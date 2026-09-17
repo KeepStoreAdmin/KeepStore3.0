@@ -1,19 +1,19 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-16
+Aggiornato: 2026-09-17
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-16.
+- Aggiornato: 2026-09-17.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
 - Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `192701ae65ecac00c294399a686af52d98d398c1`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
 - Ultimo task runtime chiuso: `STOREFRONT-PROMO-ROUTE-RETIREMENT-1A`, esito A, PR #256 integrata fast-forward nel checkpoint `192701ae65ecac00c294399a686af52d98d398c1`; tre commit lineari, zero merge commit e `main` invariato.
-- Task runtime corrente: `STOREFRONT-OFFERS-PROMO-UX-1A`, branch `task/storefront-offers-promo-ux-1a`, base stabile `192701ae65ecac00c294399a686af52d98d398c1`. Implementazione e verifiche tecniche sono in review; il gate visuale reale sui quattro viewport resta pendente e il task non e dichiarato A.
+- Task runtime corrente: `STOREFRONT-OFFERS-PROMO-UX-1A`, branch `task/storefront-offers-promo-ux-1a`, base stabile `192701ae65ecac00c294399a686af52d98d398c1`. La REV2 tecnica e completata e verificata; il gate visuale reale sui quattro viewport resta pendente e il task non e dichiarato A.
 - Prossimo task candidabile: `HOME-ASYNC-CART-1A`, soltanto dopo review A e merge autorizzato di `STOREFRONT-OFFERS-PROMO-UX-1A`. Non e avviato da questo aggiornamento.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
@@ -88,7 +88,10 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Il task uniforma esclusivamente la presentazione promo di HOME, catalogo normale/promozionale, `Visti di recente` e PDP, adattando al markup KeepStore i pattern ONSUS per prezzo corrente/precedente, sale badge e offerte quantitative. Restano fuori scope logica commerciale, query, carrello, ordine, pagamento, gateway, e-mail e database.
 - Contratto visuale: il prezzo applicabile alla quantita `1` compare una sola volta; il precedente e barrato soltanto se realmente valido; label `Promo` e percentuale valida compaiono una sola volta; il tier futuro resta separato come `Da ...` con la propria condizione e non sostituisce il prezzo principale. Un prodotto senza offerta valida non rende label, percentuali, contenitori vuoti o spazi anomali.
 - La PDP rende `Offerte attive` come elenco leggibile: il prezzo immediato non duplica quello principale, i tier e le condizioni restano distinti, le date compaiono soltanto quando reali e nessun ID tecnico o dato owner entra nel DOM. La selezione commerciale, `ProductPromotionEligibilityResolver`, `StorefrontPromotionCatalogProvider`, i calcoli `Decimal`, owner/listino/azienda/campagna, tie-break e `data-ks-price` restano invariati.
-- Implementazione e harness tecnici sono in review. Il controllo visuale reale a `360x800`, `390x844`, `768x1024` e `1365x900` resta un gate esplicito pendente: non e registrato alcun esito A visuale senza quel controllo. `HOME-ASYNC-CART-1A` resta il candidato successivo e non va avviato prima di review A e merge autorizzato di questo task.
+- REV2 HOME: `Occasione Imperdibile` usa un solo pool, ammette soltanto promozioni autorizzate con `Giacenza >= 1`, ordina per vendite annuali positive, scadenza autorizzata piu vicina, venduti, visite e ID, senza fallback non promozionale. Il massimo e sei; deduplica `BusinessKey` e `DisplayKey` e anche `Visti di recente` condivide gli stessi insiemi. La barra mostra `Venduti`, `Disponibili` da `Giacenza` e la percentuale reale `VendutiAnno / (VendutiAnno + Giacenza) * 100`, normalizzata `0-100`, con `aria-valuetext`; il countdown compare soltanto con una scadenza autorizzata reale.
+- REV2 PDP: nel buy-box il pannello offerte usa una colonna fluida `minmax(0, 1fr)`, figli restringibili e testo a capo. Le card Simili, Correlati e Visti di recente riusano il modello promozionale cache; il badge `Promo -NN%` esiste soltanto per una promo immediata reale, il tier usa il riepilogo condiviso `Da ...`, le offerte multiple mantengono un contatore e l'assenza di promo non produce contenitori vuoti.
+- Verifiche REV2: harness promozionale completo `544/544`; matrice card reale con promo immediata, tier-only, mista, multi-offerta e nessuna promo; retirement `126/126`; parita anonima `887/887` e PROVA `840/840`, con elementi solo-route e duplicati a zero; precompile ASP.NET Framework 4.8 superata. Nessuna scrittura ecommerce o DB e nessuna modifica a resolver, provider o formule prezzo.
+- Il controllo visuale reale a `360x800`, `390x844`, `768x1024` e `1365x900` resta l'unico gate esplicito pendente: non e registrato alcun esito A visuale senza quel controllo. `HOME-ASYNC-CART-1A` resta il candidato successivo e non va avviato prima di review A e merge autorizzato di questo task.
 
 ### Funzione digitale di recesso B2C - documentata e differita
 

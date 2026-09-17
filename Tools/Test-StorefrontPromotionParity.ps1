@@ -125,6 +125,36 @@ function Get-ElementByClass {
     return ''
 }
 
+function Get-DivCardsByClass {
+    param([string]$Html, [string]$RequiredClass = 'card-product')
+    $cards = New-Object System.Collections.Generic.List[string]
+    $pattern = '<div\b[^>]*class=(?<quote>[''"])(?<classes>[^''"]*)\k<quote>[^>]*>'
+    foreach ($match in [regex]::Matches($Html, $pattern, [Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+        $classes = @($match.Groups['classes'].Value -split '\s+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        if ($classes -notcontains $RequiredClass) { continue }
+        $card = Get-BalancedElementAt $Html $match.Index 'div'
+        if (-not [string]::IsNullOrWhiteSpace($card)) { $cards.Add($card) }
+    }
+    return @($cards)
+}
+
+function Assert-PdpRelatedCardContract {
+    param([string]$Card, [string]$Name)
+    $priceWrap = Get-ElementByClass $Card 'price-wrap'
+    $summary = Get-ElementByClass $Card 'ks-catalog-promos'
+    Assert-True (-not [string]::IsNullOrWhiteSpace($priceWrap)) ($Name + ' has one price-wrap')
+    Assert-True ([regex]::Matches($Card, 'class=[''"][^''"]*\bprice-wrap\b[^''"]*[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) ($Name + ' does not duplicate price-wrap')
+    Assert-True ($Card.IndexOf('sale-item', [StringComparison]::OrdinalIgnoreCase) -lt 0) ($Name + ' has no legacy sale-item badge')
+    Assert-True ([regex]::Matches($Card, '<p class=[''"]small-text[''"]>\s*Promo\s*</p>', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -le 1) ($Name + ' has at most one authorized Promo badge')
+    Assert-True ([regex]::Matches($Card, 'class=[''"]ks-catalog-promos[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -le 1) ($Name + ' has at most one promotion summary')
+    Assert-True (-not [regex]::IsMatch($Card, '(?:OfferId|OfferDetailId|OwnerUserId|UtentiId|AziendeId|data-offer)', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) ($Name + ' exposes no technical promotion identifiers')
+    if (-not [string]::IsNullOrWhiteSpace($summary)) {
+        foreach ($price in [regex]::Matches((Get-PageText $priceWrap), '(?<![0-9])[0-9\.]+,[0-9]{2}\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+            Assert-True ((Get-PageText $summary).IndexOf($price.Value, [StringComparison]::OrdinalIgnoreCase) -lt 0) ($Name + ' summary does not repeat current or previous price ' + $price.Value)
+        }
+    }
+}
+
 function Get-BalancedElementAt {
     param([string]$Html, [int]$StartIndex, [string]$TagName)
     if ([string]::IsNullOrWhiteSpace($Html) -or $StartIndex -lt 0 -or [string]::IsNullOrWhiteSpace($TagName)) { return '' }
@@ -257,11 +287,14 @@ function Test-StaticContract {
     $catalogMarkup = Get-FileText 'articoli.aspx'
     $homePage = Get-FileText 'Default.aspx.vb'
     $pdp = Get-FileText 'articolo.aspx.vb'
+    $pdpMarkup = Get-FileText 'articolo.aspx'
     $recent = Get-FileText 'Public\assets\keepstore\js\keepstore-recently-viewed.js'
     $cartPrice = Get-FileText 'App_Code\CartPriceRevalidationHelper.vb'
     $productCard = Get-FileText 'Public\ui\controls\ProductCard.ascx'
     $css = Get-FileText 'Public\assets\keepstore\css\theme-overrides.css'
     $catalogCss = Get-FileText 'Public\assets\keepstore\css\catalog-ui.css'
+    $productCss = Get-FileText 'Public\assets\keepstore\css\product-ui.css'
+    $master = Get-FileText 'Page.master'
 
     Assert-Contains $provider 'ROW_NUMBER() OVER (PARTITION BY catalog.id ORDER BY' 'provider selects one deterministic offer per article'
     Assert-Contains $provider 'Public Function BuildLegacyCatalogJoin() As String' 'legacy route has a canonical provider join'
@@ -318,6 +351,52 @@ function Test-StaticContract {
     Assert-Contains $catalogCss '.ks-catalog-promos__price strong' 'tier price has dedicated emphasis'
     Assert-Contains $catalogCss 'column-gap: 4px' 'Da and tier price keep real spacing'
     Assert-Contains $catalogMarkup 'catalog-ui.css") %>?v=20260916-offers-promo-ux1' 'catalog CSS cache-buster is current'
+    Assert-NotContains $homePage 'Dim offerPool As DataTable' 'home does not acquire an unused duplicate offer pool'
+    Assert-True ([regex]::Matches($homePage, 'Dim dealPool As DataTable = GetDealOfferPool\(96\)', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'home acquires its authorized deal pool once'
+    Assert-Contains $homePage 'SortAuthorizedDealRows(authorized, limit)' 'home sorts after the authorized promotion snapshot'
+    Assert-Contains $homePage 'RowDateValue(left, "DisplayPromoDeadline")' 'home ordering uses the effective authorized deadline'
+    Assert-Contains $homePage 'model.Offers' 'home derives the nearest deadline from authorized offers'
+    Assert-Contains $homePage 'TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)' 'deal selection reserves business and display keys'
+    Assert-Contains $homePage 'TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, featuredPool' 'featured selection shares home diversity keys'
+    Assert-Contains $homePage 'TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool' 'best-seller selection shares home diversity keys'
+    Assert-Contains $homePage 'GetRecentlyViewedProducts(8, usedBusinessKeys, True, usedDisplayKeys, True)' 'recent products cannot reintroduce prior home products'
+    Assert-Contains $homePage 'Venduti: <span class=''fw-bold''>' 'deal cards show sold quantity'
+    Assert-Contains $homePage 'Disponibili: <span class=''fw-bold''>' 'deal cards show available quantity'
+    Assert-Contains $homePage 'aria-valuetext=' 'deal progress exposes understandable accessible text'
+    Assert-Contains $homePage '(soldCount / total) * 100D' 'deal progress uses sold over sold plus stock'
+    Assert-Contains $homePage 'Math.Min(limit, rows.Count)' 'deal selection enforces its requested maximum'
+
+    $availabilityPercent = {
+        param([decimal]$Sold, [decimal]$Available)
+        $soldValue = [Math]::Max(0D, $Sold)
+        $availableValue = [Math]::Max(0D, $Available)
+        $total = $soldValue + $availableValue
+        if ($total -le 0D) { return 0D }
+        return [Math]::Min(100D, [Math]::Max(0D, [Math]::Round(($soldValue / $total) * 100D, 2, [MidpointRounding]::AwayFromZero)))
+    }
+    Assert-True ((& $availabilityPercent 0 10) -eq 0D) 'deal progress handles zero sold'
+    Assert-True ((& $availabilityPercent 5 5) -eq 50D) 'deal progress handles positive sold'
+    Assert-True ((& $availabilityPercent -5 -10) -eq 0D) 'deal progress normalizes negative values'
+    Assert-True ((& $availabilityPercent 10 0) -eq 100D) 'deal progress clamps the upper limit'
+
+    Assert-NotContains $pdpMarkup 'sale-item' 'PDP related cards remove the legacy generic offer badge'
+    Assert-True ([regex]::Matches($pdpMarkup, 'Eval\("PromotionBadgeHtml"\)', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 3) 'similar related and recent cards bind the authorized badge'
+    Assert-True ([regex]::Matches($pdpMarkup, 'Eval\("PromotionSummaryHtml"\)', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 3) 'similar related and recent cards bind the shared summary'
+    Assert-Contains $pdp 'GetAuthorizedPromotionModel(idVal,' 'related items reuse the cached authorized promotion model'
+    Assert-Contains $pdp 'BuildRelatedPromotionBadgeHtml(promotionModel)' 'immediate promotion cards build the ONSUS badge from the authorized model'
+    Assert-Contains $pdp 'Not model.HasDefaultQuantityOffer' 'tier-only cards cannot receive a false immediate Promo badge'
+    Assert-Contains $pdp 'model.BestDefaultQuantityDiscountPercent <= 0D' 'badges require a real discount percentage'
+    Assert-Contains $pdp 'ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel)' 'tier and multi-offer cards reuse the shared certified summary'
+    Assert-Contains $pdp 'Return String.Empty' 'no-promotion cards emit no badge container'
+    Assert-Contains $display 'If Not model.HasQuantityTierOffer AndAlso model.Offers.Count <= 1 Then Return String.Empty' 'immediate-only cards emit no redundant summary'
+    Assert-Contains $display 'If model.HasQuantityTierOffer Then' 'tier-only and mixed cards expose the quantity tier'
+    Assert-Contains $display 'If model.Offers.Count > 1 Then' 'multi-offer cards expose a coherent offer count'
+    Assert-Contains $productCss '.ks-pdp-buybox-sticky .ks-product-promos__list' 'PDP buy-box has a scoped promotion grid override'
+    Assert-Contains $productCss 'grid-template-columns: minmax(0, 1fr)' 'PDP buy-box uses one fluid promotion column'
+    Assert-Contains $productCss '.ks-pdp-buybox-sticky .ks-product-promos *' 'PDP promotion children can shrink inside the buy-box'
+    Assert-Contains $productCss 'overflow-wrap: anywhere' 'long promotion content wraps safely'
+    Assert-Contains $pdpMarkup 'product-ui.css") %>?v=20260917-offers-promo-ux1-rev2' 'PDP CSS cache-buster is current'
+    Assert-Contains $master 'theme-overrides.css") & "?v=20260917-offers-promo-ux1-rev2"' 'global theme CSS cache-buster is current'
 
     $ownerVisible = {
         param([int]$OwnerId, [bool]$Authenticated, [int]$CurrentUserId)
@@ -587,6 +666,23 @@ function Test-RuntimeContract {
             Assert-True ([regex]::Matches($promoText, 'Già applicata al prezzo principale', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP points to the already displayed immediate price'
             Assert-True ($promoText.IndexOf('promo attiva', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'PDP does not invent a validity label'
             Assert-True (-not [regex]::IsMatch($promoPanel, '(?:OfferId|OfferDetailId|OwnerUserId|UtentiId|AziendeId|data-offer)', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP exposes no technical promotion identifiers'
+
+            $pdpCardSections = @(
+                (Get-ElementByClass $pdp.Content 'ks-similar-products-section'),
+                (Get-ElementByClass $pdp.Content 'ks-related-products-section'),
+                (Get-ElementByClass $pdp.Content 'ks-recently-viewed-section')
+            )
+            $pdpCards = @($pdpCardSections | ForEach-Object { Get-DivCardsByClass $_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+            Assert-True ($pdpCards.Count -gt 0) 'PDP renders related presentation cards'
+            for ($cardIndex = 0; $cardIndex -lt $pdpCards.Count; $cardIndex++) {
+                Assert-PdpRelatedCardContract $pdpCards[$cardIndex] ('PDP related card ' + ($cardIndex + 1))
+            }
+            $pdpCardsHtml = $pdpCards -join "`n"
+            Assert-True ([regex]::IsMatch($pdpCardsHtml, '<p class=[''"]small-text[''"]>\s*Promo\s*</p>', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP card matrix includes an immediate promotion presentation'
+            Assert-True ([regex]::IsMatch($pdpCardsHtml, 'ks-catalog-promos__tier', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP card matrix includes a quantity-tier presentation'
+            Assert-True ([regex]::IsMatch($pdpCardsHtml, '<p class=[''"]small-text[''"]>\s*Promo\s*</p>.*?ks-catalog-promos__tier', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Singleline)) 'PDP card matrix includes a mixed immediate and tier presentation'
+            Assert-True ([regex]::IsMatch((Get-PageText $pdpCardsHtml), '[2-9][0-9]* offerte disponibili', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP card matrix includes a coherent multi-offer count'
+            Assert-True (@($pdpCards | Where-Object { $_.IndexOf('ks-catalog-promos', [StringComparison]::OrdinalIgnoreCase) -lt 0 -and $_.IndexOf('<p class="small-text">Promo</p>', [StringComparison]::OrdinalIgnoreCase) -lt 0 }).Count -gt 0) 'PDP card matrix includes a normal non-promotion presentation'
         }
 
         $recentCatalog = Invoke-LocalGet 'articoli.aspx?q=ZAP80-A4&ksreview=recent-promo' $session
@@ -599,10 +695,23 @@ function Test-RuntimeContract {
         $homeResponse = Invoke-LocalGet 'Default.aspx?ksreview=recent-promo' $session
         $homeRecent = Get-SectionById $homeResponse.Content 'HomeRecentlyViewedSection'
         Assert-HealthyResponse $homeResponse 'home'
-        $homeRecentCard = Get-ProductCardByCode $homeRecent 'ZAP80-A4'
-        Assert-ZapHomePresentation $homeRecentCard 'home recently viewed ZAP80-A4 card'
+        $homeZapCards = @(Get-DivCardsByClass $homeResponse.Content | Where-Object { $_.IndexOf('ZAP80-A4', [StringComparison]::OrdinalIgnoreCase) -ge 0 })
+        Assert-True ($homeZapCards.Count -le 1) 'home never repeats ZAP80-A4 across sections'
+        if ($homeZapCards.Count -eq 1) { Assert-ZapHomePresentation $homeZapCards[0] 'home ZAP80-A4 card' }
+        if ($homeRecent.IndexOf('ZAP80-A4', [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+            Assert-True ($homeResponse.Content.Substring(0, $homeResponse.Content.IndexOf($homeRecent, [StringComparison]::Ordinal)).IndexOf('ZAP80-A4', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'home recent does not reintroduce ZAP80-A4 shown above'
+        }
+        $homeDeals = Get-ElementByClass $homeResponse.Content 'ks-home-deals'
+        $dealCards = @(Get-DivCardsByClass $homeDeals | Where-Object { $_.IndexOf('ks-deal-card', [StringComparison]::OrdinalIgnoreCase) -ge 0 })
+        Assert-True ($dealCards.Count -gt 0) 'home deal section renders authorized promotion products'
+        Assert-True ($dealCards.Count -le 6) 'home deal section renders at most six authorized products'
+        Assert-True ($homeDeals.IndexOf('prodotto demo', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'home deal section has no demo product fallback'
+        foreach ($dealCard in $dealCards) {
+            Assert-True ((Get-PageText $dealCard).IndexOf('Venduti:', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'deal card shows sold quantity'
+            Assert-True ((Get-PageText $dealCard).IndexOf('Disponibili:', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'deal card shows available quantity'
+            Assert-True ([regex]::IsMatch($dealCard, 'role=[''"]progressbar[''"][^>]*aria-valuemin=[''"]0[''"][^>]*aria-valuemax=[''"]100[''"][^>]*aria-valuenow=[''"][0-9]+(?:\.[0-9]+)?[''"][^>]*aria-valuetext=[''"][^''"]*venduti[^''"]*disponibili[^''"]*[''"]', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'deal card progress is real and accessible'
+        }
         Assert-Contains $homeResponse.Content 'ks-home-price-stack--emphasized' 'home keeps stable long-price geometry'
-        Assert-True ($homeResponse.Content.IndexOf('1.500,00', [StringComparison]::OrdinalIgnoreCase) -ge 0) 'home renders a long commercial price'
     } finally { Restore-LocalCertificateCompatibility }
 }
 

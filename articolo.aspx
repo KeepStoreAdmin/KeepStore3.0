@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260916-offers-promo-ux1" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20260917-offers-promo-ux1-rev2" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -610,7 +610,7 @@
                                         </li>
                                     </ul>
 
-                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                    <%# Eval("PromotionBadgeHtml") %>
                                 </div>
 
                                 <div class="card-product-info">
@@ -623,6 +623,7 @@
                                         <div class="price-wrap fw-medium">
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
+                                        <%# Eval("PromotionSummaryHtml") %>
                                         <%# Eval("AvailabilityHtml") %>
                                     </div>
 
@@ -711,7 +712,7 @@
                                         </li>
                                     </ul>
 
-                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                    <%# Eval("PromotionBadgeHtml") %>
                                 </div>
 
                                 <div class="card-product-info">
@@ -724,6 +725,7 @@
                                         <div class="price-wrap fw-medium">
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
+                                        <%# Eval("PromotionSummaryHtml") %>
                                         <%# Eval("AvailabilityHtml") %>
                                     </div>
 
@@ -832,7 +834,7 @@
                                         </li>
                                     </ul>
 
-                                    <%# If(Convert.ToBoolean(Eval("InOfferta")), "<div class='box-sale-wrap'><span class='sale-item'>Offerta</span></div>", String.Empty) %>
+                                    <%# Eval("PromotionBadgeHtml") %>
                                 </div>
 
                                 <div class="card-product-info">
@@ -845,6 +847,7 @@
                                         <div class="price-wrap fw-medium">
                                             <%# Eval("PrezzoHtml") %>
                                         </div>
+                                        <%# Eval("PromotionSummaryHtml") %>
                                         <%# Eval("AvailabilityHtml") %>
                                     </div>
                                     <button type="submit" <%# Eval("PrimaryNativeCartAttributes") %> class="tf-btn text-white w-100 ks-mobile-card-buy-cta js-ks-cart-link" aria-label="Acquista: aggiungi al carrello" title="Acquista: aggiungi al carrello">

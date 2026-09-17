@@ -1406,14 +1406,48 @@ body.ks-page-home .ks-home-main .product-progress-sale .progress {
   background: #eef1f4;
 }
 
+body.ks-page-home .ks-home-main .ks-home-progress-heading {
+  align-items: baseline;
+  color: #687382;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  gap: 4px 10px;
+  justify-content: space-between;
+  line-height: 1.35;
+  margin-bottom: 7px;
+  min-width: 0;
+}
+
+body.ks-page-home .ks-home-main .ks-home-progress-heading strong {
+  color: #d80027;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+body.ks-page-home .ks-home-main .ks-home-progress-bar {
+  background-color: #d80027 !important;
+  border-radius: inherit;
+}
+
 body.ks-page-home .ks-home-main .box-quantity {
   margin-top: 8px;
+}
+
+body.ks-page-home .ks-home-main .ks-home-progress-quantity {
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
 }
 
 body.ks-page-home .ks-home-main .text-avaiable {
   margin: 0;
   color: #687382;
   font-size: 11px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 body.ks-page-home .ks-home-main .sw-dot-default {

@@ -92,6 +92,8 @@ Partial Class articolo
         Public Property Url As String
         Public Property PrezzoHtml As String
         Public Property InOfferta As Boolean
+        Public Property PromotionBadgeHtml As String
+        Public Property PromotionSummaryHtml As String
         Public Property Codice As String
         Public Property Ean As String
         Public Property BrandName As String
@@ -501,6 +503,10 @@ Partial Class articolo
                                                                 tcidVal,
                                                                 GetRowDecimal(row, "Prezzo"),
                                                                 GetRowDecimal(row, "PrezzoIvato"))
+        Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(_id,
+                                                                                          tcidVal,
+                                                                                          GetRowDecimal(row, "Prezzo"),
+                                                                                          GetRowDecimal(row, "PrezzoIvato"))
         Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
 
         Dim item As New RelatedItem() With {
@@ -512,6 +518,8 @@ Partial Class articolo
             .Url = BuildProductUrl(_id, tcidVal, includeTcid:=(Request.QueryString("TCid") IsNot Nothing)),
             .PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
             .InOfferta = price.IsPromo,
+            .PromotionBadgeHtml = BuildRelatedPromotionBadgeHtml(promotionModel),
+            .PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel),
             .Codice = codiceVal,
             .Ean = eanVal,
             .BrandName = brandName,
@@ -1156,6 +1164,10 @@ Partial Class articolo
                                                                         tcidVal,
                                                                         SafeDec(rdr("Prezzo"), 0D),
                                                                         SafeDec(rdr("PrezzoIvato"), 0D))
+                Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(idVal,
+                                                                                                  tcidVal,
+                                                                                                  SafeDec(rdr("Prezzo"), 0D),
+                                                                                                  SafeDec(rdr("PrezzoIvato"), 0D))
 
                 Dim item As New RelatedItem()
                 item.Id = idVal
@@ -1166,6 +1178,8 @@ Partial Class articolo
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = price.IsPromo
+                item.PromotionBadgeHtml = BuildRelatedPromotionBadgeHtml(promotionModel)
+                item.PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel)
                 item.Codice = codiceVal
                 item.Ean = eanVal
                 item.BrandName = SafeReaderString(rdr, "MarcheDescrizione")
@@ -2539,6 +2553,20 @@ Partial Class articolo
             price.CurrentPrice = FirstPositiveDecimal(baseGross, baseNet)
         End If
         Return price
+    End Function
+
+    Private Function BuildRelatedPromotionBadgeHtml(ByVal model As ProductPromotionDisplayModel) As String
+        If model Is Nothing OrElse
+           Not model.HasDefaultQuantityOffer OrElse
+           model.BestDefaultQuantityDiscountPercent <= 0D Then
+            Return String.Empty
+        End If
+
+        Dim percentText As String = model.BestDefaultQuantityDiscountPercent.ToString("0.##", ItCulture)
+        Return "<div class=""box-sale-wrap pst-default"">" &
+               "<p class=""small-text"">Promo</p>" &
+               "<p class=""title-sidebar-2"">-" & Server.HtmlEncode(percentText) & "%</p>" &
+               "</div>"
     End Function
 
     Private Function FormatMoney(value As Decimal) As String

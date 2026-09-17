@@ -788,9 +788,46 @@
   font-size: 11px;
 }
 
+.ks-pdp-buybox-sticky .ks-product-promos,
+.ks-pdp-buybox-sticky .ks-product-promos__list,
+.ks-pdp-buybox-sticky .ks-product-promos__item {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.ks-pdp-buybox-sticky .ks-product-promos__list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ks-pdp-buybox-sticky .ks-product-promos * {
+  min-width: 0;
+}
+
+.ks-pdp-buybox-sticky .ks-product-promos__head,
+.ks-pdp-buybox-sticky .ks-product-promos__item-head,
+.ks-pdp-buybox-sticky .ks-product-promos__item-body,
+.ks-pdp-buybox-sticky .ks-product-promos__price {
+  flex-wrap: wrap;
+}
+
+.ks-pdp-buybox-sticky .ks-product-promos__price,
+.ks-pdp-buybox-sticky .ks-product-promos__condition,
+.ks-pdp-buybox-sticky .ks-product-promos__dates,
+.ks-pdp-buybox-sticky .ks-product-promos__applied {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 @media (min-width: 768px) {
   .ks-product-promos__list {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+
+  .ks-pdp-buybox-sticky .ks-product-promos__list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

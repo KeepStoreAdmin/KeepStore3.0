@@ -112,7 +112,6 @@ Partial Public Class _Default
 
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim offerPool As DataTable = GetOfferPool(96)
         Dim dealPool As DataTable = GetDealOfferPool(96)
         Dim featuredPool As DataTable = GetFeaturedPool(96)
         Dim newArrivalsPool As DataTable = GetNewArrivalsPool(120)
@@ -122,8 +121,7 @@ Partial Public Class _Default
         Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
         Dim fallbackCatalogPool As DataTable = GetCatalogFallbackPool(160)
 
-        Dim dealRows As DataTable = TakeDistinctRows(6, usedBusinessKeys, dealPool)
-        CommitDisplayKeys(dealRows, usedDisplayKeys)
+        Dim dealRows As DataTable = TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)
         rptDealOfDay.DataSource = dealRows
         rptDealOfDay.DataBind()
         If HomeOffersSection IsNot Nothing Then
@@ -136,8 +134,7 @@ Partial Public Class _Default
             HomeOffersSliderWrap.Visible = Not IsTableEmpty(dealRows)
         End If
 
-        Dim featuredRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
-        CommitDisplayKeys(featuredRows, usedDisplayKeys)
+        Dim featuredRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
         rptHomeFeaturedProducts.DataSource = featuredRows
         rptHomeFeaturedProducts.DataBind()
         If HomeFeaturedProductsSection IsNot Nothing Then
@@ -152,14 +149,14 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = False
         End If
 
-        Dim bestRows As DataTable = TakeDistinctRows(8, usedBusinessKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
+        Dim bestRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
         rptBestSeller.DataSource = bestRows
         rptBestSeller.DataBind()
         If HomeLegacyBestSection IsNot Nothing Then
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
 
-        Dim recentRows As DataTable = GetRecentlyViewedProducts(8, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase), True, Nothing, False)
+        Dim recentRows As DataTable = GetRecentlyViewedProducts(8, usedBusinessKeys, True, usedDisplayKeys, True)
         rptRecentlyViewed.DataSource = recentRows
         rptRecentlyViewed.DataBind()
         If HomeRecentlyViewedSection IsNot Nothing Then
@@ -621,12 +618,49 @@ Partial Public Class _Default
         Return filtered
     End Function
 
-    Private Function GetOfferPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit, True)
+    Private Function GetDealOfferPool(ByVal limit As Integer) As DataTable
+        Dim authorized As DataTable = QueryProducts(OfferWhereClause(),
+                                                    "COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
+                                                    0,
+                                                    True)
+        Return SortAuthorizedDealRows(authorized, limit)
     End Function
 
-    Private Function GetDealOfferPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(OfferWhereClause(), "CASE WHEN v.OfferteDataFine IS NULL THEN 1 ELSE 0 END ASC, COALESCE(v.OfferteDataFine,'9999-12-31') ASC, COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC", limit, True)
+    Private Function SortAuthorizedDealRows(ByVal source As DataTable, ByVal limit As Integer) As DataTable
+        Dim result As DataTable = If(source IsNot Nothing, source.Clone(), EmptyProductsTable())
+        If source Is Nothing OrElse source.Rows.Count = 0 OrElse limit <= 0 Then Return result
+
+        Dim rows As New List(Of DataRow)()
+        For Each row As DataRow In source.Rows
+            rows.Add(row)
+        Next
+
+        rows.Sort(
+            Function(left As DataRow, right As DataRow) As Integer
+                Dim bySoldPresence As Integer = (ToDecimal(right("VendutiAnno")) > 0D).CompareTo(ToDecimal(left("VendutiAnno")) > 0D)
+                If bySoldPresence <> 0 Then Return bySoldPresence
+
+                Dim leftDeadline As Nullable(Of Date) = RowDateValue(left, "DisplayPromoDeadline")
+                Dim rightDeadline As Nullable(Of Date) = RowDateValue(right, "DisplayPromoDeadline")
+                If leftDeadline.HasValue <> rightDeadline.HasValue Then
+                    Return If(leftDeadline.HasValue, -1, 1)
+                End If
+                If leftDeadline.HasValue Then
+                    Dim byDeadline As Integer = Date.Compare(leftDeadline.Value, rightDeadline.Value)
+                    If byDeadline <> 0 Then Return byDeadline
+                End If
+
+                Dim bySold As Integer = Decimal.Compare(ToDecimal(right("VendutiAnno")), ToDecimal(left("VendutiAnno")))
+                If bySold <> 0 Then Return bySold
+                Dim byVisits As Integer = SafeInt(right("Visite")).CompareTo(SafeInt(left("Visite")))
+                If byVisits <> 0 Then Return byVisits
+                Return SafeInt(right("id")).CompareTo(SafeInt(left("id")))
+            End Function)
+
+        For i As Integer = 0 To Math.Min(limit, rows.Count) - 1
+            result.ImportRow(rows(i))
+        Next
+        Return result
     End Function
 
     Private Function GetFeaturedPool(ByVal limit As Integer) As DataTable
@@ -892,7 +926,9 @@ Partial Public Class _Default
             sql.Append("AND ").Append(whereClause).Append(" ")
         End If
         sql.Append("ORDER BY ").Append(orderClause).Append(" ")
-        sql.Append("LIMIT ").Append(Math.Max(1, limit).ToString(CultureInfo.InvariantCulture))
+        If limit > 0 Then
+            sql.Append("LIMIT ").Append(limit.ToString(CultureInfo.InvariantCulture))
+        End If
 
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
@@ -939,7 +975,6 @@ Partial Public Class _Default
 
             If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
                 row("DisplayPromoQtyOnePrice") = If(useNetPrices, model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross)
-                If model.BestDefaultQuantityEndsOn.HasValue Then row("DisplayPromoDeadline") = model.BestDefaultQuantityEndsOn.Value
             End If
             If model IsNot Nothing AndAlso model.HasQuantityTierOffer Then
                 row("DisplayPromoTierPrice") = If(useNetPrices, model.BestQuantityTierPriceNet, model.BestQuantityTierPriceGross)
@@ -952,8 +987,18 @@ Partial Public Class _Default
                     row("DisplayPromoTierQntMinima") = tier.QntMinima
                     row("DisplayPromoTierMultipli") = tier.Multipli
                 End If
-                If row.IsNull("DisplayPromoDeadline") AndAlso model.BestQuantityTierEndsOn.HasValue Then
-                    row("DisplayPromoDeadline") = model.BestQuantityTierEndsOn.Value
+            End If
+
+            If model IsNot Nothing AndAlso model.Offers IsNot Nothing Then
+                Dim earliestDeadline As Nullable(Of Date) = Nothing
+                For Each offer As ProductPromotionOffer In model.Offers
+                    If offer Is Nothing OrElse Not offer.EndsOn.HasValue Then Continue For
+                    If Not earliestDeadline.HasValue OrElse offer.EndsOn.Value.Date < earliestDeadline.Value.Date Then
+                        earliestDeadline = offer.EndsOn.Value.Date
+                    End If
+                Next
+                If earliestDeadline.HasValue Then
+                    row("DisplayPromoDeadline") = earliestDeadline.Value
                 End If
             End If
         Next
@@ -2043,7 +2088,7 @@ Partial Public Class _Default
         Dim soldCount As Decimal = Math.Max(0D, ToDecimal(sold))
         Dim total As Decimal = soldCount + available
         If total <= 0D Then Return 0D
-        Return Decimal.Round((soldCount / total) * 100D, 2, MidpointRounding.AwayFromZero)
+        Return Math.Min(100D, Math.Max(0D, Decimal.Round((soldCount / total) * 100D, 2, MidpointRounding.AwayFromZero)))
     End Function
 
     Protected Function CountdownSeconds(ByVal offerteDataFine As Object) As Integer
@@ -2694,12 +2739,18 @@ Partial Public Class _Default
         sb.Append("<div class='box-infor-detail gap-xl-20'>")
         sb.Append(RenderCountdownBlock(row))
         Dim progressValue As Decimal = AvailabilityPercent(row("Giacenza"), row("VendutiAnno"))
+        Dim progressText As String = progressValue.ToString("0.##", ItCulture) & "%"
+        Dim soldText As String = FormatQuantity(row("VendutiAnno"))
+        Dim availableText As String = FormatQuantity(row("Giacenza"))
+        Dim progressAriaText As String = progressText & ": " & soldText & " venduti, " & availableText & " disponibili"
         sb.Append("<div class='product-progress-sale'>")
-        sb.Append("<div class='progress-sold progress ks-home-progress' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("'>")
+        sb.Append("<div class='ks-home-progress-heading'><span>Vendite annuali</span><strong>").Append(progressText).Append("</strong></div>")
+        sb.Append("<div class='progress-sold progress ks-home-progress' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("' aria-valuetext='").Append(HttpUtility.HtmlAttributeEncode(progressAriaText)).Append("'>")
         sb.Append("<div class='progress-bar bg-danger ks-home-progress-bar' style='width:").Append(progressValue.ToString("0.##", CultureInfo.InvariantCulture)).Append("%'></div>")
         sb.Append("</div>")
-        sb.Append("<div class='box-quantity d-flex justify-content-between'>")
-        sb.Append("<p class='text-avaiable caption'>Venduti: <span class='fw-bold'>").Append(FormatQuantity(row("VendutiAnno"))).Append("</span></p>")
+        sb.Append("<div class='box-quantity ks-home-progress-quantity d-flex justify-content-between'>")
+        sb.Append("<p class='text-avaiable caption'>Venduti: <span class='fw-bold'>").Append(soldText).Append("</span></p>")
+        sb.Append("<p class='text-avaiable caption'>Disponibili: <span class='fw-bold'>").Append(availableText).Append("</span></p>")
         sb.Append("</div>")
         sb.Append("</div>")
         sb.Append("</div>")
