@@ -185,6 +185,27 @@ Private Function HeaderHasMeta(ByVal metaName As String) As Boolean
     Return False
 End Function
 
+Private Function HeaderHasCanonical() As Boolean
+    If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Return False
+    Dim stack As New Stack(Of Control)()
+    stack.Push(Me.Page.Header)
+    While stack.Count > 0
+        Dim current As Control = stack.Pop()
+        If current Is Nothing Then Continue While
+        Dim link As HtmlLink = TryCast(current, HtmlLink)
+        If link IsNot Nothing AndAlso
+           String.Equals(Convert.ToString(link.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then
+            Return True
+        End If
+        If current.HasControls() Then
+            For i As Integer = current.Controls.Count - 1 To 0 Step -1
+                stack.Push(current.Controls(i))
+            Next
+        End If
+    End While
+    Return False
+End Function
+
     
 ' ============================================================
 ' STEP29 - SEO globale (noindex + canonical) per pagine NON SEO
@@ -234,70 +255,64 @@ Private Sub ApplyGlobalSeoPolicy()
         End If
 
         Dim qs As NameValueCollection = Request.QueryString
-        Dim hasRimuovi As Boolean = False
-        Dim hasSt As Boolean = False
-        If qs IsNot Nothing Then
-            hasRimuovi = (qs("rimuovi") IsNot Nothing AndAlso qs("rimuovi").ToString().Trim() <> "")
-            hasSt = (qs("st") IsNot Nothing AndAlso qs("st").ToString().Trim() <> "")
-        End If
+        Dim hasMutationParameter As Boolean = (qs IsNot Nothing AndAlso
+            qs("rimuovi") IsNot Nothing AndAlso Convert.ToString(qs("rimuovi")).Trim() <> String.Empty)
+        Dim applyNoIndex As Boolean = hasMutationParameter OrElse
+            StorefrontCanonicalHostPolicy.IsNoIndexPath(pathLower) OrElse
+            Response.StatusCode >= 400
 
-        ' Aree non SEO / private / transazionali
-        Dim isNonSeo As Boolean = False
-        If pathLower.Contains("/myaccount") OrElse pathLower.Contains("/my-account") Then isNonSeo = True
-        If pathLower.Contains("/checkout") Then isNonSeo = True
-        If pathLower.Contains("/carrello") Then isNonSeo = True
-        If pathLower.Contains("/shop-cart") Then isNonSeo = True
-        If pathLower.Contains("/wishlist") Then isNonSeo = True
-        If pathLower.Contains("/compare") Then isNonSeo = True
-        If pathLower.Contains("/track-your-order") Then isNonSeo = True
-        If pathLower.Contains("/documenti") Then isNonSeo = True
-        If pathLower.Contains("/documentidettaglio") Then isNonSeo = True
-        If pathLower.Contains("/datiutente") Then isNonSeo = True
-        If pathLower.Contains("/cambiapassword") Then isNonSeo = True
-        If pathLower.Contains("/login") Then isNonSeo = True
-        If pathLower.Contains("/logout") Then isNonSeo = True
-        If pathLower.Contains("/register") Then isNonSeo = True
-        If pathLower.Contains("/payYourOrders") Then isNonSeo = True
+        Dim sb As New StringBuilder()
+        If applyNoIndex Then
+            Try
+                Response.Headers("X-Robots-Tag") = "noindex, nofollow"
+            Catch
+                Try
+                    Response.AddHeader("X-Robots-Tag", "noindex, nofollow")
+                Catch
+                End Try
+            End Try
 
-        Dim applyNoIndex As Boolean = (hasRimuovi OrElse hasSt OrElse isNonSeo)
+            Try
+                Response.Cache.SetCacheability(HttpCacheability.NoCache)
+                Response.Cache.SetNoStore()
+                Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
+                Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1))
+            Catch
+            End Try
 
-        If Not applyNoIndex Then
-            litGlobalSeoHead.Text = String.Empty
+            If Not HeaderHasMeta("robots") Then
+                sb.Append("<meta name=""robots"" content=""noindex,nofollow"" />")
+            End If
+            litGlobalSeoHead.Text = sb.ToString()
             Exit Sub
         End If
 
-        ' Header HTTP (preferibile ai bot)
-        Try
-            Response.Headers("X-Robots-Tag") = "noindex,follow"
-        Catch
-            Try
-                Response.AddHeader("X-Robots-Tag", "noindex,follow")
-            Catch
-            End Try
-        End Try
-
-        ' Hardening: evita caching su pagine non-SEO / transazionali (possono contenere dati personali)
-        Try
-            Response.Cache.SetCacheability(HttpCacheability.NoCache)
-            Response.Cache.SetNoStore()
-            Response.Cache.SetRevalidation(HttpCacheRevalidation.AllCaches)
-            Response.Cache.SetExpires(DateTime.UtcNow.AddMinutes(-1))
-        Catch
-        End Try
-
-
-        ' Canonical: senza querystring (evita duplicati su pagine transazionali)
-        Dim canonicalUrl As String = "https://" & Request.Url.Authority & path
-
-        Dim sb As New StringBuilder()
-        If Not HeaderHasMeta("robots") Then
-            sb.Append("<meta name=""robots"" content=""noindex,follow"" />")
-            sb.Append(vbCrLf)
+        Dim relativeCanonical As String = path
+        If pathLower.EndsWith("/default.aspx", StringComparison.Ordinal) Then
+            relativeCanonical = "/"
         End If
-        sb.Append("<link rel=""canonical"" href=""")
-        sb.Append(HttpUtility.HtmlAttributeEncode(canonicalUrl))
-        sb.Append(""" />")
+        Dim canonicalUrl As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, relativeCanonical)
+        If String.IsNullOrEmpty(canonicalUrl) Then
+            Response.Headers("X-Robots-Tag") = "noindex, nofollow"
+            litGlobalSeoHead.Text = "<meta name=""robots"" content=""noindex,nofollow"" />"
+            Exit Sub
+        End If
 
+        If Not HeaderHasMeta("robots") Then
+            sb.Append("<meta name=""robots"" content=""index,follow"" />").Append(vbCrLf)
+        End If
+        If Not HeaderHasMeta("description") Then
+            Dim description As String = Convert.ToString(Page.Title).Trim()
+            If String.IsNullOrEmpty(description) Then description = "Storefront " & StorefrontSeoTenantContext.BrandName(HttpContext.Current)
+            sb.Append("<meta name=""description"" content=""")
+            sb.Append(HttpUtility.HtmlAttributeEncode(description))
+            sb.Append(""" />").Append(vbCrLf)
+        End If
+        If Not HeaderHasCanonical() Then
+            sb.Append("<link rel=""canonical"" href=""")
+            sb.Append(HttpUtility.HtmlAttributeEncode(canonicalUrl))
+            sb.Append(""" />")
+        End If
         litGlobalSeoHead.Text = sb.ToString()
 
     Catch
@@ -1055,16 +1070,14 @@ End Function
         Dim localCmd As New MySqlCommand
 
         If IsNothing(Me.Session("AziendaID")) Then
-            Dim sDominio As String = Me.Request.Url.Host
-
-            ' Sanitize host: lunghezza max e niente spazi folli
-            If String.IsNullOrWhiteSpace(sDominio) Then
-                sDominio = ""
-            Else
-                sDominio = sDominio.Trim()
-                If sDominio.Length > 255 Then
-                    sDominio = sDominio.Substring(0, 255)
-                End If
+            Dim resolvedTenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If resolvedTenant Is Nothing OrElse resolvedTenant.CompanyId <= 0 Then
+                Response.Clear()
+                Response.StatusCode = 421
+                Response.TrySkipIisCustomErrors = True
+                Response.Write("Sito non configurato per l'host richiesto.")
+                Context.ApplicationInstance.CompleteRequest()
+                Return
             End If
 
             localConn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -1075,19 +1088,45 @@ End Function
             localCmd.CommandType = CommandType.Text
             localCmd.CommandText = "SELECT * " &
                                    "FROM aziende " &
-                                   "LEFT JOIN pagine ON aziende.Id = Aziendeid " &
-                                   "WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) " &
+                                   "WHERE Id=@companyId " &
                                    "LIMIT 0, 1"
             localCmd.Parameters.Clear()
-            localCmd.Parameters.AddWithValue("@dominio", "%" & sDominio & "%")
+            localCmd.Parameters.AddWithValue("@companyId", resolvedTenant.CompanyId)
 
             Dim dr As MySqlDataReader = localCmd.ExecuteReader()
             dr.Read()
 
             If Not dr.HasRows Then
-                Response.Write("Nessun sito web configurato per questa applicazione.")
-                Response.End()
+                Response.Clear()
+                Response.StatusCode = 421
+                Response.TrySkipIisCustomErrors = True
+                Response.Write("Sito non configurato per l'host richiesto.")
+                Context.ApplicationInstance.CompleteRequest()
+                dr.Close()
+                localConn.Close()
+                Return
             Else
+                Dim configuredTenant As StorefrontSeoTenantIdentity = StorefrontCanonicalHostPolicy.CreateTenant(
+                    Convert.ToInt32(dr.Item("Id")),
+                    Convert.ToString(dr.Item("Nome")),
+                    Convert.ToString(dr.Item("Descrizione")),
+                    Convert.ToString(dr.Item("url1")),
+                    Convert.ToString(dr.Item("url2")),
+                    Convert.ToString(dr.Item("logoWeb")),
+                    Convert.ToInt32(dr.Item("ListinoDefault")))
+                If configuredTenant Is Nothing OrElse
+                   Not StorefrontCanonicalHostPolicy.IsRequestHostAllowed(configuredTenant,
+                                                                          Me.Request.Url.DnsSafeHost,
+                                                                          Me.Request.IsLocal) Then
+                    Response.Clear()
+                    Response.StatusCode = 421
+                    Response.TrySkipIisCustomErrors = True
+                    Response.Write("Sito non configurato per l'host richiesto.")
+                    Context.ApplicationInstance.CompleteRequest()
+                    dr.Close()
+                    localConn.Close()
+                    Return
+                End If
                 Me.Session("AziendaID") = dr.Item("Id")
                 Me.Session("AziendaEmail") = dr.Item("Email")
                 Me.Session("AziendaNome") = dr.Item("Nome")
@@ -1096,6 +1135,7 @@ End Function
                 Me.Session("AziendaLogo") = logoWebPath
                 Me.Session("AziendaLogoMobile") = logoWebPath
                 Me.Session("AziendaUrl") = dr.Item("url1")
+                Me.Session("AziendaUrl2") = dr.Item("url2")
                 Me.Session("Credits") = " <b>© " & DateTime.Now.Year.ToString() & " " & dr.Item("RagioneSociale") & "</b> - " & dr.Item("Indirizzo") & " - " & dr.Item("Cap") & " " & dr.Item("Citta") & " (" & dr.Item("provincia") & ") - P.I. " & dr.Item("Piva") & " - Tel. " & dr.Item("Telefono") & " - Fax " & dr.Item("Fax")
                 Me.Session("Credits2") = "<br>" & dr.Item("RagioneSociale") & "<br>" & dr.Item("Indirizzo") & "-" & dr.Item("Cap") & "<br>" & dr.Item("Citta") & " (" & dr.Item("provincia") & ")<br>P.Iva " & dr.Item("Piva") & "<br>Tel " & dr.Item("Telefono") & "<br>Fax " & dr.Item("Fax")
                 Me.Session("Listino") = dr.Item("ListinoDefault")
@@ -2135,7 +2175,7 @@ End Class
     '==========================================================
     ' MENU NAV (Settori → Categorie → Tipologie) - gerarchia legacy
     '   - Mostra SOLO elementi Abilitato=1
-    '   - Link coerenti come webaffare: articoli.aspx?ct=...&st=...&tp=...
+    '   - Link coerenti con il catalogo: articoli.aspx?ct=...&st=...&tp=...
     '==========================================================
     Private Function LoadNavSettori() As List(Of NavSettoreItem)
 

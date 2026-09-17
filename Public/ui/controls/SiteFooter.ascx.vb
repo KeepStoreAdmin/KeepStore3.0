@@ -9,11 +9,22 @@ Imports MySql.Data.MySqlClient
 Partial Class SiteFooter
     Inherits System.Web.UI.UserControl
 
-    Private Const FooterCompanyId As Integer = 1
     Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.svg"
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         BindFooterLogo()
+        BindTenantSocialLinks()
+    End Sub
+
+    Private Sub BindTenantSocialLinks()
+        If liFooterFacebook Is Nothing OrElse lnkFooterFacebook Is Nothing Then Return
+        liFooterFacebook.Visible = False
+        Dim raw As String = If(Session Is Nothing, String.Empty, Convert.ToString(Session("facebookLink")).Trim())
+        Dim target As Uri = Nothing
+        If Not Uri.TryCreate(raw, UriKind.Absolute, target) OrElse target Is Nothing Then Return
+        If Not String.Equals(target.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) Then Return
+        lnkFooterFacebook.HRef = target.AbsoluteUri
+        liFooterFacebook.Visible = True
     End Sub
 
     Private Sub BindFooterLogo()
@@ -75,21 +86,9 @@ Partial Class SiteFooter
             End If
         End If
 
-        Try
-            Dim host As String = If(Request Is Nothing OrElse Request.Url Is Nothing, String.Empty, Request.Url.Host)
-            If Not String.IsNullOrWhiteSpace(host) Then
-                Using cmd As New MySqlCommand("SELECT aziende.Id FROM aziende LEFT JOIN pagine ON aziende.Id=Aziendeid WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) LIMIT 1", conn)
-                    cmd.Parameters.AddWithValue("@dominio", "%" & host.Trim() & "%")
-                    Dim raw As Object = cmd.ExecuteScalar()
-                    If raw IsNot Nothing AndAlso raw IsNot DBNull.Value AndAlso Integer.TryParse(Convert.ToString(raw), companyId) AndAlso companyId > 0 Then
-                        Return companyId
-                    End If
-                End Using
-            End If
-        Catch
-        End Try
-
-        Return FooterCompanyId
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant IsNot Nothing Then Return tenant.CompanyId
+        Return 0
     End Function
 
     Private Function BuildLogoAssetUrlFromFileName(ByVal rawFileName As String) As String

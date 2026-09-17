@@ -11,20 +11,32 @@ Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
     Try
         If Context Is Nothing OrElse Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
 
+        ' Gli endpoint SEO pubblici sono dinamici e tenant-aware. I nomi standard
+        ' restano /robots.txt e /sitemap.xml, senza mantenere file statici paralleli.
+        Dim requestPath As String = Convert.ToString(Request.Url.AbsolutePath)
+        If requestPath.EndsWith("/robots.txt", StringComparison.OrdinalIgnoreCase) Then
+            Context.RewritePath("~/robots.aspx", String.Empty, Request.Url.Query.TrimStart("?"c), False)
+        ElseIf requestPath.EndsWith("/sitemap.xml", StringComparison.OrdinalIgnoreCase) Then
+            Context.RewritePath("~/sitemap.aspx", String.Empty, Request.Url.Query.TrimStart("?"c), False)
+        End If
+
         ' Evita redirect in locale
         If Request.IsLocal Then Exit Sub
 
-        ' Determina se la richiesta è già HTTPS (o dietro proxy con header)
-        Dim isHttps As Boolean = Request.IsSecureConnection
-        Dim xfProto As String = Request.Headers("X-Forwarded-Proto")
-        If (Not String.IsNullOrEmpty(xfProto)) AndAlso xfProto.Equals("https", StringComparison.OrdinalIgnoreCase) Then
-            isHttps = True
+        ' La canonical authority arriva esclusivamente dalla configurazione
+        ' azienda (url1/url2), mai da Host o X-Forwarded-Host non validati.
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(Context)
+        If tenant Is Nothing Then
+            Response.Clear()
+            Response.StatusCode = 421
+            Response.StatusDescription = "Misdirected Request"
+            Response.TrySkipIisCustomErrors = True
+            Response.SuppressContent = True
+            Context.ApplicationInstance.CompleteRequest()
+            Exit Sub
         End If
 
-        ' La sessione ASP.NET è host-only: i due host pubblici non devono
-        ' generare due identità applicative differenti. Non allarghiamo il
-        ' Domain del cookie; normalizziamo invece l'alias prima del runtime.
-        Dim canonicalTarget As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(Request.Url, Request.IsLocal)
+        Dim canonicalTarget As String = StorefrontCanonicalHostPolicy.BuildCanonicalRedirect(Request.Url, Request.IsLocal, tenant)
         If Not String.IsNullOrEmpty(canonicalTarget) Then
             Response.Clear()
             If String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) OrElse
@@ -37,29 +49,6 @@ Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
             End If
             Response.RedirectLocation = canonicalTarget
             Response.Headers("Location") = canonicalTarget
-            Response.SuppressContent = True
-            Response.TrySkipIisCustomErrors = True
-            Context.ApplicationInstance.CompleteRequest()
-            Exit Sub
-        End If
-
-        If Not isHttps Then
-            Dim u As Uri = Request.Url
-            Dim b As New UriBuilder(u)
-            b.Scheme = Uri.UriSchemeHttps
-            b.Port = -1 ' porta di default (443)
-
-            Dim target As String = b.Uri.ToString()
-            Response.Clear()
-            If String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
-                Response.StatusCode = 303
-                Response.StatusDescription = "See Other"
-            Else
-                Response.StatusCode = 301
-                Response.StatusDescription = "Moved Permanently"
-            End If
-            Response.RedirectLocation = target
-            Response.Headers("Location") = target
             Response.SuppressContent = True
             Response.TrySkipIisCustomErrors = True
             Context.ApplicationInstance.CompleteRequest()
@@ -131,6 +120,12 @@ Sub Application_PreSendRequestHeaders(ByVal sender As Object, ByVal e As EventAr
             If Response.Headers("Strict-Transport-Security") Is Nothing Then
                 Response.Headers("Strict-Transport-Security") = "max-age=31536000; includeSubDomains"
             End If
+        End If
+
+        If Request IsNot Nothing Then
+            Dim shouldNoIndex As Boolean = (Response.StatusCode >= 400) OrElse
+                StorefrontCanonicalHostPolicy.IsNoIndexPath(Request.Url.AbsolutePath)
+            If shouldNoIndex Then Response.Headers("X-Robots-Tag") = "noindex, nofollow"
         End If
 
     Catch

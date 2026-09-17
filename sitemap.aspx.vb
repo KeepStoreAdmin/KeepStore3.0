@@ -35,6 +35,7 @@ Public Class sitemap
 
     Private _auditEnabled As Boolean
     Private _auditToken As String
+    Private _tenant As StorefrontSeoTenantIdentity
 
     ' --- robots rules ---
     Private _robotsDisallowRaw As List(Of String)
@@ -73,7 +74,7 @@ Public Class sitemap
 
         ' URLs
         _homePath = GetAppSetting("KeepStore.Sitemap.Home", "default.aspx")
-        _listingPath = GetAppSetting("KeepStore.Sitemap.Listing", "shop/default.aspx")
+        _listingPath = GetAppSetting("KeepStore.Sitemap.Listing", "articoli.aspx")
         _includeProductDetails = GetAppSettingBool("KeepStore.Sitemap.IncludeProductDetails", True)
         _includeCatalogFacets = GetAppSettingBool("KeepStore.Sitemap.IncludeCatalogFacets", True)
 
@@ -81,14 +82,41 @@ Public Class sitemap
         _auditEnabled = GetAppSettingBool("KeepStore.Sitemap.Audit.Enabled", False)
         _auditToken = GetAppSetting("KeepStore.Sitemap.Audit.Token", "")
 
-        ' Robots disallow
-        Dim rr As RobotsDisallowRules = LoadRobotsDisallowRulesFromRobotsTxt()
-        _robotsDisallowRaw = rr.Raw
-        _robotsDisallowRegex = rr.RegexList
+        _robotsDisallowRaw = New List(Of String)()
+        _robotsDisallowRegex = New List(Of Regex)()
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
-        Dim host As String = DetermineHostBaseUrl()
+        _tenant = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If _tenant Is Nothing Then
+            Response.Clear()
+            Response.StatusCode = 404
+            Response.TrySkipIisCustomErrors = True
+            Response.SuppressContent = True
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
+
+        Dim host As String = _tenant.CanonicalBaseUrl.TrimEnd("/"c) & "/"
+
+        Dim rawPath As String = Convert.ToString(Request.RawUrl)
+        Dim rawQueryIndex As Integer = rawPath.IndexOf("?"c)
+        If rawQueryIndex >= 0 Then rawPath = rawPath.Substring(0, rawQueryIndex)
+        If rawPath.EndsWith("/sitemap.aspx", StringComparison.OrdinalIgnoreCase) Then
+            Dim target As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(_tenant, "/sitemap.xml")
+            Dim partValue As Integer = 0
+            If Integer.TryParse(Convert.ToString(Request.QueryString("part")), partValue) AndAlso partValue > 0 Then
+                target &= "?part=" & partValue.ToString()
+            End If
+            Response.Clear()
+            Response.StatusCode = 301
+            Response.RedirectLocation = target
+            Response.Headers("Location") = target
+            Response.SuppressContent = True
+            Response.TrySkipIisCustomErrors = True
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
 
         ' --- Audit ---
         Dim auditFlag As String = Convert.ToString(Request.QueryString("audit"))
@@ -136,7 +164,7 @@ Public Class sitemap
 
             If allowed.Count = 0 Then
                 ' fallback minimo
-                allowed.Add(New UrlEntry(CombineHostAndPath(host, NormalizePath(_homePath)), GetFallbackLastModUtc()))
+                allowed.Add(New UrlEntry(StorefrontCanonicalHostPolicy.BuildCanonicalUrl(_tenant, "/"), Nothing))
             End If
 
             Dim parts As Integer = CInt(Math.Ceiling(allowed.Count / CDbl(MAX_URLS_PER_SITEMAP)))
@@ -163,7 +191,7 @@ Public Class sitemap
         Catch
             ' In caso di eccezioni, restituisco sitemap minimale per non rompere l'intero sito.
             Dim mini As New List(Of UrlEntry)()
-            mini.Add(New UrlEntry(CombineHostAndPath(host, NormalizePath(_homePath)), GetFallbackLastModUtc()))
+            mini.Add(New UrlEntry(StorefrontCanonicalHostPolicy.BuildCanonicalUrl(_tenant, "/"), Nothing))
             xml = RenderUrlSet(mini)
         End Try
 
@@ -174,7 +202,11 @@ Public Class sitemap
         Response.Clear()
         Response.ContentType = "application/xml"
         Response.ContentEncoding = Encoding.UTF8
-        Response.Write(xml)
+        If String.Equals(Request.HttpMethod, "HEAD", StringComparison.OrdinalIgnoreCase) Then
+            Response.SuppressContent = True
+        Else
+            Response.Write(xml)
+        End If
         Context.ApplicationInstance.CompleteRequest()
     End Sub
 
@@ -185,9 +217,6 @@ Public Class sitemap
 
         AddStaticUrls(res, host)
         AddDynamicUrls(res, host)
-
-        ' Normalizzazione + lastmod fallback
-        Dim fallbackUtc As DateTime = GetFallbackLastModUtc().Value
 
         Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim normalized As New List(Of UrlEntry)()
@@ -202,9 +231,7 @@ Public Class sitemap
             If Not seen.Contains(absUrl) Then
                 seen.Add(absUrl)
 
-                If Not it.LastModUtc.HasValue Then
-                    it.LastModUtc = fallbackUtc
-                Else
+                If it.LastModUtc.HasValue Then
                     it.LastModUtc = ToUtcNullable(it.LastModUtc.Value)
                 End If
 
@@ -217,23 +244,84 @@ Public Class sitemap
     End Function
 
     Private Sub AddStaticUrls(ByVal urls As List(Of UrlEntry), ByVal host As String)
-        Dim fallbackUtc As Nullable(Of DateTime) = GetFallbackLastModUtc()
-
-        Dim homeAbs As String = CombineHostAndPath(host, NormalizePath(_homePath))
-        urls.Add(New UrlEntry(homeAbs, fallbackUtc))
-
-        Dim listAbs As String = CombineHostAndPath(host, NormalizePath(_listingPath))
-        urls.Add(New UrlEntry(listAbs, fallbackUtc))
+        urls.Add(New UrlEntry(StorefrontCanonicalHostPolicy.BuildCanonicalUrl(_tenant, "/"), Nothing))
+        urls.Add(New UrlEntry(StorefrontCanonicalHostPolicy.BuildCanonicalUrl(_tenant, "/articoli.aspx"), Nothing))
     End Sub
 
     Private Sub AddDynamicUrls(ByVal urls As List(Of UrlEntry), ByVal host As String)
         If _includeProductDetails Then
-            AddEntriesFromView(urls, host, "v_sitemap_prodotti")
+            AddProductUrls(urls)
         End If
 
         If _includeCatalogFacets Then
-            AddEntriesFromView(urls, host, "v_sitemap_categorie")
+            AddCatalogUrls(urls)
         End If
+    End Sub
+
+    Private Sub AddProductUrls(ByVal urls As List(Of UrlEntry))
+        Dim cs As String = GetConnectionString()
+        If String.IsNullOrEmpty(cs) Then Return
+
+        Dim sql As String = "SELECT DISTINCT a.id FROM articoli a INNER JOIN articoli_listini al ON al.ArticoliId=a.id WHERE a.Abilitato>0"
+        If _tenant IsNot Nothing AndAlso _tenant.DefaultPriceListId > 0 Then sql &= " AND al.NListino=@listino"
+        sql &= " ORDER BY a.id"
+
+        Try
+            Using conn As New MySqlConnection(cs)
+                conn.Open()
+                Using cmd As New MySqlCommand(sql, conn)
+                    If _tenant IsNot Nothing AndAlso _tenant.DefaultPriceListId > 0 Then cmd.Parameters.AddWithValue("@listino", _tenant.DefaultPriceListId)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim productId As Integer = 0
+                            Integer.TryParse(Convert.ToString(reader("id")), productId)
+                            If productId > 0 Then urls.Add(New UrlEntry("/articolo.aspx?id=" & productId.ToString(), Nothing))
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch
+            ' La sitemap resta valida con le sole URL statiche se il catalogo non e disponibile.
+        End Try
+    End Sub
+
+    Private Sub AddCatalogUrls(ByVal urls As List(Of UrlEntry))
+        Dim cs As String = GetConnectionString()
+        If String.IsNullOrEmpty(cs) Then Return
+
+        Dim sql As String = "SELECT DISTINCT a.SettoriId, a.CategorieId, a.TipologieId " &
+                            "FROM articoli a INNER JOIN articoli_listini al ON al.ArticoliId=a.id " &
+                            "INNER JOIN settori s ON s.id=a.SettoriId AND s.Abilitato>0 " &
+                            "INNER JOIN categorie c ON c.id=a.CategorieId AND c.Abilitato>0 " &
+                            "LEFT JOIN tipologie t ON t.id=a.TipologieId " &
+                            "WHERE a.Abilitato>0"
+        If _tenant IsNot Nothing AndAlso _tenant.DefaultPriceListId > 0 Then sql &= " AND al.NListino=@listino"
+        sql &= " ORDER BY a.SettoriId, a.CategorieId, a.TipologieId"
+
+        Try
+            Using conn As New MySqlConnection(cs)
+                conn.Open()
+                Using cmd As New MySqlCommand(sql, conn)
+                    If _tenant IsNot Nothing AndAlso _tenant.DefaultPriceListId > 0 Then cmd.Parameters.AddWithValue("@listino", _tenant.DefaultPriceListId)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim sectorId As Integer = 0
+                            Dim categoryId As Integer = 0
+                            Dim typeId As Integer = 0
+                            Integer.TryParse(Convert.ToString(reader("SettoriId")), sectorId)
+                            Integer.TryParse(Convert.ToString(reader("CategorieId")), categoryId)
+                            Integer.TryParse(Convert.ToString(reader("TipologieId")), typeId)
+                            If sectorId <= 0 OrElse categoryId <= 0 Then Continue While
+                            Dim path As String = "/articoli.aspx?st=" & sectorId.ToString() & "&ct=" & categoryId.ToString()
+                            If typeId > 0 Then path &= "&tp=" & typeId.ToString()
+                            urls.Add(New UrlEntry(path, Nothing))
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch
+            ' La sitemap resta valida con le sole URL statiche se le tassonomie non sono disponibili.
+        End Try
     End Sub
 
     Private Sub AddEntriesFromView(ByVal urls As List(Of UrlEntry), ByVal host As String, ByVal viewName As String)
@@ -290,18 +378,9 @@ Public Class sitemap
     End Function
 
     Private Function GetConnectionString() As String
-        Dim cs As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("taikunConnectionString")
+        Dim cs As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If cs IsNot Nothing AndAlso Not String.IsNullOrEmpty(cs.ConnectionString) Then
             Return cs.ConnectionString
-        End If
-
-        ' fallback: prima connection string non vuota
-        If ConfigurationManager.ConnectionStrings IsNot Nothing Then
-            For Each s As ConnectionStringSettings In ConfigurationManager.ConnectionStrings
-                If s IsNot Nothing AndAlso Not String.IsNullOrEmpty(s.ConnectionString) Then
-                    Return s.ConnectionString
-                End If
-            Next
         End If
 
         Return ""
@@ -600,7 +679,7 @@ Public Class sitemap
         End If
 
         For i As Integer = 1 To parts
-            Dim loc As String = host.TrimEnd("/"c) & "/sitemap.aspx?part=" & i.ToString()
+            Dim loc As String = host.TrimEnd("/"c) & "/sitemap.xml?part=" & i.ToString()
             sb.AppendLine("  <sitemap>")
             sb.AppendLine("    <loc>" & XmlEscape(loc) & "</loc>")
             If lm.Length > 0 Then
@@ -710,16 +789,8 @@ Public Class sitemap
     ' -------------------- Helpers --------------------
 
     Private Function DetermineHostBaseUrl() As String
-        ' Se vuoi forzare un host fisso, puoi aggiungere in web.config: KeepStore.Sitemap.BaseUrl
-        Dim forced As String = GetAppSetting("KeepStore.Sitemap.BaseUrl", "")
-        If Not String.IsNullOrEmpty(forced) Then
-            If Not forced.EndsWith("/", StringComparison.Ordinal) Then forced &= "/"
-            Return forced
-        End If
-
-        Dim u As Uri = Request.Url
-        Dim baseUrl As String = u.Scheme & "://" & u.Authority & "/"
-        Return baseUrl
+        If _tenant Is Nothing Then Return String.Empty
+        Return _tenant.CanonicalBaseUrl.TrimEnd("/"c) & "/"
     End Function
 
     Private Function NormalizeToAbsoluteUrl(ByVal host As String, ByVal inputUrlOrPath As String) As String
@@ -729,13 +800,30 @@ Public Class sitemap
 
         Dim uriAbs As Uri = Nothing
         If Uri.TryCreate(s, UriKind.Absolute, uriAbs) AndAlso uriAbs IsNot Nothing Then
-            Return uriAbs.ToString()
+            If _tenant Is Nothing OrElse
+               Not StorefrontCanonicalHostPolicy.IsRequestHostAllowed(_tenant, uriAbs.DnsSafeHost, False) Then
+                Return String.Empty
+            End If
+            s = uriAbs.PathAndQuery
         End If
 
-        ' relativo
         Dim p As String = s
         If Not p.StartsWith("/", StringComparison.Ordinal) Then p = "/" & p
-        Return CombineHostAndPath(host, p)
+        Dim queryIndex As Integer = p.IndexOf("?"c)
+        Dim pathOnly As String = If(queryIndex >= 0, p.Substring(0, queryIndex), p)
+        If pathOnly.Equals("/default.aspx", StringComparison.OrdinalIgnoreCase) Then p = "/"
+        If Not IsPublicSitemapPath(pathOnly) Then Return String.Empty
+        Return StorefrontCanonicalHostPolicy.BuildCanonicalUrl(_tenant, p)
+    End Function
+
+    Private Function IsPublicSitemapPath(ByVal path As String) As Boolean
+        If String.Equals(path, "/", StringComparison.Ordinal) OrElse
+           String.Equals(path, "/default.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(path, "/articoli.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+           String.Equals(path, "/articolo.aspx", StringComparison.OrdinalIgnoreCase) Then
+            Return True
+        End If
+        Return False
     End Function
 
     Private Function CombineHostAndPath(ByVal host As String, ByVal path As String) As String

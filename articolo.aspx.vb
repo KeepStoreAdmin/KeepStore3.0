@@ -219,7 +219,7 @@ Partial Class articolo
         _tcidPresent = (Request.QueryString("TCid") IsNot Nothing)
         If _tcidPresent Then
             Dim tmp As Integer
-            ' Nel DB Taikun/KeepStore il "non variante" è storicamente TCid = -1.
+            ' Nel modello KeepStore il "non variante" è storicamente TCid = -1.
             ' Il listing (articoli.aspx) costruisce link includendo sempre TCid; se qui
             ' rifiutiamo -1, generiamo redirect e (con listino errato) si arriva al "non trovato".
             If Integer.TryParse(Convert.ToString(Request.QueryString("TCid")), tmp) AndAlso tmp >= -1 Then
@@ -2104,8 +2104,9 @@ Partial Class articolo
     End Function
 
     Private Function GetSiteBaseUrl() As String
-        Dim uri As Uri = Request.Url
-        Return uri.Scheme & "://" & uri.Authority
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant Is Nothing Then Return String.Empty
+        Return tenant.CanonicalBaseUrl.TrimEnd("/"c)
     End Function
 
         Private Function BuildProductJsonLd(row As DataRow, canonical As String, metaDesc As String) As String
@@ -2144,13 +2145,16 @@ Partial Class articolo
                 orgName = TryCast(Session("AziendaNome"), String)
             Catch
             End Try
-            If String.IsNullOrEmpty(orgName) Then orgName = "Taikun"
+            If String.IsNullOrEmpty(orgName) Then orgName = "KeepStore"
+
+            Dim siteHomeUrl As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
+            Dim catalogUrl As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/articoli.aspx")
 
             Dim organization As New Dictionary(Of String, Object)()
             organization("@type") = "Organization"
             organization("@id") = orgId
             organization("name") = orgName
-            organization("url") = Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/")
+            organization("url") = siteHomeUrl
 
             ' --- WebSite
             Dim webSite As New Dictionary(Of String, Object)()
@@ -2166,13 +2170,13 @@ Partial Class articolo
                 {"@type", "ListItem"},
                 {"position", 1},
                 {"name", "Home"},
-                {"item", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/")}
+                {"item", siteHomeUrl}
             })
             breadcrumbItems.Add(New Dictionary(Of String, Object) From {
                 {"@type", "ListItem"},
                 {"position", 2},
                 {"name", "Catalogo"},
-                {"item", Request.Url.GetLeftPart(UriPartial.Authority) & ResolveUrl("~/articoli.aspx")}
+                {"item", catalogUrl}
             })
             breadcrumbItems.Add(New Dictionary(Of String, Object) From {
                 {"@type", "ListItem"},
@@ -3405,9 +3409,10 @@ Partial Class articolo
         phNotFound.Visible = True
         litBreadcrumbCurrent.Text = "Articolo"
 
-        ' SEO: 404 soft (noindex) + canonical verso listing
-        SeoBuilder.AddOrReplaceNameMeta(Page, "robots", "noindex,follow")
-        SeoBuilder.SetCanonical(Page, MakeAbsoluteUrl(ResolveUrl("~/articoli.aspx")))
+        Response.StatusCode = 404
+        Response.TrySkipIisCustomErrors = True
+        Response.Headers("X-Robots-Tag") = "noindex, nofollow"
+        SeoBuilder.AddOrReplaceNameMeta(Page, "robots", "noindex,nofollow")
     End Sub
 
     '----- Helpers: safe read + session -----
@@ -3553,17 +3558,13 @@ Partial Class articolo
 
     Private Sub EnsureArticleCompanyContext()
         Try
-            If Request Is Nothing OrElse Request.Url Is Nothing Then Return
-
-            Dim host As String = Convert.ToString(Request.Url.Host)
-            If String.IsNullOrWhiteSpace(host) Then Return
-            host = host.Trim()
-            If host.Length > 255 Then host = host.Substring(0, 255)
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then Return
 
             Using cn As New MySqlConnection(GetConnectionString())
                 cn.Open()
-                Using cmd As New MySqlCommand("SELECT Id, ListinoDefault, ListinoUser, IvaTipo, DispoTipo, url1, url2 FROM aziende WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) LIMIT 1", cn)
-                    cmd.Parameters.AddWithValue("@dominio", "%" & host & "%")
+                Using cmd As New MySqlCommand("SELECT Id, ListinoDefault, ListinoUser, IvaTipo, DispoTipo, url1, url2 FROM aziende WHERE Id=@companyId LIMIT 1", cn)
+                    cmd.Parameters.AddWithValue("@companyId", tenant.CompanyId)
                     Using rdr As MySqlDataReader = cmd.ExecuteReader()
                         If Not rdr.Read() Then Return
 
@@ -3589,6 +3590,9 @@ Partial Class articolo
 
                         Dim listinoUser As Integer = SafeReaderInt(rdr, "ListinoUser", 0)
                         If listinoUser > 0 Then Session("ListinoUser") = listinoUser
+
+                        Session("AziendaUrl") = Convert.ToString(rdr("url1"))
+                        Session("AziendaUrl2") = Convert.ToString(rdr("url2"))
                     End Using
                 End Using
             End Using

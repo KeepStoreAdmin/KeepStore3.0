@@ -15,10 +15,9 @@ Imports MySql.Data.MySqlClient
 Partial Class SiteHeader
     Inherits System.Web.UI.UserControl
 
-    Private Const HeaderCompanyId As Integer = 1
     Private Const DefaultLogoVirtual As String = "~/Public/assets/images/logo/logo.svg"
     Private Const DefaultMobileLogoVirtual As String = "~/Public/assets/images/logo/logo.svg"
-    Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/webaffare.ico"
+    Private Const DefaultFaviconVirtual As String = "~/Public/assets/images/favicons/entropic.ico"
     Private Const DefaultAppleTouchIconVirtual As String = "~/Public/assets/images/favicons/apple-touch-icon.png"
     Private Const DefaultFavicon32Virtual As String = "~/Public/assets/images/favicons/favicon-32x32.png"
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
@@ -202,7 +201,7 @@ Partial Class SiteHeader
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
                 Using cmd As New MySqlCommand("SELECT telefono, email FROM aziende WHERE id=@companyId LIMIT 1", conn)
-                    cmd.Parameters.AddWithValue("@companyId", HeaderCompanyId)
+                    cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
                     Using reader As MySqlDataReader = cmd.ExecuteReader()
                         If reader.Read() Then
                             Dim dbPhone As String = SafeString(reader, "telefono")
@@ -238,7 +237,7 @@ Partial Class SiteHeader
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
                 Using cmd As New MySqlCommand("SELECT MIN(COALESCE(CostoMinimo,0)) AS CostoMinimo FROM vettori WHERE COALESCE(Promo,0)=1 AND COALESCE(AziendeID,0)=@companyId", conn)
-                    cmd.Parameters.AddWithValue("@companyId", HeaderCompanyId)
+                    cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
                     Dim raw As Object = cmd.ExecuteScalar()
                     If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
                         Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, minAmount)
@@ -418,21 +417,9 @@ Partial Class SiteHeader
             End If
         End If
 
-        Try
-            Dim host As String = If(Request Is Nothing OrElse Request.Url Is Nothing, String.Empty, Request.Url.Host)
-            If Not String.IsNullOrWhiteSpace(host) Then
-                Using cmd As New MySqlCommand("SELECT aziende.Id FROM aziende LEFT JOIN pagine ON aziende.Id=Aziendeid WHERE (url1 LIKE @dominio OR url2 LIKE @dominio) LIMIT 1", conn)
-                    cmd.Parameters.AddWithValue("@dominio", "%" & host.Trim() & "%")
-                    Dim raw As Object = cmd.ExecuteScalar()
-                    If raw IsNot Nothing AndAlso raw IsNot DBNull.Value AndAlso Integer.TryParse(Convert.ToString(raw), companyId) AndAlso companyId > 0 Then
-                        Return companyId
-                    End If
-                End Using
-            End If
-        Catch
-        End Try
-
-        Return HeaderCompanyId
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant IsNot Nothing Then Return tenant.CompanyId
+        Return 0
     End Function
 
     Private Function BuildLogoAssetUrlFromFileName(ByVal rawFileName As String) As String

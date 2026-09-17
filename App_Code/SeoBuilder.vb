@@ -210,30 +210,21 @@ Public NotInheritable Class SeoBuilder
         Dim page As Page = ResolvePage(ctx)
         Dim js As New JavaScriptSerializer()
 
-        ' Dati base (senza presupporre campi DB: solo Session/Request se presenti)
+        ' Dati base risolti dalla configurazione tenant autorevole.
         Dim orgName As String = ""
         Dim orgDescr As String = ""
         Dim siteUrl As String = ""
 
         If page IsNot Nothing Then
-            Try
-                orgName = TryCast(page.Session("AziendaNome"), String)
-                orgDescr = TryCast(page.Session("AziendaDescrizione"), String)
-                siteUrl = TryCast(page.Session("AziendaUrl"), String)
-            Catch
-                ' ignore
-            End Try
-
-            If String.IsNullOrEmpty(siteUrl) Then
-                Try
-                    siteUrl = page.Request.Url.GetLeftPart(UriPartial.Authority) & page.ResolveUrl("~/")
-                Catch
-                    ' ignore
-                End Try
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant IsNot Nothing Then
+                orgName = tenant.CompanyName
+                orgDescr = tenant.CompanyDescription
+                siteUrl = tenant.CanonicalBaseUrl.TrimEnd("/"c) & "/"
             End If
         End If
 
-        orgName = Coalesce(orgName, "Taikun")
+        orgName = Coalesce(orgName, "KeepStore")
         orgDescr = Coalesce(orgDescr, descr)
         siteUrl = Coalesce(siteUrl, canonicalUrl)
 
@@ -267,7 +258,7 @@ Public NotInheritable Class SeoBuilder
         Dim searchTarget As String = ""
         If page IsNot Nothing Then
             Try
-                searchTarget = page.Request.Url.GetLeftPart(UriPartial.Authority) & page.ResolveUrl("~/ricerca.aspx") & "?q={search_term_string}"
+                searchTarget = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/articoli.aspx?q={search_term_string}")
             Catch
                 searchTarget = ""
             End Try

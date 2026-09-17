@@ -3722,17 +3722,9 @@ End Sub
 
     End If
 
-    ' --- SEO hardening: carrello/checkout noindex + canonical + JSON-LD ---
-Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
-
+    ' Il carrello e il checkout sono superfici private/transazionali:
+    ' noindex/nofollow, nessuna canonical e nessun markup strutturato pubblico.
 AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
-SetCanonical(Me.Page, canonical)
-
-Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(Me.Title,
-                                                        "Checkout e riepilogo carrello su Taikun.",
-                                                        canonical,
-                                                        "CheckoutPage")
-SeoBuilder.SetJsonLdOnMaster(Me, jsonLd)
 
 
             ' IVA per scorporare il buono: se l'utente ha IVA propria uso quella (percentuale), altrimenti default

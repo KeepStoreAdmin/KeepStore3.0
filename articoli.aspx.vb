@@ -2722,7 +2722,7 @@ strWhere = strWhere & " GROUP BY id"
         Try
             If litSeoHead Is Nothing Then Exit Sub
 
-            Dim basePath As String = Request.Url.GetLeftPart(UriPartial.Path)
+            Dim basePath As String = "/articoli.aspx"
 
             Dim stId As Integer = GetQsIntSafe("st")
             Dim ctId As Integer = GetQsIntSafe("ct")
@@ -2733,24 +2733,31 @@ strWhere = strWhere & " GROUP BY id"
 
             Dim allowIndex As Boolean = IsSeoIndexAllowed(stId, ctId, tpIds, grIds, sgIds, mrIds)
 
-            Dim canonical As String = BuildSeoCanonicalUrl(basePath, allowIndex, stId, ctId, tpIds, grIds, sgIds, mrIds)
+            Dim canonicalRelative As String = BuildSeoCanonicalUrl(basePath, allowIndex, stId, ctId, tpIds, grIds, sgIds, mrIds)
             If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then
-                canonical = basePath & "?inpromo=1"
+                canonicalRelative = basePath & "?inpromo=1"
                 Dim campaignId As Integer = 0
                 If TryReadPromotionCampaignId(campaignId) AndAlso campaignId > 0 Then
-                    canonical &= "&pid=" & campaignId.ToString(CultureInfo.InvariantCulture)
+                    canonicalRelative &= "&pid=" & campaignId.ToString(CultureInfo.InvariantCulture)
                 End If
             End If
+            Dim canonical As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, canonicalRelative)
+            If String.IsNullOrEmpty(canonical) Then
+                allowIndex = False
+                canonical = String.Empty
+            End If
             Dim robots As String = If(allowIndex, "index,follow", "noindex,follow")
+            Context.Items("KeepStore.CatalogCanonical") = canonical
 
             Dim sb As New StringBuilder()
-            sb.Append("<link rel=""canonical"" href=""")
-            sb.Append(HttpUtility.HtmlAttributeEncode(canonical))
-            sb.Append(""" />").Append(vbCrLf)
+            If Not String.IsNullOrEmpty(canonical) Then
+                sb.Append("<link rel=""canonical"" href=""")
+                sb.Append(HttpUtility.HtmlAttributeEncode(canonical))
+                sb.Append(""" />").Append(vbCrLf)
+            End If
             sb.Append("<meta name=""robots"" content=""")
             sb.Append(robots)
             sb.Append(""" />").Append(vbCrLf)
-
             litSeoHead.Text = sb.ToString()
 
             If Not allowIndex Then
@@ -2771,7 +2778,9 @@ strWhere = strWhere & " GROUP BY id"
                                       ByVal grIds As List(Of Integer),
                                       ByVal sgIds As List(Of Integer),
                                       ByVal mrIds As List(Of Integer)) As Boolean
-        ' st/ct obbligatori
+        If Request.QueryString Is Nothing OrElse Request.QueryString.Count = 0 Then Return True
+
+        ' Le tassonomie indicizzabili richiedono settore e categoria.
         If stId <= 0 OrElse ctId <= 0 Then Return False
 
         ' Se ci sono parametri extra (diversi da st/ct/tp/gr/sg/mr) => NOINDEX
@@ -3468,55 +3477,24 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Private Sub EnsureCatalogSeo()
-        Dim canonical As String = Request.Url.GetLeftPart(UriPartial.Path)
-
-        ' Canonical: per navigazione categoria (st/ct/tp) manteniamo i parametri base,
-        ' mentre per ricerca (q) o dettaglio (pid) restiamo su path pulito.
-        Dim _pid As Integer = 0
-        Integer.TryParse(Request.QueryString("pid"), _pid)
-        Dim _q As String = QS("q", 80)
-
-        If _pid <= 0 AndAlso String.IsNullOrEmpty(_q) Then
-            Dim _st As Integer = 0
-            Dim _ct As Integer = 0
-            Integer.TryParse(Request.QueryString("st"), _st)
-            Integer.TryParse(Request.QueryString("ct"), _ct)
-            Dim _tpRaw As String = Convert.ToString(Request.QueryString("tp"))
-
-            Dim parts As New List(Of String)()
-            If _st > 0 Then parts.Add("st=" & _st.ToString())
-            If _ct > 0 Then parts.Add("ct=" & _ct.ToString())
-
-            If Not String.IsNullOrEmpty(_tpRaw) Then
-                Dim _tp As String = _tpRaw.Replace("|", ",")
-                Dim firstTp As String = ""
-                For Each token As String In _tp.Split(","c)
-                    Dim id As Integer = 0
-                    If Integer.TryParse(token.Trim(), id) AndAlso id > 0 Then
-                        firstTp = id.ToString()
-                        Exit For
-                    End If
-                Next
-                If Not String.IsNullOrEmpty(firstTp) Then
-                    parts.Add("tp=" & firstTp)
-                End If
-            End If
-
-            If parts.Count > 0 Then
-                canonical &= "?" & String.Join("&", parts.ToArray())
-            End If
-        End If
-
         If String.IsNullOrEmpty(Page.Title) Then
             Page.Title = "Catalogo prodotti"
         End If
 
-        AddOrReplaceMeta(Me.Page, "robots", "index, follow")
-        AddOrReplaceMeta(Me.Page, "description", "Catalogo prodotti - " & Page.Title)
-        SetCanonical(Me.Page, canonical)
+        Dim brandName As String = StorefrontSeoTenantContext.BrandName(HttpContext.Current)
+        Dim catalogPageTitle As String = "Catalogo prodotti " & brandName
+        AddOrReplaceMeta(Me.Page, "description", catalogPageTitle & " — cerca articoli, marche e categorie disponibili online.")
 
-        Dim jsonLd As String = BuildSimplePageJsonLd(Page.Title, "Catalogo prodotti", canonical)
-        SetJsonLdOnMaster(Me.Page, jsonLd)
+        Dim canonical As String = Convert.ToString(Context.Items("KeepStore.CatalogCanonical"))
+        If String.IsNullOrEmpty(canonical) Then
+            canonical = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/articoli.aspx")
+        End If
+
+        Dim jsonLd As String = BuildSimplePageJsonLd(catalogPageTitle, "Catalogo prodotti", canonical)
+        If litSeoHead IsNot Nothing AndAlso
+           litSeoHead.Text.IndexOf("application/ld+json", StringComparison.OrdinalIgnoreCase) < 0 Then
+            litSeoHead.Text &= "<script type=""application/ld+json"">" & jsonLd & "</script>"
+        End If
     End Sub
 
     ' ============================================================
@@ -3526,23 +3504,32 @@ strWhere = strWhere & " GROUP BY id"
     Private Shared Sub AddOrReplaceMeta(ByVal page As System.Web.UI.Page, ByVal metaName As String, ByVal metaContent As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
-        Dim found As System.Web.UI.HtmlControls.HtmlMeta = Nothing
-        For Each ctrl As Control In page.Header.Controls
-            Dim m As System.Web.UI.HtmlControls.HtmlMeta = TryCast(ctrl, System.Web.UI.HtmlControls.HtmlMeta)
-            If m IsNot Nothing AndAlso String.Equals(m.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
-                found = m
-                Exit For
-            End If
-        Next
+        Dim found As System.Web.UI.HtmlControls.HtmlMeta = FindMetaRecursive(page.Header, metaName)
 
         If found Is Nothing Then
             found = New System.Web.UI.HtmlControls.HtmlMeta()
             found.Name = metaName
-            page.Header.Controls.Add(found)
+            Dim container As Control = SeoBuilder.FindControlRecursive(page, "phHeadDynamic")
+            If container Is Nothing Then container = SeoBuilder.FindControlRecursive(page, "phHeadLinks")
+            If container Is Nothing Then container = page.Header
+            container.Controls.Add(found)
         End If
 
         found.Content = metaContent
     End Sub
+
+    Private Shared Function FindMetaRecursive(ByVal root As Control, ByVal metaName As String) As System.Web.UI.HtmlControls.HtmlMeta
+        If root Is Nothing Then Return Nothing
+        Dim candidate As System.Web.UI.HtmlControls.HtmlMeta = TryCast(root, System.Web.UI.HtmlControls.HtmlMeta)
+        If candidate IsNot Nothing AndAlso String.Equals(candidate.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
+            Return candidate
+        End If
+        For Each child As Control In root.Controls
+            Dim found As System.Web.UI.HtmlControls.HtmlMeta = FindMetaRecursive(child, metaName)
+            If found IsNot Nothing Then Return found
+        Next
+        Return Nothing
+    End Function
 
     Private Shared Sub SetCanonical(ByVal page As System.Web.UI.Page, ByVal canonicalUrl As String)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
@@ -3570,7 +3557,7 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
     Private Shared Function BuildSimplePageJsonLd(ByVal pageTitle As String, ByVal descr As String, ByVal canonicalUrl As String) As String
         Dim sb As New StringBuilder()
-        sb.Append("{""@context"":""https://schema.org"",""@type"":""WebPage""")
+        sb.Append("{""@context"":""https://schema.org"",""@type"":""CollectionPage""")
         sb.Append(",""name"":""").Append(JsonEscape(pageTitle)).Append("""")
         sb.Append(",""url"":""").Append(JsonEscape(canonicalUrl)).Append("""")
         If Not String.IsNullOrEmpty(descr) Then
@@ -3613,13 +3600,10 @@ strWhere = strWhere & " GROUP BY id"
     End Function
     Private Shared Sub SetJsonLdOnMaster(ByVal page As System.Web.UI.Page, ByVal jsonLd As String)
         Try
-            Dim m As Object = page.Master
-            If m IsNot Nothing Then
-                Dim prop = m.GetType().GetProperty("SeoJsonLd")
-                If prop IsNot Nothing AndAlso prop.CanWrite Then
-                    prop.SetValue(m, jsonLd, Nothing)
-                    Return
-                End If
+            Dim seoMaster As ISeoMaster = TryCast(page.Master, ISeoMaster)
+            If seoMaster IsNot Nothing Then
+                seoMaster.SeoJsonLd = jsonLd
+                Return
             End If
         Catch
             ' NOP
@@ -4208,30 +4192,11 @@ strWhere = strWhere & " GROUP BY id"
     ' WhatsApp share helpers
     ' =========================
 
-    ' Ritorna la base URL del sito.
-    ' - priorità: Session("AziendaUrl") (accetta con o senza schema)
-    ' - fallback: Request.Url (authority della request corrente)
+    ' Ritorna esclusivamente la base canonica configurata del tenant corrente.
     Private Function GetSiteBaseUrl() As String
-        Dim s As String = ""
-        Try
-            s = Convert.ToString(Session("AziendaUrl"))
-        Catch
-            s = ""
-        End Try
-
-        s = If(s, "").Trim()
-
-        If s <> "" Then
-            If Not (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
-                    s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) Then
-                s = "https://" & s
-            End If
-
-            Return s.TrimEnd("/"c)
-        End If
-
-        Dim req As HttpRequest = HttpContext.Current.Request
-        Return req.Url.GetLeftPart(UriPartial.Authority).TrimEnd("/"c)
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant Is Nothing Then Return String.Empty
+        Return Convert.ToString(tenant.CanonicalBaseUrl).TrimEnd("/"c)
     End Function
 
     ' Usata dal markup (data-binding) per costruire il link di condivisione WhatsApp.

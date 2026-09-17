@@ -18,7 +18,6 @@ Partial Public Class _Default
 
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private Shared ReadOnly Rng As New Random()
-    Private Const RuntimeSiteBaseUrl As String = "https://www.taikun.it"
     Private ReadOnly _homePromotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
 
     Protected ReadOnly Property HomeAsyncCartToken As String
@@ -53,15 +52,15 @@ Partial Public Class _Default
     End Sub
 
     Private Sub ApplyHomeSeo()
-        Const pageTitle As String = "KeepStore - Informatica, telefonia, assistenza e accessori"
-        Const description As String = "Tecnologia, assistenza e accessori per lavoro e casa: computer, telefonia, stampanti, consumabili, periferiche e supporto tecnico KeepStore."
+        Dim brandName As String = StorefrontSeoTenantContext.BrandName(HttpContext.Current)
+        Dim pageTitle As String = brandName & " - Informatica, telefonia, assistenza e accessori"
+        Dim description As String = "Tecnologia, assistenza e accessori per lavoro e casa: computer, telefonia, stampanti, consumabili, periferiche e supporto tecnico " & brandName & "."
         Dim canonical As String = HomeCanonicalUrl()
         Dim heroImage As String = BuildRuntimeAssetUrl("/Public/assets/images/banner/Banner_PC_ricondizionati_1200x560.png")
         Dim logoUrl As String = BuildRuntimeAssetUrl("/Public/assets/images/logo/logo.webp")
 
         Page.Title = pageTitle
         SeoBuilder.AddOrReplaceMeta(Me, "description", description)
-        SeoBuilder.AddOrReplaceMeta(Me, "keywords", "KeepStore,informatica,telefonia,assistenza tecnica,computer,stampanti,consumabili,periferiche,accessori")
         SeoBuilder.AddOrReplaceMeta(Me, "robots", "index,follow")
         SeoBuilder.SetCanonical(Me, canonical)
         SeoBuilder.ApplyOpenGraph(Me, pageTitle, description, canonical, heroImage)
@@ -73,18 +72,7 @@ Partial Public Class _Default
     End Sub
 
     Private Function HomeCanonicalUrl() As String
-        Try
-            Dim root As String = ResolveUrl("~/")
-            If String.IsNullOrWhiteSpace(root) Then
-                root = "/"
-            End If
-            If Not root.StartsWith("/", StringComparison.Ordinal) Then
-                root = "/" & root.TrimStart("/"c)
-            End If
-            Return RuntimeSiteBaseUrl.TrimEnd("/"c) & root.TrimEnd("/"c) & "/"
-        Catch
-            Return RuntimeSiteBaseUrl.TrimEnd("/"c) & "/"
-        End Try
+        Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
     End Function
 
     Private Sub BindHome()
@@ -562,31 +550,15 @@ Partial Public Class _Default
             Return defaultLink
         End If
 
-        Dim hosts As String() = {
-            "https://www.taikun.it",
-            "http://www.taikun.it",
-            "https://taikun.it",
-            "http://taikun.it",
-            "https://www.webaffare.it",
-            "http://www.webaffare.it",
-            "https://webaffare.it",
-            "http://webaffare.it"
-        }
-
-        For Each host As String In hosts
-            If link.StartsWith(host, StringComparison.OrdinalIgnoreCase) Then
-                Try
-                    Dim uri As New Uri(link)
-                    Dim pathAndQuery As String = uri.PathAndQuery
-                    If String.IsNullOrWhiteSpace(pathAndQuery) Then
-                        Return defaultLink
-                    End If
-                    Return pathAndQuery
-                Catch
-                    Return defaultLink
-                End Try
+        Dim absoluteLink As Uri = Nothing
+        If Uri.TryCreate(link, UriKind.Absolute, absoluteLink) AndAlso absoluteLink IsNot Nothing Then
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant Is Nothing OrElse
+               Not StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenant, absoluteLink.DnsSafeHost, False) Then
+                Return defaultLink
             End If
-        Next
+            Return If(String.IsNullOrWhiteSpace(absoluteLink.PathAndQuery), defaultLink, absoluteLink.PathAndQuery)
+        End If
 
         If link.StartsWith("~", StringComparison.OrdinalIgnoreCase) Then
             Return ResolveUrl(link)
@@ -1938,7 +1910,7 @@ Partial Public Class _Default
             candidate = "/" & candidate.TrimStart("/"c)
         End If
 
-        Return RuntimeSiteBaseUrl.TrimEnd("/"c) & candidate
+        Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, candidate)
     End Function
 
     Private Function RuntimeUrlExistsCached(ByVal absoluteUrl As String) As Boolean

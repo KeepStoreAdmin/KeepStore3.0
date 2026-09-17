@@ -109,9 +109,8 @@
             <div class="container">
                 <div class="ft-bottom">
                     <ul class="social-list">
-                        <li><a href="https://www.facebook.com/taikun.it"><i class="icon-facebook"></i></a></li>
+                        <li id="liFooterFacebook" runat="server" visible="false"><a id="lnkFooterFacebook" runat="server" rel="noopener noreferrer"><i class="icon-facebook"></i></a></li>
                         <li><a href="https://x.com/"><i class="icon-x"></i></a></li>
-                        <li><a href="https://www.instagram.com/taikun.it"><i class="icon-instagram"></i></a></li>
                         <li><a href="https://www.linkedin.com/"><i class="icon-linkin"></i></a></li>
                         <li><a href="https://web.whatsapp.com/"><i class="icon-whatapp"></i></a></li>
                     </ul>

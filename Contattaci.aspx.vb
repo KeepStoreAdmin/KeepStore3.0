@@ -36,8 +36,7 @@ Partial Class Contattaci
 
     Private Sub ApplySeoBasics()
         Try
-            Dim host As String = Request.Url.GetLeftPart(UriPartial.Authority).TrimEnd("/"c)
-            Dim canonical As String = host & Me.ResolveUrl("~/Contattaci.aspx")
+            Dim canonical As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/Contattaci.aspx")
             SeoBuilder.SetCanonical(Me, canonical)
 
             Dim azi As String = S("AziendaNome")
@@ -227,20 +226,7 @@ Partial Class Contattaci
     End Sub
 
     Private Function BuildSiteHomeUrl() As String
-        Dim url As String = S("AziendaUrl")
-        If url = "" Then
-            Return "https://www.taikun.it"
-        End If
-
-        If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
-            Return "https://" & url.Substring(7)
-        End If
-
-        If url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            Return url
-        End If
-
-        Return "https://" & url
+        Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
     End Function
 
     Private Sub ShowAlert(ByVal msg As String, ByVal isError As Boolean)
