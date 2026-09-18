@@ -66,6 +66,8 @@ Friend Class CartStandardBatchPlan
 End Class
 
 Friend Class CartMutationOwnerContext
+    Public Property DatabaseScopeKey As String
+    Public Property CompanyId As Integer
     Public Property LoginId As Integer
     Public Property SessionId As String
     Public Property Listino As Integer
@@ -485,21 +487,14 @@ Public Module CartMutationService
                                          ByVal fallbackLoginId As Integer,
                                          ByVal fallbackSessionId As String,
                                          ByVal fallbackListino As Integer) As CartMutationOwnerContext
-        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return Nothing
-        Dim loginId As Integer = SessionInteger(ctx, "LoginId",
-            SessionInteger(ctx, "LoginID", SessionInteger(ctx, "LOGINID", fallbackLoginId)))
-        Dim sessionId As String = String.Empty
-        If loginId <= 0 Then
-            sessionId = Convert.ToString(ctx.Session.SessionID)
-            If String.IsNullOrWhiteSpace(sessionId) Then sessionId = If(fallbackSessionId, String.Empty)
-        End If
-        Dim listino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", fallbackListino))
-        If listino <= 0 Then listino = 1
-        If loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId) Then Return Nothing
+        Dim scope As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(ctx)
+        If scope Is Nothing Then Return Nothing
         Return New CartMutationOwnerContext With {
-            .LoginId = loginId,
-            .SessionId = sessionId,
-            .Listino = listino
+            .DatabaseScopeKey = scope.DatabaseScopeKey,
+            .CompanyId = scope.CompanyId,
+            .LoginId = scope.LoginId,
+            .SessionId = scope.SessionId,
+            .Listino = scope.Listino
         }
     End Function
 

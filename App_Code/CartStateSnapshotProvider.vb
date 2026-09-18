@@ -26,8 +26,11 @@ Public NotInheritable Class CartStateSnapshotProvider
         _items = New List(Of CartStateSnapshotItem)()
         _quantities = New Dictionary(Of String, Decimal)(StringComparer.Ordinal)
         _articleQuantities = New Dictionary(Of Integer, Decimal)()
-        _loginId = ResolveLoginId(context)
-        _sessionId = ResolveSessionId(context)
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(context)
+        If owner IsNot Nothing Then
+            _loginId = owner.LoginId
+            _sessionId = owner.SessionId
+        End If
         LoadSnapshot()
     End Sub
 
@@ -135,27 +138,6 @@ Public NotInheritable Class CartStateSnapshotProvider
             _articleQuantities.Clear()
         End Try
     End Sub
-
-    Private Shared Function ResolveLoginId(ByVal context As HttpContext) As Integer
-        If context Is Nothing OrElse context.Session Is Nothing Then Return 0
-
-        Dim aliases As String() = {"LoginId", "LoginID", "LOGINID"}
-        For Each aliasName As String In aliases
-            Dim loginId As Integer = 0
-            If Integer.TryParse(Convert.ToString(context.Session(aliasName)), loginId) AndAlso loginId > 0 Then Return loginId
-        Next
-
-        Return 0
-    End Function
-
-    Private Shared Function ResolveSessionId(ByVal context As HttpContext) As String
-        Try
-            If context IsNot Nothing AndAlso context.Session IsNot Nothing Then Return Convert.ToString(context.Session.SessionID)
-        Catch
-        End Try
-
-        Return String.Empty
-    End Function
 
     Private Shared Function BuildKey(ByVal articleId As Integer, ByVal tcId As Integer) As String
         Return articleId.ToString(CultureInfo.InvariantCulture) & ":" & NormalizeTCId(tcId).ToString(CultureInfo.InvariantCulture)

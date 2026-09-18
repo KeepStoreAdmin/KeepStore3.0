@@ -101,16 +101,13 @@ Public Module CartPriceRevalidationHelper
                 "standalone-revalidation",
                 CartMutationIdempotencyService.GetCurrentRequestId(ctx),
                 Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartPriceRevalidationResult)
-                    Dim loginId As Integer = SessionInt(ctx, "LoginId", SessionInt(ctx, "LoginID", 0))
-                    Dim sessionId As String = Convert.ToString(ctx.Session.SessionID)
-                    Dim listino As Integer = SessionInt(ctx, "Listino", SessionInt(ctx, "listino", 1))
-                    If listino <= 0 Then listino = 1
-                    If loginId <= 0 AndAlso String.IsNullOrWhiteSpace(sessionId) Then
+                    Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(ctx)
+                    If owner Is Nothing Then
                         Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(TechnicalFailureResult())
                     End If
 
                     Dim result As CartPriceRevalidationResult = RevalidateCurrentCart(
-                        ctx, conn, transaction, loginId, sessionId, listino, updateCart, True, Nothing, True)
+                        ctx, conn, transaction, owner.LoginId, owner.SessionId, owner.Listino, updateCart, True, Nothing, True)
                     If result Is Nothing OrElse result.HasBlockingError Then
                         Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(
                             If(result, TechnicalFailureResult()))

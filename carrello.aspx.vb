@@ -2065,8 +2065,14 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Sub
 
     Private Sub ConfigureCartDataSources()
-        Dim LoginId As Integer = GetSessionInt("LoginId", 0)
-        Dim SessionID As String = If(Me.Session IsNot Nothing, Me.Session.SessionID, "")
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(HttpContext.Current)
+        If owner Is Nothing Then
+            Me.sdsArticoli.SelectCommand = "SELECT * FROM vcarrello WHERE 1=0"
+            Me.sdsArticoli_Spedizione_Gratis.SelectCommand = "SELECT * FROM vcarrello WHERE 1=0"
+            Return
+        End If
+        Dim LoginId As Integer = owner.LoginId
+        Dim SessionID As String = owner.SessionId
         Dim WhereUserId As String
 
         Dim Sqlstring As String = "SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione as taglia, colori.descrizione as colore FROM vcarrello"
@@ -2108,13 +2114,14 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
     ' preleva_prezzi_articoli() hardening Session/parametri
     Sub preleva_prezzi_articoli()
-
-    Dim LoginId As Integer = GetSessionInt("LoginId", 0)
+    Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(HttpContext.Current)
+    If owner Is Nothing Then Exit Sub
+    Dim LoginId As Integer = owner.LoginId
 
     Dim ivaUtente As Double = SafeDbl(Session("Iva_Utente"), -1)
     Dim ivaRCUtente As Double = SafeDbl(Session("IvaReverseCharge_Utente"), -1)
 
-    Dim listino As Integer = GetSessionInt("Listino", 0)
+    Dim listino As Integer = owner.Listino
 
     Dim params As New Dictionary(Of String, String)
     params.Add("@IvaUtente", ivaUtente.ToString(CultureInfo.InvariantCulture))
@@ -2124,7 +2131,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     Dim loginOrSessionId As String = ""
     If LoginId = 0 Then
         loginOrSessionId = "COALESCE(LoginId,0)<=0 AND SessionID=@SessionId"
-        params.Add("@SessionId", If(Me.Session IsNot Nothing, Me.Session.SessionID, ""))
+        params.Add("@SessionId", owner.SessionId)
     Else
         loginOrSessionId = "LoginId=@LoginId"
         params.Add("@LoginId", LoginId.ToString())
@@ -3846,9 +3853,14 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
             requests.Add(New CartQuantityMutationRequest() With {.CartRowId = row.Id, .Quantity = row.Qnt})
         Next
 
-        Dim loginId As Integer = GetLoginIdSafe(0)
-        Dim sessionId As String = If(Me.Session IsNot Nothing, Me.Session.SessionID, String.Empty)
-        Dim listino As Integer = GetListinoSafe(1)
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(HttpContext.Current)
+        If owner Is Nothing Then
+            _cartPriceRevalidationBlockedThisRequest = True
+            Exit Sub
+        End If
+        Dim loginId As Integer = owner.LoginId
+        Dim sessionId As String = owner.SessionId
+        Dim listino As Integer = owner.Listino
         Dim revalidation As CartPriceRevalidationResult = CartMutationService.UpdateStandardQuantities(
             HttpContext.Current, loginId, sessionId, listino, requests)
         If revalidation Is Nothing OrElse revalidation.HasBlockingError OrElse revalidation.HasChanges Then
@@ -4522,18 +4534,11 @@ End Sub
 
     Public Function listaArticoliInCarrello() As String
     Dim stringa As String = ""
-
-    Dim LoginId As Integer = 0
-    If Session("LoginId") IsNot Nothing Then
-        Integer.TryParse(Session("LoginId").ToString(), LoginId)
-    End If
-
-    Dim SessionID As String = ""
-    If Session IsNot Nothing AndAlso Session.SessionID IsNot Nothing Then
-        SessionID = Session.SessionID
-    End If
-
-    Dim listino As String = GetListinoSafeString()
+    Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(HttpContext.Current)
+    If owner Is Nothing Then Return stringa
+    Dim LoginId As Integer = owner.LoginId
+    Dim SessionID As String = owner.SessionId
+    Dim listino As String = owner.Listino.ToString(CultureInfo.InvariantCulture)
 
     Dim whereUserId As String = ""
 

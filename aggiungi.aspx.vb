@@ -369,18 +369,25 @@ End Function
     '  COUPON
     ' =======================================
     Private Sub GestisciCoupon()
-        ' loginId sicuro
-        Dim loginId As Integer = 0
-        If Session("LoginId") IsNot Nothing Then
-            Integer.TryParse(Session("LoginId").ToString(), loginId)
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(HttpContext.Current)
+        If owner Is Nothing Then
+            SafeRedirect("carrello.aspx")
+            Return
         End If
+        Dim loginId As Integer = owner.LoginId
 
         Dim params As New Dictionary(Of String, String)
-        params.Add("@LoginId", loginId.ToString())
-        params.Add("@SessionId", Session.SessionID)
+        Dim ownerWhere As String
+        If loginId > 0 Then
+            params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+            ownerWhere = "WHERE LoginId=@LoginId"
+        Else
+            params.Add("@SessionId", owner.SessionId)
+            ownerWhere = "WHERE COALESCE(LoginId,0)<=0 AND SessionId=@SessionId"
+        End If
 
-        ' Svuoto il carrello dell'utente/sessione
-        ExecuteDelete("carrello", "WHERE LoginId=@LoginId OR SessionId=@SessionId", params)
+        ' Svuoto esclusivamente il carrello del tenant/owner corrente.
+        ExecuteDelete("carrello", ownerWhere, params)
 
         ' Inserisco l'articolo coupon
         Dim couponQnt As Double = 1
@@ -393,7 +400,7 @@ End Function
         Dim couponArticleId As Integer = 0
         Integer.TryParse(Convert.ToString(Session("Coupon_idArticolo")), couponArticleId)
         AddCartRowWithNewcarrello(loginId,
-                                  Session.SessionID,
+                                  owner.SessionId,
                                   couponArticleId,
                                   -1,
                                   Convert.ToString(Session("Coupon_codArticolo")),
@@ -559,22 +566,16 @@ End Function
         Dim articoliIdGlobali As String = String.Empty
 
         Dim IdRiga As Integer = 0
-        Dim LoginId As Integer = 0
-        Dim SessionID As String = Me.Session.SessionID
-
-        ' LoginId sicuro
-        If Me.Session("LoginId") IsNot Nothing Then
-            Integer.TryParse(Me.Session("LoginId").ToString(), LoginId)
-        End If
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(HttpContext.Current)
+        If owner Is Nothing Then Return String.Empty
+        Dim LoginId As Integer = owner.LoginId
+        Dim SessionID As String = owner.SessionId
 
         ' Quantità base richiesta (se manca qualcosa, almeno 1)
         Dim QuantitaBase As Double = ResolveRequestedCartQuantity()
 
         ' Listino
-        Dim NListino As Integer = 1
-        If Me.Session("Listino") IsNot Nothing Then
-            Integer.TryParse(Me.Session("Listino").ToString(), NListino)
-        End If
+        Dim NListino As Integer = owner.Listino
 
         Dim Codice As String = ""
         Dim Descrizione As String = ""
@@ -1211,17 +1212,17 @@ End Function
     Private Sub DeleteDeferredCartRow(ByVal rowId As Integer)
         If rowId <= 0 Then Exit Sub
 
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(HttpContext.Current)
+        If owner Is Nothing Then Throw New InvalidOperationException("Cart storefront owner scope is not valid.")
         Dim params As New Dictionary(Of String, String)
         params.Add("@idRiga", rowId.ToString(CultureInfo.InvariantCulture))
-        Dim loginId As Integer = 0
-        Integer.TryParse(Convert.ToString(Session("LoginId")), loginId)
         Dim ownerWhere As String
-        If loginId > 0 Then
+        If owner.LoginId > 0 Then
             ownerWhere = "where id=@idRiga and LoginId=@LoginId"
-            params.Add("@LoginId", loginId.ToString(CultureInfo.InvariantCulture))
+            params.Add("@LoginId", owner.LoginId.ToString(CultureInfo.InvariantCulture))
         Else
-            ownerWhere = "where id=@idRiga and SessionId=@SessionId"
-            params.Add("@SessionId", Session.SessionID)
+            ownerWhere = "where id=@idRiga and COALESCE(LoginId,0)<=0 and SessionId=@SessionId"
+            params.Add("@SessionId", owner.SessionId)
         End If
 
         Dim affected As Integer = ExecuteDelete("carrello", ownerWhere, params)
@@ -1258,7 +1259,7 @@ End Function
         If tcId < 0 Then tcId = -1
         If qnt <= 0 Then qnt = 1
         If nListino <= 0 Then nListino = 1
-        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
+        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then Return 0
 
         Dim connectionSettings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If connectionSettings Is Nothing OrElse String.IsNullOrEmpty(connectionSettings.ConnectionString) Then Return 0
@@ -1348,7 +1349,7 @@ End Function
     Private Function VerifyCartRow(ByVal loginId As Integer, ByVal sessionId As String, ByVal articoloId As Integer, ByVal tcId As Integer) As Boolean
         If articoloId <= 0 Then Return False
         If tcId < 0 Then tcId = -1
-        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
+        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then Return False
 
         Dim wherePart As String
         Dim params As New Dictionary(Of String, String)
@@ -1370,7 +1371,7 @@ End Function
     Private Function VerifyVCarrelloRow(ByVal loginId As Integer, ByVal sessionId As String, ByVal articoloId As Integer, ByVal tcId As Integer) As Boolean
         If articoloId <= 0 Then Return False
         If tcId < 0 Then tcId = -1
-        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then sessionId = Me.Session.SessionID
+        If String.IsNullOrEmpty(sessionId) AndAlso loginId <= 0 Then Return False
 
         Dim wherePart As String
         Dim params As New Dictionary(Of String, String)

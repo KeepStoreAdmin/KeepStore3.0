@@ -45,10 +45,16 @@ Public Module CartOwnershipService
                 "merge-anonymous-account",
                 CartMutationIdempotencyService.GetCurrentRequestId(ctx),
                 Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartOwnershipMergeResult)
-            Dim attemptLoginId As Integer = SessionInteger(ctx, "LoginId", SessionInteger(ctx, "LoginID", loginId))
-            Dim attemptListino As Integer = SessionInteger(ctx, "Listino", SessionInteger(ctx, "listino", listino))
-            Dim attemptSessionId As String = Convert.ToString(ctx.Session.SessionID)
-            If attemptLoginId <= 0 OrElse attemptListino <= 0 OrElse String.IsNullOrWhiteSpace(attemptSessionId) Then
+            Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(ctx)
+            If owner Is Nothing OrElse Not owner.IsAuthenticated OrElse owner.LoginId <> loginId OrElse
+               owner.Listino <= 0 OrElse String.IsNullOrWhiteSpace(Convert.ToString(ctx.Session.SessionID)) Then
+                Return CartTransactionWorkResult(Of CartOwnershipMergeResult).Abort(New CartOwnershipMergeResult())
+            End If
+            Dim attemptLoginId As Integer = owner.LoginId
+            Dim attemptListino As Integer = owner.Listino
+            Dim attemptSessionId As String = CartStorefrontScopePolicy.BuildAnonymousOwnerToken(
+                owner.DatabaseScopeKey, owner.CompanyId, Convert.ToString(ctx.Session.SessionID))
+            If String.IsNullOrEmpty(attemptSessionId) Then
                 Return CartTransactionWorkResult(Of CartOwnershipMergeResult).Abort(New CartOwnershipMergeResult())
             End If
 

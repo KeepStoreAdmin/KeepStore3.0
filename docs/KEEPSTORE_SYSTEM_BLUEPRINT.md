@@ -1942,3 +1942,34 @@ Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedu
 La definizione canonica usa tabelle non qualificate; l’installer qualifica soltanto la routine nel database validato, preservando DEFINER, SQL SECURITY, SQL_MODE, charset/collation e privilegi per ciascun cliente. Il rollout è DryRun di default, richiede `-Apply` e conferma locale, esegue preflight globale, verifica immediata e rollback isolato in caso di errore.
 
 La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.
+
+## 21. Isolamento carrello multi-storefront
+
+### 21.1 Modello owner
+
+`carrello` conserva il modello storico senza `AziendaId`: `LoginId` per righe autenticate e `SessionId varchar(50)` per righe anonime. L'isolamento non richiede una migration perché il confine azienda viene certificato prima dell'accesso e codificato nell'owner anonimo:
+
+- autenticato: connessione/database configurato + azienda risolta per host + `LoginId`, valido solo se `AuthenticatedAziendaID` coincide;
+- anonimo: connessione/database configurato + azienda risolta per host + token `ksc1_` Base64URL(SHA-256) della sessione, lungo 47 caratteri;
+- listino: quello della sessione autenticata validata oppure `Aziende.ListinoDefault` per l'anonimo.
+
+`CartStorefrontOwnerContext` risolve il tenant con `StorefrontSeoTenantContext`, ottiene l'identita database sanitizzata dalla connection string e fallisce chiuso su host/azienda/account incoerenti. Per le mutazioni rifiuta anche un alias per cui la policy richiede redirect canonico. Non accetta owner o azienda da form, querystring o hidden field.
+
+### 21.2 Consumatori e query
+
+Il resolver comune alimenta:
+
+- `CartMutationService`: add, batch, quantita, remove e clear transazionali;
+- `CartOwnershipService`: merge login delle sole righe anonime dello stesso token azienda;
+- `CartPriceRevalidationHelper`: prezzo, listino e promo del contesto corrente;
+- `CartStateSnapshotProvider`: stato condiviso HOME/catalogo/PDP;
+- `carrello.aspx`, `Page.master` e `MiniCart.ascx`: pagina, header e minicart coerenti;
+- `CartMutationIdempotencyService`: fingerprint `database + azienda + owner + operazione + payload`.
+
+Le clausole SQL continuano a usare `LoginId=?ownerLoginId` oppure `COALESCE(LoginId,0)<=0 AND SessionId=?ownerSessionId`, ma i parametri sono prodotti soltanto dal resolver autorevole. Non esiste fallback al primo carrello e non viene effettuato merge di un `SessionID` storico ambiguo.
+
+### 21.3 Sicurezza e compatibilita
+
+POST-only, CSRF, same-origin, ReturnUrl locale, transazioni, retry, idempotenza e revalidation preesistenti restano invariati. Lo stesso catalogo e lo stesso `ArticoliId` possono avere quantita, prezzi e promo diversi nei due storefront. Cambio host invalida account incompatibili; logout non rende visibile il carrello autenticato e un nuovo login nello storefront corretto lo recupera tramite `LoginId` validato.
+
+La prova sintetica same-database copre i 25 casi richiesti, usa rollback completo (`0 -> 0`) e non crea documenti, ordini o righe di idempotenza ordine. Il follow-up `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` resta `NON AVVIATO` e dovra trattare separatamente provenienza ordine ed e-mail legacy azienda-scoped.

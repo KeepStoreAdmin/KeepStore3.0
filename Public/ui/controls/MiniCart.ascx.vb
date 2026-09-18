@@ -32,8 +32,15 @@ Partial Class MiniCart
     End Sub
 
     Private Sub BindMiniCart()
-        Dim loginId As Integer = GetLoginIdSafe()
-        Dim sessionId As String = GetSessionIdSafe()
+        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(HttpContext.Current)
+        If owner Is Nothing Then
+            phMiniCartEmpty.Visible = True
+            phMiniCartList.Visible = False
+            lblMiniCartTotale.Text = "0,00"
+            Return
+        End If
+        Dim loginId As Integer = owner.LoginId
+        Dim sessionId As String = owner.SessionId
         _ivaTipo = GetIvaTipoSafe()
 
         Dim dt As DataTable = LoadItems(loginId, sessionId)
@@ -201,17 +208,6 @@ Partial Class MiniCart
         End Try
 
         Return 0
-    End Function
-
-    Private Function GetSessionIdSafe() As String
-        Try
-            If Context IsNot Nothing AndAlso Context.Session IsNot Nothing Then
-                Return Context.Session.SessionID
-            End If
-        Catch
-        End Try
-
-        Return String.Empty
     End Function
 
     Private Function GetIvaTipoSafe() As Integer

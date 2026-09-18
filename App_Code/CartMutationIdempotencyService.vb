@@ -382,11 +382,9 @@ Public NotInheritable Class CartMutationIdempotencyService
     Private Shared Function BuildFingerprint(ByVal context As HttpContext,
                                              ByVal operationType As String,
                                              ByVal payload As String) As String
-        Dim loginId As Integer = SessionInt(context.Session, "LoginID", SessionInt(context.Session, "LoginId", 0))
-        Dim owner As String = If(loginId > 0,
-                                 "login:" & loginId.ToString(CultureInfo.InvariantCulture),
-                                 "session:" & context.Session.SessionID)
-        Dim canonical As String = owner & "|" & operationType.Trim().ToLowerInvariant() & "|" & payload
+        Dim scope As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(context)
+        If scope Is Nothing Then Return String.Empty
+        Dim canonical As String = scope.OwnerScopeKey & "|" & operationType.Trim().ToLowerInvariant() & "|" & payload
         Using sha As SHA256 = SHA256.Create()
             Return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(canonical)))
         End Using
@@ -489,7 +487,7 @@ Public NotInheritable Class CartMutationIdempotencyService
     End Function
 
     Private Shared Function IsUsableContext(ByVal context As HttpContext) As Boolean
-        Return context IsNot Nothing AndAlso context.Session IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(context.Session.SessionID)
+        Return CartStorefrontOwnerContext.ResolveForMutation(context) IsNot Nothing
     End Function
 
     Private Shared Function SessionInt(ByVal session As HttpSessionState,

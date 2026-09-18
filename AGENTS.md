@@ -99,6 +99,15 @@ KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire azi
 
 La compatibilita strutturale non autorizza un deployment. Database, domini e ambienti destinatari sono sempre indicati esplicitamente dal Product Owner; discovery o similarita non ampliano l'allowlist. Il collaudo di onboarding usa target espliciti, richieste non mutative e un manifest sanitizzato, e registra commit KeepStore, ambiente, dominio canonico, alias, identita, percorsi asset e risultati senza segreti.
 
+### Carrello multi-storefront
+
+- L'owner autenticato del carrello e la tupla `database + AziendaId + LoginId`; l'owner anonimo e `database + AziendaId + identita sessione anonima`.
+- Il `SessionID` ASP.NET grezzo non e una chiave carrello sufficiente: la persistenza anonima usa un token opaco deterministico legato anche a database e azienda, entro il limite della colonna esistente.
+- Letture, add singolo/multiplo/asincrono, fallback POST, quantita, remove, clear, MiniCart, header, revalidation e merge post-login devono risolvere l'owner esclusivamente dal contesto server-side autorevole. `AziendaId`, `LoginId`, listino o owner forniti dal client non sono attendibili.
+- Un account e valido per il carrello solo quando `AuthenticatedAziendaID` coincide con l'azienda risolta per host; cambio storefront incompatibile, host ambiguo/sconosciuto o alias non canonicalizzato falliscono chiusi prima di una mutazione.
+- Fingerprint e registri idempotenti del carrello includono sempre database, azienda e owner. Cache/snapshot commerciali includono inoltre listino e stato autenticato secondo il contratto storefront.
+- Carrelli anonimi storici identificati soltanto dal `SessionID` grezzo non vengono reclamati automaticamente: non e possibile attribuirli in sicurezza a una delle aziende dello stesso database.
+
 ## Baseline minima di verifica
 
 Ogni task verifica: diff/manifest; `git diff --check`; sintassi/logica; dipendenze dirette; percorso positivo; un failure pertinente; regressioni influenzate; secret scan; branch, staging e working tree.

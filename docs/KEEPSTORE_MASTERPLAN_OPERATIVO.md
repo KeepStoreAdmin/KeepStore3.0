@@ -2462,3 +2462,22 @@ Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedu
 Ogni rollout DB deve essere ripetibile e verificabile per database, con preflight globale read-only, backup/rollback indipendente, applicazione sequenziale e report sanitizzato. Il nome del database è un parametro di deployment e non deve essere hardcoded nel corpo canonico della procedura.
 
 La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.
+
+## Checkpoint MULTI-STOREFRONT-CART-ISOLATION-1A
+
+Task implementato sul branch `task/multistorefront-cart-isolation-1a`, base stabile `f34a4a5229f318234a772d1c8263a5c1a9238b50`, con PR da mantenere DRAFT fino alla review e agli eventuali smoke richiesti. Esito tecnico locale A; nessun merge autorizzato in questa fase.
+
+Audit certo: `carrello` non contiene `AziendaId`; le righe autenticate erano selezionate tramite il solo `LoginId`, mentre le anonime usavano il `SessionID` ASP.NET grezzo in servizi, revalidation, snapshot, MiniCart, header e pagina carrello. Il `LoginId` e univoco nel database e viene ora accettato soltanto con marker server-side `AuthenticatedAziendaID` coerente con l'azienda risolta per host. Per l'anonimo, la colonna esistente `SessionId varchar(50)` contiene un token opaco deterministico di 47 caratteri derivato da identita database sanitizzata, `AziendaId` e sessione; non serve DDL.
+
+Contratto dimostrato:
+
+- owner autenticato `database + AziendaId + LoginId`; owner anonimo `database + AziendaId + token sessione`;
+- host/azienda/database/listino provengono solo dal contesto server-side; host sconosciuto, marker account incompatibile o alias non canonicalizzato impediscono la mutazione;
+- `CartMutationService`, `CartOwnershipService`, `CartPriceRevalidationHelper`, `CartStateSnapshotProvider`, MiniCart, header e query pagina carrello consumano lo stesso owner;
+- add standard singolo/multiplo, async e POST nativo, quantita, remove, clear, prezzi/promo e merge post-login restano atomici e tenant-scoped;
+- la fingerprint idempotente include database, azienda e owner; `ReturnUrl` esterni, GET mutativi e CSRF invalidi restano respinti;
+- righe anonime legacy basate sul solo `SessionID` non sono reclamate automaticamente, perche la loro azienda originaria non e dimostrabile senza introdurre una fuga cross-tenant.
+
+Harness same-database sintetico: 25/25 scenari PASS piu rollback; conteggi laboratorio `0 -> 0`. Verificati A=2 e B=3 sullo stesso articolo, update/remove/clear isolati, replay singolo, login/merge A e B distinti, A-B-A senza contaminazione, prezzi tenant `5,00` e `6,25`, batch isolato e parita MiniCart/pagina/header/checkout. Zero documenti, ordini e idempotenza ordine. Regression gate: pricing/account PASS, promotion parity/error-state 141/141, promotion bulk 19/19, SEO/same-database 41/41 e 44/44, Product structured data 46/46, precompile ASP.NET Framework 4.8 PASS. Nessun database reale, account reale, ordine, e-mail, pagamento o gateway coinvolto.
+
+Prossimo task dopo review A e merge: `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, obbligatoriamente comprensivo del ramo e-mail legacy legato a un ID azienda. Stato `NON AVVIATO`; Merchant Center resta sospeso.

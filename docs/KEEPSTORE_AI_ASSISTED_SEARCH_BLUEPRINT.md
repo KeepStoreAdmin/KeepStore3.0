@@ -481,3 +481,9 @@ Database-per-cliente con schema canonico condiviso. Nessuna nuova stored procedu
 Guardrail: niente nomi database hardcoded nella logica canonica, DryRun prima di ogni applicazione, preflight read-only globale, backup/rollback per cliente e report senza credenziali o identificativi sensibili.
 
 La compatibilità strutturale non costituisce autorizzazione al deployment. L’allowlist dei database destinatari è stabilita esclusivamente dal Product Owner.
+
+## Checkpoint isolamento carrello multi-storefront
+
+`MULTI-STOREFRONT-CART-ISOLATION-1A` certifica il contratto server-side `database + AziendaId + owner`: `LoginId` autenticato con marker azienda coerente oppure token anonimo opaco tenant-scoped. Snapshot carrello, MiniCart/header, mutazioni, merge login, prezzi/promo e fingerprint idempotente condividono lo stesso scope; un cambio storefront incompatibile fallisce chiuso.
+
+Guardrail AI/search: dati, cache o retrieval futuri non possono usare il solo `LoginId`, `SessionID`, database o articolo come confine; devono includere database sanitizzato, azienda, listino, stato autenticato e owner, senza esporre token o identificativi. Il task non abilita carrello, account o cronologia per AI/RAG e non modifica ranking, feed, SEO o Product JSON-LD. Il prossimo task `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` e `NON AVVIATO`.
