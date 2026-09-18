@@ -1,5 +1,9 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
+Checkpoint `MULTITENANT-BY-DESIGN`: le fondamenta SEO tenant-aware sono integrate con PR #261 al commit `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`; `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A` formalizza configurazione e collaudo senza modificare runtime o database. Search, AI, feed e structured data devono riusare l'identita tenant autorevole e il database selezionato dal deploy, mai inferire il cliente da host grezzi, nomi database, esempi merceologici o dati di un altro tenant. Il prossimo task `GOOGLE-PRODUCT-STRUCTURED-DATA-1A` resta `NON AVVIATO` fino a chiusura A e merge del contratto onboarding.
+
+Guardrail permanente: nessun nome cliente, dominio, database o merceologia nel nucleo condiviso; host sconosciuti e contaminazione cross-tenant falliscono chiusi; ogni funzione tenant-aware richiede almeno due tenant sintetici. Nome, descrizione, marca, codice commerciale, EAN/GTIN/MPN, prezzo/valuta, disponibilita, immagini, spedizione e resi sono pubblicabili solo quando reali. Taglia, colore, compatibilita, materiale, peso, alimentazione e altri attributi specifici sono omessi quando mancanti o non applicabili, mai inventati. Migrazioni e stored procedure restano standard e prive di riferimenti cliente.
+
 Stato: blueprint architetturale, non implementazione runtime.
 
 Questo documento definisce la direzione futura per una ricerca assistita / assistente acquisto multi-merceologia in KeepStore 3.0. La funzione deve nascere sopra la ricerca deterministica esistente e sopra i dati reali del catalogo, senza introdurre API AI, nuove tabelle, endpoint o modifiche runtime in questa fase.
@@ -12,7 +16,7 @@ Regola stato: chiudere un micro-task su `articoli.aspx` non significa dichiarare
 
 Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. I micro-task chiusi non equivalgono alla parita ONSUS completa. Restano sidebar/facet residui, tassonomie/load-more, active filters legacy/reset, Price/Deals/Condition, Reviews con dati reali, performance, componenti commerciali e responsive complessivo. Pager, posizione recent, quattro viste mobile, compact grid e containment recent non vanno invece lasciati come gap aperti.
 
-Checkpoint corrente 2026-09-18: `frontend-rebuild` / `origin/frontend-rebuild` a `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`; `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. `STOREFRONT-PROMO-BULK-PERFORMANCE-1A` e chiuso A con PR #260 integrata fast-forward. `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` e il task corrente e consolida le fondamenta tecniche multi-tenant; JavaScript, search e AI non sono fonte di verita per tenant, owner, quantita, prezzo o idempotenza. Le 46 immagini locali non tracciate restano escluse dai commit e preservate.
+Checkpoint corrente 2026-09-18: `frontend-rebuild` / `origin/frontend-rebuild` a `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`; `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` e chiuso A con PR #261. `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A` e il task documentale/operativo corrente; JavaScript, search e AI non sono fonte di verita per tenant, owner, quantita, prezzo o idempotenza. Le 46 immagini locali non tracciate restano escluse dai commit e preservate.
 
 Guardrail checkout rilevante anche per future superfici AI/search: ogni esito terminale ha una sola destinazione, interrompe esplicitamente tutti i chiamanti ed e coperto end-to-end; `documenti.aspx` non e mai un fallback per errori checkout. Search e assistenza non devono inventare, sostituire o pilotare destinazioni di checkout, ne diventare fonte di verita per stock, owner, RequestId o idempotenza.
 
@@ -26,7 +30,7 @@ La presentazione anonima usa valori `Decimal` reali: nessuna conversione da test
 
 Vincoli discovery promo/EAN: le label umane `EAN/GTIN` migliorano la chiarezza semantica, ma identificatori strutturati `gtin`, `gtin13`, `gtin14`, JSON-LD, feed, CSV/XML e integrazioni non sono stati modificati. Dopo la parita certificata dalla PR #255, `promozioni.aspx` e ritirata come UI/query e resta soltanto uno shim verso `articoli.aspx?inpromo=1`; e fuori sitemap e non puo comparire in link o canonical. Il listing promo moderno filtrato resta prudenzialmente `noindex,follow`. Questo non dichiara KeepStore `SEO completo`, `Google pronto` o `AI ready`.
 
-Roadmap vigente: parity, retirement, UX promo, HOME async cart, hardening error-state e bulk performance hanno completato il rispettivo perimetro; PR #260 e integrata. Le fondamenta SEO correnti usano identita tenant autorevole per canonical, robots e sitemap; host grezzi/alterati falliscono chiusi, le superfici private sono `noindex` e la sitemap contiene soltanto route pubbliche canoniche. Questa base e standard per tutti i clienti e non puo essere soggetta a licenza o feature flag. Non autorizza ancora nuovi dati strutturati prodotto, feed, LLMS o runtime AI. Dopo chiusura e merge del task corrente, il candidato e `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, prerequisito `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` chiuso A, stato `NON AVVIATO`. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; Coupon/Groupon e recesso digitale restano differiti dal Product Owner.
+Roadmap vigente: parity, retirement, UX promo, HOME async cart, hardening error-state, bulk performance e fondamenta SEO hanno completato il rispettivo perimetro; PR #261 e integrata. Canonical, robots e sitemap usano l'identita tenant autorevole; host grezzi/alterati falliscono chiusi, le superfici private sono `noindex` e la sitemap contiene soltanto route pubbliche canoniche. Questa base e standard per tutti i clienti e non puo essere soggetta a licenza o feature flag. Non autorizza ancora nuovi dati strutturati prodotto, feed, LLMS o runtime AI. Dopo chiusura A e merge di `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A`, il candidato e `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, stato `NON AVVIATO`. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; Coupon/Groupon e recesso digitale restano differiti dal Product Owner.
 
 Guardrail SEO/AI: crawler, feed e futuri assistenti devono usare esclusivamente URL HTTPS del tenant risolto server-side; non possono fidarsi di `Host`/`X-Forwarded-Host`, mescolare domini, indicizzare carrello/account/documenti/checkout o trasformare query di ricerca, campagne e token in canonical. La sitemap non e un catalogo AI parallelo e non autorizza a pubblicare prezzi personali, owner, stock stimato o dati tecnici. Il contratto Google `Product/Offer` avanzato deve arrivare nel micro-task dedicato e riusare prezzi, disponibilita, brand, GTIN, spedizioni e resi reali senza duplicare la logica commerciale.
 
@@ -56,7 +60,7 @@ Stato storefront mobile/cart/catalog corrente, senza impatto sulla logica AI/sea
 
 ## 1. Principio multi-merceologia
 
-L'assistente acquisto non deve contenere domande hardcoded valide per tutti i negozi. KeepStore e rivendibile e multi-azienda: Taikun, Webaffare e futuri ecommerce possono avere merceologie molto diverse.
+L'assistente acquisto non deve contenere domande hardcoded valide per tutti i negozi. KeepStore e rivendibile e multi-azienda: installazioni presenti e future possono avere merceologie molto diverse.
 
 Il comportamento futuro deve derivare il piu possibile da:
 
@@ -79,7 +83,7 @@ Gli esempi merceologici sono linee guida, non logiche da hardcodare:
 - elettronica/informatica: compatibilita, marca, modello, codice/EAN e caratteristiche tecniche;
 - cartucce/toner: marca stampante, modello stampante, codice cartuccia, colore, originale/compatibile se presente nei dati.
 
-Regola permanente: l'assistente deve leggere il catalogo del sito corrente e proporre domande coerenti con quella merceologia. Non deve trasformare esempi Taikun/Webaffare in comportamento fisso per tutti.
+Regola permanente: l'assistente deve leggere il catalogo del tenant corrente e proporre domande coerenti con i dati reali di quella merceologia. Gli esempi documentali non diventano comportamento fisso per tutti.
 
 ## 2. Stato ricerca attuale
 
@@ -295,9 +299,11 @@ Roadmap funzionale, non promessa runtime:
 
 Regole:
 
-- nessun testo fisso Taikun-only;
+- nessun nome cliente, dominio o database nel codice condiviso;
 - nessuna merceologia hardcoded nel runtime;
-- vocabolario derivato dagli articoli dell'azienda/sito corrente;
+- identita e vocabolario derivati esclusivamente dal tenant e dagli articoli del sito corrente;
+- host validato contro la sorgente autorevole; host sconosciuto e contaminazione cross-tenant fail-closed;
+- almeno due tenant sintetici per ogni funzione tenant-aware;
 - eventuali configurazioni per azienda solo con task separato;
 - nessun nuovo schema DB in questa fase;
 - configurazione AI aziendale solo con task DB esplicito;

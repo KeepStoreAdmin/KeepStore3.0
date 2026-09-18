@@ -75,6 +75,21 @@ Stack reale: ASP.NET WebForms, VB.NET, .NET Framework 4.x, MySQL, code-behind `.
 - Non convertire WebForms o proporre rewrite non autorizzati. Tecnologia diversa indispensabile: B motivato.
 - Il server resta fonte di verita per sessione, login, carrello, prezzi, listini, IVA, promo, checkout e ordine; niente logica commerciale affidata o duplicata nel browser.
 
+## MULTITENANT-BY-DESIGN
+
+KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire aziende, domini, database, identita visive e merceologie differenti cambiando esclusivamente configurazione, dati e asset autorizzati. Ogni task nuovo o modificato deve rispettare questo contratto permanente:
+
+- zero nomi cliente, domini cliente, nomi database o tabelle qualificate per database nel codice condiviso;
+- zero logica progettata esclusivamente per una singola azienda e nessuna supposizione sulla merceologia;
+- configurazione, dati e asset tenant separati dal codice; un nuovo cliente deve essere installabile senza patch o ricompilazione del sorgente;
+- host e alias validati server-side contro la sorgente autorevole; host sconosciuti o contaminazione cross-tenant falliscono chiusi;
+- funzioni tenant-aware provate con almeno due tenant sintetici, verificando isolamento degli URL e assenza di dati incrociati;
+- il nucleo prodotto usa solo dati reali disponibili. Attributi mancanti o non applicabili sono omessi, mai simulati o inventati;
+- migrazioni e stored procedure restano standard e riutilizzabili, senza `USE`, nomi database o riferimenti cliente nel corpo canonico;
+- valori di deploy e segreti, inclusi connection string, password, token, chiavi, certificati privati, machine key, credenziali SMTP/gateway e dati personali, non entrano in sorgenti, commit, PR, manuali, log o output.
+
+La compatibilita strutturale non autorizza un deployment. Database, domini e ambienti destinatari sono sempre indicati esplicitamente dal Product Owner; discovery o similarita non ampliano l'allowlist. Il collaudo di onboarding usa target espliciti, richieste non mutative e un manifest sanitizzato, e registra commit KeepStore, ambiente, dominio canonico, alias, identita, percorsi asset e risultati senza segreti.
+
 ## Baseline minima di verifica
 
 Ogni task verifica: diff/manifest; `git diff --check`; sintassi/logica; dipendenze dirette; percorso positivo; un failure pertinente; regressioni influenzate; secret scan; branch, staging e working tree.

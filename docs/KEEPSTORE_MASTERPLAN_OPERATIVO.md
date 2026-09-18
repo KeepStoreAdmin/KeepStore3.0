@@ -9,12 +9,12 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 - Aggiornato: 2026-09-18.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task runtime chiuso: `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`, esito A, PR #260 integrata fast-forward nel checkpoint `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`; la risoluzione promozionale request-scoped evita lavoro duplicato cacheabile senza memorizzare gli stati `TechnicalError`.
-- Task runtime corrente: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, branch `task/storefront-seo-technical-audit-1a`, base stabile `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`. Il task rende multi-tenant canonical, robots, sitemap e policy index/noindex senza flag commerciali e senza cambiare prezzi, promozioni o flussi ecommerce.
-- Prossimo task consigliato soltanto dopo la chiusura A: `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, per implementare e validare `Product`/`Offer`/`Breadcrumb`/`Organization` JSON-LD sui dati commerciali reali. Prerequisito: merge di `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`. Stato: `NON AVVIATO`.
+- Ultimo task runtime chiuso: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, esito A, PR #261 integrata fast-forward nel checkpoint `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`; canonical, robots, sitemap e policy index/noindex sono tenant-aware e fail-closed senza modificare logica commerciale o database.
+- Task corrente: `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A`, branch `task/keepstore-multitenant-onboarding-contract-1a`, base stabile `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`. Il task formalizza il contratto operativo e aggiunge un solo validatore HTTP read-only; non modifica runtime, dati o configurazioni cliente.
+- Prossimo task consigliato soltanto dopo chiusura A e merge: `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, per implementare e validare `Product`/`Offer`/`Breadcrumb`/`Organization` JSON-LD sui dati commerciali reali. Stato: `NON AVVIATO`.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -34,6 +34,78 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Problemi risolti: host cliente hardcoded in policy, HOME, robots e sitemap; canonical ricavate dall'authority della richiesta; risoluzione azienda tramite confronto SQL parziale dell'host; segnali statici/dinamici conflittuali; pagine private con canonical/checkout JSON-LD; sitemap su route inesistente e connection key specifica; link social condivisi specifici di un cliente.
 - Prove anti-regressione: harness compilato sulla policy reale con due tenant sintetici e host alterato; canonical/robots/sitemap isolati; matrice HTTP con header `Purpose: prefetch`; XML sitemap valido e univoco; JSON-LD esistente parseabile; precompile ASP.NET Framework 4.8, diff check, secret scan e confronto delle aree commerciali protette. Nessuna DDL/DML, ordine, carrello, pagamento, e-mail o modifica dati appartiene al task.
 - Residui separati: dati strutturati Google avanzati, Merchant Center, IndexNow, Search Console API, `llms.txt`/`llms.ashx`, feed e integrazioni AI. Il primo candidato e `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, ancora `NON AVVIATO`.
+
+### Contratto permanente MULTITENANT-BY-DESIGN e onboarding
+
+KeepStore deve installare lo stesso commit presso clienti con azienda, dominio, database, asset e merceologia differenti senza modificare o ricompilare il codice condiviso. Sono vietati nomi cliente, domini, database, tabelle qualificate per database e logica dedicata a una sola azienda nel runtime comune. Configurazione e dati tenant restano separati dal sorgente; host sconosciuti e contaminazione cross-tenant falliscono chiusi; ogni funzione tenant-aware usa almeno due tenant sintetici nei test. Migrazioni e stored procedure sono standard, senza `USE` o riferimenti cliente nel corpo canonico. Attributi prodotto mancanti o non applicabili sono omessi, mai inventati.
+
+Origine e responsabilita verificate sul runtime dopo PR #261:
+
+| Ambito | Fonte autorevole e contratto |
+| --- | --- |
+| Database dell'installazione | La connection string applicativa `EntropicConnectionString`, fornita dalla configurazione di deploy, seleziona il database fisico usato da tutto il runtime. Il codice non sceglie automaticamente altri database in base all'host. |
+| Identita tenant | Nel database selezionato, il record `aziende` e autorevole. `StorefrontSeoTenantContext` carica le identita configurate; `Page.master.LeggiAzienda()` rilegge il record selezionato e inizializza la sessione applicativa. |
+| Dominio e alias | `aziende.url1` e la base canonica primaria; `aziende.url2` e l'alias secondario. Gli URL sono normalizzati a origin HTTPS e devono contenere host DNS validi. |
+| Validazione host | `StorefrontCanonicalHostPolicy` usa confronto esatto case-insensitive. `Global.asax` devia un alias ammesso verso il canonico e risponde fail-closed a host sconosciuti; `Host` e `X-Forwarded-Host` grezzi non sono fonti di identita o canonical. |
+| Dati aziendali | Nome/ragione sociale, descrizione, indirizzo e contatti, dati legali, logo/favicon, listini, IVA, disponibilita e opzioni storefront provengono dal record tenant e dai dati del database selezionato. |
+| Deploy IIS/configurazione | Binding host, certificato TLS, connection string, machine key, endpoint/servizi esterni e impostazioni ambientali restano responsabilita del deploy IIS/configurazione, non del codice tenant-aware. |
+| Asset cliente | Logo e favicon azienda, immagini marche, articoli, categorie/settori e vettori sono dati o asset di deploy; i nomi file vengono validati e non autorizzano URL esterni o traversal. |
+| Valori esclusi da Git | Password, token, chiavi API/gateway, connection string, machine key, certificati e chiavi private, credenziali SMTP, cookie/sessioni, dati personali, nomi host/database interni e file di configurazione reali non entrano in commit, PR, manuali, log o output. |
+
+Checklist numerata di installazione cliente:
+
+1. Preparare ambiente, versioni .NET Framework/MySQL supportate, account di servizio e segregazione accessi, senza copiare segreti nel repository.
+2. Creare il database dal modello KeepStore e applicare in ordine le migration standard approvate, con allowlist esplicita del Product Owner.
+3. Configurare `EntropicConnectionString` nell'ambiente di deploy affinche punti esclusivamente al database autorizzato; non riportarne il valore nel verbale.
+4. Registrare nel record `aziende` identita, ragione sociale, dati legali e parametri storefront reali del cliente.
+5. Registrare `url1` come origin canonico HTTPS e `url2` soltanto come alias autorizzato; non usare URL con path, credenziali o host locali.
+6. Creare binding IIS HTTP/HTTPS e installare il certificato TLS corretto per canonico e alias.
+7. Verificare redirect permanente da alias e non-www verso il canonico, preservando path/query sicuri e rifiutando host sconosciuti.
+8. Distribuire logo, favicon, immagini marche/articoli/settori e altri asset autorizzati nei percorsi previsti, controllando esistenza, tipo e assenza di traversal.
+9. Verificare dati legali, indirizzi, contatti e condizioni pubbliche direttamente dalle fonti tenant; non inserire valori fittizi.
+10. Configurare lingua, cultura, valuta, fuso orario, regole IVA e listini coerenti con il cliente e con il mercato servito.
+11. Configurare e-mail e servizi esterni nell'ambiente sicuro; nel manifest indicare solo presenza/assenza e stato del collaudo, mai credenziali.
+12. Importare catalogo, tassonomie, marche, codici, EAN/GTIN/MPN, prezzi, disponibilita e immagini reali della merceologia del cliente.
+13. Eseguire il validatore read-only su HOME, catalogo, PDP, alias, route private, robots e sitemap; verificare canonical unica e isolamento tenant.
+14. Eseguire smoke anonimo e autenticato con fixture dedicate, snapshot iniziale/finale e nessun ordine/pagamento/e-mail reale salvo autorizzazione separata.
+15. Collaudare almeno `360x800`, `390x844`, tablet e desktop: navigazione, leggibilita, asset, touch target e assenza overflow.
+16. Verificare backup, restore e rollback indipendente di configurazione, database e asset prima della consegna.
+17. Compilare e firmare il verbale finale con commit KeepStore, manifest sanitizzato, esiti, anomalie e autorizzazione alla consegna.
+
+Modello sanitizzato `Manifest installazione cliente`:
+
+| Campo | Valore da registrare |
+| --- | --- |
+| Codice tenant | Identificatore operativo non segreto |
+| Nome azienda | Ragione sociale/denominazione autorizzata |
+| Ambiente | Sviluppo, collaudo o produzione |
+| Dominio canonico | Origin HTTPS autorizzato |
+| Alias | Elenco esplicito oppure `nessuno` |
+| Nome logico database | Alias operativo non contenente credenziali |
+| Localizzazione | Lingua, valuta e fuso orario |
+| Tipologia merceologica | Descrizione sintetica del catalogo reale |
+| Percorsi asset | Percorsi pubblici/autorizzati per logo, favicon e immagini |
+| E-mail | Configurazione presente/non presente e testata/non testata |
+| Analytics/servizi esterni | Presenti/non presenti, senza ID sensibili o chiavi |
+| Data installazione | Data e fuso orario del verbale |
+| Versione KeepStore | Commit Git distribuito |
+| Esito controlli | PASS/FAIL per preflight, SEO, smoke e mobile; anomalie collegate |
+
+Il validatore canonico e `Tools/Test-KeepStoreTenantOnboarding.ps1`: richiede target espliciti, usa esclusivamente GET/HEAD, non effettua login o accesso DB, non disabilita TLS e non produce mutazioni. Parametri principali: `CanonicalUrl`, `AliasUrls`, `HomePath`, `CatalogPath`, `ProductPath`, `PrivatePaths`, `ForbiddenTenantHosts` e `UnknownHostUrls`. HTTPS e obbligatorio; `AllowHttpForLoopbackTest` ammette HTTP soltanto su loopback durante test sintetici locali.
+
+Esempio con soli placeholder non instradabili:
+
+```powershell
+.\Tools\Test-KeepStoreTenantOnboarding.ps1 `
+  -CanonicalUrl 'https://shop-a.example.invalid/' `
+  -AliasUrls @('https://www.shop-a.example.invalid/') `
+  -HomePath '/' `
+  -CatalogPath '/articoli.aspx' `
+  -ProductPath '/articolo.aspx?id=42' `
+  -PrivatePaths @('/login.aspx', '/carrello.aspx') `
+  -ForbiddenTenantHosts @('shop-b.example.invalid') `
+  -UnknownHostUrls @('https://unknown.example.invalid/')
+```
 
 ### Chiusura WORKFLOW-GOVERNANCE-1A
 
@@ -205,8 +277,9 @@ Responsabilita: Codex esegue audit e implementazioni tecniche solo nei manifest 
 4. `HOME-ASYNC-CART-1A`: CHIUSO / A e integrato con PR #258 al checkpoint `b87ad17a5dd346d07f9e53c0697bb562c5cb4a93`; `PDP-BRAND-LOGO-1A` e assorbito dalla REV3 e non resta un task separato.
 5. `PROMO-DISPLAY-ERROR-STATE-HARDENING-1A`: CHIUSO / A e integrato con PR #259 al checkpoint `23f21e6da00e726db9e361ace68de39b3d8f77eb`.
 6. `STOREFRONT-PROMO-BULK-PERFORMANCE-1A`: CHIUSO / A e integrato con PR #260 al checkpoint `eb020eb7f2431d7c91e500e2f1768edcb5cc5d70`.
-7. `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`: task corrente; fondamenta tecniche multi-tenant in PR, nessun merge ancora autorizzato.
-8. Dopo chiusura A e merge: `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, quindi Merchant/AI/LLMS nei rispettivi task dedicati.
+7. `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`: CHIUSO / A e integrato con PR #261 al checkpoint `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`.
+8. `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A`: task documentale/operativo corrente; nessun runtime o database modificato.
+9. Dopo chiusura A e merge: `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, quindi Merchant/AI/LLMS nei rispettivi task dedicati.
 
 Finding separati ancora aperti: materializzazione promo, `articolix.aspx` HTTP 500 e due label `EAN:` nella preview diagnostica `ProductDetailView.ascx`. I precedenti delta 25/22, la parita owner/campagna, GridView/add-to-cart di `promozioni.aspx`, HOME async cart e performance bulk promo sono superati dalle PR #255-#260. Catalogo, PDP, Google structured data e AI non sono dichiarati completi dal solo task SEO tecnico.
 
@@ -615,11 +688,11 @@ Backlog hardening separato: `CART-SESSIONID-LOG-REDACTION-1A`. L'audit cart-stat
 
 ### Regola multi-azienda / dominio / runtime
 
-- KeepStore usa un database condiviso multi-azienda: `AziendeId=1` identifica Taikun, `AziendeId=2` identifica Webaffare.
-- I domini possono puntare allo stesso DB ma usare spazi webroot e `web.config` separati; prima di validare bug sensibili a pagamenti, logo, listini, promo, gateway o dati azienda bisogna annotare dominio/host, `AziendaID` risolta e contesto runtime.
-- `localhost` non rappresenta automaticamente Taikun: nel runtime verificato mappa Webaffare/Azienda 2 tramite `Aziende.URL2=localhost`. Per test Taikun usare host/domain mapping corretto, ad esempio host locale coerente o `--resolve`, e dichiararlo nel report.
-- Non confondere "metodo pagamento visibile" con "gateway configurato": `pagamentitipo`/`vpagamentitipo` determinano visibilita del metodo, mentre il gateway PayPal Express richiede configurazione aziendale dedicata in `vpaypal_express_azienda` o fallback espliciti `PAYPAL_EXPRESS_*`.
-- Non copiare configurazioni gateway tra aziende senza decisione esplicita del titolare. PayPal Taikun e PayPal Webaffare restano task separati.
+- Ogni installazione usa il database esplicitamente selezionato dalla propria configurazione di deploy. Nel database selezionato, `aziende` e la fonte autorevole dell'identita tenant; `url1` e il canonico e `url2` l'eventuale alias.
+- Domini diversi possono avere webroot/configurazioni IIS separate oppure condividere il runtime solo quando l'isolamento e la topologia sono stati autorizzati. Prima di un test sensibile si registrano ambiente, host, tenant risolto e commit, senza segreti.
+- `localhost` e gli altri loopback sono esclusivamente facilitazioni di laboratorio e non determinano l'identita commerciale. Un test tenant-aware usa mapping sintetici o configurazione locale esplicita e non deduce mai il cliente dal nome del database o da valori storici.
+- Non confondere visibilita di un metodo di pagamento con configurazione del gateway. Credenziali, account e fallback di servizi esterni sono tenant-specifici e non si copiano tra aziende senza autorizzazione esplicita.
+- Il contratto prevalente e `MULTITENANT-BY-DESIGN`: nessun nuovo cliente richiede branch, patch del sorgente, dominio hardcoded o stored procedure personalizzata.
 
 ### Ripartenza rapida in nuova chat
 
@@ -2271,8 +2344,8 @@ Task consigliato separato per eventuale proseguimento:
 
 ### Immediati
 
-1. Completare review e chiusura A di `STOREFRONT-SEO-TECHNICAL-AUDIT-1A`, mantenendo resolver, prezzi, presentazione, dati e logica commerciale invariati.
-2. Solo dopo il merge, proporre `GOOGLE-PRODUCT-STRUCTURED-DATA-1A` per il contratto dinamico `Product`/`Offer`/`Breadcrumb`/`Organization`. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
+1. Completare review e chiusura A di `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A`, mantenendo runtime, database e configurazioni cliente invariati.
+2. Solo dopo il merge, proporre `GOOGLE-PRODUCT-STRUCTURED-DATA-1A` per il contratto dinamico multi-tenant e multi-merceologia `Product`/`Offer`/`Breadcrumb`/`Organization`. Stato: `NON AVVIATO` e non autorizzato all'implementazione.
 3. Audit futuro dello schema monetario ancora `DOUBLE`.
 4. Candidati separati da conservare senza implementarli ora:
    - `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`: verificare la raggiungibilita di `AmbiguousCommercialRule`; oggi risultano zero offerte ambigue attive ed e un task commerciale non prioritario rispetto al carrello.
