@@ -23,6 +23,9 @@ Partial Class articolo
     Private _pdpBundleCartRequestId As String
     Private _pdpCommercialCode As String
     Private ReadOnly _promotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
+    Private _pdpStructuredPrice As PriceContext
+    Private _pdpStructuredAvailability As AvailabilityDisplayModel
+    Private _pdpStructuredPromotion As ProductPromotionDisplayModel
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class ImgItem
@@ -1600,10 +1603,17 @@ Partial Class articolo
 
         ' Prezzi
         Dim selectedTcid As Integer = GetRowInt(row, "TCid", _tcid)
+        Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(_id,
+                                                                                          selectedTcid,
+                                                                                          GetRowDecimal(row, "Prezzo"),
+                                                                                          GetRowDecimal(row, "PrezzoIvato"))
         Dim price As PriceContext = BuildAuthorizedPriceContext(_id,
                                                                 selectedTcid,
                                                                 GetRowDecimal(row, "Prezzo"),
-                                                                GetRowDecimal(row, "PrezzoIvato"))
+                                                                GetRowDecimal(row, "PrezzoIvato"),
+                                                                promotionModel)
+        _pdpStructuredPrice = price
+        _pdpStructuredPromotion = promotionModel
 
         litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
@@ -1612,10 +1622,6 @@ Partial Class articolo
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
         BindCommercialProductInfo(row)
 
-        Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(_id,
-                                                                                          selectedTcid,
-                                                                                          GetRowDecimal(row, "Prezzo"),
-                                                                                          GetRowDecimal(row, "PrezzoIvato"))
         phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
         litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
 
@@ -1646,6 +1652,7 @@ Partial Class articolo
 
         ' Disponibilità (Arrivo)
         Dim availabilityModel As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
+        _pdpStructuredAvailability = availabilityModel
         Dim availabilityText As String = availabilityModel.Text
         Dim availabilityHtml As String = availabilityModel.Html
         phAvailability.Visible = False
@@ -2109,176 +2116,96 @@ Partial Class articolo
         Return tenant.CanonicalBaseUrl.TrimEnd("/"c)
     End Function
 
-        Private Function BuildProductJsonLd(row As DataRow, canonical As String, metaDesc As String) As String
-        ' Miglioramento SEO/AI:
-        ' - JSON-LD @graph coerente (Organization + WebSite + WebPage + BreadcrumbList + Product)
-        ' - Include GTIN (EAN) se presente
-        ' - Offer con currency e (se disponibile) availability
+    Private Function BuildProductJsonLd(row As DataRow, canonical As String, metaDesc As String) As String
         Try
-            Dim js As New System.Web.Script.Serialization.JavaScriptSerializer()
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant Is Nothing OrElse _pdpStructuredPrice Is Nothing OrElse
+               _pdpStructuredAvailability Is Nothing OrElse _pdpStructuredPromotion Is Nothing Then Return String.Empty
 
-            Dim name As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), "Articolo")
-            Dim brand As String = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca"))
-            Dim sku As String = FirstNonEmpty(GetRowString(row, "SKU"), GetRowString(row, "Codice"), _id.ToString())
-            Dim ean As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
-
-            Dim img As String = NormalizeImageUrl(GetRowString(row, "Img1"))
-            If Not String.IsNullOrEmpty(img) Then
-                img = MakeAbsoluteUrl(img)
+            Dim validUntil As Nullable(Of DateTime) = Nothing
+            If _pdpStructuredPrice.IsPromo AndAlso
+               _pdpStructuredPromotion.HasDefaultQuantityOffer AndAlso
+               _pdpStructuredPromotion.BestDefaultQuantityEndsOn.HasValue Then
+                validUntil = _pdpStructuredPromotion.BestDefaultQuantityEndsOn.Value
             End If
 
-            Dim price As PriceContext = BuildAuthorizedPriceContext(FirstPositiveInt(GetRowInt(row, "ID", 0), GetRowInt(row, "id", 0), _id),
-                                                                    GetRowInt(row, "TCid", _tcid),
-                                                                    GetRowDecimal(row, "Prezzo"),
-                                                                    GetRowDecimal(row, "PrezzoIvato"))
+            Dim input As New ProductStructuredDataInput() With {
+                .CanonicalUrl = canonical,
+                .RequestHost = Request.Url.DnsSafeHost,
+                .IsLocalRequest = Request.IsLocal,
+                .AllowedRequestHosts = tenant.AllowedHosts(),
+                .TenantName = tenant.CompanyName,
+                .TenantDescription = tenant.CompanyDescription,
+                .TenantHomeUrl = tenant.CanonicalBaseUrl.TrimEnd("/"c) & "/",
+                .TenantLogoUrl = BuildStructuredDataTenantLogoUrl(tenant),
+                .ProductName = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome")),
+                .ProductDescription = metaDesc,
+                .CommercialSku = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU")),
+                .BrandName = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca")),
+                .CategoryName = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione")),
+                .Gtin = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN")),
+                .ProductImages = BuildStructuredDataProductImages(row, tenant),
+                .OfferPrice = _pdpStructuredPrice.CurrentPrice,
+                .CurrencyCode = "EUR",
+                .IsAvailable = _pdpStructuredAvailability.IsAvailable,
+                .PriceValidUntil = validUntil,
+                .CommercialResolutionSucceeded = (_pdpStructuredPromotion.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError)
+            }
 
-            ' --- Base entity ids
-            Dim baseUrl As String = canonical.TrimEnd("/"c)
-            Dim orgId As String = baseUrl & "#organization"
-            Dim webSiteId As String = baseUrl & "#website"
-            Dim webPageId As String = baseUrl & "#webpage"
-            Dim productId As String = baseUrl & "#product"
-
-            ' --- Organization (dati best-effort da Session)
-            Dim orgName As String = ""
-            Try
-                orgName = TryCast(Session("AziendaNome"), String)
-            Catch
-            End Try
-            If String.IsNullOrEmpty(orgName) Then orgName = "KeepStore"
-
-            Dim siteHomeUrl As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
-            Dim catalogUrl As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/articoli.aspx")
-
-            Dim organization As New Dictionary(Of String, Object)()
-            organization("@type") = "Organization"
-            organization("@id") = orgId
-            organization("name") = orgName
-            organization("url") = siteHomeUrl
-
-            ' --- WebSite
-            Dim webSite As New Dictionary(Of String, Object)()
-            webSite("@type") = "WebSite"
-            webSite("@id") = webSiteId
-            webSite("url") = organization("url")
-            webSite("name") = orgName
-            webSite("publisher") = New Dictionary(Of String, Object) From {{"@id", orgId}}
-
-            ' --- BreadcrumbList (Home > Catalogo > Prodotto)
-            Dim breadcrumbItems As New List(Of Object)()
-            breadcrumbItems.Add(New Dictionary(Of String, Object) From {
-                {"@type", "ListItem"},
-                {"position", 1},
-                {"name", "Home"},
-                {"item", siteHomeUrl}
-            })
-            breadcrumbItems.Add(New Dictionary(Of String, Object) From {
-                {"@type", "ListItem"},
-                {"position", 2},
-                {"name", "Catalogo"},
-                {"item", catalogUrl}
-            })
-            breadcrumbItems.Add(New Dictionary(Of String, Object) From {
-                {"@type", "ListItem"},
-                {"position", 3},
-                {"name", name},
-                {"item", canonical}
-            })
-
-            Dim breadcrumb As New Dictionary(Of String, Object)()
-            breadcrumb("@type") = "BreadcrumbList"
-            breadcrumb("@id") = baseUrl & "#breadcrumb"
-            breadcrumb("itemListElement") = breadcrumbItems.ToArray()
-
-            ' --- Product
-            Dim product As New Dictionary(Of String, Object)()
-            product("@type") = "Product"
-            product("@id") = productId
-            product("name") = name
-            If Not String.IsNullOrEmpty(metaDesc) Then product("description") = metaDesc
-            product("sku") = sku
-            product("url") = canonical
-            If Not String.IsNullOrEmpty(img) Then product("image") = img
-            If Not String.IsNullOrEmpty(brand) Then
-                product("brand") = New Dictionary(Of String, Object) From {{"@type", "Brand"}, {"name", brand}}
-            End If
-
-            ' GTIN: se EAN 13 -> gtin13, se 14 -> gtin14, altrimenti generic gtin
-            If Not String.IsNullOrEmpty(ean) Then
-                Dim sbDigits As New StringBuilder()
-                For Each ch As Char In ean
-                    If Char.IsDigit(ch) Then sbDigits.Append(ch)
-                Next
-                Dim digitsOnly As String = sbDigits.ToString()
-                If digitsOnly.Length = 13 Then
-                    product("gtin13") = digitsOnly
-                ElseIf digitsOnly.Length = 14 Then
-                    product("gtin14") = digitsOnly
-                ElseIf digitsOnly.Length > 0 Then
-                    product("gtin") = digitsOnly
-                End If
-            End If
-
-            ' Offer
-            If price.CurrentPrice.HasValue AndAlso price.CurrentPrice.Value > 0D Then
-                Dim offer As New Dictionary(Of String, Object)()
-                offer("@type") = "Offer"
-                offer("price") = price.CurrentPrice.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
-                offer("priceCurrency") = "EUR"
-                offer("url") = canonical
-
-                Dim stockAvailable As Integer = GetRowInt(row, "Giacenza", 0) - GetRowInt(row, "Impegnata", 0)
-                If stockAvailable > 0 OrElse GetRowInt(row, "Disponibilita", 0) > 0 OrElse GetRowInt(row, "InOrdine", 0) > 0 Then
-                    offer("availability") = "https://schema.org/InStock"
-                Else
-                    offer("availability") = "https://schema.org/OutOfStock"
-                End If
-
-                offer("itemCondition") = "https://schema.org/NewCondition"
-                offer("seller") = New Dictionary(Of String, Object) From {{"@id", orgId}}
-
-                product("offers") = offer
-            End If
-
-            ' --- WebPage
-            Dim webPage As New Dictionary(Of String, Object)()
-            webPage("@type") = "WebPage"
-            webPage("@id") = webPageId
-            webPage("url") = canonical
-            webPage("name") = name
-            If Not String.IsNullOrEmpty(metaDesc) Then webPage("description") = metaDesc
-            webPage("isPartOf") = New Dictionary(Of String, Object) From {{"@id", webSiteId}}
-            webPage("about") = New Dictionary(Of String, Object) From {{"@id", orgId}}
-            webPage("mainEntity") = New Dictionary(Of String, Object) From {{"@id", productId}}
-            If Not String.IsNullOrEmpty(img) Then
-                webPage("primaryImageOfPage") = New Dictionary(Of String, Object) From {{"@type", "ImageObject"}, {"url", img}}
-            End If
-
-            Dim graph As New List(Of Object)()
-            graph.Add(organization)
-            graph.Add(webSite)
-            graph.Add(webPage)
-            graph.Add(breadcrumb)
-            graph.Add(product)
-
-            Dim root As New Dictionary(Of String, Object)()
-            root("@context") = "https://schema.org"
-            root("@graph") = graph
-
-            Dim json As String = js.Serialize(root)
+            Dim json As String = ProductStructuredDataBuilder.BuildJson(input)
+            If String.IsNullOrWhiteSpace(json) Then Return String.Empty
             Return "<script type=""application/ld+json"">" & json & "</script>"
-        Catch
-            Return ""
+        Catch ex As Exception
+            KeepStoreLog.Error("product-structured-data",
+                               "Product structured data omitted. errorType=" & ex.GetType().Name & ".",
+                               Nothing,
+                               HttpContext.Current)
+            Return String.Empty
         End Try
     End Function
 
-    Private Function JsonString(value As String) As String
-        If value Is Nothing Then value = ""
-        Return """" & value.Replace("\", "\\").Replace("""", "\""").Replace(vbCr, " ").Replace(vbLf, " ") & """"
+    Private Function BuildStructuredDataProductImages(ByVal row As DataRow,
+                                                      ByVal tenant As StorefrontSeoTenantIdentity) As IList(Of String)
+        Dim images As New List(Of String)()
+        If row Is Nothing OrElse tenant Is Nothing Then Return images
+
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim placeholder As String = ThemeManager.PlaceholderProductImageUrl()
+        For index As Integer = 1 To 6
+            Dim raw As String = GetRowString(row, "Img" & index.ToString(CultureInfo.InvariantCulture)).Trim()
+            If String.IsNullOrWhiteSpace(raw) OrElse raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+               raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Continue For
+
+            Dim relativeUrl As String = NormalizeImageUrl(raw)
+            If String.IsNullOrWhiteSpace(relativeUrl) OrElse relativeUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(relativeUrl, placeholder, StringComparison.OrdinalIgnoreCase) Then Continue For
+
+            Dim absoluteUrl As String = MakeAbsoluteUrl(relativeUrl)
+            Dim imageUri As Uri = Nothing
+            If Not Uri.TryCreate(absoluteUrl, UriKind.Absolute, imageUri) OrElse imageUri Is Nothing OrElse
+               Not String.Equals(imageUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) OrElse
+               Not String.Equals(imageUri.DnsSafeHost, tenant.CanonicalHost, StringComparison.OrdinalIgnoreCase) OrElse
+               Not seen.Add(imageUri.AbsoluteUri) Then Continue For
+            images.Add(imageUri.AbsoluteUri)
+        Next
+        Return images
     End Function
 
-    Private Function JsonNumber(value As Decimal) As String
-        Return value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+    Private Function BuildStructuredDataTenantLogoUrl(ByVal tenant As StorefrontSeoTenantIdentity) As String
+        If tenant Is Nothing OrElse String.IsNullOrWhiteSpace(tenant.LogoFileName) Then Return String.Empty
+        Try
+            Dim raw As String = tenant.LogoFileName.Trim().Replace("/"c, "\"c)
+            Dim fileName As String = System.IO.Path.GetFileName(raw)
+            If String.IsNullOrWhiteSpace(fileName) OrElse
+               Not Regex.IsMatch(fileName, "^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$", RegexOptions.CultureInvariant) Then Return String.Empty
+
+            Dim relativeUrl As String = "/Public/assets/images/logo/" & fileName
+            Dim physicalPath As String = Server.MapPath(relativeUrl)
+            If String.IsNullOrWhiteSpace(physicalPath) OrElse Not System.IO.File.Exists(physicalPath) Then Return String.Empty
+            Return tenant.CanonicalBaseUrl.TrimEnd("/"c) & relativeUrl
+        Catch
+            Return String.Empty
+        End Try
     End Function
 
     Private Function BuildMetaDescription(row As DataRow, fallbackName As String) As String
@@ -2538,13 +2465,15 @@ Partial Class articolo
     Private Function BuildAuthorizedPriceContext(ByVal articleId As Integer,
                                                   ByVal tcId As Integer,
                                                   ByVal baseNet As Nullable(Of Decimal),
-                                                  ByVal baseGross As Nullable(Of Decimal)) As PriceContext
+                                                  ByVal baseGross As Nullable(Of Decimal),
+                                                  Optional ByVal promotionModel As ProductPromotionDisplayModel = Nothing) As PriceContext
         Dim price As New PriceContext()
         Dim ivaTipo As Integer = GetSessionInt("IvaTipo", 2)
         price.IvaLabel = If(ivaTipo = 1, "IVA esclusa", "IVA inclusa")
         price.CurrentPrice = If(ivaTipo = 1, baseNet, baseGross)
 
-        Dim model As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(articleId, tcId, baseNet, baseGross)
+        Dim model As ProductPromotionDisplayModel = promotionModel
+        If model Is Nothing Then model = GetAuthorizedPromotionModel(articleId, tcId, baseNet, baseGross)
         If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
             Dim authorizedPrice As Decimal = If(ivaTipo = 1,
                                                 model.BestDefaultQuantityPriceNet,

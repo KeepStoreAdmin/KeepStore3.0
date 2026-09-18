@@ -39,9 +39,32 @@ Relazione con le fonti operative: il root `AGENTS.md` governa il metodo permanen
 - Policy canonical: HOME `/`; catalogo `/articoli.aspx`; PDP `/articolo.aspx?id=...` con eventuale variante `TCid`; tassonomie catalogo soltanto nella combinazione whitelist. Ricerca, promo/campagne, ordinamenti, paginazione, multiselezioni e parametri tecnici restano `noindex,follow` e non contaminano la canonical. Le superfici private/transazionali non emettono canonical né markup pubblico contraddittorio.
 - Policy index: HOME, catalogo base, tassonomie ammesse e PDP valida sono `index,follow`. Carrello, autenticazione, registrazione, account, wishlist, documenti, ordine, checkout/pagamento, endpoint tecnici/mutativi e promo legacy sono `noindex,nofollow`. Errori HTTP ricevono anche `X-Robots-Tag` fail-closed.
 - `/robots.txt` e `/sitemap.xml` sono instradati da IIS a handler ASP.NET dinamici. Robots e sitemap condividono la stessa identita tenant; non coesistono file statici. La sitemap legge soltanto dati pubblici con query parametrizzate/read-only, usa la connection string applicativa senza dipendere dal nome database, emette XML `application/xml`, supporta GET/HEAD, deduplica e filtra le route ammesse.
-- Metadati esistenti verificati: HOME con Open Graph e grafo WebSite/Organization; catalogo con `CollectionPage`; PDP con Open Graph e grafo prodotto esistente. Cart/checkout non espongono piu `CheckoutPage` pubblico. Il task non introduce il nuovo contratto Google `Product/Offer`, feed, Merchant Center, IndexNow, Search Console, LLMS o AI.
+- Metadati esistenti verificati: HOME con Open Graph e grafo WebSite/Organization; catalogo con `CollectionPage`; PDP con Open Graph. Cart/checkout non espongono `CheckoutPage` pubblico. Il contratto Google `Product/Offer` e ora implementato esclusivamente sulla PDP dal modulo descritto sotto; feed, Merchant Center, IndexNow, Search Console, LLMS e AI restano fuori perimetro.
 - Anti-regressione: harness VB compilato insieme alla policy effettiva con due identita sintetiche, alias, host cross-tenant e alterato; route matrix HTTP non mutativa; validazione XML e JSON-LD; precompile .NET Framework 4.8; controllo che resolver promo, card, CSS/JavaScript, ordine e servizi carrello restino byte/diff invariati.
-- Roadmap: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` e chiuso A con PR #261 al checkpoint `37bbfdc102ac1686a96b1b97eadd9cc6b385e0d0`. Il task documentale/operativo corrente formalizza l'onboarding multi-tenant; soltanto dopo la sua chiusura A e merge il candidato e `GOOGLE-PRODUCT-STRUCTURED-DATA-1A`, stato `NON AVVIATO`.
+- Roadmap: `STOREFRONT-SEO-TECHNICAL-AUDIT-1A` e chiuso A con PR #261 e `KEEPSTORE-MULTITENANT-ONBOARDING-CONTRACT-1A` e chiuso con PR #262 al checkpoint `07522fa332c98b83bd535abd090d0d8899ee262a`. `GOOGLE-PRODUCT-STRUCTURED-DATA-1A` e il task corrente; il candidato successivo, solo dopo review A e merge, e `GOOGLE-MERCHANT-CENTER-FEED-1A`, stato `NON AVVIATO`.
+
+#### 2.0.1.1 Modulo Product structured data deterministico
+
+`ProductStructuredDataBuilder` e il primo modulo deterministico del futuro SEO Automation Engine. Riceve un DTO gia risolto dalla PDP, non accede al database, non invoca resolver commerciali e serializza un grafo JSON-LD script-safe. `articolo.aspx.vb` gli consegna lo stesso `PriceContext`, `ProductPromotionDisplayModel` e `AvailabilityDisplayModel` gia usato per la presentazione visibile; pertanto il delta query DB del builder e zero.
+
+| Proprieta JSON-LD | Fonte autorevole | Regola di omissione |
+| --- | --- | --- |
+| `Organization.name/url/logo` | Identita tenant e logo locale validato | Output intero omesso se identita/URL non validi; logo omesso se assente, placeholder, esterno o non locale |
+| `WebSite`, `WebPage`, breadcrumb e `@id` | Canonical HTTPS e home del tenant risolto | Output intero omesso su host/authority sconosciuti o contaminazione cross-tenant |
+| `Product.name/description` | Riga prodotto della PDP; descrizione convertita in testo semplice | Output intero omesso senza nome; descrizione omessa se vuota |
+| `sku` | Codice commerciale reale | Omesso se vuoto; vietato il fallback su `ArticoliId` |
+| `brand`, `category` | Marca e tassonomia reali della riga prodotto | Omesse se mancanti |
+| `gtin8/12/13/14` | EAN/GTIN reale | Omesso se non numerico, con lunghezza non ammessa o check digit invalido |
+| `image` | File immagini prodotto locali risolti dalla PDP | Omesse immagini mancanti, placeholder/demo/data URI, esterne o duplicate |
+| `Offer.price` | Prezzo server-side applicabile alla quantita `1` | Output intero omesso se prezzo non positivo o risoluzione commerciale fallisce; tier futuri non lo sostituiscono |
+| `priceCurrency` | Valuta storefront autorevole | Output intero omesso senza codice ISO a tre lettere |
+| `availability` | Medesimo snapshot disponibilita visibile | Output intero omesso senza stato; mapping limitato a `InStock`/`OutOfStock` |
+| `priceValidUntil` | Fine reale della promo applicabile alla quantita `1` | Omessa senza scadenza autorevole |
+| `seller` | Riferimento all'`Organization` tenant | Mai account utente o valore hardcoded |
+
+Il grafo contiene esattamente un `Product` e un `Offer`. `AggregateOffer`, `ProductGroup`, varianti, rating/recensioni, MPN, condizione, spedizione e resi non sono dedotti: richiedono fonti e task dedicati. Il JSON-LD non include login, owner, sessione, e-mail, token o ID tecnici. La serializzazione neutralizza terminatori script e caratteri HTML pericolosi; una failure produce output vuoto, mai JSON parziale.
+
+Harness permanente: 18 gruppi fixture e 46 asserzioni coprono prezzo normale, stock zero, promo immediata, tier, prezzo lungo, brand, GTIN, immagini, caratteri speciali, dati mancanti, errore tecnico, due tenant/host ignoto e contesti anonimo/owner-scoped. Il controllo statico garantisce collocazione solo PDP, nessun data access e delta query zero. Il runtime anonimo e verificato; il gate HTTP autenticato PROVA rimane obbligatorio prima della chiusura A. Anche con tutti i gate superati, il markup rende la pagina tecnicamente idonea ma non garantisce un rich result Google.
 
 ### 2.0.2 Contratto MULTITENANT-BY-DESIGN e confini di configurazione
 
