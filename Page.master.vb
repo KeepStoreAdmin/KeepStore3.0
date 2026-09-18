@@ -593,7 +593,10 @@ Dim IvaTipo As Integer
                 background = "Default" & Session("AziendaID") & ".png"
             End If
 
-            PageBody.Style.Value = PageBody.Style.Value & "; background-image:url('public/Sfondi/" & background & "')"
+            Dim backgroundUrl As String = TenantRuntimeAssetResolver.ResolveTenantBackground(background, Server.MapPath("~/"))
+            If Not String.IsNullOrWhiteSpace(backgroundUrl) Then
+                PageBody.Style("background-image") = "url('" & backgroundUrl & "')"
+            End If
 
             dr.Close()
             conn.Close()
@@ -1357,16 +1360,20 @@ End Function
 	            lblCreditsCtrl.Text = credits
 	        End If
 
-        Dim objcss As New HtmlLink()
         Dim obj3 As New HtmlLink()
-	        objcss.Href = "~/public/style/" & If(Session("css") Is Nothing, "", Session("css").ToString())
-        objcss.Attributes.Add("rel", "stylesheet")
-        objcss.Attributes.Add("type", "text/css")
+        Dim cssFile As String = If(Session("css") Is Nothing, "", Session("css").ToString())
+        Dim cssHref As String = TenantRuntimeAssetResolver.ResolveTenantStylesheet(cssFile, Server.MapPath("~/"))
 
         obj3.Attributes.Add("rel", "shortcut icon")
-	        obj3.Href = If(Session("IconaWeb") Is Nothing, "", Session("IconaWeb").ToString())
+        obj3.Href = If(Session("IconaWeb") Is Nothing, "", Session("IconaWeb").ToString())
 
-        If headC IsNot Nothing Then headC.Controls.Add(objcss)
+        If headC IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(cssHref) Then
+            Dim objcss As New HtmlLink()
+            objcss.Href = cssHref
+            objcss.Attributes.Add("rel", "stylesheet")
+            objcss.Attributes.Add("type", "text/css")
+            headC.Controls.Add(objcss)
+        End If
         If headC IsNot Nothing Then headC.Controls.Add(obj3)
     End Sub
 

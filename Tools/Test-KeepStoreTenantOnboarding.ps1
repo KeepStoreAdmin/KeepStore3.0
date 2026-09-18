@@ -56,6 +56,32 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 $checks = New-Object 'System.Collections.Generic.List[object]'
+$assetReferences = @{}
+
+function Invoke-TenantAssetResolverSelfTest {
+    $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe'
+    $resolver = Join-Path (Split-Path -Parent $PSScriptRoot) 'App_Code\TenantRuntimeAssetResolver.vb'
+    $harness = Join-Path $PSScriptRoot 'TenantRuntimeAssetResolverHarness.vb'
+    foreach ($required in @($compiler, $resolver, $harness)) {
+        if (-not (Test-Path -LiteralPath $required)) { throw ('TENANT_ASSET_TEST_REQUIRED_FILE_MISSING=' + $required) }
+    }
+
+    $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('KeepStoreTenantAsset-' + [Guid]::NewGuid().ToString('N'))
+    $fixtureRoot = Join-Path $tempRoot 'fixture'
+    $executable = Join-Path $tempRoot 'TenantRuntimeAssetResolverHarness.exe'
+    New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
+    try {
+        & $compiler /nologo /target:exe "/out:$executable" $resolver $harness
+        if ($LASTEXITCODE -ne 0) { throw 'TENANT_ASSET_TEST_COMPILE_FAILED' }
+        & $executable $fixtureRoot
+        if ($LASTEXITCODE -ne 0) { throw 'TENANT_ASSET_TEST_FAILED' }
+    }
+    finally {
+        if (Test-Path -LiteralPath $tempRoot) {
+            Remove-Item -LiteralPath $tempRoot -Recurse -Force
+        }
+    }
+}
 
 function Add-Check {
     param(
@@ -213,6 +239,89 @@ function Get-HtmlAttribute {
     return $match.Groups['uq'].Value
 }
 
+function Register-FirstPartyAssetReference {
+    param(
+        [Uri]$PageUri,
+        [string]$Candidate,
+        [string]$Referrer
+    )
+
+    if ($null -eq $PageUri -or [string]::IsNullOrWhiteSpace($Candidate)) { return }
+    $decoded = [Net.WebUtility]::HtmlDecode($Candidate).Trim().Trim('"', "'")
+    if ([string]::IsNullOrWhiteSpace($decoded) -or $decoded.StartsWith('#') -or
+        $decoded.StartsWith('data:', [StringComparison]::OrdinalIgnoreCase) -or
+        $decoded.StartsWith('blob:', [StringComparison]::OrdinalIgnoreCase) -or
+        $decoded.StartsWith('javascript:', [StringComparison]::OrdinalIgnoreCase) -or
+        $decoded.StartsWith('mailto:', [StringComparison]::OrdinalIgnoreCase) -or
+        $decoded.StartsWith('tel:', [StringComparison]::OrdinalIgnoreCase)) { return }
+
+    $assetUri = $null
+    if (-not [Uri]::TryCreate($PageUri, $decoded, [ref]$assetUri) -or $null -eq $assetUri) { return }
+    if (-not (Test-SameOrigin -Left $assetUri -Right $PageUri)) { return }
+
+    $allowed = @('.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot')
+    $extension = [IO.Path]::GetExtension($assetUri.AbsolutePath).ToLowerInvariant()
+    if ($allowed -notcontains $extension) { return }
+
+    $key = $assetUri.AbsoluteUri
+    if (-not $script:assetReferences.ContainsKey($key)) {
+        $script:assetReferences[$key] = [PSCustomObject]@{
+            Uri = $assetUri
+            Referrers = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        }
+    }
+    [void]$script:assetReferences[$key].Referrers.Add($Referrer)
+}
+
+function Register-HtmlFirstPartyAssets {
+    param(
+        [Uri]$PageUri,
+        [string]$Html,
+        [string]$Referrer
+    )
+
+    if ($null -eq $PageUri -or [string]::IsNullOrWhiteSpace($Html)) { return }
+    $scanHtml = [Regex]::Replace($Html, '(?is)<!--.*?-->', '')
+    foreach ($tagMatch in [Regex]::Matches($scanHtml, '(?is)<[a-z][^>]*>')) {
+        $tag = $tagMatch.Value
+        foreach ($attributeName in @('src', 'href')) {
+            $candidate = Get-HtmlAttribute -Tag $tag -Name $attributeName
+            Register-FirstPartyAssetReference -PageUri $PageUri -Candidate $candidate -Referrer $Referrer
+        }
+
+        $style = Get-HtmlAttribute -Tag $tag -Name 'style'
+        if ([string]::IsNullOrWhiteSpace($style)) { continue }
+        foreach ($urlMatch in [Regex]::Matches([Net.WebUtility]::HtmlDecode($style), '(?is)url\(\s*(?:"(?<dq>[^"]*)"|''(?<sq>[^'']*)''|(?<uq>[^\)\s]+))\s*\)')) {
+            $candidate = if ($urlMatch.Groups['dq'].Success) {
+                $urlMatch.Groups['dq'].Value
+            }
+            elseif ($urlMatch.Groups['sq'].Success) {
+                $urlMatch.Groups['sq'].Value
+            }
+            else {
+                $urlMatch.Groups['uq'].Value
+            }
+            Register-FirstPartyAssetReference -PageUri $PageUri -Candidate $candidate -Referrer $Referrer
+        }
+    }
+}
+
+function Test-RegisteredFirstPartyAssets {
+    $index = 0
+    foreach ($key in @($script:assetReferences.Keys | Sort-Object)) {
+        $index += 1
+        $reference = $script:assetReferences[$key]
+        $response = Invoke-ReadOnlyRequest -Uri $reference.Uri -Method 'HEAD'
+        if ($response.StatusCode -eq 405) {
+            $response = Invoke-ReadOnlyRequest -Uri $reference.Uri -Method 'GET'
+        }
+        $referrers = @($reference.Referrers | Sort-Object) -join ','
+        Add-Check -Name ('ASSET_' + $index.ToString('000') + '_HTTP_200') `
+            -Passed ($response.StatusCode -eq 200) `
+            -Detail ('HTTP=' + $response.StatusCode + ' URL=' + $reference.Uri.AbsoluteUri + ' REFERRER=' + $referrers)
+    }
+}
+
 function Get-CanonicalUris {
     param([string]$Html)
 
@@ -256,6 +365,7 @@ function Test-ForbiddenTenantHost {
     return $false
 }
 
+Invoke-TenantAssetResolverSelfTest
 Assert-OriginTarget -Uri $CanonicalUrl -ParameterName 'CANONICAL_URL'
 
 $seenOrigins = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
@@ -287,6 +397,7 @@ foreach ($target in $publicTargets) {
     $targetUri = New-TargetUri -Origin $CanonicalUrl -Path $target.Path
     $response = Invoke-ReadOnlyRequest -Uri $targetUri -Method 'GET'
     Add-Check -Name ($target.Name + '_HTTP_200') -Passed ($response.StatusCode -eq 200) -Detail ('HTTP=' + $response.StatusCode)
+    Register-HtmlFirstPartyAssets -PageUri $targetUri -Html $response.Body -Referrer $target.Name
 
     $canonicalUris = @(Get-CanonicalUris -Html $response.Body)
     Add-Check -Name ($target.Name + '_ONE_CANONICAL') -Passed ($canonicalUris.Count -eq 1) -Detail ('COUNT=' + $canonicalUris.Count)
@@ -362,6 +473,7 @@ foreach ($privatePath in $PrivatePaths) {
     $privateIndex += 1
     $privateUri = New-TargetUri -Origin $CanonicalUrl -Path $privatePath
     $response = Invoke-ReadOnlyRequest -Uri $privateUri -Method 'GET'
+    Register-HtmlFirstPartyAssets -PageUri $privateUri -Html $response.Body -Referrer ('PRIVATE_' + $privateIndex)
     $robotsHeader = ''
     if ($null -ne $response.Headers) { $robotsHeader = [string]$response.Headers['X-Robots-Tag'] }
     $metaNoIndex = [Regex]::IsMatch($response.Body, '(?is)<meta\b[^>]*\bname\s*=\s*["'']robots["''][^>]*\bcontent\s*=\s*["''][^"'']*noindex') -or
@@ -378,6 +490,8 @@ foreach ($unknownUrl in $UnknownHostUrls) {
     $safeFailure = @(400, 403, 404, 421).Contains($response.StatusCode) -and [string]::IsNullOrWhiteSpace($response.Location)
     Add-Check -Name ('UNKNOWN_HOST_' + $unknownIndex + '_FAIL_CLOSED') -Passed $safeFailure -Detail ('HTTP=' + $response.StatusCode)
 }
+
+Test-RegisteredFirstPartyAssets
 
 Write-Output ('TARGET=' + (Get-Origin -Uri $CanonicalUrl))
 foreach ($check in $checks) {
