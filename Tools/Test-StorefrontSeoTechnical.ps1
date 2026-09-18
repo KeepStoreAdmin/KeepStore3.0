@@ -70,6 +70,8 @@ try {
 
     $tenantContextSource = Get-Content -LiteralPath (Join-Path $repoRoot 'App_Code\StorefrontSeoTenantContext.vb') -Raw
     $masterSource = Get-Content -LiteralPath (Join-Path $repoRoot 'Page.master.vb') -Raw
+    $masterMarkup = Get-Content -LiteralPath (Join-Path $repoRoot 'Page.master') -Raw
+    $keepStoreCssSource = Get-Content -LiteralPath (Join-Path $repoRoot 'Public\assets\keepstore\css\keepstore.css') -Raw
     if ($tenantContextSource -notmatch 'StorefrontCanonicalHostPolicy\.SelectExactTenant\(') { throw 'TENANT_EXACT_HOST_SELECTION_MISSING' }
     if ($tenantContextSource -match '(?is)For Each candidate.*?Exit For') { throw 'TENANT_FIRST_MATCH_SELECTION_FOUND' }
     if ($tenantContextSource -notmatch 'BuildTenantListCacheKey\(') { throw 'TENANT_DATABASE_SCOPED_LIST_CACHE_MISSING' }
@@ -78,7 +80,16 @@ try {
     if ($masterSource -notmatch 'Me\.Session\("Listino"\)\s*=\s*dr\.Item\("ListinoDefault"\)') { throw 'TENANT_DEFAULT_PRICE_LIST_SELECTED_ROW_BINDING_MISSING' }
     if ($masterSource -notmatch 'Me\.Session\("ListinoUser"\)\s*=\s*dr\.Item\("ListinoUser"\)') { throw 'TENANT_INITIAL_USER_PRICE_LIST_SELECTED_ROW_BINDING_MISSING' }
     if ($masterSource -notmatch 'Me\.Session\("css"\)\s*=\s*dr\.Item\("css"\)') { throw 'TENANT_CSS_SELECTED_ROW_BINDING_MISSING' }
-    if ($masterSource -notmatch 'WHERE \(aziendaid=@aziendaId\)') { throw 'TENANT_BACKGROUND_OWNER_SCOPE_MISSING' }
+    if ($masterSource -match 'PageBody\.Style\("background-image"\)' -or
+        $masterSource -match 'Default"\s*&\s*Session\("AziendaID"\)\s*&\s*"\.png"' -or
+        $masterSource -match '(?is)SELECT\s+\*\s+FROM\s+sfondi') { throw 'LEGACY_PAGE_BACKGROUND_EMISSION_FOUND' }
+    $globalBodyRules = [regex]::Matches($keepStoreCssSource, '(?is)(?:^|})\s*body\s*\{([^}]*)\}')
+    foreach ($bodyRule in $globalBodyRules) {
+        if ($bodyRule.Groups[1].Value -match '(?i)background(?:-image|-color)?\s*:|DXImageTransform\.Microsoft\.gradient') {
+            throw 'GLOBAL_LEGACY_BODY_BACKGROUND_FOUND'
+        }
+    }
+    if ($masterMarkup -notmatch 'css/keepstore\.css"\)\s*&\s*"\?v=20260918-runtime-asset-404-rev3"') { throw 'KEEPSTORE_CSS_CACHE_BUSTER_STALE' }
 
     if (Test-Path -LiteralPath (Join-Path $repoRoot 'robots.txt')) { throw 'STATIC_ROBOTS_CONFLICT_FOUND' }
     if (Test-Path -LiteralPath (Join-Path $repoRoot 'sitemap.xml')) { throw 'STATIC_SITEMAP_CONFLICT_FOUND' }

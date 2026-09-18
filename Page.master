@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("fonts/font.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("icons/icomoon/style.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") & "?v=20260918-runtime-asset-404-rev3" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />

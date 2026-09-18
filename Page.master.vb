@@ -570,39 +570,6 @@ Dim IvaTipo As Integer
             conn.Close()
         End If
 
-        'Background
-        If aziendaId > 0 Then
-            conn.Open()
-
-            cmd.Parameters.Clear()
-            cmd.CommandType = CommandType.Text
-            cmd.CommandText = "SELECT * FROM sfondi " &
-                              "WHERE (aziendaid=@aziendaId) " &
-                              "AND ((data_inizio<=@dataOdierna) AND (data_fine>=@dataOdierna)) " &
-                              "AND (abilitato=1)"
-            cmd.Parameters.AddWithValue("@aziendaId", aziendaId)
-            cmd.Parameters.AddWithValue("@dataOdierna", DataOdierna)
-
-            dr = cmd.ExecuteReader()
-            dr.Read()
-
-            'Default
-            Dim background As String
-            If dr.HasRows Then
-                background = dr.Item("path").ToString()
-            Else
-                background = "Default" & Session("AziendaID") & ".png"
-            End If
-
-            Dim backgroundUrl As String = TenantRuntimeAssetResolver.ResolveTenantBackground(background, Server.MapPath("~/"))
-            If Not String.IsNullOrWhiteSpace(backgroundUrl) Then
-                PageBody.Style("background-image") = "url('" & backgroundUrl & "')"
-            End If
-
-            dr.Close()
-            conn.Close()
-        End If
-
         ' Carico social con query parametrizzate
         Load_social_buttons()
 
