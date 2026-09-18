@@ -513,6 +513,7 @@ Dim IvaTipo As Integer
         Catch
         End Try
         LeggiAzienda()
+        If Response.StatusCode = 421 Then Return
         SettaCatalogo()
 
         If Me.Session.Item("ListaSettori") Is Nothing Then
@@ -1072,16 +1073,20 @@ End Function
         Dim localConn As New MySqlConnection
         Dim localCmd As New MySqlCommand
 
-        If IsNothing(Me.Session("AziendaID")) Then
-            Dim resolvedTenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
-            If resolvedTenant Is Nothing OrElse resolvedTenant.CompanyId <= 0 Then
-                Response.Clear()
-                Response.StatusCode = 421
-                Response.TrySkipIisCustomErrors = True
-                Response.Write("Sito non configurato per l'host richiesto.")
-                Context.ApplicationInstance.CompleteRequest()
-                Return
-            End If
+        Dim resolvedTenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If resolvedTenant Is Nothing OrElse resolvedTenant.CompanyId <= 0 Then
+            Response.Clear()
+            Response.StatusCode = 421
+            Response.TrySkipIisCustomErrors = True
+            Response.SuppressContent = True
+            Response.Write("Sito non configurato per l'host richiesto.")
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
+
+        Dim sessionCompanyId As Integer = 0
+        Integer.TryParse(Convert.ToString(Me.Session("AziendaID")), sessionCompanyId)
+        If sessionCompanyId <> resolvedTenant.CompanyId Then
 
             localConn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             localCmd.Connection = localConn
@@ -1103,6 +1108,7 @@ End Function
                 Response.Clear()
                 Response.StatusCode = 421
                 Response.TrySkipIisCustomErrors = True
+                Response.SuppressContent = True
                 Response.Write("Sito non configurato per l'host richiesto.")
                 Context.ApplicationInstance.CompleteRequest()
                 dr.Close()
@@ -1118,12 +1124,17 @@ End Function
                     Convert.ToString(dr.Item("logoWeb")),
                     Convert.ToInt32(dr.Item("ListinoDefault")))
                 If configuredTenant Is Nothing OrElse
-                   Not StorefrontCanonicalHostPolicy.IsRequestHostAllowed(configuredTenant,
-                                                                          Me.Request.Url.DnsSafeHost,
-                                                                          Me.Request.IsLocal) Then
+                   configuredTenant.CompanyId <> resolvedTenant.CompanyId OrElse
+                   Not String.Equals(configuredTenant.CanonicalHost,
+                                     resolvedTenant.CanonicalHost,
+                                     StringComparison.OrdinalIgnoreCase) OrElse
+                   Not String.Equals(configuredTenant.SecondaryHost,
+                                     resolvedTenant.SecondaryHost,
+                                     StringComparison.OrdinalIgnoreCase) Then
                     Response.Clear()
                     Response.StatusCode = 421
                     Response.TrySkipIisCustomErrors = True
+                    Response.SuppressContent = True
                     Response.Write("Sito non configurato per l'host richiesto.")
                     Context.ApplicationInstance.CompleteRequest()
                     dr.Close()

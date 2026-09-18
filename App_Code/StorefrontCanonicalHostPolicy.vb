@@ -49,7 +49,6 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
                                         ByVal defaultPriceListId As Integer) As StorefrontSeoTenantIdentity
         Dim primaryBase As String = NormalizeConfiguredBaseUrl(primaryUrl)
         Dim secondaryBase As String = NormalizeConfiguredBaseUrl(secondaryUrl)
-        If String.IsNullOrEmpty(primaryBase) Then primaryBase = secondaryBase
         If String.IsNullOrEmpty(primaryBase) Then Return Nothing
 
         Dim primaryUri As Uri = Nothing
@@ -111,11 +110,38 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
         If tenant Is Nothing Then Return False
         Dim host As String = NormalizeHost(requestHost)
         If String.IsNullOrEmpty(host) Then Return False
-        If isLocalRequest OrElse IsLoopbackHost(host) Then Return True
         For Each allowedHost As String In tenant.AllowedHosts()
             If String.Equals(host, allowedHost, StringComparison.OrdinalIgnoreCase) Then Return True
         Next
         Return False
+    End Function
+
+    Public Shared Function SelectExactTenant(ByVal identities As IEnumerable(Of StorefrontSeoTenantIdentity),
+                                             ByVal requestHost As String,
+                                             ByVal allowSingleTenantLoopback As Boolean) As StorefrontSeoTenantIdentity
+        If identities Is Nothing Then Return Nothing
+
+        Dim host As String = NormalizeHost(requestHost)
+        If String.IsNullOrEmpty(host) Then Return Nothing
+
+        Dim selected As StorefrontSeoTenantIdentity = Nothing
+        Dim validIdentityCount As Integer = 0
+
+        For Each candidate As StorefrontSeoTenantIdentity In identities
+            If candidate Is Nothing Then Continue For
+            validIdentityCount += 1
+            If Not IsRequestHostAllowed(candidate, host, False) Then Continue For
+            If selected IsNot Nothing Then Return Nothing
+            selected = candidate
+        Next
+
+        If selected IsNot Nothing Then Return selected
+        If allowSingleTenantLoopback AndAlso IsLoopbackHost(host) AndAlso validIdentityCount = 1 Then
+            For Each candidate As StorefrontSeoTenantIdentity In identities
+                If candidate IsNot Nothing Then Return candidate
+            Next
+        End If
+        Return Nothing
     End Function
 
     Public Shared Function IsNoIndexPath(ByVal absolutePath As String) As Boolean

@@ -4,14 +4,20 @@ param()
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $policyPath = Join-Path $repoRoot 'App_Code\StorefrontCanonicalHostPolicy.vb'
+$assetResolverPath = Join-Path $repoRoot 'App_Code\TenantRuntimeAssetResolver.vb'
 $harnessPath = Join-Path $PSScriptRoot 'StorefrontSeoPolicyHarness.vb'
+$sameDatabaseHarnessPath = Join-Path $PSScriptRoot 'StorefrontSameDatabaseTenantHarness.vb'
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe'
 
 if (-not (Test-Path -LiteralPath $compiler)) { throw 'VB_COMPILER_NOT_FOUND' }
 if (-not (Test-Path -LiteralPath $policyPath)) { throw 'SEO_POLICY_SOURCE_NOT_FOUND' }
+if (-not (Test-Path -LiteralPath $assetResolverPath)) { throw 'TENANT_ASSET_RESOLVER_SOURCE_NOT_FOUND' }
+if (-not (Test-Path -LiteralPath $sameDatabaseHarnessPath)) { throw 'SAME_DATABASE_TENANT_HARNESS_NOT_FOUND' }
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('KeepStoreSeoPolicy-' + [Guid]::NewGuid().ToString('N'))
 $exePath = Join-Path $tempRoot 'StorefrontSeoPolicyHarness.exe'
+$sameDatabaseExePath = Join-Path $tempRoot 'StorefrontSameDatabaseTenantHarness.exe'
+$sameDatabaseFixtureRoot = Join-Path $tempRoot 'same-database-fixture'
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
 try {
@@ -20,6 +26,12 @@ try {
 
     & $exePath
     if ($LASTEXITCODE -ne 0) { throw 'SEO_POLICY_HARNESS_FAILED' }
+
+    & $compiler /nologo /target:exe "/out:$sameDatabaseExePath" $policyPath $assetResolverPath $sameDatabaseHarnessPath
+    if ($LASTEXITCODE -ne 0) { throw 'SAME_DATABASE_TENANT_COMPILE_FAILED' }
+
+    & $sameDatabaseExePath $sameDatabaseFixtureRoot
+    if ($LASTEXITCODE -ne 0) { throw 'SAME_DATABASE_TENANT_HARNESS_FAILED' }
 
     $seoFiles = @(
         'App_Code\StorefrontCanonicalHostPolicy.vb',
@@ -55,6 +67,16 @@ try {
         'sitemap.aspx.vb'
     ) | ForEach-Object { Get-Content -LiteralPath (Join-Path $repoRoot $_) -Raw }
     if (($seoCoreSource -join "`n") -match '(?i)\b(INSERT\s+(INTO|IGNORE)|UPDATE\s+[A-Za-z`]|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\b') { throw 'SEO_MUTATING_SQL_FOUND' }
+
+    $tenantContextSource = Get-Content -LiteralPath (Join-Path $repoRoot 'App_Code\StorefrontSeoTenantContext.vb') -Raw
+    $masterSource = Get-Content -LiteralPath (Join-Path $repoRoot 'Page.master.vb') -Raw
+    if ($tenantContextSource -notmatch 'StorefrontCanonicalHostPolicy\.SelectExactTenant\(') { throw 'TENANT_EXACT_HOST_SELECTION_MISSING' }
+    if ($tenantContextSource -match '(?is)For Each candidate.*?Exit For') { throw 'TENANT_FIRST_MATCH_SELECTION_FOUND' }
+    if ($tenantContextSource -notmatch 'BuildTenantListCacheKey\(') { throw 'TENANT_DATABASE_SCOPED_LIST_CACHE_MISSING' }
+    if ($masterSource -notmatch 'sessionCompanyId\s*<>\s*resolvedTenant\.CompanyId') { throw 'TENANT_SESSION_REALIGNMENT_MISSING' }
+    if ($masterSource -notmatch 'WHERE Id=@companyId') { throw 'TENANT_SELECTED_ROW_LOAD_MISSING' }
+    if ($masterSource -notmatch 'Me\.Session\("css"\)\s*=\s*dr\.Item\("css"\)') { throw 'TENANT_CSS_SELECTED_ROW_BINDING_MISSING' }
+    if ($masterSource -notmatch 'WHERE \(aziendaid=@aziendaId\)') { throw 'TENANT_BACKGROUND_OWNER_SCOPE_MISSING' }
 
     if (Test-Path -LiteralPath (Join-Path $repoRoot 'robots.txt')) { throw 'STATIC_ROBOTS_CONFLICT_FOUND' }
     if (Test-Path -LiteralPath (Join-Path $repoRoot 'sitemap.xml')) { throw 'STATIC_SITEMAP_CONFLICT_FOUND' }

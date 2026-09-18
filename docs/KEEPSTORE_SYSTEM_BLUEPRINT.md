@@ -72,20 +72,22 @@ Harness permanente: 18 gruppi fixture e 46 asserzioni coprono prezzo normale, st
 
 Il master aggiunge il `<link rel="stylesheet">` o `background-image` soltanto quando il resolver restituisce un asset valido. Un CSS assente lascia invariati i fogli KeepStore/ONSUS standard; uno sfondo assente lascia operare colore e fallback CSS. Non vengono creati file, copiati asset legacy o selezionati fallback demo. URL assoluti/protocol-relative, traversal, directory annidate, caratteri di controllo ed estensioni non ammesse falliscono chiusi.
 
+REV1 separa risoluzione host e validazione file senza perdere il legame tra loro. `StorefrontSeoTenantContext` carica la lista dal database configurato, la conserva in una cache di lista identificata da server/porta/database e seleziona per ogni richiesta una sola identita tramite confronto host esatto. Nessun risultato tenant viene memorizzato per il solo database. `Page.master` confronta l'ID di sessione con l'identita request-scoped e, se differente, rilegge esattamente quella riga prima di impostare CSS, logo, contatti e opzioni; lo sfondo resta owner-scoped allo stesso ID. Host sconosciuto o duplicato produce nessun tenant.
+
 `Tools/Test-KeepStoreTenantOnboarding.ps1` mantiene i target espliciti e il comportamento read-only, compila le fixture del resolver e verifica gli asset first-party realmente referenziati dalle pagine richieste. Estrae `src`, `href` e `url(...)` inline dopo avere rimosso i commenti HTML; considera soltanto la stessa origin e le estensioni web ammesse; usa HEAD con fallback GET su 405 e produce URL/status/referrer. Browser extension, URL esterni e contenuto commentato non entrano nell'inventario.
 
-Copertura: CSS/sfondo valido, mancante e assente; URL esterno; traversal; estensione vietata; due tenant isolati. Matrice runtime HOME/catalogo/PDP/carrello/login: HTTP 200, riferimenti legacy assenti, 83 asset first-party e zero status non-200. Il solo gate residuo e la conferma visuale Product Owner della PDP sui tre viewport richiesti.
+Copertura: CSS/sfondo valido, mancante e assente; URL esterno; traversal; estensione vietata; due tenant isolati. Il test same-database aggiunge 33 asserzioni per canonico/alias A e B, identita/CSS/contatti separati, articolo condiviso con canonical differenti, ripetizione A-B-A, host ignoto e host ambiguo fail-closed. Matrice runtime HOME/catalogo/PDP/carrello/login: HTTP 200 sull'host valido e riferimenti legacy assenti. Il solo gate residuo e la conferma visuale Product Owner della PDP sui tre viewport richiesti.
 
 ### 2.0.2 Contratto MULTITENANT-BY-DESIGN e confini di configurazione
 
-KeepStore usa un unico codice condiviso per installazioni con aziende, domini, database, asset e merceologie differenti. Il provisioning di un cliente cambia esclusivamente configurazione di deploy, dati e asset autorizzati: non richiede branch cliente, patch, ricompilazione, `USE`, tabelle qualificate o stored procedure personalizzate.
+KeepStore usa un unico codice condiviso sia quando ogni installazione usa un database separato sia quando piu vetrine/aziende condividono database e catalogo. Il provisioning cambia esclusivamente configurazione di deploy, righe `aziende`, dati e asset autorizzati: non richiede branch cliente, patch, ricompilazione, `USE`, tabelle qualificate o stored procedure personalizzate. L'identita runtime e sempre database configurato + host autorevole + unica riga `aziende`.
 
 Mappa tecnica verificata sul codice effettivo:
 
 - `ConfigurationManager.ConnectionStrings("EntropicConnectionString")` e la sorgente unica usata dal runtime per raggiungere il database dell'installazione. La scelta fisica avviene nel deploy, non tramite discovery dell'host e non mediante nomi database nel codice.
-- Nel database selezionato, `aziende` e la fonte autorevole dell'identita tenant. `StorefrontSeoTenantContext.LoadConfiguredTenants()` legge `Id`, nome/descrizione, `url1`, `url2`, `LogoWeb` e listino di default; la cache e request/runtime-scoped e non sostituisce i dati autorevoli.
+- Nel database selezionato, `aziende` e la fonte autorevole dell'identita tenant. `StorefrontSeoTenantContext.LoadConfiguredTenants()` legge `Id`, nome/descrizione, `url1`, `url2`, `LogoWeb` e listino di default; la cache contiene la lista per database configurato, non un tenant scelto. La selezione e request-scoped e richiede una sola corrispondenza host.
 - `url1` definisce l'origin canonico HTTPS e `url2` l'eventuale alias. `StorefrontCanonicalHostPolicy` normalizza e confronta host DNS esatti; non accetta URL con credenziali, loopback configurati o authority riflesse dalla richiesta.
-- `StorefrontSeoTenantContext.Resolve()` seleziona il tenant tramite host ammesso. `Page.master.LeggiAzienda()` rilegge lo stesso record per ID, rivalida l'host e popola la sessione con identita, contatti, dati legali, logo, listini, IVA, disponibilita e opzioni storefront. La scorciatoia loopback/singolo tenant e solo di laboratorio e non costituisce identita commerciale.
+- `StorefrontSeoTenantContext.Resolve()` confronta l'host normalizzato con ogni identita e rifiuta zero o piu corrispondenze; non sceglie la prima riga. `Page.master.LeggiAzienda()` rilegge lo stesso record per ID e riallinea la sessione quando l'azienda precedente differisce, popolando identita, contatti, dati legali, logo, CSS, listini, IVA, disponibilita e opzioni storefront. La scorciatoia loopback e ammessa soltanto con una singola identita valida e non costituisce identita commerciale.
 - `Global.asax` usa l'identita risolta per il redirect canonico; un alias ammesso viene rediretto, un host sconosciuto fallisce chiuso. Canonical, robots e sitemap derivano dalla medesima identita e non da `Host` o `X-Forwarded-Host` non validati.
 - IIS e la configurazione ambientale restano responsabili di binding, certificati TLS, connection string, machine key, impostazioni di cultura/runtime ed endpoint dei servizi esterni. Questi valori non vanno duplicati nei dati tenant o nel codice.
 - Logo/favicon e immagini di marche, articoli, settori/categorie e vettori sono asset cliente. Il runtime accetta nomi file locali validati e applica fallback controllati; URL esterni, traversal o copie di asset di un altro tenant non sono configurazione valida.
@@ -571,7 +573,7 @@ Session timeout web standardizzato a 30 minuti: `web.config` dichiara `sessionSt
 - Il nome del database cliente/azienda non e fisso: cambia in base al cliente/azienda che utilizza KeepStore.
 - Il database ecommerce e condiviso e multi-azienda: `AziendeId=1` = Taikun, `AziendeId=2` = Webaffare. I domini possono usare webroot e `web.config` separati pur puntando allo stesso DB.
 - Il contesto azienda dipende da dominio/host e dai dati `Aziende` (`URL1`, `URL2`, dati azienda, logo, listino, `DispoTipo`, configurazioni gateway). Nei test runtime annotare sempre host, azienda risolta e listino quando si verificano pagamenti, promo, logo o dati azienda.
-- Nel runtime locale verificato, `localhost` risolve Webaffare/Azienda 2 tramite `Aziende.URL2=localhost`; per test Taikun/Azienda 1 usare host/domain mapping coerente o una configurazione locale dedicata.
+- Nota storica superata da `STOREFRONT-RUNTIME-ASSET-404-1A` REV1: `localhost` non seleziona piu una vetrina quando il database espone piu identita valide. I test multi-storefront devono usare un host mapping coerente con la riga `aziende`; il loopback senza host autorevole fallisce chiuso.
 
 ### 5.8 Integrazioni esterne
 
@@ -770,7 +772,7 @@ Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, 
 
 PayPal Express NVP e stato stabilizzato con token `EC-TOKEN` e transazioni `TXN` mascherate nei report. BancaSella resta legacy. Non invocare gateway senza task dedicato.
 
-Regola di test multi-azienda: prima di qualsiasi smoke gateway verificare azienda attiva, host/dominio, `AziendaID`, pagamento selezionato e configurazione gateway senza esporre segreti. `localhost` puo rappresentare Webaffare/Azienda 2, non Taikun/Azienda 1. Prossimi task separati consigliati: `PAYPAL-TAIKUN-SANDBOX-SMOKE-1A` per contesto Taikun e `PAYPAL-WEBAFFARE-EXPRESS-CONFIG-DECISION-1A` per decidere configurazione o disabilitazione PayPal Webaffare; eventuale diagnostica runtime protetta solo con approvazione esplicita.
+Regola di test multi-azienda: prima di qualsiasi smoke gateway verificare azienda attiva, host/dominio, `AziendaID`, pagamento selezionato e configurazione gateway senza esporre segreti. Un loopback privo di host mapping non identifica una vetrina in un database multi-azienda e deve fallire chiuso. Prossimi task separati consigliati: `PAYPAL-TAIKUN-SANDBOX-SMOKE-1A` per contesto Taikun e `PAYPAL-WEBAFFARE-EXPRESS-CONFIG-DECISION-1A` per decidere configurazione o disabilitazione PayPal Webaffare; eventuale diagnostica runtime protetta solo con approvazione esplicita.
 
 ### 9.7 Area account
 

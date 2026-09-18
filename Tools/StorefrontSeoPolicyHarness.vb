@@ -40,6 +40,7 @@ Module StorefrontSeoPolicyHarness
 
         AssertTrue("primary host accepted", StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenantA, "SHOP-ALPHA.EXAMPLE.", False))
         AssertTrue("configured alias accepted", StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenantA, "www.shop-alpha.example", False))
+        AssertFalse("local flag does not bypass exact host", StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenantA, "localhost", True))
         AssertFalse("unknown host rejected", StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenantA, "altered.example", False))
         AssertFalse("cross-tenant host rejected", StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenantA, tenantB.CanonicalHost, False))
 

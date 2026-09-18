@@ -79,6 +79,11 @@ Stack reale: ASP.NET WebForms, VB.NET, .NET Framework 4.x, MySQL, code-behind `.
 
 KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire aziende, domini, database, identita visive e merceologie differenti cambiando esclusivamente configurazione, dati e asset autorizzati. Ogni task nuovo o modificato deve rispettare questo contratto permanente:
 
+- sono supportati sia database separati per installazione sia piu vetrine/aziende nello stesso database e catalogo;
+- l'identita runtime non deriva mai dal solo database: segue `database configurato -> host normalizzato -> confronto esatto con url1/url2 -> una sola riga aziende`; `url1` e il canonico e `url2` l'eventuale alias;
+- nessuna prima riga, `LIMIT 1` senza ID gia risolto, match parziale o cache del tenant indicizzata soltanto per database; host sconosciuti o compatibili con piu righe falliscono chiusi;
+- la lista delle aziende puo essere memorizzata per database configurato, ma la selezione resta per-request e host-scoped; sessione, asset, canonical, seller, robots e sitemap devono provenire dalla stessa riga selezionata;
+
 - zero nomi cliente, domini cliente, nomi database o tabelle qualificate per database nel codice condiviso;
 - zero logica progettata esclusivamente per una singola azienda e nessuna supposizione sulla merceologia;
 - configurazione, dati e asset tenant separati dal codice; un nuovo cliente deve essere installabile senza patch o ricompilazione del sorgente;
