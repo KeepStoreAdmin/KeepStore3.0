@@ -75,6 +75,8 @@ try {
     if ($tenantContextSource -notmatch 'BuildTenantListCacheKey\(') { throw 'TENANT_DATABASE_SCOPED_LIST_CACHE_MISSING' }
     if ($masterSource -notmatch 'sessionCompanyId\s*<>\s*resolvedTenant\.CompanyId') { throw 'TENANT_SESSION_REALIGNMENT_MISSING' }
     if ($masterSource -notmatch 'WHERE Id=@companyId') { throw 'TENANT_SELECTED_ROW_LOAD_MISSING' }
+    if ($masterSource -notmatch 'Me\.Session\("Listino"\)\s*=\s*dr\.Item\("ListinoDefault"\)') { throw 'TENANT_DEFAULT_PRICE_LIST_SELECTED_ROW_BINDING_MISSING' }
+    if ($masterSource -notmatch 'Me\.Session\("ListinoUser"\)\s*=\s*dr\.Item\("ListinoUser"\)') { throw 'TENANT_INITIAL_USER_PRICE_LIST_SELECTED_ROW_BINDING_MISSING' }
     if ($masterSource -notmatch 'Me\.Session\("css"\)\s*=\s*dr\.Item\("css"\)') { throw 'TENANT_CSS_SELECTED_ROW_BINDING_MISSING' }
     if ($masterSource -notmatch 'WHERE \(aziendaid=@aziendaId\)') { throw 'TENANT_BACKGROUND_OWNER_SCOPE_MISSING' }
 

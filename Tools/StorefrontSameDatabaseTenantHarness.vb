@@ -9,8 +9,12 @@ Imports System.IO
 Module StorefrontSameDatabaseTenantHarness
     Private NotInheritable Class SyntheticStorefront
         Public Property Identity As StorefrontSeoTenantIdentity
+        Public Property ApplicationLabel As String
+        Public Property DatabaseIdentity As String
         Public Property CssFileName As String
         Public Property ContactLabel As String
+        Public Property InitialUserPriceListId As Integer
+        Public Property SharedArticleId As Integer
     End Class
 
     Private _tests As Integer
@@ -57,15 +61,23 @@ Module StorefrontSameDatabaseTenantHarness
 
         Dim storefrontA As New SyntheticStorefront() With {
             .Identity = StorefrontCanonicalHostPolicy.CreateTenant(
-                101, "Synthetic Storefront A", "Shared catalog A", "store-a.example", "alias-a.example", "logo-a.svg", 1),
+                101, "Synthetic Storefront A", "Shared catalog A", "store-a.example", "alias-a.example", "logo-a.svg", 11),
+            .ApplicationLabel = "IIS_APP_A",
+            .DatabaseIdentity = "SYNTHETIC_SHARED_DATABASE",
             .CssFileName = "storefront-a.css",
-            .ContactLabel = "CONTACT_A"
+            .ContactLabel = "CONTACT_A",
+            .InitialUserPriceListId = 111,
+            .SharedArticleId = 42
         }
         Dim storefrontB As New SyntheticStorefront() With {
             .Identity = StorefrontCanonicalHostPolicy.CreateTenant(
-                202, "Synthetic Storefront B", "Shared catalog B", "store-b.example", "alias-b.example", "logo-b.svg", 2),
+                202, "Synthetic Storefront B", "Shared catalog B", "store-b.example", "alias-b.example", "logo-b.svg", 22),
+            .ApplicationLabel = "IIS_APP_B",
+            .DatabaseIdentity = "SYNTHETIC_SHARED_DATABASE",
             .CssFileName = "storefront-b.css",
-            .ContactLabel = "CONTACT_B"
+            .ContactLabel = "CONTACT_B",
+            .InitialUserPriceListId = 222,
+            .SharedArticleId = 42
         }
         Dim profiles As IList(Of SyntheticStorefront) = New List(Of SyntheticStorefront) From {storefrontA, storefrontB}
         Dim identities As IList(Of StorefrontSeoTenantIdentity) = New List(Of StorefrontSeoTenantIdentity) From {
@@ -87,11 +99,18 @@ Module StorefrontSameDatabaseTenantHarness
         Dim profileA As SyntheticStorefront = ProfileFor(profiles, selectedA)
         Dim profileB As SyntheticStorefront = ProfileFor(profiles, selectedB)
         AssertEqual("A name isolated", "Synthetic Storefront A", profileA.Identity.CompanyName)
+        AssertEqual("A request belongs to IIS application A", "IIS_APP_A", profileA.ApplicationLabel)
         AssertEqual("A logo isolated", "logo-a.svg", profileA.Identity.LogoFileName)
         AssertEqual("A contact isolated", "CONTACT_A", profileA.ContactLabel)
+        AssertEqual("A default price list follows selected row", 11, profileA.Identity.DefaultPriceListId)
+        AssertEqual("A initial user price list follows selected row", 111, profileA.InitialUserPriceListId)
         AssertEqual("B name isolated", "Synthetic Storefront B", profileB.Identity.CompanyName)
+        AssertEqual("B request belongs to IIS application B", "IIS_APP_B", profileB.ApplicationLabel)
         AssertEqual("B logo isolated", "logo-b.svg", profileB.Identity.LogoFileName)
         AssertEqual("B contact isolated", "CONTACT_B", profileB.ContactLabel)
+        AssertEqual("B default price list follows selected row", 22, profileB.Identity.DefaultPriceListId)
+        AssertEqual("B initial user price list follows selected row", 222, profileB.InitialUserPriceListId)
+        AssertEqual("two IIS applications share one database identity", profileA.DatabaseIdentity, profileB.DatabaseIdentity)
         AssertTrue("A never exposes B name", Not profileA.Identity.CompanyName.Contains("Storefront B"))
         AssertTrue("B never exposes A name", Not profileB.Identity.CompanyName.Contains("Storefront A"))
 
@@ -102,8 +121,14 @@ Module StorefrontSameDatabaseTenantHarness
         AssertEqual("legacy missing background omitted", String.Empty, TenantRuntimeAssetResolver.ResolveTenantBackground("Default1.png", root))
 
         Const sharedArticleId As Integer = 42
+        AssertEqual("same article id in storefront A", sharedArticleId, profileA.SharedArticleId)
+        AssertEqual("same article id in storefront B", sharedArticleId, profileB.SharedArticleId)
         AssertEqual("same article canonical A", "https://store-a.example/articolo.aspx?id=42", StorefrontCanonicalHostPolicy.BuildCanonicalUrl(selectedA, "/articolo.aspx?id=" & sharedArticleId.ToString(CultureInfo.InvariantCulture)))
         AssertEqual("same article canonical B", "https://store-b.example/articolo.aspx?id=42", StorefrontCanonicalHostPolicy.BuildCanonicalUrl(selectedB, "/articolo.aspx?id=" & sharedArticleId.ToString(CultureInfo.InvariantCulture)))
+        AssertTrue("same product stays in different storefront contexts", Not String.Equals(
+            StorefrontCanonicalHostPolicy.BuildCanonicalUrl(selectedA, "/articolo.aspx?id=42"),
+            StorefrontCanonicalHostPolicy.BuildCanonicalUrl(selectedB, "/articolo.aspx?id=42"),
+            StringComparison.OrdinalIgnoreCase))
         AssertEqual("seller A follows selected row", "Synthetic Storefront A", selectedA.CompanyName)
         AssertEqual("seller B follows selected row", "Synthetic Storefront B", selectedB.CompanyName)
 
@@ -113,6 +138,7 @@ Module StorefrontSameDatabaseTenantHarness
         AssertEqual("A B A first A", 101, If(repeatA1 Is Nothing, 0, repeatA1.CompanyId))
         AssertEqual("A B A B", 202, If(repeatB Is Nothing, 0, repeatB.CompanyId))
         AssertEqual("A B A second A", 101, If(repeatA2 Is Nothing, 0, repeatA2.CompanyId))
+        AssertEqual("A B A restores A default price list", 11, If(repeatA2 Is Nothing, 0, repeatA2.DefaultPriceListId))
 
         AssertTrue("unknown host fails closed", SelectTenant(identities, "unknown.example") Is Nothing)
         Dim duplicate As StorefrontSeoTenantIdentity = StorefrontCanonicalHostPolicy.CreateTenant(

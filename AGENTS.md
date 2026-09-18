@@ -80,6 +80,7 @@ Stack reale: ASP.NET WebForms, VB.NET, .NET Framework 4.x, MySQL, code-behind `.
 KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire aziende, domini, database, identita visive e merceologie differenti cambiando esclusivamente configurazione, dati e asset autorizzati. Ogni task nuovo o modificato deve rispettare questo contratto permanente:
 
 - sono supportati sia database separati per installazione sia piu vetrine/aziende nello stesso database e catalogo;
+- sono supportate applicazioni IIS distinte, con physical path e configurazioni di deploy separate, che eseguono la stessa release e possono puntare allo stesso database; binding e connection string non sostituiscono comunque la selezione host-scoped della riga `aziende`;
 - l'identita runtime non deriva mai dal solo database: segue `database configurato -> host normalizzato -> confronto esatto con url1/url2 -> una sola riga aziende`; `url1` e il canonico e `url2` l'eventuale alias;
 - nessuna prima riga, `LIMIT 1` senza ID gia risolto, match parziale o cache del tenant indicizzata soltanto per database; host sconosciuti o compatibili con piu righe falliscono chiusi;
 - la lista delle aziende puo essere memorizzata per database configurato, ma la selezione resta per-request e host-scoped; sessione, asset, canonical, seller, robots e sitemap devono provenire dalla stessa riga selezionata;
@@ -89,6 +90,7 @@ KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire azi
 - configurazione, dati e asset tenant separati dal codice; un nuovo cliente deve essere installabile senza patch o ricompilazione del sorgente;
 - host e alias validati server-side contro la sorgente autorevole; host sconosciuti o contaminazione cross-tenant falliscono chiusi;
 - funzioni tenant-aware provate con almeno due tenant sintetici, verificando isolamento degli URL e assenza di dati incrociati;
+- catalogo e numerazione documenti possono essere condivisi, mentre identita, account, carrello e regole di prezzo restano storefront-scoped; il listino anonimo deriva da `ListinoDefault`, `ListinoUser` vale solo come assegnazione iniziale in registrazione e poi prevale il listino dell'anagrafica utente;
 - il nucleo prodotto usa solo dati reali disponibili. Attributi mancanti o non applicabili sono omessi, mai simulati o inventati;
 - migrazioni e stored procedure restano standard e riutilizzabili, senza `USE`, nomi database o riferimenti cliente nel corpo canonico;
 - valori di deploy e segreti, inclusi connection string, password, token, chiavi, certificati privati, machine key, credenziali SMTP/gateway e dati personali, non entrano in sorgenti, commit, PR, manuali, log o output.
