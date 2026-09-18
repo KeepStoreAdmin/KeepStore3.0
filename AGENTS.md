@@ -91,6 +91,8 @@ KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire azi
 - host e alias validati server-side contro la sorgente autorevole; host sconosciuti o contaminazione cross-tenant falliscono chiusi;
 - funzioni tenant-aware provate con almeno due tenant sintetici, verificando isolamento degli URL e assenza di dati incrociati;
 - catalogo e numerazione documenti possono essere condivisi, mentre identita, account, carrello e regole di prezzo restano storefront-scoped; il listino anonimo deriva da `ListinoDefault`, `ListinoUser` vale solo come assegnazione iniziale in registrazione e poi prevale il listino dell'anagrafica utente;
+- login e recupero di un account richiedono sempre l'`AziendaID` risolto per la richiesta; sono vietati fallback username-only tra aziende. La sessione autenticata conserva l'azienda verificata e viene invalidata quando cambia storefront o il marker non coincide;
+- HOME, catalogo, PDP, recenti e Product JSON-LD consumano lo stesso listino/sessione e gli snapshot commerciali autorevoli. Le cache prezzo/promo includono almeno identita database sanitizzata, azienda, listino, stato autenticato e owner; gli stati tecnici non vengono memorizzati come assenza commerciale;
 - il nucleo prodotto usa solo dati reali disponibili. Attributi mancanti o non applicabili sono omessi, mai simulati o inventati;
 - migrazioni e stored procedure restano standard e riutilizzabili, senza `USE`, nomi database o riferimenti cliente nel corpo canonico;
 - valori di deploy e segreti, inclusi connection string, password, token, chiavi, certificati privati, machine key, credenziali SMTP/gateway e dati personali, non entrano in sorgenti, commit, PR, manuali, log o output.

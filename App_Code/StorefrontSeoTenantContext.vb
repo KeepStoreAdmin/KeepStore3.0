@@ -92,7 +92,18 @@ Public NotInheritable Class StorefrontSeoTenantContext
         Return result
     End Function
 
-    Private Shared Function BuildTenantListCacheKey(ByVal connectionString As String) As String
+    Public Shared Function ConfiguredDatabaseScopeKey() As String
+        Try
+            Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+            If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return String.Empty
+            Return BuildDatabaseScopeKey(settings.ConnectionString)
+        Catch
+            Return String.Empty
+        End Try
+    End Function
+
+    Public Shared Function BuildDatabaseScopeKey(ByVal connectionString As String) As String
+        If String.IsNullOrWhiteSpace(connectionString) Then Return String.Empty
         Dim builder As New MySqlConnectionStringBuilder(connectionString)
         Dim databaseIdentity As String = StorefrontCanonicalHostPolicy.NormalizeHost(builder.Server) & "|" &
                                          builder.Port.ToString() & "|" &
@@ -103,8 +114,12 @@ Public NotInheritable Class StorefrontSeoTenantContext
             For Each value As Byte In hash
                 encoded.Append(value.ToString("x2"))
             Next
-            Return TenantListCacheKeyPrefix & "." & encoded.ToString()
+            Return encoded.ToString()
         End Using
+    End Function
+
+    Private Shared Function BuildTenantListCacheKey(ByVal connectionString As String) As String
+        Return TenantListCacheKeyPrefix & "." & BuildDatabaseScopeKey(connectionString)
     End Function
 
     Private Shared Function SafeReaderString(ByVal reader As IDataRecord, ByVal name As String) As String

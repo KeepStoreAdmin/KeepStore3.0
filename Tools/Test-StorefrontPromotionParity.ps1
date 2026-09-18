@@ -519,6 +519,7 @@ End Module
 function Test-StaticContract {
     $provider = Get-FileText 'App_Code\StorefrontPromotionCatalogProvider.vb'
     $resolver = Get-FileText 'App_Code\ProductPromotionEligibilityResolver.vb'
+    $commercialIsolationPolicy = Get-FileText 'App_Code\StorefrontCommercialIsolationPolicy.vb'
     $display = Get-FileText 'App_Code\ProductPromotionDisplayHelper.vb'
     $legacy = Get-FileText 'promozioni.aspx.vb'
     $legacyPolicy = Get-FileText 'App_Code\LegacyPromotionRoutePolicy.vb'
@@ -549,7 +550,9 @@ function Test-StaticContract {
     Assert-Contains $legacyPolicy '"pid", "pmr", "pst", "pct", "ptp", "pgr", "psg"' 'retirement policy exposes only the approved legacy keys'
 
     Assert-Contains $resolver 'AND (@campaignId<=0 OR o.id=@campaignId)' 'shared resolver enforces campaign id'
-    Assert-Contains $resolver 'CurrentUserId.ToString' 'owner participates in request cache key'
+    Assert-Contains $resolver 'IsAuthenticated,' 'authentication state participates in request cache key'
+    Assert-Contains $resolver 'CurrentUserId) &' 'owner is passed to the request cache key policy'
+    Assert-Contains $commercialIsolationPolicy 'If(userId > 0, userId, 0).ToString' 'owner participates in request cache key'
     Assert-Contains $resolver 'Public Function PreloadStatus' 'shared resolver supports fail-closed preload'
 
     Assert-Contains $display 'model.BestDefaultQuantityPriceGross' 'display model preserves the quantity-one promotion price'

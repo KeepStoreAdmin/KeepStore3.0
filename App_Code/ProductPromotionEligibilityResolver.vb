@@ -6,6 +6,7 @@ Imports System.Web
 Imports MySql.Data.MySqlClient
 
 Public Class ProductPromotionEligibilityContext
+    Public Property DatabaseScopeKey As String
     Public Property CompanyId As Integer
     Public Property Listino As Integer
     Public Property CurrentUserId As Integer
@@ -15,10 +16,12 @@ Public Class ProductPromotionEligibilityContext
 
     Public ReadOnly Property CacheKey As String
         Get
-            Return CompanyId.ToString(CultureInfo.InvariantCulture) & ":" &
-                   Listino.ToString(CultureInfo.InvariantCulture) & ":" &
-                   If(IsAuthenticated, "1", "0") & ":" &
-                   CurrentUserId.ToString(CultureInfo.InvariantCulture) & ":" &
+            Return StorefrontCommercialIsolationPolicy.BuildCommercialScope(
+                       DatabaseScopeKey,
+                       CompanyId,
+                       Listino,
+                       IsAuthenticated,
+                       CurrentUserId) & ":" &
                    EvaluationDate.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & ":" &
                    CampaignId.ToString(CultureInfo.InvariantCulture)
         End Get
@@ -136,6 +139,7 @@ Public Module ProductPromotionEligibilityResolver
         Dim currentUserId As Integer = SessionInt(ctx, "UtentiId", 0)
 
         Return New ProductPromotionEligibilityContext() With {
+            .DatabaseScopeKey = StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey(),
             .CompanyId = companyId,
             .Listino = listino,
             .CurrentUserId = If(currentUserId > 0, currentUserId, 0),
@@ -367,7 +371,10 @@ Public Module ProductPromotionEligibilityResolver
             If Not propagateTransactionTransientErrors Then LogResolverFailure(ex)
         End Try
 
-        If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
+        If useRequestCache AndAlso
+           snapshot.Status <> ProductPromotionEligibilityLoadStatus.TechnicalError AndAlso
+           current IsNot Nothing AndAlso
+           current.Items IsNot Nothing Then
             current.Items(cacheKey) = snapshot
         End If
         Return snapshot

@@ -367,28 +367,34 @@ Partial Public Class _Default
     End Sub
 
     Private Function GetHeroWideBanners() As DataTable
+        Dim companyId As Integer = GetCurrentAziendaId()
+        If companyId <= 0 Then Return HeroSlidesFallback()
         Dim sql As String = "SELECT id, COALESCE(NULLIF(Descrizione,''),'Promozioni KeepStore') AS Caption, Immagine AS Image, Link AS LinkUrl " &
                             "FROM bannerv2 " &
-                            "WHERE COALESCE(AziendeId,1)=1 AND COALESCE(Posizione,0)=3 " &
+                            "WHERE AziendeId=@companyId AND COALESCE(Posizione,0)=3 " &
                             "ORDER BY COALESCE(Ordinamento,0), id DESC LIMIT 24"
-        Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback(), "GetHeroWideBanners")
+        Dim parameters As New Dictionary(Of String, Object) From {{"@companyId", companyId}}
+        Dim dt As DataTable = SafeTableQuery(sql, HeroSlidesFallback(), "GetHeroWideBanners", parameters)
         dt = FilterRowsByResolvedImage(dt, "Image", AddressOf ResolveAdvertisingImagePath)
         Return PrepareHeroRows(dt, "Promo KeepStore", "Selezione reale KeepStore")
     End Function
 
     Private Function GetHeroSideBannerSource() As DataTable
+        Dim companyId As Integer = GetCurrentAziendaId()
+        If companyId <= 0 Then Return SideBannersFallback()
         Dim sql As String = "SELECT p.id, " &
                             "COALESCE(NULLIF(p.caption,''), NULLIF(s.titolo,''), NULLIF(s.descrizione,''), 'Selezione KeepStore') AS Title, " &
                             "NULLIF(s.descrizione,'') AS Description, " &
                             "p.image AS Image, p.link AS LinkUrl, 'Promo' AS Badge " &
                             "FROM slideshows s " &
                             "INNER JOIN slideshows_parts p ON p.slideshowid = s.id " &
-                            "WHERE COALESCE(s.abilitato,0)=1 AND LOWER(COALESCE(s.placeholder,''))='defaultpage' " &
+                            "WHERE s.aziendeId=@companyId AND COALESCE(s.abilitato,0)=1 AND LOWER(COALESCE(s.placeholder,''))='defaultpage' " &
                             "AND (s.dataInizioPubblicazione IS NULL OR s.dataInizioPubblicazione <= CURDATE()) " &
                             "AND (s.dataFinePubblicazione IS NULL OR s.dataFinePubblicazione >= CURDATE()) " &
                             "ORDER BY CASE WHEN NULLIF(p.orderPosition,'') IS NULL THEN 999 ELSE CAST(p.orderPosition AS UNSIGNED) END, p.id DESC " &
                             "LIMIT 12"
-        Dim dt As DataTable = SafeTableQuery(sql, SideBannersFallback(), "GetHeroSideBannerSource")
+        Dim parameters As New Dictionary(Of String, Object) From {{"@companyId", companyId}}
+        Dim dt As DataTable = SafeTableQuery(sql, SideBannersFallback(), "GetHeroSideBannerSource", parameters)
         dt = FilterRowsByResolvedImage(dt, "Image", AddressOf ResolveHeroSlideImagePath)
         Return PrepareSideBannerRows(dt)
     End Function
@@ -900,7 +906,7 @@ Partial Public Class _Default
         sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState AND YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE())")
         sql.Append(" GROUP BY dr.ArticoliId")
         sql.Append(") sy ON sy.ArticoliId = v.id ")
-        sql.Append("WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(v.id,0)>0 ")
+        sql.Append("WHERE v.NListino=@listino AND COALESCE(v.id,0)>0 ")
         sql.Append("AND COALESCE(aBase.Abilitato,1)=1 ")
         sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
         sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
@@ -1686,10 +1692,18 @@ Partial Public Class _Default
         Return table Is Nothing OrElse table.Rows.Count = 0
     End Function
 
-    Private Function SafeTableQuery(ByVal sql As String, ByVal fallback As DataTable, Optional ByVal context As String = "SafeTableQuery") As DataTable
+    Private Function SafeTableQuery(ByVal sql As String,
+                                    ByVal fallback As DataTable,
+                                    Optional ByVal context As String = "SafeTableQuery",
+                                    Optional ByVal parameters As IDictionary(Of String, Object) = Nothing) As DataTable
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 Using cmd As New MySqlCommand(sql, conn)
+                    If parameters IsNot Nothing Then
+                        For Each item As KeyValuePair(Of String, Object) In parameters
+                            cmd.Parameters.AddWithValue(item.Key, item.Value)
+                        Next
+                    End If
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
                         conn.Open()
@@ -1721,12 +1735,9 @@ Partial Public Class _Default
 
 
     Private Function GetCurrentListino() As Integer
-        Dim listino As Integer = 1
-        If Session("Listino") IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(Session("Listino")), listino)
-        End If
-        If listino <= 0 Then listino = 1
-        Return listino
+        Return StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(
+            Session("Listino"),
+            Session("listino"))
     End Function
 
     Private Function GetCurrentAziendaId() As Integer

@@ -3539,20 +3539,15 @@ Partial Class articolo
     ' Listino robusto: usa Session("Listino") come fonte principale, con fallback a Session("listino").
     ' Imposta anche in Session per coerenza con le altre pagine.
     Private Function GetCurrentListino() As Integer
-        Dim n As Integer = 0
-
-        n = GetSessionInt("Listino", 0)
-        If n <= 0 Then
-            n = GetSessionInt("listino", 0)
-        End If
-
-        If n <= 0 Then
-            n = 1
-        End If
+        Dim n As Integer = StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(
+            Session("Listino"),
+            Session("listino"))
 
         ' Mantengo entrambe le chiavi per compatibilità con codice legacy
-        Session("Listino") = n
-        Session("listino") = n
+        If n > 0 Then
+            Session("Listino") = n
+            Session("listino") = n
+        End If
 
         Return n
     End Function

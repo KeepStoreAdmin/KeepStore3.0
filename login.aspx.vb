@@ -43,6 +43,7 @@ Partial Class Login
         Session.Remove("UtentiId")
         Session.Remove("UtentiID")
         Session.Remove("UtentiTipoId")
+        Session.Remove("AuthenticatedAziendaID")
     End Sub
 
     '================================================================
@@ -158,16 +159,16 @@ Partial Class Login
                 cmd.Connection = conn
                 cmd.CommandType = CommandType.Text
 
-                ' Query parametrizzata su vlogin (no concatenazioni stringa).
-                ' Se l'azienda Ã¨ giÃ  in sessione, filtro come nel flusso storico della master.
+                ' Il login e' sempre vincolato allo storefront risolto server-side.
                 Dim aziendaId As Integer = 0
                 Integer.TryParse(Convert.ToString(Session("AziendaID")), aziendaId)
-                If aziendaId > 0 Then
-                    cmd.CommandText = "SELECT * FROM vlogin WHERE AziendeID=?aziendaId AND UPPER(Username) = ?username LIMIT 0, 1"
-                    cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
-                Else
-                    cmd.CommandText = "SELECT * FROM vlogin WHERE UPPER(Username) = ?username LIMIT 0, 1"
+                If aziendaId <= 0 Then
+                    ClearInvalidLoginSession()
+                    lblLogin.Text = GenericLoginFailureMessage
+                    Return False
                 End If
+                cmd.CommandText = "SELECT * FROM vlogin WHERE AziendeID=?aziendaId AND UPPER(Username) = ?username LIMIT 0, 1"
+                cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
                 cmd.Parameters.AddWithValue("?username", user.ToUpper())
 
                 Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -184,6 +185,18 @@ Partial Class Login
                     End If
 
                     If dr.Item("UtentiAbilitato") <> 1 Then
+                        lblLogin.Text = GenericLoginFailureMessage
+                        Return False
+                    End If
+
+                    Dim accountCompanyId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("AziendeID"))
+                    Dim persistedPriceListId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("listino"))
+                    Dim authenticatedPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAuthenticatedPriceList(
+                        aziendaId,
+                        accountCompanyId,
+                        persistedPriceListId)
+                    If authenticatedPriceListId <= 0 Then
+                        ClearInvalidLoginSession()
                         lblLogin.Text = GenericLoginFailureMessage
                         Return False
                     End If
@@ -216,6 +229,7 @@ Partial Class Login
                     Session("UtentiId") = dr.Item("utentiid")
                     Session("UtentiID") = dr.Item("utentiid")
                     Session("UtentiTipoId") = dr.Item("utentitipoid")
+                    Session("AuthenticatedAziendaID") = accountCompanyId
 
                     'Indica se l'utente può o meno creare l'html per le promo mailing
                     Session("genera_html_mail") = dr.Item("genera_html_mail")
@@ -236,8 +250,8 @@ Partial Class Login
                     'Reverse Charge Utente
                     Session("AbilitatoIvaReverseCharge") = dr.Item("AbilitatoIvaReverseCharge")
 
-                    Session("Listino") = dr.Item("listino")
-                    Session("listino") = dr.Item("listino")
+                    Session("Listino") = authenticatedPriceListId
+                    Session("listino") = authenticatedPriceListId
                     Session("IvaTipo") = dr.Item("IvaTipo")
                     Session("DataPassword") = dr.Item("DataPassword")
                     Try

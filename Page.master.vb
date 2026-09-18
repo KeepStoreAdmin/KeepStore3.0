@@ -55,6 +55,82 @@ Partial Class PageMaster
         Return loginId
     End Function
 
+    Private Sub ClearStorefrontAuthenticationState()
+        LoginAccessAuditRecorder.ClearAuthenticationMarker(HttpContext.Current)
+        Dim authenticationKeys As String() = {
+            "LoginId", "LoginID", "LoginEmail", "LoginNomeCognome", "LoginUltimoAccesso", "Login_User",
+            "UtentiId", "UtentiID", "UtentiTipoId", "AuthenticatedAziendaID",
+            "AbilitaListino", "genera_html_mail", "Iva_Utente", "DescrizioneEsenzioneIva",
+            "IdEsenzioneIva", "AbilitatoIvaReverseCharge", "DataPassword"
+        }
+        For Each key As String In authenticationKeys
+            Me.Session.Remove(key)
+        Next
+    End Sub
+
+    Private Sub EnsureAuthenticatedStorefrontScope(ByVal companyId As Integer,
+                                                   ByVal defaultPriceListId As Integer)
+        Dim anonymousPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAnonymousPriceList(
+            companyId,
+            defaultPriceListId)
+        Dim loginId As Integer = CurrentLoginIdSafe()
+        If loginId <= 0 Then
+            Me.Session("Listino") = anonymousPriceListId
+            Me.Session("listino") = anonymousPriceListId
+            Return
+        End If
+
+        Dim authenticatedCompanyId As Integer = 0
+        Integer.TryParse(Convert.ToString(Me.Session("AuthenticatedAziendaID")), authenticatedCompanyId)
+        If authenticatedCompanyId > 0 Then
+            If authenticatedCompanyId <> companyId OrElse
+               StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Me.Session("Listino"), Me.Session("listino")) <= 0 Then
+                ClearStorefrontAuthenticationState()
+                Me.Session("Listino") = anonymousPriceListId
+                Me.Session("listino") = anonymousPriceListId
+            End If
+            Return
+        End If
+
+        ' Compatibilita' con sessioni create prima dell'introduzione del marker:
+        ' convalida una sola volta login, azienda e listino persistito, sempre owner-scoped.
+        Try
+            Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+            Using authenticationConnection As New MySqlConnection(connectionString)
+                authenticationConnection.Open()
+                Const sql As String = "SELECT id, AziendeID, listino, utentiid, utentitipoid FROM vlogin " &
+                                      "WHERE id=@loginId AND AziendeID=@companyId AND Abilitato=1 AND UtentiAbilitato=1 LIMIT 0, 1"
+                Using authenticationCommand As New MySqlCommand(sql, authenticationConnection)
+                    authenticationCommand.Parameters.AddWithValue("@loginId", loginId)
+                    authenticationCommand.Parameters.AddWithValue("@companyId", companyId)
+                    Using reader As MySqlDataReader = authenticationCommand.ExecuteReader()
+                        If reader.Read() Then
+                            Dim persistedPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAuthenticatedPriceList(
+                                companyId,
+                                Convert.ToInt32(reader("AziendeID")),
+                                Convert.ToInt32(reader("listino")))
+                            If persistedPriceListId > 0 Then
+                                Me.Session("AuthenticatedAziendaID") = companyId
+                                Me.Session("UtentiId") = reader("utentiid")
+                                Me.Session("UtentiID") = reader("utentiid")
+                                Me.Session("UtentiTipoId") = reader("utentitipoid")
+                                Me.Session("Listino") = persistedPriceListId
+                                Me.Session("listino") = persistedPriceListId
+                                Return
+                            End If
+                        End If
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("storefront-auth-scope", "Authenticated storefront scope validation failed closed.", ex, HttpContext.Current)
+        End Try
+
+        ClearStorefrontAuthenticationState()
+        Me.Session("Listino") = anonymousPriceListId
+        Me.Session("listino") = anonymousPriceListId
+    End Sub
+
     '==========================================================
     ' Helper: trova controlli SENZA ricorsione (evita StackOverflow)
     '==========================================================
@@ -1053,6 +1129,15 @@ End Function
 
         Dim sessionCompanyId As Integer = 0
         Integer.TryParse(Convert.ToString(Me.Session("AziendaID")), sessionCompanyId)
+        Dim authenticatedCompanyId As Integer = 0
+        Integer.TryParse(Convert.ToString(Me.Session("AuthenticatedAziendaID")), authenticatedCompanyId)
+        If StorefrontCommercialIsolationPolicy.ShouldClearAuthentication(
+               sessionCompanyId,
+               resolvedTenant.CompanyId,
+               CurrentLoginIdSafe(),
+               authenticatedCompanyId) Then
+            ClearStorefrontAuthenticationState()
+        End If
         If sessionCompanyId <> resolvedTenant.CompanyId Then
 
             localConn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -1120,6 +1205,7 @@ End Function
                 Me.Session("Credits") = " <b>© " & DateTime.Now.Year.ToString() & " " & dr.Item("RagioneSociale") & "</b> - " & dr.Item("Indirizzo") & " - " & dr.Item("Cap") & " " & dr.Item("Citta") & " (" & dr.Item("provincia") & ") - P.I. " & dr.Item("Piva") & " - Tel. " & dr.Item("Telefono") & " - Fax " & dr.Item("Fax")
                 Me.Session("Credits2") = "<br>" & dr.Item("RagioneSociale") & "<br>" & dr.Item("Indirizzo") & "-" & dr.Item("Cap") & "<br>" & dr.Item("Citta") & " (" & dr.Item("provincia") & ")<br>P.Iva " & dr.Item("Piva") & "<br>Tel " & dr.Item("Telefono") & "<br>Fax " & dr.Item("Fax")
                 Me.Session("Listino") = dr.Item("ListinoDefault")
+                Me.Session("listino") = dr.Item("ListinoDefault")
                 Me.Session("ListinoUser") = dr.Item("ListinoUser")
                 Me.Session("IvaTipo") = dr.Item("IvaTipo")
                 Me.Session("CanOrder") = dr.Item("CanOrder")
@@ -1200,6 +1286,7 @@ End Function
             localCmd.Dispose()
         End If
 
+        EnsureAuthenticatedStorefrontScope(resolvedTenant.CompanyId, resolvedTenant.DefaultPriceListId)
         ImpostaTemplate()
     End Sub
 
@@ -1487,7 +1574,11 @@ End Function
                 End If
                 Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType(), "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & GenericLoginFailureMessage & "')}</script>")
 
-            ElseIf dr.Item("Password").ToString().ToLower() = pass.ToLower() Then
+            ElseIf dr.Item("Password").ToString().ToLower() = pass.ToLower() AndAlso
+                   StorefrontCommercialIsolationPolicy.ResolveAuthenticatedPriceList(
+                       StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AziendaID")),
+                       StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("AziendeID")),
+                       StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("listino"))) > 0 Then
                 'Login OK
                 Try
                     Me.Session("AbilitaListino") = CType(dr.Item("AbilitaListino"), Integer)
@@ -1504,7 +1595,9 @@ End Function
                 End If
 
                 Me.Session("UtentiId") = dr.Item("utentiid")
+                Me.Session("UtentiID") = dr.Item("utentiid")
                 Me.Session("UtentiTipoId") = dr.Item("utentitipoid")
+                Me.Session("AuthenticatedAziendaID") = dr.Item("AziendeID")
                 Me.Session("genera_html_mail") = dr.Item("genera_html_mail")
 
                 If dr.Item("idEsenzioneIva") <> -1 Then
@@ -1521,6 +1614,7 @@ End Function
                 Session("AbilitatoIvaReverseCharge") = dr.Item("AbilitatoIvaReverseCharge")
 
                 Me.Session("Listino") = dr.Item("listino")
+                Me.Session("listino") = dr.Item("listino")
                 Me.Session("IvaTipo") = dr.Item("IvaTipo")
                 Me.Session("DataPassword") = dr.Item("DataPassword")
                 ' Cookie username (OK)

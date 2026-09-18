@@ -84,6 +84,18 @@ REV2 certifica la compatibilita con due applicazioni IIS distinte: physical path
 
 Copertura: CSS/sfondo valido, mancante e assente; URL esterno; traversal; estensione vietata; due tenant isolati. Il test same-database copre due applicazioni IIS sintetiche, identita database e articolo condivisi, canonico/alias A e B, identita/CSS/contatti/listini separati, ripetizione A-B-A, host ignoto e host ambiguo fail-closed. Matrice runtime HOME/catalogo/PDP/carrello/login: HTTP 200 sull'host valido e riferimenti legacy assenti. Il solo gate residuo e la conferma visuale Product Owner della PDP sui tre viewport richiesti.
 
+#### 2.0.1.3 Isolamento prezzi, listini e account
+
+`StorefrontCommercialIsolationPolicy` rende espliciti i passaggi commerciali senza duplicare il resolver prezzo: valida il listino di sessione, assegna `ListinoDefault` all'anonimo, costruisce l'assegnazione iniziale `AziendaID + ListinoUser` della registrazione e accetta il listino persistito di un account soltanto quando la sua azienda coincide con quella della richiesta.
+
+`Page.master` riallinea il tenant prima del rendering. Una sessione autenticata conserva `AuthenticatedAziendaID`; al cambio host/azienda LoginId e dati account vengono rimossi e il listino torna al default anonimo della nuova vetrina. Le sessioni legacy prive del marker sono convalidate una sola volta mediante `vlogin.id + AziendeID`; assenza, mismatch o listino invalido falliscono chiusi. Entrambi i percorsi login interrogano sempre `vlogin` con azienda esplicita e usano il listino persistito, mai `ListinoUser`.
+
+La creazione account continua a usare la stored procedure canonica senza schema change: `parAziendeID` e `parListino` derivano dalla stessa riga tenant; la lookup successiva e parametrizzata e filtrata per azienda. HOME, catalogo e PDP non inventano piu il listino `1` se il tenant context manca. Recenti e structured data riusano rispettivamente lo snapshot card e il prezzo PDP gia autorizzati.
+
+La cache promozionale request-scoped e distinta da una fingerprint SHA-256 di server/porta/database configurati, `AziendaID`, listino, stato autenticato, owner, data e campagna. La fingerprint non espone la connection string. Uno stato `TechnicalError` non entra in cache e non viene assimilato a nessuna offerta. La matrice sintetica usa ID non reali e certifica 17 scenari senza account, carrelli, ordini o scritture DB.
+
+I banner HOME correnti sono filtrati con l'azienda request-scoped tramite parametri SQL. Confini: carrello, checkout, ordine, numerazione ed e-mail non sono modificati. I riferimenti azienda/listino rilevati nel feed HOME legacy non collegato, nelle pagine listini/coupon e nel ramo e-mail storico restano finding separati; i prossimi task sono `MULTI-STOREFRONT-CART-ISOLATION-1A` e poi `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`.
+
 ### 2.0.2 Contratto MULTITENANT-BY-DESIGN e confini di configurazione
 
 KeepStore usa un unico codice condiviso sia quando ogni installazione usa un database separato sia quando piu vetrine/aziende condividono database e catalogo. Il provisioning cambia esclusivamente configurazione di deploy, righe `aziende`, dati e asset autorizzati: non richiede branch cliente, patch, ricompilazione, `USE`, tabelle qualificate o stored procedure personalizzate. L'identita runtime e sempre database configurato + host autorevole + unica riga `aziende`.

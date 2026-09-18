@@ -600,15 +600,9 @@ End Sub
         ' ============================
         ' LISTINO: GESTIONE ROBUSTA
         ' ============================
-        Dim NListino As Integer = 1  ' listino di default per anonimi
-
-        Dim rawListinoN As String = Convert.ToString(Session("Listino"))
-        Dim tmp As Integer
-        If Integer.TryParse(rawListinoN, tmp) AndAlso tmp > 0 Then
-            NListino = tmp
-        Else
-            Session("Listino") = NListino
-        End If
+        Dim NListino As Integer = StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(
+            Session("Listino"),
+            Session("listino"))
 
         Dim SettoriId As Integer = 0
         Dim CategorieId As Integer = 0

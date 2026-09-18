@@ -542,14 +542,16 @@ Partial Class registrazione
         Dim codice As String = 1
 
         cmd.CommandType = CommandType.Text
+        cmd.Parameters.Clear()
 
         If Me.tbPartitaIva.Text.Trim <> "" Then
-            cmd.CommandText = "Select Utenti.id from Utenti join utentitipo on Utenti.UtentiTipoId=utentitipo.id where Utenti.AziendeID=" & aziendaId & " and Utenti.PIva=?Piva and utentitipo.Clienti = 1"
+            cmd.CommandText = "Select Utenti.id from Utenti join utentitipo on Utenti.UtentiTipoId=utentitipo.id where Utenti.AziendeID=?aziendaId and Utenti.PIva=?Piva and utentitipo.Clienti = 1"
             cmd.Parameters.AddWithValue("?Piva", Me.tbPartitaIva.Text.Trim)
         Else
-            cmd.CommandText = "Select Utenti.id from Utenti join utentitipo on Utenti.UtentiTipoId=utentitipo.id where Utenti.AziendeID=" & aziendaId & " and CodiceFiscale=?CodiceFiscale and utentitipo.Clienti = 1"
+            cmd.CommandText = "Select Utenti.id from Utenti join utentitipo on Utenti.UtentiTipoId=utentitipo.id where Utenti.AziendeID=?aziendaId and CodiceFiscale=?CodiceFiscale and utentitipo.Clienti = 1"
             cmd.Parameters.AddWithValue("?CodiceFiscale", Me.tbCodiceFiscale.Text.Trim)
         End If
+        cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
         Dim dr As MySqlDataReader = cmd.ExecuteReader()
         dr.Read()
 
@@ -567,6 +569,7 @@ Partial Class registrazione
             dr.Close()
             dr.Dispose()
 
+            cmd.Parameters.Clear()
             cmd.CommandText = "SELECT Max((Codice*1)+1) AS Cod FROM utenti"
             dr = cmd.ExecuteReader
             dr.Read()
@@ -584,7 +587,9 @@ Partial Class registrazione
             End If
 
 
-            AggiungiUtente(codice)
+            If Not AggiungiUtente(codice) Then
+                Return
+            End If
 
             Try
                 'Invio l'email di registrazione effettuata
@@ -622,11 +627,24 @@ Partial Class registrazione
     End Sub
 
 
-    Public Sub AggiungiUtente(ByVal cod As Integer)
-		
+    Public Function AggiungiUtente(ByVal cod As Integer) As Boolean
+            Dim companyId As Integer = 0
+            Dim initialPriceListId As Integer = 0
+            Integer.TryParse(Convert.ToString(Session("AziendaID")), companyId)
+            Integer.TryParse(Convert.ToString(Session("ListinoUser")), initialPriceListId)
+            Dim assignment As StorefrontRegistrationAssignment = StorefrontCommercialIsolationPolicy.CreateRegistrationAssignment(
+                companyId,
+                initialPriceListId)
+            If assignment Is Nothing Then
+                Me.lblEmail.Text = "Si e' verificato un errore durante la registrazione. Contatta il supporto."
+                Me.lblEmail.Visible = True
+                Return False
+            End If
+
             cmd.CommandType = CommandType.StoredProcedure
             cmd.CommandText = "Newutenti"
-            cmd.Parameters.AddWithValue("?parAziendeID", Session("AziendaID"))
+            cmd.Parameters.Clear()
+            cmd.Parameters.AddWithValue("?parAziendeID", assignment.CompanyId)
             cmd.Parameters.AddWithValue("?parCodice", cod)
             cmd.Parameters.AddWithValue("?parUtentiTipoId", "2")
             cmd.Parameters.AddWithValue("?parRagioneSociale", Me.tbRagioneSociale.Text.ToString.ToUpper.Trim)
@@ -671,7 +689,7 @@ Partial Class registrazione
 				cmd.Parameters.AddWithValue("?parFax", dbNull.value)
 			end if
             cmd.Parameters.AddWithValue("?parEmail", Me.tbEmail.Text.ToString.Trim.ToLower)
-            cmd.Parameters.AddWithValue("?parListino", Session("ListinoUser"))
+            cmd.Parameters.AddWithValue("?parListino", assignment.InitialPriceListId)
             cmd.Parameters.AddWithValue("?parUrl", Me.tbSito.Text.ToString.Trim)
             cmd.Parameters.AddWithValue("?parPrivacy", "1")
             cmd.Parameters.AddWithValue("?parAbilitato", "1")
@@ -695,15 +713,17 @@ Partial Class registrazione
             cmd.ExecuteNonQuery()
 
             cmd.Parameters.Clear()
-            cmd.Dispose()
             'UtentiID = cmd.Parameters("?parRetVal").Value
 
             cmd.CommandType = CommandType.Text
-            cmd.CommandText = "SELECT Id FROM utenti WHERE Codice=" & cod
+            cmd.CommandText = "SELECT Id FROM utenti WHERE Codice=?codice AND AziendeID=?aziendaId ORDER BY Id DESC LIMIT 1"
+			cmd.Parameters.AddWithValue("?codice", cod)
+			cmd.Parameters.AddWithValue("?aziendaId", assignment.CompanyId)
 			
             Dim dr As MySqlDataReader = cmd.ExecuteReader()
 
-            If dr.HasRows Then
+            Dim createdUserFound As Boolean = dr.HasRows
+            If createdUserFound Then
                 dr.Read()
                 Session("UTENTIID") = dr.Item("Id")
             End If
@@ -714,6 +734,12 @@ Partial Class registrazione
             cmd.Parameters.Clear()
             cmd.Dispose()
 
+            If Not createdUserFound Then
+                Me.lblEmail.Text = "Si e' verificato un errore durante la registrazione. Contatta il supporto."
+                Me.lblEmail.Visible = True
+                Return False
+            End If
+
             'If (tbRagioneSocialeA.Text.ToString.Trim <> "") Or (tbNomeA.Text.ToString.Trim <> "") Then
             AggiungiUtenteIndirizzo(Session("UTENTIID"))
             'End If
@@ -723,12 +749,15 @@ Partial Class registrazione
             'Aggiungo l'utente alle credenziali di Accesso WEB
             AggiungiLogin(Session("UTENTIID"))
 
-    End Sub
+            Return True
+    End Function
 
     Protected Sub AggiungiUtenteRapporto(ByVal aziendaId As Integer, ByVal utenteId As String)
         cmd.Connection = conn
         cmd.CommandType = CommandType.Text
-        cmd.CommandText = "Select id from pagamentitipo where AziendeID=" & aziendaId & " and Predefinito = 1"
+        cmd.Parameters.Clear()
+        cmd.CommandText = "Select id from pagamentitipo where AziendeID=?aziendaId and Predefinito = 1"
+        cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
 
         Dim dr As MySqlDataReader = cmd.ExecuteReader()
         dr.Read()
@@ -845,7 +874,9 @@ Partial Class registrazione
     Public Sub ControllaUser(ByVal aziendaId As Integer)
         cmd.Connection = conn
         cmd.CommandType = CommandType.Text
-        cmd.CommandText = "Select id from vlogin where AziendeID=" & aziendaId & " And (Username =?Piva )"
+        cmd.Parameters.Clear()
+        cmd.CommandText = "Select id from vlogin where AziendeID=?aziendaId And (Username =?Piva )"
+        cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
         cmd.Parameters.AddWithValue("?Piva", Me.tbUsername.Text)
 
         Dim dr As MySqlDataReader = cmd.ExecuteReader()
