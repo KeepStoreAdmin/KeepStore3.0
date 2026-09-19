@@ -259,6 +259,81 @@ Public NotInheritable Class OrderDurableIdempotencyService
         End Using
     End Sub
 
+    ''' <summary>
+    ''' Persists a terminal retry marker after the checkout transaction has
+    ''' rolled back. A completed request is never downgraded and an owner or
+    ''' payload collision remains fail-closed.
+    ''' </summary>
+    Public Shared Function RecordRetryRequired(ByVal connection As MySqlConnection,
+                                               ByVal requestId As String,
+                                               ByVal loginId As Long,
+                                               ByVal aziendaId As Integer,
+                                               ByVal tipoDocumentiId As Integer,
+                                               ByVal payloadFingerprint As String) As Boolean
+        If connection Is Nothing OrElse connection.State <> ConnectionState.Open Then Return False
+
+        Dim normalized As String = String.Empty
+        If loginId <= 0 OrElse aziendaId <= 0 OrElse tipoDocumentiId <= 0 OrElse
+           Not TryNormalizeRequestId(requestId, normalized) OrElse
+           Not IsFingerprintValid(payloadFingerprint) Then Return False
+
+        Dim recoveryTransaction As MySqlTransaction = Nothing
+        Try
+            recoveryTransaction = connection.BeginTransaction(IsolationLevel.ReadCommitted)
+            If Not IsLoginOwnedByCompany(connection, recoveryTransaction, loginId, aziendaId) Then
+                recoveryTransaction.Rollback()
+                Return False
+            End If
+
+            Dim existing As OrderDurableIdempotencyRecord =
+                LoadRecord(connection, recoveryTransaction, normalized, True)
+            If existing Is Nothing Then
+                Using insertCommand As New MySqlCommand(
+                    "INSERT INTO ordini_web_idempotenza " &
+                    "(RequestId, LoginId, TipoDocumentiId, PayloadFingerprint, Stato, DataCreazione, DataCompletamento) " &
+                    "VALUES (?requestId, ?loginId, ?tipoDocumentiId, ?payloadFingerprint, ?retryState, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6))",
+                    connection, recoveryTransaction)
+                    insertCommand.Parameters.Add("?requestId", MySqlDbType.VarChar, 32).Value = normalized
+                    insertCommand.Parameters.Add("?loginId", MySqlDbType.Int64).Value = loginId
+                    insertCommand.Parameters.Add("?tipoDocumentiId", MySqlDbType.Int32).Value = tipoDocumentiId
+                    insertCommand.Parameters.Add("?payloadFingerprint", MySqlDbType.VarChar, 64).Value = payloadFingerprint
+                    insertCommand.Parameters.Add("?retryState", MySqlDbType.VarChar, 16).Value = RetryRequiredState
+                    If insertCommand.ExecuteNonQuery() <> 1 Then
+                        recoveryTransaction.Rollback()
+                        Return False
+                    End If
+                End Using
+            Else
+                If existing.LoginId <> loginId OrElse existing.AziendaId <> aziendaId OrElse
+                   existing.TipoDocumentiId <> tipoDocumentiId OrElse
+                   Not String.Equals(existing.PayloadFingerprint, payloadFingerprint, StringComparison.Ordinal) OrElse
+                   existing.Status = OrderDurableClaimStatus.CompletedReplay Then
+                    recoveryTransaction.Rollback()
+                    Return False
+                End If
+
+                If existing.Status <> OrderDurableClaimStatus.RetryRequired Then
+                    MarkRetryRequired(
+                        connection, recoveryTransaction, normalized, loginId, aziendaId,
+                        tipoDocumentiId, payloadFingerprint)
+                End If
+            End If
+
+            recoveryTransaction.Commit()
+            Return True
+        Catch
+            If recoveryTransaction IsNot Nothing Then
+                Try
+                    recoveryTransaction.Rollback()
+                Catch
+                End Try
+            End If
+            Return False
+        Finally
+            If recoveryTransaction IsNot Nothing Then recoveryTransaction.Dispose()
+        End Try
+    End Function
+
     Private Shared Function LoadRecord(ByVal connection As MySqlConnection,
                                        ByVal transaction As MySqlTransaction,
                                        ByVal requestId As String,
@@ -309,11 +384,24 @@ Public NotInheritable Class OrderDurableIdempotencyService
                                                   ByVal loginId As Long,
                                                   ByVal aziendaId As Integer) As Boolean
         Using command As New MySqlCommand(
-            "SELECT COUNT(*) FROM vlogin WHERE id=?loginId AND AziendeID=?aziendaId",
+            "SELECT utentiid, COALESCE(listino,0) AS listino " &
+            "FROM vlogin WHERE id=?loginId AND AziendeID=?aziendaId",
             connection, transaction)
             command.Parameters.Add("?loginId", MySqlDbType.Int64).Value = loginId
             command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = aziendaId
-            Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) = 1
+            Dim rows As New List(Of OrderLogicalIdentityRow)()
+            Using reader As MySqlDataReader = command.ExecuteReader()
+                While reader.Read()
+                    rows.Add(New OrderLogicalIdentityRow() With {
+                        .UserId = Convert.ToInt64(reader("utentiid"), CultureInfo.InvariantCulture),
+                        .PriceListId = Convert.ToInt32(reader("listino"), CultureInfo.InvariantCulture)
+                    })
+                End While
+            End Using
+
+            Dim resolvedUserId As Long = 0
+            Dim resolvedPriceListId As Integer = 0
+            Return OrderLogicalIdentityResolver.TryResolve(rows, resolvedUserId, resolvedPriceListId)
         End Using
     End Function
 

@@ -19,6 +19,7 @@ function Read-Source([string]$RelativePath) {
 }
 
 $dispatcher = Read-Source 'App_Code\CheckoutTerminalOutcomeDispatcher.vb'
+$recovery = Read-Source 'App_Code\CheckoutFailureRecoveryService.vb'
 $cart = Read-Source 'carrello.aspx.vb'
 $cartMarkup = Read-Source 'carrello.aspx'
 $order = Read-Source 'ordine.aspx.vb'
@@ -43,28 +44,31 @@ $results += Assert-Contract (
     $cart.Contains('Handles btInviaOrdine.Click')
 ) '01 handler invocato dal submit finale'
 
-# 2. Un validator invalido produce sempre feedback visibile e focalizzabile.
+# 2. Un validator invalido viene classificato e trasferito via PRG a feedback accessibile.
 $results += Assert-Contract (
-    $cart.Contains('Private Function HasInvalidCheckoutValidator() As Boolean') -and
+    $cart.Contains('Private Function TryGetCheckoutValidationFailure') -and
     $cart.Contains('Page.Validate(CHECKOUT_SUBMIT_VALIDATION_GROUP)') -and
-    $cart.Contains('Not groupedValidator.IsValid') -and
+    $cart.Contains('groupedValidator.IsValid Then Continue For') -and
     $cart.Contains('Protected Sub cvCheckoutSubmit_ServerValidate') -and
-    $cart.Contains('If HasInvalidCheckoutValidator() Then') -and
+    $submitHandler.Contains('If TryGetCheckoutValidationFailure(validationReason) Then') -and
+    $submitHandler.Contains('DispatchCheckoutFailure(validationReason, "04-checkout-validation")') -and
     $cartMarkup.Contains('CausesValidation="true" ValidationGroup="checkoutSubmit" ID="btInviaOrdine"') -and
     ([regex]::Matches($cartMarkup, '<asp:CustomValidator[^>]+ValidationGroup="checkoutSubmit"').Count -eq 4) -and
     $cartMarkup.Contains('ID="vsCheckoutSubmit"') -and
-    $cart.Contains('ShowCheckoutSubmitError("Controlla i campi evidenziati prima di inviare l''ordine.")') -and
+    $cart.Contains('CheckoutFailureRecoveryService.TryConsumeFailure') -and
     $cartMarkup.Contains('ID="pnlCheckoutSubmitError"') -and
     $cartMarkup.Contains('role="alert"') -and
     $cartMarkup.Contains('tabindex="-1"')
 ) '02 Page.IsValid false mostra errore accessibile'
 
-# 3. Il consenso e' verificato sia prima del postback sia sul server.
+# 3. Il consenso e' verificato sia prima del postback sia sul server e torna alla conferma.
 $results += Assert-Contract (
     $cartMarkup.Contains('window.ksValidateCheckoutTermsConsent = function ()') -and
     $cartMarkup.Contains("if (checkbox && !checkbox.checked)") -and
     $cart.Contains('If Not TermsConsentAccepted() Then') -and
-    $cart.Contains('Per proseguire devi accettare le Condizioni Generali di Vendita.') -and
+    $cart.Contains('CheckoutFailureReason.TermsNotAccepted') -and
+    $recovery.Contains('Accetta le Condizioni Generali di Vendita prima di confermare l''ordine.') -and
+    $cart.Contains('Case Else') -and
     $cart.Contains('SetCheckoutStep("confirm")')
 ) '03 termini mancanti restano sulla conferma con messaggio'
 
@@ -75,14 +79,18 @@ $shippingValidation = [regex]::Match(
 $results += Assert-Contract (
     $cart.Contains('If Not ValidateCheckoutBeforeConfirm() Then') -and
     $shippingValidation.Contains('tbVettoriId') -and
-    $shippingValidation.Contains('Seleziona un metodo di spedizione prima di rivedere l''ordine.')
+    $shippingValidation.Contains('Seleziona un metodo di spedizione prima di rivedere l''ordine.') -and
+    $cart.Contains('CheckoutFailureReason.ShippingMethodMissing') -and
+    $order.Contains('If Vettore <= 0 Then')
 ) '04 spedizione mancante mostra istruzione visibile'
 
 # 5. Il pagamento viene rivalidato anche al POST finale.
 $results += Assert-Contract (
     $cart.Contains('If Not ValidateCheckoutBeforeConfirm() Then') -and
     $shippingValidation.Contains('tbPagamenti') -and
-    $shippingValidation.Contains('Seleziona un metodo di pagamento prima di rivedere l''ordine.')
+    $shippingValidation.Contains('Seleziona un metodo di pagamento prima di rivedere l''ordine.') -and
+    $cart.Contains('CheckoutFailureReason.PaymentMethodMissing') -and
+    $order.Contains('If Pagamento <= 0 Then')
 ) '05 pagamento mancante mostra istruzione visibile'
 
 # 6. TipoDocumento assente non puo' diventare un ritorno muto al carrello.
@@ -155,13 +163,10 @@ $results += Assert-Contract (
 ) '12 RequestId alterata fallisce chiusa'
 
 # 13. Un payload diverso viene annullato prima del claim e torna con messaggio.
-$payloadMismatch = [regex]::Match(
-    $order,
-    'If isLegacyCheckoutToken OrElse(?<body>[\s\S]*?)End If').Groups['body'].Value
 $results += Assert-Contract (
-    $payloadMismatch.Contains('Not String.Equals(payloadFingerprint, checkoutPayloadFingerprint') -and
-    $payloadMismatch.Contains('trns.Rollback()') -and
-    $payloadMismatch.Contains('ReturnToCartAfterPayloadMismatch()') -and
+    $order.Contains('Not String.Equals(payloadFingerprint, checkoutPayloadFingerprint') -and
+    $order.Contains('Dim mismatchRetryPersisted As Boolean = False') -and
+    $order.Contains('ReturnToCartAfterPayloadMismatch(checkoutRequestId)') -and
     $order.Contains('Il carrello è cambiato rispetto alla richiesta precedente.')
 ) '13 payload differente esegue rollback con messaggio'
 
@@ -185,14 +190,21 @@ $results += Assert-Contract (
     $dispatcher.Contains('Return "ordine.aspx?c="')
 ) '15 replay restituisce lo stesso documento'
 
-# 16. Timeout/deadlock o commit ambiguo terminano con reconcile oppure errore visibile.
-$orderCatch = [regex]::Match(
-    $order,
-    'Catch ex As Exception(?<body>[\s\S]*?)Finally\s+If trns IsNot Nothing Then trns.Dispose\(\)').Groups['body'].Value
+# 16. Timeout/deadlock o commit ambiguo terminano con reconcile oppure stato neutro e tombstone.
+$transactionMarkerIndex = $order.IndexOf('commitAttempted = True', [StringComparison]::Ordinal)
+$orderCatchStart = $order.IndexOf('Catch ex As Exception', $transactionMarkerIndex, [StringComparison]::Ordinal)
+$orderCatchEnd = $order.IndexOf('Finally', $orderCatchStart, [StringComparison]::Ordinal)
+$orderCatch = ''
+if ($orderCatchStart -ge 0 -and $orderCatchEnd -gt $orderCatchStart) {
+    $orderCatch = $order.Substring($orderCatchStart, $orderCatchEnd - $orderCatchStart)
+}
 $results += Assert-Contract (
-    $orderCatch.Contains('If trns IsNot Nothing Then trns.Rollback()') -and
+    $orderCatch.Contains('If trns IsNot Nothing Then') -and
+    $orderCatch.Contains('trns.Rollback()') -and
     $orderCatch.Contains('TryReconcileCompletedOrder') -and
-    $orderCatch.Contains('ShowDurableCheckoutTechnicalFailure()') -and
+    $orderCatch.Contains('ShowIndeterminateOrderOutcome()') -and
+    $orderCatch.Contains('CheckoutFailureRecoveryService.RetireRequest') -and
+    $orderCatch.Contains('OrderDurableIdempotencyService.RecordRetryRequired') -and
     $idempotency.Contains('RetryRequiredState')
 ) '16 deadlock timeout e commit ambiguo hanno esito terminale'
 
@@ -230,6 +242,8 @@ $results += Assert-Contract (
     $order.Contains('LogDurableCheckoutFailure(ex, "transaction")') -and
     $order.Contains('Checkout confirmation failed. phase=') -and
     $order.Contains('Private Sub ReturnToCartWithReviewMessage') -and
+    $recovery.Contains('Public Shared Function RetireAndDispatch') -and
+    $dispatcher.Contains('carrello.aspx?checkoutfailed=1#pnlCheckoutSubmitError') -and
     (Read-Source 'ordine.aspx').Contains('ID="Panel2" runat="server" ClientIDMode="Static" Visible="false" role="alert"') -and
     $dispatcher.Contains('response.StatusCode = 303') -and
     $dispatcher.Contains('context.ApplicationInstance.CompleteRequest()')

@@ -198,14 +198,13 @@ Private Function GenerateCheckoutToken() As String
     If orderIdentity Is Nothing OrElse orderIdentity.LoginId <> loginId Then
         Throw New InvalidOperationException("Authenticated storefront checkout context is not valid.")
     End If
-
     Dim requestId As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
     Dim normalizedRequestId As String = String.Empty
-    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) Then
+    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) OrElse
+       CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current, normalizedRequestId) Then
         normalizedRequestId = OrderDurableIdempotencyService.CreateRequestId()
         ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
     End If
-
     Dim payloadFingerprint As String = String.Empty
     Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
         connection.Open()
@@ -225,8 +224,15 @@ Private Function GenerateCheckoutToken() As String
             ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
         End If
 
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "07-request-id", "ready")
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "08-storefront-context", "resolved")
+
         payloadFingerprint = BuildCheckoutPayloadFingerprint(connection, Nothing, orderIdentity, False)
     End Using
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, normalizedRequestId, "06-token-fingerprint", "ready")
 
     Dim payload As String = "v3|" & normalizedRequestId & "|" &
         orderIdentity.DatabaseScopeKey & "|" &
@@ -284,7 +290,8 @@ End Function
 Private Sub EnsureCheckoutRequestId()
     Dim current As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
     Dim normalized As String = String.Empty
-    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(current, normalized) Then
+    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(current, normalized) OrElse
+       CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current, normalized) Then
         ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = OrderDurableIdempotencyService.CreateRequestId()
     End If
 End Sub
@@ -400,6 +407,8 @@ Private Sub DispatchCheckoutProcessing(ByVal url As String)
     Response.RedirectLocation = url
     Response.Headers("Location") = url
     Response.SuppressContent = True
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, CurrentCheckoutRequestId(), "18-processing-redirect", "dispatched")
     Context.ApplicationInstance.CompleteRequest()
 End Sub
 
@@ -2167,6 +2176,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End If
     ShowCartPriceRevalidationMessage()
     ShowOrderInventoryAvailabilityMessage()
+    ShowCheckoutFailureFromSession()
     StabilizeCartAddressEditUi()
     End Sub
 
@@ -2282,16 +2292,78 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         ScriptManager.RegisterStartupScript(Me, Me.GetType(), "checkoutSubmitFailure", script, True)
     End Sub
 
-    Private Function HasInvalidCheckoutValidator() As Boolean
-        If Page Is Nothing OrElse Page.Validators Is Nothing Then Return False
+    Private Function CurrentCheckoutRequestId() As String
+        Return Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
+    End Function
+
+    Private Sub DispatchCheckoutFailure(ByVal reason As CheckoutFailureReason,
+                                        ByVal phase As String,
+                                        Optional ByVal failure As Exception = Nothing)
+        Dim failedRequestId As String = CurrentCheckoutRequestId()
+        ' A redirect creates a fresh page/ViewState and therefore a fresh
+        ' RequestId. Rotate this instance too so a failed dispatcher cannot
+        ' accidentally render the retired key back to the browser.
+        ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = OrderDurableIdempotencyService.CreateRequestId()
+        CheckoutFailureRecoveryService.RetireAndDispatch(
+            HttpContext.Current, failedRequestId, reason, phase, failure)
+    End Sub
+
+    Private Sub ShowCheckoutFailureFromSession()
+        If Page.IsPostBack OrElse
+           Not String.Equals(Request.QueryString(CheckoutFailureRecoveryService.FailureQueryName),
+                             CheckoutFailureRecoveryService.FailureQueryValue,
+                             StringComparison.Ordinal) Then Return
+
+        Dim failure As CheckoutFailureFlash = Nothing
+        If Not CheckoutFailureRecoveryService.TryConsumeFailure(HttpContext.Current, failure) OrElse
+           failure Is Nothing Then Return
+
+        Select Case failure.Reason
+            Case CheckoutFailureReason.ShippingAddressInvalid,
+                 CheckoutFailureReason.ShippingMethodMissing,
+                 CheckoutFailureReason.PaymentMethodMissing
+                SetCheckoutStep("checkout")
+                If tOrdine IsNot Nothing Then tOrdine.Visible = True
+                ShowCheckoutSubmitError(failure.Message, False)
+            Case CheckoutFailureReason.CartInvalid
+                SetCheckoutStep("cart")
+                ShowCheckoutSubmitError(failure.Message, False)
+            Case Else
+                SetCheckoutStep("confirm")
+                If tOrdine IsNot Nothing Then tOrdine.Visible = True
+                ShowCheckoutSubmitError(failure.Message)
+        End Select
+    End Sub
+
+    Private Function TryGetCheckoutValidationFailure(ByRef reason As CheckoutFailureReason) As Boolean
         Page.Validate(CHECKOUT_SUBMIT_VALIDATION_GROUP)
         For Each validator As IValidator In Page.Validators
             Dim groupedValidator As BaseValidator = TryCast(validator, BaseValidator)
-            If groupedValidator IsNot Nothing AndAlso
-               String.Equals(groupedValidator.ValidationGroup, CHECKOUT_SUBMIT_VALIDATION_GROUP, StringComparison.Ordinal) AndAlso
-               Not groupedValidator.IsValid Then Return True
+            If groupedValidator Is Nothing OrElse
+               Not String.Equals(groupedValidator.ValidationGroup, CHECKOUT_SUBMIT_VALIDATION_GROUP, StringComparison.Ordinal) OrElse
+               groupedValidator.IsValid Then Continue For
+
+            Select Case groupedValidator.ID
+                Case "cvCheckoutShippingAddress"
+                    reason = CheckoutFailureReason.ShippingAddressInvalid
+                Case "cvCheckoutShippingMethod"
+                    reason = CheckoutFailureReason.ShippingMethodMissing
+                Case "cvCheckoutPaymentMethod"
+                    reason = CheckoutFailureReason.PaymentMethodMissing
+                Case "cvCheckoutTerms"
+                    reason = CheckoutFailureReason.TermsNotAccepted
+                Case Else
+                    reason = CheckoutFailureReason.CartInvalid
+            End Select
+            Return True
         Next
         Return False
+    End Function
+
+    Private Function HasInvalidCheckoutValidator() As Boolean
+        If Page Is Nothing OrElse Page.Validators Is Nothing Then Return False
+        Dim ignored As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+        Return TryGetCheckoutValidationFailure(ignored)
     End Function
 
     Protected Sub cvCheckoutSubmit_ServerValidate(ByVal source As Object, ByVal args As ServerValidateEventArgs)
@@ -2307,9 +2379,9 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
                     Not IsBlankLabel(lblTab_CittaSpedizione) AndAlso
                     Not IsBlankLabel(lblTab_ProvinciaSpedizione)
             Case "cvCheckoutShippingMethod"
-                args.IsValid = tbVettoriId IsNot Nothing AndAlso CleanCartAddressInput(tbVettoriId.Text) <> ""
+                args.IsValid = tbVettoriId IsNot Nothing AndAlso SafeIntFromDb(tbVettoriId.Text, 0) > 0
             Case "cvCheckoutPaymentMethod"
-                args.IsValid = tbPagamenti IsNot Nothing AndAlso CleanCartAddressInput(tbPagamenti.Text) <> ""
+                args.IsValid = tbPagamenti IsNot Nothing AndAlso SafeIntFromDb(tbPagamenti.Text, 0) > 0
             Case "cvCheckoutTerms"
                 args.IsValid = TermsConsentAccepted()
             Case Else
@@ -2552,7 +2624,7 @@ If buonoTot > 0 Then
 
         Catch ex As Exception
             LogCheckoutSubmitFailure(ex, "order-token")
-            ShowCheckoutSubmitError(CheckoutTechnicalErrorMessage)
+            DispatchCheckoutFailure(CheckoutFailureReason.TechnicalTransient, "order-token", ex)
         End Try
 
     End Sub
@@ -5156,12 +5228,18 @@ End Sub
 
 
 Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInviaOrdine.Click
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, CurrentCheckoutRequestId(), "01-final-click", "entered")
     If GetLoginIdSafe(0) <= 0 Then
         Session.Item("StavonelCarrello") = 1
         SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
         Return
     End If
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, CurrentCheckoutRequestId(), "02-page-lifecycle", If(Page.IsPostBack, "postback", "invalid"))
     If Not ValidateCheckoutSubmitCsrfToken() Then
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, CurrentCheckoutRequestId(), "03-csrf", "rejected")
         RejectCheckoutSubmitCsrf()
         Return
     End If
@@ -5173,13 +5251,16 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         ApplyCheckoutStepUi()
         Return
     End If
-    If HasInvalidCheckoutValidator() Then
-        ShowCheckoutSubmitError("Controlla i campi evidenziati prima di inviare l'ordine.")
+    Dim validationReason As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+    If TryGetCheckoutValidationFailure(validationReason) Then
+        DispatchCheckoutFailure(validationReason, "04-checkout-validation")
         Return
     End If
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, CurrentCheckoutRequestId(), "04-checkout-validation", "passed")
     Dim checkoutCart As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
     If checkoutCart Is Nothing OrElse Not checkoutCart.LoadSucceeded Then
-        ShowCheckoutSubmitError(CheckoutTechnicalErrorMessage)
+        DispatchCheckoutFailure(CheckoutFailureReason.TechnicalTransient, "05-cart-read-model")
         Return
     End If
     If checkoutCart.GetAllItems().Rows.Count = 0 Then
@@ -5189,17 +5270,17 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         Return
     End If
     If Not ValidateCheckoutBeforeConfirm() Then
-        SetCheckoutStep("checkout")
-        ApplyCheckoutStepUi()
+        If CheckoutTerminalOutcomeDispatcher.HasDispatched(HttpContext.Current) Then Return
+        DispatchCheckoutFailure(CheckoutFailureReason.ShippingAddressInvalid, "05-checkout-options")
         Return
     End If
     If Not TermsConsentAccepted() Then
-        SetTermsConsentError("Per proseguire devi accettare le Condizioni Generali di Vendita.")
-        SetCheckoutStep("confirm")
-        ApplyCheckoutStepUi()
+        DispatchCheckoutFailure(CheckoutFailureReason.TermsNotAccepted, "04-checkout-terms")
         Return
     End If
     SetTermsConsentError("")
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, CurrentCheckoutRequestId(), "05-checkout-options", "passed")
     Me.PnlDestinazione.Visible = False
     If Not ValidateOrderNotesLength() Then Return
 
@@ -5246,7 +5327,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
 
     Catch ex As Exception
         LogCheckoutSubmitFailure(ex, "pre-dispatch")
-        ShowCheckoutSubmitError(CheckoutTechnicalErrorMessage)
+        DispatchCheckoutFailure(CheckoutFailureReason.TechnicalTransient, "05-pre-dispatch", ex)
         Return
     End Try
 
@@ -5261,7 +5342,7 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
     End If
 
     If Not _cartPriceRevalidationBlockedThisRequest Then
-        ShowCheckoutSubmitError("Controlla le quantità nel carrello prima di inviare l'ordine.")
+        DispatchCheckoutFailure(CheckoutFailureReason.CartInvalid, "05-cart-quantity")
     End If
     End Sub
 
