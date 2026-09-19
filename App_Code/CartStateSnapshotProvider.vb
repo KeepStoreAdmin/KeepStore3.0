@@ -1,11 +1,9 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.Collections.ObjectModel
-Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
 Imports System.Web
-Imports MySql.Data.MySqlClient
 
 Public NotInheritable Class CartStateSnapshotItem
     Public Property ArticleId As Integer
@@ -26,12 +24,10 @@ Public NotInheritable Class CartStateSnapshotProvider
         _items = New List(Of CartStateSnapshotItem)()
         _quantities = New Dictionary(Of String, Decimal)(StringComparer.Ordinal)
         _articleQuantities = New Dictionary(Of Integer, Decimal)()
-        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(context)
-        If owner IsNot Nothing Then
-            _loginId = owner.LoginId
-            _sessionId = owner.SessionId
-        End If
-        LoadSnapshot()
+        Dim readModel As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(context)
+        _loginId = readModel.LoginId
+        _sessionId = readModel.SessionId
+        LoadSnapshot(readModel.GetAllItems())
     End Sub
 
     Public Shared Function GetCurrent(ByVal context As HttpContext) As CartStateSnapshotProvider
@@ -44,6 +40,11 @@ Public NotInheritable Class CartStateSnapshotProvider
         context.Items(RequestCacheKey) = cached
         Return cached
     End Function
+
+    Public Shared Sub Invalidate(ByVal context As HttpContext)
+        If context Is Nothing Then Return
+        context.Items.Remove(RequestCacheKey)
+    End Sub
 
     Public ReadOnly Property LoginId As Integer
         Get
@@ -90,54 +91,40 @@ Public NotInheritable Class CartStateSnapshotProvider
         Return tcId
     End Function
 
-    Private Sub LoadSnapshot()
-        If _loginId <= 0 AndAlso String.IsNullOrEmpty(_sessionId) Then Return
+    Private Sub LoadSnapshot(ByVal rows As DataTable)
+        If rows Is Nothing Then Return
 
-        Dim settings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
-        If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return
+        For Each row As DataRow In rows.Rows
+            Dim articleId As Integer = SafeInteger(ReadColumn(row, "ArticoliId"), 0)
+            Dim tcId As Integer = NormalizeTCId(SafeInteger(ReadColumn(row, "TCId"), -1))
+            Dim quantity As Decimal = SafeDecimal(ReadColumn(row, "Qnt"), 0D)
+            If articleId <= 0 OrElse quantity <= 0D Then Continue For
 
-        Try
-            Using connection As New MySqlConnection(settings.ConnectionString)
-                connection.Open()
-                Using command As New MySqlCommand()
-                    command.Connection = connection
-                    command.CommandType = CommandType.Text
+            Dim key As String = BuildKey(articleId, tcId)
+            Dim rowQuantity As Decimal = 0D
+            _quantities.TryGetValue(key, rowQuantity)
+            _quantities(key) = rowQuantity + quantity
 
-                    If _loginId > 0 Then
-                        command.CommandText = "SELECT ArticoliId, COALESCE(TCId,-1) AS TCId, SUM(COALESCE(Qnt,0)) AS Qty FROM carrello WHERE LoginId=@LoginId AND COALESCE(Qnt,0)>0 GROUP BY ArticoliId, COALESCE(TCId,-1)"
-                        command.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = _loginId
-                    Else
-                        command.CommandText = "SELECT ArticoliId, COALESCE(TCId,-1) AS TCId, SUM(COALESCE(Qnt,0)) AS Qty FROM carrello WHERE SessionId=@SessionId AND COALESCE(Qnt,0)>0 GROUP BY ArticoliId, COALESCE(TCId,-1)"
-                        command.Parameters.Add("@SessionId", MySqlDbType.VarChar, 50).Value = _sessionId
-                    End If
+            Dim articleQuantity As Decimal = 0D
+            _articleQuantities.TryGetValue(articleId, articleQuantity)
+            _articleQuantities(articleId) = articleQuantity + quantity
+        Next
 
-                    Using reader As MySqlDataReader = command.ExecuteReader()
-                        While reader.Read()
-                            Dim articleId As Integer = SafeInteger(reader("ArticoliId"), 0)
-                            Dim tcId As Integer = NormalizeTCId(SafeInteger(reader("TCId"), -1))
-                            Dim quantity As Decimal = SafeDecimal(reader("Qty"), 0D)
-                            If articleId <= 0 OrElse quantity <= 0D Then Continue While
-
-                            _items.Add(New CartStateSnapshotItem() With {
-                                .ArticleId = articleId,
-                                .TCId = tcId,
-                                .Quantity = quantity
-                            })
-                            _quantities(BuildKey(articleId, tcId)) = quantity
-
-                            Dim articleQuantity As Decimal = 0D
-                            _articleQuantities.TryGetValue(articleId, articleQuantity)
-                            _articleQuantities(articleId) = articleQuantity + quantity
-                        End While
-                    End Using
-                End Using
-            End Using
-        Catch
-            _items.Clear()
-            _quantities.Clear()
-            _articleQuantities.Clear()
-        End Try
+        For Each pair As KeyValuePair(Of String, Decimal) In _quantities
+            Dim parts() As String = pair.Key.Split(":"c)
+            If parts.Length <> 2 Then Continue For
+            _items.Add(New CartStateSnapshotItem() With {
+                .ArticleId = SafeInteger(parts(0), 0),
+                .TCId = NormalizeTCId(SafeInteger(parts(1), -1)),
+                .Quantity = pair.Value
+            })
+        Next
     End Sub
+
+    Private Shared Function ReadColumn(ByVal row As DataRow, ByVal name As String) As Object
+        If row Is Nothing OrElse row.Table Is Nothing OrElse Not row.Table.Columns.Contains(name) Then Return Nothing
+        Return row(name)
+    End Function
 
     Private Shared Function BuildKey(ByVal articleId As Integer, ByVal tcId As Integer) As String
         Return articleId.ToString(CultureInfo.InvariantCulture) & ":" & NormalizeTCId(tcId).ToString(CultureInfo.InvariantCulture)

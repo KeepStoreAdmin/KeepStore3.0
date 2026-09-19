@@ -1,20 +1,20 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-18
+Aggiornato: 2026-09-19
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-18.
+- Aggiornato: 2026-09-19.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `5e01d3e805842c47cabea2f7bee22254701f0110`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `2d6ebd540a29ff906a01fa0820ebf65706150408`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task chiuso: `STOREFRONT-RUNTIME-ASSET-404-1A`, esito A, PR #264 integrata fast-forward nel checkpoint `5e01d3e805842c47cabea2f7bee22254701f0110`; asset tenant opzionali e superfici neutre sono fail-closed senza fallback legacy inventati.
-- Task corrente: `MULTI-STOREFRONT-PRICING-ACCOUNT-ISOLATION-1A`, branch `task/multistorefront-pricing-account-isolation-1a`, base stabile `5e01d3e805842c47cabea2f7bee22254701f0110`. Sono isolati account, listini e snapshot commerciali per database/azienda/listino/owner; carrello e ordine restano esplicitamente fuori perimetro.
-- Prossimo task obbligatorio soltanto dopo review A e merge: `MULTI-STOREFRONT-CART-ISOLATION-1A`, stato `NON AVVIATO`. Seguira `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`; `GOOGLE-MERCHANT-CENTER-FEED-1A` resta sospeso.
+- Ultimo task chiuso: `MULTI-STOREFRONT-CART-ISOLATION-1A`, esito A, PR #266 integrata fast-forward nel checkpoint `2d6ebd540a29ff906a01fa0820ebf65706150408`.
+- Task corrente: `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, branch `task/multistorefront-order-provenance-email-1a`, base stabile `2d6ebd540a29ff906a01fa0820ebf65706150408`. La PR #267 resta DRAFT e non merge-safe: la forensica REV4 sul checkout reale si e fermata E per assenza della telemetria persistente necessaria a ricondurre il riferimento assistenza alla prima istruzione fallita; non e autorizzata una correzione ipotetica.
+- Prossimo task soltanto dopo review A, smoke autorizzato e merge della PR #267: (1) `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A`; (2) `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A`; (3) `STOREFRONT-CART-CONVERSION-UX-1A`; (4) `GOOGLE-MERCHANT-CENTER-FEED-1A`; (5) `STOREFRONT-ABANDONED-CART-RECOVERY-1A`, quest'ultimo solo dopo il contratto privacy/consenso. Tutti sono `NON AVVIATO`.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -33,7 +33,7 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Inventario metadati: HOME mantiene title, description, canonical, Open Graph e JSON-LD esistente; catalogo mantiene title/description/canonical e `CollectionPage` JSON-LD valido; PDP mantiene title/description/canonical e Open Graph. Il contratto `Product`/`Offer` avanzato e ora implementato nel micro-task dedicato descritto sotto, senza estenderlo a HOME o catalogo.
 - Problemi risolti: host cliente hardcoded in policy, HOME, robots e sitemap; canonical ricavate dall'authority della richiesta; risoluzione azienda tramite confronto SQL parziale dell'host; segnali statici/dinamici conflittuali; pagine private con canonical/checkout JSON-LD; sitemap su route inesistente e connection key specifica; link social condivisi specifici di un cliente.
 - Prove anti-regressione: harness compilato sulla policy reale con due tenant sintetici e host alterato; canonical/robots/sitemap isolati; matrice HTTP con header `Purpose: prefetch`; XML sitemap valido e univoco; JSON-LD esistente parseabile; precompile ASP.NET Framework 4.8, diff check, secret scan e confronto delle aree commerciali protette. Nessuna DDL/DML, ordine, carrello, pagamento, e-mail o modifica dati appartiene al task.
-- Residui separati: Merchant Center, IndexNow, Search Console API, `llms.txt`/`llms.ashx`, feed e integrazioni AI. Il primo candidato dopo la chiusura dei dati strutturati e `GOOGLE-MERCHANT-CENTER-FEED-1A`, ancora `NON AVVIATO`.
+- Residui separati: Merchant Center, IndexNow, Search Console API, `llms.txt`/`llms.ashx`, feed e integrazioni AI. `GOOGLE-MERCHANT-CENTER-FEED-1A` resta `NON AVVIATO` e, nella roadmap vigente, segue persistent anonymous cart e cart conversion UX.
 
 ### Contratto Google Product structured data
 
@@ -65,7 +65,7 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Il login e sempre `AziendaID + username`; non esiste fallback username-only. Dopo il login prevale il listino persistito nell'anagrafica e `ListinoUser` non lo sovrascrive. La sessione registra l'azienda autenticata; un passaggio A-B invalida LoginId e dati account e ripristina il listino anonimo B.
 - HOME, catalogo, PDP e recenti usano il listino positivo gia stabilito dal tenant context, senza fallback cliente `1`. Product JSON-LD riusa il prezzo quantita `1` della PDP. La cache promo include fingerprint non reversibile del database configurato, azienda, listino, stato autenticato e owner; `TechnicalError` non viene memorizzato.
 - Matrice sintetica same-database: 17 scenari / 22 asserzioni, inclusi anonimo A/B, A-B-A, account A/B, stale LoginId, registrazione, listino persistito, prezzi differenti, promo immediata/tier, parita delle superfici, JSON-LD e failure cache. Regressioni: promo/error-state `141/141`, bulk `19/19`, SEO same-database `41/41 + 44/44`, Product structured data `46/46`, precompile e GET locali HOME/catalogo/PDP sull'host tenant valido.
-- I banner HOME correnti sono ora filtrati con l'azienda risolta e parametri SQL. Residui separati, non corretti da questo task: endpoint feed HOME legacy non collegato con fallback listino storico, pagine listini/coupon legacy e ramo e-mail con ID azienda concreto. Il carrello appartiene a `MULTI-STOREFRONT-CART-ISOLATION-1A`; provenienza ordine, numerazione ed e-mail a `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`.
+- I banner HOME correnti sono ora filtrati con l'azienda risolta e parametri SQL. Residui separati da quel task: endpoint feed HOME legacy non collegato con fallback listino storico e pagine listini/coupon legacy. Il carrello same-database e stato chiuso da `MULTI-STOREFRONT-CART-ISOLATION-1A`; provenienza ordine, numerazione ed e-mail tenant-aware sono il perimetro del checkpoint corrente `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`.
 
 ### Contratto permanente MULTITENANT-BY-DESIGN e onboarding
 
@@ -163,7 +163,7 @@ Esempio con soli placeholder non instradabili:
 - L'idempotenza distingue `processing`, `completed` e `indeterminate`: il replay `completed` non ripete DML, il replay `indeterminate` fallisce chiuso e una collisione di payload viene respinta in modo controllato. La persistenza resta `Session`/`InProc`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` rimane aperto.
 - Nel merge anonimo/account si bloccano prima le righe account e poi quelle della sessione anonima, con query separate owner-scoped, `ORDER BY ID FOR UPDATE` e indici `IX_carrello_LoginId_ID` / `IX_carrello_SessionId_ID`, usando la stessa connessione e transazione e senza commit intermedi.
 - Prove A: precompile .NET Framework 4.8; fault harness con 45 asserzioni; lock timeout reale con retry e delta esatto; smoke autenticato con 43 controlli, matrice articolo `21906` invariata, concorrenza e checkout senza documento; fixture ripristinate. Smoke post-merge 18/18 su desktop, `390px` e `360px`, nessun HTTP 500; `git diff --check` e secret scan puliti.
-- Finding residui al checkpoint PR #245: `CART-REMOVE-TRANSACTION-HARDENING-1A`, `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `ORDER-DOCUMENT-INVENTORY-LOCK-AUDIT-1A` e `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`. Lo stato corrente prevalente e nel checkpoint sopra: remove e audit ordine/inventario sono stati chiusi dai task successivi; idempotenza cart persistente resta E/differita; promo ambigua e recesso digitale restano separati.
+- Finding residui al checkpoint PR #245: `CART-REMOVE-TRANSACTION-HARDENING-1A`, `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, `ORDER-DOCUMENT-INVENTORY-LOCK-AUDIT-1A` e `PROMO-AMBIGUOUS-STATE-REACHABILITY-1A`. Lo stato corrente prevalente e nel checkpoint sopra: remove e audit ordine/inventario sono stati chiusi dai task successivi; la persistenza del registro idempotente delle mutazioni carrello resta E/differita ed e distinta dal futuro carrello anonimo persistente; promo ambigua e recesso digitale restano separati.
 
 ### Chiusura CART-HISTORY-STOCKERROR-MINICART-UX-1A
 
@@ -176,7 +176,7 @@ Esempio con soli placeholder non instradabili:
 
 ### Chiusura tecnica ORDER-DURABLE-IDEMPOTENCY-1A REV5
 
-- `ORDER-DURABLE-IDEMPOTENCY-1A` ha esito tecnico A sulla PR #254, ancora OPEN/DRAFT e non integrata. Il registro MySQL persistente lega la richiesta all'owner e al payload; claim, documento, prenotazione inventario, svuotamento carrello e completamento condividono la transazione. Replay completato, doppio clic e risposta ambigua non ripetono documento, prenotazione, e-mail o gateway; la conferma valida resta Post/Redirect/Get con token opaco owner-scoped.
+- `ORDER-DURABLE-IDEMPOTENCY-1A` e chiuso A: la PR #254 e stata integrata fast-forward nel checkpoint `9fed039d4563fd20ecc02859236d90e7a2f0be5d`. Il registro MySQL persistente lega la richiesta all'owner e al payload; claim, documento, prenotazione inventario, svuotamento carrello e completamento condividono la transazione. Replay completato, doppio clic e risposta ambigua non ripetono documento, prenotazione, e-mail o gateway; la conferma valida resta Post/Redirect/Get con token opaco owner-scoped.
 - Il falso esito ordine era causato dalla collisione case-insensitive fra il flag checkout legacy `C=N` e la chiave token `c`: la richiesta veniva classificata come conferma non valida e deviata verso `documenti.aspx?t=4` prima della verifica stock. Il token di conferma viene ora letto soltanto con chiave dal casing esatto e gli esiti checkout passano da un dispatcher terminale first-wins con `303` e interruzione esplicita dei chiamanti.
 - Per stock insufficiente, il POST finale rivaluta server-side l'intero carrello owner-scoped prima di entrare in `ordine.aspx`; conserva tutte le righe, mostra tutti i codici commerciali interessati in un pannello accessibile e responsive, evidenzia le righe e termina soltanto su `carrello.aspx?stockerror=1#ksCartStockError`. Non vengono chiamati stored procedure ordine, completamento idempotenza, e-mail, pixel o gateway.
 - Smoke autenticato sanitizzato del 2026-09-15 su `https://localhost:8443`: account test PROVA preservato; fixture `PF/PT10`, `ZAP80-A4`, `3343N`; carrello iniziale/finale 3 righe; documenti web iniziali/finali 4; registro idempotenza iniziale/finale una riga `COMPLETED` associata al documento di collaudo 261; `Impegnata` delle fixture invariata. Refresh, Back/Forward e reinvio del vecchio form non hanno raggiunto `documenti.aspx`, creato ordini o prodotto doppie mutazioni; nessun pagamento, gateway o e-mail e stato eseguito.
@@ -2448,7 +2448,7 @@ Contratto visuale: desktop 1365×900 mantiene la tabella; tablet 768×1024 e mob
 
 L’audit `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso con esito E, implementazione differita e nessun DDL: Session/InProc conserva rischi su recycle e topologie multi-nodo. Recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
 
-Roadmap corrente: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; mobile UX, target touch mobile e `ORDER-DURABLE-IDEMPOTENCY-1A` sono tecnicamente chiusi A, con quest'ultimo ancora in PR #254 DRAFT. Il prossimo task effettivo non e stabilito; audit monetario, AntiCsrfPage e promo ambigua restano separati, mentre Coupon/Groupon e recesso restano differiti.
+Roadmap al checkpoint storico: `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta chiuso E e differito; mobile UX, target touch mobile e `ORDER-DURABLE-IDEMPOTENCY-1A` sono chiusi A, con PR #254 integrata nel checkpoint `9fed039d4563fd20ecc02859236d90e7a2f0be5d`. La roadmap corrente prevalente e quella della REV2 PR #267; audit monetario, AntiCsrfPage e promo ambigua restano separati, mentre Coupon/Groupon e recesso restano differiti.
 
 ## Chiusura CART-REMOVE-TRANSACTION-HARDENING-1A
 
@@ -2480,4 +2480,31 @@ Contratto dimostrato:
 
 Harness same-database sintetico: 25/25 scenari PASS piu rollback; conteggi laboratorio `0 -> 0`. Verificati A=2 e B=3 sullo stesso articolo, update/remove/clear isolati, replay singolo, login/merge A e B distinti, A-B-A senza contaminazione, prezzi tenant `5,00` e `6,25`, batch isolato e parita MiniCart/pagina/header/checkout. Zero documenti, ordini e idempotenza ordine. Regression gate: pricing/account PASS, promotion parity/error-state 141/141, promotion bulk 19/19, SEO/same-database 41/41 e 44/44, Product structured data 46/46, precompile ASP.NET Framework 4.8 PASS. Nessun database reale, account reale, ordine, e-mail, pagamento o gateway coinvolto.
 
-Prossimo task dopo review A e merge: `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, obbligatoriamente comprensivo del ramo e-mail legacy legato a un ID azienda. Stato `NON AVVIATO`; Merchant Center resta sospeso.
+Il task successivo a questo checkpoint carrello e `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, ora implementato nel checkpoint seguente e ancora soggetto a review/merge. Merchant Center resta sospeso e, nella roadmap aggiornata, segue persistent anonymous cart e cart conversion UX.
+
+## Checkpoint MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A
+
+Task implementato sul branch `task/multistorefront-order-provenance-email-1a`, base stabile `2d6ebd540a29ff906a01fa0820ebf65706150408`; PR da mantenere DRAFT fino alla review indipendente e agli eventuali smoke autorizzati. Nessun database cliente, ordine, SMTP, pagamento o gateway viene usato per la prova tecnica.
+
+Audit e modello:
+
+- `Carrello_Documento` risolve `vlogin.UtentiId/AziendeId`, inserisce `documenti.AziendeId` nella stessa transazione e usa il contatore globale per tipo/anno; la provenienza e gia persistente e non serve una migration duplicata;
+- la numerazione resta condivisa fra storefront nello stesso database (`A -> N`, `B -> N+1`, `A -> N+2`) e non contiene un filtro azienda;
+- il vecchio ramo `Session("AziendaId") = 2` nell'e-mail era una differenziazione cliente hardcoded: e rimosso, non sostituito con un altro ID;
+- checkout token, confirmation token, fingerprint, claim, completion e replay verificano database configurato, azienda, login, tipo documento, listino, opzioni e carrello;
+- ricevuta PRG, lista e dettaglio documento richiedono insieme account/utente e `AziendeId` del tenant autorevole;
+- branding, mittente, reply-to, destinatario amministrativo, SMTP e URL e-mail vengono caricati dall'azienda persistita nel documento. L'invio resta dopo il commit; replay, rollback, stock error e collisione non inviano.
+
+Harness same-database: 26 scenari richiesti piu concorrenza globale A/B, tutti su fixture sintetiche e fake e-mail sink. Sono coperti provenienza, numerazione, listini/promo, inventario condiviso, clear dei soli carrelli owner, replay/collisione, lista/dettaglio/ricevuta cross-tenant, una sola e-mail, rollback/stock/deadlock, errore SMTP post-commit e atomicita. La sequenza successiva aggiornata e registrata nella REV2 seguente; nessun task successivo e avviato prima della chiusura della PR #267.
+
+### REV2 - submit checkout osservabile e roadmap carrello
+
+- Causa certa del refresh silenzioso: `vlogin` puo produrre duplicati fisici identici della stessa tupla logica account/listino; `OrderStorefrontContext.VerifyAccount`, introdotto dal commit ordine `7c6c63863275faa5a7ae389a0d719a6448c3fb49`, interpretava la seconda riga come ambiguita e falliva chiuso. Il problema veniva amplificato dal `Catch` di `btInviaOrdine_Click`, che registrava l'eccezione senza rendere osservabile l'esito e lasciava quindi un `HTTP 200` senza ordine ne messaggio.
+- Correzione REV2: la verifica account deduplica con `DISTINCT` la tupla logica, continuando a fallire chiusa se esistono tuple realmente differenti; il submit dispone di CSRF dedicato, controlli espliciti per validator, carrello, indirizzo, spedizione, pagamento, tipo documento, prezzo e stock, e mostra un errore accessibile e sanitizzato con reset del busy state quando non puo proseguire. Successo e replay conservano PRG/`303`; login, stock e variazioni commerciali mantengono destinazioni dedicate; nessun ramo puo concludersi con un refresh silenzioso.
+- La matrice terminale obbligatoria della REV2 copre handler, validazione pagina, termini, spedizione, pagamento, tipo documento, carrello vuoto, stock, prezzo, login scaduto, CSRF, RequestId, collisione payload, doppio clic, replay, deadlock/timeout, eccezione annidata, errore e-mail post-commit, assenza di rami silenziosi e coerenza pagina/MiniCart/header. I test restano sintetici o read-only e non autorizzano ordini, e-mail, pagamenti, gateway o DML reali.
+- Stato: PR #267 ancora DRAFT e non merge-safe fino allo smoke Product Owner sul commit REV2 pubblicato. Il checkpoint non dichiara concluso il task e non autorizza il task successivo.
+- Stato login/sessione verificato: timeout applicativo di 30 minuti di inattivita; autenticazione dipendente da `Session("LoginId")`; carrello autenticato persistito nel DB e recuperato dopo un nuovo login; cookie annuale con solo username, non credenziale e non autenticazione; timeout idle/recycle dell'Application Pool non ancora certificato. La REV2 non modifica alcun timeout.
+- Forensica REV4: il riferimento assistenza mostrato dal checkout reale non e presente nei log applicativi disponibili e il tentativo non ha creato claim idempotente, documento o e-mail. Poiche fase ed eccezione non sono state persistite, lo stop E vieta fix dedotti dal solo stato UI; PR #267 resta DRAFT fino a una diagnosi causale osservabile.
+- `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A` e registrato ma `NON AVVIATO`: dovra rendere il login desktop/mobile compatibile con i password manager tramite form e nomi input stabili, HTTPS, `autocomplete="username"` e `autocomplete="current-password"`, con verifica Edge, Chrome, Firefox e Safari e audit dei JavaScript che cancellano o alterano gli input. Il browser e l'utente restano gli unici a decidere salvataggio e riempimento; logout continua a invalidare l'autenticazione. Sono vietati password in cookie, Web Storage, Session, ViewState, hidden field, query string, HTML/server prefill e log, cosi come autenticazione persistente nascosta.
+- Roadmap obbligatoria dopo la chiusura della PR #267: (1) `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A`; (2) `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A`, 30 giorni dall'ultima attivita, token casuale opaco, cookie host-only `Secure`/`HttpOnly`/`SameSite=Lax`, isolamento database + `AziendaId`, righe DB, merge login idempotente una sola volta, rotazione e invalidazione, revalidation prezzi/promo/stock, nessuna prenotazione inventario, cleanup e aggiornamento privacy/cookie policy; (3) `STOREFRONT-CART-CONVERSION-UX-1A`, inclusi stato `carrello salvato`, soglia spedizione e variazioni prezzo/stock; (4) `GOOGLE-MERCHANT-CENTER-FEED-1A`; (5) `STOREFRONT-ABANDONED-CART-RECOVERY-1A` soltanto per utenti autenticati e dopo contratto privacy/consenso, senza spam. Tutti sono `NON AVVIATO`.
+- `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A` riguarda durata e recupero delle righe anonime; non coincide con `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, che riguarda i registri anti-replay delle mutazioni e resta E/differito.

@@ -84,7 +84,7 @@ Partial Class cart_add
         Dim result As CartOwnerRemovalResult = If(clearAll,
             CartMutationService.ClearCartForCurrentOwner(HttpContext.Current),
             CartMutationService.RemoveCartRowForCurrentOwner(HttpContext.Current, cartRowId))
-        If result Is Nothing OrElse Not result.Succeeded Then
+        If result Is Nothing OrElse Not result.Succeeded OrElse (Not clearAll AndAlso result.AffectedRows <> 1) Then
             If result IsNot Nothing AndAlso result.IsIndeterminate Then
                 RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
             Else
@@ -97,8 +97,13 @@ Partial Class cart_add
         CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
         CartMutationIdempotencyService.ClearProgressiveRequestIds(
             HttpContext.Current, If(clearAll, "cart-clear:", "cart-remove:"))
-        Session(CartPriceRevalidationHelper.SessionMessageKey) = "Il carrello è stato aggiornato."
-        Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
+        If result.WasNoOp Then
+            Session(CartPriceRevalidationHelper.SessionMessageKey) = "Il carrello è già vuoto."
+            Session(CartPriceRevalidationHelper.SessionChangedKey) = 0
+        Else
+            Session(CartPriceRevalidationHelper.SessionMessageKey) = "Il carrello è stato aggiornato."
+            Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
+        End If
         RedirectAfterPost(cartReturnUrl)
     End Sub
 

@@ -107,6 +107,18 @@ La compatibilita strutturale non autorizza un deployment. Database, domini e amb
 - Un account e valido per il carrello solo quando `AuthenticatedAziendaID` coincide con l'azienda risolta per host; cambio storefront incompatibile, host ambiguo/sconosciuto o alias non canonicalizzato falliscono chiusi prima di una mutazione.
 - Fingerprint e registri idempotenti del carrello includono sempre database, azienda e owner. Cache/snapshot commerciali includono inoltre listino e stato autenticato secondo il contratto storefront.
 - Carrelli anonimi storici identificati soltanto dal `SessionID` grezzo non vengono reclamati automaticamente: non e possibile attribuirli in sicurezza a una delle aziende dello stesso database.
+- Ogni POST finale di checkout termina in un solo esito osservabile: conferma PRG, redirect specializzato, errore di validazione accessibile sulla pagina, `403` CSRF, replay/collisione fail-closed oppure errore tecnico sanitizzato. Sono vietati catch silenziosi, refresh `200` senza messaggio e prosecuzione dopo un esito terminale; gli effetti esterni restano post-commit.
+- `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A` e un task futuro, non una capacita gia attiva: dovra usare 30 giorni dall'ultima attivita, token casuale opaco senza dati personali, cookie host-only `Secure`, `HttpOnly`, `SameSite=Lax`, righe DB isolate per database e `AziendaId`, merge login una sola volta con rotazione e invalidazione del token, rivalidazione di prezzi/promo/stock, nessuna prenotazione inventario e cleanup server-side. Privacy e cookie policy sono gate di rilascio. Questa roadmap e distinta dall'idempotenza delle mutazioni carrello e non ne modifica lo stato corrente.
+
+### Ordini, documenti ed e-mail multi-storefront
+
+- La provenienza dell'ordine e il `documenti.AziendeId` persistito dalla procedura canonica nella stessa transazione del documento; la sessione non e una fonte storica sufficiente.
+- La numerazione documenti resta globale nel database per contatore/tipo/anno: non va partizionata per azienda quando piu storefront condividono catalogo e inventario.
+- Token checkout/conferma, fingerprint e replay durevole legano sempre fingerprint del database configurato, `AziendaId`, `LoginId`, tipo documento, opzioni commerciali e snapshot carrello. Un replay di un'altra azienda o con payload diverso fallisce chiuso.
+- Lista, dettaglio e ricevuta documento richiedono congiuntamente owner utente e `AziendeId` del tenant autorevole; un solo `LoginId`/`UtentiId` non sostituisce il confine azienda.
+- Branding, mittente, reply-to, destinatario amministrativo, SMTP e URL della conferma e-mail derivano dall'azienda persistita nel documento. Vietati ID azienda, nomi cliente, domini o destinatari hardcoded nel flusso condiviso.
+- L'e-mail ordine parte soltanto dopo il commit e mai su replay, rollback, stock insufficiente o collisione. Un errore SMTP post-commit viene registrato in forma sanitizzata e non annulla o duplica il documento.
+- I test del flusso usano tenant/account sintetici e fake e-mail sink; nessun SMTP, ordine, pagamento o gateway reale senza autorizzazione esplicita.
 
 ## Baseline minima di verifica
 

@@ -29,11 +29,16 @@ Friend Class CartOwnershipRow
 End Class
 
 Public Module CartOwnershipService
+    Private Const MergeRequestCacheKey As String = "KeepStore:CartOwnershipService:MergeResult"
+
     Public Function MergeAnonymousCartIntoAccount(ByVal ctx As HttpContext,
                                                    ByVal loginId As Integer,
                                                    ByVal listino As Integer) As CartOwnershipMergeResult
         Dim result As New CartOwnershipMergeResult()
         If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse loginId <= 0 OrElse listino <= 0 Then Return result
+
+        Dim cachedResult As CartOwnershipMergeResult = TryCast(ctx.Items(MergeRequestCacheKey), CartOwnershipMergeResult)
+        If cachedResult IsNot Nothing Then Return cachedResult
 
         Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
@@ -83,6 +88,7 @@ Public Module CartOwnershipService
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
             result = execution.Value
             result.Succeeded = True
+            CartAuthoritativeReadModel.Invalidate(ctx)
             If result.PriceRevalidation IsNot Nothing AndAlso result.PriceRevalidation.HasChanges Then
                 CartPriceRevalidationHelper.StoreResultInSession(ctx, result.PriceRevalidation)
             End If
@@ -97,6 +103,7 @@ Public Module CartOwnershipService
             CartPriceRevalidationHelper.StoreResultInSession(ctx, result.PriceRevalidation)
         End If
 
+        ctx.Items(MergeRequestCacheKey) = result
         Return result
     End Function
 

@@ -9,6 +9,7 @@ Public Enum CheckoutTerminalOutcome
     AddressError = 4
     NotesError = 5
     OrderConfirmation = 6
+    CheckoutFailure = 7
 End Enum
 
 ''' <summary>
@@ -53,7 +54,7 @@ Public NotInheritable Class CheckoutTerminalOutcomeDispatcher
             Case CheckoutTerminalOutcome.StockFailure
                 Return "carrello.aspx?stockerror=1#ksCartStockError"
             Case CheckoutTerminalOutcome.LoginRequired
-                Return "accessonegato.aspx"
+                Return "carrello.aspx?loginrequired=1#ksCartLoginRequired"
             Case CheckoutTerminalOutcome.PriceChanged
                 Return "carrello.aspx?pricechanged=1"
             Case CheckoutTerminalOutcome.AddressError
@@ -65,6 +66,8 @@ Public NotInheritable Class CheckoutTerminalOutcomeDispatcher
                     Throw New ArgumentException("Confirmation token is required.", "opaqueConfirmationToken")
                 End If
                 Return "ordine.aspx?c=" & HttpUtility.UrlEncode(opaqueConfirmationToken)
+            Case CheckoutTerminalOutcome.CheckoutFailure
+                Return "carrello.aspx?checkoutfailed=1#pnlCheckoutSubmitError"
             Case Else
                 Return "carrello.aspx"
         End Select

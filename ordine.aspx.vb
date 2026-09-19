@@ -75,14 +75,16 @@ Private Function OrderNotesAreTooLong(ByVal note As String) As Boolean
     Return note.Length > OrderNotesMaxLength
 End Function
 
-Private Function TryValidateCheckoutToken(ByVal loginId As Long,
+Private Function TryValidateCheckoutToken(ByVal identity As OrderStorefrontIdentity,
                                           ByRef requestId As String,
                                           ByRef payloadFingerprint As String,
+                                          ByRef draftFingerprint As String,
                                           ByRef isLegacyToken As Boolean) As Boolean
     requestId = String.Empty
     payloadFingerprint = String.Empty
+    draftFingerprint = String.Empty
     isLegacyToken = False
-    If loginId <= 0 Then Return False
+    If identity Is Nothing OrElse Not identity.IsComplete Then Return False
 
     Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 1024)
     If String.IsNullOrEmpty(token) Then Return False
@@ -106,25 +108,28 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long,
         If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
 
         Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
-        Dim requestIndex As Integer = 0
-        Dim loginIndex As Integer = 1
-        Dim ticksIndex As Integer = 2
-        If parts.Length = 5 AndAlso String.Equals(parts(0), "v2", StringComparison.Ordinal) Then
-            requestIndex = 1
-            loginIndex = 2
-            ticksIndex = 3
-            If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(4), payloadFingerprint) Then Return False
-        ElseIf parts.Length = 3 Then
-            isLegacyToken = True
-        Else
-            Return False
-        End If
+        If parts.Length <> 8 OrElse Not String.Equals(parts(0), "v4", StringComparison.Ordinal) Then Return False
+        Dim requestIndex As Integer = 1
+        Dim databaseIndex As Integer = 2
+        Dim companyIndex As Integer = 3
+        Dim loginIndex As Integer = 4
+        Dim ticksIndex As Integer = 5
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(6), payloadFingerprint) Then Return False
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(7), draftFingerprint) Then Return False
+
+        Dim tokenDatabaseScope As String = String.Empty
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(databaseIndex), tokenDatabaseScope) OrElse
+           Not String.Equals(tokenDatabaseScope, identity.DatabaseScopeKey, StringComparison.Ordinal) Then Return False
+
+        Dim tokenCompanyId As Integer = 0
+        If Not Integer.TryParse(parts(companyIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenCompanyId) OrElse
+           tokenCompanyId <> identity.CompanyId Then Return False
 
         Dim normalized As String = String.Empty
         If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(requestIndex), normalized) Then Return False
 
         Dim tokenLoginId As Long = 0
-        If Not Long.TryParse(parts(loginIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> loginId Then Return False
+        If Not Long.TryParse(parts(loginIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> identity.LoginId Then Return False
 
         Dim issuedTicks As Long = 0
         If Not Long.TryParse(parts(ticksIndex), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
@@ -135,6 +140,41 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long,
         requestId = normalized
         Return True
     Catch
+        Return False
+    Finally
+        If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
+        If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
+    End Try
+End Function
+
+Private Function TryExtractCheckoutRequestIdForRetirement(ByRef requestId As String) As Boolean
+    requestId = String.Empty
+    Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 1024)
+    If String.IsNullOrEmpty(token) Then Return False
+
+    Dim protectedBytes() As Byte = Nothing
+    Dim clearBytes() As Byte = Nothing
+    Try
+        Dim encoded As String = token.Replace("-"c, "+"c).Replace("_"c, "/"c)
+        Select Case encoded.Length Mod 4
+            Case 0
+            Case 2
+                encoded &= "=="
+            Case 3
+                encoded &= "="
+            Case Else
+                Return False
+        End Select
+
+        protectedBytes = Convert.FromBase64String(encoded)
+        clearBytes = System.Web.Security.MachineKey.Unprotect(protectedBytes, CHECKOUT_TOKEN_PURPOSE)
+        If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
+
+        Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
+        If parts.Length <> 8 OrElse Not String.Equals(parts(0), "v4", StringComparison.Ordinal) Then Return False
+        Return OrderDurableIdempotencyService.TryNormalizeRequestId(parts(1), requestId)
+    Catch
+        requestId = String.Empty
         Return False
     Finally
         If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
@@ -161,19 +201,28 @@ Private Function GetExactCaseQueryString(ByVal key As String, Optional ByVal max
     End Try
 End Function
 
-Private Sub ReturnToCartAfterPayloadMismatch()
-    Session(CartPriceRevalidationHelper.SessionMessageKey) =
-        "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine."
+Private Sub ReturnToCartAfterPayloadMismatch(ByVal requestId As String)
+    CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, requestId)
+    ReturnToCartWithReviewMessage(
+        "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine.")
+End Sub
+
+Private Sub ReturnToCartWithReviewMessage(ByVal message As String)
+    Session(CartPriceRevalidationHelper.SessionMessageKey) = If(
+        String.IsNullOrWhiteSpace(message),
+        "Non è stato possibile confermare l'ordine. Rivedi il carrello e riprova.",
+        message.Trim())
     Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
 End Sub
 
-Private Sub RedirectToStockFailure()
+Private Sub RedirectToStockFailure(Optional ByVal requestId As String = "")
+    CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, requestId)
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.StockFailure)
 End Sub
 
-Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal loginId As Long)
-    Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, loginId)
+Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal identity As OrderStorefrontIdentity)
+    Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, identity)
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.OrderConfirmation, token)
 End Sub
 
@@ -324,9 +373,11 @@ End Sub
         Return ShippingAddressBelongsToUser(conn, selectedAddressId, utentiId)
     End Function
 
-    Private Sub BlockInvalidShippingAddress()
-        Session("SCEGLIINDIRIZZO") = Nothing
-        CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.AddressError)
+    Private Sub BlockInvalidShippingAddress(ByVal requestId As String)
+        DispatchDurableCheckoutFailure(
+            requestId,
+            CheckoutFailureReason.ShippingAddressInvalid,
+            "05-shipping-address")
     End Sub
 
     Private Function TryReadInventoryFailureAfterRollback(ByVal conn As MySqlConnection,
@@ -461,12 +512,71 @@ End Sub
     Private Sub ShowDurableCheckoutTechnicalFailure()
         Me.Panel1.Visible = False
         Me.Panel2.Visible = True
+        ScriptManager.RegisterStartupScript(
+            Me,
+            Me.GetType(),
+            "focusDurableCheckoutFailure",
+            "setTimeout(function(){var e=document.getElementById('Panel2');if(e){e.focus();}},0);",
+            True)
+    End Sub
+
+    Private Sub ShowCompletedOrderReceiptUnavailable()
+        Me.Panel1.Visible = False
+        Me.Panel2.Controls.Clear()
+        Me.Panel2.Controls.Add(New LiteralControl(
+            "<div class=""ks-alert ks-alert-warning""><div style=""font-weight:700; margin-bottom:6px;"">" &
+            "Ordine già registrato.</div><div>La ricevuta non è temporaneamente disponibile. " &
+            "Controlla la sezione I miei ordini oppure contatta l'assistenza.</div></div>"))
+        Me.Panel2.Visible = True
+    End Sub
+
+    Private Sub ShowIndeterminateOrderOutcome()
+        Me.Panel1.Visible = False
+        Me.Panel2.Controls.Clear()
+        Me.Panel2.Controls.Add(New LiteralControl(
+            "<div class=""ks-alert ks-alert-warning""><div style=""font-weight:700; margin-bottom:6px;"">" &
+            "Esito dell'ordine in verifica.</div><div>Non ripetere l'invio. Aggiorna questa pagina: " &
+            "se l'ordine è stato registrato verrà mostrata la ricevuta; in caso contrario controlla " &
+            "la sezione I miei ordini o contatta l'assistenza.</div></div>"))
+        Me.Panel2.Visible = True
+    End Sub
+
+    Private Sub DispatchDurableCheckoutFailure(ByVal requestId As String,
+                                               ByVal reason As CheckoutFailureReason,
+                                               ByVal phase As String,
+                                               Optional ByVal failure As Exception = Nothing)
+        If Not CheckoutFailureRecoveryService.RetireAndDispatch(
+            HttpContext.Current, requestId, reason, phase, failure) Then
+            ' Fail closed if an HTTP destination was already selected or the
+            ' session is unavailable. Never continue into document creation.
+            ShowDurableCheckoutTechnicalFailure()
+        End If
+    End Sub
+
+    Private Sub LogDurableCheckoutFailure(ByVal failure As Exception, ByVal phase As String)
+        Try
+            Dim effective As Exception = failure
+            While effective IsNot Nothing AndAlso effective.InnerException IsNot Nothing
+                effective = effective.InnerException
+            End While
+            Dim errorType As String = If(effective Is Nothing, "Exception", effective.GetType().Name)
+            Dim safePhase As String = If(String.IsNullOrWhiteSpace(phase), "unknown", phase.Trim())
+            KeepStoreLog.Error(
+                "ordine.aspx",
+                "Checkout confirmation failed. phase=" & safePhase & "; errorType=" & errorType & ".",
+                Nothing,
+                HttpContext.Current)
+        Catch
+        End Try
     End Sub
 
     Private Function RenderCompletedOrder(ByVal conn As MySqlConnection,
-                                          ByVal record As OrderDurableIdempotencyRecord) As Boolean
+                                          ByVal record As OrderDurableIdempotencyRecord,
+                                          ByVal identity As OrderStorefrontIdentity) As Boolean
         If conn Is Nothing OrElse record Is Nothing OrElse
+           identity Is Nothing OrElse Not identity.IsComplete OrElse
            record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
+           record.AziendaId <> identity.CompanyId OrElse
            record.DocumentiId <= 0 OrElse record.DocumentoMemorizzato <= 0 Then Return False
 
         Dim documentId As Integer = 0
@@ -477,9 +587,10 @@ End Sub
         If ownerUtentiId <= 0 Then Return False
         Using command As New MySqlCommand(
             "SELECT id, TipoDocumentiId, NDocumento, DataDocumento FROM documenti " &
-            "WHERE id=?id AND UtentiId=?utentiId LIMIT 1", conn)
+            "WHERE id=?id AND UtentiId=?utentiId AND AziendeId=?aziendaId LIMIT 1", conn)
             command.Parameters.Add("?id", MySqlDbType.Int64).Value = record.DocumentiId
             command.Parameters.Add("?utentiId", MySqlDbType.Int64).Value = ownerUtentiId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = identity.CompanyId
             Using reader As MySqlDataReader = command.ExecuteReader()
                 If Not reader.Read() Then Return False
                 documentId = Convert.ToInt32(reader("id"), CultureInfo.InvariantCulture)
@@ -508,7 +619,7 @@ End Sub
             HyperLink1.Text = "I miei ordini"
         End If
         If litOrderReceipt IsNot Nothing Then
-            litOrderReceipt.Text = BuildOrderReceiptHtml(conn, documentId, documentLabel, documentNumber, documentDate, String.Empty)
+            litOrderReceipt.Text = BuildOrderReceiptHtml(conn, documentId, documentLabel, documentNumber, documentDate, String.Empty, identity)
         End If
         Me.Panel2.Visible = False
         Me.Panel1.Visible = True
@@ -549,27 +660,31 @@ End Sub
         Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = lineKeys
     End Sub
 
-    Private Function RouteCurrentInventoryFailureToCart(ByVal conn As MySqlConnection, ByVal loginId As Long) As Boolean
+    Private Function RouteCurrentInventoryFailureToCart(ByVal conn As MySqlConnection,
+                                                        ByVal loginId As Long,
+                                                        ByVal requestId As String) As Boolean
         Dim refreshedMessage As String = ""
         Dim refreshedLineKeys As String = ""
         If Not TryReadInventoryFailureAfterRollback(conn, loginId, refreshedMessage, refreshedLineKeys) Then Return False
 
         StoreInventoryFailure(refreshedMessage, refreshedLineKeys)
-        RedirectToStockFailure()
+        RedirectToStockFailure(requestId)
         Return True
     End Function
 
     Private Function TryReconcileCompletedOrder(ByVal connectionString As String,
                                                  ByVal requestId As String,
-                                                 ByVal loginId As Long,
+                                                 ByVal identity As OrderStorefrontIdentity,
                                                  ByVal payloadFingerprint As String) As Boolean
         Dim normalizedFingerprint As String = String.Empty
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(payloadFingerprint, normalizedFingerprint) Then Return False
         Try
             Using reconcileConnection As New MySqlConnection(connectionString)
                 reconcileConnection.Open()
+                If Not OrderStorefrontContext.VerifyAccount(reconcileConnection, Nothing, identity) Then Return False
                 Dim record As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryReadCompleted(reconcileConnection, requestId, loginId)
+                    OrderDurableIdempotencyService.TryReadCompleted(
+                        reconcileConnection, requestId, identity.LoginId, identity.CompanyId)
                 Return record IsNot Nothing AndAlso
                     record.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
                     String.Equals(record.PayloadFingerprint, normalizedFingerprint, StringComparison.Ordinal) AndAlso
@@ -580,44 +695,54 @@ End Sub
         End Try
     End Function
 
-    Private Sub HandleOrderConfirmationGet(ByVal authenticatedLoginId As Long)
+    Private Sub HandleOrderConfirmationGet(ByVal identity As OrderStorefrontIdentity)
         If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
-            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+            ReturnToCartWithReviewMessage("La richiesta di conferma non è valida. Rivedi il carrello e riprova.")
             Return
         End If
 
         Dim requestId As String = String.Empty
         If Not OrderConfirmationTokenService.TryValidate(
             GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024),
-            authenticatedLoginId,
+            identity,
             requestId) Then
-            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+            ReturnToCartWithReviewMessage("La conferma dell'ordine non è più valida. Rivedi il carrello e riprova.")
             Return
         End If
 
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then
+                    ReturnToCartWithReviewMessage("Non è stato possibile verificare l'ordine completato. Rivedi il carrello e riprova.")
+                    Return
+                End If
                 Dim record As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryReadCompleted(conn, requestId, authenticatedLoginId)
+                    OrderDurableIdempotencyService.TryReadCompleted(
+                        conn, requestId, identity.LoginId, identity.CompanyId)
                 If record Is Nothing OrElse
                    record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
-                   Not RenderCompletedOrder(conn, record) Then
-                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                   Not RenderCompletedOrder(conn, record, identity) Then
+                    ReturnToCartWithReviewMessage("La conferma richiesta non è disponibile per questo account. Rivedi il carrello e riprova.")
                     Return
                 End If
             End Using
 
             Response.Cache.SetCacheability(HttpCacheability.Private)
             Response.Cache.SetNoStore()
-        Catch
-            ShowDurableCheckoutTechnicalFailure()
+        Catch ex As Exception
+            LogDurableCheckoutFailure(ex, "confirmation-receipt")
+            ShowCompletedOrderReceiptUnavailable()
         End Try
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
         If Me.Session("LoginId") Is Nothing Then
+            Dim expiredRequestId As String = String.Empty
+            If TryExtractCheckoutRequestIdForRetirement(expiredRequestId) Then
+                CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, expiredRequestId)
+            End If
             ' Mantengo la tua variabile originale (Page) e aggiungo anche Pagina_visitata (pattern standard)
             Me.Session("Page") = Me.Request.Url.ToString()
             Me.Session("Pagina_visitata") = Me.Request.Url.ToString()
@@ -627,45 +752,62 @@ End Sub
 
 ' Durable idempotency token issued by carrello and protected with MachineKey.
 Dim authenticatedLoginId As Long = GetSessionLong("LoginId", 0)
+Dim orderIdentity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+If orderIdentity Is Nothing OrElse Not orderIdentity.IsComplete OrElse
+   orderIdentity.LoginId <> authenticatedLoginId Then
+    Dim invalidIdentityRequestId As String = String.Empty
+    If TryExtractCheckoutRequestIdForRetirement(invalidIdentityRequestId) Then
+        CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, invalidIdentityRequestId)
+    End If
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.LoginRequired)
+    Exit Sub
+End If
 If Not String.IsNullOrEmpty(GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024)) Then
-    HandleOrderConfirmationGet(authenticatedLoginId)
+    HandleOrderConfirmationGet(orderIdentity)
     Exit Sub
 End If
 
 Dim checkoutRequestId As String = String.Empty
 Dim checkoutPayloadFingerprint As String = String.Empty
+Dim checkoutDraftFingerprint As String = String.Empty
 Dim isLegacyCheckoutToken As Boolean = False
-If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
-    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+If Not TryValidateCheckoutToken(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, checkoutDraftFingerprint, isLegacyCheckoutToken) Then
+    Dim invalidTokenRequestId As String = String.Empty
+    If TryExtractCheckoutRequestIdForRetirement(invalidTokenRequestId) Then
+        CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, invalidTokenRequestId)
+    End If
+    ReturnToCartWithReviewMessage("La sessione di conferma non è più valida. Rivedi il carrello e invia nuovamente l'ordine.")
     Exit Sub
 End If
+CheckoutFailureRecoveryService.TracePhase(
+    HttpContext.Current, checkoutRequestId, "06-token-fingerprint", "validated")
+CheckoutFailureRecoveryService.TracePhase(
+    HttpContext.Current, checkoutRequestId, "07-request-id", "validated")
+CheckoutFailureRecoveryService.TracePhase(
+    HttpContext.Current, checkoutRequestId, "08-storefront-context", "resolved")
 
 
         SyncLock Semaforo
 
             Dim LoginId As Long = authenticatedLoginId
             Dim UtentiId As Long = GetSessionLong("UtentiId", 0)
-            Dim TipoDoc As Integer = GetSessionInt("Ordine_TipoDoc", 0)
-            Dim Documento As String = If(TryCast(Me.Session("Ordine_Documento"), String), "")
-            Dim Pagamento As Integer = GetSessionInt("Ordine_Pagamento", 0)
-            Dim Vettore As Integer = GetSessionInt("Ordine_Vettore", 0)
-            Dim SpeseSped As Decimal = GetSessionDecimal("Ordine_SpeseSped", 0D)
-            Dim SpeseAss As Decimal = GetSessionDecimal("Ordine_SpeseAss", 0D)
-            Dim SpesePag As Decimal = GetSessionDecimal("Ordine_SpesePag", 0D)
-            Dim PagamentoOnLine As Integer = GetSessionInt("Ordine_Pagamento_OnLine", 0)
-            Dim ConfermaOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1)
-            Dim PermettiPagamentoSuccessivo As Integer = GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1)
-            Dim InviaEmailOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_InviaEmailOrdinePrimaPagamento", 1)
+            Dim checkoutDraft As CheckoutDraftState = Nothing
+            Dim TipoDoc As Integer = 0
+            Dim Documento As String = String.Empty
+            Dim Pagamento As Integer = 0
+            Dim Vettore As Integer = 0
+            Dim SpeseSped As Decimal = 0D
+            Dim SpeseAss As Decimal = 0D
+            Dim SpesePag As Decimal = 0D
+            Dim PagamentoOnLine As Integer = 0
+            Dim ConfermaOrdinePrimaPagamento As Integer = 1
+            Dim PermettiPagamentoSuccessivo As Integer = 1
+            Dim InviaEmailOrdinePrimaPagamento As Integer = 1
 
             Dim documento_memorizzato As Long = 0
             Dim id As Integer = 0
             Dim DataDoc As String = ""
-            Dim Note As String = If(TryCast(Me.Session("NoteDocumento"), String), "")
-
-            If OrderNotesAreTooLong(Note) Then
-                CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.NotesError)
-                Exit Sub
-            End If
+            Dim Note As String = String.Empty
 
             Dim NumDoc As Long = 0
             Dim numDoc_tracking As String = "1"
@@ -676,14 +818,25 @@ End If
 
             Dim trns As MySqlTransaction = Nothing
             Dim payloadFingerprint As String = String.Empty
+            Dim claimCreated As Boolean = False
+            Dim commitAttempted As Boolean = False
+            Dim commitCompleted As Boolean = False
 
             Try
                 conn.Open()
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, orderIdentity) Then
+                    CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, checkoutRequestId)
+                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.LoginRequired)
+                    Exit Sub
+                End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "09-account-verification", "passed")
 
                 ' A completed durable request is resolved before reading order
                 ' session data, which may already have been cleared by success.
                 Dim completedBeforeWork As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryReadCompleted(conn, checkoutRequestId, LoginId)
+                    OrderDurableIdempotencyService.TryReadCompleted(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId)
                 If completedBeforeWork IsNot Nothing Then
                     If completedBeforeWork.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
                        completedBeforeWork.DocumentiId > 0 AndAlso
@@ -694,30 +847,125 @@ End If
                         ' disponibile tramite il token di conferma owner-scoped.
                         If Not isLegacyCheckoutToken AndAlso
                            String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
-                            RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                            CheckoutFailureRecoveryService.TracePhase(
+                                HttpContext.Current, checkoutRequestId, "11-state-reconciliation", "completed")
+                            RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                         Else
-                            ReturnToCartAfterPayloadMismatch()
+                            ReturnToCartAfterPayloadMismatch(checkoutRequestId)
                         End If
                         Exit Sub
                     End If
                     If completedBeforeWork.Status = OrderDurableClaimStatus.RetryRequired Then
                         If Not isLegacyCheckoutToken AndAlso
                            String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
-                            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
+                            DispatchDurableCheckoutFailure(
+                                checkoutRequestId, CheckoutFailureReason.RetryRequired, "11-state-reconciliation")
                         Else
-                            ReturnToCartAfterPayloadMismatch()
+                            ReturnToCartAfterPayloadMismatch(checkoutRequestId)
                         End If
                         Exit Sub
                     End If
-                    ShowDurableCheckoutTechnicalFailure()
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.Collision, "11-state-reconciliation")
                     Exit Sub
                 End If
+
+                If CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current, checkoutRequestId) Then
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.Collision, "11-retired-request")
+                    Exit Sub
+                End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "11-state-reconciliation", "new")
+
+                Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+                If Not CheckoutDraftService.TryRead(
+                    HttpContext.Current, orderIdentity, checkoutRequestId,
+                    checkoutDraftFingerprint, checkoutDraft) Then
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.CartChanged, "ValidateDraft")
+                    Exit Sub
+                End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "ValidateDraft", "passed", Nothing,
+                    "not-claimed", "none", "ValidateDraft")
+                If Not CheckoutDraftService.ValidateAuthoritativeSelections(
+                    conn, Nothing, orderIdentity, checkoutDraft, draftFailure) Then
+                    If draftFailure = CheckoutFailureReason.ShippingAddressInvalid Then
+                        BlockInvalidShippingAddress(checkoutRequestId)
+                    Else
+                        DispatchDurableCheckoutFailure(checkoutRequestId, draftFailure, "ValidateDraft")
+                    End If
+                    Exit Sub
+                End If
+
+                TipoDoc = checkoutDraft.TipoDocumentiId
+                Documento = If(TipoDoc = 2, "Preventivo", "Ordine")
+                Pagamento = checkoutDraft.PaymentMethodId
+                Vettore = checkoutDraft.DeliveryMethodId
+                SpeseSped = checkoutDraft.ShippingCost
+                SpeseAss = checkoutDraft.InsuranceCost
+                SpesePag = checkoutDraft.PaymentCost
+                PagamentoOnLine = checkoutDraft.PaymentOnline
+                ConfermaOrdinePrimaPagamento = checkoutDraft.ConfirmBeforePayment
+                PermettiPagamentoSuccessivo = checkoutDraft.AllowLaterPayment
+                InviaEmailOrdinePrimaPagamento = checkoutDraft.SendEmailBeforePayment
+                Note = checkoutDraft.Notes
+                UtentiId = checkoutDraft.UtentiId
+                Session("SCEGLIINDIRIZZO") = If(checkoutDraft.ShippingAddressId > 0,
+                    CType(checkoutDraft.ShippingAddressId, Object), Nothing)
+                Session("Ordine_DescrizioneBuonoSconto") = checkoutDraft.CouponDescription
+                Session("Ordine_TotaleBuonoScontoImponibile") = checkoutDraft.CouponTaxableTotal
+                Session("Ordine_CodiceBuonoSconto") = checkoutDraft.CouponCode
+                Session("Ordine_BuonoScontoIdIva") = checkoutDraft.CouponVatId
+                Session("Ordine_BuonoScontoValoreIva") = checkoutDraft.CouponVatValue
+                Session("Coupon_Arrotondamento") = checkoutDraft.CouponRounding
+                Session("AbilitatoIvaReverseCharge") = checkoutDraft.ReverseChargeVat
+                Session("Iva_Vettori") = checkoutDraft.CarrierVat
 
                 If TipoDoc <= 0 Then
                     ' A missing checkout-session field must not mask an owner-scoped
                     ' stock failure with the generic document-history redirect.
-                    If RouteCurrentInventoryFailureToCart(conn, LoginId) Then Exit Sub
-                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                    If RouteCurrentInventoryFailureToCart(conn, LoginId, checkoutRequestId) Then Exit Sub
+                    CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, checkoutRequestId)
+                    ReturnToCartWithReviewMessage("I dati necessari per confermare l'ordine sono incompleti. Rivedi spedizione e pagamento e riprova.")
+                    Exit Sub
+                End If
+
+                If OrderNotesAreTooLong(Note) Then
+                    Dim notesRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                        TipoDoc, checkoutPayloadFingerprint)
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(notesRetryPersisted, "persisted", "session-tombstone"))
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId,
+                        CheckoutFailureReason.OrderNotesInvalid,
+                        "04-order-notes")
+                    Exit Sub
+                End If
+
+                If Vettore <= 0 Then
+                    Dim shippingRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                        TipoDoc, checkoutPayloadFingerprint)
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(shippingRetryPersisted, "persisted", "session-tombstone"))
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.ShippingMethodMissing, "05-shipping-method")
+                    Exit Sub
+                End If
+                If Pagamento <= 0 Then
+                    Dim paymentRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                        TipoDoc, checkoutPayloadFingerprint)
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(paymentRetryPersisted, "persisted", "session-tombstone"))
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.PaymentMethodMissing, "05-payment-method")
                     Exit Sub
                 End If
 
@@ -731,47 +979,61 @@ End If
                     End Try
                 End Using
 
-                Dim selectedShippingAddressId As Integer = 0
-                If Not ValidateSelectedShippingAddressForOrder(conn, LoginId, UtentiId, selectedShippingAddressId) Then
-                    BlockInvalidShippingAddress()
+                Dim selectedShippingAddressId As Integer = checkoutDraft.ShippingAddressId
+                Dim selectedAddress As CheckoutAddressSnapshot = Nothing
+                If Not CheckoutAddressService.TryResolve(
+                    conn, Nothing, orderIdentity, selectedShippingAddressId, selectedAddress) Then
+                    Dim addressRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                        TipoDoc, checkoutPayloadFingerprint)
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(addressRetryPersisted, "persisted", "session-tombstone"))
+                    BlockInvalidShippingAddress(checkoutRequestId)
                     Exit Sub
                 End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "ValidateAddress", "passed", Nothing,
+                    "not-claimed", "none", "ValidateAddress")
 
-                Dim optionsFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
-                    TipoDoc, Pagamento, Vettore, SpeseSped, SpeseAss, SpesePag,
-                    PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo,
-                    InviaEmailOrdinePrimaPagamento, selectedShippingAddressId, Note,
-                    DbVal(Session("Ordine_DescrizioneBuonoSconto")),
-                    DbVal(Session("Ordine_TotaleBuonoScontoImponibile")),
-                    DbVal(Session("Ordine_CodiceBuonoSconto")),
-                    DbVal(Session("Ordine_BuonoScontoIdIva")),
-                    DbVal(Session("Ordine_BuonoScontoValoreIva")),
-                    DbVal(Session("Coupon_Arrotondamento")),
-                    DbVal(Session("AbilitatoIvaReverseCharge")),
-                    DbVal(Session("Iva_Vettori")))
+                Dim optionsFingerprint As String = checkoutDraft.OptionsFingerprint
 
                 ' Lock, rivalidazione commerciale e creazione documento condividono
                 ' la stessa connessione e la stessa transazione.
                 trns = conn.BeginTransaction(IsolationLevel.Serializable)
                 Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
                     conn, trns, LoginId, True)
-                payloadFingerprint = OrderDurableIdempotencyService.ComputePayloadFingerprint(
-                    "checkout-v2", optionsFingerprint, cartFingerprint)
+                payloadFingerprint = OrderStorefrontContext.BuildCheckoutFingerprint(
+                    orderIdentity, TipoDoc, optionsFingerprint, cartFingerprint)
                 If isLegacyCheckoutToken OrElse
+                   Not String.Equals(cartFingerprint, checkoutDraft.CartFingerprint, StringComparison.Ordinal) OrElse
                    Not String.Equals(payloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
                     trns.Rollback()
                     trns.Dispose()
                     trns = Nothing
-                    ReturnToCartAfterPayloadMismatch()
+                    Dim mismatchRetryPersisted As Boolean = False
+                    If Not isLegacyCheckoutToken Then
+                        mismatchRetryPersisted = OrderDurableIdempotencyService.RecordRetryRequired(
+                            conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                            TipoDoc, checkoutPayloadFingerprint)
+                    End If
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(mismatchRetryPersisted, "persisted", "session-tombstone"))
+                    ReturnToCartAfterPayloadMismatch(checkoutRequestId)
                     Exit Sub
                 End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "10-idempotency-claim", "entered")
                 Dim durableClaim As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryClaim(conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
+                    OrderDurableIdempotencyService.TryClaim(
+                        conn, trns, checkoutRequestId, LoginId, orderIdentity.CompanyId, TipoDoc, payloadFingerprint)
                 If durableClaim Is Nothing OrElse durableClaim.Status = OrderDurableClaimStatus.Rejected Then
                     trns.Rollback()
                     trns.Dispose()
                     trns = Nothing
-                    ShowDurableCheckoutTechnicalFailure()
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.Collision, "10-idempotency-claim")
                     Exit Sub
                 End If
                 If durableClaim.Status = OrderDurableClaimStatus.CompletedReplay Then
@@ -779,9 +1041,10 @@ End If
                     trns.Dispose()
                     trns = Nothing
                     If durableClaim.DocumentiId > 0 AndAlso durableClaim.DocumentoMemorizzato > 0 Then
-                        RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                        RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                     Else
-                        ShowDurableCheckoutTechnicalFailure()
+                        DispatchDurableCheckoutFailure(
+                            checkoutRequestId, CheckoutFailureReason.Collision, "10-idempotency-claim")
                     End If
                     Exit Sub
                 End If
@@ -789,9 +1052,13 @@ End If
                     trns.Rollback()
                     trns.Dispose()
                     trns = Nothing
-                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.RetryRequired, "10-idempotency-claim")
                     Exit Sub
                 End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "10-idempotency-claim", "created")
+                claimCreated = True
 
                 If Not isLegacyCouponFlow Then
                     Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
@@ -809,21 +1076,31 @@ End If
                         trns.Rollback()
                         trns.Dispose()
                         trns = Nothing
+                        Dim priceRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
+                            conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                            TipoDoc, payloadFingerprint)
+                        CheckoutFailureRecoveryService.TracePhase(
+                            HttpContext.Current, checkoutRequestId, "11-retry-state",
+                            If(priceRetryPersisted, "persisted", "session-tombstone"))
                         CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
+                        CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, checkoutRequestId)
                         CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
                         Exit Sub
                     End If
                     If priceRevalidation.HasChanges Then
                         OrderDurableIdempotencyService.MarkRetryRequired(
-                            conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
+                            conn, trns, checkoutRequestId, LoginId, orderIdentity.CompanyId, TipoDoc, payloadFingerprint)
                         trns.Commit()
                         trns.Dispose()
                         trns = Nothing
                         CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, priceRevalidation)
+                        CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, checkoutRequestId)
                         CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.PriceChanged)
                         Exit Sub
                     End If
                 End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "12-commercial-revalidation", "passed")
 
                 Dim articoliIdGlobali As String = ""
                 Using cmdCart As New MySqlCommand("SELECT ArticoliId FROM carrello WHERE LoginId=?LoginId ORDER BY ID FOR UPDATE", conn, trns)
@@ -833,7 +1110,14 @@ End If
                             trns.Rollback()
                             trns.Dispose()
                             trns = Nothing
-                            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                            Dim emptyCartRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
+                                conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                                TipoDoc, payloadFingerprint)
+                            CheckoutFailureRecoveryService.TracePhase(
+                                HttpContext.Current, checkoutRequestId, "11-retry-state",
+                                If(emptyCartRetryPersisted, "persisted", "session-tombstone"))
+                            CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, checkoutRequestId)
+                            ReturnToCartWithReviewMessage("Il carrello è vuoto. Aggiungi almeno un articolo prima di inviare l'ordine.")
                             Exit Sub
                         End If
 
@@ -850,8 +1134,14 @@ End If
 
                 ' Lock and inspect warehouse-1 availability before the canonical
                 ' procedure. The procedure remains the only reservation owner.
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "13-inventory", "entered")
                 OrderInventoryAvailabilityService.InspectCurrentCart(conn, trns, Convert.ToInt32(LoginId))
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "13-inventory", "passed")
 
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "14-canonical-procedure", "entered")
                 Using cmd As New MySqlCommand("Carrello_Documento", conn, trns)
                     cmd.CommandType = CommandType.StoredProcedure
 
@@ -907,10 +1197,13 @@ End If
                         Long.TryParse(pOut.Value.ToString(), NumDoc)
                     End If
                 End Using
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "14-canonical-procedure", "completed")
 
                 ' Resolve the exact document created by the canonical procedure.
-                Using cmdDoc As New MySqlCommand("SELECT id, DataDocumento FROM documenti WHERE UtentiId=?UtentiId AND TipoDocumentiID=?TipoDoc AND NDocumento=?NumDoc AND YEAR(DataDocumento)=YEAR(CURRENT_TIMESTAMP) ORDER BY ID DESC LIMIT 2", conn, trns)
+                Using cmdDoc As New MySqlCommand("SELECT id, DataDocumento FROM documenti WHERE UtentiId=?UtentiId AND AziendeId=?AziendaId AND TipoDocumentiID=?TipoDoc AND NDocumento=?NumDoc AND YEAR(DataDocumento)=YEAR(CURRENT_TIMESTAMP) ORDER BY ID DESC LIMIT 2", conn, trns)
                     cmdDoc.Parameters.AddWithValue("?UtentiId", UtentiId)
+                    cmdDoc.Parameters.AddWithValue("?AziendaId", orderIdentity.CompanyId)
                     cmdDoc.Parameters.AddWithValue("?TipoDoc", TipoDoc)
                     cmdDoc.Parameters.Add("?NumDoc", MySqlDbType.Int64).Value = NumDoc
                     Using dr As MySqlDataReader = cmdDoc.ExecuteReader()
@@ -926,6 +1219,8 @@ End If
                         End If
                     End Using
                 End Using
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "15-document-resolution", "completed")
 
                 InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)
                 If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
@@ -933,15 +1228,22 @@ End If
                 End If
 
                 OrderDurableIdempotencyService.Complete(
-                    conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint, NumDoc, id)
+                    conn, trns, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                    TipoDoc, payloadFingerprint, NumDoc, id)
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "16-idempotency-complete", "completed")
 
                 Me.Label1.Text = NumDoc.ToString()
                 Me.Label2.Text = Documento
                 Me.Label3.Text = FormatDocumentDate(DataDoc)
 
+                commitAttempted = True
                 trns.Commit()
+                commitCompleted = True
                 trns.Dispose()
                 trns = Nothing
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "17-commit", "completed")
 
                 If articoliIdGlobali <> "" Then facebook_pixel(articoliIdGlobali)
 
@@ -953,15 +1255,21 @@ End If
                     HyperLink1.Text = "I miei ordini"
                 End If
                 If litOrderReceipt IsNot Nothing Then
-                    litOrderReceipt.Text = BuildOrderReceiptHtml(conn, id, Documento, NumDoc, DataDoc, If(TryCast(Session("Coupon_Codice_Controllo"), String), ""))
+                    litOrderReceipt.Text = BuildOrderReceiptHtml(conn, id, Documento, NumDoc, DataDoc, If(TryCast(Session("Coupon_Codice_Controllo"), String), ""), orderIdentity)
                 End If
 
                 ' Email (ordine normale vs coupon)
                 If (If(TryCast(Session("Coupon_Codice_Controllo"), String), "")) = "" Then
-                    SendEmail(NumDoc, Documento, id, "")
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "19-order-email", "entered")
+                    SendEmail(NumDoc, Documento, id, "", orderIdentity)
                 Else
-                    SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""))
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "19-order-email", "entered")
+                    SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""), orderIdentity)
                 End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "19-order-email", "completed")
 
                 ' Reset session ordine
                 Me.Session("Ordine_TipoDoc") = Nothing
@@ -1086,13 +1394,19 @@ End If
                 End If
 
                 If String.IsNullOrEmpty(redirect) Then
-                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "18-confirmation-redirect", "entered")
+                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                     Exit Sub
                 End If
 
             Catch ex As Exception
+                Dim rollbackSucceeded As Boolean = False
                 Try
-                    If trns IsNot Nothing Then trns.Rollback()
+                    If trns IsNot Nothing Then
+                        trns.Rollback()
+                        rollbackSucceeded = True
+                    End If
                 Catch rollbackError As Exception
                     Try
                         KeepStoreLog.Error("ordine.aspx", "Rollback conferma ordine non riuscito. Error type: " & rollbackError.GetType().Name & ".", Nothing, HttpContext.Current)
@@ -1106,34 +1420,85 @@ End If
                 End Try
                 trns = Nothing
 
+                If commitCompleted Then
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "19-post-commit-effects", "failed-order-confirmed", ex)
+                    LogDurableCheckoutFailure(ex, "post-commit-effects")
+                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
+                    Return
+                End If
+
+                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, orderIdentity, payloadFingerprint) Then
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "17-commit", "reconciled-completed")
+                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
+                    Return
+                End If
+
                 Dim availabilityError As OrderInventoryAvailabilityException = FindInventoryAvailabilityException(ex)
                 If availabilityError IsNot Nothing Then
+                    Dim availabilityRetryPersisted As Boolean = False
+                    If claimCreated AndAlso rollbackSucceeded Then
+                        availabilityRetryPersisted = OrderDurableIdempotencyService.RecordRetryRequired(
+                            conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                            TipoDoc, payloadFingerprint)
+                    End If
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(availabilityRetryPersisted, "persisted", "session-tombstone"))
                     StoreInventoryFailure(availabilityError.BuildUserMessage(), availabilityError.BuildLineKeys())
-                    RedirectToStockFailure()
+                    RedirectToStockFailure(checkoutRequestId)
                     Exit Sub
                 End If
 
                 If IsCanonicalInventoryFailure(ex) Then
+                    Dim canonicalRetryPersisted As Boolean = False
+                    If claimCreated AndAlso rollbackSucceeded Then
+                        canonicalRetryPersisted = OrderDurableIdempotencyService.RecordRetryRequired(
+                            conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                            TipoDoc, payloadFingerprint)
+                    End If
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(canonicalRetryPersisted, "persisted", "session-tombstone"))
                     Dim refreshedMessage As String = ""
                     Dim refreshedLineKeys As String = ""
                     If Not TryReadInventoryFailureAfterRollback(conn, LoginId, refreshedMessage, refreshedLineKeys) Then
                         refreshedMessage = OrderInventoryAvailabilityService.TechnicalErrorMessage
                     End If
                     StoreInventoryFailure(refreshedMessage, refreshedLineKeys)
-                    RedirectToStockFailure()
+                    RedirectToStockFailure(checkoutRequestId)
                     Exit Sub
                 End If
 
-                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId, payloadFingerprint) Then
-                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
-                    Return
+                If commitAttempted AndAlso Not commitCompleted AndAlso Not rollbackSucceeded Then
+                    ' The commit result is unknown. Preserve the same RequestId:
+                    ' a later GET can only reconcile it, never create a fresh order.
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "17-commit", "indeterminate", ex)
+                    CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, checkoutRequestId)
+                    ShowIndeterminateOrderOutcome()
+                    LogDurableCheckoutFailure(ex, "commit-indeterminate")
+                    Exit Sub
                 End If
 
-                ShowDurableCheckoutTechnicalFailure()
-                Try
-                    KeepStoreLog.Error("ordine.aspx", "Errore conferma ordine", ex, HttpContext.Current)
-                Catch
-                End Try
+                Dim retryStatePersisted As Boolean = False
+                If claimCreated AndAlso rollbackSucceeded Then
+                    retryStatePersisted = OrderDurableIdempotencyService.RecordRetryRequired(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                        TipoDoc, payloadFingerprint)
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "11-retry-state",
+                        If(retryStatePersisted, "persisted", "session-tombstone"))
+                End If
+
+                LogDurableCheckoutFailure(ex, "transaction")
+                DispatchDurableCheckoutFailure(
+                    checkoutRequestId,
+                    If(retryStatePersisted, CheckoutFailureReason.RetryRequired, CheckoutFailureReason.TechnicalTransient),
+                    "transaction",
+                    ex)
+                Exit Sub
 
             Finally
                 If trns IsNot Nothing Then trns.Dispose()
@@ -1257,14 +1622,24 @@ End If
         Public Property FiscalCode As String
         Public Property Pec As String
         Public Property Sdi As String
+        Public Property SmtpHost As String
+        Public Property SmtpUser As String
+        Public Property SmtpPassword As String
+        Public Property AdministrativeRecipient As String
     End Class
 
-    Public Sub SendEmail(ByVal n As Long, ByVal documento As String, ByVal id As Integer, ByVal Descrizione_Coupon As String)
+    Public Sub SendEmail(ByVal n As Long,
+                         ByVal documento As String,
+                         ByVal id As Integer,
+                         ByVal Descrizione_Coupon As String,
+                         ByVal identity As OrderStorefrontIdentity)
         Dim conn As New MySqlConnection
         Dim connDestAlt As New MySqlConnection
         Try
+            If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException("Order email tenant is not valid.")
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
+            If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Throw New InvalidOperationException("Order email tenant is not valid.")
 
             Dim StrCarrello As String = ""
             Dim StrIva As String = ""
@@ -1279,8 +1654,10 @@ End If
             Dim cmdTestata As New MySqlCommand
             cmdTestata.Connection = conn
             cmdTestata.CommandType = CommandType.Text
-            cmdTestata.CommandText = "SELECT * FROM vdocumenticompleta WHERE id=?id"
+            cmdTestata.CommandText = "SELECT * FROM vdocumenticompleta WHERE id=?id AND AziendeId=?aziendaId AND UtentiId=?utentiId"
             cmdTestata.Parameters.AddWithValue("?id", id)
+            cmdTestata.Parameters.AddWithValue("?aziendaId", identity.CompanyId)
+            cmdTestata.Parameters.AddWithValue("?utentiId", identity.UtentiId)
 
             Dim drTestata As MySqlDataReader = cmdTestata.ExecuteReader()
             drTestata.Read()
@@ -1304,8 +1681,14 @@ End If
             Dim dataDocumentoDisplay As String = ""
             Dim righeOrdine As New List(Of OrderEmailLine)()
             Dim emailBrand As OrderEmailBrandData = Nothing
+            Dim recipientName As String = ""
+            Dim recipientEmail As String = ""
+            Dim receiptAziendaId As Integer = 0
 
             If drTestata.HasRows Then
+                receiptAziendaId = Convert.ToInt32(drTestata("AziendeId"), CultureInfo.InvariantCulture)
+                recipientName = DbText(drTestata, "cognomenome")
+                recipientEmail = DbText(drTestata, "Email")
                 numeroDocumento = DbText(drTestata, "NDocumento")
                 dataDocumento = DbText(drTestata, "DataDocumento")
                 dataDocumentoDisplay = FormatDocumentDate(dataDocumento)
@@ -1399,12 +1782,24 @@ End If
             drTestata.Dispose()
             cmdTestata.Dispose()
 
-            emailBrand = LoadOrderEmailBrandData(conn)
+            emailBrand = LoadOrderEmailBrandData(conn, receiptAziendaId, False)
+            If emailBrand Is Nothing OrElse receiptAziendaId <> identity.CompanyId OrElse
+               String.IsNullOrWhiteSpace(recipientEmail) OrElse
+               String.IsNullOrWhiteSpace(emailBrand.CompanyName) OrElse
+               String.IsNullOrWhiteSpace(emailBrand.SupportEmail) OrElse
+               String.IsNullOrWhiteSpace(emailBrand.SmtpHost) Then
+                Throw New InvalidOperationException("Order email persisted identity is not valid.")
+            End If
 
             If Descrizione_Coupon <> "" Then
                 StrCarrello &= "<tr><td colspan=6 bgcolor=whitesmoke><b>Coupon</b></td></tr>"
                 StrCarrello &= "<tr><td colspan=6>" & Descrizione_Coupon & "</td></tr>"
-                StrCarrello &= "<tr><td colspan=6><a href=""http://" & Session("AziendaUrl") & "/coupon_stampa.aspx?id=" & Session("Coupon_idCoupon") & "&cod=" & Session("Coupon_Codice_Controllo") & """>Clicca qui</a> per visualizzare il Coupon Acquistato</td></tr>"
+                Dim couponPath As String = "coupon_stampa.aspx?id=" & HttpUtility.UrlEncode(Convert.ToString(Session("Coupon_idCoupon"), CultureInfo.InvariantCulture)) &
+                                           "&cod=" & HttpUtility.UrlEncode(Convert.ToString(Session("Coupon_Codice_Controllo"), CultureInfo.InvariantCulture))
+                Dim couponUrl As String = BuildSiteUrl(couponPath, emailBrand.SiteUrl)
+                If Not String.IsNullOrWhiteSpace(couponUrl) Then
+                    StrCarrello &= "<tr><td colspan=6><a href=""" & HttpUtility.HtmlAttributeEncode(couponUrl) & """>Clicca qui</a> per visualizzare il Coupon Acquistato</td></tr>"
+                End If
                 StrCarrello &= "<tr><td colspan=6 bgcolor=whitesmoke height=1></td></tr>"
             Else
                 Dim cmdRighe As New MySqlCommand
@@ -1457,28 +1852,24 @@ End If
                            "</table>"
 
             Dim oMsg As MailMessage = New MailMessage()
-            oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
-            oMsg.To.Add(New MailAddress(Session("LoginEmail"), Session("LoginNomeCognome")))
-            oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
+            oMsg.From = New MailAddress(emailBrand.SupportEmail, emailBrand.CompanyName)
+            oMsg.To.Add(New MailAddress(recipientEmail, recipientName))
+            If Not String.IsNullOrWhiteSpace(emailBrand.AdministrativeRecipient) Then
+                oMsg.Bcc.Add(New MailAddress(emailBrand.AdministrativeRecipient, emailBrand.CompanyName))
+            End If
+            oMsg.ReplyToList.Add(New MailAddress(emailBrand.SupportEmail, emailBrand.CompanyName))
             ConfigureOrderEmailEncoding(oMsg)
-            Dim legacySubject As String = "Conferma " & documento & " dal sito " & Session("AziendaNome")
-            Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & Session("LoginNomeCognome") & "," &
-                                       "<br>La ringraziamo per aver preferito " & Session("AziendaNome") & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
+            Dim legacySubject As String = "Conferma " & documento & " dal sito " & emailBrand.CompanyName
+            Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & recipientName & "," &
+                                       "<br>La ringraziamo per aver preferito " & emailBrand.CompanyName & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
                                        StrCarrello
 
             If documento.Contains("Preventivo") = True Then
                 legacyBody &= "<br/><span style=""font-size:9pt; color:red;"">Le ricordiamo che tale documento non ha nessuna validità di impegno poichè non è un ORDINE ma semplicemente un PREVENTIVO online.<br/>Se vuole può convertirlo in ordine contattandoci, ed indicando il tipo di pagamento che vuole effettuare.<br/>Oppure può rifare l’ordine on-line e alla fine del carrello deve cliccare sul tasto ""CONFERMA ORDINE"" e non ""SALVA PREVENTIVO"".<br/>Dopodichè seguendo le istruzioni, potrà procedere al pagamento.</span>"
             End If
 
-            If (Session.Item("AziendaId") = 2) Then
-                legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
-                            "<br><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" &
-                            "<br/><br/><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
-            Else
-                legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
-                            "<br/><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" &
-                            "<br/><br><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
-            End If
+            legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
+                          "<br/><font face=arial size=2 color=black><b>" & emailBrand.CompanyName & "</b><br>Sito Web: <a href=" & HttpUtility.HtmlAttributeEncode(emailBrand.SiteUrl) & ">" & HttpUtility.HtmlEncode(emailBrand.SiteUrl) & "</a> - Email: <a href=mailto:" & HttpUtility.HtmlAttributeEncode(emailBrand.SupportEmail) & ">" & HttpUtility.HtmlEncode(emailBrand.SupportEmail) & "</a></font>"
 
             Dim renderedEmail As KeepStoreEmailRenderResult = TryRenderOrderConfirmationEmail(documento,
                                                                                               numeroDocumento,
@@ -1503,27 +1894,33 @@ End If
                                                                                                righeOrdine,
                                                                                                IvaTipo,
                                                                                                emailBrand,
+                                                                                               recipientName,
+                                                                                               recipientEmail,
                                                                                                id,
                                                                                                n)
 
             If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
-                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
+                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni, emailBrand.CompanyName)
                 ApplyRenderedOrderEmailMime(oMsg, renderedEmail)
             Else
                 oMsg.Subject = legacySubject
                 ApplyLegacyOrderEmailMime(oMsg, legacyBody)
             End If
 
-            Dim oSmtp As SmtpClient = New SmtpClient(Me.Session.Item("smtp"))
+            Dim oSmtp As SmtpClient = New SmtpClient(emailBrand.SmtpHost)
             oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
 
-            Dim oCredential As NetworkCredential = New NetworkCredential(CType(Session.Item("User_smtp"), String), CType(Session.Item("Password_smtp"), String))
+            Dim oCredential As NetworkCredential = New NetworkCredential(emailBrand.SmtpUser, emailBrand.SmtpPassword)
             oSmtp.UseDefaultCredentials = False
             oSmtp.Credentials = oCredential
 
             oSmtp.Send(oMsg)
 
-        Catch
+        Catch ex As Exception
+            Try
+                KeepStoreLog.Error("ordine-email", "Invio conferma ordine non riuscito. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+            Catch
+            End Try
         Finally
             If conn.State = ConnectionState.Open Then
                 conn.Close()
@@ -1570,7 +1967,8 @@ End If
                                            ByVal documento As String,
                                            ByVal numeroDocumento As Long,
                                            ByVal dataDocumento As String,
-                                           ByVal descrizioneCoupon As String) As String
+                                           ByVal descrizioneCoupon As String,
+                                           ByVal identity As OrderStorefrontIdentity) As String
         Dim sb As New StringBuilder()
         Try
             Dim numeroDocumentoTesto As String = numeroDocumento.ToString(CultureInfo.InvariantCulture)
@@ -1601,8 +1999,10 @@ End If
 
             Using cmdTestata As New MySqlCommand(
                 "SELECT vd.*, COALESCE((SELECT u.IvaTipo FROM utenti u WHERE u.Id=vd.UtentiId LIMIT 1),2) AS ReceiptIvaTipo " &
-                "FROM vdocumenticompleta vd WHERE vd.id=?id", conn)
+                "FROM vdocumenticompleta vd WHERE vd.id=?id AND vd.AziendeId=?aziendaId AND vd.UtentiId=?utentiId", conn)
                 cmdTestata.Parameters.AddWithValue("?id", idDocumento)
+                cmdTestata.Parameters.AddWithValue("?aziendaId", identity.CompanyId)
+                cmdTestata.Parameters.AddWithValue("?utentiId", identity.UtentiId)
                 Using dr As MySqlDataReader = cmdTestata.ExecuteReader()
                     If dr.Read() Then
                         If String.IsNullOrWhiteSpace(numeroDocumentoTesto) OrElse numeroDocumentoTesto = "0" Then
@@ -1774,7 +2174,7 @@ End If
             brand = New OrderEmailBrandData()
         End If
 
-        Dim companyName As String = FirstNonEmpty(brand.CompanyName, SessionText("AziendaNome"))
+        Dim companyName As String = brand.CompanyName
         Dim siteUrl As String = FirstNonEmpty(brand.SiteUrl, BuildSiteHomeUrl())
         Dim logoUrl As String = KeepStoreEmailLogo.BuildLogoUrl(siteUrl, brand.LogoWeb)
         Dim fiscalCode As String = brand.FiscalCode
@@ -1862,22 +2262,24 @@ End If
                                                      ByVal dataDocumentoDisplay As String,
                                                      ByVal descrizioneCoupon As String,
                                                      ByVal righeOrdine As List(Of OrderEmailLine),
-                                                     ByVal ivaTipo As Integer,
-                                                     ByVal emailBrand As OrderEmailBrandData,
-                                                     ByVal idDocumento As Integer,
-                                                     ByVal numeroDocumentoNumerico As Long) As KeepStoreEmailRenderResult
+                                                      ByVal ivaTipo As Integer,
+                                                      ByVal emailBrand As OrderEmailBrandData,
+                                                      ByVal recipientName As String,
+                                                      ByVal recipientEmail As String,
+                                                      ByVal idDocumento As Integer,
+                                                      ByVal numeroDocumentoNumerico As Long) As KeepStoreEmailRenderResult
         Try
-            Dim companyName As String = SessionText("AziendaNome")
+            Dim companyName As String = If(emailBrand Is Nothing, "", emailBrand.CompanyName)
             Dim model As New KeepStoreEmailMessageModel()
 
             ApplyOrderEmailBrand(model.Brand, emailBrand, companyName)
-            model.Recipient.DisplayName = SessionText("LoginNomeCognome")
-            model.Recipient.Email = SessionText("LoginEmail")
+            model.Recipient.DisplayName = recipientName
+            model.Recipient.Email = recipientEmail
 
             model.Title = BuildOrderEmailTitle(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
             model.StatusBadge = If(IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni), "In attesa di bonifico", "Ordine ricevuto")
             model.Preheader = JoinNonEmpty(" - ", "Riepilogo " & documento & " n. " & numeroDocumento, dataDocumentoDisplay)
-            model.Intro = "Gentile " & SessionText("LoginNomeCognome") & ", abbiamo ricevuto la sua richiesta di " & documento & ". Di seguito trova il riepilogo dell'ordine e delle condizioni commerciali."
+            model.Intro = "Gentile " & recipientName & ", abbiamo ricevuto la sua richiesta di " & documento & ". Di seguito trova il riepilogo dell'ordine e delle condizioni commerciali."
             AddHighlightItem(model, documento, "n. " & numeroDocumento)
             AddHighlightItem(model, "Data", dataDocumentoDisplay)
             AddHighlightItem(model, "Totale", totale)
@@ -1998,7 +2400,7 @@ End If
             End If
 
             Dim detailPath As String = "/documentidettaglio.aspx?id=" & idDocumento.ToString(CultureInfo.InvariantCulture) & "&ndoc=" & numeroDocumentoNumerico.ToString(CultureInfo.InvariantCulture)
-            Dim detailUrl As String = BuildSiteUrl("login.aspx?ReturnUrl=" & HttpUtility.UrlEncode(detailPath))
+            Dim detailUrl As String = BuildSiteUrl("login.aspx?ReturnUrl=" & HttpUtility.UrlEncode(detailPath), model.Brand.SiteUrl)
             If Not String.IsNullOrWhiteSpace(detailUrl) Then
                 Dim action As New KeepStoreEmailActionLink()
                 action.Text = "Visualizza ordine"
@@ -2007,7 +2409,7 @@ End If
 
                 Dim accountAction As New KeepStoreEmailActionLink()
                 accountAction.Text = "Accedi al tuo account"
-                accountAction.Url = BuildSiteUrl("login.aspx")
+                accountAction.Url = BuildSiteUrl("login.aspx", model.Brand.SiteUrl)
                 model.SecondaryActionLink = accountAction
             End If
 
@@ -2023,8 +2425,8 @@ End If
                                                    ByVal numeroDocumento As String,
                                                    ByVal dataDocumentoDisplay As String,
                                                    ByVal pagamentoDescrizione As String,
-                                                   ByVal pagamentoInformazioni As String) As String
-        Dim companyName As String = SessionText("AziendaNome")
+                                                   ByVal pagamentoInformazioni As String,
+                                                   ByVal companyName As String) As String
         If documento.Contains("Preventivo") Then
             Return KeepStoreEmailSubjects.QuoteConfirmation(companyName, numeroDocumento, dataDocumentoDisplay)
         End If
@@ -2093,7 +2495,7 @@ End If
         End If
 
         Try
-            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb FROM aziende WHERE id=?id LIMIT 1", conn)
+            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb, Smtp, User_smtp, Password_smtp FROM aziende WHERE id=?id LIMIT 1", conn)
                 cmd.Parameters.AddWithValue("?id", aziendaId)
                 Using reader As MySqlDataReader = cmd.ExecuteReader()
                     If reader.Read() Then
@@ -2112,6 +2514,10 @@ End If
                         data.FiscalCode = DbText(reader, "CodiceFiscale")
                         data.Pec = DbText(reader, "email_pec")
                         data.Sdi = DbText(reader, "codice_sdi")
+                        data.SmtpHost = DbText(reader, "Smtp")
+                        data.SmtpUser = DbText(reader, "User_smtp")
+                        data.SmtpPassword = DbText(reader, "Password_smtp")
+                        data.AdministrativeRecipient = data.SupportEmail
                     End If
                 End Using
             End Using
@@ -2130,11 +2536,11 @@ End If
             data = New OrderEmailBrandData()
         End If
 
-        brand.CompanyName = FirstNonEmpty(data.CompanyName, fallbackCompanyName, SessionText("AziendaNome"))
-        brand.SupportEmail = FirstNonEmpty(data.SupportEmail, SessionText("AziendaEmail"))
+        brand.CompanyName = FirstNonEmpty(data.CompanyName, fallbackCompanyName)
+        brand.SupportEmail = data.SupportEmail
         brand.Phone = data.Phone
         brand.SiteUrl = FirstNonEmpty(data.SiteUrl, BuildSiteHomeUrl())
-        brand.LogoWeb = FirstNonEmpty(data.LogoWeb, ResolveEmailLogoWebFileName())
+        brand.LogoWeb = data.LogoWeb
         brand.Iban = data.Iban
         brand.SwiftCode = data.SwiftCode
         brand.BankName = data.BankName
@@ -2346,25 +2752,24 @@ End If
         Return BuildSiteUrl("")
     End Function
 
-    Private Function BuildSiteUrl(ByVal relativePath As String) As String
-        Dim host As String = SessionText("AziendaUrl")
+    Private Function BuildSiteUrl(ByVal relativePath As String,
+                                  Optional ByVal persistedSiteUrl As String = "") As String
+        Dim host As String = Convert.ToString(persistedSiteUrl).Trim()
         If String.IsNullOrWhiteSpace(host) Then
-            host = "www.taikun.it"
+            host = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "")
         End If
-
-        If host.StartsWith("//", StringComparison.Ordinal) OrElse
+        If String.IsNullOrWhiteSpace(host) OrElse host.StartsWith("//", StringComparison.Ordinal) OrElse
            host.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
-           host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
-            host = "www.taikun.it"
-        End If
+           host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then Return ""
 
-        If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
-            host = "https://" & host.Substring(7)
-        ElseIf Not host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            host = "https://" & host
-        End If
+        If Not host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) AndAlso
+           Not host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then host = "https://" & host
 
-        Return host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+        Dim parsed As Uri = Nothing
+        If Not Uri.TryCreate(host, UriKind.Absolute, parsed) OrElse
+           (Not String.Equals(parsed.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) AndAlso
+            Not String.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) Then Return ""
+        Return host.TrimEnd("/"c) & "/" & Convert.ToString(relativePath).TrimStart("/"c)
     End Function
 
     Private Function ResolveEmailLogoWebFileName() As String
