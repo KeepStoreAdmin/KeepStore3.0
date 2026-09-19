@@ -1791,9 +1791,8 @@ End Function
         Session("Carrello_Quantita") = 0
         Session("Carrello_Totale_Merce") = 0D
 
+        Dim cartReadModel As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
         Dim cartSnapshot As CartStateSnapshotProvider = CartStateSnapshotProvider.GetCurrent(HttpContext.Current)
-        Dim LoginId As Integer = cartSnapshot.LoginId
-        Dim SessionID As String = cartSnapshot.SessionId
 
         ' Tipo IVA: 1 = imponibile, 2 = ivato. Default 2 se non impostato.
         Dim ivaTipoLocal As Integer = 2
@@ -1801,74 +1800,18 @@ End Function
             ivaTipoLocal = CInt(Me.Session("IvaTipo"))
         End If
 
-        Dim sql As String = ""
-        Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-
         Try
-            Using localConn As New MySqlConnection(connString)
-                localConn.Open()
+            Dim quantity As Decimal = cartReadModel.TotalQuantity
+            Dim qVal As Integer = Convert.ToInt32(Decimal.Truncate(quantity))
+            Dim totDec As Decimal = If(ivaTipoLocal = 1, cartReadModel.TotalNet, cartReadModel.TotalGross)
 
-                Using localCmd As New MySqlCommand()
-                    localCmd.Connection = localConn
-                    localCmd.CommandType = CommandType.Text
-
-                    If LoginId = 0 Then
-                        ' Carrello associato alla sessione anonima
-                        If ivaTipoLocal = 1 Then
-                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * Prezzo) AS TotRiga FROM carrello WHERE COALESCE(LoginId,0)<=0 AND SessionID = ?sessionId"
-                        Else
-                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * PrezzoIvato) AS TotRiga FROM carrello WHERE COALESCE(LoginId,0)<=0 AND SessionID = ?sessionId"
-                        End If
-                        localCmd.Parameters.AddWithValue("?sessionId", SessionID)
-                    Else
-                        ' Carrello associato al LoginId
-                        If ivaTipoLocal = 1 Then
-                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * Prezzo) AS TotRiga FROM carrello WHERE LoginId = ?loginId"
-                        Else
-                            sql = "SELECT Sum(Qnt) AS Quantita, Sum(Qnt * PrezzoIvato) AS TotRiga FROM carrello WHERE LoginId = ?loginId"
-                        End If
-                        localCmd.Parameters.AddWithValue("?loginId", LoginId)
-                    End If
-
-                    localCmd.CommandText = sql
-
-                    Using dr As MySqlDataReader = localCmd.ExecuteReader()
-                        If dr.Read() Then
-                            ' Quantità articoli
-                            If Not dr.IsDBNull(dr.GetOrdinal("Quantita")) Then
-                                Dim qVal As Integer = 0
-                                Integer.TryParse(dr("Quantita").ToString(), qVal)
-
-                                Session("Carrello_Quantita") = qVal
-
-                                If lblCarrelloCountCtrl IsNot Nothing Then
-                                    If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = qVal.ToString()
-                                End If
-                                If lblCarrelloCountMobileCtrl IsNot Nothing Then lblCarrelloCountMobileCtrl.Text = qVal.ToString()
-                            End If
-
-                            ' Totale carrello (merce)
-                            If Not dr.IsDBNull(dr.GetOrdinal("TotRiga")) Then
-                                Dim totDec As Decimal = 0D
-                                Try
-                                    totDec = Convert.ToDecimal(dr("TotRiga"))
-                                Catch
-                                    totDec = 0D
-                                End Try
-
-                                Session("Carrello_Totale_Merce") = Convert.ToDouble(totDec)
-
-                                If lblCarrelloTotaleCtrl IsNot Nothing Then
-                                    ' Formato italiano: "1.234,56"
-                                    If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = totDec.ToString("N2")
-                                End If
-                            End If
-                        End If
-                    End Using
-                End Using
-            End Using
+            Session("Carrello_Quantita") = qVal
+            Session("Carrello_Totale_Merce") = Convert.ToDouble(totDec)
+            If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = qVal.ToString()
+            If lblCarrelloCountMobileCtrl IsNot Nothing Then lblCarrelloCountMobileCtrl.Text = qVal.ToString()
+            If lblCarrelloTotaleCtrl IsNot Nothing Then lblCarrelloTotaleCtrl.Text = totDec.ToString("N2")
         Catch
-            ' In caso di errore DB: lascio i valori a 0
+            ' In caso di errore nel read model: lascia i valori a 0.
             If lblCarrelloCountCtrl IsNot Nothing Then
                 If lblCarrelloCountCtrl IsNot Nothing Then lblCarrelloCountCtrl.Text = "0"
             End If

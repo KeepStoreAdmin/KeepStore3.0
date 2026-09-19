@@ -82,15 +82,13 @@
                 <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial" CssClass="ks-cart-price-note"></asp:Label>
             </div>
 
-            <asp:SqlDataSource ID="sdsArticoli" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione AS taglia, colori.descrizione AS colore FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id WHERE (articoli.SpedizioneGratis_Listini IS NULL) ORDER BY vcarrello.id">
-            </asp:SqlDataSource>
+            <asp:ObjectDataSource ID="sdsArticoli" runat="server"
+                TypeName="CartAuthoritativeReadDataSource" SelectMethod="SelectStandardItems">
+            </asp:ObjectDataSource>
 
-            <asp:SqlDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                EnableViewState="False" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                SelectCommand="SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione AS taglia, colori.descrizione AS colore FROM vcarrello LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id WHERE (articoli.SpedizioneGratis_Listini IS NOT NULL) ORDER BY vcarrello.id">
-            </asp:SqlDataSource>
+            <asp:ObjectDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server"
+                TypeName="CartAuthoritativeReadDataSource" SelectMethod="SelectFreeShippingItems">
+            </asp:ObjectDataSource>
             <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">

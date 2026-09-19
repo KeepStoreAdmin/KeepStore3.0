@@ -134,6 +134,9 @@ Public Module CartMutationService
                 If affected <> 1 Then
                     Throw New InvalidOperationException("Owned cart row removal affected an unexpected row count.")
                 End If
+            Else
+                Return CartTransactionWorkResult(Of CartOwnerRemovalResult).Abort(
+                    New CartOwnerRemovalResult With {.ErrorMessage = GenericMutationError})
             End If
 
             Dim remaining As Integer = CountOwnedRows(
@@ -156,7 +159,10 @@ Public Module CartMutationService
                 .ErrorMessage = GenericMutationError
             }
         End If
-        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then Return execution.Value
+        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            CartAuthoritativeReadModel.Invalidate(ctx)
+            Return execution.Value
+        End If
         Return fallback
     End Function
 
@@ -365,7 +371,11 @@ Public Module CartMutationService
                 End Function)
 
         If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
-        Return If(execution.Value, result)
+        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            CartAuthoritativeReadModel.Invalidate(ctx)
+            Return execution.Value
+        End If
+        Return result
     End Function
 
     Private Function MutateStandardProduct(ByVal ctx As HttpContext,
@@ -473,7 +483,11 @@ Public Module CartMutationService
                 End Function)
 
         If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
-        Return If(execution.Value, result)
+        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            CartAuthoritativeReadModel.Invalidate(ctx)
+            Return execution.Value
+        End If
+        Return result
     End Function
 
     Private Function SessionInteger(ByVal ctx As HttpContext, ByVal key As String, ByVal fallback As Integer) As Integer
@@ -544,7 +558,11 @@ Public Module CartMutationService
                 End Function)
 
         If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
-        Return If(execution.Value, TechnicalResult())
+        If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            CartAuthoritativeReadModel.Invalidate(ctx)
+            Return execution.Value
+        End If
+        Return TechnicalResult()
     End Function
 
     Private Function LoadOwnedRows(ByVal conn As MySqlConnection,

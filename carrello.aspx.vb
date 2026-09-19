@@ -2076,39 +2076,6 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Sub
 
     Private Sub ConfigureCartDataSources()
-        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(HttpContext.Current)
-        If owner Is Nothing Then
-            Me.sdsArticoli.SelectCommand = "SELECT * FROM vcarrello WHERE 1=0"
-            Me.sdsArticoli_Spedizione_Gratis.SelectCommand = "SELECT * FROM vcarrello WHERE 1=0"
-            Return
-        End If
-        Dim LoginId As Integer = owner.LoginId
-        Dim SessionID As String = owner.SessionId
-        Dim WhereUserId As String
-
-        Dim Sqlstring As String = "SELECT vcarrello.*, articoli.SpedizioneGratis_Listini, articoli.SpedizioneGratis_Data_Inizio, articoli.SpedizioneGratis_Data_Fine, taglie.descrizione as taglia, colori.descrizione as colore FROM vcarrello"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli ON vcarrello.ArticoliId = articoli.id"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN articoli_tagliecolori ON vcarrello.TCid = articoli_tagliecolori.id"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN taglie ON articoli_tagliecolori.tagliaid = taglie.id"
-        Sqlstring = Sqlstring + " LEFT OUTER JOIN colori ON articoli_tagliecolori.coloreid = colori.id"
-
-        If LoginId = 0 Then
-            WhereUserId = "(COALESCE(LoginId,0)<=0 AND SessionId=@SessionId)"
-        Else
-            WhereUserId = "(LoginId=@LoginId)"
-        End If
-
-        Me.sdsArticoli.SelectCommand = Sqlstring & " WHERE (" & WhereUserId & " ) ORDER BY id"
-        sdsArticoli.SelectParameters.Clear()
-        sdsArticoli.SelectParameters.Add("@SessionId", SessionID)
-        sdsArticoli.SelectParameters.Add("@LoginId", LoginId.ToString())
-
-        Me.sdsArticoli_Spedizione_Gratis.SelectCommand = Sqlstring & " WHERE " & WhereUserId & " AND (articoli.SpedizioneGratis_Listini != '') AND (SpedizioneGratis_Listini LIKE CONCAT('%', @listino, ';%')) AND ((SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE() OR SpedizioneGratis_Data_Fine Is NULL)) ORDER BY id"
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Clear()
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@SessionId", SessionID)
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@LoginId", LoginId.ToString())
-        sdsArticoli_Spedizione_Gratis.SelectParameters.Add("@listino", GetListinoSafeString())
-
         IvaTipo = GetSessionInt("IvaTipo", 0)
         If IvaTipo = 1 Then
             Me.lblPrezzi.Text = "*Prezzi Iva Esclusa"
@@ -2193,7 +2160,6 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         RenderClearCartAction()
 		
 		
-		REM Me.Page.ClientScript.RegisterClientScriptBlock(Me.GetType, "prova", "<script type='text/javascript'>document.body.onload=function(){alert('" & Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper & "')}</script>")
     End Sub
 
     Protected Sub Repeater1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Repeater1.PreRender

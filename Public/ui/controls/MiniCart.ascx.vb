@@ -1,9 +1,7 @@
 Imports System
-Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
 Imports System.Web
-Imports MySql.Data.MySqlClient
 Imports System.Web.UI.WebControls
 
 Partial Class MiniCart
@@ -32,28 +30,18 @@ Partial Class MiniCart
     End Sub
 
     Private Sub BindMiniCart()
-        Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.Resolve(HttpContext.Current)
-        If owner Is Nothing Then
+        Dim cart As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+        If Not cart.HasOwner Then
             phMiniCartEmpty.Visible = True
             phMiniCartList.Visible = False
             lblMiniCartTotale.Text = "0,00"
             Return
         End If
-        Dim loginId As Integer = owner.LoginId
-        Dim sessionId As String = owner.SessionId
         _ivaTipo = GetIvaTipoSafe()
 
-        Dim dt As DataTable = LoadItems(loginId, sessionId)
-
-        Dim qty As Integer = 0
-        Dim total As Decimal = 0D
-
-        If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
-            For Each r As DataRow In dt.Rows
-                qty += SafeInt(r("Qnt"), 0)
-                total += SafeDec(If(_ivaTipo = 1, r("Importo"), r("ImportoIvato")), 0D)
-            Next
-        End If
+        Dim dt As DataTable = cart.GetMiniCartItems(10)
+        Dim qty As Decimal = cart.TotalQuantity
+        Dim total As Decimal = If(_ivaTipo = 1, cart.TotalNet, cart.TotalGross)
 
         lblMiniCartTotale.Text = FormatCurrency(total)
 
@@ -69,44 +57,6 @@ Partial Class MiniCart
         rptMiniCart.DataSource = dt
         rptMiniCart.DataBind()
     End Sub
-
-    Private Function LoadItems(ByVal loginId As Integer, ByVal sessionId As String) As DataTable
-        Dim dt As New DataTable()
-        Dim connStr As String = GetConnectionString()
-        If String.IsNullOrEmpty(connStr) Then Return dt
-
-        Try
-            Using cn As New MySqlConnection(connStr)
-                cn.Open()
-
-                Dim sql As String = "SELECT id, ArticoliId, TCId, Descrizione1, Qnt, Img1, Prezzo, PrezzoIvato, Importo, ImportoIvato " &
-                                    "FROM vcarrello WHERE "
-
-                Using cmd As New MySqlCommand()
-                    cmd.Connection = cn
-
-                    If loginId > 0 Then
-                        sql &= "LoginId=@loginId "
-                        cmd.Parameters.AddWithValue("@loginId", loginId)
-                    Else
-                        sql &= "COALESCE(LoginId,0)<=0 AND SessionId=@sessionId "
-                        cmd.Parameters.AddWithValue("@sessionId", sessionId)
-                    End If
-
-                    sql &= "ORDER BY id DESC LIMIT 10"
-                    cmd.CommandText = sql
-
-                    Using adp As New MySqlDataAdapter(cmd)
-                        adp.Fill(dt)
-                    End Using
-                End Using
-            End Using
-        Catch
-            ' best-effort
-        End Try
-
-        Return dt
-    End Function
 
     ' ------------------------------------------------------------
     ' Binding helpers (usati nel markup)
@@ -177,39 +127,6 @@ Partial Class MiniCart
     ' ------------------------------------------------------------
     ' Safe helpers
     ' ------------------------------------------------------------
-    Private Function GetConnectionString() As String
-        Try
-            Dim cs = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
-            If cs IsNot Nothing Then
-                Return cs.ConnectionString
-            End If
-        Catch
-        End Try
-        Return String.Empty
-    End Function
-
-    Private Function GetLoginIdSafe() As Integer
-        Dim loginIdVal As Integer = 0
-
-        Try
-            Dim o As Object = Session("LoginId")
-            If o IsNot Nothing AndAlso Integer.TryParse(o.ToString(), loginIdVal) AndAlso loginIdVal > 0 Then
-                Return loginIdVal
-            End If
-        Catch
-        End Try
-
-        Try
-            Dim o As Object = Session("LoginID")
-            If o IsNot Nothing AndAlso Integer.TryParse(o.ToString(), loginIdVal) AndAlso loginIdVal > 0 Then
-                Return loginIdVal
-            End If
-        Catch
-        End Try
-
-        Return 0
-    End Function
-
     Private Function GetIvaTipoSafe() As Integer
         Dim iva As Integer = 2
         Try
