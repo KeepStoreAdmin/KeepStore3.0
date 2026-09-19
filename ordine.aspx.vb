@@ -75,14 +75,14 @@ Private Function OrderNotesAreTooLong(ByVal note As String) As Boolean
     Return note.Length > OrderNotesMaxLength
 End Function
 
-Private Function TryValidateCheckoutToken(ByVal loginId As Long,
+Private Function TryValidateCheckoutToken(ByVal identity As OrderStorefrontIdentity,
                                           ByRef requestId As String,
                                           ByRef payloadFingerprint As String,
                                           ByRef isLegacyToken As Boolean) As Boolean
     requestId = String.Empty
     payloadFingerprint = String.Empty
     isLegacyToken = False
-    If loginId <= 0 Then Return False
+    If identity Is Nothing OrElse Not identity.IsComplete Then Return False
 
     Dim token As String = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 1024)
     If String.IsNullOrEmpty(token) Then Return False
@@ -106,25 +106,27 @@ Private Function TryValidateCheckoutToken(ByVal loginId As Long,
         If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
 
         Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
-        Dim requestIndex As Integer = 0
-        Dim loginIndex As Integer = 1
-        Dim ticksIndex As Integer = 2
-        If parts.Length = 5 AndAlso String.Equals(parts(0), "v2", StringComparison.Ordinal) Then
-            requestIndex = 1
-            loginIndex = 2
-            ticksIndex = 3
-            If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(4), payloadFingerprint) Then Return False
-        ElseIf parts.Length = 3 Then
-            isLegacyToken = True
-        Else
-            Return False
-        End If
+        If parts.Length <> 7 OrElse Not String.Equals(parts(0), "v3", StringComparison.Ordinal) Then Return False
+        Dim requestIndex As Integer = 1
+        Dim databaseIndex As Integer = 2
+        Dim companyIndex As Integer = 3
+        Dim loginIndex As Integer = 4
+        Dim ticksIndex As Integer = 5
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(6), payloadFingerprint) Then Return False
+
+        Dim tokenDatabaseScope As String = String.Empty
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(databaseIndex), tokenDatabaseScope) OrElse
+           Not String.Equals(tokenDatabaseScope, identity.DatabaseScopeKey, StringComparison.Ordinal) Then Return False
+
+        Dim tokenCompanyId As Integer = 0
+        If Not Integer.TryParse(parts(companyIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenCompanyId) OrElse
+           tokenCompanyId <> identity.CompanyId Then Return False
 
         Dim normalized As String = String.Empty
         If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(requestIndex), normalized) Then Return False
 
         Dim tokenLoginId As Long = 0
-        If Not Long.TryParse(parts(loginIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> loginId Then Return False
+        If Not Long.TryParse(parts(loginIndex), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse tokenLoginId <> identity.LoginId Then Return False
 
         Dim issuedTicks As Long = 0
         If Not Long.TryParse(parts(ticksIndex), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
@@ -172,8 +174,8 @@ Private Sub RedirectToStockFailure()
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.StockFailure)
 End Sub
 
-Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal loginId As Long)
-    Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, loginId)
+Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal identity As OrderStorefrontIdentity)
+    Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, identity)
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.OrderConfirmation, token)
 End Sub
 
@@ -464,9 +466,12 @@ End Sub
     End Sub
 
     Private Function RenderCompletedOrder(ByVal conn As MySqlConnection,
-                                          ByVal record As OrderDurableIdempotencyRecord) As Boolean
+                                          ByVal record As OrderDurableIdempotencyRecord,
+                                          ByVal identity As OrderStorefrontIdentity) As Boolean
         If conn Is Nothing OrElse record Is Nothing OrElse
+           identity Is Nothing OrElse Not identity.IsComplete OrElse
            record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
+           record.AziendaId <> identity.CompanyId OrElse
            record.DocumentiId <= 0 OrElse record.DocumentoMemorizzato <= 0 Then Return False
 
         Dim documentId As Integer = 0
@@ -477,9 +482,10 @@ End Sub
         If ownerUtentiId <= 0 Then Return False
         Using command As New MySqlCommand(
             "SELECT id, TipoDocumentiId, NDocumento, DataDocumento FROM documenti " &
-            "WHERE id=?id AND UtentiId=?utentiId LIMIT 1", conn)
+            "WHERE id=?id AND UtentiId=?utentiId AND AziendeId=?aziendaId LIMIT 1", conn)
             command.Parameters.Add("?id", MySqlDbType.Int64).Value = record.DocumentiId
             command.Parameters.Add("?utentiId", MySqlDbType.Int64).Value = ownerUtentiId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = identity.CompanyId
             Using reader As MySqlDataReader = command.ExecuteReader()
                 If Not reader.Read() Then Return False
                 documentId = Convert.ToInt32(reader("id"), CultureInfo.InvariantCulture)
@@ -508,7 +514,7 @@ End Sub
             HyperLink1.Text = "I miei ordini"
         End If
         If litOrderReceipt IsNot Nothing Then
-            litOrderReceipt.Text = BuildOrderReceiptHtml(conn, documentId, documentLabel, documentNumber, documentDate, String.Empty)
+            litOrderReceipt.Text = BuildOrderReceiptHtml(conn, documentId, documentLabel, documentNumber, documentDate, String.Empty, identity)
         End If
         Me.Panel2.Visible = False
         Me.Panel1.Visible = True
@@ -561,15 +567,17 @@ End Sub
 
     Private Function TryReconcileCompletedOrder(ByVal connectionString As String,
                                                  ByVal requestId As String,
-                                                 ByVal loginId As Long,
+                                                 ByVal identity As OrderStorefrontIdentity,
                                                  ByVal payloadFingerprint As String) As Boolean
         Dim normalizedFingerprint As String = String.Empty
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(payloadFingerprint, normalizedFingerprint) Then Return False
         Try
             Using reconcileConnection As New MySqlConnection(connectionString)
                 reconcileConnection.Open()
+                If Not OrderStorefrontContext.VerifyAccount(reconcileConnection, Nothing, identity) Then Return False
                 Dim record As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryReadCompleted(reconcileConnection, requestId, loginId)
+                    OrderDurableIdempotencyService.TryReadCompleted(
+                        reconcileConnection, requestId, identity.LoginId, identity.CompanyId)
                 Return record IsNot Nothing AndAlso
                     record.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
                     String.Equals(record.PayloadFingerprint, normalizedFingerprint, StringComparison.Ordinal) AndAlso
@@ -580,7 +588,7 @@ End Sub
         End Try
     End Function
 
-    Private Sub HandleOrderConfirmationGet(ByVal authenticatedLoginId As Long)
+    Private Sub HandleOrderConfirmationGet(ByVal identity As OrderStorefrontIdentity)
         If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
             CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
             Return
@@ -589,7 +597,7 @@ End Sub
         Dim requestId As String = String.Empty
         If Not OrderConfirmationTokenService.TryValidate(
             GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024),
-            authenticatedLoginId,
+            identity,
             requestId) Then
             CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
             Return
@@ -598,11 +606,16 @@ End Sub
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then
+                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                    Return
+                End If
                 Dim record As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryReadCompleted(conn, requestId, authenticatedLoginId)
+                    OrderDurableIdempotencyService.TryReadCompleted(
+                        conn, requestId, identity.LoginId, identity.CompanyId)
                 If record Is Nothing OrElse
                    record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
-                   Not RenderCompletedOrder(conn, record) Then
+                   Not RenderCompletedOrder(conn, record, identity) Then
                     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
                     Return
                 End If
@@ -627,15 +640,21 @@ End Sub
 
 ' Durable idempotency token issued by carrello and protected with MachineKey.
 Dim authenticatedLoginId As Long = GetSessionLong("LoginId", 0)
+Dim orderIdentity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+If orderIdentity Is Nothing OrElse Not orderIdentity.IsComplete OrElse
+   orderIdentity.LoginId <> authenticatedLoginId Then
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.LoginRequired)
+    Exit Sub
+End If
 If Not String.IsNullOrEmpty(GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024)) Then
-    HandleOrderConfirmationGet(authenticatedLoginId)
+    HandleOrderConfirmationGet(orderIdentity)
     Exit Sub
 End If
 
 Dim checkoutRequestId As String = String.Empty
 Dim checkoutPayloadFingerprint As String = String.Empty
 Dim isLegacyCheckoutToken As Boolean = False
-If Not TryValidateCheckoutToken(authenticatedLoginId, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
+If Not TryValidateCheckoutToken(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
     Exit Sub
 End If
@@ -679,11 +698,16 @@ End If
 
             Try
                 conn.Open()
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, orderIdentity) Then
+                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.LoginRequired)
+                    Exit Sub
+                End If
 
                 ' A completed durable request is resolved before reading order
                 ' session data, which may already have been cleared by success.
                 Dim completedBeforeWork As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryReadCompleted(conn, checkoutRequestId, LoginId)
+                    OrderDurableIdempotencyService.TryReadCompleted(
+                        conn, checkoutRequestId, LoginId, orderIdentity.CompanyId)
                 If completedBeforeWork IsNot Nothing Then
                     If completedBeforeWork.Status = OrderDurableClaimStatus.CompletedReplay AndAlso
                        completedBeforeWork.DocumentiId > 0 AndAlso
@@ -694,7 +718,7 @@ End If
                         ' disponibile tramite il token di conferma owner-scoped.
                         If Not isLegacyCheckoutToken AndAlso
                            String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
-                            RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                            RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                         Else
                             ReturnToCartAfterPayloadMismatch()
                         End If
@@ -755,8 +779,8 @@ End If
                 trns = conn.BeginTransaction(IsolationLevel.Serializable)
                 Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
                     conn, trns, LoginId, True)
-                payloadFingerprint = OrderDurableIdempotencyService.ComputePayloadFingerprint(
-                    "checkout-v2", optionsFingerprint, cartFingerprint)
+                payloadFingerprint = OrderStorefrontContext.BuildCheckoutFingerprint(
+                    orderIdentity, TipoDoc, optionsFingerprint, cartFingerprint)
                 If isLegacyCheckoutToken OrElse
                    Not String.Equals(payloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
                     trns.Rollback()
@@ -766,7 +790,8 @@ End If
                     Exit Sub
                 End If
                 Dim durableClaim As OrderDurableIdempotencyRecord =
-                    OrderDurableIdempotencyService.TryClaim(conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
+                    OrderDurableIdempotencyService.TryClaim(
+                        conn, trns, checkoutRequestId, LoginId, orderIdentity.CompanyId, TipoDoc, payloadFingerprint)
                 If durableClaim Is Nothing OrElse durableClaim.Status = OrderDurableClaimStatus.Rejected Then
                     trns.Rollback()
                     trns.Dispose()
@@ -779,7 +804,7 @@ End If
                     trns.Dispose()
                     trns = Nothing
                     If durableClaim.DocumentiId > 0 AndAlso durableClaim.DocumentoMemorizzato > 0 Then
-                        RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                        RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                     Else
                         ShowDurableCheckoutTechnicalFailure()
                     End If
@@ -815,7 +840,7 @@ End If
                     End If
                     If priceRevalidation.HasChanges Then
                         OrderDurableIdempotencyService.MarkRetryRequired(
-                            conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint)
+                            conn, trns, checkoutRequestId, LoginId, orderIdentity.CompanyId, TipoDoc, payloadFingerprint)
                         trns.Commit()
                         trns.Dispose()
                         trns = Nothing
@@ -909,8 +934,9 @@ End If
                 End Using
 
                 ' Resolve the exact document created by the canonical procedure.
-                Using cmdDoc As New MySqlCommand("SELECT id, DataDocumento FROM documenti WHERE UtentiId=?UtentiId AND TipoDocumentiID=?TipoDoc AND NDocumento=?NumDoc AND YEAR(DataDocumento)=YEAR(CURRENT_TIMESTAMP) ORDER BY ID DESC LIMIT 2", conn, trns)
+                Using cmdDoc As New MySqlCommand("SELECT id, DataDocumento FROM documenti WHERE UtentiId=?UtentiId AND AziendeId=?AziendaId AND TipoDocumentiID=?TipoDoc AND NDocumento=?NumDoc AND YEAR(DataDocumento)=YEAR(CURRENT_TIMESTAMP) ORDER BY ID DESC LIMIT 2", conn, trns)
                     cmdDoc.Parameters.AddWithValue("?UtentiId", UtentiId)
+                    cmdDoc.Parameters.AddWithValue("?AziendaId", orderIdentity.CompanyId)
                     cmdDoc.Parameters.AddWithValue("?TipoDoc", TipoDoc)
                     cmdDoc.Parameters.Add("?NumDoc", MySqlDbType.Int64).Value = NumDoc
                     Using dr As MySqlDataReader = cmdDoc.ExecuteReader()
@@ -933,7 +959,8 @@ End If
                 End If
 
                 OrderDurableIdempotencyService.Complete(
-                    conn, trns, checkoutRequestId, LoginId, TipoDoc, payloadFingerprint, NumDoc, id)
+                    conn, trns, checkoutRequestId, LoginId, orderIdentity.CompanyId,
+                    TipoDoc, payloadFingerprint, NumDoc, id)
 
                 Me.Label1.Text = NumDoc.ToString()
                 Me.Label2.Text = Documento
@@ -953,14 +980,14 @@ End If
                     HyperLink1.Text = "I miei ordini"
                 End If
                 If litOrderReceipt IsNot Nothing Then
-                    litOrderReceipt.Text = BuildOrderReceiptHtml(conn, id, Documento, NumDoc, DataDoc, If(TryCast(Session("Coupon_Codice_Controllo"), String), ""))
+                    litOrderReceipt.Text = BuildOrderReceiptHtml(conn, id, Documento, NumDoc, DataDoc, If(TryCast(Session("Coupon_Codice_Controllo"), String), ""), orderIdentity)
                 End If
 
                 ' Email (ordine normale vs coupon)
                 If (If(TryCast(Session("Coupon_Codice_Controllo"), String), "")) = "" Then
-                    SendEmail(NumDoc, Documento, id, "")
+                    SendEmail(NumDoc, Documento, id, "", orderIdentity)
                 Else
-                    SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""))
+                    SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""), orderIdentity)
                 End If
 
                 ' Reset session ordine
@@ -1086,7 +1113,7 @@ End If
                 End If
 
                 If String.IsNullOrEmpty(redirect) Then
-                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                     Exit Sub
                 End If
 
@@ -1124,8 +1151,8 @@ End If
                     Exit Sub
                 End If
 
-                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, LoginId, payloadFingerprint) Then
-                    RedirectToOrderConfirmation(checkoutRequestId, LoginId)
+                If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, orderIdentity, payloadFingerprint) Then
+                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                     Return
                 End If
 
@@ -1257,14 +1284,24 @@ End If
         Public Property FiscalCode As String
         Public Property Pec As String
         Public Property Sdi As String
+        Public Property SmtpHost As String
+        Public Property SmtpUser As String
+        Public Property SmtpPassword As String
+        Public Property AdministrativeRecipient As String
     End Class
 
-    Public Sub SendEmail(ByVal n As Long, ByVal documento As String, ByVal id As Integer, ByVal Descrizione_Coupon As String)
+    Public Sub SendEmail(ByVal n As Long,
+                         ByVal documento As String,
+                         ByVal id As Integer,
+                         ByVal Descrizione_Coupon As String,
+                         ByVal identity As OrderStorefrontIdentity)
         Dim conn As New MySqlConnection
         Dim connDestAlt As New MySqlConnection
         Try
+            If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException("Order email tenant is not valid.")
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
+            If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Throw New InvalidOperationException("Order email tenant is not valid.")
 
             Dim StrCarrello As String = ""
             Dim StrIva As String = ""
@@ -1279,8 +1316,10 @@ End If
             Dim cmdTestata As New MySqlCommand
             cmdTestata.Connection = conn
             cmdTestata.CommandType = CommandType.Text
-            cmdTestata.CommandText = "SELECT * FROM vdocumenticompleta WHERE id=?id"
+            cmdTestata.CommandText = "SELECT * FROM vdocumenticompleta WHERE id=?id AND AziendeId=?aziendaId AND UtentiId=?utentiId"
             cmdTestata.Parameters.AddWithValue("?id", id)
+            cmdTestata.Parameters.AddWithValue("?aziendaId", identity.CompanyId)
+            cmdTestata.Parameters.AddWithValue("?utentiId", identity.UtentiId)
 
             Dim drTestata As MySqlDataReader = cmdTestata.ExecuteReader()
             drTestata.Read()
@@ -1304,8 +1343,14 @@ End If
             Dim dataDocumentoDisplay As String = ""
             Dim righeOrdine As New List(Of OrderEmailLine)()
             Dim emailBrand As OrderEmailBrandData = Nothing
+            Dim recipientName As String = ""
+            Dim recipientEmail As String = ""
+            Dim receiptAziendaId As Integer = 0
 
             If drTestata.HasRows Then
+                receiptAziendaId = Convert.ToInt32(drTestata("AziendeId"), CultureInfo.InvariantCulture)
+                recipientName = DbText(drTestata, "cognomenome")
+                recipientEmail = DbText(drTestata, "Email")
                 numeroDocumento = DbText(drTestata, "NDocumento")
                 dataDocumento = DbText(drTestata, "DataDocumento")
                 dataDocumentoDisplay = FormatDocumentDate(dataDocumento)
@@ -1399,12 +1444,24 @@ End If
             drTestata.Dispose()
             cmdTestata.Dispose()
 
-            emailBrand = LoadOrderEmailBrandData(conn)
+            emailBrand = LoadOrderEmailBrandData(conn, receiptAziendaId, False)
+            If emailBrand Is Nothing OrElse receiptAziendaId <> identity.CompanyId OrElse
+               String.IsNullOrWhiteSpace(recipientEmail) OrElse
+               String.IsNullOrWhiteSpace(emailBrand.CompanyName) OrElse
+               String.IsNullOrWhiteSpace(emailBrand.SupportEmail) OrElse
+               String.IsNullOrWhiteSpace(emailBrand.SmtpHost) Then
+                Throw New InvalidOperationException("Order email persisted identity is not valid.")
+            End If
 
             If Descrizione_Coupon <> "" Then
                 StrCarrello &= "<tr><td colspan=6 bgcolor=whitesmoke><b>Coupon</b></td></tr>"
                 StrCarrello &= "<tr><td colspan=6>" & Descrizione_Coupon & "</td></tr>"
-                StrCarrello &= "<tr><td colspan=6><a href=""http://" & Session("AziendaUrl") & "/coupon_stampa.aspx?id=" & Session("Coupon_idCoupon") & "&cod=" & Session("Coupon_Codice_Controllo") & """>Clicca qui</a> per visualizzare il Coupon Acquistato</td></tr>"
+                Dim couponPath As String = "coupon_stampa.aspx?id=" & HttpUtility.UrlEncode(Convert.ToString(Session("Coupon_idCoupon"), CultureInfo.InvariantCulture)) &
+                                           "&cod=" & HttpUtility.UrlEncode(Convert.ToString(Session("Coupon_Codice_Controllo"), CultureInfo.InvariantCulture))
+                Dim couponUrl As String = BuildSiteUrl(couponPath, emailBrand.SiteUrl)
+                If Not String.IsNullOrWhiteSpace(couponUrl) Then
+                    StrCarrello &= "<tr><td colspan=6><a href=""" & HttpUtility.HtmlAttributeEncode(couponUrl) & """>Clicca qui</a> per visualizzare il Coupon Acquistato</td></tr>"
+                End If
                 StrCarrello &= "<tr><td colspan=6 bgcolor=whitesmoke height=1></td></tr>"
             Else
                 Dim cmdRighe As New MySqlCommand
@@ -1457,28 +1514,24 @@ End If
                            "</table>"
 
             Dim oMsg As MailMessage = New MailMessage()
-            oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
-            oMsg.To.Add(New MailAddress(Session("LoginEmail"), Session("LoginNomeCognome")))
-            oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
+            oMsg.From = New MailAddress(emailBrand.SupportEmail, emailBrand.CompanyName)
+            oMsg.To.Add(New MailAddress(recipientEmail, recipientName))
+            If Not String.IsNullOrWhiteSpace(emailBrand.AdministrativeRecipient) Then
+                oMsg.Bcc.Add(New MailAddress(emailBrand.AdministrativeRecipient, emailBrand.CompanyName))
+            End If
+            oMsg.ReplyToList.Add(New MailAddress(emailBrand.SupportEmail, emailBrand.CompanyName))
             ConfigureOrderEmailEncoding(oMsg)
-            Dim legacySubject As String = "Conferma " & documento & " dal sito " & Session("AziendaNome")
-            Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & Session("LoginNomeCognome") & "," &
-                                       "<br>La ringraziamo per aver preferito " & Session("AziendaNome") & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
+            Dim legacySubject As String = "Conferma " & documento & " dal sito " & emailBrand.CompanyName
+            Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & recipientName & "," &
+                                       "<br>La ringraziamo per aver preferito " & emailBrand.CompanyName & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
                                        StrCarrello
 
             If documento.Contains("Preventivo") = True Then
                 legacyBody &= "<br/><span style=""font-size:9pt; color:red;"">Le ricordiamo che tale documento non ha nessuna validità di impegno poichè non è un ORDINE ma semplicemente un PREVENTIVO online.<br/>Se vuole può convertirlo in ordine contattandoci, ed indicando il tipo di pagamento che vuole effettuare.<br/>Oppure può rifare l’ordine on-line e alla fine del carrello deve cliccare sul tasto ""CONFERMA ORDINE"" e non ""SALVA PREVENTIVO"".<br/>Dopodichè seguendo le istruzioni, potrà procedere al pagamento.</span>"
             End If
 
-            If (Session.Item("AziendaId") = 2) Then
-                legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
-                            "<br><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" &
-                            "<br/><br/><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
-            Else
-                legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
-                            "<br/><font face=arial size=2 color=black><b>" & Session("AziendaNome") & "</b><br>" & Session("AziendaDescrizione") & "<br>Sito Web: <a href=http://" & Session("AziendaUrl") & ">http://" & Session("AziendaUrl") & "</a> - Email: <a href=mailto:" & Session("AziendaEmail") & ">" & Session("AziendaEmail") & "</a></font>" &
-                            "<br/><br><font face=arial size=1 color=silver>D.Lgs 196/2003 tutela delle persone di altri soggetti rispetto al trattamento di dati personali. La presente comunicazione è destinata esclusivamente al soggetto indicato più sopra quale destinatario o ad eventuali altri soggetti autorizzati a riceverla. Essa contiene informazioni strettamente confidenziali e riservate, la cui comunicazione o diffusione a terzi è proibita, salvo che non sia espressamente autorizzata. Se avete ricevuto questa comunicazione per errore, o se desiderate non ricevere più comunicazioni su novità e offerte, Vi preghiamo di darne immediata comunicazione al mittente scrivendo a " & Me.Session("AziendaEmail") & ". Si informa che i dati forniti saranno tenuti rigorosamente riservati, saranno utilizzati unicamente da " & Me.Session("AziendaNome") & " per comunicare offerte promozionali o novità sui prodotti/servizi e resteranno a disposizione per eventuali variazioni o per la cancellazione ai sensi dell'art. 7 del citato decreto legislativo.</font>"
-            End If
+            legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
+                          "<br/><font face=arial size=2 color=black><b>" & emailBrand.CompanyName & "</b><br>Sito Web: <a href=" & HttpUtility.HtmlAttributeEncode(emailBrand.SiteUrl) & ">" & HttpUtility.HtmlEncode(emailBrand.SiteUrl) & "</a> - Email: <a href=mailto:" & HttpUtility.HtmlAttributeEncode(emailBrand.SupportEmail) & ">" & HttpUtility.HtmlEncode(emailBrand.SupportEmail) & "</a></font>"
 
             Dim renderedEmail As KeepStoreEmailRenderResult = TryRenderOrderConfirmationEmail(documento,
                                                                                               numeroDocumento,
@@ -1503,27 +1556,33 @@ End If
                                                                                                righeOrdine,
                                                                                                IvaTipo,
                                                                                                emailBrand,
+                                                                                               recipientName,
+                                                                                               recipientEmail,
                                                                                                id,
                                                                                                n)
 
             If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
-                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
+                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni, emailBrand.CompanyName)
                 ApplyRenderedOrderEmailMime(oMsg, renderedEmail)
             Else
                 oMsg.Subject = legacySubject
                 ApplyLegacyOrderEmailMime(oMsg, legacyBody)
             End If
 
-            Dim oSmtp As SmtpClient = New SmtpClient(Me.Session.Item("smtp"))
+            Dim oSmtp As SmtpClient = New SmtpClient(emailBrand.SmtpHost)
             oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
 
-            Dim oCredential As NetworkCredential = New NetworkCredential(CType(Session.Item("User_smtp"), String), CType(Session.Item("Password_smtp"), String))
+            Dim oCredential As NetworkCredential = New NetworkCredential(emailBrand.SmtpUser, emailBrand.SmtpPassword)
             oSmtp.UseDefaultCredentials = False
             oSmtp.Credentials = oCredential
 
             oSmtp.Send(oMsg)
 
-        Catch
+        Catch ex As Exception
+            Try
+                KeepStoreLog.Error("ordine-email", "Invio conferma ordine non riuscito. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+            Catch
+            End Try
         Finally
             If conn.State = ConnectionState.Open Then
                 conn.Close()
@@ -1570,7 +1629,8 @@ End If
                                            ByVal documento As String,
                                            ByVal numeroDocumento As Long,
                                            ByVal dataDocumento As String,
-                                           ByVal descrizioneCoupon As String) As String
+                                           ByVal descrizioneCoupon As String,
+                                           ByVal identity As OrderStorefrontIdentity) As String
         Dim sb As New StringBuilder()
         Try
             Dim numeroDocumentoTesto As String = numeroDocumento.ToString(CultureInfo.InvariantCulture)
@@ -1601,8 +1661,10 @@ End If
 
             Using cmdTestata As New MySqlCommand(
                 "SELECT vd.*, COALESCE((SELECT u.IvaTipo FROM utenti u WHERE u.Id=vd.UtentiId LIMIT 1),2) AS ReceiptIvaTipo " &
-                "FROM vdocumenticompleta vd WHERE vd.id=?id", conn)
+                "FROM vdocumenticompleta vd WHERE vd.id=?id AND vd.AziendeId=?aziendaId AND vd.UtentiId=?utentiId", conn)
                 cmdTestata.Parameters.AddWithValue("?id", idDocumento)
+                cmdTestata.Parameters.AddWithValue("?aziendaId", identity.CompanyId)
+                cmdTestata.Parameters.AddWithValue("?utentiId", identity.UtentiId)
                 Using dr As MySqlDataReader = cmdTestata.ExecuteReader()
                     If dr.Read() Then
                         If String.IsNullOrWhiteSpace(numeroDocumentoTesto) OrElse numeroDocumentoTesto = "0" Then
@@ -1774,7 +1836,7 @@ End If
             brand = New OrderEmailBrandData()
         End If
 
-        Dim companyName As String = FirstNonEmpty(brand.CompanyName, SessionText("AziendaNome"))
+        Dim companyName As String = brand.CompanyName
         Dim siteUrl As String = FirstNonEmpty(brand.SiteUrl, BuildSiteHomeUrl())
         Dim logoUrl As String = KeepStoreEmailLogo.BuildLogoUrl(siteUrl, brand.LogoWeb)
         Dim fiscalCode As String = brand.FiscalCode
@@ -1862,22 +1924,24 @@ End If
                                                      ByVal dataDocumentoDisplay As String,
                                                      ByVal descrizioneCoupon As String,
                                                      ByVal righeOrdine As List(Of OrderEmailLine),
-                                                     ByVal ivaTipo As Integer,
-                                                     ByVal emailBrand As OrderEmailBrandData,
-                                                     ByVal idDocumento As Integer,
-                                                     ByVal numeroDocumentoNumerico As Long) As KeepStoreEmailRenderResult
+                                                      ByVal ivaTipo As Integer,
+                                                      ByVal emailBrand As OrderEmailBrandData,
+                                                      ByVal recipientName As String,
+                                                      ByVal recipientEmail As String,
+                                                      ByVal idDocumento As Integer,
+                                                      ByVal numeroDocumentoNumerico As Long) As KeepStoreEmailRenderResult
         Try
-            Dim companyName As String = SessionText("AziendaNome")
+            Dim companyName As String = If(emailBrand Is Nothing, "", emailBrand.CompanyName)
             Dim model As New KeepStoreEmailMessageModel()
 
             ApplyOrderEmailBrand(model.Brand, emailBrand, companyName)
-            model.Recipient.DisplayName = SessionText("LoginNomeCognome")
-            model.Recipient.Email = SessionText("LoginEmail")
+            model.Recipient.DisplayName = recipientName
+            model.Recipient.Email = recipientEmail
 
             model.Title = BuildOrderEmailTitle(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni)
             model.StatusBadge = If(IsBankTransferPayment(pagamentoDescrizione, pagamentoInformazioni), "In attesa di bonifico", "Ordine ricevuto")
             model.Preheader = JoinNonEmpty(" - ", "Riepilogo " & documento & " n. " & numeroDocumento, dataDocumentoDisplay)
-            model.Intro = "Gentile " & SessionText("LoginNomeCognome") & ", abbiamo ricevuto la sua richiesta di " & documento & ". Di seguito trova il riepilogo dell'ordine e delle condizioni commerciali."
+            model.Intro = "Gentile " & recipientName & ", abbiamo ricevuto la sua richiesta di " & documento & ". Di seguito trova il riepilogo dell'ordine e delle condizioni commerciali."
             AddHighlightItem(model, documento, "n. " & numeroDocumento)
             AddHighlightItem(model, "Data", dataDocumentoDisplay)
             AddHighlightItem(model, "Totale", totale)
@@ -1998,7 +2062,7 @@ End If
             End If
 
             Dim detailPath As String = "/documentidettaglio.aspx?id=" & idDocumento.ToString(CultureInfo.InvariantCulture) & "&ndoc=" & numeroDocumentoNumerico.ToString(CultureInfo.InvariantCulture)
-            Dim detailUrl As String = BuildSiteUrl("login.aspx?ReturnUrl=" & HttpUtility.UrlEncode(detailPath))
+            Dim detailUrl As String = BuildSiteUrl("login.aspx?ReturnUrl=" & HttpUtility.UrlEncode(detailPath), model.Brand.SiteUrl)
             If Not String.IsNullOrWhiteSpace(detailUrl) Then
                 Dim action As New KeepStoreEmailActionLink()
                 action.Text = "Visualizza ordine"
@@ -2007,7 +2071,7 @@ End If
 
                 Dim accountAction As New KeepStoreEmailActionLink()
                 accountAction.Text = "Accedi al tuo account"
-                accountAction.Url = BuildSiteUrl("login.aspx")
+                accountAction.Url = BuildSiteUrl("login.aspx", model.Brand.SiteUrl)
                 model.SecondaryActionLink = accountAction
             End If
 
@@ -2023,8 +2087,8 @@ End If
                                                    ByVal numeroDocumento As String,
                                                    ByVal dataDocumentoDisplay As String,
                                                    ByVal pagamentoDescrizione As String,
-                                                   ByVal pagamentoInformazioni As String) As String
-        Dim companyName As String = SessionText("AziendaNome")
+                                                   ByVal pagamentoInformazioni As String,
+                                                   ByVal companyName As String) As String
         If documento.Contains("Preventivo") Then
             Return KeepStoreEmailSubjects.QuoteConfirmation(companyName, numeroDocumento, dataDocumentoDisplay)
         End If
@@ -2093,7 +2157,7 @@ End If
         End If
 
         Try
-            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb FROM aziende WHERE id=?id LIMIT 1", conn)
+            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb, Smtp, User_smtp, Password_smtp FROM aziende WHERE id=?id LIMIT 1", conn)
                 cmd.Parameters.AddWithValue("?id", aziendaId)
                 Using reader As MySqlDataReader = cmd.ExecuteReader()
                     If reader.Read() Then
@@ -2112,6 +2176,10 @@ End If
                         data.FiscalCode = DbText(reader, "CodiceFiscale")
                         data.Pec = DbText(reader, "email_pec")
                         data.Sdi = DbText(reader, "codice_sdi")
+                        data.SmtpHost = DbText(reader, "Smtp")
+                        data.SmtpUser = DbText(reader, "User_smtp")
+                        data.SmtpPassword = DbText(reader, "Password_smtp")
+                        data.AdministrativeRecipient = data.SupportEmail
                     End If
                 End Using
             End Using
@@ -2130,11 +2198,11 @@ End If
             data = New OrderEmailBrandData()
         End If
 
-        brand.CompanyName = FirstNonEmpty(data.CompanyName, fallbackCompanyName, SessionText("AziendaNome"))
-        brand.SupportEmail = FirstNonEmpty(data.SupportEmail, SessionText("AziendaEmail"))
+        brand.CompanyName = FirstNonEmpty(data.CompanyName, fallbackCompanyName)
+        brand.SupportEmail = data.SupportEmail
         brand.Phone = data.Phone
         brand.SiteUrl = FirstNonEmpty(data.SiteUrl, BuildSiteHomeUrl())
-        brand.LogoWeb = FirstNonEmpty(data.LogoWeb, ResolveEmailLogoWebFileName())
+        brand.LogoWeb = data.LogoWeb
         brand.Iban = data.Iban
         brand.SwiftCode = data.SwiftCode
         brand.BankName = data.BankName
@@ -2346,25 +2414,24 @@ End If
         Return BuildSiteUrl("")
     End Function
 
-    Private Function BuildSiteUrl(ByVal relativePath As String) As String
-        Dim host As String = SessionText("AziendaUrl")
+    Private Function BuildSiteUrl(ByVal relativePath As String,
+                                  Optional ByVal persistedSiteUrl As String = "") As String
+        Dim host As String = Convert.ToString(persistedSiteUrl).Trim()
         If String.IsNullOrWhiteSpace(host) Then
-            host = "www.taikun.it"
+            host = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "")
         End If
-
-        If host.StartsWith("//", StringComparison.Ordinal) OrElse
+        If String.IsNullOrWhiteSpace(host) OrElse host.StartsWith("//", StringComparison.Ordinal) OrElse
            host.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
-           host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
-            host = "www.taikun.it"
-        End If
+           host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then Return ""
 
-        If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
-            host = "https://" & host.Substring(7)
-        ElseIf Not host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then
-            host = "https://" & host
-        End If
+        If Not host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) AndAlso
+           Not host.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then host = "https://" & host
 
-        Return host.TrimEnd("/"c) & "/" & relativePath.TrimStart("/"c)
+        Dim parsed As Uri = Nothing
+        If Not Uri.TryCreate(host, UriKind.Absolute, parsed) OrElse
+           (Not String.Equals(parsed.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) AndAlso
+            Not String.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) Then Return ""
+        Return host.TrimEnd("/"c) & "/" & Convert.ToString(relativePath).TrimStart("/"c)
     End Function
 
     Private Function ResolveEmailLogoWebFileName() As String

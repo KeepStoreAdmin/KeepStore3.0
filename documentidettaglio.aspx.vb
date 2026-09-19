@@ -10,6 +10,14 @@ Partial Class documentidettaglio
     Inherits System.Web.UI.Page
 
     Private _fallbackTipoDocumentoId As Integer = -1
+    Private _orderIdentity As OrderStorefrontIdentity
+
+    Private ReadOnly Property CurrentOrderIdentity As OrderStorefrontIdentity
+        Get
+            If _orderIdentity Is Nothing Then _orderIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            Return _orderIdentity
+        End Get
+    End Property
 
     Private Class PayNowDocumentInfo
         Public DocumentId As Integer
@@ -28,6 +36,10 @@ Partial Class documentidettaglio
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         ' Richiede login
         If Session("LoginId") Is Nothing OrElse Convert.ToString(Session("LoginId")) = "" Then
+            Response.Redirect("accessonegato.aspx")
+            Return
+        End If
+        If CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then
             Response.Redirect("accessonegato.aspx")
             Return
         End If
@@ -86,9 +98,10 @@ Partial Class documentidettaglio
         Try
             Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using c As New MySqlConnection(cs)
-                Using cmd As New MySqlCommand("SELECT TipoDocumentiId FROM vdocumenti WHERE Id=@id AND UtentiId=@uid LIMIT 1", c)
+                Using cmd As New MySqlCommand("SELECT TipoDocumentiId FROM vdocumenti WHERE Id=@id AND UtentiId=@uid AND AziendeId=@aziendaId LIMIT 1", c)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = idDocumento
-                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = Convert.ToInt32(Session("UtentiID"))
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = CurrentOrderIdentity.UtentiId
+                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
                     c.Open()
                     Dim o As Object = cmd.ExecuteScalar()
                     If o Is Nothing OrElse Convert.IsDBNull(o) Then Return False
@@ -544,7 +557,7 @@ Partial Class documentidettaglio
         If documentId <= 0 Then Return Nothing
 
         Try
-            Dim utentiId As Integer = SafeInt(Session("UtentiID"), 0)
+            Dim utentiId As Long = CurrentOrderIdentity.UtentiId
             If utentiId <= 0 Then Return Nothing
 
             Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -564,12 +577,13 @@ Partial Class documentidettaglio
                 sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
                 sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
                 sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
-                sql &= "WHERE d.id=@id AND d.UtentiId=@uid "
+                sql &= "WHERE d.id=@id AND d.UtentiId=@uid AND d.AziendeId=@aziendaId "
                 sql &= "LIMIT 1"
 
                 Using cmd As New MySqlCommand(sql, c)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
-                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = utentiId
+                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
                     c.Open()
 
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -730,7 +744,7 @@ Partial Class documentidettaglio
             sql &= "LEFT JOIN aziende a ON a.id = d.AziendeId "
             sql &= "LEFT JOIN utenti u ON u.id = d.UtentiId "
             sql &= "LEFT JOIN utentiindirizzi ui ON ui.id = d.UtentiIndirizziId "
-            sql &= "WHERE d.id=@id AND d.UtentiId=@uid "
+            sql &= "WHERE d.id=@id AND d.UtentiId=@uid AND d.AziendeId=@aziendaId "
             sql &= "LIMIT 1"
 
             Using c As New MySqlConnection(cs)
@@ -738,7 +752,8 @@ Partial Class documentidettaglio
 
                 Using cmd As New MySqlCommand(sql, c)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = idDocumento
-                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = Convert.ToInt32(Session("UtentiID"))
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = CurrentOrderIdentity.UtentiId
+                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
 
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then

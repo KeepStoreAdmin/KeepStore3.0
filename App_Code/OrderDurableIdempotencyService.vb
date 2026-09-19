@@ -17,6 +17,7 @@ Public NotInheritable Class OrderDurableIdempotencyRecord
     Public Property Status As OrderDurableClaimStatus
     Public Property RequestId As String
     Public Property LoginId As Long
+    Public Property AziendaId As Integer
     Public Property TipoDocumentiId As Integer
     Public Property PayloadFingerprint As String
     Public Property DocumentoMemorizzato As Long
@@ -119,16 +120,17 @@ Public NotInheritable Class OrderDurableIdempotencyService
 
     Public Shared Function TryReadCompleted(ByVal connection As MySqlConnection,
                                             ByVal requestId As String,
-                                            ByVal loginId As Long) As OrderDurableIdempotencyRecord
+                                            ByVal loginId As Long,
+                                            ByVal aziendaId As Integer) As OrderDurableIdempotencyRecord
         If connection Is Nothing Then Throw New ArgumentNullException("connection")
         Dim normalized As String = String.Empty
-        If loginId <= 0 OrElse Not TryNormalizeRequestId(requestId, normalized) Then
+        If loginId <= 0 OrElse aziendaId <= 0 OrElse Not TryNormalizeRequestId(requestId, normalized) Then
             Return RejectedRecord()
         End If
 
         Dim record As OrderDurableIdempotencyRecord = LoadRecord(connection, Nothing, normalized, False)
         If record Is Nothing Then Return Nothing
-        If record.LoginId <> loginId OrElse
+        If record.LoginId <> loginId OrElse record.AziendaId <> aziendaId OrElse
            (record.Status <> OrderDurableClaimStatus.CompletedReplay AndAlso
             record.Status <> OrderDurableClaimStatus.RetryRequired) Then
             Return RejectedRecord()
@@ -140,17 +142,19 @@ Public NotInheritable Class OrderDurableIdempotencyService
                                     ByVal transaction As MySqlTransaction,
                                     ByVal requestId As String,
                                     ByVal loginId As Long,
+                                    ByVal aziendaId As Integer,
                                     ByVal tipoDocumentiId As Integer,
                                     ByVal payloadFingerprint As String) As OrderDurableIdempotencyRecord
         If connection Is Nothing Then Throw New ArgumentNullException("connection")
         If transaction Is Nothing Then Throw New ArgumentNullException("transaction")
 
         Dim normalized As String = String.Empty
-        If loginId <= 0 OrElse tipoDocumentiId <= 0 OrElse
+        If loginId <= 0 OrElse aziendaId <= 0 OrElse tipoDocumentiId <= 0 OrElse
            Not TryNormalizeRequestId(requestId, normalized) OrElse
            Not IsFingerprintValid(payloadFingerprint) Then
             Return RejectedRecord()
         End If
+        If Not IsLoginOwnedByCompany(connection, transaction, loginId, aziendaId) Then Return RejectedRecord()
 
         Try
             Using command As New MySqlCommand(
@@ -170,6 +174,7 @@ Public NotInheritable Class OrderDurableIdempotencyService
                 .Status = OrderDurableClaimStatus.NewClaim,
                 .RequestId = normalized,
                 .LoginId = loginId,
+                .AziendaId = aziendaId,
                 .TipoDocumentiId = tipoDocumentiId,
                 .PayloadFingerprint = payloadFingerprint
             }
@@ -179,7 +184,7 @@ Public NotInheritable Class OrderDurableIdempotencyService
 
         Dim existing As OrderDurableIdempotencyRecord = LoadRecord(connection, transaction, normalized, True)
         If existing Is Nothing OrElse
-           existing.LoginId <> loginId OrElse
+           existing.LoginId <> loginId OrElse existing.AziendaId <> aziendaId OrElse
            existing.TipoDocumentiId <> tipoDocumentiId OrElse
            Not String.Equals(existing.PayloadFingerprint, payloadFingerprint, StringComparison.Ordinal) OrElse
            (existing.Status <> OrderDurableClaimStatus.CompletedReplay AndAlso
@@ -193,6 +198,7 @@ Public NotInheritable Class OrderDurableIdempotencyService
                                ByVal transaction As MySqlTransaction,
                                ByVal requestId As String,
                                ByVal loginId As Long,
+                               ByVal aziendaId As Integer,
                                ByVal tipoDocumentiId As Integer,
                                ByVal payloadFingerprint As String,
                                ByVal documentoMemorizzato As Long,
@@ -206,13 +212,17 @@ Public NotInheritable Class OrderDurableIdempotencyService
             "DocumentoMemorizzato=?documentoMemorizzato, DocumentiId=?documentiId, " &
             "Stato=?completedState, DataCompletamento=CURRENT_TIMESTAMP(6) " &
             "WHERE RequestId=?requestId AND LoginId=?loginId AND TipoDocumentiId=?tipoDocumentiId " &
-            "AND PayloadFingerprint=?payloadFingerprint AND Stato=?pendingState",
+            "AND PayloadFingerprint=?payloadFingerprint AND Stato=?pendingState " &
+            "AND EXISTS (SELECT 1 FROM documenti d INNER JOIN vlogin v " &
+            "ON v.id=?loginId AND v.utentiid=d.UtentiId AND v.AziendeID=?aziendaId " &
+            "WHERE d.id=?documentiId AND d.AziendeId=?aziendaId)",
             connection, transaction)
             command.Parameters.Add("?documentoMemorizzato", MySqlDbType.Int64).Value = documentoMemorizzato
             command.Parameters.Add("?documentiId", MySqlDbType.Int64).Value = documentiId
             command.Parameters.Add("?completedState", MySqlDbType.VarChar, 16).Value = CompletedState
             command.Parameters.Add("?requestId", MySqlDbType.VarChar, 32).Value = requestId
             command.Parameters.Add("?loginId", MySqlDbType.Int64).Value = loginId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = aziendaId
             command.Parameters.Add("?tipoDocumentiId", MySqlDbType.Int32).Value = tipoDocumentiId
             command.Parameters.Add("?payloadFingerprint", MySqlDbType.VarChar, 64).Value = payloadFingerprint
             command.Parameters.Add("?pendingState", MySqlDbType.VarChar, 16).Value = PendingState
@@ -224,6 +234,7 @@ Public NotInheritable Class OrderDurableIdempotencyService
                                         ByVal transaction As MySqlTransaction,
                                         ByVal requestId As String,
                                         ByVal loginId As Long,
+                                        ByVal aziendaId As Integer,
                                         ByVal tipoDocumentiId As Integer,
                                         ByVal payloadFingerprint As String)
         If connection Is Nothing Then Throw New ArgumentNullException("connection")
@@ -234,11 +245,13 @@ Public NotInheritable Class OrderDurableIdempotencyService
             "DataCompletamento=CURRENT_TIMESTAMP(6) " &
             "WHERE RequestId=?requestId AND LoginId=?loginId AND TipoDocumentiId=?tipoDocumentiId " &
             "AND PayloadFingerprint=?payloadFingerprint AND Stato=?pendingState " &
-            "AND DocumentoMemorizzato IS NULL AND DocumentiId IS NULL",
+            "AND DocumentoMemorizzato IS NULL AND DocumentiId IS NULL " &
+            "AND EXISTS (SELECT 1 FROM vlogin v WHERE v.id=?loginId AND v.AziendeID=?aziendaId)",
             connection, transaction)
             command.Parameters.Add("?retryState", MySqlDbType.VarChar, 16).Value = RetryRequiredState
             command.Parameters.Add("?requestId", MySqlDbType.VarChar, 32).Value = requestId
             command.Parameters.Add("?loginId", MySqlDbType.Int64).Value = loginId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = aziendaId
             command.Parameters.Add("?tipoDocumentiId", MySqlDbType.Int32).Value = tipoDocumentiId
             command.Parameters.Add("?payloadFingerprint", MySqlDbType.VarChar, 64).Value = payloadFingerprint
             command.Parameters.Add("?pendingState", MySqlDbType.VarChar, 16).Value = PendingState
@@ -251,9 +264,13 @@ Public NotInheritable Class OrderDurableIdempotencyService
                                        ByVal requestId As String,
                                        ByVal lockForUpdate As Boolean) As OrderDurableIdempotencyRecord
         Dim sql As String =
-            "SELECT RequestId, LoginId, TipoDocumentiId, PayloadFingerprint, Stato, " &
-            "DocumentoMemorizzato, DocumentiId FROM ordini_web_idempotenza " &
-            "WHERE RequestId=?requestId LIMIT 1"
+            "SELECT i.RequestId, i.LoginId, i.TipoDocumentiId, i.PayloadFingerprint, i.Stato, " &
+            "i.DocumentoMemorizzato, i.DocumentiId, " &
+            "COALESCE(d.AziendeId, v.AziendeID, 0) AS AziendaId " &
+            "FROM ordini_web_idempotenza i " &
+            "LEFT JOIN documenti d ON d.id=i.DocumentiId " &
+            "LEFT JOIN vlogin v ON v.id=i.LoginId " &
+            "WHERE i.RequestId=?requestId LIMIT 1"
         If lockForUpdate Then sql &= " FOR UPDATE"
 
         Using command As New MySqlCommand(sql, connection, transaction)
@@ -273,6 +290,7 @@ Public NotInheritable Class OrderDurableIdempotencyService
                     .Status = status,
                     .RequestId = Convert.ToString(reader("RequestId"), CultureInfo.InvariantCulture),
                     .LoginId = Convert.ToInt64(reader("LoginId"), CultureInfo.InvariantCulture),
+                    .AziendaId = Convert.ToInt32(reader("AziendaId"), CultureInfo.InvariantCulture),
                     .TipoDocumentiId = Convert.ToInt32(reader("TipoDocumentiId"), CultureInfo.InvariantCulture),
                     .PayloadFingerprint = Convert.ToString(reader("PayloadFingerprint"), CultureInfo.InvariantCulture),
                     .DocumentoMemorizzato = If(reader.IsDBNull(reader.GetOrdinal("DocumentoMemorizzato")), 0L, Convert.ToInt64(reader("DocumentoMemorizzato"), CultureInfo.InvariantCulture)),
@@ -284,6 +302,19 @@ Public NotInheritable Class OrderDurableIdempotencyService
 
     Private Shared Function RejectedRecord() As OrderDurableIdempotencyRecord
         Return New OrderDurableIdempotencyRecord() With {.Status = OrderDurableClaimStatus.Rejected}
+    End Function
+
+    Private Shared Function IsLoginOwnedByCompany(ByVal connection As MySqlConnection,
+                                                  ByVal transaction As MySqlTransaction,
+                                                  ByVal loginId As Long,
+                                                  ByVal aziendaId As Integer) As Boolean
+        Using command As New MySqlCommand(
+            "SELECT COUNT(*) FROM vlogin WHERE id=?loginId AND AziendeID=?aziendaId",
+            connection, transaction)
+            command.Parameters.Add("?loginId", MySqlDbType.Int64).Value = loginId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = aziendaId
+            Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) = 1
+        End Using
     End Function
 
     Private Shared Function IsFingerprintValid(ByVal value As String) As Boolean

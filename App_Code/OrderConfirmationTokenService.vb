@@ -10,9 +10,12 @@ Public NotInheritable Class OrderConfirmationTokenService
     Private Sub New()
     End Sub
 
-    Public Shared Function CreateToken(ByVal requestId As String, ByVal loginId As Long) As String
+    Public Shared Function CreateToken(ByVal requestId As String,
+                                       ByVal identity As OrderStorefrontIdentity) As String
         Dim normalizedRequestId As String = String.Empty
-        If loginId <= 0 OrElse
+        Dim databaseScope As String = String.Empty
+        If identity Is Nothing OrElse Not identity.IsComplete OrElse
+           Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(identity.DatabaseScopeKey, databaseScope) OrElse
            Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) Then
             Throw New InvalidOperationException("Completed order identity is not valid.")
         End If
@@ -20,8 +23,9 @@ Public NotInheritable Class OrderConfirmationTokenService
         Dim clearBytes() As Byte = Nothing
         Dim protectedBytes() As Byte = Nothing
         Try
-            Dim payload As String = normalizedRequestId & "|" &
-                loginId.ToString(CultureInfo.InvariantCulture) & "|" &
+            Dim payload As String = "v2|" & normalizedRequestId & "|" & databaseScope & "|" &
+                identity.CompanyId.ToString(CultureInfo.InvariantCulture) & "|" &
+                identity.LoginId.ToString(CultureInfo.InvariantCulture) & "|" &
                 DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture)
             clearBytes = Encoding.UTF8.GetBytes(payload)
             protectedBytes = MachineKey.Protect(clearBytes, TokenPurpose)
@@ -38,10 +42,11 @@ Public NotInheritable Class OrderConfirmationTokenService
     End Function
 
     Public Shared Function TryValidate(ByVal token As String,
-                                       ByVal loginId As Long,
+                                       ByVal identity As OrderStorefrontIdentity,
                                        ByRef requestId As String) As Boolean
         requestId = String.Empty
-        If loginId <= 0 OrElse String.IsNullOrWhiteSpace(token) OrElse token.Length > 1024 Then Return False
+        If identity Is Nothing OrElse Not identity.IsComplete OrElse
+           String.IsNullOrWhiteSpace(token) OrElse token.Length > 1024 Then Return False
 
         Dim protectedBytes() As Byte = Nothing
         Dim clearBytes() As Byte = Nothing
@@ -62,17 +67,25 @@ Public NotInheritable Class OrderConfirmationTokenService
             If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
 
             Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
-            If parts.Length <> 3 Then Return False
+            If parts.Length <> 6 OrElse Not String.Equals(parts(0), "v2", StringComparison.Ordinal) Then Return False
 
             Dim normalized As String = String.Empty
-            If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(0), normalized) Then Return False
+            If Not OrderDurableIdempotencyService.TryNormalizeRequestId(parts(1), normalized) Then Return False
+
+            Dim databaseScope As String = String.Empty
+            If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(2), databaseScope) OrElse
+               Not String.Equals(databaseScope, identity.DatabaseScopeKey, StringComparison.Ordinal) Then Return False
+
+            Dim tokenCompanyId As Integer = 0
+            If Not Integer.TryParse(parts(3), NumberStyles.None, CultureInfo.InvariantCulture, tokenCompanyId) OrElse
+               tokenCompanyId <> identity.CompanyId Then Return False
 
             Dim tokenLoginId As Long = 0
-            If Not Long.TryParse(parts(1), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse
-               tokenLoginId <> loginId Then Return False
+            If Not Long.TryParse(parts(4), NumberStyles.None, CultureInfo.InvariantCulture, tokenLoginId) OrElse
+               tokenLoginId <> identity.LoginId Then Return False
 
             Dim issuedTicks As Long = 0
-            If Not Long.TryParse(parts(2), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
+            If Not Long.TryParse(parts(5), NumberStyles.None, CultureInfo.InvariantCulture, issuedTicks) Then Return False
             Dim issuedUtc As New DateTime(issuedTicks, DateTimeKind.Utc)
             Dim age As TimeSpan = DateTime.UtcNow.Subtract(issuedUtc)
             If age < TimeSpan.FromMinutes(-1) OrElse age > MaxTokenAge Then Return False

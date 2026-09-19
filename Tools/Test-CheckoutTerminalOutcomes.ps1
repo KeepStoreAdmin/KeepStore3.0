@@ -83,7 +83,7 @@ $results += Assert-Contract (
 ) 'inventory failure precedes document, idempotency completion and email'
 
 $results += Assert-Contract (
-    $order.Contains('RedirectToOrderConfirmation(checkoutRequestId, LoginId)') -and
+    $order.Contains('RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)') -and
     $dispatcher.Contains('Case CheckoutTerminalOutcome.OrderConfirmation') -and
     $dispatcher.Contains('Return "ordine.aspx?c="')
 ) 'valid PRG confirmation remains available'
@@ -92,7 +92,7 @@ $completedReplay = [regex]::Match($order, 'If completedBeforeWork IsNot Nothing 
 $results += Assert-Contract (
     $completedReplay.Contains('OrderDurableClaimStatus.CompletedReplay') -and
     $completedReplay.Contains('PayloadFingerprint') -and
-    $completedReplay.Contains('RedirectToOrderConfirmation(checkoutRequestId, LoginId)')
+    $completedReplay.Contains('RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)')
 ) 'completed replay returns the same protected confirmation path'
 
 $spinnerFunction = [regex]::Match($cartMarkup, 'window\.ksValidateCheckoutTermsConsent\s*=\s*function\s*\(\)\s*\{(?<body>[\s\S]*?)\n\s*\};').Groups['body'].Value

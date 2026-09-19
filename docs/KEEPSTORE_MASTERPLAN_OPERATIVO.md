@@ -1,20 +1,20 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-18
+Aggiornato: 2026-09-19
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-18.
+- Aggiornato: 2026-09-19.
 - Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `5e01d3e805842c47cabea2f7bee22254701f0110`.
+- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `2d6ebd540a29ff906a01fa0820ebf65706150408`.
 - Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 - `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task chiuso: `STOREFRONT-RUNTIME-ASSET-404-1A`, esito A, PR #264 integrata fast-forward nel checkpoint `5e01d3e805842c47cabea2f7bee22254701f0110`; asset tenant opzionali e superfici neutre sono fail-closed senza fallback legacy inventati.
-- Task corrente: `MULTI-STOREFRONT-PRICING-ACCOUNT-ISOLATION-1A`, branch `task/multistorefront-pricing-account-isolation-1a`, base stabile `5e01d3e805842c47cabea2f7bee22254701f0110`. Sono isolati account, listini e snapshot commerciali per database/azienda/listino/owner; carrello e ordine restano esplicitamente fuori perimetro.
-- Prossimo task obbligatorio soltanto dopo review A e merge: `MULTI-STOREFRONT-CART-ISOLATION-1A`, stato `NON AVVIATO`. Seguira `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`; `GOOGLE-MERCHANT-CENTER-FEED-1A` resta sospeso.
+- Ultimo task chiuso: `MULTI-STOREFRONT-CART-ISOLATION-1A`, esito A, PR #266 integrata fast-forward nel checkpoint `2d6ebd540a29ff906a01fa0820ebf65706150408`.
+- Task corrente: `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, branch `task/multistorefront-order-provenance-email-1a`, base stabile `2d6ebd540a29ff906a01fa0820ebf65706150408`. Provenienza, replay, documenti ed e-mail vengono resi tenant-aware conservando numerazione globale e procedura canonica.
+- Prossimo task soltanto dopo review A, eventuale smoke autorizzato e merge: `GOOGLE-MERCHANT-CENTER-FEED-1A`, stato `NON AVVIATO`.
 - La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
 - Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
 - Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
@@ -65,7 +65,7 @@ Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo tas
 - Il login e sempre `AziendaID + username`; non esiste fallback username-only. Dopo il login prevale il listino persistito nell'anagrafica e `ListinoUser` non lo sovrascrive. La sessione registra l'azienda autenticata; un passaggio A-B invalida LoginId e dati account e ripristina il listino anonimo B.
 - HOME, catalogo, PDP e recenti usano il listino positivo gia stabilito dal tenant context, senza fallback cliente `1`. Product JSON-LD riusa il prezzo quantita `1` della PDP. La cache promo include fingerprint non reversibile del database configurato, azienda, listino, stato autenticato e owner; `TechnicalError` non viene memorizzato.
 - Matrice sintetica same-database: 17 scenari / 22 asserzioni, inclusi anonimo A/B, A-B-A, account A/B, stale LoginId, registrazione, listino persistito, prezzi differenti, promo immediata/tier, parita delle superfici, JSON-LD e failure cache. Regressioni: promo/error-state `141/141`, bulk `19/19`, SEO same-database `41/41 + 44/44`, Product structured data `46/46`, precompile e GET locali HOME/catalogo/PDP sull'host tenant valido.
-- I banner HOME correnti sono ora filtrati con l'azienda risolta e parametri SQL. Residui separati, non corretti da questo task: endpoint feed HOME legacy non collegato con fallback listino storico, pagine listini/coupon legacy e ramo e-mail con ID azienda concreto. Il carrello appartiene a `MULTI-STOREFRONT-CART-ISOLATION-1A`; provenienza ordine, numerazione ed e-mail a `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`.
+- I banner HOME correnti sono ora filtrati con l'azienda risolta e parametri SQL. Residui separati da quel task: endpoint feed HOME legacy non collegato con fallback listino storico e pagine listini/coupon legacy. Il carrello same-database e stato chiuso da `MULTI-STOREFRONT-CART-ISOLATION-1A`; provenienza ordine, numerazione ed e-mail tenant-aware sono il perimetro del checkpoint corrente `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`.
 
 ### Contratto permanente MULTITENANT-BY-DESIGN e onboarding
 
@@ -2480,4 +2480,19 @@ Contratto dimostrato:
 
 Harness same-database sintetico: 25/25 scenari PASS piu rollback; conteggi laboratorio `0 -> 0`. Verificati A=2 e B=3 sullo stesso articolo, update/remove/clear isolati, replay singolo, login/merge A e B distinti, A-B-A senza contaminazione, prezzi tenant `5,00` e `6,25`, batch isolato e parita MiniCart/pagina/header/checkout. Zero documenti, ordini e idempotenza ordine. Regression gate: pricing/account PASS, promotion parity/error-state 141/141, promotion bulk 19/19, SEO/same-database 41/41 e 44/44, Product structured data 46/46, precompile ASP.NET Framework 4.8 PASS. Nessun database reale, account reale, ordine, e-mail, pagamento o gateway coinvolto.
 
-Prossimo task dopo review A e merge: `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, obbligatoriamente comprensivo del ramo e-mail legacy legato a un ID azienda. Stato `NON AVVIATO`; Merchant Center resta sospeso.
+Il task successivo a questo checkpoint carrello e `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, ora implementato nel checkpoint seguente e ancora soggetto a review/merge. Merchant Center resta sospeso fino alla sua chiusura.
+
+## Checkpoint MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A
+
+Task implementato sul branch `task/multistorefront-order-provenance-email-1a`, base stabile `2d6ebd540a29ff906a01fa0820ebf65706150408`; PR da mantenere DRAFT fino alla review indipendente e agli eventuali smoke autorizzati. Nessun database cliente, ordine, SMTP, pagamento o gateway viene usato per la prova tecnica.
+
+Audit e modello:
+
+- `Carrello_Documento` risolve `vlogin.UtentiId/AziendeId`, inserisce `documenti.AziendeId` nella stessa transazione e usa il contatore globale per tipo/anno; la provenienza e gia persistente e non serve una migration duplicata;
+- la numerazione resta condivisa fra storefront nello stesso database (`A -> N`, `B -> N+1`, `A -> N+2`) e non contiene un filtro azienda;
+- il vecchio ramo `Session("AziendaId") = 2` nell'e-mail era una differenziazione cliente hardcoded: e rimosso, non sostituito con un altro ID;
+- checkout token, confirmation token, fingerprint, claim, completion e replay verificano database configurato, azienda, login, tipo documento, listino, opzioni e carrello;
+- ricevuta PRG, lista e dettaglio documento richiedono insieme account/utente e `AziendeId` del tenant autorevole;
+- branding, mittente, reply-to, destinatario amministrativo, SMTP e URL e-mail vengono caricati dall'azienda persistita nel documento. L'invio resta dopo il commit; replay, rollback, stock error e collisione non inviano.
+
+Harness same-database: 26 scenari richiesti piu concorrenza globale A/B, tutti su fixture sintetiche e fake e-mail sink. Sono coperti provenienza, numerazione, listini/promo, inventario condiviso, clear dei soli carrelli owner, replay/collisione, lista/dettaglio/ricevuta cross-tenant, una sola e-mail, rollback/stock/deadlock, errore SMTP post-commit e atomicita. Il prossimo task, soltanto dopo review A e merge, e `GOOGLE-MERCHANT-CENTER-FEED-1A`, stato `NON AVVIATO`.

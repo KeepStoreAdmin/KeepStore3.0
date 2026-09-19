@@ -108,6 +108,16 @@ La compatibilita strutturale non autorizza un deployment. Database, domini e amb
 - Fingerprint e registri idempotenti del carrello includono sempre database, azienda e owner. Cache/snapshot commerciali includono inoltre listino e stato autenticato secondo il contratto storefront.
 - Carrelli anonimi storici identificati soltanto dal `SessionID` grezzo non vengono reclamati automaticamente: non e possibile attribuirli in sicurezza a una delle aziende dello stesso database.
 
+### Ordini, documenti ed e-mail multi-storefront
+
+- La provenienza dell'ordine e il `documenti.AziendeId` persistito dalla procedura canonica nella stessa transazione del documento; la sessione non e una fonte storica sufficiente.
+- La numerazione documenti resta globale nel database per contatore/tipo/anno: non va partizionata per azienda quando piu storefront condividono catalogo e inventario.
+- Token checkout/conferma, fingerprint e replay durevole legano sempre fingerprint del database configurato, `AziendaId`, `LoginId`, tipo documento, opzioni commerciali e snapshot carrello. Un replay di un'altra azienda o con payload diverso fallisce chiuso.
+- Lista, dettaglio e ricevuta documento richiedono congiuntamente owner utente e `AziendeId` del tenant autorevole; un solo `LoginId`/`UtentiId` non sostituisce il confine azienda.
+- Branding, mittente, reply-to, destinatario amministrativo, SMTP e URL della conferma e-mail derivano dall'azienda persistita nel documento. Vietati ID azienda, nomi cliente, domini o destinatari hardcoded nel flusso condiviso.
+- L'e-mail ordine parte soltanto dopo il commit e mai su replay, rollback, stock insufficiente o collisione. Un errore SMTP post-commit viene registrato in forma sanitizzata e non annulla o duplica il documento.
+- I test del flusso usano tenant/account sintetici e fake e-mail sink; nessun SMTP, ordine, pagamento o gateway reale senza autorizzazione esplicita.
+
 ## Baseline minima di verifica
 
 Ogni task verifica: diff/manifest; `git diff --check`; sintassi/logica; dipendenze dirette; percorso positivo; un failure pertinente; regressioni influenzate; secret scan; branch, staging e working tree.

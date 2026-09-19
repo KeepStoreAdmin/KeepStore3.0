@@ -10,6 +10,14 @@ Partial Class documenti
     Dim strSql As String = ""
 
     Public nDocTrovati As String = "0"
+    Private _orderIdentity As OrderStorefrontIdentity
+
+    Private ReadOnly Property CurrentOrderIdentity As OrderStorefrontIdentity
+        Get
+            If _orderIdentity Is Nothing Then _orderIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            Return _orderIdentity
+        End Get
+    End Property
 
     '==============================================================
     ' Safe tipo documento (QueryString t)
@@ -91,6 +99,11 @@ Partial Class documenti
 
             ' Salvo la pagina attuale (con eventuali querystring tipo ?t=4)
             Session("Pagina_visitata") = Request.RawUrl
+            Response.Redirect("accessonegato.aspx", True)
+            Exit Sub
+        End If
+
+        If CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then
             Response.Redirect("accessonegato.aspx", True)
             Exit Sub
         End If
@@ -280,8 +293,9 @@ Partial Class documenti
         strSql &= "LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` "
         strSql &= "LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` "
         strSql &= "LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` "
-        Dim utentiId As Integer = SafeInt(Session("UtentiID"), 0)
-        strSql &= "WHERE ((`vdocumenti`.`UtentiId`=" & utentiId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ") AND (`vdocumenti`.`TipoDocumentiId`=" & tipoDocumentoId.ToString(System.Globalization.CultureInfo.InvariantCulture) & "))"
+        Dim utentiId As Long = CurrentOrderIdentity.UtentiId
+        Dim aziendaId As Integer = CurrentOrderIdentity.CompanyId
+        strSql &= "WHERE ((`vdocumenti`.`UtentiId`=" & utentiId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ") AND (`vdocumenti`.`AziendeId`=" & aziendaId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ") AND (`vdocumenti`.`TipoDocumentiId`=" & tipoDocumentoId.ToString(System.Globalization.CultureInfo.InvariantCulture) & "))"
 
         ' Stato
         If idStato > -1 Then
@@ -379,6 +393,8 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Try
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
+            Dim documentId As Integer = SafeInt(id, 0)
+            If Not DocumentBelongsToCurrentStorefront(conn, documentId) Then Throw New UnauthorizedAccessException("Document scope mismatch.")
 
             strSql = "INSERT INTO INVIADOCUMENTI " &
                      "(UTENTIID, AZIENDEID, DOCUMENTIID, DataRichiesta) " &
@@ -386,9 +402,9 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
 
             Using cmdLocal As New MySqlCommand(strSql, conn)
                 cmdLocal.CommandType = CommandType.Text
-                cmdLocal.Parameters.AddWithValue("@UTENTIID", Session("UTENTIID"))
-                cmdLocal.Parameters.AddWithValue("@AziendaID", Session("AziendaID"))
-                cmdLocal.Parameters.AddWithValue("@DOCUMENTIID", id)
+                cmdLocal.Parameters.AddWithValue("@UTENTIID", CurrentOrderIdentity.UtentiId)
+                cmdLocal.Parameters.AddWithValue("@AziendaID", CurrentOrderIdentity.CompanyId)
+                cmdLocal.Parameters.AddWithValue("@DOCUMENTIID", documentId)
                 cmdLocal.ExecuteNonQuery()
             End Using
 
@@ -426,15 +442,18 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 If (e.CommandName = "Stampa") Then
                     conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
                     conn.Open()
+                    Dim documentId As Integer = SafeInt(ID_DOC, 0)
+                    If Not DocumentBelongsToCurrentStorefront(conn, documentId) Then Throw New UnauthorizedAccessException("Document scope mismatch.")
 
                     strSql = "INSERT INTO INVIADOCUMENTI " &
-                             "(UTENTIID, DOCUMENTIID, DataRichiesta) " &
-                             "VALUES (@UTENTIID, @DOCUMENTIID, Now())"
+                             "(UTENTIID, AZIENDEID, DOCUMENTIID, DataRichiesta) " &
+                             "VALUES (@UTENTIID, @AziendaID, @DOCUMENTIID, Now())"
 
                     Using cmdLocal As New MySqlCommand(strSql, conn)
                         cmdLocal.CommandType = CommandType.Text
-                        cmdLocal.Parameters.AddWithValue("@UTENTIID", Session("UTENTIID"))
-                        cmdLocal.Parameters.AddWithValue("@DOCUMENTIID", ID_DOC)
+                        cmdLocal.Parameters.AddWithValue("@UTENTIID", CurrentOrderIdentity.UtentiId)
+                        cmdLocal.Parameters.AddWithValue("@AziendaID", CurrentOrderIdentity.CompanyId)
+                        cmdLocal.Parameters.AddWithValue("@DOCUMENTIID", documentId)
                         cmdLocal.ExecuteNonQuery()
                     End Using
 
@@ -575,12 +594,13 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
                 sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
                 sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
-                sql &= "WHERE d.id=@id AND d.UtentiId=@uid "
+                sql &= "WHERE d.id=@id AND d.UtentiId=@uid AND d.AziendeId=@aziendaId "
                 sql &= "LIMIT 1"
 
                 Using cmd As New MySql.Data.MySqlClient.MySqlCommand(sql, c)
                     cmd.Parameters.Add("@id", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = documentId
                     cmd.Parameters.Add("@uid", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = utentiId
+                    cmd.Parameters.Add("@aziendaId", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
                     c.Open()
 
                     Using dr As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
@@ -608,6 +628,20 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Catch
             Return False
         End Try
+    End Function
+
+    Private Function DocumentBelongsToCurrentStorefront(ByVal connection As MySqlConnection,
+                                                        ByVal documentId As Integer) As Boolean
+        If connection Is Nothing OrElse documentId <= 0 OrElse
+           CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then Return False
+        Using command As New MySqlCommand(
+            "SELECT COUNT(*) FROM documenti WHERE id=@id AND UtentiId=@utentiId AND AziendeId=@aziendaId",
+            connection)
+            command.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
+            command.Parameters.Add("@utentiId", MySqlDbType.Int64).Value = CurrentOrderIdentity.UtentiId
+            command.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
+            Return Convert.ToInt32(command.ExecuteScalar()) = 1
+        End Using
     End Function
 
     Private Function SafeInt(ByVal value As Object, ByVal fallback As Integer) As Integer

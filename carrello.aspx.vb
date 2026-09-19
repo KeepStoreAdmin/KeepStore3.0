@@ -191,6 +191,10 @@ End Class
 Private Function GenerateCheckoutToken() As String
     Dim loginId As Long = GetLoginIdSafe(0)
     If loginId <= 0 Then Throw New InvalidOperationException("Authenticated checkout is required.")
+    Dim orderIdentity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+    If orderIdentity Is Nothing OrElse orderIdentity.LoginId <> loginId Then
+        Throw New InvalidOperationException("Authenticated storefront checkout context is not valid.")
+    End If
 
     Dim requestId As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
     Dim normalizedRequestId As String = String.Empty
@@ -202,11 +206,15 @@ Private Function GenerateCheckoutToken() As String
     Dim payloadFingerprint As String = String.Empty
     Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
         connection.Open()
+        If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, orderIdentity) Then
+            Throw New InvalidOperationException("Authenticated storefront checkout context is not valid.")
+        End If
 
         ' A ViewState restored from a page rendered before an already completed
         ' checkout must not reuse that durable key for a new cart.
         Dim existing As OrderDurableIdempotencyRecord =
-            OrderDurableIdempotencyService.TryReadCompleted(connection, normalizedRequestId, loginId)
+            OrderDurableIdempotencyService.TryReadCompleted(
+                connection, normalizedRequestId, loginId, orderIdentity.CompanyId)
         If existing IsNot Nothing AndAlso
            (existing.Status = OrderDurableClaimStatus.CompletedReplay OrElse
             existing.Status = OrderDurableClaimStatus.RetryRequired) Then
@@ -214,10 +222,12 @@ Private Function GenerateCheckoutToken() As String
             ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
         End If
 
-        payloadFingerprint = BuildCheckoutPayloadFingerprint(connection, Nothing, loginId, False)
+        payloadFingerprint = BuildCheckoutPayloadFingerprint(connection, Nothing, orderIdentity, False)
     End Using
 
-    Dim payload As String = "v2|" & normalizedRequestId & "|" &
+    Dim payload As String = "v3|" & normalizedRequestId & "|" &
+        orderIdentity.DatabaseScopeKey & "|" &
+        orderIdentity.CompanyId.ToString(CultureInfo.InvariantCulture) & "|" &
         loginId.ToString(CultureInfo.InvariantCulture) & "|" &
         DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture) & "|" &
         payloadFingerprint
@@ -233,9 +243,9 @@ Private Function GenerateCheckoutToken() As String
 End Function
 
 Private Function BuildCheckoutPayloadFingerprint(ByVal connection As MySqlConnection,
-                                                 ByVal transaction As MySqlTransaction,
-                                                 ByVal loginId As Long,
-                                                 ByVal lockCart As Boolean) As String
+                                                  ByVal transaction As MySqlTransaction,
+                                                  ByVal identity As OrderStorefrontIdentity,
+                                                  ByVal lockCart As Boolean) As String
     Dim optionsFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
         GetSessionInt("Ordine_TipoDoc", 0),
         GetSessionInt("Ordine_Pagamento", 0),
@@ -258,8 +268,9 @@ Private Function BuildCheckoutPayloadFingerprint(ByVal connection As MySqlConnec
         FingerprintDbValue(Session("AbilitatoIvaReverseCharge")),
         FingerprintDbValue(Session("Iva_Vettori")))
     Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
-        connection, transaction, loginId, lockCart)
-    Return OrderDurableIdempotencyService.ComputePayloadFingerprint("checkout-v2", optionsFingerprint, cartFingerprint)
+        connection, transaction, identity.LoginId, lockCart)
+    Return OrderStorefrontContext.BuildCheckoutFingerprint(
+        identity, GetSessionInt("Ordine_TipoDoc", 0), optionsFingerprint, cartFingerprint)
 End Function
 
 Private Function FingerprintDbValue(ByVal value As Object) As Object
