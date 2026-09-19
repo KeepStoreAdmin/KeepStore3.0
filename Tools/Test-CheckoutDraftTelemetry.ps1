@@ -110,6 +110,15 @@ Assert-Source (
     $durableTelemetry.Contains('PostCommitEmail')
 ) '10_REQUIRED_PHASES_ROUTE_TO_DURABLE_TELEMETRY'
 
+Assert-Source (
+    $durableTelemetry.Contains('BuildOrderToken') -and
+    $durableTelemetry.Contains('ProtectOrderToken') -and
+    $durableTelemetry.Contains('order-token-protect') -and
+    $cart.Contains('"order-token-payload", "ready"') -and
+    $cart.Contains('"order-token-protect", "entered"') -and
+    $cart.Contains('"not-claimed", "none", "BuildOrderToken"')
+) '11_ORDER_TOKEN_BOUNDARY_IS_EXPLICIT_AND_STATEFUL'
+
 $blockInvalidStart = $order.IndexOf('Private Sub BlockInvalidShippingAddress', [StringComparison]::Ordinal)
 $blockInvalidEnd = if ($blockInvalidStart -ge 0) { $order.IndexOf('End Sub', $blockInvalidStart, [StringComparison]::Ordinal) } else { -1 }
 $blockInvalid = if ($blockInvalidStart -ge 0 -and $blockInvalidEnd -gt $blockInvalidStart) {
@@ -118,7 +127,7 @@ $blockInvalid = if ($blockInvalidStart -ge 0 -and $blockInvalidEnd -gt $blockInv
 Assert-Source (
     -not [string]::IsNullOrWhiteSpace($blockInvalid) -and
     -not $blockInvalid.Contains('Session("SCEGLIINDIRIZZO") = Nothing')
-) '11_FAILURE_DOES_NOT_DESTROY_RETRY_ADDRESS_SELECTION'
+) '12_FAILURE_DOES_NOT_DESTROY_RETRY_ADDRESS_SELECTION'
 
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
 try {
@@ -141,9 +150,9 @@ try {
     $output | ForEach-Object { Write-Output $_ }
     if ($exitCode -ne 0) { throw ('HARNESS_EXIT=' + $exitCode) }
     $scenarioPasses = @($output | Where-Object { $_ -match '^PASS \d{2}_' }).Count
-    if ($scenarioPasses -ne 20) { throw ('EXPECTED_20_COMPILED_SCENARIOS_ACTUAL=' + $scenarioPasses) }
+    if ($scenarioPasses -ne 22) { throw ('EXPECTED_22_COMPILED_SCENARIOS_ACTUAL=' + $scenarioPasses) }
     if (@($output | Where-Object { $_ -match '^FAIL ' }).Count -ne 0) { throw 'COMPILED_SCENARIO_FAILURE' }
-    Write-Output 'PASS CHECKOUT_DRAFT_TELEMETRY_COMPILED=20/20'
+    Write-Output 'PASS CHECKOUT_DRAFT_TELEMETRY_COMPILED=22/22'
 } finally {
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force

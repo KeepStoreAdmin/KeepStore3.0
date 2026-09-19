@@ -27,6 +27,8 @@ Public Enum CheckoutTelemetryPhase
     Commit = 14
     ReceiptRedirect = 15
     PostCommitEmail = 16
+    BuildOrderToken = 17
+    ProtectOrderToken = 18
 End Enum
 
 ''' <summary>
@@ -138,6 +140,10 @@ Public NotInheritable Class CheckoutDurableTelemetry
 
     Public Shared Function MapPhase(ByVal phase As String) As CheckoutTelemetryPhase
         Dim value As String = If(phase, String.Empty).Trim().ToLowerInvariant()
+        If value.Contains("order-token-payload") Then Return CheckoutTelemetryPhase.BuildOrderToken
+        If value.Contains("order-token-protect") OrElse value.Contains("token-protection") Then
+            Return CheckoutTelemetryPhase.ProtectOrderToken
+        End If
         If value.Contains("confirm-get") OrElse value.Contains("confirmget") Then Return CheckoutTelemetryPhase.ConfirmGet
         If value.Contains("final-click") OrElse value.Contains("confirm-post") OrElse
            value.Contains("confirmpost") Then Return CheckoutTelemetryPhase.ConfirmPost

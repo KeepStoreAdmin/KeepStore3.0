@@ -233,6 +233,27 @@ Module CheckoutDraftTelemetryHarness
                 blockedPrimary, blockedPrimary, context, request2, "ConfirmPost", "failure",
                 Nothing, "not-claimed", "none", "none")
             Pass("20_REGRESSION_AND_LOGGER_FAIL_OPEN", fallbackWorked AndAlso loggerFailureDidNotThrow)
+
+            Pass("21_ORDER_TOKEN_PHASES_ARE_EXPLICIT",
+                 CheckoutDurableTelemetry.MapPhase("order-token-payload") = CheckoutTelemetryPhase.BuildOrderToken AndAlso
+                 CheckoutDurableTelemetry.MapPhase("order-token-protect") = CheckoutTelemetryPhase.ProtectOrderToken AndAlso
+                 CheckoutDurableTelemetry.MapPhase("order-token") = CheckoutTelemetryPhase.Unknown)
+
+            Dim tokenSecretMarker As String = "token-protection-secret@example.invalid"
+            Dim tokenFailure As New ApplicationException(
+                "wrapper", New CryptographicException(tokenSecretMarker))
+            Dim tokenTelemetryWritten As Boolean = CheckoutDurableTelemetry.WriteToPaths(
+                primary, fallback, context, request2, "order-token-protect", "failure",
+                tokenFailure, "not-claimed", "none", "BuildOrderToken")
+            content = File.ReadAllText(Path.Combine(primary, "checkout-durable.log"))
+            Pass("22_ORDER_TOKEN_FAILURE_IS_SANITIZED_AND_STATEFUL",
+                 tokenTelemetryWritten AndAlso
+                 CheckoutDurableTelemetry.ContainsCorrelation(
+                     primary, correlation, CheckoutTelemetryPhase.ProtectOrderToken, "CryptographicException") AndAlso
+                 content.Contains("idempotency=not-claimed") AndAlso
+                 content.Contains("transaction=none") AndAlso
+                 content.Contains("checkpoint=BuildOrderToken") AndAlso
+                 Not content.Contains(tokenSecretMarker))
         Finally
             If Directory.Exists(root) Then Directory.Delete(root, True)
         End Try
@@ -241,7 +262,7 @@ Module CheckoutDraftTelemetryHarness
             Console.Error.WriteLine("FAILURES=" & _failures.ToString(CultureInfo.InvariantCulture))
             Environment.ExitCode = 1
         Else
-            Console.WriteLine("PASS CHECKOUT_DRAFT_TELEMETRY_20_COMPILED_SCENARIOS")
+            Console.WriteLine("PASS CHECKOUT_DRAFT_TELEMETRY_22_COMPILED_SCENARIOS")
         End If
     End Sub
 

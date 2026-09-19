@@ -249,11 +249,33 @@ Private Function GenerateCheckoutToken() As String
         loginId.ToString(CultureInfo.InvariantCulture) & "|" &
         DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture) & "|" &
         payloadFingerprint & "|" & draft.Fingerprint
-    Dim protectedBytes() As Byte = System.Web.Security.MachineKey.Protect(
-        Encoding.UTF8.GetBytes(payload), CHECKOUT_TOKEN_PURPOSE)
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, normalizedRequestId, "order-token-payload", "ready", Nothing,
+        "not-claimed", "none", "BuildOrderToken")
+
+    Dim protectedBytes() As Byte = Nothing
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, normalizedRequestId, "order-token-protect", "entered", Nothing,
+        "not-claimed", "none", "BuildOrderToken")
+    Try
+        protectedBytes = System.Web.Security.MachineKey.Protect(
+            Encoding.UTF8.GetBytes(payload), CHECKOUT_TOKEN_PURPOSE)
+    Catch ex As Exception
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "order-token-protect", "failure", ex,
+            "not-claimed", "none", "BuildOrderToken")
+        Throw
+    End Try
     If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then
-        Throw New InvalidOperationException("Checkout token protection failed.")
+        Dim protectionFailure As New InvalidOperationException("Checkout token protection failed.")
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "order-token-protect", "failure", protectionFailure,
+            "not-claimed", "none", "BuildOrderToken")
+        Throw protectionFailure
     End If
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, normalizedRequestId, "order-token-protect", "passed", Nothing,
+        "not-claimed", "none", "ProtectOrderToken")
 
     Dim b64 As String = Convert.ToBase64String(protectedBytes)
     b64 = b64.Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
