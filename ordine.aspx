@@ -235,7 +235,7 @@
                     <asp:Literal ID="litOrderReceipt" runat="server"></asp:Literal>
                 </asp:Panel>
 
-                        <asp:Panel ID="Panel2" runat="server" Visible="false">
+                        <asp:Panel ID="Panel2" runat="server" ClientIDMode="Static" Visible="false" role="alert" aria-live="assertive" tabindex="-1">
                             <div class="ks-alert ks-alert-danger">
                                 <div style="font-weight:700; margin-bottom:6px;">Non è stato possibile confermare l'ordine.</div>
                                 <div>Il carrello è rimasto invariato. Riprova tra qualche istante.</div>

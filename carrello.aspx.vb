@@ -176,11 +176,14 @@ End Function
 
 ' === HARDENING HELPERS (VB2012 safe) ===
 Private Const CHECKOUT_TOKEN_PURPOSE As String = "KeepStore.OrderCheckout.Idempotency.V1"
+Private Const CHECKOUT_SUBMIT_CSRF_PURPOSE As String = "KeepStore.OrderCheckout.SubmitCsrf.V1"
+Private Const CHECKOUT_SUBMIT_VALIDATION_GROUP As String = "checkoutSubmit"
 Private Const CHECKOUT_REQUEST_VIEWSTATE_KEY As String = "CheckoutRequestId"
 Private Const SessCheckoutStep As String = "CartCheckoutStep"
 Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare con il checkout."
 Private Const OrderNotesMaxLength As Integer = 255
 Private Const OrderNotesLimitMessage As String = "Le note dell'ordine superano il limite massimo di 255 caratteri. Riduci il testo e riprova."
+Private Const CheckoutTechnicalErrorMessage As String = "Non è stato possibile inviare l'ordine. Il carrello è rimasto invariato. Riprova tra qualche istante; se il problema continua, contatta l'assistenza."
 
 Private Class CityRegistryAddressOption
     Public Property Cap As String
@@ -292,7 +295,84 @@ Private Sub RedirectToOrdine()
     Session("Ordine_FromCheckout") = 1
 
     Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
-    Response.Redirect(url, True)
+    DispatchCheckoutProcessing(url)
+End Sub
+
+Private Sub EnsureCheckoutSubmitCsrfToken()
+    If hfCheckoutSubmitToken Is Nothing OrElse Session Is Nothing Then Return
+
+    Dim requestId As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
+    Dim normalizedRequestId As String = String.Empty
+    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) Then
+        hfCheckoutSubmitToken.Value = ""
+        Return
+    End If
+
+    Dim clearBytes() As Byte = Nothing
+    Dim protectedBytes() As Byte = Nothing
+    Try
+        Dim payload As String = "v1|" & Convert.ToString(Session.SessionID) & "|" &
+            GetLoginIdSafe(0).ToString(CultureInfo.InvariantCulture) & "|" & normalizedRequestId
+        clearBytes = Encoding.UTF8.GetBytes(payload)
+        protectedBytes = System.Web.Security.MachineKey.Protect(clearBytes, CHECKOUT_SUBMIT_CSRF_PURPOSE)
+        If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then
+            hfCheckoutSubmitToken.Value = ""
+            Return
+        End If
+        hfCheckoutSubmitToken.Value = Convert.ToBase64String(protectedBytes).
+            Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
+    Catch ex As Exception
+        hfCheckoutSubmitToken.Value = ""
+        LogCheckoutSubmitFailure(ex, "csrf-token")
+    Finally
+        If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
+        If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
+    End Try
+End Sub
+
+Private Function ValidateCheckoutSubmitCsrfToken() As Boolean
+    If hfCheckoutSubmitToken Is Nothing OrElse Session Is Nothing Then Return False
+
+    Dim protectedBytes() As Byte = Nothing
+    Dim clearBytes() As Byte = Nothing
+    Try
+        Dim encoded As String = Convert.ToString(hfCheckoutSubmitToken.Value).Trim().
+            Replace("-"c, "+"c).Replace("_"c, "/"c)
+        Select Case encoded.Length Mod 4
+            Case 0
+            Case 2
+                encoded &= "=="
+            Case 3
+                encoded &= "="
+            Case Else
+                Return False
+        End Select
+
+        protectedBytes = Convert.FromBase64String(encoded)
+        clearBytes = System.Web.Security.MachineKey.Unprotect(protectedBytes, CHECKOUT_SUBMIT_CSRF_PURPOSE)
+        If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
+
+        Dim requestId As String = Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
+        Dim normalizedRequestId As String = String.Empty
+        If Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) Then Return False
+        Dim expected As String = "v1|" & Convert.ToString(Session.SessionID) & "|" &
+            GetLoginIdSafe(0).ToString(CultureInfo.InvariantCulture) & "|" & normalizedRequestId
+        Return String.Equals(Encoding.UTF8.GetString(clearBytes), expected, StringComparison.Ordinal)
+    Catch
+        Return False
+    Finally
+        If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
+        If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
+    End Try
+End Function
+
+Private Sub RejectCheckoutSubmitCsrf()
+    Response.Clear()
+    Response.StatusCode = 403
+    Response.StatusDescription = "Forbidden"
+    Response.TrySkipIisCustomErrors = True
+    Response.SuppressContent = True
+    Context.ApplicationInstance.CompleteRequest()
 End Sub
 
 Private Sub RedirectToOrdineWithQuery(ByVal extraQuery As String)
@@ -305,7 +385,22 @@ Private Sub RedirectToOrdineWithQuery(ByVal extraQuery As String)
         If extraQuery.StartsWith("?") Then extraQuery = extraQuery.Substring(1)
         url &= "&" & extraQuery
     End If
-    Response.Redirect(url, True)
+    DispatchCheckoutProcessing(url)
+End Sub
+
+Private Sub DispatchCheckoutProcessing(ByVal url As String)
+    If String.IsNullOrWhiteSpace(url) OrElse Not UrlIsLocal(url) Then
+        Throw New InvalidOperationException("Checkout processing destination is not valid.")
+    End If
+
+    Response.Clear()
+    Response.StatusCode = 303
+    Response.StatusDescription = "See Other"
+    Response.TrySkipIisCustomErrors = True
+    Response.RedirectLocation = url
+    Response.Headers("Location") = url
+    Response.SuppressContent = True
+    Context.ApplicationInstance.CompleteRequest()
 End Sub
 
 
@@ -2137,6 +2232,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         ' One logical checkout key is protected by the rendered ViewState. Two
         ' concurrent postbacks from this page therefore claim the same DB row.
         EnsureCheckoutRequestId()
+        EnsureCheckoutSubmitCsrfToken()
         Me.Title = Me.Title & " - Il tuo Carrello"
 		
         Dim LoginId As Integer = GetSessionInt("LoginId", 0)
@@ -2160,6 +2256,82 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         RenderClearCartAction()
 		
 		
+    End Sub
+
+    Private Sub ClearCheckoutSubmitError()
+        If pnlCheckoutSubmitError IsNot Nothing Then pnlCheckoutSubmitError.Visible = False
+        If litCheckoutSubmitError IsNot Nothing Then litCheckoutSubmitError.Text = ""
+    End Sub
+
+    Private Sub ShowCheckoutSubmitError(ByVal message As String, Optional ByVal returnToConfirm As Boolean = True)
+        Dim safeMessage As String = If(String.IsNullOrWhiteSpace(message), CheckoutTechnicalErrorMessage, message.Trim())
+        If pnlCheckoutSubmitError IsNot Nothing Then pnlCheckoutSubmitError.Visible = True
+        If litCheckoutSubmitError IsNot Nothing Then litCheckoutSubmitError.Text = HttpUtility.HtmlEncode(safeMessage)
+        If returnToConfirm Then
+            If tOrdine IsNot Nothing Then tOrdine.Visible = True
+            SetCheckoutStep("confirm")
+        End If
+        ApplyCheckoutStepUi()
+
+        Dim script As String =
+            "(function(){" &
+            "var s=document.getElementById('spinner_caricamento');if(s){s.style.display='none';}" &
+            "var b=document.querySelector('[id$=""btInviaOrdine""]');if(b){b.style.display='';b.removeAttribute('aria-disabled');}" &
+            "var e=document.getElementById('pnlCheckoutSubmitError');if(e){e.focus();}" &
+            "})();"
+        ScriptManager.RegisterStartupScript(Me, Me.GetType(), "checkoutSubmitFailure", script, True)
+    End Sub
+
+    Private Function HasInvalidCheckoutValidator() As Boolean
+        If Page Is Nothing OrElse Page.Validators Is Nothing Then Return False
+        Page.Validate(CHECKOUT_SUBMIT_VALIDATION_GROUP)
+        For Each validator As IValidator In Page.Validators
+            Dim groupedValidator As BaseValidator = TryCast(validator, BaseValidator)
+            If groupedValidator IsNot Nothing AndAlso
+               String.Equals(groupedValidator.ValidationGroup, CHECKOUT_SUBMIT_VALIDATION_GROUP, StringComparison.Ordinal) AndAlso
+               Not groupedValidator.IsValid Then Return True
+        Next
+        Return False
+    End Function
+
+    Protected Sub cvCheckoutSubmit_ServerValidate(ByVal source As Object, ByVal args As ServerValidateEventArgs)
+        Dim validator As CustomValidator = TryCast(source, CustomValidator)
+        If validator Is Nothing Then
+            args.IsValid = False
+            Return
+        End If
+
+        Select Case validator.ID
+            Case "cvCheckoutShippingAddress"
+                args.IsValid = Not IsBlankLabel(lblTab_CapSpedizione) AndAlso
+                    Not IsBlankLabel(lblTab_CittaSpedizione) AndAlso
+                    Not IsBlankLabel(lblTab_ProvinciaSpedizione)
+            Case "cvCheckoutShippingMethod"
+                args.IsValid = tbVettoriId IsNot Nothing AndAlso CleanCartAddressInput(tbVettoriId.Text) <> ""
+            Case "cvCheckoutPaymentMethod"
+                args.IsValid = tbPagamenti IsNot Nothing AndAlso CleanCartAddressInput(tbPagamenti.Text) <> ""
+            Case "cvCheckoutTerms"
+                args.IsValid = TermsConsentAccepted()
+            Case Else
+                args.IsValid = False
+        End Select
+    End Sub
+
+    Private Sub LogCheckoutSubmitFailure(ByVal ex As Exception, ByVal phase As String)
+        Try
+            Dim effective As Exception = ex
+            While effective IsNot Nothing AndAlso effective.InnerException IsNot Nothing
+                effective = effective.InnerException
+            End While
+            Dim errorType As String = If(effective Is Nothing, "Exception", effective.GetType().Name)
+            Dim safePhase As String = If(String.IsNullOrWhiteSpace(phase), "unknown", phase.Trim())
+            KeepStoreLog.Error(
+                "checkout-submit",
+                "Checkout submit failed. phase=" & safePhase & "; errorType=" & errorType & ".",
+                Nothing,
+                HttpContext.Current)
+        Catch
+        End Try
     End Sub
 
     Protected Sub Repeater1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Repeater1.PreRender
@@ -2379,8 +2551,8 @@ If buonoTot > 0 Then
             'test = test2 + Session("Ordine_DescrizioneBuonoSconto")
 
         Catch ex As Exception
-        LogEx(ex, "SendOrder")
-
+            LogCheckoutSubmitFailure(ex, "order-token")
+            ShowCheckoutSubmitError(CheckoutTechnicalErrorMessage)
         End Try
 
     End Sub
@@ -4984,15 +5156,40 @@ End Sub
 
 
 Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btInviaOrdine.Click
-    If Not IsAddressEditorActionAllowed(sender) Then Return
     If GetLoginIdSafe(0) <= 0 Then
         Session.Item("StavonelCarrello") = 1
         SafeRedirectLocal("/carrello.aspx?loginrequired=1#ksCartLoginRequired")
         Return
     End If
+    If Not ValidateCheckoutSubmitCsrfToken() Then
+        RejectCheckoutSubmitCsrf()
+        Return
+    End If
+    If Not IsAddressEditorActionAllowed(sender) Then Return
+    ClearCheckoutSubmitError()
     If Not IsCheckoutConfirmStep() Then
         SetCheckoutStep("checkout")
         SetAddressSelectionMessage("Rivedi il riepilogo finale prima di confermare l'ordine.")
+        ApplyCheckoutStepUi()
+        Return
+    End If
+    If HasInvalidCheckoutValidator() Then
+        ShowCheckoutSubmitError("Controlla i campi evidenziati prima di inviare l'ordine.")
+        Return
+    End If
+    Dim checkoutCart As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+    If checkoutCart Is Nothing OrElse Not checkoutCart.LoadSucceeded Then
+        ShowCheckoutSubmitError(CheckoutTechnicalErrorMessage)
+        Return
+    End If
+    If checkoutCart.GetAllItems().Rows.Count = 0 Then
+        SetCheckoutStep("cart")
+        If tOrdine IsNot Nothing Then tOrdine.Visible = False
+        ShowCheckoutSubmitError("Il carrello è vuoto. Aggiungi almeno un articolo prima di inviare l'ordine.", False)
+        Return
+    End If
+    If Not ValidateCheckoutBeforeConfirm() Then
+        SetCheckoutStep("checkout")
         ApplyCheckoutStepUi()
         Return
     End If
@@ -5048,8 +5245,9 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         End If
 
     Catch ex As Exception
-        LogEx(ex, "btInviaOrdine_Click")
-        ' (mantengo logica originale: nessun messaggio utente)
+        LogCheckoutSubmitFailure(ex, "pre-dispatch")
+        ShowCheckoutSubmitError(CheckoutTechnicalErrorMessage)
+        Return
     End Try
 
     If shouldSendOrder AndAlso Not _cartPriceRevalidationBlockedThisRequest Then
@@ -5059,6 +5257,11 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
         If TryDispatchCurrentCheckoutStockFailure() Then Return
         Cookie = "N"
         SendOrder()
+        Return
+    End If
+
+    If Not _cartPriceRevalidationBlockedThisRequest Then
+        ShowCheckoutSubmitError("Controlla le quantità nel carrello prima di inviare l'ordine.")
     End If
     End Sub
 

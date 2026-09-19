@@ -164,8 +164,15 @@ Private Function GetExactCaseQueryString(ByVal key As String, Optional ByVal max
 End Function
 
 Private Sub ReturnToCartAfterPayloadMismatch()
-    Session(CartPriceRevalidationHelper.SessionMessageKey) =
-        "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine."
+    ReturnToCartWithReviewMessage(
+        "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine.")
+End Sub
+
+Private Sub ReturnToCartWithReviewMessage(ByVal message As String)
+    Session(CartPriceRevalidationHelper.SessionMessageKey) = If(
+        String.IsNullOrWhiteSpace(message),
+        "Non è stato possibile confermare l'ordine. Rivedi il carrello e riprova.",
+        message.Trim())
     Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
 End Sub
@@ -463,6 +470,29 @@ End Sub
     Private Sub ShowDurableCheckoutTechnicalFailure()
         Me.Panel1.Visible = False
         Me.Panel2.Visible = True
+        ScriptManager.RegisterStartupScript(
+            Me,
+            Me.GetType(),
+            "focusDurableCheckoutFailure",
+            "setTimeout(function(){var e=document.getElementById('Panel2');if(e){e.focus();}},0);",
+            True)
+    End Sub
+
+    Private Sub LogDurableCheckoutFailure(ByVal failure As Exception, ByVal phase As String)
+        Try
+            Dim effective As Exception = failure
+            While effective IsNot Nothing AndAlso effective.InnerException IsNot Nothing
+                effective = effective.InnerException
+            End While
+            Dim errorType As String = If(effective Is Nothing, "Exception", effective.GetType().Name)
+            Dim safePhase As String = If(String.IsNullOrWhiteSpace(phase), "unknown", phase.Trim())
+            KeepStoreLog.Error(
+                "ordine.aspx",
+                "Checkout confirmation failed. phase=" & safePhase & "; errorType=" & errorType & ".",
+                Nothing,
+                HttpContext.Current)
+        Catch
+        End Try
     End Sub
 
     Private Function RenderCompletedOrder(ByVal conn As MySqlConnection,
@@ -590,7 +620,7 @@ End Sub
 
     Private Sub HandleOrderConfirmationGet(ByVal identity As OrderStorefrontIdentity)
         If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
-            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+            ReturnToCartWithReviewMessage("La richiesta di conferma non è valida. Rivedi il carrello e riprova.")
             Return
         End If
 
@@ -599,7 +629,7 @@ End Sub
             GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024),
             identity,
             requestId) Then
-            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+            ReturnToCartWithReviewMessage("La conferma dell'ordine non è più valida. Rivedi il carrello e riprova.")
             Return
         End If
 
@@ -607,7 +637,7 @@ End Sub
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
                 If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then
-                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                    ReturnToCartWithReviewMessage("Non è stato possibile verificare l'ordine completato. Rivedi il carrello e riprova.")
                     Return
                 End If
                 Dim record As OrderDurableIdempotencyRecord =
@@ -616,7 +646,7 @@ End Sub
                 If record Is Nothing OrElse
                    record.Status <> OrderDurableClaimStatus.CompletedReplay OrElse
                    Not RenderCompletedOrder(conn, record, identity) Then
-                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                    ReturnToCartWithReviewMessage("La conferma richiesta non è disponibile per questo account. Rivedi il carrello e riprova.")
                     Return
                 End If
             End Using
@@ -655,7 +685,7 @@ Dim checkoutRequestId As String = String.Empty
 Dim checkoutPayloadFingerprint As String = String.Empty
 Dim isLegacyCheckoutToken As Boolean = False
 If Not TryValidateCheckoutToken(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
-    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+    ReturnToCartWithReviewMessage("La sessione di conferma non è più valida. Rivedi il carrello e invia nuovamente l'ordine.")
     Exit Sub
 End If
 
@@ -741,7 +771,7 @@ End If
                     ' A missing checkout-session field must not mask an owner-scoped
                     ' stock failure with the generic document-history redirect.
                     If RouteCurrentInventoryFailureToCart(conn, LoginId) Then Exit Sub
-                    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                    ReturnToCartWithReviewMessage("I dati necessari per confermare l'ordine sono incompleti. Rivedi spedizione e pagamento e riprova.")
                     Exit Sub
                 End If
 
@@ -858,7 +888,7 @@ End If
                             trns.Rollback()
                             trns.Dispose()
                             trns = Nothing
-                            CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+                            ReturnToCartWithReviewMessage("Il carrello è vuoto. Aggiungi almeno un articolo prima di inviare l'ordine.")
                             Exit Sub
                         End If
 
@@ -1157,10 +1187,7 @@ End If
                 End If
 
                 ShowDurableCheckoutTechnicalFailure()
-                Try
-                    KeepStoreLog.Error("ordine.aspx", "Errore conferma ordine", ex, HttpContext.Current)
-                Catch
-                End Try
+                LogDurableCheckoutFailure(ex, "transaction")
 
             Finally
                 If trns IsNot Nothing Then trns.Dispose()

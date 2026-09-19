@@ -64,6 +64,37 @@ Friend NotInheritable Class SubmitResult
     Public EmailFailed As Boolean
 End Class
 
+Friend NotInheritable Class AccountIdentityRow
+    Public UtentiId As Long
+    Public PriceListId As Integer
+End Class
+
+Friend NotInheritable Class SyntheticAccountIdentityResolver
+    Private Sub New()
+    End Sub
+
+    Public Shared Function TryResolve(ByVal rows As IEnumerable(Of AccountIdentityRow),
+                                      ByRef utentiId As Long,
+                                      ByRef priceListId As Integer) As Boolean
+        utentiId = 0
+        priceListId = 0
+        If rows Is Nothing Then Return False
+
+        Dim found As Boolean = False
+        For Each row As AccountIdentityRow In rows
+            If row Is Nothing OrElse row.UtentiId <= 0 Then Return False
+            If Not found Then
+                utentiId = row.UtentiId
+                priceListId = row.PriceListId
+                found = True
+            ElseIf row.UtentiId <> utentiId OrElse row.PriceListId <> priceListId Then
+                Return False
+            End If
+        Next
+        Return found
+    End Function
+End Class
+
 Friend NotInheritable Class SyntheticOrderEngine
     Private ReadOnly _gate As New Object()
     Private _nextDocumentNumber As Integer = 700
@@ -218,6 +249,23 @@ Module OrderStorefrontProvenanceHarness
         Dim low As Integer = Math.Min(ca.Order.Number, cb.Order.Number)
         Dim high As Integer = Math.Max(ca.Order.Number, cb.Order.Number)
         Assert(low + 1 = high AndAlso ca.Order.Id <> cb.Order.Id, "27_CONCURRENT_GLOBAL_NUMBERING_UNIQUE_CONTIGUOUS")
+
+        Dim resolvedUtentiId As Long = 0
+        Dim resolvedPriceListId As Integer = 0
+        Dim duplicatePhysicalRows As New List(Of AccountIdentityRow) From {
+            New AccountIdentityRow() With {.UtentiId = 501, .PriceListId = 4},
+            New AccountIdentityRow() With {.UtentiId = 501, .PriceListId = 4}
+        }
+        Assert(SyntheticAccountIdentityResolver.TryResolve(duplicatePhysicalRows, resolvedUtentiId, resolvedPriceListId) AndAlso
+               resolvedUtentiId = 501 AndAlso resolvedPriceListId = 4,
+               "28_DUPLICATE_PHYSICAL_ACCOUNT_ROWS_ACCEPTED")
+
+        Dim distinctLogicalRows As New List(Of AccountIdentityRow) From {
+            New AccountIdentityRow() With {.UtentiId = 501, .PriceListId = 4},
+            New AccountIdentityRow() With {.UtentiId = 501, .PriceListId = 5}
+        }
+        Assert(Not SyntheticAccountIdentityResolver.TryResolve(distinctLogicalRows, resolvedUtentiId, resolvedPriceListId),
+               "29_DISTINCT_LOGICAL_ACCOUNT_TUPLES_REJECTED")
 
         If _failures > 0 Then Environment.ExitCode = 1
     End Sub

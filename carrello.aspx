@@ -360,6 +360,12 @@
                 <asp:Literal ID="litCartPriceRevalidation" runat="server" />
             </asp:Panel>
 
+            <asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false" CssClass="ks-alert ks-alert-danger mb-3" role="alert" aria-live="assertive" tabindex="-1">
+                <strong>Ordine non inviato.</strong>
+                <span class="d-block mt-1"><asp:Literal ID="litCheckoutSubmitError" runat="server" /></span>
+                <asp:ValidationSummary ID="vsCheckoutSubmit" runat="server" ValidationGroup="checkoutSubmit" CssClass="mt-2" HeaderText="Controlla prima di riprovare:" />
+            </asp:Panel>
+
             <span id="ksCartStockError" aria-hidden="true"></span>
             <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" aria-labelledby="ksCartStockErrorTitle" tabindex="-1">
                 <span class="ks-order-inventory-alert__icon" aria-hidden="true">
@@ -1210,6 +1216,11 @@
             </div>
         </div>
         <asp:Panel ID="pnlCheckoutConfirm" runat="server" Visible="false" CssClass="wrap ks-checkout-section ks-final-confirm-section">
+            <asp:HiddenField ID="hfCheckoutSubmitToken" runat="server" />
+            <asp:CustomValidator ID="cvCheckoutShippingAddress" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Completa un indirizzo di spedizione valido." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
+            <asp:CustomValidator ID="cvCheckoutShippingMethod" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Seleziona un metodo di spedizione." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
+            <asp:CustomValidator ID="cvCheckoutPaymentMethod" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Seleziona un metodo di pagamento." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
+            <asp:CustomValidator ID="cvCheckoutTerms" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Accetta le Condizioni Generali di Vendita." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
             <div class="ks-confirm-copy">
                 <h5 class="title fw-semibold">Riepilogo finale</h5>
                 <p class="body-text-3 text-main-2">Verifica indirizzo, spedizione, pagamento, note e importi prima di confermare. Nessun pagamento viene avviato prima di questo pulsante finale.</p>
@@ -1270,7 +1281,7 @@
                             </div>
                             <asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" />
                         </div>
-                        <asp:LinkButton CausesValidation="false" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">Invia ordine con obbligo di pagamento</asp:LinkButton>
+                        <asp:LinkButton CausesValidation="true" ValidationGroup="checkoutSubmit" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">Invia ordine con obbligo di pagamento</asp:LinkButton>
                     <%else%>
                         <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
                     <%end if%>

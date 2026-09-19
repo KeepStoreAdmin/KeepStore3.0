@@ -36,6 +36,7 @@ $canonicalProcedure = Read-RepoFile 'Database Taikun\Migrations\20260911_ORDER_I
 Assert-Source ($context -match 'CartStorefrontOwnerContext\.Resolve\(context\)') 'ORDER_CONTEXT_SERVER_TENANT'
 Assert-Source ($context -match 'DatabaseScopeKey') 'ORDER_CONTEXT_DATABASE_SCOPE'
 Assert-Source ($context -match 'vlogin WHERE id=\?loginId AND AziendeID=\?aziendaId') 'ORDER_CONTEXT_ACCOUNT_COMPANY_VERIFIED'
+Assert-Source ($context -match '(?i)SELECT\s+DISTINCT\s+utentiid\s*,\s*COALESCE\s*\(\s*listino\s*,\s*0\s*\)\s+AS\s+listino') 'ORDER_CONTEXT_DISTINCT_LOGICAL_IDENTITY'
 Assert-Source ($context -match '"checkout-v3".*identity\.DatabaseScopeKey' -or $context -match '(?s)"checkout-v3".*identity\.DatabaseScopeKey') 'ORDER_FINGERPRINT_DATABASE_COMPANY_OWNER'
 Assert-Source ($cart -match '"v3\|".*DatabaseScopeKey' -or $cart -match '(?s)"v3\|".*DatabaseScopeKey') 'CHECKOUT_TOKEN_TENANT_BOUND'
 Assert-Source ($confirmation -match '"v2\|".*databaseScope' -or $confirmation -match '(?s)"v2\|".*databaseScope') 'CONFIRMATION_TOKEN_TENANT_BOUND'

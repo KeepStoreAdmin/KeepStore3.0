@@ -53,7 +53,7 @@ Public NotInheritable Class OrderStorefrontContext
            identity.CompanyId <= 0 OrElse identity.LoginId <= 0 Then Return False
 
         Const sql As String =
-            "SELECT utentiid, COALESCE(listino,0) AS listino " &
+            "SELECT DISTINCT utentiid, COALESCE(listino,0) AS listino " &
             "FROM vlogin WHERE id=?loginId AND AziendeID=?aziendaId LIMIT 2"
         Using command As New MySqlCommand(sql, connection, transaction)
             command.Parameters.Add("?loginId", MySqlDbType.Int64).Value = identity.LoginId

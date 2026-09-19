@@ -53,7 +53,7 @@ Public NotInheritable Class CheckoutTerminalOutcomeDispatcher
             Case CheckoutTerminalOutcome.StockFailure
                 Return "carrello.aspx?stockerror=1#ksCartStockError"
             Case CheckoutTerminalOutcome.LoginRequired
-                Return "accessonegato.aspx"
+                Return "carrello.aspx?loginrequired=1#ksCartLoginRequired"
             Case CheckoutTerminalOutcome.PriceChanged
                 Return "carrello.aspx?pricechanged=1"
             Case CheckoutTerminalOutcome.AddressError
