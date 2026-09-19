@@ -205,7 +205,12 @@ Private Function GenerateCheckoutToken() As String
         normalizedRequestId = OrderDurableIdempotencyService.CreateRequestId()
         ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = normalizedRequestId
     End If
-    Dim payloadFingerprint As String = String.Empty
+    Dim draft As CheckoutDraftState = Nothing
+    If Not CheckoutDraftService.TryRead(
+        HttpContext.Current, orderIdentity, normalizedRequestId, String.Empty, draft) Then
+        Throw New InvalidOperationException("Authoritative checkout draft is not available.")
+    End If
+    Dim payloadFingerprint As String = draft.PayloadFingerprint
     Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
         connection.Open()
         If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, orderIdentity) Then
@@ -229,17 +234,21 @@ Private Function GenerateCheckoutToken() As String
         CheckoutFailureRecoveryService.TracePhase(
             HttpContext.Current, normalizedRequestId, "08-storefront-context", "resolved")
 
-        payloadFingerprint = BuildCheckoutPayloadFingerprint(connection, Nothing, orderIdentity, False)
+        Dim resolvedAddress As CheckoutAddressSnapshot = Nothing
+        If Not CheckoutAddressService.TryResolve(
+            connection, Nothing, orderIdentity, draft.ShippingAddressId, resolvedAddress) Then
+            Throw New InvalidOperationException("Authoritative shipping address is not valid.")
+        End If
     End Using
     CheckoutFailureRecoveryService.TracePhase(
         HttpContext.Current, normalizedRequestId, "06-token-fingerprint", "ready")
 
-    Dim payload As String = "v3|" & normalizedRequestId & "|" &
+    Dim payload As String = "v4|" & normalizedRequestId & "|" &
         orderIdentity.DatabaseScopeKey & "|" &
         orderIdentity.CompanyId.ToString(CultureInfo.InvariantCulture) & "|" &
         loginId.ToString(CultureInfo.InvariantCulture) & "|" &
         DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture) & "|" &
-        payloadFingerprint
+        payloadFingerprint & "|" & draft.Fingerprint
     Dim protectedBytes() As Byte = System.Web.Security.MachineKey.Protect(
         Encoding.UTF8.GetBytes(payload), CHECKOUT_TOKEN_PURPOSE)
     If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then
@@ -285,6 +294,225 @@ End Function
 Private Function FingerprintDbValue(ByVal value As Object) As Object
     If value Is Nothing OrElse value Is DBNull.Value Then Return DBNull.Value
     Return value
+End Function
+
+Private Sub StoreCheckoutOrderSession(ByVal tipoDocumento As Integer, ByVal documento As String)
+    Session("Ordine_TipoDoc") = tipoDocumento
+    Session("Ordine_Documento") = documento
+    Session("Ordine_Pagamento") = SafeIntFromDb(If(tbPagamenti Is Nothing, "", tbPagamenti.Text), 0)
+    StorePaymentPolicySession(GetSessionInt("Ordine_Pagamento", 0))
+    Session("Ordine_BancaSellaGestPay_ShopId") = If(tbShopIdGestPay Is Nothing, "", tbShopIdGestPay.Text)
+    Session("Ordine_Vettore") = SafeIntFromDb(If(tbVettoriId Is Nothing, "", tbVettoriId.Text), 0)
+    Session("Ordine_SpeseSped") = ParseDecimalForDb(If(lblSpeseSped Is Nothing, Nothing, lblSpeseSped.Text), 0D)
+    Session("Ordine_SpeseAss") = ParseDecimalForDb(If(lblSpeseAss Is Nothing, Nothing, lblSpeseAss.Text), 0D)
+    Session("Ordine_SpesePag") = ParseDecimalForDb(If(lblPagamento Is Nothing, Nothing, lblPagamento.Text), 0D)
+    Session("Ordine_Totale_Documento") = ParseDecimalForDb(If(lblTotale Is Nothing, Nothing, lblTotale.Text), 0D)
+
+    Dim couponTaxable As Decimal = ParseDecimalForDb(If(lblBuonoSconto Is Nothing, Nothing, lblBuonoSconto.Text), 0D)
+    Dim couponVat As Decimal = ParseDecimalForDb(If(lblBuonoScontoIVA Is Nothing, Nothing, lblBuonoScontoIVA.Text), 0D)
+    If couponTaxable + couponVat <> 0D Then
+        Dim description1 As String = String.Empty
+        Dim description2 As String = String.Empty
+        If GV_BuoniSconti IsNot Nothing AndAlso GV_BuoniSconti.Rows.Count > 0 Then
+            Dim row As GridViewRow = GV_BuoniSconti.Rows(0)
+            Dim label1 As Label = TryCast(row.FindControl("lbl_Descrizione1_BuonoSconto"), Label)
+            Dim label2 As Label = TryCast(row.FindControl("lbl_Descrizione2_BuonoSconto"), Label)
+            If label1 IsNot Nothing Then description1 = label1.Text
+            If label2 IsNot Nothing Then description2 = label2.Text
+        End If
+        Session("Ordine_DescrizioneBuonoSconto") =
+            (description1 & " " & description2).Trim() &
+            " per un valore di " & FormatCurrencyIt(CDbl(couponTaxable + couponVat)) &
+            " Codice Applicato: " & If(TB_BuonoSconto Is Nothing, "", TB_BuonoSconto.Text)
+        Session("Ordine_TotaleBuonoSconto") = couponTaxable + couponVat
+        Session("Ordine_TotaleBuonoScontoImponibile") = couponTaxable
+        Session("Ordine_BuonoScontoIdIva") = preleva_IdIva(GetSessionInt("Iva_Utente", -1))
+        Session("Ordine_BuonoScontoValoreIva") = preleva_ValoreIva(GetSessionInt("Iva_Utente", -1))
+        Session("Ordine_CodiceBuonoSconto") = If(TB_BuonoSconto Is Nothing, "", TB_BuonoSconto.Text)
+    Else
+        Session("Ordine_DescrizioneBuonoSconto") = String.Empty
+        Session("Ordine_TotaleBuonoSconto") = 0D
+        Session("Ordine_TotaleBuonoScontoImponibile") = 0D
+        Session("Ordine_BuonoScontoIdIva") = -1
+        Session("Ordine_BuonoScontoValoreIva") = 0D
+        Session("Ordine_CodiceBuonoSconto") = String.Empty
+    End If
+    Session("NoteDocumento") = If(txtNoteSpedizione Is Nothing, "", CleanCartAddressInput(txtNoteSpedizione.Text))
+End Sub
+
+Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Integer,
+                                                      ByRef draft As CheckoutDraftState,
+                                                      ByRef failureReason As CheckoutFailureReason) As Boolean
+    draft = Nothing
+    failureReason = CheckoutFailureReason.CartInvalid
+    EnsureCheckoutRequestId()
+    Dim requestId As String = CurrentCheckoutRequestId()
+    Dim normalizedRequestId As String = String.Empty
+    If Not OrderDurableIdempotencyService.TryNormalizeRequestId(requestId, normalizedRequestId) Then Return False
+
+    Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+    If identity Is Nothing OrElse Not identity.IsComplete Then Return False
+    Dim deliveryId As Integer = GetSessionInt("Ordine_Vettore", 0)
+    Dim paymentId As Integer = GetSessionInt("Ordine_Pagamento", 0)
+    Dim shippingAddressId As Integer = GetCartShippingAddressId()
+
+    Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+        connection.Open()
+        If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, identity) Then Return False
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "VerifyAccount", "passed", Nothing,
+            "not-claimed", "none", "VerifyAccount")
+
+        Dim address As CheckoutAddressSnapshot = Nothing
+        If Not CheckoutAddressService.TryResolve(connection, Nothing, identity, shippingAddressId, address) Then
+            failureReason = CheckoutFailureReason.ShippingAddressInvalid
+            CheckoutFailureRecoveryService.TracePhase(
+                HttpContext.Current, normalizedRequestId, "ValidateAddress", "rejected", Nothing,
+                "not-claimed", "none", "VerifyAccount")
+            Return False
+        End If
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "ValidateAddress", "passed", Nothing,
+            "not-claimed", "none", "ValidateAddress")
+        If Not IsAuthoritativeDeliveryValid(connection, identity, deliveryId) Then
+            failureReason = CheckoutFailureReason.ShippingMethodMissing
+            CheckoutFailureRecoveryService.TracePhase(
+                HttpContext.Current, normalizedRequestId, "ValidateDelivery", "rejected", Nothing,
+                "not-claimed", "none", "ValidateAddress")
+            Return False
+        End If
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "ValidateDelivery", "passed", Nothing,
+            "not-claimed", "none", "ValidateDelivery")
+        If Not IsAuthoritativePaymentValid(connection, identity, paymentId) Then
+            failureReason = CheckoutFailureReason.PaymentMethodMissing
+            CheckoutFailureRecoveryService.TracePhase(
+                HttpContext.Current, normalizedRequestId, "ValidatePayment", "rejected", Nothing,
+                "not-claimed", "none", "ValidateDelivery")
+            Return False
+        End If
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "ValidatePayment", "passed", Nothing,
+            "not-claimed", "none", "ValidatePayment")
+
+        Dim subtotal As Decimal = ParseDecimalForDb(If(lblImponibile Is Nothing, Nothing, lblImponibile.Text), 0D)
+        Dim vat As Decimal = ParseDecimalForDb(If(lblIva Is Nothing, Nothing, lblIva.Text), 0D)
+        Dim shippingCost As Decimal = ParseDecimalForDb(Session("Ordine_SpeseSped"), 0D)
+        Dim insuranceCost As Decimal = ParseDecimalForDb(Session("Ordine_SpeseAss"), 0D)
+        Dim paymentCost As Decimal = ParseDecimalForDb(Session("Ordine_SpesePag"), 0D)
+        Dim discount As Decimal = ParseDecimalForDb(If(lblBuonoSconto Is Nothing, Nothing, lblBuonoSconto.Text), 0D)
+        Dim discountVat As Decimal = ParseDecimalForDb(If(lblBuonoScontoIVA Is Nothing, Nothing, lblBuonoScontoIVA.Text), 0D)
+        Dim total As Decimal = ParseDecimalForDb(Session("Ordine_Totale_Documento"), 0D)
+        Dim calculatedTotal As Decimal = subtotal + vat + shippingCost + insuranceCost + paymentCost + discount + discountVat
+        If Math.Abs(total - calculatedTotal) > 0.02D Then Return False
+
+        Dim couponFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
+            FingerprintDbValue(Session("Ordine_DescrizioneBuonoSconto")),
+            FingerprintDbValue(Session("Ordine_TotaleBuonoScontoImponibile")),
+            FingerprintDbValue(Session("Ordine_CodiceBuonoSconto")),
+            FingerprintDbValue(Session("Ordine_BuonoScontoIdIva")),
+            FingerprintDbValue(Session("Ordine_BuonoScontoValoreIva")),
+            FingerprintDbValue(Session("Coupon_Arrotondamento")))
+        Dim optionsFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
+            tipoDocumento, paymentId, deliveryId, shippingCost, insuranceCost, paymentCost,
+            GetSessionInt("Ordine_Pagamento_OnLine", 0),
+            GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1),
+            GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1),
+            GetSessionInt("Ordine_InviaEmailOrdinePrimaPagamento", 1),
+            shippingAddressId, Convert.ToString(Session("NoteDocumento")),
+            FingerprintDbValue(Session("Ordine_DescrizioneBuonoSconto")),
+            FingerprintDbValue(Session("Ordine_TotaleBuonoScontoImponibile")),
+            FingerprintDbValue(Session("Ordine_CodiceBuonoSconto")),
+            FingerprintDbValue(Session("Ordine_BuonoScontoIdIva")),
+            FingerprintDbValue(Session("Ordine_BuonoScontoValoreIva")),
+            FingerprintDbValue(Session("Coupon_Arrotondamento")),
+            FingerprintDbValue(Session("AbilitatoIvaReverseCharge")),
+            FingerprintDbValue(Session("Iva_Vettori")))
+        Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
+            connection, Nothing, identity.LoginId, False)
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "ValidateCart", "passed", Nothing,
+            "not-claimed", "none", "ValidateCart")
+        Dim payloadFingerprint As String = OrderStorefrontContext.BuildCheckoutFingerprint(
+            identity, tipoDocumento, optionsFingerprint, cartFingerprint)
+        Dim nowUtc As DateTime = DateTime.UtcNow
+        draft = CheckoutDraftService.Seal(New CheckoutDraftState() With {
+            .IssuedUtc = nowUtc,
+            .ExpiresUtc = nowUtc.Add(CheckoutDraftService.Lifetime),
+            .DatabaseScopeKey = identity.DatabaseScopeKey,
+            .CompanyId = identity.CompanyId,
+            .LoginId = identity.LoginId,
+            .UtentiId = identity.UtentiId,
+            .BillingAddressId = identity.UtentiId,
+            .ShippingAddressId = shippingAddressId,
+            .TipoDocumentiId = tipoDocumento,
+            .DeliveryMethodId = deliveryId,
+            .PaymentMethodId = paymentId,
+            .PaymentOnline = GetSessionInt("Ordine_Pagamento_OnLine", 0),
+            .ConfirmBeforePayment = GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1),
+            .AllowLaterPayment = GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1),
+            .SendEmailBeforePayment = GetSessionInt("Ordine_InviaEmailOrdinePrimaPagamento", 1),
+            .InsuranceSelected = cbAssicurazione IsNot Nothing AndAlso cbAssicurazione.Checked,
+            .Notes = Convert.ToString(Session("NoteDocumento")),
+            .CouponCode = Convert.ToString(Session("Ordine_CodiceBuonoSconto")),
+            .CouponDescription = Convert.ToString(Session("Ordine_DescrizioneBuonoSconto")),
+            .CouponTaxableTotal = ParseDecimalForDb(Session("Ordine_TotaleBuonoScontoImponibile"), 0D),
+            .CouponVatId = GetSessionInt("Ordine_BuonoScontoIdIva", -1),
+            .CouponVatValue = ParseDecimalForDb(Session("Ordine_BuonoScontoValoreIva"), 0D),
+            .CouponRounding = ParseDecimalForDb(Session("Coupon_Arrotondamento"), 0D),
+            .ReverseChargeVat = ParseDecimalForDb(Session("AbilitatoIvaReverseCharge"), 0D),
+            .CarrierVat = ParseDecimalForDb(Session("Iva_Vettori"), 0D),
+            .CouponFingerprint = couponFingerprint,
+            .CartFingerprint = cartFingerprint,
+            .OptionsFingerprint = optionsFingerprint,
+            .PayloadFingerprint = payloadFingerprint,
+            .RequestId = normalizedRequestId,
+            .Subtotal = subtotal,
+            .Vat = vat,
+            .ShippingCost = shippingCost,
+            .InsuranceCost = insuranceCost,
+            .PaymentCost = paymentCost,
+            .Discount = discount,
+            .DiscountVat = discountVat,
+            .Total = total
+        })
+        CheckoutDraftService.Store(HttpContext.Current, draft)
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, normalizedRequestId, "ValidateDraft", "passed", Nothing,
+            "not-claimed", "none", "ValidateFingerprint")
+        Return True
+    End Using
+End Function
+
+Private Function IsAuthoritativeDeliveryValid(ByVal connection As MySqlConnection,
+                                              ByVal identity As OrderStorefrontIdentity,
+                                              ByVal deliveryId As Integer) As Boolean
+    If connection Is Nothing OrElse identity Is Nothing OrElse deliveryId = 0 Then Return False
+    Const sql As String =
+        "SELECT COUNT(DISTINCT id) FROM vettori " &
+        "WHERE id=?id AND AziendeId=?aziendaId AND Abilitato=1 AND Web=1"
+    Using command As New MySqlCommand(sql, connection)
+        command.Parameters.Add("?id", MySqlDbType.Int32).Value = deliveryId
+        command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = identity.CompanyId
+        Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) = 1
+    End Using
+End Function
+
+Private Function IsAuthoritativePaymentValid(ByVal connection As MySqlConnection,
+                                             ByVal identity As OrderStorefrontIdentity,
+                                             ByVal paymentId As Integer) As Boolean
+    If connection Is Nothing OrElse identity Is Nothing OrElse paymentId <= 0 Then Return False
+    Const sql As String =
+        "SELECT COUNT(DISTINCT id) FROM vpagamentitipo " &
+        "WHERE id=?id AND AziendeId=?aziendaId AND Abilitato=1 " &
+        "AND CostoMassimo>=?total AND (Web=1 OR UtenteID=?utentiId)"
+    Using command As New MySqlCommand(sql, connection)
+        command.Parameters.Add("?id", MySqlDbType.Int32).Value = paymentId
+        command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = identity.CompanyId
+        command.Parameters.Add("?total", MySqlDbType.Decimal).Value = ParseDecimalForDb(Session("Ordine_Totale_Documento"), 0D)
+        command.Parameters.Add("?utentiId", MySqlDbType.Int64).Value = identity.UtentiId
+        Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) = 1
+    End Using
 End Function
 
 Private Sub EnsureCheckoutRequestId()
@@ -1799,6 +2027,15 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Function
 
     Private Sub BindCheckoutConfirmSummary()
+        Dim authoritativeDraft As CheckoutDraftState = Nothing
+        Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+        If identity IsNot Nothing AndAlso identity.IsComplete AndAlso
+           CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current, identity, authoritativeDraft) Then
+            SetCartShippingAddressId(authoritativeDraft.ShippingAddressId)
+            SetCartShippingAddressIsManual(authoritativeDraft.ShippingAddressId > 0)
+            ApplyCurrentShippingAddress()
+            If lblTotale IsNot Nothing Then lblTotale.Text = FormatCurrencyIt(CDbl(authoritativeDraft.Total))
+        End If
         If lblConfirmBillingName IsNot Nothing Then lblConfirmBillingName.Text = LabelText(lblTab_RagioneSociale) & " " & LabelText(lblTab_Nome)
         If lblConfirmBillingAddress IsNot Nothing Then lblConfirmBillingAddress.Text = (LabelText(lblTab_Indirizzo) & " - " & LabelText(lblTab_Cap) & " " & LabelText(lblTab_Citta) & " " & LabelText(lblTab_Provincia)).Trim()
         If lblConfirmShippingName IsNot Nothing Then lblConfirmShippingName.Text = LabelText(lblTab_RagioneSocialeSpedizione) & " " & LabelText(lblTab_NomeSpedizione)
@@ -1844,20 +2081,17 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
     Private Function LoadAlternativeAddressRow(ByVal utentiId As Integer, ByVal addressId As Integer) As DataRow
         If utentiId <= 0 OrElse addressId <= 0 Then Return Nothing
-
+        Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+        If identity Is Nothing OrElse Not identity.IsComplete OrElse identity.UtentiId <> utentiId Then Return Nothing
         Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
             conn.Open()
-            Using cmd As New MySqlCommand("SELECT Id, RagioneSocialeA, NomeA, IndirizzoA, CapA, CittaA, ProvinciaA, Zona, TelefonoA, CellulareA, FaxA, Note, NazioneA, Predefinito FROM utentiindirizzi WHERE Id=@Id AND UtenteId=@UtentiId LIMIT 1", conn)
-                cmd.Parameters.AddWithValue("@Id", addressId)
-                cmd.Parameters.AddWithValue("@UtentiId", utentiId)
-                Using adp As New MySqlDataAdapter(cmd)
-                    Dim dt As New DataTable()
-                    adp.Fill(dt)
-                    If dt.Rows.Count = 0 Then Return Nothing
-                    Return dt.Rows(0)
-                End Using
-            End Using
+            If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Return Nothing
+            Dim table As DataTable = CheckoutAddressService.LoadAlternativeAddresses(conn, Nothing, identity)
+            For Each row As DataRow In table.Rows
+                If SafeIntFromDb(row("Id"), 0) = addressId Then Return row
+            Next
         End Using
+        Return Nothing
     End Function
 
     Private Sub FillCartAddressEditor(ByVal row As DataRow)
@@ -2157,6 +2391,12 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Dim utentiId As Integer = GetUtentiIdSafe(0)
         If utentiId > 0 Then
             FillTableInfo()
+            If Not Page.IsPostBack Then
+                ' A PRG/failure GET has no previous control tree. Rebuild the
+                ' authoritative owner-scoped list before PreRender can apply a
+                ' fallback and overwrite the selected address id.
+                BindLstDestinazioneLstScegliIndirizzo()
+            End If
         End If
     End If
     If String.Equals(Request.QueryString("addresserror"), "1", StringComparison.OrdinalIgnoreCase) Then
@@ -2318,6 +2558,12 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         If Not CheckoutFailureRecoveryService.TryConsumeFailure(HttpContext.Current, failure) OrElse
            failure Is Nothing Then Return
 
+        ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY) = OrderDurableIdempotencyService.CreateRequestId()
+        RestoreCheckoutDraftSelectionAfterPrg()
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, CurrentCheckoutRequestId(), "ConfirmGet", "recovered", Nothing,
+            "not-claimed", "none", "ValidateDraft")
+
         Select Case failure.Reason
             Case CheckoutFailureReason.ShippingAddressInvalid,
                  CheckoutFailureReason.ShippingMethodMissing,
@@ -2333,6 +2579,35 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
                 If tOrdine IsNot Nothing Then tOrdine.Visible = True
                 ShowCheckoutSubmitError(failure.Message)
         End Select
+    End Sub
+
+    Private Sub RestoreCheckoutDraftSelectionAfterPrg()
+        Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            Dim draft As CheckoutDraftState = Nothing
+            If identity Is Nothing OrElse Not identity.IsComplete OrElse
+               Not CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current, identity, draft) Then Return
+            Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                connection.Open()
+                If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, identity) Then Return
+                Dim address As CheckoutAddressSnapshot = Nothing
+                If Not CheckoutAddressService.TryResolve(connection, Nothing, identity, draft.ShippingAddressId, address) Then
+                    SetAddressSelectionMessage(InvalidShippingAddressMessage, True)
+                    Return
+                End If
+            End Using
+            SetCartShippingAddressId(draft.ShippingAddressId)
+            SetCartShippingAddressIsManual(draft.ShippingAddressId > 0)
+            If tbVettoriId IsNot Nothing Then tbVettoriId.Text = draft.DeliveryMethodId.ToString(CultureInfo.InvariantCulture)
+            If tbPagamenti IsNot Nothing Then tbPagamenti.Text = draft.PaymentMethodId.ToString(CultureInfo.InvariantCulture)
+            If cbAssicurazione IsNot Nothing Then cbAssicurazione.Checked = draft.InsuranceSelected
+            If txtNoteSpedizione IsNot Nothing Then txtNoteSpedizione.Text = draft.Notes
+            ApplyCurrentShippingAddress()
+        Catch ex As Exception
+            CheckoutFailureRecoveryService.TracePhase(
+                HttpContext.Current, CurrentCheckoutRequestId(), "ValidateDraft", "recovery-failed", ex,
+                "not-claimed", "none", "ConfirmGet")
+        End Try
     End Sub
 
     Private Function TryGetCheckoutValidationFailure(ByRef reason As CheckoutFailureReason) As Boolean
@@ -2561,66 +2836,14 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
         Try
             If Not ValidateOrderNotesLength() Then Return
-
-            Me.Session("Ordine_TipoDoc") = 4
-            Me.Session("Ordine_Documento") = "Ordine"
-            Me.Session("Ordine_Pagamento") = Me.tbPagamenti.Text
-            StorePaymentPolicySession(SafeIntFromDb(Me.tbPagamenti.Text, 0))
-            Me.Session("Ordine_BancaSellaGestPay_ShopId") = Me.tbShopIdGestPay.Text
-            Me.Session("Ordine_Vettore") = Me.tbVettoriId.Text
-            Me.Session("Ordine_SpeseSped") = SafeDbl(Me.lblSpeseSped.Text, 0)
-            Me.Session("Ordine_SpeseAss") = SafeDbl(Me.lblSpeseAss.Text, 0)
-            Me.Session("Ordine_SpesePag") = SafeDbl(Me.lblPagamento.Text, 0)
-            Me.Session("Ordine_Totale_Documento") = SafeDbl(Me.lblTotale.Text, 0)
-
-
-            '// INIZIO BLOCCO BUONO SCONTO - FIX COMPILAZIONE (SendOrder)
-Dim buonoImp As Double = SafeMoney(lblBuonoSconto.Text, 0)
-Dim buonoIva As Double = SafeMoney(lblBuonoScontoIVA.Text, 0)
-Dim buonoTot As Double = buonoImp + buonoIva
-
-' Se buono applicato: nel markup il GridView GV_BuoniSconti esiste e contiene le descrizioni nel primo record
-If buonoTot > 0 Then
-
-    Dim desc1 As String = ""
-    Dim desc2 As String = ""
-
-    If GV_BuoniSconti IsNot Nothing AndAlso GV_BuoniSconti.Rows.Count > 0 Then
-        Dim r As GridViewRow = GV_BuoniSconti.Rows(0)
-        Dim l1 As Label = TryCast(r.FindControl("lbl_Descrizione1_BuonoSconto"), Label)
-        Dim l2 As Label = TryCast(r.FindControl("lbl_Descrizione2_BuonoSconto"), Label)
-        If l1 IsNot Nothing Then desc1 = l1.Text
-        If l2 IsNot Nothing Then desc2 = l2.Text
-    End If
-
-    Me.Session("Ordine_DescrizioneBuonoSconto") =
-        (desc1 & " " & desc2).Trim() &
-        " per un valore di " & FormatCurrencyIt(buonoTot) &
-        " Codice Applicato: " & TB_BuonoSconto.Text
-
-            Me.Session("Ordine_TotaleBuonoSconto") = buonoTot
-            Me.Session("Ordine_TotaleBuonoScontoImponibile") = buonoImp
-            Me.Session("Ordine_BuonoScontoIdIva") = preleva_IdIva(GetSessionInt("Iva_Utente", -1))
-            Me.Session("Ordine_BuonoScontoValoreIva") = preleva_ValoreIva(GetSessionInt("Iva_Utente", -1))
-            Me.Session("Ordine_CodiceBuonoSconto") = TB_BuonoSconto.Text
-
-            Else
-            Me.Session("Ordine_DescrizioneBuonoSconto") = ""
-            Me.Session("Ordine_TotaleBuonoSconto") = 0
-            Me.Session("Ordine_TotaleBuonoScontoImponibile") = 0
-            Me.Session("Ordine_BuonoScontoIdIva") = -1
-            Me.Session("Ordine_BuonoScontoValoreIva") = 0
-            Me.Session("Ordine_CodiceBuonoSconto") = ""
+            StoreCheckoutOrderSession(4, "Ordine")
+            Dim draft As CheckoutDraftState = Nothing
+            Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+            If Not TryCaptureAuthoritativeCheckoutDraft(4, draft, draftFailure) Then
+                DispatchCheckoutFailure(draftFailure, "ValidateDraft")
+                Return
             End If
-            Me.Session("NoteDocumento") = Me.txtNoteSpedizione.Text
-
             RedirectToOrdineWithQuery("C=" & HttpUtility.UrlEncode(Cookie.ToUpper()))
-
-            'Test di controllo, relativo al buono sconto del carrello
-            'Dim test As Integer = 0
-            'Dim test2 As Integer = 0
-
-            'test = test2 + Session("Ordine_DescrizioneBuonoSconto")
 
         Catch ex As Exception
             LogCheckoutSubmitFailure(ex, "order-token")
@@ -2630,7 +2853,31 @@ If buonoTot > 0 Then
     End Sub
 
     Protected Sub gvVettori_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettori.PreRender
+        RestoreCheckoutOptionSelections()
         LeggiVettori()
+    End Sub
+
+    Private Sub RestoreCheckoutOptionSelections()
+        Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+        Dim draft As CheckoutDraftState = Nothing
+        If identity Is Nothing OrElse Not identity.IsComplete OrElse
+           Not CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current, identity, draft) Then Return
+        RestoreGridRadioSelection(gvVettori, "rbSpedizione", draft.DeliveryMethodId)
+        RestoreGridRadioSelection(gvVettoriPromo, "rbSpedizione", draft.DeliveryMethodId)
+        RestoreGridRadioSelection(gvPagamento, "rbPagamento", draft.PaymentMethodId)
+    End Sub
+
+    Private Sub RestoreGridRadioSelection(ByVal grid As GridView,
+                                          ByVal radioId As String,
+                                          ByVal selectedId As Integer)
+        If grid Is Nothing OrElse selectedId = 0 Then Return
+        For Each row As GridViewRow In grid.Rows
+            If row.RowType <> DataControlRowType.DataRow Then Continue For
+            Dim idLabel As Label = TryCast(row.FindControl("lblId"), Label)
+            Dim radio As Control = row.FindControl(radioId)
+            If radio Is Nothing OrElse idLabel Is Nothing Then Continue For
+            RbSetChecked(radio, SafeIntFromDb(idLabel.Text, 0) = selectedId AndAlso RbGetEnabled(radio))
+        Next
     End Sub
 
     Public Sub LeggiVettori()
@@ -2825,6 +3072,7 @@ End Sub
     End Sub
 
     Protected Sub gvPagamento_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvPagamento.PreRender
+        RestoreCheckoutOptionSelections()
         LeggiPagamenti()
     End Sub
 
@@ -3001,55 +3249,46 @@ End Sub
 
 
     Public Sub BindLstDestinazioneLstScegliIndirizzo
-
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
-        Dim sqlString As String = ""
-        Dim dsData As New DataSet
-
         Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException("Checkout owner is not available.")
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then
+                    Throw New InvalidOperationException("Checkout owner is not valid.")
+                End If
+                Dim table As DataTable = CheckoutAddressService.LoadAlternativeAddresses(conn, Nothing, identity)
+                table.Columns.Add("CAMPO", GetType(String))
+                For Each row As DataRow In table.Rows
+                    row("CAMPO") = String.Join(" ", New String() {
+                        DbText(row("RagioneSocialeA")), "-", DbText(row("NomeA")), "-",
+                        DbText(row("IndirizzoA")) & ", CAP: " & DbText(row("CapA")), "-",
+                        DbText(row("CittaA")) & " (" & DbText(row("ProvinciaA")) & ")"})
+                Next
 
-            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            conn.Open()
+                LstDestinazione.Items.Clear()
+                LstDestinazione.DataSource = table
+                LstDestinazione.DataValueField = "ID"
+                LstDestinazione.DataTextField = "CAMPO"
+                LstDestinazione.DataBind()
+                LstDestinazione.Items.Insert(0, New ListItem("(Seleziona)", "0"))
 
-            cmd.Connection = conn
-            cmd.CommandType = CommandType.Text
-			cmd.Parameters.AddWithValue("@id", GetUtentiIdSafe(0))
-            cmd.CommandText = "SELECT ID, CONCAT(RAGIONESOCIALEA, ' - ', NOMEA, ' - ',INDIRIZZOA, ', CAP: ', CAPA, ' - ',CITTAA,' (', PROVINCIAA, ')') AS CAMPO FROM utentiindirizzi where UTENTEID = @id Order by Predefinito Desc"
-
-
-            Dim sqlAdp As New MySqlDataAdapter(cmd)
-            sqlAdp.Fill(dsData, "utentiindirizzi")
-
-            cmd.Dispose()
-
-            LstDestinazione.Items.Clear()
-            LstDestinazione.DataSource = dsData
-            LstDestinazione.DataValueField = "ID"
-            LstDestinazione.DataTextField = "CAMPO"
-            LstDestinazione.DataBind()
-			LstDestinazione.Items.Insert(0, New ListItem("(Seleziona)", "0"))
-			
-			LstScegliIndirizzo.Items.Clear()
-            LstScegliIndirizzo.DataSource = dsData
-            LstScegliIndirizzo.DataValueField = "ID"
-            LstScegliIndirizzo.DataTextField = "CAMPO"
-            LstScegliIndirizzo.DataBind()
-            LstScegliIndirizzo.Items.Insert(0, New ListItem("Indirizzo principale", "0"))
-            ApplyCurrentShippingAddress()
-
+                LstScegliIndirizzo.Items.Clear()
+                LstScegliIndirizzo.DataSource = table
+                LstScegliIndirizzo.DataValueField = "ID"
+                LstScegliIndirizzo.DataTextField = "CAMPO"
+                LstScegliIndirizzo.DataBind()
+                LstScegliIndirizzo.Items.Insert(0, New ListItem("Indirizzo principale", "0"))
+                ApplyCurrentShippingAddress()
+            End Using
         Catch ex As Exception
-        LogEx(ex, "SendOrder")
-
-        Finally
-
-            If conn.State = ConnectionState.Open Then
-                conn.Close()
-                conn.Dispose()
+            LogEx(ex, "BindLstDestinazioneLstScegliIndirizzo")
+            If LstDestinazione IsNot Nothing Then LstDestinazione.Items.Clear()
+            If LstScegliIndirizzo IsNot Nothing Then
+                LstScegliIndirizzo.Items.Clear()
+                LstScegliIndirizzo.Items.Insert(0, New ListItem("Indirizzo principale", "0"))
             End If
-
         End Try
-
     End Sub
 
     Public Function getIndirizzoPrincipale() As String
@@ -3094,19 +3333,16 @@ End Sub
     End Function
 
     Private Function ShippingAddressBelongsToCurrentUser(ByVal addressId As Integer) As Boolean
-        Dim utentiId As Integer = GetUtentiIdSafe(0)
-        If addressId <= 0 OrElse utentiId <= 0 Then Return False
+        If addressId <= 0 Then Return False
 
         Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            If identity Is Nothing OrElse Not identity.IsComplete Then Return False
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT COUNT(*) FROM utentiindirizzi WHERE Id=@Id AND UtenteId=@UtentiId", conn)
-                    cmd.CommandType = CommandType.Text
-                    cmd.Parameters.AddWithValue("@Id", addressId)
-                    cmd.Parameters.AddWithValue("@UtentiId", utentiId)
-                    Dim countValue As Object = cmd.ExecuteScalar()
-                    Return Convert.ToInt32(countValue) > 0
-                End Using
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Return False
+                Dim snapshot As CheckoutAddressSnapshot = Nothing
+                Return CheckoutAddressService.TryResolve(conn, Nothing, identity, addressId, snapshot)
             End Using
         Catch ex As Exception
             LogEx(ex, "ShippingAddressBelongsToCurrentUser")
@@ -3137,37 +3373,21 @@ End Sub
     End Sub
 
     Private Sub FillMainShippingAddressSummary()
-        Dim utentiId As Integer = GetUtentiIdSafe(0)
-        If utentiId <= 0 Then
-            ClearShippingAddressSummary()
-            Return
-        End If
-
         Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            If identity Is Nothing OrElse Not identity.IsComplete Then
+                ClearShippingAddressSummary()
+                Return
+            End If
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT RagioneSociale, CognomeNome, Indirizzo, Cap, Citta, Provincia, Telefono, Cellulare FROM utenti WHERE Id=@Id", conn)
-                    cmd.CommandType = CommandType.Text
-                    cmd.Parameters.AddWithValue("@Id", utentiId)
-                    Using dr As MySqlDataReader = cmd.ExecuteReader()
-                        If dr.Read() Then
-                            Dim telefono As String = DbText(dr("Cellulare"))
-                            If telefono = "" Then telefono = DbText(dr("Telefono"))
-
-                            lblTab_RagioneSocialeSpedizione.Text = DbText(dr("RagioneSociale"))
-                            lblTab_NomeSpedizione.Text = DbText(dr("CognomeNome"))
-                            lblTab_IndirizzoSpedizione.Text = DbText(dr("Indirizzo"))
-                            lblTab_CapSpedizione.Text = DbText(dr("Cap"))
-                            lblTab_CittaSpedizione.Text = DbText(dr("Citta"))
-                            lblTab_ProvinciaSpedizione.Text = DbText(dr("Provincia"))
-                            lblTab_ZonaSpedizione.Text = ""
-                            lblTab_TelSpedizione.Text = telefono
-                            lblTab_NotaDestinazione.Text = ""
-                        Else
-                            ClearShippingAddressSummary()
-                        End If
-                    End Using
-                End Using
+                If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Throw New InvalidOperationException("Checkout owner is not valid.")
+                Dim address As CheckoutAddressSnapshot = Nothing
+                If CheckoutAddressService.TryResolve(conn, Nothing, identity, 0, address) Then
+                    ApplyShippingAddressSnapshot(address)
+                Else
+                    ClearShippingAddressSummary()
+                End If
             End Using
         Catch ex As Exception
             LogEx(ex, "FillMainShippingAddressSummary")
@@ -3175,16 +3395,45 @@ End Sub
         End Try
     End Sub
 
-    Private Sub ApplyAlternativeShippingAddress(ByVal addressId As Integer, ByVal isManual As Boolean)
-        If Not ShippingAddressBelongsToCurrentUser(addressId) Then
-            ApplyDefaultShippingAddress()
+    Private Sub ApplyShippingAddressSnapshot(ByVal address As CheckoutAddressSnapshot)
+        If address Is Nothing OrElse Not address.IsComplete Then
+            ClearShippingAddressSummary()
             Return
         End If
+        lblTab_RagioneSocialeSpedizione.Text = address.CompanyName
+        lblTab_NomeSpedizione.Text = address.ContactName
+        lblTab_IndirizzoSpedizione.Text = address.AddressLine
+        lblTab_CapSpedizione.Text = address.PostalCode
+        lblTab_CittaSpedizione.Text = address.City
+        lblTab_ProvinciaSpedizione.Text = address.Province
+        lblTab_ZonaSpedizione.Text = address.Zone
+        lblTab_TelSpedizione.Text = address.Phone
+        lblTab_NotaDestinazione.Text = address.Notes
+    End Sub
+
+    Private Sub ApplyAlternativeShippingAddress(ByVal addressId As Integer, ByVal isManual As Boolean)
+        Dim address As CheckoutAddressSnapshot = Nothing
+        Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException("Checkout owner is not available.")
+            Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                connection.Open()
+                If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, identity) OrElse
+                   Not CheckoutAddressService.TryResolve(connection, Nothing, identity, addressId, address) Then
+                    ApplyDefaultShippingAddress()
+                    Return
+                End If
+            End Using
+        Catch ex As Exception
+            LogEx(ex, "ApplyAlternativeShippingAddress")
+            ApplyDefaultShippingAddress()
+            Return
+        End Try
 
         SetCartShippingAddressId(addressId)
         SetCartShippingAddressIsManual(isManual)
         SelectShippingAddressListValue(addressId)
-        compila_campi_destinazione_alternativa_o_indirizzo_spedizione(addressId, Lst.indirizzoSpedizione)
+        ApplyShippingAddressSnapshot(address)
         If isManual Then
             SetShippingAddressUxState("Selezionato per questo ordine", "Stai usando un indirizzo scelto manualmente per il checkout corrente.")
         Else
@@ -3583,19 +3832,21 @@ End Sub
     End Sub
 
     Function calcola_indirizzo_spedizione_predefinito() As Integer
-        Dim predefinito As Integer = 0
-        Dim params As New Dictionary(Of String, String)
-        params.add("@UtenteId", GetUtentiIdSafe(0).ToString())
-        Dim dr = ExecuteQueryGetDataReader("id", "utentiindirizzi", "(UtenteId=@UtenteId) AND (Predefinito=1)", params)
-        dr.Read()
-
-        If dr.HasRows = True Then
-            predefinito = dr.Item("id")
-        End If
-
-        dr.Close()
-
-        Return predefinito
+        Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            If identity Is Nothing OrElse Not identity.IsComplete Then Return 0
+            Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                connection.Open()
+                If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, identity) Then Return 0
+                Dim table As DataTable = CheckoutAddressService.LoadAlternativeAddresses(connection, Nothing, identity)
+                For Each row As DataRow In table.Rows
+                    If SafeIntFromDb(row("Predefinito"), 0) = 1 Then Return SafeIntFromDb(row("Id"), 0)
+                Next
+            End Using
+        Catch ex As Exception
+            LogEx(ex, "calcola_indirizzo_spedizione_predefinito")
+        End Try
+        Return 0
     End Function
 
     Private Function compila_campi_destinazione_alternativa_o_indirizzo_spedizione(ByVal idDestinazione As Integer, ByVal tipolst As Lst) As Integer
@@ -4189,8 +4440,17 @@ Private Sub MoveToCheckoutConfirmStep()
     End If
     LeggiVettori()
     LeggiPagamenti()
+    StoreCheckoutOrderSession(4, "Ordine")
     If Not ValidateCheckoutBeforeConfirm() Then
         SetCheckoutStep("checkout")
+        ApplyCheckoutStepUi()
+        Return
+    End If
+    Dim draft As CheckoutDraftState = Nothing
+    Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+    If Not TryCaptureAuthoritativeCheckoutDraft(4, draft, draftFailure) Then
+        SetCheckoutStep("checkout")
+        SetAddressSelectionMessage(CheckoutFailureRecoveryService.BuildUserMessage(draftFailure, String.Empty))
         ApplyCheckoutStepUi()
         Return
     End If
@@ -5207,22 +5467,17 @@ Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.
     If Not ValidateOrderNotesLength() Then Return
     Me.PnlDestinazione.Visible = False
 
-    Me.Session("Ordine_TipoDoc") = 2
-    Me.Session("Ordine_Documento") = "Preventivo"
-    Me.Session("Ordine_Pagamento") = Me.tbPagamenti.Text
-    Me.Session("Ordine_Vettore") = Me.tbVettoriId.Text
-
-    Me.Session("Ordine_SpeseSped") = SafeMoney(Me.lblSpeseSped.Text, 0)
-    Me.Session("Ordine_SpeseAss") = SafeMoney(Me.lblSpeseAss.Text, 0)
-    Me.Session("Ordine_SpesePag") = SafeMoney(Me.lblPagamento.Text, 0)
-    Me.Session("Ordine_Totale_Documento") = SafeMoney(Me.lblTotale.Text, 0)
-
+    StoreCheckoutOrderSession(2, "Preventivo")
     Session("Ordine_DescrizioneBuonoSconto") = ""
     Session("Ordine_TotaleBuonoSconto") = 0
+    Session("Ordine_TotaleBuonoScontoImponibile") = 0
     Session("Ordine_CodiceBuonoSconto") = ""
-
-    Me.Session("NoteDocumento") = Me.txtNoteSpedizione.Text
-
+    Dim draft As CheckoutDraftState = Nothing
+    Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+    If Not TryCaptureAuthoritativeCheckoutDraft(2, draft, draftFailure) Then
+        DispatchCheckoutFailure(draftFailure, "ValidateDraft")
+        Return
+    End If
     RedirectToOrdine()
 End Sub
 

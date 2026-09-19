@@ -78,9 +78,11 @@ End Function
 Private Function TryValidateCheckoutToken(ByVal identity As OrderStorefrontIdentity,
                                           ByRef requestId As String,
                                           ByRef payloadFingerprint As String,
+                                          ByRef draftFingerprint As String,
                                           ByRef isLegacyToken As Boolean) As Boolean
     requestId = String.Empty
     payloadFingerprint = String.Empty
+    draftFingerprint = String.Empty
     isLegacyToken = False
     If identity Is Nothing OrElse Not identity.IsComplete Then Return False
 
@@ -106,13 +108,14 @@ Private Function TryValidateCheckoutToken(ByVal identity As OrderStorefrontIdent
         If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
 
         Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
-        If parts.Length <> 7 OrElse Not String.Equals(parts(0), "v3", StringComparison.Ordinal) Then Return False
+        If parts.Length <> 8 OrElse Not String.Equals(parts(0), "v4", StringComparison.Ordinal) Then Return False
         Dim requestIndex As Integer = 1
         Dim databaseIndex As Integer = 2
         Dim companyIndex As Integer = 3
         Dim loginIndex As Integer = 4
         Dim ticksIndex As Integer = 5
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(6), payloadFingerprint) Then Return False
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(7), draftFingerprint) Then Return False
 
         Dim tokenDatabaseScope As String = String.Empty
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(databaseIndex), tokenDatabaseScope) OrElse
@@ -168,7 +171,7 @@ Private Function TryExtractCheckoutRequestIdForRetirement(ByRef requestId As Str
         If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
 
         Dim parts() As String = Encoding.UTF8.GetString(clearBytes).Split("|"c)
-        If parts.Length <> 7 OrElse Not String.Equals(parts(0), "v3", StringComparison.Ordinal) Then Return False
+        If parts.Length <> 8 OrElse Not String.Equals(parts(0), "v4", StringComparison.Ordinal) Then Return False
         Return OrderDurableIdempotencyService.TryNormalizeRequestId(parts(1), requestId)
     Catch
         requestId = String.Empty
@@ -371,7 +374,6 @@ End Sub
     End Function
 
     Private Sub BlockInvalidShippingAddress(ByVal requestId As String)
-        Session("SCEGLIINDIRIZZO") = Nothing
         DispatchDurableCheckoutFailure(
             requestId,
             CheckoutFailureReason.ShippingAddressInvalid,
@@ -767,8 +769,9 @@ End If
 
 Dim checkoutRequestId As String = String.Empty
 Dim checkoutPayloadFingerprint As String = String.Empty
+Dim checkoutDraftFingerprint As String = String.Empty
 Dim isLegacyCheckoutToken As Boolean = False
-If Not TryValidateCheckoutToken(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, isLegacyCheckoutToken) Then
+If Not TryValidateCheckoutToken(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, checkoutDraftFingerprint, isLegacyCheckoutToken) Then
     Dim invalidTokenRequestId As String = String.Empty
     If TryExtractCheckoutRequestIdForRetirement(invalidTokenRequestId) Then
         CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, invalidTokenRequestId)
@@ -788,22 +791,23 @@ CheckoutFailureRecoveryService.TracePhase(
 
             Dim LoginId As Long = authenticatedLoginId
             Dim UtentiId As Long = GetSessionLong("UtentiId", 0)
-            Dim TipoDoc As Integer = GetSessionInt("Ordine_TipoDoc", 0)
-            Dim Documento As String = If(TryCast(Me.Session("Ordine_Documento"), String), "")
-            Dim Pagamento As Integer = GetSessionInt("Ordine_Pagamento", 0)
-            Dim Vettore As Integer = GetSessionInt("Ordine_Vettore", 0)
-            Dim SpeseSped As Decimal = GetSessionDecimal("Ordine_SpeseSped", 0D)
-            Dim SpeseAss As Decimal = GetSessionDecimal("Ordine_SpeseAss", 0D)
-            Dim SpesePag As Decimal = GetSessionDecimal("Ordine_SpesePag", 0D)
-            Dim PagamentoOnLine As Integer = GetSessionInt("Ordine_Pagamento_OnLine", 0)
-            Dim ConfermaOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_ConfermaOrdinePrimaPagamento", 1)
-            Dim PermettiPagamentoSuccessivo As Integer = GetSessionInt("Ordine_PermettiPagamentoSuccessivo", 1)
-            Dim InviaEmailOrdinePrimaPagamento As Integer = GetSessionInt("Ordine_InviaEmailOrdinePrimaPagamento", 1)
+            Dim checkoutDraft As CheckoutDraftState = Nothing
+            Dim TipoDoc As Integer = 0
+            Dim Documento As String = String.Empty
+            Dim Pagamento As Integer = 0
+            Dim Vettore As Integer = 0
+            Dim SpeseSped As Decimal = 0D
+            Dim SpeseAss As Decimal = 0D
+            Dim SpesePag As Decimal = 0D
+            Dim PagamentoOnLine As Integer = 0
+            Dim ConfermaOrdinePrimaPagamento As Integer = 1
+            Dim PermettiPagamentoSuccessivo As Integer = 1
+            Dim InviaEmailOrdinePrimaPagamento As Integer = 1
 
             Dim documento_memorizzato As Long = 0
             Dim id As Integer = 0
             Dim DataDoc As String = ""
-            Dim Note As String = If(TryCast(Me.Session("NoteDocumento"), String), "")
+            Dim Note As String = String.Empty
 
             Dim NumDoc As Long = 0
             Dim numDoc_tracking As String = "1"
@@ -874,6 +878,51 @@ CheckoutFailureRecoveryService.TracePhase(
                 CheckoutFailureRecoveryService.TracePhase(
                     HttpContext.Current, checkoutRequestId, "11-state-reconciliation", "new")
 
+                Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
+                If Not CheckoutDraftService.TryRead(
+                    HttpContext.Current, orderIdentity, checkoutRequestId,
+                    checkoutDraftFingerprint, checkoutDraft) Then
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.CartChanged, "ValidateDraft")
+                    Exit Sub
+                End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "ValidateDraft", "passed", Nothing,
+                    "not-claimed", "none", "ValidateDraft")
+                If Not CheckoutDraftService.ValidateAuthoritativeSelections(
+                    conn, Nothing, orderIdentity, checkoutDraft, draftFailure) Then
+                    If draftFailure = CheckoutFailureReason.ShippingAddressInvalid Then
+                        BlockInvalidShippingAddress(checkoutRequestId)
+                    Else
+                        DispatchDurableCheckoutFailure(checkoutRequestId, draftFailure, "ValidateDraft")
+                    End If
+                    Exit Sub
+                End If
+
+                TipoDoc = checkoutDraft.TipoDocumentiId
+                Documento = If(TipoDoc = 2, "Preventivo", "Ordine")
+                Pagamento = checkoutDraft.PaymentMethodId
+                Vettore = checkoutDraft.DeliveryMethodId
+                SpeseSped = checkoutDraft.ShippingCost
+                SpeseAss = checkoutDraft.InsuranceCost
+                SpesePag = checkoutDraft.PaymentCost
+                PagamentoOnLine = checkoutDraft.PaymentOnline
+                ConfermaOrdinePrimaPagamento = checkoutDraft.ConfirmBeforePayment
+                PermettiPagamentoSuccessivo = checkoutDraft.AllowLaterPayment
+                InviaEmailOrdinePrimaPagamento = checkoutDraft.SendEmailBeforePayment
+                Note = checkoutDraft.Notes
+                UtentiId = checkoutDraft.UtentiId
+                Session("SCEGLIINDIRIZZO") = If(checkoutDraft.ShippingAddressId > 0,
+                    CType(checkoutDraft.ShippingAddressId, Object), Nothing)
+                Session("Ordine_DescrizioneBuonoSconto") = checkoutDraft.CouponDescription
+                Session("Ordine_TotaleBuonoScontoImponibile") = checkoutDraft.CouponTaxableTotal
+                Session("Ordine_CodiceBuonoSconto") = checkoutDraft.CouponCode
+                Session("Ordine_BuonoScontoIdIva") = checkoutDraft.CouponVatId
+                Session("Ordine_BuonoScontoValoreIva") = checkoutDraft.CouponVatValue
+                Session("Coupon_Arrotondamento") = checkoutDraft.CouponRounding
+                Session("AbilitatoIvaReverseCharge") = checkoutDraft.ReverseChargeVat
+                Session("Iva_Vettori") = checkoutDraft.CarrierVat
+
                 If TipoDoc <= 0 Then
                     ' A missing checkout-session field must not mask an owner-scoped
                     ' stock failure with the generic document-history redirect.
@@ -930,8 +979,10 @@ CheckoutFailureRecoveryService.TracePhase(
                     End Try
                 End Using
 
-                Dim selectedShippingAddressId As Integer = 0
-                If Not ValidateSelectedShippingAddressForOrder(conn, LoginId, UtentiId, selectedShippingAddressId) Then
+                Dim selectedShippingAddressId As Integer = checkoutDraft.ShippingAddressId
+                Dim selectedAddress As CheckoutAddressSnapshot = Nothing
+                If Not CheckoutAddressService.TryResolve(
+                    conn, Nothing, orderIdentity, selectedShippingAddressId, selectedAddress) Then
                     Dim addressRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
                         conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
                         TipoDoc, checkoutPayloadFingerprint)
@@ -941,19 +992,11 @@ CheckoutFailureRecoveryService.TracePhase(
                     BlockInvalidShippingAddress(checkoutRequestId)
                     Exit Sub
                 End If
+                CheckoutFailureRecoveryService.TracePhase(
+                    HttpContext.Current, checkoutRequestId, "ValidateAddress", "passed", Nothing,
+                    "not-claimed", "none", "ValidateAddress")
 
-                Dim optionsFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
-                    TipoDoc, Pagamento, Vettore, SpeseSped, SpeseAss, SpesePag,
-                    PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo,
-                    InviaEmailOrdinePrimaPagamento, selectedShippingAddressId, Note,
-                    DbVal(Session("Ordine_DescrizioneBuonoSconto")),
-                    DbVal(Session("Ordine_TotaleBuonoScontoImponibile")),
-                    DbVal(Session("Ordine_CodiceBuonoSconto")),
-                    DbVal(Session("Ordine_BuonoScontoIdIva")),
-                    DbVal(Session("Ordine_BuonoScontoValoreIva")),
-                    DbVal(Session("Coupon_Arrotondamento")),
-                    DbVal(Session("AbilitatoIvaReverseCharge")),
-                    DbVal(Session("Iva_Vettori")))
+                Dim optionsFingerprint As String = checkoutDraft.OptionsFingerprint
 
                 ' Lock, rivalidazione commerciale e creazione documento condividono
                 ' la stessa connessione e la stessa transazione.
@@ -963,6 +1006,7 @@ CheckoutFailureRecoveryService.TracePhase(
                 payloadFingerprint = OrderStorefrontContext.BuildCheckoutFingerprint(
                     orderIdentity, TipoDoc, optionsFingerprint, cartFingerprint)
                 If isLegacyCheckoutToken OrElse
+                   Not String.Equals(cartFingerprint, checkoutDraft.CartFingerprint, StringComparison.Ordinal) OrElse
                    Not String.Equals(payloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
                     trns.Rollback()
                     trns.Dispose()

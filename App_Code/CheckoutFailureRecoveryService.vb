@@ -167,20 +167,14 @@ Public NotInheritable Class CheckoutFailureRecoveryService
                                  ByVal requestId As String,
                                  ByVal phase As String,
                                  ByVal outcome As String,
-                                 Optional ByVal failure As Exception = Nothing)
+                                 Optional ByVal failure As Exception = Nothing,
+                                 Optional ByVal idempotencyState As String = "unknown",
+                                 Optional ByVal transactionState As String = "none",
+                                 Optional ByVal lastCheckpoint As String = "none")
         Try
-            Dim effective As Exception = failure
-            While effective IsNot Nothing AndAlso effective.InnerException IsNot Nothing
-                effective = effective.InnerException
-            End While
-            Dim errorType As String = If(effective Is Nothing, "none", effective.GetType().Name)
-            KeepStoreLog.Info(
-                "checkout-flow",
-                "correlation=" & GetCorrelationId(requestId) &
-                "; phase=" & SafeLogToken(phase, "unknown") &
-                "; outcome=" & SafeLogToken(outcome, "unknown") &
-                "; errorType=" & SafeLogToken(errorType, "Exception") & ".",
-                context)
+            CheckoutDurableTelemetry.Write(
+                context, requestId, phase, outcome, failure,
+                idempotencyState, transactionState, lastCheckpoint)
         Catch
         End Try
     End Sub

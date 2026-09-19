@@ -227,7 +227,8 @@ $invalidTokenBranch = Get-VbMethod $order 'Private Function TryExtractCheckoutRe
 Assert-Source (
     -not [string]::IsNullOrWhiteSpace($invalidTokenBranch) -and
     $invalidTokenBranch.Contains('MachineKey.Unprotect') -and
-    $invalidTokenBranch.Contains('parts.Length <> 7') -and
+    $invalidTokenBranch.Contains('parts.Length <> 8') -and
+    $invalidTokenBranch.Contains('"v4"') -and
     $order.Contains('RetireRequest(HttpContext.Current, invalidTokenRequestId)')
 ) '20_INVALID_AUTHENTIC_TOKEN_IS_RETIRED_BEFORE_CART_REVIEW'
 
