@@ -249,6 +249,9 @@ Private Function GenerateCheckoutToken() As String
         loginId.ToString(CultureInfo.InvariantCulture) & "|" &
         DateTime.UtcNow.Ticks.ToString(CultureInfo.InvariantCulture) & "|" &
         payloadFingerprint & "|" & draft.Fingerprint
+    If String.IsNullOrEmpty(payload) Then
+        Throw New InvalidOperationException("Checkout token payload is not available.")
+    End If
     CheckoutFailureRecoveryService.TracePhase(
         HttpContext.Current, normalizedRequestId, "order-token-payload", "ready", Nothing,
         "not-claimed", "none", "BuildOrderToken")
@@ -257,14 +260,17 @@ Private Function GenerateCheckoutToken() As String
     CheckoutFailureRecoveryService.TracePhase(
         HttpContext.Current, normalizedRequestId, "order-token-protect", "entered", Nothing,
         "not-claimed", "none", "BuildOrderToken")
+    Dim clearBytes() As Byte = Encoding.UTF8.GetBytes(payload)
     Try
         protectedBytes = System.Web.Security.MachineKey.Protect(
-            Encoding.UTF8.GetBytes(payload), CHECKOUT_TOKEN_PURPOSE)
+            clearBytes, CHECKOUT_TOKEN_PURPOSE)
     Catch ex As Exception
         CheckoutFailureRecoveryService.TracePhase(
             HttpContext.Current, normalizedRequestId, "order-token-protect", "failure", ex,
             "not-claimed", "none", "BuildOrderToken")
         Throw
+    Finally
+        Array.Clear(clearBytes, 0, clearBytes.Length)
     End Try
     If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then
         Dim protectionFailure As New InvalidOperationException("Checkout token protection failed.")
@@ -279,6 +285,9 @@ Private Function GenerateCheckoutToken() As String
 
     Dim b64 As String = Convert.ToBase64String(protectedBytes)
     b64 = b64.Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
+    CheckoutFailureRecoveryService.TracePhase(
+        HttpContext.Current, normalizedRequestId, "order-token-encode", "passed", Nothing,
+        "not-claimed", "none", "EncodeOrderToken")
     Return b64
 End Function
 
@@ -551,7 +560,7 @@ Private Sub RedirectToOrdine()
     Dim token As String = GenerateCheckoutToken()
     Session("Ordine_FromCheckout") = 1
 
-    Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
+    Dim url As String = VirtualPathUtility.ToAbsolute("~/ordine.aspx") & "?t=" & HttpUtility.UrlEncode(token)
     DispatchCheckoutProcessing(url)
 End Sub
 
@@ -636,7 +645,7 @@ Private Sub RedirectToOrdineWithQuery(ByVal extraQuery As String)
     Dim token As String = GenerateCheckoutToken()
     Session("Ordine_FromCheckout") = 1
 
-    Dim url As String = "ordine.aspx?t=" & HttpUtility.UrlEncode(token)
+    Dim url As String = VirtualPathUtility.ToAbsolute("~/ordine.aspx") & "?t=" & HttpUtility.UrlEncode(token)
     If Not String.IsNullOrEmpty(extraQuery) Then
         If extraQuery.StartsWith("&") Then extraQuery = extraQuery.Substring(1)
         If extraQuery.StartsWith("?") Then extraQuery = extraQuery.Substring(1)
@@ -647,7 +656,11 @@ End Sub
 
 Private Sub DispatchCheckoutProcessing(ByVal url As String)
     If String.IsNullOrWhiteSpace(url) OrElse Not UrlIsLocal(url) Then
-        Throw New InvalidOperationException("Checkout processing destination is not valid.")
+        Dim redirectFailure As New InvalidOperationException("Checkout processing destination is not valid.")
+        CheckoutFailureRecoveryService.TracePhase(
+            HttpContext.Current, CurrentCheckoutRequestId(), "17-processing-redirect", "failure", redirectFailure,
+            "not-claimed", "none", "EncodeOrderToken")
+        Throw redirectFailure
     End If
 
     Response.Clear()

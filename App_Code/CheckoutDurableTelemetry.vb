@@ -29,6 +29,8 @@ Public Enum CheckoutTelemetryPhase
     PostCommitEmail = 16
     BuildOrderToken = 17
     ProtectOrderToken = 18
+    EncodeOrderToken = 19
+    DispatchOrderProcessing = 20
 End Enum
 
 ''' <summary>
@@ -144,6 +146,8 @@ Public NotInheritable Class CheckoutDurableTelemetry
         If value.Contains("order-token-protect") OrElse value.Contains("token-protection") Then
             Return CheckoutTelemetryPhase.ProtectOrderToken
         End If
+        If value.Contains("order-token-encode") Then Return CheckoutTelemetryPhase.EncodeOrderToken
+        If value.Contains("processing-redirect") Then Return CheckoutTelemetryPhase.DispatchOrderProcessing
         If value.Contains("confirm-get") OrElse value.Contains("confirmget") Then Return CheckoutTelemetryPhase.ConfirmGet
         If value.Contains("final-click") OrElse value.Contains("confirm-post") OrElse
            value.Contains("confirmpost") Then Return CheckoutTelemetryPhase.ConfirmPost

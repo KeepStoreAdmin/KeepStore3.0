@@ -258,8 +258,16 @@ $results += Assert-Contract (
     $readModel.Contains('Private Const RequestCacheKey As String = "KeepStore:CartAuthoritativeReadModel:Current"')
 ) '20 pagina MiniCart e header restano coerenti'
 
-if ($results.Count -ne 20) {
-    throw "CHECKOUT_TERMINAL_OUTCOME_FAILED: expected 20 checks, got $($results.Count)"
+# 21. La destinazione ordine deve essere app-relative e accettata dalla policy locale.
+$results += Assert-Contract (
+    ([regex]::Matches($cart, 'VirtualPathUtility\.ToAbsolute\("~/ordine\.aspx"\)').Count -eq 2) -and
+    -not $cart.Contains('Dim url As String = "ordine.aspx?t="') -and
+    $cart.Contains('If String.IsNullOrWhiteSpace(url) OrElse Not UrlIsLocal(url) Then') -and
+    $cart.Contains('"17-processing-redirect", "failure"')
+) '21 redirect ordine app-relative supera la policy locale'
+
+if ($results.Count -ne 21) {
+    throw "CHECKOUT_TERMINAL_OUTCOME_FAILED: expected 21 checks, got $($results.Count)"
 }
 
 $results | Format-Table -AutoSize

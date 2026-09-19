@@ -237,6 +237,8 @@ Module CheckoutDraftTelemetryHarness
             Pass("21_ORDER_TOKEN_PHASES_ARE_EXPLICIT",
                  CheckoutDurableTelemetry.MapPhase("order-token-payload") = CheckoutTelemetryPhase.BuildOrderToken AndAlso
                  CheckoutDurableTelemetry.MapPhase("order-token-protect") = CheckoutTelemetryPhase.ProtectOrderToken AndAlso
+                 CheckoutDurableTelemetry.MapPhase("order-token-encode") = CheckoutTelemetryPhase.EncodeOrderToken AndAlso
+                 CheckoutDurableTelemetry.MapPhase("18-processing-redirect") = CheckoutTelemetryPhase.DispatchOrderProcessing AndAlso
                  CheckoutDurableTelemetry.MapPhase("order-token") = CheckoutTelemetryPhase.Unknown)
 
             Dim tokenSecretMarker As String = "token-protection-secret@example.invalid"

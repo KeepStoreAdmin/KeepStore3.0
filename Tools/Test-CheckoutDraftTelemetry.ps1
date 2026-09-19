@@ -113,9 +113,13 @@ Assert-Source (
 Assert-Source (
     $durableTelemetry.Contains('BuildOrderToken') -and
     $durableTelemetry.Contains('ProtectOrderToken') -and
+    $durableTelemetry.Contains('EncodeOrderToken') -and
+    $durableTelemetry.Contains('DispatchOrderProcessing') -and
     $durableTelemetry.Contains('order-token-protect') -and
     $cart.Contains('"order-token-payload", "ready"') -and
     $cart.Contains('"order-token-protect", "entered"') -and
+    $cart.Contains('"order-token-encode", "passed"') -and
+    $cart.Contains('VirtualPathUtility.ToAbsolute("~/ordine.aspx")') -and
     $cart.Contains('"not-claimed", "none", "BuildOrderToken"')
 ) '11_ORDER_TOKEN_BOUNDARY_IS_EXPLICIT_AND_STATEFUL'
 
