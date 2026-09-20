@@ -500,6 +500,8 @@ Guardrail feed/search/AI: il numero globale non implica visibilita globale. Ness
 
 ## Checkpoint trasporto e-mail multi-provider
 
-`MULTIPROVIDER-TENANT-EMAIL-CONFIG-CONTRACT-REV1` definisce, senza applicarla, una sola tabella per database con PK tecnica e profili univoci `(AziendeId, Purpose)`. Gli invii correnti useranno in futuro `TRANSACTIONAL`; i profili nascono disabilitati, contengono soltanto un `CredentialReference` e richiedono verifica TLS/auth prima dell'attivazione. Runtime, rollout e OAuth2 Google/Microsoft restano `NON AVVIATO`/`NON OPERATIVO` fino ai task autorizzati.
+`MULTIPROVIDER-TENANT-EMAIL-CONFIG-CONTRACT-REV1` definisce una sola tabella per database con PK tecnica e profili univoci `(AziendeId, Purpose)`. In `taikun` sono presenti due profili `TRANSACTIONAL`, entrambi disabilitati, `NOT_VERIFIED` e privi di credenziali reali; i placeholder non sono operativi. Il nucleo runtime provider-neutral usa resolver distinti per invio e verifica, scope database/azienda/scopo, MailKit riproducibile e riferimenti DPAPI fuori webroot. Il provisioning e un tool amministrativo locale con input mascherato, ACL protette e nessun endpoint UAC temporaneo. Nessun chiamante legacy e ancora migrato; OAuth2 Google/Microsoft resta `NON OPERATIVO` e la configurazione/verifica reale e un task successivo separato.
 
 Guardrail AI/search: configurazioni SMTP, provider, username, secret reference, token, destinatari, telemetria di consegna e dati e-mail non sono fonti di retrieval, ranking, feed o personalizzazione. Nessun assistente deve dedurre provider dal dominio, proporre credenziali, esporre stato tecnico tenant o trasformare configurazioni e-mail in contenuto indicizzabile.
+
+`DATABASE-DUMP-REPOSITORY-HYGIENE-1A` e registrato `NON AVVIATO` e separato dal nucleo e-mail: dump locali, contenuto e metadata non sono fonti AI/search e non devono entrare in commit, retrieval o output.

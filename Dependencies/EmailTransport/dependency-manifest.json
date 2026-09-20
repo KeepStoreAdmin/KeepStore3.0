@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "framework": "net48",
+  "source": "https://api.nuget.org/v3-flatcontainer",
+  "packages": [
+    {
+      "id": "MailKit",
+      "version": "4.18.0",
+      "packageBytes": 5931159,
+      "packageSha256": "565d372247d4b8e25662e71446e2a91a629e5667c4f687e6f534d65937e01551",
+      "asset": "lib/net48/MailKit.dll",
+      "destination": "MailKit.dll",
+      "assetBytes": 979456,
+      "assetSha256": "0bba5df44799b9cd0ad6b1edb20b13905bc854ddef75fe59833a6779db3c7933",
+      "assemblyVersion": "4.18.0.0",
+      "license": "MIT"
+    },
+    {
+      "id": "MimeKit",
+      "version": "4.18.0",
+      "packageBytes": 7342936,
+      "packageSha256": "6508adf70b74d51a1993ccd304b466bdacf41294112518a5e143fbee2ab9b72c",
+      "asset": "lib/net48/MimeKit.dll",
+      "destination": "MimeKit.dll",
+      "assetBytes": 1329664,
+      "assetSha256": "2b0509018274768d1f525027d183e33a2f27839cd540d0a740e6782ab34cc0c2",
+      "assemblyVersion": "4.18.0.0",
+      "license": "MIT"
+    },
+    {
+      "id": "BouncyCastle.Cryptography",
+      "version": "2.7.0",
+      "packageBytes": 8730569,
+      "packageSha256": "f091ffccab4d03993e660bace277659a79dee0972f54d7f1f4bd46d680966241",
+      "asset": "lib/net461/BouncyCastle.Cryptography.dll",
+      "destination": "BouncyCastle.Cryptography.dll",
+      "assetBytes": 4885392,
+      "assetSha256": "4f96977e9c67334742c683410b3a361258219f0d3084a5e0bc10fba96cf23a0d",
+      "assemblyVersion": "2.0.0.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.Formats.Asn1",
+      "version": "10.0.0",
+      "packageBytes": 366629,
+      "packageSha256": "2bd2b191aece6d3172789241c8fb5e482cea136e97d002a4940ccfc9c9834a3f",
+      "asset": "lib/net462/System.Formats.Asn1.dll",
+      "destination": "System.Formats.Asn1.dll",
+      "assetBytes": 109832,
+      "assetSha256": "55b76f285226519ad79c3df915ae4e885f16b4f42212065820be27c54b83872b",
+      "assemblyVersion": "10.0.0.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.Buffers",
+      "version": "4.6.1",
+      "packageBytes": 67724,
+      "packageSha256": "b00451e91d016fbec091ad1e361f3a7015e1d91d4047f7e48a74455b2a673d79",
+      "asset": "lib/net462/System.Buffers.dll",
+      "destination": "System.Buffers.dll",
+      "assetBytes": 23816,
+      "assetSha256": "2d78d770c9cb997199154ae8c018b9f1d1efbc86729f7264dde6dbad2a12cac3",
+      "assemblyVersion": "4.0.5.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.Memory",
+      "version": "4.6.3",
+      "packageBytes": 192935,
+      "packageSha256": "26078aeb758c9ae985e8bf851f973026061da6a5eb4837204d0c2d2204c72955",
+      "asset": "lib/net462/System.Memory.dll",
+      "destination": "System.Memory.dll",
+      "assetBytes": 145200,
+      "assetSha256": "d5e8e4866f9cfa66f7765660f84b210198893e55335487afe5ebda342c0e913d",
+      "assemblyVersion": "4.0.5.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.Threading.Tasks.Extensions",
+      "version": "4.6.3",
+      "packageBytes": 74604,
+      "packageSha256": "1abc92c7517a021ead7e79d0b7f3c70be75bce0fac7cfe3b38e157d32245ff1a",
+      "asset": "lib/net462/System.Threading.Tasks.Extensions.dll",
+      "destination": "System.Threading.Tasks.Extensions.dll",
+      "assetBytes": 27960,
+      "assetSha256": "af4e13ef418fd89b432de20cd1dfb7fa10a7179c8dd049c9856316e50c5949ca",
+      "assemblyVersion": "4.2.4.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.Numerics.Vectors",
+      "version": "4.6.1",
+      "packageBytes": 136872,
+      "packageSha256": "2bc500a86dcb02f2032d6d877f9e2d6e9e4a79080e57239b4198679d4031f2c7",
+      "asset": "lib/net462/System.Numerics.Vectors.dll",
+      "destination": "System.Numerics.Vectors.dll",
+      "assetBytes": 110344,
+      "assetSha256": "20c2fa81b8c70d651099d762954f285fd4f942e63b2d7217c145dab8d4b2f4c9",
+      "assemblyVersion": "4.1.6.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.Runtime.CompilerServices.Unsafe",
+      "version": "6.1.2",
+      "packageBytes": 75106,
+      "packageSha256": "5f6a7f53af3465f92beb6da873ebe0e496206c313313b98badee4355a6b25937",
+      "asset": "lib/net462/System.Runtime.CompilerServices.Unsafe.dll",
+      "destination": "System.Runtime.CompilerServices.Unsafe.dll",
+      "assetBytes": 19256,
+      "assetSha256": "08cbd7278b66f1e68425a82d4b97181a4130d93e3dd91831407aba7212ccdacf",
+      "assemblyVersion": "6.0.3.0",
+      "license": "MIT"
+    },
+    {
+      "id": "System.ValueTuple",
+      "version": "4.6.1",
+      "packageBytes": 87142,
+      "packageSha256": "1dbf3b30f70d747411951103cc510a53c66ab4a376e9b8f20228a62669ba2d62",
+      "asset": null,
+      "destination": null,
+      "assetBytes": 0,
+      "assetSha256": null,
+      "assemblyVersion": "framework-inbox-net48",
+      "license": "MIT"
+    }
+  ]
+}
