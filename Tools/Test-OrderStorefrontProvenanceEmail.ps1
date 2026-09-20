@@ -58,7 +58,8 @@ Assert-Source ($order -match 'emailBrand\.SmtpHost') 'ORDER_EMAIL_SMTP_FROM_PERS
 Assert-Source ($order -match 'emailBrand\.AdministrativeRecipient') 'ORDER_EMAIL_ADMIN_FROM_PERSISTED_COMPANY'
 Assert-Source ($order -match 'ReplyToList\.Add') 'ORDER_EMAIL_REPLY_TO_TENANT'
 Assert-Source ($order.IndexOf('trns.Commit()', [StringComparison]::Ordinal) -lt $order.IndexOf('SendEmail(', $order.IndexOf('trns.Commit()', [StringComparison]::Ordinal), [StringComparison]::Ordinal)) 'ORDER_EMAIL_AFTER_COMMIT'
-Assert-Source ($order -match 'Invio conferma ordine non riuscito\. Error type:') 'ORDER_EMAIL_FAILURE_SANITIZED'
+Assert-Source ($order -match 'OrderEmailDeliveryDiagnostics\.BuildFailureLog\(emailPhase, ex\)') 'ORDER_EMAIL_FAILURE_SANITIZED'
+Assert-Source ($order -match 'If\(orderEmailSent, "completed", "failed"\)') 'ORDER_EMAIL_FAILURE_NOT_RECORDED_COMPLETED'
 
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 try {

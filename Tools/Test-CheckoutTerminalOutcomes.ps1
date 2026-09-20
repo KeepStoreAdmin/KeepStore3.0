@@ -222,7 +222,7 @@ $commitIndex = $order.IndexOf('trns.Commit()', $completeIndex, [StringComparison
 $emailIndex = $order.IndexOf('SendEmail(', $commitIndex, [StringComparison]::Ordinal)
 $sendEmailBody = [regex]::Match(
     $order,
-    'Public Sub SendEmail\((?<body>[\s\S]*?)\n\s*End Sub').Groups['body'].Value
+    'Public Function SendEmail\((?<body>[\s\S]*?)\n\s*End Function').Groups['body'].Value
 $results += Assert-Contract (
     $completeIndex -gt $procedureIndex -and
     $commitIndex -gt $completeIndex -and

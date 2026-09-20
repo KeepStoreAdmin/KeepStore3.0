@@ -1259,17 +1259,18 @@ CheckoutFailureRecoveryService.TracePhase(
                 End If
 
                 ' Email (ordine normale vs coupon)
+                Dim orderEmailSent As Boolean = False
                 If (If(TryCast(Session("Coupon_Codice_Controllo"), String), "")) = "" Then
                     CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "19-order-email", "entered")
-                    SendEmail(NumDoc, Documento, id, "", orderIdentity)
+                    orderEmailSent = SendEmail(NumDoc, Documento, id, "", orderIdentity)
                 Else
                     CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "19-order-email", "entered")
-                    SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""), orderIdentity)
+                    orderEmailSent = SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""), orderIdentity)
                 End If
                 CheckoutFailureRecoveryService.TracePhase(
-                    HttpContext.Current, checkoutRequestId, "19-order-email", "completed")
+                    HttpContext.Current, checkoutRequestId, "19-order-email", If(orderEmailSent, "completed", "failed"))
 
                 ' Reset session ordine
                 Me.Session("Ordine_TipoDoc") = Nothing
@@ -1628,19 +1629,21 @@ CheckoutFailureRecoveryService.TracePhase(
         Public Property AdministrativeRecipient As String
     End Class
 
-    Public Sub SendEmail(ByVal n As Long,
-                         ByVal documento As String,
-                         ByVal id As Integer,
-                         ByVal Descrizione_Coupon As String,
-                         ByVal identity As OrderStorefrontIdentity)
+    Public Function SendEmail(ByVal n As Long,
+                              ByVal documento As String,
+                              ByVal id As Integer,
+                              ByVal Descrizione_Coupon As String,
+                              ByVal identity As OrderStorefrontIdentity) As Boolean
         Dim conn As New MySqlConnection
         Dim connDestAlt As New MySqlConnection
+        Dim emailPhase As String = "tenant-validation"
         Try
             If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException("Order email tenant is not valid.")
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
             If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Throw New InvalidOperationException("Order email tenant is not valid.")
 
+            emailPhase = "message-build"
             Dim StrCarrello As String = ""
             Dim StrIva As String = ""
             Dim IvaTipo As Integer = GetSessionInt("IvaTipo", 0)
@@ -1871,6 +1874,7 @@ CheckoutFailureRecoveryService.TracePhase(
             legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
                           "<br/><font face=arial size=2 color=black><b>" & emailBrand.CompanyName & "</b><br>Sito Web: <a href=" & HttpUtility.HtmlAttributeEncode(emailBrand.SiteUrl) & ">" & HttpUtility.HtmlEncode(emailBrand.SiteUrl) & "</a> - Email: <a href=mailto:" & HttpUtility.HtmlAttributeEncode(emailBrand.SupportEmail) & ">" & HttpUtility.HtmlEncode(emailBrand.SupportEmail) & "</a></font>"
 
+            emailPhase = "template-render"
             Dim renderedEmail As KeepStoreEmailRenderResult = TryRenderOrderConfirmationEmail(documento,
                                                                                               numeroDocumento,
                                                                                               dataDocumento,
@@ -1907,20 +1911,28 @@ CheckoutFailureRecoveryService.TracePhase(
                 ApplyLegacyOrderEmailMime(oMsg, legacyBody)
             End If
 
-            Dim oSmtp As SmtpClient = New SmtpClient(emailBrand.SmtpHost)
-            oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
-
-            Dim oCredential As NetworkCredential = New NetworkCredential(emailBrand.SmtpUser, emailBrand.SmtpPassword)
-            oSmtp.UseDefaultCredentials = False
-            oSmtp.Credentials = oCredential
-
-            oSmtp.Send(oMsg)
+            emailPhase = "transport-send"
+            Dim settings As New OrderEmailTransportSettings() With {
+                .Host = emailBrand.SmtpHost,
+                .UserName = emailBrand.SmtpUser,
+                .Password = emailBrand.SmtpPassword
+            }
+            Dim transport As IOrderEmailTransport = New NetworkOrderEmailTransport()
+            transport.Send(oMsg, settings)
+            KeepStoreLog.Info("ordine-email",
+                              OrderEmailDeliveryDiagnostics.BuildSuccessLog(receiptAziendaId, id),
+                              HttpContext.Current)
+            Return True
 
         Catch ex As Exception
             Try
-                KeepStoreLog.Error("ordine-email", "Invio conferma ordine non riuscito. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+                KeepStoreLog.Error("ordine-email",
+                                   OrderEmailDeliveryDiagnostics.BuildFailureLog(emailPhase, ex),
+                                   Nothing,
+                                   HttpContext.Current)
             Catch
             End Try
+            Return False
         Finally
             If conn.State = ConnectionState.Open Then
                 conn.Close()
@@ -1932,7 +1944,7 @@ CheckoutFailureRecoveryService.TracePhase(
                 connDestAlt.Dispose()
             End If
         End Try
-    End Sub
+    End Function
 
     Private Sub ConfigureOrderEmailEncoding(ByVal message As MailMessage)
         message.SubjectEncoding = Encoding.UTF8
