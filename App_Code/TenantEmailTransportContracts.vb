@@ -276,6 +276,7 @@ Public NotInheritable Class EmailTransportRequest
     Public Property ConnectionString As String
     Public Property AziendaId As Integer
     Public Property Purpose As String
+    Public Property Classification As String
     Public Property CorrelationId As String
     Public Property Message As MimeMessage
 End Class

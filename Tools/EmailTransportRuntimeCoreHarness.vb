@@ -170,6 +170,70 @@ Public NotInheritable Class HarnessSmtpSession
     End Sub
 End Class
 
+Public NotInheritable Class HarnessCaptureTransport
+    Implements IEmailTransport
+
+    Public Property Result As EmailDeliveryResult = SuccessResult("HARNESS_OK")
+    Public Property ReturnNull As Boolean
+    Public Property ThrowOnDeliver As Boolean
+    Public Property DeliverCount As Integer
+    Public Property LastConnectionString As String
+    Public Property LastAziendaId As Integer
+    Public Property LastPurpose As String
+    Public Property LastClassification As String
+    Public Property LastCorrelationId As String
+    Public Property ToCount As Integer
+    Public Property CcCount As Integer
+    Public Property BccCount As Integer
+    Public Property ReplyToCount As Integer
+    Public Property FromCount As Integer
+    Public Property AttachmentCount As Integer
+    Public Property HtmlBody As String
+    Public Property PlainTextBody As String
+
+    Public Function Deliver(ByVal request As EmailTransportRequest) As EmailDeliveryResult Implements IEmailTransport.Deliver
+        DeliverCount += 1
+        If ThrowOnDeliver Then Throw New InvalidOperationException("synthetic-sensitive-message")
+        LastConnectionString = request.ConnectionString
+        LastAziendaId = request.AziendaId
+        LastPurpose = request.Purpose
+        LastClassification = request.Classification
+        LastCorrelationId = request.CorrelationId
+        ToCount = request.Message.To.Count
+        CcCount = request.Message.Cc.Count
+        BccCount = request.Message.Bcc.Count
+        ReplyToCount = request.Message.ReplyTo.Count
+        FromCount = request.Message.From.Count
+        HtmlBody = request.Message.HtmlBody
+        PlainTextBody = request.Message.TextBody
+        AttachmentCount = 0
+        For Each attachment As MimeEntity In request.Message.Attachments
+            AttachmentCount += 1
+        Next
+        If ReturnNull Then Return Nothing
+        Result.CorrelationId = request.CorrelationId
+        Return Result
+    End Function
+
+    Public Function VerifyConnection(ByVal connectionString As String,
+                                     ByVal aziendaId As Integer,
+                                     ByVal purpose As String,
+                                     ByVal correlationId As String) As EmailConnectionVerificationResult Implements IEmailTransport.VerifyConnection
+        Throw New InvalidOperationException("FACADE_MUST_NOT_VERIFY")
+    End Function
+
+    Public Shared Function SuccessResult(ByVal code As String) As EmailDeliveryResult
+        Return New EmailDeliveryResult() With {
+            .Status = EmailTransportOperationStatus.Succeeded,
+            .ProfileState = TenantEmailTransportProfileState.Ready,
+            .FailureKind = EmailTransportFailureKind.None,
+            .Phase = "send",
+            .Code = code,
+            .TimestampUtc = DateTime.UtcNow
+        }
+    End Function
+End Class
+
 Public Module EmailTransportRuntimeCoreHarness
     Private _passed As Integer
 
@@ -178,6 +242,7 @@ Public Module EmailTransportRuntimeCoreHarness
         TestCredentialMatrixAndDpapi()
         TestTransportMatrix()
         TestLegacyEmptyTableGate()
+        TestDeliveryFacade()
         Console.WriteLine("EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=" & _passed.ToString())
         Console.WriteLine("PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL")
     End Sub
@@ -323,7 +388,8 @@ Public Module EmailTransportRuntimeCoreHarness
         message.To.Add(New MailboxAddress("Recipient", "recipient@example.invalid"))
         message.Subject = "synthetic"
         message.Body = New TextPart("plain") With {.Text = "synthetic"}
-        Dim result = deliveryTransport.Deliver(New EmailTransportRequest() With {.ConnectionString = "unused", .AziendaId = 1, .Purpose = "TRANSACTIONAL", .CorrelationId = "corr-delivery", .Message = message})
+        Dim syntheticDatabase As String = "unused"
+        Dim result = deliveryTransport.Deliver(New EmailTransportRequest() With {.ConnectionString = syntheticDatabase, .AziendaId = 1, .Purpose = "TRANSACTIONAL", .CorrelationId = "corr-delivery", .Message = message})
         Assert(result.Status = EmailTransportOperationStatus.Succeeded AndAlso deliveryFactory.Sessions(0).SendCount = 1, "28_SINGLE_SEND_NO_RETRY")
         Assert(deliveryResolver.NormalResolveCount = 1 AndAlso deliveryResolver.VerificationResolveCount = 0, "28A_DELIVERY_CANNOT_USE_ADMIN_RESOLUTION")
         Assert(Not String.Join("|", deliveryTelemetry.Lines.ToArray()).Contains(credential.Secret) AndAlso
@@ -339,6 +405,82 @@ Public Module EmailTransportRuntimeCoreHarness
         Dim result = transport.VerifyConnection("db-a", 1, "TRANSACTIONAL", "corr-empty")
         Assert(result.ProfileState = TenantEmailTransportProfileState.NotConfigured AndAlso factory.Sessions.Count = 0, "30_EMPTY_TABLE_LEGACY_UNTOUCHED")
     End Sub
+
+    Private Sub TestDeliveryFacade()
+        Dim capture As New HarnessCaptureTransport()
+        Dim facade As New TenantEmailDeliveryService(capture, "db-a")
+        Dim request As TenantEmailDeliveryRequest = FacadeRequest(1, "facade-correlation-0001")
+        request.ToRecipients.Add(New TenantEmailRecipient() With {.Address = "second@example.invalid", .DisplayName = "Second"})
+        request.CcRecipients.Add(New TenantEmailRecipient() With {.Address = "copy@example.invalid", .DisplayName = "Copy"})
+        request.BccRecipients.Add(New TenantEmailRecipient() With {.Address = "blind@example.invalid", .DisplayName = "Blind"})
+        request.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "reply@example.invalid", .DisplayName = "Reply"})
+        request.Attachments.Add(New TenantEmailAttachment() With {.FileName = "synthetic.txt", .ContentType = "text/plain", .ContentBytes = Encoding.UTF8.GetBytes("synthetic")})
+
+        Dim result As EmailDeliveryResult = facade.Deliver(request)
+        Assert(result.Status = EmailTransportOperationStatus.Succeeded AndAlso capture.DeliverCount = 1, "31_FACADE_SINGLE_DELIVERY")
+        Assert(capture.LastAziendaId = 1, "32_FACADE_TENANT_A")
+        Assert(String.Equals(capture.LastPurpose, "TRANSACTIONAL", StringComparison.Ordinal), "33_FACADE_TRANSACTIONAL_ONLY")
+        Assert(String.Equals(capture.LastClassification, TenantEmailMessageClassifications.OrderConfirmation, StringComparison.Ordinal), "34_FACADE_CLASSIFICATION")
+        Assert(capture.ToCount = 2 AndAlso capture.CcCount = 1 AndAlso capture.BccCount = 1, "35_FACADE_TO_CC_BCC")
+        Assert(capture.ReplyToCount = 1, "36_FACADE_REPLY_TO")
+        Assert(capture.HtmlBody = "<p>synthetic</p>" AndAlso capture.PlainTextBody = "synthetic", "37_FACADE_HTML_PLAIN")
+        Assert(capture.AttachmentCount = 1, "38_FACADE_ATTACHMENT")
+        Assert(String.Equals(capture.LastCorrelationId, "facade-correlation-0001", StringComparison.Ordinal), "39_FACADE_CORRELATION")
+        Assert(capture.FromCount = 0, "40_FROM_RESERVED_FOR_CENTRAL_TRANSPORT")
+
+        Dim captureB As New HarnessCaptureTransport()
+        Dim resultB As EmailDeliveryResult = New TenantEmailDeliveryService(captureB, "db-b").Deliver(FacadeRequest(2, "facade-correlation-0002"))
+        Assert(resultB.Status = EmailTransportOperationStatus.Succeeded AndAlso captureB.LastAziendaId = 2, "41_FACADE_TENANT_B")
+        Assert(String.Equals(capture.LastConnectionString, "db-a", StringComparison.Ordinal) AndAlso String.Equals(captureB.LastConnectionString, "db-b", StringComparison.Ordinal), "42_FACADE_DATABASE_ISOLATION")
+
+        Dim rejectedTransport As New HarnessCaptureTransport()
+        Dim rejectedFacade As New TenantEmailDeliveryService(rejectedTransport, "db-a")
+        Dim invalidTenant As TenantEmailDeliveryRequest = FacadeRequest(0, "facade-correlation-0003")
+        Assert(rejectedFacade.Deliver(invalidTenant).Code = "EMAIL_FACADE_SCOPE_INVALID" AndAlso rejectedTransport.DeliverCount = 0, "43_FACADE_INVALID_TENANT_FAIL_CLOSED")
+        Dim invalidSubject As TenantEmailDeliveryRequest = FacadeRequest(1, "facade-correlation-0004")
+        invalidSubject.Subject = "bad" & ControlChars.CrLf & "header"
+        Assert(rejectedFacade.Deliver(invalidSubject).Code = "EMAIL_SUBJECT_INVALID" AndAlso rejectedTransport.DeliverCount = 0, "44_FACADE_HEADER_INJECTION_REJECTED")
+        Dim invalidTo As TenantEmailDeliveryRequest = FacadeRequest(1, "facade-correlation-0005")
+        invalidTo.ToRecipients.Clear()
+        Assert(rejectedFacade.Deliver(invalidTo).Code = "EMAIL_TO_INVALID" AndAlso rejectedTransport.DeliverCount = 0, "45_FACADE_RECIPIENT_REQUIRED")
+        Dim invalidAttachment As TenantEmailDeliveryRequest = FacadeRequest(1, "facade-correlation-0006")
+        invalidAttachment.Attachments.Add(New TenantEmailAttachment() With {.FileName = "..\outside.txt", .ContentType = "text/plain", .ContentBytes = Encoding.UTF8.GetBytes("synthetic")})
+        Assert(rejectedFacade.Deliver(invalidAttachment).Code = "EMAIL_ATTACHMENT_INVALID" AndAlso rejectedTransport.DeliverCount = 0, "46_FACADE_ATTACHMENT_PATH_REJECTED")
+
+        Dim nullTransport As New HarnessCaptureTransport() With {.ReturnNull = True}
+        Assert(New TenantEmailDeliveryService(nullTransport, "db-a").Deliver(FacadeRequest(1, "facade-correlation-0007")).Code = "EMAIL_TRANSPORT_RESULT_NULL" AndAlso nullTransport.DeliverCount = 1, "47_FACADE_NULL_RESULT_SANITIZED")
+        Dim throwingTransport As New HarnessCaptureTransport() With {.ThrowOnDeliver = True}
+        Assert(New TenantEmailDeliveryService(throwingTransport, "db-a").Deliver(FacadeRequest(1, "facade-correlation-0008")).Code = "EMAIL_FACADE_FAILURE" AndAlso throwingTransport.DeliverCount = 1, "48_FACADE_EXCEPTION_SANITIZED")
+
+        Dim disabledTransport As New HarnessCaptureTransport() With {.Result = RejectedResult(TenantEmailTransportProfileState.Disabled, "PROFILE_DISABLED")}
+        Assert(New TenantEmailDeliveryService(disabledTransport, "db-a").Deliver(FacadeRequest(1, "facade-correlation-0009")).ProfileState = TenantEmailTransportProfileState.Disabled AndAlso disabledTransport.DeliverCount = 1, "49_FACADE_DISABLED_NO_FALLBACK")
+        Dim missingTransport As New HarnessCaptureTransport() With {.Result = RejectedResult(TenantEmailTransportProfileState.CredentialMissing, "CREDENTIAL_MISSING")}
+        Assert(New TenantEmailDeliveryService(missingTransport, "db-a").Deliver(FacadeRequest(1, "facade-correlation-0010")).ProfileState = TenantEmailTransportProfileState.CredentialMissing AndAlso missingTransport.DeliverCount = 1, "50_FACADE_CREDENTIAL_MISSING_NO_FALLBACK")
+    End Sub
+
+    Private Function FacadeRequest(ByVal aziendaId As Integer, ByVal correlationId As String) As TenantEmailDeliveryRequest
+        Dim request As New TenantEmailDeliveryRequest() With {
+            .AziendaId = aziendaId,
+            .CorrelationId = correlationId,
+            .Classification = TenantEmailMessageClassifications.OrderConfirmation,
+            .Subject = "Synthetic subject",
+            .HtmlBody = "<p>synthetic</p>",
+            .PlainTextBody = "synthetic"
+        }
+        request.ToRecipients.Add(New TenantEmailRecipient() With {.Address = "recipient@example.invalid", .DisplayName = "Recipient"})
+        Return request
+    End Function
+
+    Private Function RejectedResult(ByVal state As TenantEmailTransportProfileState, ByVal code As String) As EmailDeliveryResult
+        Return New EmailDeliveryResult() With {
+            .Status = EmailTransportOperationStatus.Rejected,
+            .ProfileState = state,
+            .FailureKind = EmailTransportFailureKind.NotOperational,
+            .Phase = "resolve",
+            .Code = code,
+            .TimestampUtc = DateTime.UtcNow
+        }
+    End Function
 
     Private Sub AssertFailure(ByVal kind As EmailTransportFailureKind,
                               ByVal code As String,

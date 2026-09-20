@@ -25,7 +25,8 @@ try {
         'App_Code\TenantEmailTransportContracts.vb',
         'App_Code\TenantEmailTransportProfileResolver.vb',
         'App_Code\EmailCredentialStore.vb',
-        'App_Code\MailKitEmailTransport.vb'
+        'App_Code\MailKitEmailTransport.vb',
+        'App_Code\TenantEmailDeliveryService.vb'
     )
     $runtimeText = ($runtimeFiles | ForEach-Object { Get-Content -LiteralPath (Join-Path $repo $_) -Raw }) -join "`n"
     Assert-Check ($runtimeText -notmatch '(?i)SecureSocketOptions\.Auto|SecureSocketOptions\.None') 'NO_TLS_AUTO_OR_PLAINTEXT'
@@ -62,26 +63,12 @@ try {
     $output = & $exe
     if ($LASTEXITCODE -ne 0) { throw ('EMAIL_CORE_HARNESS_RUN_' + $LASTEXITCODE) }
     $output | Write-Output
-    Assert-Check (($output -join "`n") -match 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=36') 'HARNESS_36_CHECKS'
+    Assert-Check (($output -join "`n") -match 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=56') 'HARNESS_56_CHECKS'
     Assert-Check (($output -join "`n") -match 'PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL') 'SIMPLIFIED_PROVISIONING_EXPLICIT'
 
     & (Join-Path $PSScriptRoot 'Test-EmailTransportCredentialProvisioning.ps1')
 
-    $legacyFiles = @('ordine.aspx.vb','registrazione.aspx.vb','Contattaci.aspx.vb','main.aspx.vb','App_Code\PasswordResetTokenService.vb','documenti.aspx.vb')
-    foreach ($legacyFile in $legacyFiles) {
-        $relative = $legacyFile.Replace('\','/')
-        $currentHash = (Get-FileHash -LiteralPath (Join-Path $repo $legacyFile) -Algorithm SHA256).Hash.ToLowerInvariant()
-        $headBytes = & git -C $repo show ('HEAD:' + $relative) 2>$null
-        $headTemp = Join-Path $tempRoot ([IO.Path]::GetFileName($legacyFile) + '.head')
-        [IO.File]::WriteAllLines($headTemp, @($headBytes))
-        $headHash = (Get-FileHash -LiteralPath $headTemp -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($currentHash -eq $headHash) {
-            Write-Output ('PASS LEGACY_UNCHANGED_' + ([IO.Path]::GetFileName($legacyFile)))
-        } else {
-            $diff = & git -C $repo diff --numstat -- $legacyFile
-            Assert-Check ([string]::IsNullOrWhiteSpace(($diff -join ''))) ('LEGACY_UNCHANGED_' + ([IO.Path]::GetFileName($legacyFile)))
-        }
-    }
+    Assert-Check ($runtimeText -match 'Class TenantEmailDeliveryService') 'CENTRAL_FACADE_COMPILED'
 } finally {
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force

@@ -1,6 +1,5 @@
 Imports MySql.Data.MySqlClient
 Imports System.Data
-Imports System.Net.Mail
 Imports System.Configuration
 
 Partial Class documenti

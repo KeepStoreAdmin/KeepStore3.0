@@ -54,12 +54,13 @@ Assert-Source ($canonicalProcedure -match 'AziendeId=Azienda') 'DOCUMENT_PROVENA
 Assert-Source ($order -notmatch 'Session\.Item\("AziendaId"\)\s*=\s*2') 'ORDER_EMAIL_HARDCODED_COMPANY_REMOVED'
 Assert-Source ($order -notmatch '(?i)taikun|webaffare') 'ORDER_SHARED_CODE_NO_CLIENT_NAME'
 Assert-Source ($order -match 'LoadOrderEmailBrandData\(conn, receiptAziendaId, False\)') 'ORDER_EMAIL_BRAND_FROM_PERSISTED_COMPANY'
-Assert-Source ($order -match 'emailBrand\.SmtpHost') 'ORDER_EMAIL_SMTP_FROM_PERSISTED_COMPANY'
+Assert-Source ($order -match '\.AziendaId\s*=\s*receiptAziendaId') 'ORDER_EMAIL_TRANSPORT_FROM_PERSISTED_COMPANY'
 Assert-Source ($order -match 'emailBrand\.AdministrativeRecipient') 'ORDER_EMAIL_ADMIN_FROM_PERSISTED_COMPANY'
-Assert-Source ($order -match 'ReplyToList\.Add') 'ORDER_EMAIL_REPLY_TO_TENANT'
+Assert-Source ($order -match 'emailRequest\.ReplyToRecipients\.Add') 'ORDER_EMAIL_REPLY_TO_TENANT'
 Assert-Source ($order.IndexOf('trns.Commit()', [StringComparison]::Ordinal) -lt $order.IndexOf('SendEmail(', $order.IndexOf('trns.Commit()', [StringComparison]::Ordinal), [StringComparison]::Ordinal)) 'ORDER_EMAIL_AFTER_COMMIT'
-Assert-Source ($order -match 'OrderEmailDeliveryDiagnostics\.BuildFailureLog\(emailPhase, ex\)') 'ORDER_EMAIL_FAILURE_SANITIZED'
+Assert-Source ($order -match 'OrderEmailDeliveryDiagnostics\.BuildResultLog\(receiptAziendaId, id, deliveryResult\)') 'ORDER_EMAIL_FAILURE_SANITIZED'
 Assert-Source ($order -match 'If\(orderEmailSent, "completed", "failed"\)') 'ORDER_EMAIL_FAILURE_NOT_RECORDED_COMPLETED'
+Assert-Source ($order -notmatch '(?i)Password_smtp|User_smtp|emailBrand\.SmtpHost|\bSmtpClient\b') 'ORDER_EMAIL_ZERO_LEGACY_FALLBACK'
 
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 try {

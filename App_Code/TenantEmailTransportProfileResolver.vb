@@ -3,11 +3,11 @@ Imports System.Collections.Generic
 Imports System.Data
 Imports System.Globalization
 Imports System.Net
-Imports System.Net.Mail
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.RegularExpressions
 Imports MySql.Data.MySqlClient
+Imports MimeKit
 
 Public NotInheritable Class EmailDatabaseIdentityProvider
     Implements IEmailDatabaseIdentityProvider
@@ -262,7 +262,8 @@ Public NotInheritable Class TenantEmailTransportProfileResolver
 
     Private Shared Function IsEmailAddress(ByVal value As String) As Boolean
         Try
-            Dim parsed As New MailAddress(Convert.ToString(value).Trim())
+            Dim parsed As MailboxAddress = Nothing
+            If Not MailboxAddress.TryParse(Convert.ToString(value).Trim(), parsed) OrElse parsed Is Nothing Then Return False
             Return String.Equals(parsed.Address, Convert.ToString(value).Trim(), StringComparison.OrdinalIgnoreCase)
         Catch
             Return False

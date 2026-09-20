@@ -363,8 +363,7 @@ Public NotInheritable Class MailKitEmailTransport
                                                 ByVal profile As TenantEmailTransportProfile)
         message.From.Clear()
         message.From.Add(New MailboxAddress(profile.FromDisplayName, profile.FromAddress))
-        message.ReplyTo.Clear()
-        If Not String.IsNullOrWhiteSpace(profile.ReplyToAddress) Then
+        If message.ReplyTo.Count = 0 AndAlso Not String.IsNullOrWhiteSpace(profile.ReplyToAddress) Then
             message.ReplyTo.Add(New MailboxAddress(String.Empty, profile.ReplyToAddress))
         End If
     End Sub

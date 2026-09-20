@@ -1146,7 +1146,16 @@ End Function
             localConn.Open()
 
             localCmd.CommandType = CommandType.Text
-            localCmd.CommandText = "SELECT * " &
+            localCmd.CommandText = "SELECT Id, Nome, Descrizione, url1, url2, logoWeb, ListinoDefault, Email, " &
+                                   "RagioneSociale, Indirizzo, Cap, Citta, provincia, Piva, Telefono, Fax, " &
+                                   "ListinoUser, IvaTipo, CanOrder, MagazzinoDefault, DispoTipo, DispoMinima, RigheArticoli, " &
+                                   "Groupon, Coupon, ScadenzaPassword, VetrinaArticoliNovita, VetrinaArticoliUltimiArriviPuntoVendita, " &
+                                   "VetrinaArticoliImpatto, VetrinaArticoliPiuVenduti, VetrinaPromoFissi, VetrinaPromoRandom, " &
+                                   "VetrinaPromoScadenza, VetrinaPromoInizio, VetrinaDispoMinima, css, copyright, " &
+                                   "descrizione_servizio_coupon, logo_verific_site1, logo_verific_site2, logo_verific_site3, " &
+                                   "logo_verific_site4, link_logo_verific_site1, link_logo_verific_site2, link_logo_verific_site3, " &
+                                   "link_logo_verific_site4, logo_footer, statistiche_visite, facebookLink, Icona_web, " &
+                                   "AbilitaBuoniScontiCarrello, TC, AccountPaypal, AccountIwBank " &
                                    "FROM aziende " &
                                    "WHERE Id=@companyId " &
                                    "LIMIT 0, 1"
@@ -1227,9 +1236,6 @@ End Function
                 Me.Session("VetrinaPromoInizio") = dr.Item("VetrinaPromoInizio")
                 Me.Session("VetrinaDispoMinima") = dr.Item("VetrinaDispoMinima")
                 Me.Session("css") = dr.Item("css")
-                Me.Session("smtp") = dr.Item("smtp")
-                Me.Session("User_smtp") = dr.Item("User_smtp")
-                Me.Session("Password_smtp") = dr.Item("Password_smtp")
                 Me.Session("AziendaCopyright") = dr.Item("copyright")
                 Me.Session("AziendaDescrizioneServizioCoupon") = dr.Item("descrizione_servizio_coupon")
                 Me.Session("AziendaLogoVerificSite1") = dr.Item("logo_verific_site1")

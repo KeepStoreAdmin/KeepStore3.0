@@ -3,8 +3,6 @@ Imports System.Data
 Imports System.Globalization
 Imports System.Collections.Generic
 Imports System.Net
-Imports System.Net.Mail
-Imports System.Net.Mime
 Imports System.Text
 Imports System.IO
 Imports BancaSella
@@ -1623,9 +1621,6 @@ CheckoutFailureRecoveryService.TracePhase(
         Public Property FiscalCode As String
         Public Property Pec As String
         Public Property Sdi As String
-        Public Property SmtpHost As String
-        Public Property SmtpUser As String
-        Public Property SmtpPassword As String
         Public Property AdministrativeRecipient As String
     End Class
 
@@ -1789,8 +1784,7 @@ CheckoutFailureRecoveryService.TracePhase(
             If emailBrand Is Nothing OrElse receiptAziendaId <> identity.CompanyId OrElse
                String.IsNullOrWhiteSpace(recipientEmail) OrElse
                String.IsNullOrWhiteSpace(emailBrand.CompanyName) OrElse
-               String.IsNullOrWhiteSpace(emailBrand.SupportEmail) OrElse
-               String.IsNullOrWhiteSpace(emailBrand.SmtpHost) Then
+               String.IsNullOrWhiteSpace(emailBrand.SupportEmail) Then
                 Throw New InvalidOperationException("Order email persisted identity is not valid.")
             End If
 
@@ -1854,14 +1848,6 @@ CheckoutFailureRecoveryService.TracePhase(
                            "<tr><td colspan=2></td><td colspan=2 bgcolor=whitesmoke align=right><b>Totale:</td><td bgcolor=whitesmoke nowrap align=right><b>" & Totale & "</td></tr>" &
                            "</table>"
 
-            Dim oMsg As MailMessage = New MailMessage()
-            oMsg.From = New MailAddress(emailBrand.SupportEmail, emailBrand.CompanyName)
-            oMsg.To.Add(New MailAddress(recipientEmail, recipientName))
-            If Not String.IsNullOrWhiteSpace(emailBrand.AdministrativeRecipient) Then
-                oMsg.Bcc.Add(New MailAddress(emailBrand.AdministrativeRecipient, emailBrand.CompanyName))
-            End If
-            oMsg.ReplyToList.Add(New MailAddress(emailBrand.SupportEmail, emailBrand.CompanyName))
-            ConfigureOrderEmailEncoding(oMsg)
             Dim legacySubject As String = "Conferma " & documento & " dal sito " & emailBrand.CompanyName
             Dim legacyBody As String = "<font face=arial size=2 color=black>Gentile " & recipientName & "," &
                                        "<br>La ringraziamo per aver preferito " & emailBrand.CompanyName & ", abbiamo ricevuto la sua richiesta di " & documento & ",<br>Le riportiamo di seguito l'elenco completo dei prodotti scelti e le condizioni commerciali.</font>" &
@@ -1903,31 +1889,35 @@ CheckoutFailureRecoveryService.TracePhase(
                                                                                                id,
                                                                                                n)
 
+            Dim emailRequest As New TenantEmailDeliveryRequest() With {
+                .AziendaId = receiptAziendaId,
+                .CorrelationId = "order-" & id.ToString(CultureInfo.InvariantCulture) & "-" & Guid.NewGuid().ToString("N"),
+                .Classification = TenantEmailMessageClassifications.OrderConfirmation,
+                .Subject = legacySubject,
+                .HtmlBody = legacyBody,
+                .PlainTextBody = "Conferma " & documento & " n. " & numeroDocumento
+            }
+            emailRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = recipientEmail, .DisplayName = recipientName})
+            If Not String.IsNullOrWhiteSpace(emailBrand.AdministrativeRecipient) Then
+                emailRequest.BccRecipients.Add(New TenantEmailRecipient() With {.Address = emailBrand.AdministrativeRecipient, .DisplayName = emailBrand.CompanyName})
+            End If
+            emailRequest.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = emailBrand.SupportEmail, .DisplayName = emailBrand.CompanyName})
+
             If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
-                oMsg.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni, emailBrand.CompanyName)
-                ApplyRenderedOrderEmailMime(oMsg, renderedEmail)
-            Else
-                oMsg.Subject = legacySubject
-                ApplyLegacyOrderEmailMime(oMsg, legacyBody)
+                emailRequest.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni, emailBrand.CompanyName)
+                emailRequest.HtmlBody = renderedEmail.HtmlBody
+                emailRequest.PlainTextBody = renderedEmail.PlainTextBody
             End If
 
             emailPhase = "transport-send"
-            Dim settings As New OrderEmailTransportSettings() With {
-                .Host = emailBrand.SmtpHost,
-                .UserName = emailBrand.SmtpUser,
-                .Password = emailBrand.SmtpPassword
-            }
-            Dim transport As IOrderEmailTransport = New NetworkOrderEmailTransport()
-            transport.Send(oMsg, settings)
-            KeepStoreLog.Info("ordine-email",
-                              OrderEmailDeliveryDiagnostics.BuildSuccessLog(receiptAziendaId, id),
-                              HttpContext.Current)
-            Return True
+            Dim deliveryResult As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(emailRequest)
+            KeepStoreLog.Info("ordine-email", OrderEmailDeliveryDiagnostics.BuildResultLog(receiptAziendaId, id, deliveryResult), HttpContext.Current)
+            Return deliveryResult IsNot Nothing AndAlso deliveryResult.Status = EmailTransportOperationStatus.Succeeded
 
         Catch ex As Exception
             Try
                 KeepStoreLog.Error("ordine-email",
-                                   OrderEmailDeliveryDiagnostics.BuildFailureLog(emailPhase, ex),
+                                   "result=failed phase=" & emailPhase & " code=ORDER_EMAIL_BUILD_FAILURE type=" & ex.GetType().Name,
                                    Nothing,
                                    HttpContext.Current)
             Catch
@@ -1945,34 +1935,6 @@ CheckoutFailureRecoveryService.TracePhase(
             End If
         End Try
     End Function
-
-    Private Sub ConfigureOrderEmailEncoding(ByVal message As MailMessage)
-        message.SubjectEncoding = Encoding.UTF8
-        message.BodyEncoding = Encoding.UTF8
-        message.HeadersEncoding = Encoding.UTF8
-    End Sub
-
-    Private Sub ApplyRenderedOrderEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
-        message.AlternateViews.Clear()
-        message.Body = ""
-        message.IsBodyHtml = False
-
-        Dim plainBody As String = renderedEmail.PlainTextBody
-        If String.IsNullOrWhiteSpace(plainBody) Then
-            plainBody = "Riepilogo ordine disponibile in formato HTML."
-        End If
-
-        Dim plainView As AlternateView = AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain)
-        Dim htmlView As AlternateView = AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html)
-        message.AlternateViews.Add(plainView)
-        message.AlternateViews.Add(htmlView)
-    End Sub
-
-    Private Sub ApplyLegacyOrderEmailMime(ByVal message As MailMessage, ByVal legacyBody As String)
-        message.AlternateViews.Clear()
-        message.Body = legacyBody
-        message.IsBodyHtml = True
-    End Sub
 
     Private Function BuildOrderReceiptHtml(ByVal conn As MySqlConnection,
                                            ByVal idDocumento As Integer,
@@ -2507,7 +2469,7 @@ CheckoutFailureRecoveryService.TracePhase(
         End If
 
         Try
-            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb, Smtp, User_smtp, Password_smtp FROM aziende WHERE id=?id LIMIT 1", conn)
+            Using cmd As New MySqlCommand("SELECT RagioneSociale, Indirizzo, Cap, Citta, Provincia, Telefono, email, URL1, URL2, Piva, CodiceFiscale, email_pec, codice_sdi, Iban, SwiftCode, NomeBanca, LogoWeb FROM aziende WHERE id=?id LIMIT 1", conn)
                 cmd.Parameters.AddWithValue("?id", aziendaId)
                 Using reader As MySqlDataReader = cmd.ExecuteReader()
                     If reader.Read() Then
@@ -2526,9 +2488,6 @@ CheckoutFailureRecoveryService.TracePhase(
                         data.FiscalCode = DbText(reader, "CodiceFiscale")
                         data.Pec = DbText(reader, "email_pec")
                         data.Sdi = DbText(reader, "codice_sdi")
-                        data.SmtpHost = DbText(reader, "Smtp")
-                        data.SmtpUser = DbText(reader, "User_smtp")
-                        data.SmtpPassword = DbText(reader, "Password_smtp")
                         data.AdministrativeRecipient = data.SupportEmail
                     End If
                 End Using

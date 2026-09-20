@@ -1,9 +1,6 @@
 ﻿Imports MySql.Data.MySqlClient
 Imports System.Collections.Generic
 Imports System.Data
-Imports System.Net.Mail
-Imports System.Net.Mime
-Imports System.Text
 Imports CityRegistry.CityRegistrySoapClient
 
 Partial Class registrazione
@@ -991,22 +988,36 @@ Partial Class registrazione
     End Sub
 
     Public Sub Email(ByVal oggetto As String, ByVal tipo As Integer)
-        Dim oMsg As MailMessage = New MailMessage()
-        oMsg.From = New MailAddress(Session("AziendaEmail"), Session("AziendaNome"))
-        oMsg.To.Add(Me.tbEmail.Text)
-        oMsg.Bcc.Add(New MailAddress(Session("AziendaEmail"), Session("AziendaNome")))
-        ConfigureAccountEmailEncoding(oMsg)
-        oMsg.Subject = BuildAccountEmailSubject(tipo)
-        ApplyRenderedAccountEmailMime(oMsg, RenderAccountEmail(tipo))
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then
+            KeepStoreLog.Info("registrazione-email", "result=failed code=EMAIL_TENANT_UNAVAILABLE", HttpContext.Current)
+            Return
+        End If
+        Dim aziendaId As Integer = tenant.CompanyId
+        Dim rendered As KeepStoreEmailRenderResult = RenderAccountEmail(tipo)
+        Dim request As New TenantEmailDeliveryRequest() With {
+            .AziendaId = aziendaId,
+            .CorrelationId = "account-" & Guid.NewGuid().ToString("N"),
+            .Classification = If(tipo = 2, TenantEmailMessageClassifications.AccountProfileUpdated, TenantEmailMessageClassifications.AccountRegistration),
+            .Subject = BuildAccountEmailSubject(tipo),
+            .HtmlBody = rendered.HtmlBody,
+            .PlainTextBody = rendered.PlainTextBody
+        }
+        request.ToRecipients.Add(New TenantEmailRecipient() With {.Address = TextBoxText(Me.tbEmail), .DisplayName = TextBoxText(Me.tbNomeCognome)})
 
-        Dim oSmtp As SmtpClient = New SmtpClient(Session("smtp"))
-        oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
+        Dim administrativeRecipient As String = SessionText("AziendaEmail")
+        If administrativeRecipient <> "" Then
+            request.BccRecipients.Add(New TenantEmailRecipient() With {.Address = administrativeRecipient, .DisplayName = SessionText("AziendaNome")})
+        End If
 
-        Dim oCredential As System.Net.NetworkCredential = New System.Net.NetworkCredential(CType(Session.Item("User_smtp"), String), CType(Session.Item("Password_smtp"), String))
-        oSmtp.UseDefaultCredentials = True
-        oSmtp.Credentials = oCredential
-
-        oSmtp.Send(oMsg)
+        Dim result As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(request)
+        If result Is Nothing OrElse result.Status <> EmailTransportOperationStatus.Succeeded Then
+            KeepStoreLog.Info("registrazione-email",
+                              "result=failed code=" & If(result Is Nothing, "EMAIL_TRANSPORT_RESULT_NULL", result.Code) &
+                              " classification=" & request.Classification &
+                              " correlation=" & request.CorrelationId,
+                              HttpContext.Current)
+        End If
     End Sub
 
     Private Function RenderAccountEmail(ByVal tipo As Integer) As KeepStoreEmailRenderResult
@@ -1067,26 +1078,6 @@ Partial Class registrazione
 
         Return profile
     End Function
-
-    Private Sub ConfigureAccountEmailEncoding(ByVal message As MailMessage)
-        message.SubjectEncoding = Encoding.UTF8
-        message.BodyEncoding = Encoding.UTF8
-        message.HeadersEncoding = Encoding.UTF8
-    End Sub
-
-    Private Sub ApplyRenderedAccountEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
-        message.AlternateViews.Clear()
-        message.Body = ""
-        message.IsBodyHtml = False
-
-        Dim plainBody As String = renderedEmail.PlainTextBody
-        If String.IsNullOrWhiteSpace(plainBody) Then
-            plainBody = "Comunicazione account disponibile in formato HTML."
-        End If
-
-        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain))
-        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html))
-    End Sub
 
     Private Function HasShippingAddress() As Boolean
         Return TextBoxText(Me.tbRagioneSocialeA) <> "" AndAlso

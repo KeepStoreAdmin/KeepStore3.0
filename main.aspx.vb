@@ -1,6 +1,3 @@
-Imports System.Net.Mail
-Imports System.Net.Mime
-Imports System.Text
 Imports System.Web
 
 Partial Class main
@@ -37,29 +34,39 @@ Partial Class main
                 Throw New InvalidOperationException("Email azienda non configurata.")
             End If
 
-            Dim oMsg As MailMessage = New MailMessage()
-            oMsg.From = New MailAddress(aziendaEmail, FirstNonEmpty(aziendaNome, "KeepStore"))
-            oMsg.To.Add(New MailAddress(aziendaEmail, FirstNonEmpty(aziendaNome, "KeepStore")))
-            If userEmail <> "" Then
-                oMsg.ReplyToList.Add(New MailAddress(userEmail, userName))
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then
+                Throw New InvalidOperationException("Tenant contatto non disponibile.")
             End If
-            oMsg.Subject = HeaderText(FirstNonEmpty(reason, "Richiesta dal sito"), 150)
-            ConfigureContactEmailEncoding(oMsg)
-            ApplyRenderedContactEmailMime(oMsg, RenderContactEmail(userName, userEmail, reason, messageText))
+            Dim aziendaId As Integer = tenant.CompanyId
+            Dim rendered As KeepStoreEmailRenderResult = RenderContactEmail(userName, userEmail, reason, messageText)
+            Dim deliveryRequest As New TenantEmailDeliveryRequest() With {
+                .AziendaId = aziendaId,
+                .CorrelationId = "legacy-contact-" & Guid.NewGuid().ToString("N"),
+                .Classification = TenantEmailMessageClassifications.ContactRequest,
+                .Subject = HeaderText(FirstNonEmpty(reason, "Richiesta dal sito"), 150),
+                .HtmlBody = rendered.HtmlBody,
+                .PlainTextBody = rendered.PlainTextBody
+            }
+            deliveryRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = aziendaEmail, .DisplayName = FirstNonEmpty(aziendaNome, "KeepStore")})
+            If userEmail <> "" Then
+                deliveryRequest.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = userEmail, .DisplayName = userName})
+            End If
 
-            Dim oSmtp As SmtpClient = New SmtpClient(Me.Session.Item("smtp"))
-            oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
-
-            Dim oCredential As System.Net.NetworkCredential = New System.Net.NetworkCredential(CType(Session.Item("User_smtp"), String), CType(Session.Item("Password_smtp"), String))
-            oSmtp.UseDefaultCredentials = True
-            oSmtp.Credentials = oCredential
-
-            oSmtp.Send(oMsg)
+            Dim deliveryResult As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(deliveryRequest)
+            If deliveryResult Is Nothing OrElse deliveryResult.Status <> EmailTransportOperationStatus.Succeeded Then
+                KeepStoreLog.Info("main-contact",
+                                  "result=failed code=" & If(deliveryResult Is Nothing, "EMAIL_TRANSPORT_RESULT_NULL", deliveryResult.Code) &
+                                  " correlation=" & deliveryRequest.CorrelationId,
+                                  HttpContext.Current)
+                Me.Label_esito.Text = "Non e stato possibile inviare la richiesta. Riprova piu tardi o contattaci telefonicamente."
+                Return
+            End If
 
             Me.Label_esito.Text = "Richiesta inoltrata"
         Catch ex As Exception
             Me.Label_esito.Visible = True
-            KeepStoreLog.Error("main-contact", "Errore invio mail contatto legacy main", ex, HttpContext.Current)
+            KeepStoreLog.Error("main-contact", "result=failed code=LEGACY_CONTACT_EMAIL_FAILURE type=" & ex.GetType().Name, Nothing, HttpContext.Current)
             Me.Label_esito.Text = "Non e stato possibile inviare la richiesta. Riprova piu tardi o contattaci telefonicamente."
         End Try
     End Sub
@@ -76,26 +83,6 @@ Partial Class main
 
         Return KeepStoreContactEmailMessages.RenderContactRequest(brand, userName, userEmail, reason, messageText)
     End Function
-
-    Private Sub ConfigureContactEmailEncoding(ByVal message As MailMessage)
-        message.SubjectEncoding = Encoding.UTF8
-        message.BodyEncoding = Encoding.UTF8
-        message.HeadersEncoding = Encoding.UTF8
-    End Sub
-
-    Private Sub ApplyRenderedContactEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
-        message.AlternateViews.Clear()
-        message.Body = ""
-        message.IsBodyHtml = False
-
-        Dim plainBody As String = renderedEmail.PlainTextBody
-        If String.IsNullOrWhiteSpace(plainBody) Then
-            plainBody = "Richiesta contatto disponibile in formato HTML."
-        End If
-
-        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain))
-        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html))
-    End Sub
 
     Private Function ControlText(ByVal control As TextBox, ByVal maxLength As Integer) As String
         If control Is Nothing OrElse control.Text Is Nothing Then

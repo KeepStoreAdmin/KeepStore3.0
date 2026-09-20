@@ -1,8 +1,6 @@
 Imports System
 Imports System.Configuration
 Imports System.Data
-Imports System.Net
-Imports System.Net.Mail
 Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Web
@@ -21,6 +19,7 @@ Public Module PasswordResetTokenService
     Private Const GenericResetMessage As String = "Se i dati inseriti sono corretti riceverai le istruzioni per completare il reset della password."
 
     Private Class PasswordResetCompanyInfo
+        Public Property AziendaId As Integer
         Public Property Name As String
         Public Property Email As String
         Public Property WebsiteUrl As String
@@ -76,7 +75,7 @@ Public Module PasswordResetTokenService
                     Catch
                     End Try
 
-                    KeepStoreLog.Error("password-reset", "Errore invio email reset password", ex, HttpContext.Current)
+                    KeepStoreLog.Error("password-reset", "result=failed code=PASSWORD_RESET_EMAIL_FAILURE type=" & ex.GetType().Name, Nothing, HttpContext.Current)
                 End Try
             End Using
         Catch ex As Exception
@@ -254,6 +253,7 @@ Public Module PasswordResetTokenService
                 If Not dr.Read() Then Return Nothing
 
                 Dim info As New PasswordResetCompanyInfo()
+                info.AziendaId = aziendaId
                 info.Name = FirstNonEmpty(Convert.ToString(dr("RagioneSociale")), Convert.ToString(dr("CognomeNome")))
                 info.Email = Convert.ToString(dr("email")).Trim()
                 info.WebsiteUrl = FirstNonEmpty(Convert.ToString(dr("URL1")), Convert.ToString(dr("URL2")))
@@ -439,38 +439,26 @@ Public Module PasswordResetTokenService
         Dim ctx As HttpContext = HttpContext.Current
         Dim aziendaNome As String = FirstNonEmpty(If(companyInfo Is Nothing, "", companyInfo.Name), SessionString(ctx, "AziendaNome"), "KeepStore")
         Dim aziendaEmail As String = FirstNonEmpty(If(companyInfo Is Nothing, "", companyInfo.Email), SessionString(ctx, "AziendaEmail"))
-        Dim smtpHost As String = SessionString(ctx, "smtp")
-        Dim userSmtp As String = SessionString(ctx, "User_smtp")
-        Dim passSmtp As String = SessionString(ctx, "Password_smtp")
         Dim resetUrl As String = BuildResetUrl(page, clearToken)
 
-        If aziendaEmail = "" OrElse smtpHost = "" Then
-            Throw New InvalidOperationException("SMTP reset password non configurato.")
+        If companyInfo Is Nothing OrElse companyInfo.AziendaId <= 0 OrElse aziendaEmail = "" Then
+            Throw New InvalidOperationException("PASSWORD_RESET_EMAIL_SCOPE_INVALID")
         End If
 
-        Using msg As New MailMessage()
-            msg.From = New MailAddress(aziendaEmail, aziendaNome)
-            msg.To.Add(New MailAddress(destinationEmail))
-            msg.Subject = KeepStoreEmailSubjects.PasswordReset(aziendaNome)
-            msg.SubjectEncoding = Encoding.UTF8
-            msg.BodyEncoding = Encoding.UTF8
-
-            Dim renderedEmail As KeepStoreEmailRenderResult = KeepStorePasswordEmailMessages.RenderPasswordReset(BuildResetEmailBrand(aziendaNome, aziendaEmail, companyInfo), displayName, resetUrl, TokenLifetimeMinutes)
-
-            msg.Body = renderedEmail.HtmlBody
-            msg.IsBodyHtml = True
-            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.PlainTextBody, Encoding.UTF8, "text/plain"))
-            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, "text/html"))
-
-            Using smtp As New SmtpClient(smtpHost)
-                smtp.DeliveryMethod = SmtpDeliveryMethod.Network
-                If userSmtp <> "" Then
-                    smtp.UseDefaultCredentials = False
-                    smtp.Credentials = New NetworkCredential(userSmtp, passSmtp)
-                End If
-                smtp.Send(msg)
-            End Using
-        End Using
+        Dim renderedEmail As KeepStoreEmailRenderResult = KeepStorePasswordEmailMessages.RenderPasswordReset(BuildResetEmailBrand(aziendaNome, aziendaEmail, companyInfo), displayName, resetUrl, TokenLifetimeMinutes)
+        Dim deliveryRequest As New TenantEmailDeliveryRequest() With {
+            .AziendaId = companyInfo.AziendaId,
+            .CorrelationId = "password-reset-" & Guid.NewGuid().ToString("N"),
+            .Classification = TenantEmailMessageClassifications.PasswordReset,
+            .Subject = KeepStoreEmailSubjects.PasswordReset(aziendaNome),
+            .HtmlBody = renderedEmail.HtmlBody,
+            .PlainTextBody = renderedEmail.PlainTextBody
+        }
+        deliveryRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = destinationEmail, .DisplayName = displayName})
+        Dim deliveryResult As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(deliveryRequest)
+        If deliveryResult Is Nothing OrElse deliveryResult.Status <> EmailTransportOperationStatus.Succeeded Then
+            Throw New InvalidOperationException(If(deliveryResult Is Nothing, "EMAIL_TRANSPORT_RESULT_NULL", deliveryResult.Code))
+        End If
     End Sub
 
     Private Function BuildResetEmailBrand(ByVal aziendaNome As String, ByVal aziendaEmail As String, ByVal companyInfo As PasswordResetCompanyInfo) As KeepStoreEmailBrandInfo

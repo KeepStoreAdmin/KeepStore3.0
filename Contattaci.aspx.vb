@@ -3,10 +3,6 @@ Option Explicit On
 
 Imports System
 Imports System.Configuration
-Imports System.Net
-Imports System.Net.Mail
-Imports System.Net.Mime
-Imports System.Text
 Imports System.Web
 Imports MySql.Data.MySqlClient
 
@@ -157,41 +153,40 @@ Partial Class Contattaci
         End If
 
         Try
-            Dim smtpHost As String = S("smtp").Trim()
-            If smtpHost = "" Then Throw New Exception("SMTP host non configurato (Session(smtp) vuota).")
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then
+                ShowAlert("In questo momento non è possibile inviare il messaggio. Riprova più tardi o contattaci via email/telefono.", True)
+                Return
+            End If
+            Dim aziendaId As Integer = tenant.CompanyId
+            Dim rendered As KeepStoreEmailRenderResult = RenderContactEmail(aziendaNome, aziendaEmail, nome, fromEmailUser, oggetto, messaggio)
+            Dim deliveryRequest As New TenantEmailDeliveryRequest() With {
+                .AziendaId = aziendaId,
+                .CorrelationId = "contact-" & Guid.NewGuid().ToString("N"),
+                .Classification = TenantEmailMessageClassifications.ContactRequest,
+                .Subject = "[Contatto sito] " & oggetto,
+                .HtmlBody = rendered.HtmlBody,
+                .PlainTextBody = rendered.PlainTextBody
+            }
+            deliveryRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = aziendaEmail, .DisplayName = aziendaNome})
+            deliveryRequest.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = fromEmailUser, .DisplayName = nome})
 
-            Using oMsg As New MailMessage()
-                oMsg.From = New MailAddress(aziendaEmail, If(String.IsNullOrWhiteSpace(aziendaNome), "Sito web", aziendaNome))
-                oMsg.To.Add(New MailAddress(aziendaEmail))
-                oMsg.ReplyToList.Add(New MailAddress(fromEmailUser, nome))
-
-                oMsg.Subject = "[Contatto sito] " & oggetto
-                oMsg.SubjectEncoding = Encoding.UTF8
-                oMsg.BodyEncoding = Encoding.UTF8
-                oMsg.HeadersEncoding = Encoding.UTF8
-                ApplyRenderedContactEmailMime(oMsg, RenderContactEmail(aziendaNome, aziendaEmail, nome, fromEmailUser, oggetto, messaggio))
-
-                Using oSmtp As New SmtpClient(smtpHost)
-                    oSmtp.DeliveryMethod = SmtpDeliveryMethod.Network
-
-                    Dim userSmtp As String = S("User_smtp").Trim()
-                    Dim passSmtp As String = S("Password_smtp")
-
-                    If userSmtp <> "" Then
-                        oSmtp.UseDefaultCredentials = False
-                        oSmtp.Credentials = New NetworkCredential(userSmtp, passSmtp)
-                    End If
-
-                    oSmtp.Send(oMsg)
-                End Using
-            End Using
+            Dim deliveryResult As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(deliveryRequest)
+            If deliveryResult Is Nothing OrElse deliveryResult.Status <> EmailTransportOperationStatus.Succeeded Then
+                KeepStoreLog.Info("contattaci",
+                                  "result=failed code=" & If(deliveryResult Is Nothing, "EMAIL_TRANSPORT_RESULT_NULL", deliveryResult.Code) &
+                                  " correlation=" & deliveryRequest.CorrelationId,
+                                  HttpContext.Current)
+                ShowAlert("In questo momento non è possibile inviare il messaggio. Riprova più tardi o contattaci via email/telefono.", True)
+                Return
+            End If
 
             txtOggetto.Text = ""
             txtMessaggio.Text = ""
             ShowAlert("Messaggio inviato correttamente. Ti risponderemo il prima possibile.", False)
 
         Catch ex As Exception
-            KeepStoreLog.Error("contattaci", "Errore invio mail contatto", ex, HttpContext.Current)
+            KeepStoreLog.Error("contattaci", "result=failed code=CONTACT_EMAIL_FAILURE type=" & ex.GetType().Name, Nothing, HttpContext.Current)
             ShowAlert("Errore durante l'invio del messaggio. Riprova più tardi o contattaci via email/telefono.", True)
         End Try
     End Sub
@@ -210,20 +205,6 @@ Partial Class Contattaci
 
         Return KeepStoreContactEmailMessages.RenderContactRequest(brand, nome, fromEmailUser, oggetto, messaggio)
     End Function
-
-    Private Sub ApplyRenderedContactEmailMime(ByVal message As MailMessage, ByVal renderedEmail As KeepStoreEmailRenderResult)
-        message.AlternateViews.Clear()
-        message.Body = ""
-        message.IsBodyHtml = False
-
-        Dim plainBody As String = renderedEmail.PlainTextBody
-        If String.IsNullOrWhiteSpace(plainBody) Then
-            plainBody = "Richiesta contatto disponibile in formato HTML."
-        End If
-
-        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainBody, Encoding.UTF8, MediaTypeNames.Text.Plain))
-        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(renderedEmail.HtmlBody, Encoding.UTF8, MediaTypeNames.Text.Html))
-    End Sub
 
     Private Function BuildSiteHomeUrl() As String
         Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
