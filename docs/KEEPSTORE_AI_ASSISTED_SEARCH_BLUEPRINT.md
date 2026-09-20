@@ -497,3 +497,9 @@ Guardrail AI/search: dati, cache o retrieval futuri non possono usare il solo `L
 `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` usa `documenti.AziendeId` come provenienza storica, conserva la numerazione globale same-database e lega token/fingerprint/replay a database, azienda, account, tipo documento, listino e payload commerciale. Lista, dettaglio e ricevuta richiedono owner e azienda; branding e recapiti e-mail derivano dall'azienda persistita, senza ID o dominio cliente hardcoded. La prova A/B usa fixture sintetiche e fake sink.
 
 Guardrail feed/search/AI: il numero globale non implica visibilita globale. Nessun crawler, feed, cache, retrieval o assistente puo usare il solo numero documento o `LoginId` per accedere a ordini, ne includere destinatari, SMTP, token, note, indirizzi o dati personali. Il task non abilita dati ordine per Merchant Center o AI e non modifica ranking, Product JSON-LD o catalogo.
+
+## Checkpoint trasporto e-mail multi-provider
+
+`MULTIPROVIDER-TENANT-EMAIL-TRANSPORT-1A` e fermo a `B`: lo schema legacy non rappresenta porta, TLS/auth espliciti, secret reference e stato verifica. La migration proposta crea soltanto profili tenant-scoped disabilitati e non copia segreti; non e stata applicata. OAuth2 Google/Microsoft resta `NON OPERATIVO` fino a connettori e secret store autorizzati.
+
+Guardrail AI/search: configurazioni SMTP, provider, username, secret reference, token, destinatari, telemetria di consegna e dati e-mail non sono fonti di retrieval, ranking, feed o personalizzazione. Nessun assistente deve dedurre provider dal dominio, proporre credenziali, esporre stato tecnico tenant o trasformare configurazioni e-mail in contenuto indicizzabile.

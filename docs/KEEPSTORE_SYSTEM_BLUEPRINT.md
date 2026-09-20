@@ -2017,3 +2017,27 @@ L'invio avviene esclusivamente dopo il commit del documento e della riga idempot
 ### 22.5 Copertura
 
 L'harness sintetico same-database copre i 26 scenari richiesti e una prova concorrente A/B: provenienza, numerazione globale continua, listini/promo, inventario condiviso, cart clear isolato, replay/collisioni, lista/dettaglio/ricevuta, identita e-mail, singolo invio, rollback/stock/deadlock, failure e-mail post-commit e atomicita. Nessuna migration, DDL/DML cliente, ordine, e-mail, pagamento o gateway reale appartiene al test.
+
+## 23. Trasporto e-mail tenant-scoped multi-provider
+
+### 23.1 Gap del modello corrente
+
+`aziende` contiene soltanto host legacy `Smtp`, `User_smtp`, `Password_smtp` ed `email`. Non contiene porta, modalita di sicurezza o autenticazione, secret reference, timeout, enabled e stato verifica. `Page.master` copia le credenziali legacy in Session; ordine, `main.aspx`, `Contattaci.aspx`, registrazione/profilo e reset password usano percorsi SMTP separati. Questa struttura non puo rappresentare in modo autorevole STARTTLS, TLS implicito, password applicativa e OAuth2 senza euristiche vietate.
+
+`System.Net.Mail.SmtpClient.EnableSsl` copre STARTTLS ma non SMTPS/TLS implicito e non offre il contratto OAuth2 richiesto. Il runtime corrente non deve dedurre provider o sicurezza dal dominio e-mail o dalla porta e non deve usare `Auto`/`StartTlsWhenAvailable`, downgrade plaintext, callback certificato permissive o fallback cross-tenant.
+
+### 23.2 Contratto proposto
+
+`TenantEmailProfile` e owner-scoped da `AziendeId` e comprende: `ProviderKind`, `Host`, `Port`, `SecurityMode`, `AuthenticationMode`, `Username`, `CredentialReference`, `FromAddress`, `FromDisplayName`, `ReplyToAddress`, `EnvelopeFromAddress`, timeout, enabled e stato/tempo/codice sanitizzato dell'ultima verifica. I soli security mode ammessi sono `StartTls` e `ImplicitTls`; i soli auth mode iniziali sono `Password`, `AppPassword` e `OAuth2`. App-password e OAuth2 restano concetti distinti.
+
+La migration proposta `20260920_MULTIPROVIDER_TENANT_EMAIL_TRANSPORT_1A` crea `aziende_email_transport` senza righe, con profili disabilitati, PK/FK su `AziendeId`, nessun campo password/token e rollback vietato se esistono profili. Non copia dati legacy e non e stata eseguita. Il futuro loader deve accettare esclusivamente un profilo enabled e `VERIFIED` della stessa azienda; assenza, conflitto o secret reference non risolta falliscono chiusi.
+
+### 23.3 Trasporto e OAuth2
+
+MailKit e candidato, non dipendenza corrente: il pacchetto dispone di target .NET Framework 4.8, licenza MIT, STARTTLS, TLS implicito, SASL/XOAUTH2, timeout/cancellazione e validazione TLS standard. L'integrazione richiede pero un restore NuGet riproducibile per MailKit, MimeKit e dipendenze transitive, conversione controllata `MailMessage`/MIME, precompile e deployment verificati. Vietata la copia manuale di DLL.
+
+OAuth2 Google e Microsoft e `NON OPERATIVO`: un enum o `SaslMechanismOAuth2` non sostituiscono client registration, consenso, acquisizione/rinnovo token, secret store e revoca. Questi confini appartengono a `SMTP-OAUTH-CONNECTORS-1A`; la rimozione di `Password_smtp` e la rotazione senza downtime appartengono a `SMTP-SECRET-EXTERNALIZATION-ROTATION-1A`.
+
+### 23.4 Mittente, verifica e onboarding
+
+Envelope sender e header From devono essere autorizzati dal provider; Reply-To puo differire solo se configurato nel profilo tenant. Branding e URL derivano dall'azienda proprietaria dell'evento. Log e stato verifica contengono soltanto codici sanitizzati, mai destinatari, dati ordine, username, host sensibili, password o token. SPF, DKIM e DMARC sono requisiti di onboarding/deploy, non valori inventati dal runtime.
