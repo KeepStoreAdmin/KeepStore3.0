@@ -500,6 +500,6 @@ Guardrail feed/search/AI: il numero globale non implica visibilita globale. Ness
 
 ## Checkpoint trasporto e-mail multi-provider
 
-`MULTIPROVIDER-TENANT-EMAIL-TRANSPORT-1A` e fermo a `B`: lo schema legacy non rappresenta porta, TLS/auth espliciti, secret reference e stato verifica. La migration proposta crea soltanto profili tenant-scoped disabilitati e non copia segreti; non e stata applicata. OAuth2 Google/Microsoft resta `NON OPERATIVO` fino a connettori e secret store autorizzati.
+`MULTIPROVIDER-TENANT-EMAIL-CONFIG-CONTRACT-REV1` definisce, senza applicarla, una sola tabella per database con PK tecnica e profili univoci `(AziendeId, Purpose)`. Gli invii correnti useranno in futuro `TRANSACTIONAL`; i profili nascono disabilitati, contengono soltanto un `CredentialReference` e richiedono verifica TLS/auth prima dell'attivazione. Runtime, rollout e OAuth2 Google/Microsoft restano `NON AVVIATO`/`NON OPERATIVO` fino ai task autorizzati.
 
 Guardrail AI/search: configurazioni SMTP, provider, username, secret reference, token, destinatari, telemetria di consegna e dati e-mail non sono fonti di retrieval, ranking, feed o personalizzazione. Nessun assistente deve dedurre provider dal dominio, proporre credenziali, esporre stato tecnico tenant o trasformare configurazioni e-mail in contenuto indicizzabile.
