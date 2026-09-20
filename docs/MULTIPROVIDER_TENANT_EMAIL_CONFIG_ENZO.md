@@ -1,5 +1,7 @@
 # Contratto configurazione e-mail multi-provider per il gestionale
 
+> **Stato: BOZZA TECNICA.** Non e il manuale definitivo del pannello e non autorizza implementazione o rollout. Sara finalizzato soltanto dopo creazione autorizzata della tabella, runtime centrale, secret store, configurazione dei due tenant, test SMTP sicuro, prova e-mail reale controllata e migrazione di tutti i chiamanti.
+
 ## Scopo e confini
 
 Questo documento definisce il contratto che Enzo dovra usare per realizzare il pannello di configurazione e-mail di KeepStore. Non abilita ancora il runtime, non rende operativo OAuth2 e non autorizza alcun deployment. La tabella `aziende` resta invariata; i campi SMTP legacy restano temporaneamente disponibili durante la transizione.
