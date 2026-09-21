@@ -63,7 +63,7 @@ try {
     $output = & $exe
     if ($LASTEXITCODE -ne 0) { throw ('EMAIL_CORE_HARNESS_RUN_' + $LASTEXITCODE) }
     $output | Write-Output
-    Assert-Check (($output -join "`n") -match 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=56') 'HARNESS_56_CHECKS'
+    Assert-Check (($output -join "`n") -match 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=57') 'HARNESS_57_CHECKS'
     Assert-Check (($output -join "`n") -match 'PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL') 'SIMPLIFIED_PROVISIONING_EXPLICIT'
 
     & (Join-Path $PSScriptRoot 'Test-EmailTransportCredentialProvisioning.ps1')

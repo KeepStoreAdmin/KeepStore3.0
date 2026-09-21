@@ -343,6 +343,18 @@ Public Module EmailTransportRuntimeCoreHarness
             Using invalidScope As EmailCredentialReadResult = store.Read(reference, databaseIdentity, 2, "TRANSACTIONAL")
                 Assert(invalidScope.State = EmailCredentialState.Invalid, "17_CREDENTIAL_SCOPE_INVALID")
             End Using
+            Dim invalidReference As String = DpapiEmailCredentialStore.CreateReference(databaseIdentity, 1, "TRANSACTIONAL", New String("e"c, 32))
+            Dim invalidParts As EmailCredentialReferenceParts = Nothing
+            If Not DpapiEmailCredentialStore.TryParseReference(invalidReference, invalidParts) Then
+                Throw New InvalidOperationException("INVALID_DPAPI_FIXTURE_REFERENCE")
+            End If
+            Dim invalidPath As String = DpapiEmailCredentialStore.BuildCredentialPath(root, invalidParts)
+            Directory.CreateDirectory(Path.GetDirectoryName(invalidPath))
+            File.WriteAllBytes(invalidPath, Encoding.ASCII.GetBytes("KSEMAIL1not-a-dpapi-envelope"))
+            Using invalidDpapi As EmailCredentialReadResult = store.Read(invalidReference, databaseIdentity, 1, "TRANSACTIONAL")
+                Assert(invalidDpapi.State = EmailCredentialState.Invalid AndAlso
+                       invalidDpapi.Code = "CREDENTIAL_DPAPI_INVALID", "17A_CREDENTIAL_DPAPI_INVALID")
+            End Using
             Assert(Not Path.GetFullPath(credentialPath).StartsWith(Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory), StringComparison.OrdinalIgnoreCase), "18_SECRET_OUTSIDE_WEBROOT")
         Finally
             Array.Clear(synthetic, 0, synthetic.Length)
