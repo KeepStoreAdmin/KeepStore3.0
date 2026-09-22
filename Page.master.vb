@@ -1155,7 +1155,7 @@ End Function
                                    "descrizione_servizio_coupon, logo_verific_site1, logo_verific_site2, logo_verific_site3, " &
                                    "logo_verific_site4, link_logo_verific_site1, link_logo_verific_site2, link_logo_verific_site3, " &
                                    "link_logo_verific_site4, logo_footer, statistiche_visite, facebookLink, Icona_web, " &
-                                   "AbilitaBuoniScontiCarrello, TC, AccountPaypal, AccountIwBank " &
+                                   "AbilitaBuoniScontiCarrello, TC, AccountIwBank " &
                                    "FROM aziende " &
                                    "WHERE Id=@companyId " &
                                    "LIMIT 0, 1"
@@ -1269,12 +1269,6 @@ End Function
                 Else
                     Session("AbilitatoIvaReverseCharge") = 0
                 End If
-
-                Try
-                    Me.Session("AccountPaypal") = dr.Item("AccountPaypal")
-                Catch ex As Exception
-                    Me.Session("AccountPaypal") = "000000"
-                End Try
 
                 Try
                     Me.Session("AccountIwBank") = dr.Item("AccountIwBank")

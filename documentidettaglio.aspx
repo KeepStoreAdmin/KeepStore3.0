@@ -175,7 +175,7 @@
                                 <asp:HiddenField ID="hfPayNowDocumentId" runat="server" Value='<%# Eval("id") %>' />
 
                                 <asp:HyperLink ID="hlBancaSella" runat="server" Visible="false" ToolTip="Paga adesso con carta" CssClass="tf-btn" Text="Paga con carta" />
-                                <asp:HyperLink ID="hlPayPalExpress" runat="server" Visible="false" ToolTip="Paga con PayPal" CssClass="tf-btn" Text="Paga con PayPal" />
+                                <asp:HyperLink ID="hlPayPalCheckout" runat="server" Visible="false" ToolTip="Paga con PayPal" CssClass="tf-btn" Text="Paga con PayPal" />
 
                                 <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="/Public/assets/images/pagamenti/visa.svg" Style="height:42px;" />
 

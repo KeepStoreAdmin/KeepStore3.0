@@ -7,113 +7,50 @@ Partial Class paypalcheckout
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If IsPostBack Then Return
-
-        Dim documentId As Integer = GetQueryInt("id")
-        Dim loginId As Integer = PayPalPaymentState.GetSessionInt("LoginId", 0)
+        Dim documentId As Integer = QueryInt("id")
         Dim utentiId As Integer = PayPalPaymentState.GetSessionInt("UtentiId", 0)
-
-        If loginId <= 0 OrElse utentiId <= 0 Then
-            SafeRedirect("login.aspx")
-            Return
-        End If
-
+        If PayPalPaymentState.GetSessionInt("LoginId", 0) <= 0 OrElse utentiId <= 0 Then RedirectTerminal("login.aspx") : Return
         Dim doc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForUser(documentId, utentiId)
-        If doc Is Nothing OrElse Not doc.Exists Then
-            SafeRedirect("accessonegato.aspx")
-            Return
-        End If
-
-        If doc.Pagato = 1 Then
-            SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture))
-            Return
-        End If
-
-        If doc.PaymentState = 1 AndAlso PayPalPaymentState.IsExpressInProgressMarker(doc.TransactionId) Then
-            SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
-            Return
-        End If
-
-        If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then
-            SafeKo(documentId, "PayPal: pagamento non coerente con il documento")
-            Return
-        End If
-
-        If doc.TotalDocument <= 0D Then
-            SafeKo(documentId, "PayPal: totale documento non valido")
-            Return
-        End If
-
+        If doc Is Nothing OrElse Not doc.Exists Then RedirectTerminal("accessonegato.aspx") : Return
+        If doc.Pagato = 1 Then RedirectResult(documentId, "ok") : Return
+        If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE OrElse doc.TotalDocument <= 0D Then Fail(documentId, "Documento non idoneo al pagamento PayPal") : Return
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
-        If cfg Is Nothing OrElse Not cfg.IsExpressConfigured Then
-            SafeKo(documentId, "PayPal Express: configurazione assente")
-            Return
+        If cfg Is Nothing OrElse cfg.AziendeId <> doc.AziendeId OrElse cfg.PagamentiTipoId <> doc.PagamentiTipoId OrElse Not PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg) Then
+            Fail(documentId, "Configurazione PayPal Checkout non disponibile") : Return
         End If
-
-        If Not cfg.CanCallApiForRequest(HttpContext.Current) Then
-            SafeKo(documentId, "PayPal Express: configurazione non autorizzata per questo ambiente")
-            Return
+        Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.EnsureTransaction(doc, cfg)
+        If tx Is Nothing OrElse Not tx.Exists OrElse tx.AziendeId <> doc.AziendeId OrElse tx.PayPalAccountId <> cfg.AccountId Then
+            Fail(documentId, "Impossibile inizializzare il pagamento PayPal") : Return
         End If
-
-        PayPalPaymentState.MarkPending(documentId, "PayPal Express: richiesta avvio pagamento")
-
-        Dim client As New PayPalExpressClient(cfg)
-        Dim setResult As PayPalExpressResponse = client.SetExpressCheckout(doc, BuildPayPalReturnUrl(documentId, "return"), BuildPayPalReturnUrl(documentId, "cancel"))
-        If setResult Is Nothing OrElse Not setResult.IsSuccess OrElse String.IsNullOrWhiteSpace(setResult.Token) Then
-            SafeKo(documentId, BuildApiFailureMessage("PayPal Express Set", setResult))
-            Return
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        Dim returnUrl As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&action=return")
+        Dim cancelUrl As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&action=cancel")
+        If String.IsNullOrWhiteSpace(returnUrl) OrElse String.IsNullOrWhiteSpace(cancelUrl) Then Fail(documentId, "Host PayPal Checkout non valido") : Return
+        Dim response As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfg).CreateOrder(doc, tx.CreateRequestId, returnUrl, cancelUrl)
+        If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, response.Snapshot.OrderId, response.Snapshot) OrElse Not PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(response.Snapshot.ApprovalUrl) Then
+            Fail(documentId, "Creazione pagamento PayPal non riuscita") : Return
         End If
-
-        PayPalPaymentState.MarkPendingWithExpressToken(documentId, "PayPal Express: token avvio pagamento creato", setResult.Token)
-        PayPalExpressRepository.RecordSetExpressToken(doc, setResult.Token, setResult, cfg.CurrencyCode)
-        SafeRedirect(client.BuildApprovalUrl(setResult.Token))
+        If Not PayPalCheckoutRepository.RecordOrderCreated(tx, response.Snapshot) Then Fail(documentId, "Persistenza pagamento PayPal non riuscita") : Return
+        RedirectTerminal(response.Snapshot.ApprovalUrl)
     End Sub
 
-    Private Sub SafeKo(ByVal documentId As Integer, ByVal message As String)
+    Private Sub Fail(ByVal documentId As Integer, ByVal message As String)
         PayPalPaymentState.MarkFailed(documentId, message)
-        PayPalExpressRepository.RecordOutcome(documentId, "PayPalCheckout", "KO", message)
-        SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
+        RedirectResult(documentId, "ko")
     End Sub
 
-    Private Function GetQueryInt(ByVal key As String) As Integer
-        Try
-            Dim parsed As Integer
-            If Integer.TryParse(Convert.ToString(Request.QueryString(key)), parsed) Then Return parsed
-        Catch
-        End Try
+    Private Sub RedirectResult(ByVal documentId As Integer, ByVal outcome As String)
+        RedirectTerminal("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=" & outcome)
+    End Sub
 
-        Return 0
+    Private Function QueryInt(ByVal key As String) As Integer
+        Dim parsed As Integer
+        Integer.TryParse(Convert.ToString(Request.QueryString(key)), parsed)
+        Return parsed
     End Function
 
-    Private Function BuildPayPalReturnUrl(ByVal documentId As Integer, ByVal actionName As String) As String
-        Dim baseUrl As String = "https://www.taikun.it"
-        Try
-            If Request IsNot Nothing AndAlso Request.Url IsNot Nothing Then
-                baseUrl = Request.Url.GetLeftPart(UriPartial.Authority)
-            End If
-        Catch
-        End Try
-
-        Return baseUrl.TrimEnd("/"c) &
-               "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) &
-               "&action=" & HttpUtility.UrlEncode(actionName)
-    End Function
-
-    Private Function BuildApiFailureMessage(ByVal prefix As String, ByVal result As PayPalExpressResponse) As String
-        If result Is Nothing Then Return prefix & ": risposta assente"
-
-        Dim code As String = If(result.ErrorCode, "").Trim()
-        Dim shortMessage As String = If(result.ShortMessage, "").Trim()
-        If code <> "" AndAlso shortMessage <> "" Then Return prefix & " KO " & code & " " & shortMessage
-        If code <> "" Then Return prefix & " KO " & code
-        If shortMessage <> "" Then Return prefix & " KO " & shortMessage
-        Return prefix & " KO"
-    End Function
-
-    Private Sub SafeRedirect(ByVal url As String)
-        Try
-            Response.Redirect(url, False)
-            Context.ApplicationInstance.CompleteRequest()
-        Catch
-        End Try
+    Private Sub RedirectTerminal(ByVal url As String)
+        Response.Redirect(url, False)
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
 End Class

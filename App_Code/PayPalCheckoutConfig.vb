@@ -1,148 +1,91 @@
+Option Strict On
+Option Explicit On
+
 Imports System
 Imports System.Configuration
-Imports System.Web
+Imports System.Text.RegularExpressions
 
 Public Class PayPalCheckoutConfig
-    Private Const DEFAULT_PAYPAL_NVP_VERSION As String = "204.0"
+    Public Const LiveApiBaseUrl As String = "https://api-m.paypal.com"
 
-    Public Property ConfigId As Integer
+    Public Property AccountId As Integer
+    Public Property CompanyConfigId As Integer
     Public Property AziendeId As Integer
     Public Property PagamentiTipoId As Integer
-    Public Property Source As String
-    Public Property EnvironmentName As String
-    Public Property ApiUsername As String
-    Public Property ApiPassword As String
-    Public Property ApiSignature As String
-    Public Property BusinessAccount As String
+    Public Property CredentialKey As String
+    Public Property MerchantId As String
+    Public Property PayeeEmail As String
+    Public Property BrandName As String
     Public Property CurrencyCode As String
-    Public Property AllowLive As Boolean
+    Public Property ClientId As String
+    Public Property ClientSecret As String
+    Public Property WebhookId As String
+    Public Property AccountActive As Boolean
+    Public Property CompanyActive As Boolean
 
-    Public ReadOnly Property Version As String
+    Public ReadOnly Property IsConfigured As Boolean
         Get
-            Return DEFAULT_PAYPAL_NVP_VERSION
+            Return AccountId > 0 AndAlso CompanyConfigId > 0 AndAlso AziendeId > 0 AndAlso
+                   PagamentiTipoId > 0 AndAlso AccountActive AndAlso CompanyActive AndAlso
+                   IsCredentialKeyValid(CredentialKey) AndAlso
+                   Not String.IsNullOrWhiteSpace(MerchantId) AndAlso
+                   IsEmailValid(PayeeEmail) AndAlso
+                   Not String.IsNullOrWhiteSpace(BrandName) AndAlso
+                   IsCurrencyValid(CurrencyCode) AndAlso
+                   Not String.IsNullOrWhiteSpace(ClientId) AndAlso
+                   Not String.IsNullOrWhiteSpace(ClientSecret)
         End Get
     End Property
 
-    Public ReadOnly Property IsSandbox As Boolean
+    Public ReadOnly Property IsWebhookConfigured As Boolean
         Get
-            Return String.Equals(EnvironmentName, "sandbox", StringComparison.OrdinalIgnoreCase)
+            Return IsConfigured AndAlso Not String.IsNullOrWhiteSpace(WebhookId)
         End Get
     End Property
-
-    Public ReadOnly Property IsLive As Boolean
-        Get
-            Return String.Equals(EnvironmentName, "live", StringComparison.OrdinalIgnoreCase)
-        End Get
-    End Property
-
-    Public ReadOnly Property IsExpressConfigured As Boolean
-        Get
-            Return Not String.IsNullOrWhiteSpace(ApiUsername) AndAlso
-                   Not String.IsNullOrWhiteSpace(ApiPassword) AndAlso
-                   Not String.IsNullOrWhiteSpace(ApiSignature) AndAlso
-                   Not String.IsNullOrWhiteSpace(CurrencyCode) AndAlso
-                   (IsSandbox OrElse IsLive)
-        End Get
-    End Property
-
-    Public ReadOnly Property CanCallApi As Boolean
-        Get
-            Return PayPalProductionSafetyPolicy.IsApiCallAllowed(
-                EnvironmentName, IsExpressConfigured, AllowLive, False)
-        End Get
-    End Property
-
-    Public Function CanCallApiForRequest(ByVal context As HttpContext) As Boolean
-        Return PayPalProductionSafetyPolicy.IsApiCallAllowed(
-            EnvironmentName,
-            IsExpressConfigured,
-            AllowLive,
-            PayPalProductionSafetyPolicy.IsLocalTestRequest(context))
-    End Function
-
-    Public ReadOnly Property ApiEndpoint As String
-        Get
-            If IsLive Then Return "https://api-3t.paypal.com/nvp"
-            Return "https://api-3t.sandbox.paypal.com/nvp"
-        End Get
-    End Property
-
-    Public ReadOnly Property RedirectBaseUrl As String
-        Get
-            If IsLive Then Return "https://www.paypal.com/cgi-bin/webscr"
-            Return "https://www.sandbox.paypal.com/cgi-bin/webscr"
-        End Get
-    End Property
-
-    Public Shared Function Load() As PayPalCheckoutConfig
-        Dim cfg As New PayPalCheckoutConfig()
-        cfg.Source = "environment"
-        cfg.EnvironmentName = ReadSetting("PAYPAL_EXPRESS_ENVIRONMENT")
-        If String.IsNullOrWhiteSpace(cfg.EnvironmentName) Then cfg.EnvironmentName = "sandbox"
-        cfg.EnvironmentName = cfg.EnvironmentName.Trim()
-
-        cfg.ApiUsername = ReadSetting("PAYPAL_EXPRESS_API_USERNAME")
-        cfg.ApiPassword = ReadSetting("PAYPAL_EXPRESS_API_PASSWORD")
-        cfg.ApiSignature = ReadSetting("PAYPAL_EXPRESS_API_SIGNATURE")
-        cfg.BusinessAccount = ReadSetting("PAYPAL_EXPRESS_BUSINESS_ACCOUNT")
-
-        cfg.CurrencyCode = ReadSetting("PAYPAL_EXPRESS_CURRENCY")
-        If String.IsNullOrWhiteSpace(cfg.CurrencyCode) Then cfg.CurrencyCode = "EUR"
-        cfg.CurrencyCode = cfg.CurrencyCode.Trim().ToUpperInvariant()
-
-        cfg.AllowLive = String.Equals(ReadSetting("PAYPAL_EXPRESS_ALLOW_LIVE"), "true", StringComparison.OrdinalIgnoreCase)
-
-        Return cfg
-    End Function
 
     Public Shared Function LoadForDocument(ByVal documentId As Integer) As PayPalCheckoutConfig
-        If documentId > 0 Then
-            Dim dbConfig As PayPalCheckoutConfig = PayPalExpressRepository.LoadConfigForDocument(documentId)
-            If dbConfig IsNot Nothing Then Return dbConfig
-        End If
-
-        Return LoadLocalSandboxFallback(HttpContext.Current)
+        Return PayPalCheckoutRepository.LoadConfigForDocument(documentId)
     End Function
 
     Public Shared Function LoadForCompanyPayment(ByVal companyId As Integer,
                                                  ByVal paymentMethodId As Integer) As PayPalCheckoutConfig
-        If companyId > 0 AndAlso paymentMethodId > 0 Then
-            Dim dbConfig As PayPalCheckoutConfig =
-                PayPalExpressRepository.LoadConfigForCompanyPayment(companyId, paymentMethodId)
-            If dbConfig IsNot Nothing Then Return dbConfig
-        End If
-
-        Return LoadLocalSandboxFallback(HttpContext.Current)
+        Return PayPalCheckoutRepository.LoadConfigForCompanyPayment(companyId, paymentMethodId)
     End Function
 
-    Private Shared Function LoadLocalSandboxFallback(ByVal context As HttpContext) As PayPalCheckoutConfig
-        If Not PayPalProductionSafetyPolicy.IsLocalTestRequest(context) Then Return Nothing
-
-        Dim cfg As PayPalCheckoutConfig = Load()
-        If cfg Is Nothing OrElse
-           Not PayPalProductionSafetyPolicy.IsEnvironmentFallbackAllowed(
-               cfg.EnvironmentName, True) Then
-            Return Nothing
-        End If
-
+    Public Shared Function HydrateServerCredentials(ByVal cfg As PayPalCheckoutConfig) As PayPalCheckoutConfig
+        If cfg Is Nothing OrElse Not IsCredentialKeyValid(cfg.CredentialKey) Then Return Nothing
+        Dim prefix As String = cfg.CredentialKey.Trim().ToUpperInvariant()
+        cfg.ClientId = ReadServerSetting(prefix & "_CLIENT_ID")
+        cfg.ClientSecret = ReadServerSetting(prefix & "_CLIENT_SECRET")
+        cfg.WebhookId = ReadServerSetting(prefix & "_WEBHOOK_ID")
         Return cfg
     End Function
 
-    Private Shared Function ReadSetting(ByVal key As String) As String
-        If String.IsNullOrWhiteSpace(key) Then Return ""
+    Public Shared Function IsCredentialKeyValid(ByVal value As String) As Boolean
+        Return Regex.IsMatch(Convert.ToString(value).Trim(), "^[A-Z][A-Z0-9_]{2,63}$", RegexOptions.CultureInvariant)
+    End Function
 
+    Public Shared Function IsCurrencyValid(ByVal value As String) As Boolean
+        Return Regex.IsMatch(Convert.ToString(value).Trim(), "^[A-Z]{3}$", RegexOptions.CultureInvariant)
+    End Function
+
+    Public Shared Function IsEmailValid(ByVal value As String) As Boolean
+        Dim candidate As String = Convert.ToString(value).Trim()
+        Return candidate.Length <= 254 AndAlso Regex.IsMatch(candidate, "^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.CultureInvariant)
+    End Function
+
+    Private Shared Function ReadServerSetting(ByVal key As String) As String
+        If String.IsNullOrWhiteSpace(key) Then Return String.Empty
+        Try
+            Dim value As String = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Process)
+            If Not String.IsNullOrWhiteSpace(value) Then Return value.Trim()
+        Catch
+        End Try
         Try
             Dim value As String = ConfigurationManager.AppSettings(key)
             If Not String.IsNullOrWhiteSpace(value) Then Return value.Trim()
         Catch
         End Try
-
-        Try
-            Dim value As String = Environment.GetEnvironmentVariable(key)
-            If Not String.IsNullOrWhiteSpace(value) Then Return value.Trim()
-        Catch
-        End Try
-
-        Return ""
+        Return String.Empty
     End Function
 End Class

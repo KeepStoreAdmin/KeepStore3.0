@@ -549,7 +549,7 @@ Private Function IsAuthoritativePaymentValid(ByVal connection As MySqlConnection
     End Using
 
     Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(identity.CompanyId, paymentId)
-    Return cfg IsNot Nothing AndAlso cfg.CanCallApiForRequest(HttpContext.Current)
+    Return cfg IsNot Nothing AndAlso PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg)
 End Function
 
 Private Sub EnsureCheckoutRequestId()
@@ -3128,7 +3128,7 @@ End Sub
             Dim paymentId As Integer = SafeIntFromDb(DataBinder.Eval(e.Row.DataItem, "id"), 0)
             If identity IsNot Nothing AndAlso identity.IsComplete AndAlso paymentId > 0 Then
                 Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(identity.CompanyId, paymentId)
-                allowed = cfg IsNot Nothing AndAlso cfg.CanCallApiForRequest(HttpContext.Current)
+                allowed = cfg IsNot Nothing AndAlso PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg)
             End If
         Catch
             allowed = False

@@ -59,18 +59,6 @@ Partial Class coupon_opzioni
             Dim buyerName As String = HttpUtility.UrlEncode(Me.Session("LoginNomeCognome"))
             Dim buyerEmail As String = HttpUtility.UrlEncode(Me.Session("LoginEmail"))
             Response.Redirect("/bancasella.aspx?currency=" & currency & "&amount=" & amount & "&shopTransactionId=" & cod_controllo & "&iddocumento=" & idDocumento & "&sitoweb=" & sitoWeb & "&buyername=" & buyerName & "&buyeremail=" & buyerEmail)
-        ElseIf tipo_di_pagamento = "PagamentoPayPal" Then
-            'Dim btPayPal As Button = Me.FormView1.FindControl("btPayPal")
-            Dim accountPaypal As String = HttpUtility.UrlEncode(Me.Session("AccountPaypal"))
-            'Dim nDocumento As String = HttpUtility.UrlEncode(Request.QueryString("id"))
-            Dim dataDocumento As String = HttpUtility.UrlEncode(Date.Now.Year)
-            Dim itemName As String = Replace(descrizione," ", "+")
-            Dim totaleDocumento As String = HttpUtility.UrlEncode(totale * quantita_coupon)
-            Dim idDocumento As String = Request.QueryString("id")
-            Dim returnLink As String = HttpUtility.UrlEncode("http://" & Request.Url.Host & "/pagamento.aspx?cod_controllo=" & cod_controllo)
-            Dim cancelReturnLink As String = HttpUtility.UrlEncode("http://" & Request.Url.Host & "/coupon_opzioni.aspx?id=" & idDocumento)
-            Dim notifyUrl As String = HttpUtility.UrlEncode("http://" & Request.Url.Host & "/ipn.aspx?id=" & idDocumento)
-            Response.Redirect("https://www.paypal.com/it/cgi-bin/webscr/?cmd=_xclick&business=" & accountPaypal & "&item_name=" & itemName & "&currency_code=EUR&amount=" & totaleDocumento & "&item_number=" & cod_controllo & "&quantity=1&return=" & returnLink & "&cancel_return=" & cancelReturnLink & "&notify_url=" & notifyUrl)
         End If
 	End Sub
 

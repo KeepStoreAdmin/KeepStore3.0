@@ -441,7 +441,7 @@ Partial Class documentidettaglio
             End If
 
             Dim hlSella As Control = FindFormViewControl("hlBancaSella")
-            Dim hlPayPal As Control = FindFormViewControl("hlPayPalExpress")
+            Dim hlPayPal As Control = FindFormViewControl("hlPayPalCheckout")
             Dim btIw As Control = FindFormViewControl("btIwBank")
             Dim btPP As Control = FindFormViewControl("btPayPal")
             Dim pnlPayNow As Control = FindFormViewControl("pnlPayNowCard")
@@ -471,7 +471,7 @@ Partial Class documentidettaglio
                     SetVisible(pnlPayNow, True)
                 End If
             ElseIf info.PagamentiTipoOnline = 2 Then
-                ConfigurePayPalExpressPayNowLink(hlPayPal, info.DocumentId)
+                ConfigurePayPalCheckoutPayNowLink(hlPayPal, info.DocumentId)
                 SetVisible(hlPayPal, True)
                 SetVisible(pnlPayNow, True)
             End If
@@ -490,7 +490,7 @@ Partial Class documentidettaglio
         link.NavigateUrl = navigateUrl
     End Sub
 
-    Private Sub ConfigurePayPalExpressPayNowLink(ByVal hlPayPal As Control, ByVal documentId As Integer)
+    Private Sub ConfigurePayPalCheckoutPayNowLink(ByVal hlPayPal As Control, ByVal documentId As Integer)
         If hlPayPal Is Nothing OrElse documentId <= 0 Then Return
 
         Dim link As HyperLink = TryCast(hlPayPal, HyperLink)
