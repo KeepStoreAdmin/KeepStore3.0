@@ -1,5 +1,6 @@
 Imports System
 Imports System.Configuration
+Imports System.Web
 
 Public Class PayPalCheckoutConfig
     Private Const DEFAULT_PAYPAL_NVP_VERSION As String = "204.0"
@@ -46,11 +47,18 @@ Public Class PayPalCheckoutConfig
 
     Public ReadOnly Property CanCallApi As Boolean
         Get
-            If Not IsExpressConfigured Then Return False
-            If IsLive AndAlso Not AllowLive Then Return False
-            Return True
+            Return PayPalProductionSafetyPolicy.IsApiCallAllowed(
+                EnvironmentName, IsExpressConfigured, AllowLive, False)
         End Get
     End Property
+
+    Public Function CanCallApiForRequest(ByVal context As HttpContext) As Boolean
+        Return PayPalProductionSafetyPolicy.IsApiCallAllowed(
+            EnvironmentName,
+            IsExpressConfigured,
+            AllowLive,
+            PayPalProductionSafetyPolicy.IsLocalTestRequest(context))
+    End Function
 
     Public ReadOnly Property ApiEndpoint As String
         Get
@@ -90,6 +98,17 @@ Public Class PayPalCheckoutConfig
     Public Shared Function LoadForDocument(ByVal documentId As Integer) As PayPalCheckoutConfig
         If documentId > 0 Then
             Dim dbConfig As PayPalCheckoutConfig = PayPalExpressRepository.LoadConfigForDocument(documentId)
+            If dbConfig IsNot Nothing Then Return dbConfig
+        End If
+
+        Return Load()
+    End Function
+
+    Public Shared Function LoadForCompanyPayment(ByVal companyId As Integer,
+                                                 ByVal paymentMethodId As Integer) As PayPalCheckoutConfig
+        If companyId > 0 AndAlso paymentMethodId > 0 Then
+            Dim dbConfig As PayPalCheckoutConfig =
+                PayPalExpressRepository.LoadConfigForCompanyPayment(companyId, paymentMethodId)
             If dbConfig IsNot Nothing Then Return dbConfig
         End If
 

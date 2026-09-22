@@ -143,7 +143,7 @@ Public Module PayPalPaymentState
         End If
 
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
-        If cfg Is Nothing OrElse Not cfg.IsExpressConfigured OrElse Not cfg.CanCallApi Then
+        If cfg Is Nothing OrElse Not cfg.CanCallApiForRequest(HttpContext.Current) Then
             result.Message = "PayPal Express: configurazione non pronta"
             Return result
         End If

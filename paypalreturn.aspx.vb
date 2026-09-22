@@ -85,9 +85,9 @@ Partial Class paypalreturn
             Return
         End If
 
-        If cfg.IsLive AndAlso Not cfg.AllowLive Then
-            PayPalPaymentState.MarkFailed(documentId, "PayPal Express: ambiente live non autorizzato")
-            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: ambiente live non autorizzato", token)
+        If Not cfg.CanCallApiForRequest(HttpContext.Current) Then
+            PayPalPaymentState.MarkFailed(documentId, "PayPal Express: configurazione non autorizzata per questo ambiente")
+            PayPalExpressRepository.RecordOutcome(doc, "PayPalReturn", "KO", "PayPal Express: configurazione non autorizzata per questo ambiente", token)
             SafeRedirect("documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
             Return
         End If

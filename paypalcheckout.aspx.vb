@@ -49,13 +49,8 @@ Partial Class paypalcheckout
             Return
         End If
 
-        If cfg.IsLive AndAlso Not cfg.AllowLive Then
-            SafeKo(documentId, "PayPal Express: ambiente live non autorizzato")
-            Return
-        End If
-
-        If Not cfg.CanCallApi Then
-            SafeKo(documentId, "PayPal Express: configurazione non pronta")
+        If Not cfg.CanCallApiForRequest(HttpContext.Current) Then
+            SafeKo(documentId, "PayPal Express: configurazione non autorizzata per questo ambiente")
             Return
         End If
 

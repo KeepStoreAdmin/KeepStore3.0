@@ -534,7 +534,7 @@ Private Function IsAuthoritativePaymentValid(ByVal connection As MySqlConnection
                                              ByVal paymentId As Integer) As Boolean
     If connection Is Nothing OrElse identity Is Nothing OrElse paymentId <= 0 Then Return False
     Const sql As String =
-        "SELECT COUNT(DISTINCT id) FROM vpagamentitipo " &
+        "SELECT COUNT(DISTINCT id) AS MatchCount, MAX(COALESCE(OnLine,0)) AS PaymentOnline FROM vpagamentitipo " &
         "WHERE id=?id AND AziendeId=?aziendaId AND Abilitato=1 " &
         "AND CostoMassimo>=?total AND (Web=1 OR UtenteID=?utentiId)"
     Using command As New MySqlCommand(sql, connection)
@@ -542,8 +542,14 @@ Private Function IsAuthoritativePaymentValid(ByVal connection As MySqlConnection
         command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = identity.CompanyId
         command.Parameters.Add("?total", MySqlDbType.Decimal).Value = ParseDecimalForDb(Session("Ordine_Totale_Documento"), 0D)
         command.Parameters.Add("?utentiId", MySqlDbType.Int64).Value = identity.UtentiId
-        Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) = 1
+        Using reader As MySqlDataReader = command.ExecuteReader()
+            If Not reader.Read() OrElse SafeIntFromDb(reader("MatchCount"), 0) <> 1 Then Return False
+            If SafeIntFromDb(reader("PaymentOnline"), 0) <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then Return True
+        End Using
     End Using
+
+    Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(identity.CompanyId, paymentId)
+    Return cfg IsNot Nothing AndAlso cfg.CanCallApiForRequest(HttpContext.Current)
 End Function
 
 Private Sub EnsureCheckoutRequestId()
@@ -3109,6 +3115,32 @@ End Sub
     Protected Sub gvPagamento_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvPagamento.PreRender
         RestoreCheckoutOptionSelections()
         LeggiPagamenti()
+    End Sub
+
+    Protected Sub gvPagamento_RowDataBound(ByVal sender As Object,
+                                           ByVal e As GridViewRowEventArgs) Handles gvPagamento.RowDataBound
+        If e Is Nothing OrElse e.Row Is Nothing OrElse e.Row.RowType <> DataControlRowType.DataRow Then Return
+        If SafeIntFromDb(DataBinder.Eval(e.Row.DataItem, "OnLine"), 0) <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then Return
+
+        Dim allowed As Boolean = False
+        Try
+            Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            Dim paymentId As Integer = SafeIntFromDb(DataBinder.Eval(e.Row.DataItem, "id"), 0)
+            If identity IsNot Nothing AndAlso identity.IsComplete AndAlso paymentId > 0 Then
+                Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(identity.CompanyId, paymentId)
+                allowed = cfg IsNot Nothing AndAlso cfg.CanCallApiForRequest(HttpContext.Current)
+            End If
+        Catch
+            allowed = False
+        End Try
+
+        If allowed Then Return
+        Dim radio As Control = e.Row.FindControl("rbPagamento")
+        If radio IsNot Nothing Then
+            RbSetChecked(radio, False)
+            RbSetEnabled(radio, False)
+        End If
+        e.Row.Visible = False
     End Sub
 
     Public Sub LeggiPagamenti()

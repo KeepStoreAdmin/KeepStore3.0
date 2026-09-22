@@ -40,21 +40,7 @@ Public Module PayPalExpressRepository
                     cmd.Parameters.Add("@online", MySqlDbType.Int32).Value = PayPalPaymentState.PAYPAL_ONLINE_VALUE
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
-                            Dim cfg As New PayPalCheckoutConfig()
-                            cfg.Source = "database"
-                            cfg.ConfigId = SafeInt(dr("id"), 0)
-                            cfg.AziendeId = SafeInt(dr("AziendeId"), 0)
-                            cfg.PagamentiTipoId = SafeInt(dr("PagamentiTipoId"), 0)
-                            cfg.EnvironmentName = Convert.ToString(dr("Environment")).Trim()
-                            If String.IsNullOrWhiteSpace(cfg.EnvironmentName) Then cfg.EnvironmentName = "sandbox"
-                            cfg.ApiUsername = Convert.ToString(dr("ApiUsername")).Trim()
-                            cfg.ApiPassword = Convert.ToString(dr("ApiPasswordProtetta")).Trim()
-                            cfg.ApiSignature = Convert.ToString(dr("ApiSignatureProtetta")).Trim()
-                            cfg.BusinessAccount = Convert.ToString(dr("BusinessAccount")).Trim()
-                            cfg.CurrencyCode = Convert.ToString(dr("CurrencyCode")).Trim().ToUpperInvariant()
-                            If String.IsNullOrWhiteSpace(cfg.CurrencyCode) Then cfg.CurrencyCode = "EUR"
-                            cfg.AllowLive = (SafeInt(dr("AllowLive"), 0) = 1)
-                            Return cfg
+                            Return ReadConfig(dr)
                         End If
                     End Using
                 End Using
@@ -64,6 +50,52 @@ Public Module PayPalExpressRepository
         End Try
 
         Return Nothing
+    End Function
+
+    Public Function LoadConfigForCompanyPayment(ByVal companyId As Integer,
+                                                ByVal paymentMethodId As Integer) As PayPalCheckoutConfig
+        If companyId <= 0 OrElse paymentMethodId <= 0 Then Return Nothing
+
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Const sql As String =
+                    "SELECT id,AziendeId,PagamentiTipoId,Environment,ApiUsername,ApiPasswordProtetta,ApiSignatureProtetta," &
+                    "BusinessAccount,CurrencyCode,AllowLive FROM vpaypal_express_azienda " &
+                    "WHERE AziendeId=@azienda AND PagamentiTipoId=@pagamento AND Attivo=1 AND OnLine=@online LIMIT 1"
+                Using cmd As New MySqlCommand(sql, conn)
+                    cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = companyId
+                    cmd.Parameters.Add("@pagamento", MySqlDbType.Int32).Value = paymentMethodId
+                    cmd.Parameters.Add("@online", MySqlDbType.Int32).Value = PayPalPaymentState.PAYPAL_ONLINE_VALUE
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
+                        If dr.Read() Then Return ReadConfig(dr)
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("paypal-express-repository", "LoadConfigForCompanyPayment", ex, HttpContext.Current)
+        End Try
+
+        Return Nothing
+    End Function
+
+    Private Function ReadConfig(ByVal dr As MySqlDataReader) As PayPalCheckoutConfig
+        If dr Is Nothing Then Return Nothing
+        Dim cfg As New PayPalCheckoutConfig()
+        cfg.Source = "database"
+        cfg.ConfigId = SafeInt(dr("id"), 0)
+        cfg.AziendeId = SafeInt(dr("AziendeId"), 0)
+        cfg.PagamentiTipoId = SafeInt(dr("PagamentiTipoId"), 0)
+        cfg.EnvironmentName = Convert.ToString(dr("Environment")).Trim()
+        If String.IsNullOrWhiteSpace(cfg.EnvironmentName) Then cfg.EnvironmentName = "sandbox"
+        cfg.ApiUsername = Convert.ToString(dr("ApiUsername")).Trim()
+        cfg.ApiPassword = Convert.ToString(dr("ApiPasswordProtetta")).Trim()
+        cfg.ApiSignature = Convert.ToString(dr("ApiSignatureProtetta")).Trim()
+        cfg.BusinessAccount = Convert.ToString(dr("BusinessAccount")).Trim()
+        cfg.CurrencyCode = Convert.ToString(dr("CurrencyCode")).Trim().ToUpperInvariant()
+        If String.IsNullOrWhiteSpace(cfg.CurrencyCode) Then cfg.CurrencyCode = "EUR"
+        cfg.AllowLive = (SafeInt(dr("AllowLive"), 0) = 1)
+        Return cfg
     End Function
 
     Public Sub RecordSetExpressToken(ByVal doc As PayPalPaymentDocumentInfo, ByVal token As String, ByVal response As PayPalExpressResponse, Optional ByVal currencyCode As String = Nothing)
