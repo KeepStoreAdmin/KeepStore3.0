@@ -28,25 +28,94 @@ Partial Class paypalwebhook
         If eventData Is Nothing Then Finish(400, "INVALID_EVENT") : Return
         Dim eventId As String = SafeExternal(ReadString(eventData, "id"))
         Dim eventType As String = ReadString(eventData, "event_type").ToUpperInvariant()
-        If eventId = String.Empty OrElse (eventType <> "PAYMENT.CAPTURE.COMPLETED" AndAlso eventType <> "PAYMENT.CAPTURE.PENDING" AndAlso eventType <> "PAYMENT.CAPTURE.DENIED") Then Finish(202, "IGNORED") : Return
+        If eventId = String.Empty OrElse Not IsSupportedEvent(eventType) Then Finish(202, "IGNORED") : Return
         Dim resource As IDictionary(Of String, Object) = ReadDictionary(eventData, "resource")
-        Dim captureId As String = SafeExternal(ReadString(resource, "id"))
-        Dim related As IDictionary(Of String, Object) = ReadDictionary(ReadDictionary(resource, "supplementary_data"), "related_ids")
-        Dim orderId As String = SafeExternal(ReadString(related, "order_id"))
+        If resource Is Nothing Then Finish(400, "INVALID_RESOURCE") : Return
+        Dim captureId As String = String.Empty
+        Dim orderId As String = ResolveOrderId(eventType, resource, captureId)
+        If orderId = String.Empty Then Finish(400, "ORDER_ID_REQUIRED") : Return
         Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForExternalReference(If(orderId <> String.Empty, orderId, captureId))
         If tx Is Nothing OrElse Not tx.Exists Then Finish(202, "UNKNOWN_TRANSACTION") : Return
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(tx.DocumentiId)
         If cfg Is Nothing OrElse cfg.AziendeId <> tx.AziendeId OrElse cfg.AccountId <> tx.PayPalAccountId OrElse Not cfg.IsWebhookConfigured Then Finish(403, "CONFIGURATION_UNAVAILABLE") : Return
         Dim verification As PayPalWebhookVerificationResult = New PayPalOrdersV2Client(cfg).VerifyWebhookSignature(
             Request.Headers("PAYPAL-TRANSMISSION-ID"), Request.Headers("PAYPAL-TRANSMISSION-TIME"), Request.Headers("PAYPAL-CERT-URL"),
-            Request.Headers("PAYPAL-AUTH-ALGO"), Request.Headers("PAYPAL-TRANSMISSION-SIG"), eventData)
+            Request.Headers("PAYPAL-AUTH-ALGO"), Request.Headers("PAYPAL-TRANSMISSION-SIG"), raw)
         If verification Is Nothing OrElse Not verification.Success Then Finish(400, "SIGNATURE_REJECTED") : Return
+
+        If eventType = "CHECKOUT.ORDER.APPROVED" Then
+            ProcessApprovedOrder(tx, cfg, eventId)
+            raw = String.Empty
+            Return
+        End If
+
+        If eventType = "CHECKOUT.PAYMENT-APPROVAL.REVERSED" Then
+            Dim reversedDoc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForPayment(tx.DocumentiId)
+            If Not MatchesOrderResource(tx, cfg, reversedDoc, resource) Then Finish(409, "EVENT_MISMATCH") : Return
+            Dim reversed As New PayPalOrderSnapshot With {.OrderId = orderId, .Status = "FAILED"}
+            If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, reversed, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return
+            raw = String.Empty
+            Finish(200, "OK")
+            Return
+        End If
+
         Dim snapshot As PayPalOrderSnapshot = BuildSnapshot(resource, orderId, captureId, eventType)
         If Not MatchesTransaction(tx, cfg, snapshot) Then Finish(409, "EVENT_MISMATCH") : Return
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, snapshot, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return
         raw = String.Empty
         Finish(200, "OK")
     End Sub
+
+    Private Sub ProcessApprovedOrder(ByVal tx As PayPalCheckoutTransactionInfo,
+                                     ByVal cfg As PayPalCheckoutConfig,
+                                     ByVal eventId As String)
+        Dim doc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForPayment(tx.DocumentiId)
+        If doc Is Nothing OrElse Not doc.Exists OrElse doc.AziendeId <> tx.AziendeId OrElse doc.PagamentiTipoId <> tx.PagamentiTipoId Then Finish(409, "DOCUMENT_MISMATCH") : Return
+        Dim client As New PayPalOrdersV2Client(cfg)
+        Dim details As PayPalOrdersV2Result = client.GetOrder(tx.PayPalOrderId)
+        If details Is Nothing OrElse Not details.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, details.Snapshot) Then Finish(409, "ORDER_MISMATCH") : Return
+        Dim authoritative As PayPalOrderSnapshot = details.Snapshot
+        If Not String.Equals(authoritative.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) AndAlso
+           Not String.Equals(authoritative.CaptureStatus, "PENDING", StringComparison.OrdinalIgnoreCase) Then
+            If Not String.Equals(authoritative.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Finish(409, "ORDER_NOT_APPROVED") : Return
+            Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
+            If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, capture.Snapshot) Then Finish(409, "CAPTURE_MISMATCH") : Return
+            authoritative = capture.Snapshot
+        End If
+        If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, authoritative, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return
+        Finish(200, "OK")
+    End Sub
+
+    Private Shared Function IsSupportedEvent(ByVal eventType As String) As Boolean
+        Return eventType = "CHECKOUT.ORDER.APPROVED" OrElse eventType = "CHECKOUT.PAYMENT-APPROVAL.REVERSED" OrElse
+               eventType = "PAYMENT.CAPTURE.COMPLETED" OrElse eventType = "PAYMENT.CAPTURE.PENDING" OrElse eventType = "PAYMENT.CAPTURE.DENIED"
+    End Function
+
+    Private Shared Function ResolveOrderId(ByVal eventType As String,
+                                           ByVal resource As IDictionary(Of String, Object),
+                                           ByRef captureId As String) As String
+        If eventType = "CHECKOUT.ORDER.APPROVED" Then Return SafeExternal(ReadString(resource, "id"))
+        If eventType = "CHECKOUT.PAYMENT-APPROVAL.REVERSED" Then Return SafeExternal(ReadString(resource, "order_id"))
+        captureId = SafeExternal(ReadString(resource, "id"))
+        Dim related As IDictionary(Of String, Object) = ReadDictionary(ReadDictionary(resource, "supplementary_data"), "related_ids")
+        Return SafeExternal(ReadString(related, "order_id"))
+    End Function
+
+    Private Shared Function MatchesOrderResource(ByVal tx As PayPalCheckoutTransactionInfo,
+                                                  ByVal cfg As PayPalCheckoutConfig,
+                                                  ByVal doc As PayPalPaymentDocumentInfo,
+                                                  ByVal resource As IDictionary(Of String, Object)) As Boolean
+        If tx Is Nothing OrElse cfg Is Nothing OrElse doc Is Nothing OrElse Not doc.Exists OrElse
+           tx.AziendeId <> cfg.AziendeId OrElse tx.AziendeId <> doc.AziendeId OrElse tx.PagamentiTipoId <> doc.PagamentiTipoId OrElse
+           Not String.Equals(SafeExternal(ReadString(resource, "order_id")), tx.PayPalOrderId, StringComparison.Ordinal) Then Return False
+        Dim units As IList = ReadList(resource, "purchase_units")
+        If units Is Nothing OrElse units.Count <> 1 Then Return False
+        Dim unit As IDictionary(Of String, Object) = TryCast(units(0), IDictionary(Of String, Object))
+        Return unit IsNot Nothing AndAlso
+               String.Equals(ReadString(unit, "reference_id"), PayPalOrdersV2Client.ExpectedReferenceId(doc), StringComparison.Ordinal) AndAlso
+               String.Equals(ReadString(unit, "custom_id"), PayPalOrdersV2Client.ExpectedCustomId(doc), StringComparison.Ordinal) AndAlso
+               String.Equals(ReadString(unit, "invoice_id"), PayPalOrdersV2Client.ExpectedInvoiceId(doc), StringComparison.Ordinal)
+    End Function
 
     Private Shared Function BuildSnapshot(ByVal resource As IDictionary(Of String, Object), ByVal orderId As String, ByVal captureId As String, ByVal eventType As String) As PayPalOrderSnapshot
         Dim amount As IDictionary(Of String, Object) = ReadDictionary(resource, "amount")
@@ -69,6 +138,11 @@ Partial Class paypalwebhook
     Private Shared Function ReadDictionary(ByVal data As IDictionary(Of String, Object), ByVal key As String) As IDictionary(Of String, Object)
         If data Is Nothing OrElse Not data.ContainsKey(key) Then Return Nothing
         Return TryCast(data(key), IDictionary(Of String, Object))
+    End Function
+
+    Private Shared Function ReadList(ByVal data As IDictionary(Of String, Object), ByVal key As String) As IList
+        If data Is Nothing OrElse Not data.ContainsKey(key) Then Return Nothing
+        Return TryCast(data(key), IList)
     End Function
 
     Private Shared Function ReadString(ByVal data As IDictionary(Of String, Object), ByVal key As String) As String

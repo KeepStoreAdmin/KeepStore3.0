@@ -108,6 +108,12 @@ Module PayPalOrdersV2Harness
         Check(fake.Requests(1).RequestId = "PP-CREATE-1-267", "10 create idempotency header")
         Check(fake.Requests(1).Body.Contains("""experience_context"""), "11 experience context")
         Check(fake.Requests(1).Body.Contains("""payee"""), "12 tenant payee server payload")
+        Check(fake.Requests(1).Prefer = "return=representation", "12a Create Prefer representation")
+
+        fake = New FakeTransport()
+        fake.Add(200, OAuth())
+        fake.Add(201, "{""id"":""ORDER-123456"",""status"":""CREATED"",""links"":[]}")
+        Check(Not New PayPalOrdersV2Client(cfgA, fake).CreateOrder(Doc(1), "PP-CREATE-1-267", "https://a.invalid/r", "https://a.invalid/c").Success, "12b minimal Create response fails closed")
 
         fake = New FakeTransport()
         fake.Add(200, OAuth())
@@ -129,6 +135,12 @@ Module PayPalOrdersV2Harness
         Dim capture As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
         Check(capture.Success AndAlso capture.Snapshot.CaptureStatus = "COMPLETED", "18 Capture COMPLETED")
         Check(fake.Requests(1).RequestId = "PP-CAPTURE-1-267", "19 capture idempotency header")
+        Check(fake.Requests(1).Prefer = "return=representation", "19a Capture Prefer representation")
+
+        fake = New FakeTransport()
+        fake.Add(200, OAuth())
+        fake.Add(201, "{""id"":""ORDER-123456"",""status"":""COMPLETED"",""links"":[]}")
+        Check(Not New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267").Success, "19b minimal Capture response fails closed")
 
         fake = New FakeTransport() : fake.Add(200, OAuth()) : fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId, "ORDER-123456", "PENDING"))
         Check(New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267").Snapshot.CaptureStatus = "PENDING", "20 Capture PENDING")
@@ -149,11 +161,31 @@ Module PayPalOrdersV2Harness
         Check(abaA <> abaB, "29 tenant A/B separation")
         Check((cfgA.PayeeEmail & "|" & cfgA.BrandName) = abaA, "30 A-B-A no contamination")
 
+        Dim rawEvent As String = "{" & vbCrLf & "  ""event_type"" : ""CHECKOUT.ORDER.APPROVED"", " & vbLf & " ""id"" : ""WH-RAW-1"", ""resource"" : { ""id"" : ""ORDER-123456"" }" & vbCrLf & "}"
         fake = New FakeTransport() : fake.Add(200, OAuth()) : fake.Add(200, "{""verification_status"":""SUCCESS""}")
-        Dim webhook As PayPalWebhookVerificationResult = New PayPalOrdersV2Client(cfgA, fake).VerifyWebhookSignature("t","now","https://www.paypal.com/cert","SHA256withRSA","sig",New Dictionary(Of String,Object)())
+        Dim webhook As PayPalWebhookVerificationResult = New PayPalOrdersV2Client(cfgA, fake).VerifyWebhookSignature("t","now","https://www.paypal.com/cert","SHA256withRSA","sig",rawEvent)
         Check(webhook.Success, "31 webhook SUCCESS")
+        Check(fake.Requests(1).Body.Contains(rawEvent), "31a raw webhook text preserved exactly")
+        Check(fake.Requests(1).Body.IndexOf(rawEvent, StringComparison.Ordinal) = fake.Requests(1).Body.LastIndexOf(rawEvent, StringComparison.Ordinal), "31b raw webhook inserted once")
         fake = New FakeTransport() : fake.Add(200, OAuth()) : fake.Add(200, "{""verification_status"":""FAILURE""}")
-        Check(Not New PayPalOrdersV2Client(cfgA, fake).VerifyWebhookSignature("t","now","https://www.paypal.com/cert","SHA256withRSA","sig",New Dictionary(Of String,Object)()).Success, "32 webhook FAILURE")
+        Check(Not New PayPalOrdersV2Client(cfgA, fake).VerifyWebhookSignature("t","now","https://www.paypal.com/cert","SHA256withRSA","sig",rawEvent).Success, "32 webhook FAILURE")
+        Check(Not New PayPalOrdersV2Client(cfgA, fake).VerifyWebhookSignature("t","now","https://www.paypal.com/cert","SHA256withRSA","sig","not-json").Success, "32a invalid raw webhook blocked before network")
+
+        Check(PayPalOrdersV2Client.IsReturnOrderTokenValid("ORDER-123456", "ORDER-123456"), "33 exact return token accepted")
+        Check(Not PayPalOrdersV2Client.IsReturnOrderTokenValid(String.Empty, "ORDER-123456"), "34 missing return token blocked")
+        Check(Not PayPalOrdersV2Client.IsReturnOrderTokenValid("ORDER-WRONG", "ORDER-123456"), "35 mismatched return token blocked")
+        Check(Not PayPalOrdersV2Client.IsReturnOrderTokenValid("ORDER-123456?x=1", "ORDER-123456"), "36 invalid return token blocked")
+
+        Dim captureRequestIds As New HashSet(Of String)(StringComparer.Ordinal)
+        For attempt As Integer = 1 To 3
+            fake = New FakeTransport()
+            fake.Add(200, OAuth())
+            fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId, "ORDER-123456", "COMPLETED"))
+            Dim concurrentCapture As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
+            Check(concurrentCapture.Success, "37 deterministic capture attempt " & attempt.ToString())
+            captureRequestIds.Add(fake.Requests(1).RequestId)
+        Next
+        Check(captureRequestIds.Count = 1 AndAlso captureRequestIds.Contains("PP-CAPTURE-1-267"), "38 return/webhook/duplicate share one capture idempotency key")
         Console.WriteLine("PAYPAL_ORDERS_V2_TOTAL=" & _passed.ToString())
     End Sub
 End Module

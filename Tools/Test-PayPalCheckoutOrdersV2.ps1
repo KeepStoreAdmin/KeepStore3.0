@@ -15,6 +15,7 @@ $returnPage = Read-Source 'paypalreturn.aspx.vb'
 $recheck = Read-Source 'paypalrecheck.aspx.vb'
 $webhook = Read-Source 'paypalwebhook.aspx.vb'
 $safety = Read-Source 'App_Code\PayPalCheckoutSafetyPolicy.vb'
+$verifyMigration = Read-Source 'Database Taikun\Migrations\20260922_PAYPAL_CHECKOUT_ORDERS_V2_LIVE_1A_verify.sql'
 $runtimeFiles = @(
     'App_Code\PayPalCheckoutConfig.vb','App_Code\PayPalCheckoutRepository.vb','App_Code\PayPalOrdersV2Client.vb',
     'App_Code\PayPalCheckoutSafetyPolicy.vb','App_Code\PayPalPaymentState.vb','paypalcheckout.aspx.vb',
@@ -44,6 +45,18 @@ $results += Assert-Check (-not ($runtime -match 'SetExpressCheckout|GetExpressCh
 $results += Assert-Check (-not (Test-Path (Join-Path $RepositoryRoot 'ipn.aspx')) -and -not (Test-Path (Join-Path $RepositoryRoot 'ipn.aspx.vb'))) '52 legacy IPN removed'
 $results += Assert-Check (-not $runtime.Contains('ClientSecret = "')) '53 no hardcoded secret'
 $results += Assert-Check ($client.Contains('PAYMENT.CAPTURE.COMPLETED') -eq $false -and $webhook.Contains('PAYMENT.CAPTURE.COMPLETED')) '54 webhook event scope'
+$results += Assert-Check ($client.Contains('request.Headers("Prefer") = data.Prefer') -and $client.Contains('"return=representation"')) '55 Prefer representation transport'
+$results += Assert-Check ($client.Contains('BuildWebhookVerificationPayload') -and $client.Contains('serialized.Replace(encodedSentinel, rawWebhookEvent)')) '56 raw webhook verification contract'
+$results += Assert-Check ($webhook.Contains('Request.Headers("PAYPAL-TRANSMISSION-SIG"), raw)') -and -not $webhook.Contains('Request.Headers("PAYPAL-TRANSMISSION-SIG"), eventData)')) '57 raw event passed unchanged'
+$results += Assert-Check ($returnPage.Contains('If Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then') -and $returnPage.IndexOf('IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId)', [StringComparison]::Ordinal) -lt $returnPage.IndexOf('client.GetOrder', [StringComparison]::Ordinal)) '58 mandatory return token before API'
+$results += Assert-Check ($webhook.Contains('CHECKOUT.ORDER.APPROVED') -and $webhook.Contains('ProcessApprovedOrder')) '59 approved webhook recovery'
+$results += Assert-Check ($webhook.Contains('CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)')) '60 approved uses persisted capture request id'
+$results += Assert-Check ($webhook.Contains('CHECKOUT.PAYMENT-APPROVAL.REVERSED') -and $webhook.Contains('.Status = "FAILED"')) '61 approval reversed fails closed'
+$verifyIndex = $webhook.IndexOf('If verification Is Nothing OrElse Not verification.Success', [StringComparison]::Ordinal)
+$firstDmlIndex = $webhook.IndexOf('ApplyAuthoritativeState', [StringComparison]::Ordinal)
+$results += Assert-Check ($verifyIndex -ge 0 -and $firstDmlIndex -gt $verifyIndex) '62 zero webhook DML before signature success'
+$results += Assert-Check ($verifyMigration.Contains('COUNT(DISTINCT INDEX_NAME)=5') -and $verifyMigration.Contains('UX_paypal_checkout_tx_capture_request')) '63 all five transaction uniques verified'
+$results += Assert-Check ($webhook.Contains('LoadDocumentForPayment') -and $webhook.Contains('ValidateSnapshot(doc, cfg, tx.PayPalOrderId')) '64 approved full authoritative validation'
 
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe'
 if (-not (Test-Path $framework)) { $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\vbc.exe' }
@@ -58,7 +71,10 @@ try {
     $dynamic = & $out
     if ($LASTEXITCODE -ne 0) { throw 'PAYPAL_ORDERS_V2_HARNESS_FAILED' }
     $dynamic | Write-Output
+    $dynamicTotalLine = $dynamic | Where-Object { $_ -match '^PAYPAL_ORDERS_V2_TOTAL=(\d+)$' } | Select-Object -Last 1
+    if (-not $dynamicTotalLine) { throw 'PAYPAL_ORDERS_V2_TOTAL_MISSING' }
+    $dynamicTotal = [int]($dynamicTotalLine -replace '^PAYPAL_ORDERS_V2_TOTAL=', '')
 } finally { Remove-Item -LiteralPath $out -Force -ErrorAction SilentlyContinue }
 $results | Format-Table -AutoSize
 "PAYPAL_ORDERS_V2_STATIC_TOTAL=$($results.Count)"
-"PAYPAL_ORDERS_V2_TOTAL=$($results.Count + 32)"
+"PAYPAL_ORDERS_V2_TOTAL=$($results.Count + $dynamicTotal)"

@@ -16,6 +16,7 @@ Public Class PayPalHttpRequestData
     Public Property ContentType As String
     Public Property Authorization As String
     Public Property RequestId As String
+    Public Property Prefer As String
     Public Property Body As String
 End Class
 
@@ -42,6 +43,7 @@ Public Class PayPalHttpWebRequestTransport
         request.AllowAutoRedirect = False
         If Not String.IsNullOrWhiteSpace(data.Authorization) Then request.Headers(HttpRequestHeader.Authorization) = data.Authorization
         If Not String.IsNullOrWhiteSpace(data.RequestId) Then request.Headers("PayPal-Request-Id") = data.RequestId
+        If Not String.IsNullOrWhiteSpace(data.Prefer) Then request.Headers("Prefer") = data.Prefer
         If Not String.IsNullOrEmpty(data.Body) Then
             Dim bytes() As Byte = Encoding.UTF8.GetBytes(data.Body)
             request.ContentLength = bytes.Length
@@ -166,7 +168,7 @@ Public Class PayPalOrdersV2Client
             {"purchase_units", New Object() {unit}},
             {"payment_source", New Dictionary(Of String, Object) From {{"paypal", New Dictionary(Of String, Object) From {{"experience_context", experience}}}}}
         }
-        Return SendOrder("POST", "/v2/checkout/orders", requestId, _serializer.Serialize(payload), 201)
+        Return SendOrder("POST", "/v2/checkout/orders", requestId, _serializer.Serialize(payload), 201, True)
     End Function
 
     Public Function GetOrder(ByVal orderId As String) As PayPalOrdersV2Result
@@ -176,7 +178,12 @@ Public Class PayPalOrdersV2Client
 
     Public Function CaptureOrder(ByVal orderId As String, ByVal requestId As String) As PayPalOrdersV2Result
         If Not IsExternalIdValid(orderId) Then Return Failure("ORDER_ID_INVALID")
-        Return SendOrder("POST", "/v2/checkout/orders/" & Uri.EscapeDataString(orderId) & "/capture", requestId, "{}", 201)
+        Dim result As PayPalOrdersV2Result = SendOrder("POST", "/v2/checkout/orders/" & Uri.EscapeDataString(orderId) & "/capture", requestId, "{}", 201, True)
+        If result.Success AndAlso (String.IsNullOrWhiteSpace(result.Snapshot.CaptureId) OrElse Not IsCaptureStatusSupported(result.Snapshot.CaptureStatus)) Then
+            result.Success = False
+            result.ErrorCode = "CAPTURE_REPRESENTATION_INCOMPLETE"
+        End If
+        Return result
     End Function
 
     Public Function VerifyWebhookSignature(ByVal transmissionId As String,
@@ -184,25 +191,53 @@ Public Class PayPalOrdersV2Client
                                            ByVal certUrl As String,
                                            ByVal authAlgo As String,
                                            ByVal transmissionSignature As String,
-                                           ByVal webhookEvent As Object) As PayPalWebhookVerificationResult
+                                           ByVal rawWebhookEvent As String) As PayPalWebhookVerificationResult
         Dim result As New PayPalWebhookVerificationResult()
         If _config Is Nothing OrElse Not _config.IsWebhookConfigured Then result.ErrorCode = "WEBHOOK_CONFIGURATION_UNAVAILABLE" : Return result
+        Dim verificationBody As String = BuildWebhookVerificationPayload(transmissionId, transmissionTime, certUrl, authAlgo, transmissionSignature, _config.WebhookId, rawWebhookEvent)
+        If verificationBody = String.Empty Then result.ErrorCode = "WEBHOOK_EVENT_INVALID" : Return result
         Dim token As PayPalAccessTokenResult = GetAccessToken()
         If Not token.Success Then result.ErrorCode = token.ErrorCode : Return result
-        Dim payload As New Dictionary(Of String, Object) From {
-            {"transmission_id", transmissionId}, {"transmission_time", transmissionTime}, {"cert_url", certUrl},
-            {"auth_algo", authAlgo}, {"transmission_sig", transmissionSignature}, {"webhook_id", _config.WebhookId},
-            {"webhook_event", webhookEvent}
-        }
         Dim response As PayPalHttpResponseData = SafeSend(New PayPalHttpRequestData With {
             .Method = "POST", .Url = PayPalCheckoutConfig.LiveApiBaseUrl & "/v1/notifications/verify-webhook-signature",
             .ContentType = "application/json", .Authorization = "Bearer " & token.AccessToken,
-            .Body = _serializer.Serialize(payload)})
+            .Body = verificationBody})
         result.StatusCode = response.StatusCode
         result.VerificationStatus = ReadString(Parse(response.Body), "verification_status").ToUpperInvariant()
         result.Success = response.StatusCode = 200 AndAlso result.VerificationStatus = "SUCCESS"
         If Not result.Success Then result.ErrorCode = ReadSafeError(response.Body, "WEBHOOK_VERIFICATION_FAILED")
         Return result
+    End Function
+
+    Public Shared Function BuildWebhookVerificationPayload(ByVal transmissionId As String,
+                                                            ByVal transmissionTime As String,
+                                                            ByVal certUrl As String,
+                                                            ByVal authAlgo As String,
+                                                            ByVal transmissionSignature As String,
+                                                            ByVal webhookId As String,
+                                                            ByVal rawWebhookEvent As String) As String
+        If String.IsNullOrWhiteSpace(rawWebhookEvent) Then Return String.Empty
+        Dim serializer As New JavaScriptSerializer()
+        Try
+            If TryCast(serializer.DeserializeObject(rawWebhookEvent), IDictionary(Of String, Object)) Is Nothing Then Return String.Empty
+        Catch
+            Return String.Empty
+        End Try
+        Dim sentinel As String = "__KEEPSTORE_PAYPAL_RAW_EVENT_" & Guid.NewGuid().ToString("N") & "__"
+        Dim payload As New Dictionary(Of String, Object) From {
+            {"transmission_id", transmissionId}, {"transmission_time", transmissionTime}, {"cert_url", certUrl},
+            {"auth_algo", authAlgo}, {"transmission_sig", transmissionSignature}, {"webhook_id", webhookId},
+            {"webhook_event", sentinel}
+        }
+        Dim serialized As String = serializer.Serialize(payload)
+        Dim encodedSentinel As String = serializer.Serialize(sentinel)
+        If Not serialized.Contains(encodedSentinel) Then Return String.Empty
+        Return serialized.Replace(encodedSentinel, rawWebhookEvent)
+    End Function
+
+    Public Shared Function IsReturnOrderTokenValid(ByVal rawToken As String, ByVal persistedOrderId As String) As Boolean
+        Dim candidate As String = Convert.ToString(rawToken).Trim()
+        Return IsExternalIdValid(candidate) AndAlso String.Equals(candidate, Convert.ToString(persistedOrderId), StringComparison.Ordinal)
     End Function
 
     Public Shared Function ExpectedReferenceId(ByVal doc As PayPalPaymentDocumentInfo) As String
@@ -234,17 +269,35 @@ Public Class PayPalOrdersV2Client
                String.Equals(snapshot.MerchantId, cfg.MerchantId, StringComparison.Ordinal)
     End Function
 
-    Private Function SendOrder(ByVal method As String, ByVal path As String, ByVal requestId As String, ByVal body As String, ByVal expectedStatus As Integer) As PayPalOrdersV2Result
+    Private Function SendOrder(ByVal method As String,
+                               ByVal path As String,
+                               ByVal requestId As String,
+                               ByVal body As String,
+                               ByVal expectedStatus As Integer,
+                               Optional ByVal requireRepresentation As Boolean = False) As PayPalOrdersV2Result
         Dim token As PayPalAccessTokenResult = GetAccessToken()
         If Not token.Success Then Return Failure(token.ErrorCode)
         Dim response As PayPalHttpResponseData = SafeSend(New PayPalHttpRequestData With {
             .Method = method, .Url = PayPalCheckoutConfig.LiveApiBaseUrl & path, .ContentType = "application/json",
-            .Authorization = "Bearer " & token.AccessToken, .RequestId = requestId, .Body = body})
+            .Authorization = "Bearer " & token.AccessToken, .RequestId = requestId,
+            .Prefer = If(requireRepresentation, "return=representation", String.Empty), .Body = body})
         Dim result As New PayPalOrdersV2Result With {.StatusCode = response.StatusCode, .Snapshot = ParseSnapshot(response.Body)}
         Dim acceptedStatus As Boolean = response.StatusCode = expectedStatus OrElse (expectedStatus = 201 AndAlso response.StatusCode = 200)
         result.Success = acceptedStatus AndAlso result.Snapshot IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(result.Snapshot.OrderId)
+        If result.Success AndAlso requireRepresentation AndAlso Not HasAuthoritativeRepresentation(result.Snapshot) Then result.Success = False
         If Not result.Success Then result.ErrorCode = ReadSafeError(response.Body, "PAYPAL_API_FAILED")
         Return result
+    End Function
+
+    Private Shared Function HasAuthoritativeRepresentation(ByVal snapshot As PayPalOrderSnapshot) As Boolean
+        Return snapshot IsNot Nothing AndAlso snapshot.Intent <> String.Empty AndAlso snapshot.ReferenceId <> String.Empty AndAlso
+               snapshot.CustomId <> String.Empty AndAlso snapshot.InvoiceId <> String.Empty AndAlso snapshot.Amount > 0D AndAlso
+               snapshot.CurrencyCode <> String.Empty AndAlso snapshot.PayeeEmail <> String.Empty AndAlso snapshot.MerchantId <> String.Empty
+    End Function
+
+    Private Shared Function IsCaptureStatusSupported(ByVal value As String) As Boolean
+        Dim status As String = Convert.ToString(value).Trim().ToUpperInvariant()
+        Return status = "COMPLETED" OrElse status = "PENDING" OrElse status = "DENIED" OrElse status = "DECLINED" OrElse status = "FAILED"
     End Function
 
     Private Function SafeSend(ByVal request As PayPalHttpRequestData) As PayPalHttpResponseData

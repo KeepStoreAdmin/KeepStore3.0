@@ -34,14 +34,25 @@ Public Module PayPalPaymentState
     Public Const CAPTURE_PREFIX As String = "TXN:"
 
     Public Function LoadDocumentForUser(ByVal documentId As Integer, ByVal utentiId As Integer) As PayPalPaymentDocumentInfo
+        Return LoadDocument(documentId, utentiId, True)
+    End Function
+
+    Public Function LoadDocumentForPayment(ByVal documentId As Integer) As PayPalPaymentDocumentInfo
+        Return LoadDocument(documentId, 0, False)
+    End Function
+
+    Private Function LoadDocument(ByVal documentId As Integer, ByVal utentiId As Integer, ByVal requireUser As Boolean) As PayPalPaymentDocumentInfo
         Dim info As New PayPalPaymentDocumentInfo()
-        If documentId <= 0 OrElse utentiId <= 0 Then Return info
+        If documentId <= 0 OrElse (requireUser AndAlso utentiId <= 0) Then Return info
         Try
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT d.id,d.UtentiId,COALESCE(d.AziendeId,0) AziendeId,COALESCE(d.PagamentiTipoId,0) PagamentiTipoId,COALESCE(d.NDocumento,0) NDocumento,d.DataDocumento,COALESCE(d.Pagato,0) Pagato,COALESCE(d.StatoPagamentoWeb,0) StatoPagamentoWeb,COALESCE(p.OnLine,0) PaymentOnline,COALESCE(pie.TotaleDocumento,0) TotaleDocumento,COALESCE(d.IdTransazione,'') IdTransazione FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id AND d.UtentiId=@uid LIMIT 1", conn)
+                Dim sql As String = "SELECT d.id,d.UtentiId,COALESCE(d.AziendeId,0) AziendeId,COALESCE(d.PagamentiTipoId,0) PagamentiTipoId,COALESCE(d.NDocumento,0) NDocumento,d.DataDocumento,COALESCE(d.Pagato,0) Pagato,COALESCE(d.StatoPagamentoWeb,0) StatoPagamentoWeb,COALESCE(p.OnLine,0) PaymentOnline,COALESCE(pie.TotaleDocumento,0) TotaleDocumento,COALESCE(d.IdTransazione,'') IdTransazione FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id"
+                If requireUser Then sql &= " AND d.UtentiId=@uid"
+                sql &= " LIMIT 1"
+                Using cmd As New MySqlCommand(sql, conn)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
-                    cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
+                    If requireUser Then cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
                             info.Exists = True
@@ -61,7 +72,7 @@ Public Module PayPalPaymentState
                 End Using
             End Using
         Catch ex As Exception
-            KeepStoreLog.Error("paypal-payment-state", "LoadDocumentForUser", ex, HttpContext.Current)
+            KeepStoreLog.Error("paypal-payment-state", If(requireUser, "LoadDocumentForUser", "LoadDocumentForPayment"), ex, HttpContext.Current)
         End Try
         Return info
     End Function

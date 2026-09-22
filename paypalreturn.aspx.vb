@@ -17,13 +17,14 @@ Partial Class paypalreturn
         Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForDocument(documentId)
         If tx Is Nothing OrElse Not tx.Exists OrElse tx.AziendeId <> doc.AziendeId OrElse String.IsNullOrWhiteSpace(tx.PayPalOrderId) Then Fail(documentId, "Transazione PayPal non trovata") : Return
         Dim actionName As String = Convert.ToString(Request.QueryString("action")).Trim()
-        Dim queryOrderId As String = PayPalPaymentState.SanitizeExternalId(Convert.ToString(Request.QueryString("token")))
-        If Not String.IsNullOrWhiteSpace(queryOrderId) AndAlso Not String.Equals(queryOrderId, tx.PayPalOrderId, StringComparison.Ordinal) Then Fail(documentId, "Riferimento PayPal non coerente") : Return
+        Dim rawOrderId As String = Convert.ToString(Request.QueryString("token"))
         If String.Equals(actionName, "cancel", StringComparison.OrdinalIgnoreCase) Then
+            If Not String.IsNullOrWhiteSpace(rawOrderId) AndAlso Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then Fail(documentId, "Riferimento PayPal non coerente") : Return
             PayPalCheckoutRepository.MarkCanceled(tx)
             RedirectResult(documentId, "ko") : Return
         End If
         If Not String.Equals(actionName, "return", StringComparison.OrdinalIgnoreCase) Then Fail(documentId, "Rientro PayPal non valido") : Return
+        If Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then Fail(documentId, "Riferimento PayPal mancante o non coerente") : Return
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
         If cfg Is Nothing OrElse cfg.AccountId <> tx.PayPalAccountId OrElse Not PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg) Then Fail(documentId, "Configurazione PayPal Checkout non disponibile") : Return
         Dim client As New PayPalOrdersV2Client(cfg)
