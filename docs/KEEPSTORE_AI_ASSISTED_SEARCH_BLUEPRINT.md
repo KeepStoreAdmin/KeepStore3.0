@@ -505,3 +505,7 @@ Guardrail feed/search/AI: il numero globale non implica visibilita globale. Ness
 Guardrail AI/search: configurazioni SMTP, provider, username, secret reference, token, destinatari, telemetria di consegna e dati e-mail non sono fonti di retrieval, ranking, feed o personalizzazione. Nessun assistente deve dedurre provider dal dominio, proporre credenziali, esporre stato tecnico tenant, riattivare fallback legacy o trasformare configurazioni e-mail in contenuto indicizzabile. Il runner non deve diventare endpoint o strumento remoto e i suoi codici sanitizzati non devono essere arricchiti con messaggi raw. I sender esterni delle code documentali non vanno dichiarati migrati senza il relativo repository e contratto operativo.
 
 `DATABASE-DUMP-REPOSITORY-HYGIENE-1A` e registrato `NON AVVIATO` e separato dal nucleo e-mail: dump locali, contenuto e metadata non sono fonti AI/search e non devono entrare in commit, retrieval o output.
+
+## Checkpoint PayPal Checkout Orders v2
+
+`PAYPAL-CHECKOUT-ORDERS-V2-LIVE-1A` sostituisce il runtime Express con Orders API v2 LIVE-only ed è `READY FOR LIVE CONFIGURATION`, non LIVE VERIFIED. Guardrail AI/search: credenziali, OAuth token, request ID, Order/Capture ID, webhook, payee, merchant, payload, esiti gateway e dati documento non sono fonti di retrieval, ranking, feed o personalizzazione. Nessun assistente deve proporre fallback legacy/cross-tenant, dedurre configurazioni di pagamento o trasformare telemetria PayPal in contenuto indicizzabile.

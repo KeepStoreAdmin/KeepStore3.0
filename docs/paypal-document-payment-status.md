@@ -1,116 +1,44 @@
-# PayPal document payment status
+# PayPal Checkout document payment status
 
-## Scope
+## Current checkpoint
 
-This note records the current status of PayPal for document and My Account
-payments in KeepStore.
+`PAYPAL-CHECKOUT-ORDERS-V2-LIVE-1A` replaces the former PayPal Express engine with PayPal Checkout Orders API v2 REST, LIVE-only. The code and offline fake-transport tests are complete; the status is **READY FOR LIVE CONFIGURATION**, not LIVE VERIFIED.
 
-As of PAY-PAYPAL-1, PayPal is classified as:
+No NVP/SOAP, classic Express Checkout, runtime Sandbox or legacy IPN path remains usable. The coupon `_xclick` branch and `ipn.aspx` were removed. `aziende.AccountPaypal` is retained only as a shared legacy management column because the desktop procedures still reference it; the web PayPal runtime never reads it.
 
-**C - UI/legacy only, not operational for documents.**
+## Authoritative configuration
 
-BancaSella remains the only verified online Pay Now flow for documents.
+- `paypal_checkout_account` identifies one PayPal business account through a validated `CredentialKey`; it contains no client secret.
+- `paypal_checkout_azienda` maps an exact `AziendeId + PagamentiTipoId` to account, payee email, checkout brand and currency.
+- Server/deploy settings resolve `<CredentialKey>_CLIENT_ID`, `<CredentialKey>_CLIENT_SECRET` and `<CredentialKey>_WEBHOOK_ID` fail-closed.
+- A tenant without its own active mapping cannot inherit another tenant's configuration.
+- The public runtime accepts only HTTPS on the authoritative tenant host and rejects localhost/loopback.
 
-## Current status
+Taikun and Webaffare may reference the same account, merchant and credential key while retaining distinct `AziendeId`, payee email and brand. Those values are always loaded server-side and never accepted from the browser.
 
-PayPal document payments are not operational for My Account documents.
+## Payment contract
 
-The order detail page still contains a legacy `btPayPal` control, but it is
-hidden by default and must remain hidden. The control has
-`CommandName="PagamentoPayPal"`, but there is no verified document handler in
-`documentidettaglio.aspx.vb`.
+`paypalcheckout.aspx` creates an Orders v2 order with intent `CAPTURE`, an exact payee, canonical return/cancel URLs and a persisted deterministic `PayPal-Request-Id`. The approval URL must be HTTPS on `www.paypal.com`.
 
-The document detail Pay Now logic currently exposes BancaSella only when the
-document is payable and `PagamentiTipoOnline = 3`. PayPal is explicitly kept
-hidden until a document payment flow is designed and tested.
+`paypalreturn.aspx` distrusts browser fields. It loads the persisted order, calls Get Order, verifies tenant, document, IDs, amount, currency, payee and merchant, then captures with the already persisted capture request ID. Duplicate return, refresh or retry cannot create another logical capture.
 
-There is no complete PayPal document flow today:
+`paypalrecheck.aspx` performs Get Order only. It never recaptures. `paypalwebhook.aspx` accepts HTTPS POST only, verifies the PayPal signature with the configured webhook ID before writes, and processes unique event IDs monotonically.
 
-- no My Account PayPal launcher or server-generated document link;
-- no document-specific PayPal return URL;
-- no document-specific PayPal cancel URL;
-- no reliable document callback or webhook aligned with the new payment state
-  fields;
-- no PayPal update of `documenti.StatoPagamentoWeb`;
-- no verified idempotency for document PayPal callbacks.
+Document markers:
 
-## Existing legacy pieces
+- `PP-ORDER:<OrderId>` means created/approved/pending and never means paid;
+- `TXN:<CaptureId>` is written only for an authoritative `COMPLETED` capture;
+- `Pagato=1` and `StatoPagamentoWeb=2` are allowed only for that completed capture;
+- pending, denied, declined, failed and canceled states keep `Pagato=0`.
 
-The repository contains PayPal-related legacy pieces, but they are not a
-complete document payment implementation.
+## Database transition
 
-- `documentidettaglio.aspx` contains hidden `btPayPal` markup.
-- `pagamentitipo.OnLine = 2` is the conceptual value for PayPal.
-- `ipn.aspx.vb` contains a legacy IPN handler.
-- Coupon code contains a legacy PayPal branch.
-- Company configuration includes `aziende.AccountPaypal`, loaded into
-  `Session("AccountPaypal")`.
+The migration set `20260922_PAYPAL_CHECKOUT_ORDERS_V2_LIVE_1A_*` creates account, tenant, transaction, event-idempotency and sanitized legacy-audit tables. It removes the obsolete PayPal Express view/tables only during the separately authorized deployment. It has not been executed against production by this task.
 
-No sensitive values are documented here. Account identifiers, credentials,
-tokens, client IDs, secrets, and gateway parameters must not be copied into
-documentation or logs.
+## Security and tests
 
-## What not to do
+Credentials, OAuth tokens, authorization headers and complete webhook payloads must never be logged. Offline tests use an injectable fake HTTP transport and cover OAuth, create/get/capture, mismatches, hostile approval URLs, deterministic retries, webhook verification/idempotency, tenant A/B/A isolation and fail-closed configuration. No real PayPal call is permitted before LIVE configuration and an explicitly authorized smoke.
 
-Do not enable `btPayPal` for documents.
+## Remaining LIVE gate
 
-Do not copy the coupon PayPal flow into document payments without a dedicated
-design and security audit.
-
-Do not reuse the legacy IPN handler as authoritative for documents without
-redesigning it around document identity, amount validation, idempotency, and
-the new web payment status fields.
-
-Do not set `documenti.Pagato = 1` without also updating the web payment status
-fields consistently:
-
-- `documenti.StatoPagamentoWeb`;
-- `documenti.DataStatoPagamentoWeb`;
-- `documenti.UltimoEsitoPagamentoWeb`.
-
-Do not enable real PayPal payments before sandbox testing covers success,
-failure, cancellation, duplicate callback, amount mismatch, and missing
-callback cases.
-
-## Requirements for a future document PayPal flow
-
-A future PayPal document flow must start from a dedicated design task.
-
-Required decisions and implementation points:
-
-- choose the architecture: modern PayPal Checkout, or legacy/IPN only if
-  explicitly justified;
-- configure and test sandbox credentials before live use;
-- create a server-generated Pay Now launcher/link for documents;
-- include return and cancel UX for the browser return path;
-- implement an authoritative callback or webhook;
-- validate that the callback belongs to the expected document and amount;
-- update `documenti.Pagato` only on verified successful payment;
-- update `documenti.StatoPagamentoWeb`;
-- update `documenti.DataStatoPagamentoWeb`;
-- update `documenti.UltimoEsitoPagamentoWeb` with sanitized text;
-- make callbacks idempotent;
-- store sanitized logs only;
-- avoid exposing buyer data, tokens, credentials, or full gateway payloads.
-
-Minimum test matrix:
-
-- PayPal success;
-- PayPal failure;
-- user cancellation;
-- duplicate callback;
-- callback before browser return;
-- browser return before callback;
-- missing callback;
-- amount mismatch;
-- document already paid;
-- retry Pay Now after failure or cancellation.
-
-## Current decision
-
-PayPal remains hidden and not implemented for document and My Account payments.
-
-BancaSella remains the operative online payment flow for documents.
-
-Any future PayPal work must begin with a dedicated audit/design task before
-any UI is enabled or any live payment path is exposed.
+Before the first real payment, Enzo must deploy the migration, configure the shared account plus the two tenant mappings, provision the three server settings, configure the production webhook and run read-only verification. Only then may an explicitly authorized controlled LIVE payment establish `LIVE VERIFIED`.

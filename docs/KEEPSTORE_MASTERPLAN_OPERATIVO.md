@@ -943,12 +943,11 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 
 ### Pagamenti
 
-1. Stabilizzare PayPal Express in sandbox.
-2. Ottenere almeno un esito sandbox `Completed` con buyer Personal distinto dal merchant Business.
-3. Verificare recheck pending con `GetTransactionDetails`.
-4. Definire gestione amministrativa pending/paymentreview.
-5. Preparare cifratura credenziali condivisa tra gestionale e sito.
-6. Solo dopo sandbox completa, pianificare eventuale abilitazione live controllata.
+1. Distribuire la migration Orders v2 soltanto dopo review e autorizzazione separata.
+2. Configurare l'account condiviso e i mapping tenant Taikun/Webaffare nel gestionale.
+3. Provisionare Client ID, Client Secret e Webhook ID nel secret/config store del server.
+4. Eseguire verify read-only e poi un unico smoke LIVE controllato, senza dichiarare prima `LIVE VERIFIED`.
+5. Mantenere BancaSella e gli altri metodi separati dal nuovo motore PayPal.
 
 ### UI account/documenti
 
@@ -987,20 +986,35 @@ Branch PayPal/config/document detail/my orders/account dashboard/account profile
 
 ### Decisione tecnica
 
-KeepStore usa PayPal Express Checkout classico NVP:
+Stato corrente dopo `PAYPAL-CHECKOUT-ORDERS-V2-LIVE-1A`: **READY FOR LIVE CONFIGURATION**, non ancora LIVE VERIFIED.
+
+KeepStore usa esclusivamente PayPal Checkout Orders API v2 REST LIVE:
+
+- OAuth client credentials su configurazione deploy server-side;
+- Create Order, Get Order e Capture Order `/v2/checkout/orders`;
+- `PayPal-Request-Id` deterministico e persistito per create/capture;
+- webhook REST con verifica ufficiale della firma ed EventId univoco;
+- profilo esatto `AziendeId + PagamentiTipoId`, senza fallback cross-tenant;
+- `PP-ORDER:<OrderId>` pending e `TXN:<CaptureId>` completed.
+
+Il runtime rifiuta localhost/loopback, HTTP, tenant non autorevole, credenziali mancanti e mismatch di documento/importo/valuta/payee/merchant. `Pagato=1` è possibile soltanto dopo capture autorevole `COMPLETED`.
+
+### Checkpoint storico superato
+
+Il blocco seguente descrive il motore precedente e non è più un contratto runtime. KeepStore usava PayPal Express Checkout classico NVP:
 
 - `SetExpressCheckout`
 - `GetExpressCheckoutDetails`
 - `DoExpressCheckoutPayment`
 - `GetTransactionDetails` per recheck pending
 
-Non usare REST Orders API v2 nel flusso attuale.
+Questa decisione è stata sostituita da Orders API v2.
 Non usare `_xclick` come checkout principale.
 Non usare `ipn.aspx.vb` come autorita primaria.
 
 ### Configurazione
 
-PayPal Express e multi-azienda e legge configurazione da DB tramite `vpaypal_express_azienda`.
+Storicamente PayPal Express leggeva configurazione da DB tramite `vpaypal_express_azienda`; tali strutture sono ora solo oggetto di migrazione/rimozione.
 
 Schema runtime definitivo:
 
@@ -1055,17 +1069,17 @@ Mapping operativo:
 - `4`: annullato dall'utente
 - `5`: fallback legacy / in verifica
 
-Regola vincolante:
+Regola vincolante corrente:
 
-- `Pagato=1` solo dopo `DoExpressCheckoutPayment` verificato con ACK success e `PaymentStatus=Completed`, oppure dopo recheck `GetTransactionDetails` che conferma stato completed su TransactionID gia esistente.
-- Non richiamare `DoExpressCheckoutPayment` su transazione gia creata.
+- `Pagato=1` solo dopo capture Orders v2 `COMPLETED`, verificata contro documento, tenant, account, importo, valuta, payee e merchant.
+- Recheck usa Get Order e non ripete una capture già completata.
 
 ### Token e TransactionID
 
-Convenzione:
+Convenzione corrente:
 
-- token Express temporaneo: `EC-TOKEN:<token>` in `documenti.IdTransazione`;
-- transazione completata: `TXN:<transactionId>` in `documenti.IdTransazione`.
+- ordine PayPal creato/pending: `PP-ORDER:<OrderId>` in `documenti.IdTransazione`;
+- capture completata: `TXN:<CaptureId>` in `documenti.IdTransazione`.
 
 Nei log/report:
 
@@ -1073,7 +1087,7 @@ Nei log/report:
 - transaction id sempre mascherato se mostrato;
 - nessuna query NVP completa.
 
-### Stato sandbox recente
+### Stato Express/Sandbox storico
 
 Smoke principali:
 
@@ -2400,19 +2414,12 @@ Task consigliato separato per eventuale proseguimento:
 7. AUTH-JS-LEGACY-AUDIT-1A: audit errori JS legacy residui.
 8. DATIUTENTE-LEGACY-AUDIT-1A per errore generico, tab/JS legacy e salvataggi/destinazioni.
 
-### PayPal Express
+### PayPal Checkout Orders v2
 
-1. Riprovare pagamento sandbox con buyer Personal distinto dal merchant Business.
-2. Se PayPal restituisce ancora `Pending`:
-   - confermare `PendingReason`;
-   - non impostare `Pagato=1`;
-   - usare recheck.
-3. Se PayPal restituisce `Completed`:
-   - `Pagato=1`;
-   - `StatoPagamentoWeb=2`;
-   - `IdTransazione=TXN:<transactionId>`;
-   - transazione `COMPLETED`;
-   - Pay Now non visibile.
+1. Stato: `READY FOR LIVE CONFIGURATION`.
+2. Pending/denied/failed/canceled mantengono `Pagato=0`; il recheck usa Get Order senza recapture.
+3. Solo capture `COMPLETED` validata produce `Pagato=1`, `StatoPagamentoWeb=2` e `IdTransazione=TXN:<CaptureId>`.
+4. Il primo pagamento LIVE richiede autorizzazione, configurazione server e webhook già verificati.
 
 ### UI
 

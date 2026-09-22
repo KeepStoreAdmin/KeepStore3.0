@@ -605,12 +605,12 @@ Stato verificato per la PR #267: l'autenticazione applicativa dipende da `Sessio
 
 ### 5.8 Integrazioni esterne
 
-- PayPal Express Checkout NVP classico.
+- PayPal Checkout Orders API v2 REST LIVE-only; credenziali deploy, mapping tenant DB e nessun fallback cross-tenant.
 - BancaSella legacy.
 - Email SMTP configurata da dati azienda/sessione.
 - Eventuali integrazioni Amazon/eBay/CheckVat presenti nel codice: da completare con audit dedicato.
-- Per PayPal distinguere visibilita metodo da configurazione gateway: `pagamentitipo`/`vpagamentitipo` decidono se PayPal appare nel carrello, mentre `vpaypal_express_azienda` o fallback `PAYPAL_EXPRESS_*` determinano se Express puo partire.
-- Audit multi-azienda PayPal: metodo PayPal presente e visibile per Taikun/Azienda 1 e Webaffare/Azienda 2; configurazione Express presente solo per Taikun/Azienda 1 + pagamento `19`; configurazione Express assente per Webaffare/Azienda 2 + pagamento `12`; fallback `PAYPAL_EXPRESS_*` assenti. Non copiare configurazioni tra aziende senza decisione esplicita.
+- Per PayPal, `pagamentitipo.OnLine=2` identifica il metodo; `paypal_checkout_azienda` e `paypal_checkout_account` autorizzano l'esatta coppia azienda/pagamento. La visibilità fallisce chiusa se mapping o credenziali deploy non sono completi.
+- Taikun e Webaffare possono condividere account, Merchant ID e `CredentialKey`, mantenendo payee/brand separati. Il browser non fornisce nessuno di questi valori.
 
 ### 5.9 Deployment/staging/live
 
@@ -653,9 +653,10 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `carrello.aspx` | `carrello.aspx.vb` | Carrello | stabile UI/indirizzi/Conferma | `carrello`, sessione, login, `utentiindirizzi`, `city_registry` | Gateway/core checkout separati |
 | `ordine.aspx` | `ordine.aspx.vb` | Checkout/ordine | da completare con audit dedicato | ordine, pagamento, spedizione | Perimetro sensibile |
 | `pagamento.aspx` | `pagamento.aspx.vb` | Pagamento legacy | da completare con audit dedicato | documenti/pagamenti | Perimetro gateway |
-| `paypalcheckout.aspx` | `paypalcheckout.aspx.vb` | PayPal Express launcher | stabilizzato lato PayPal | PayPal NVP, documenti | Non invocare senza task |
-| `paypalreturn.aspx` | `paypalreturn.aspx.vb` | Return PayPal | stabilizzato lato PayPal | token, transaction state | Non invocare senza task |
-| `paypalrecheck.aspx` | `paypalrecheck.aspx.vb` | Recheck pending PayPal | stabilizzato lato PayPal | `GetTransactionDetails` | Non invocare senza task |
+| `paypalcheckout.aspx` | `paypalcheckout.aspx.vb` | Orders v2 launcher | READY FOR LIVE CONFIGURATION | create order, documento, tenant | Nessuna chiamata reale senza gate |
+| `paypalreturn.aspx` | `paypalreturn.aspx.vb` | Return/capture Orders v2 | READY FOR LIVE CONFIGURATION | get/capture, transaction state | Browser non autorevole |
+| `paypalrecheck.aspx` | `paypalrecheck.aspx.vb` | Recheck Orders v2 | READY FOR LIVE CONFIGURATION | Get Order only | Non ripete capture |
+| `paypalwebhook.aspx` | `paypalwebhook.aspx.vb` | Webhook REST verificato | READY FOR LIVE CONFIGURATION | firma, EventId, capture state | HTTPS POST only |
 | `documentidettaglio.aspx` | `documentidettaglio.aspx.vb` | Dettaglio documento/ordine e conferma post-acquisto | stabile ONSUS + UX conferma | documento, righe, pagamento | Pay Now solo se azione reale; gateway/totali separati |
 | `documenti.aspx` | `documenti.aspx.vb` | Lista documenti/ordini | stabile ONSUS account | `sdsTipo`, documenti | Selector dinamico |
 | `myaccount.aspx` | `myaccount.aspx.vb` | Dashboard account | stabile ONSUS | profilo, indirizzi, ordini recenti | AccountSidebar |
@@ -682,10 +683,11 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `AccountSidebar.ascx.vb` | Code-behind controllo | Active/current dinamico, mapping legacy | validata |
 | `AntiCsrfPage.vb` | Base page | Token anti-CSRF legato a ViewStateUserKey | esiste, non ereditata dalle auth pages audit |
 | `KeepStoreSecurity.vb` | Helper sicurezza | Header/HTTPS helper | da completare con audit dedicato |
-| `PayPalCheckoutConfig.vb` | Config PayPal | Config runtime DB PayPal Express | stabilizzato |
-| `PayPalExpressClient.vb` | Client PayPal | NVP Express calls | stabilizzato |
-| `PayPalExpressRepository.vb` | Repository PayPal | Lettura/scrittura stato PayPal | stabilizzato |
-| `PayPalPaymentState.vb` | Stato pagamento | Mapping pagamento web | stabilizzato |
+| `PayPalCheckoutConfig.vb` | Config PayPal | Mapping DB + segreti deploy risolti fail-closed | READY FOR LIVE CONFIGURATION |
+| `PayPalOrdersV2Client.vb` | Client PayPal | OAuth/Create/Get/Capture/Webhook verify REST | test offline |
+| `PayPalCheckoutRepository.vb` | Repository PayPal | Config, transazioni e idempotenza tenant-scoped | test offline |
+| `PayPalCheckoutSafetyPolicy.vb` | Policy PayPal | HTTPS/host autorevole/no loopback | test offline |
+| `PayPalPaymentState.vb` | Stato pagamento | `PP-ORDER` pending / `TXN` completed | test offline |
 | `MiniCart.ascx` | User control | Mini carrello/header | da completare con audit dedicato |
 | `SiteHeader.ascx` | User control | Header pubblico | da completare con audit dedicato |
 | `SiteFooter.ascx` | User control | Footer pubblico | da completare con audit dedicato |
@@ -798,7 +800,7 @@ Da completare con audit dedicato. Area sensibile: ordini, documenti, pagamento, 
 
 ### 9.6 Pagamenti
 
-PayPal Express NVP e stato stabilizzato con token `EC-TOKEN` e transazioni `TXN` mascherate nei report. BancaSella resta legacy. Non invocare gateway senza task dedicato.
+PayPal Checkout Orders v2 è pronto per configurazione LIVE: `PP-ORDER` non equivale mai a pagato, `TXN` è scritto solo dopo capture `COMPLETED`. BancaSella resta separato. Non invocare gateway senza task dedicato.
 
 Regola di test multi-azienda: prima di qualsiasi smoke gateway verificare azienda attiva, host/dominio, `AziendaID`, pagamento selezionato e configurazione gateway senza esporre segreti. Un loopback privo di host mapping non identifica una vetrina in un database multi-azienda e deve fallire chiuso. Prossimi task separati consigliati: `PAYPAL-TAIKUN-SANDBOX-SMOKE-1A` per contesto Taikun e `PAYPAL-WEBAFFARE-EXPRESS-CONFIG-DECISION-1A` per decidere configurazione o disabilitazione PayPal Webaffare; eventuale diagnostica runtime protetta solo con approvazione esplicita.
 
@@ -1151,7 +1153,7 @@ L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha ripo
 | Carrello | stabile UI/indirizzi/Conferma | Perimetro sensibile: gateway/core checkout separati |
 | Ordini | parziale/stabile UX dettaglio | Lista/dettaglio account stabilizzati; UX conferma ordine moderna su `documentidettaglio.aspx` |
 | Documenti | stabile area account | Selector documenti dinamico |
-| Pagamenti | parziale/stabilizzato PayPal | PayPal Express NVP stabilizzato; BancaSella legacy |
+| Pagamenti | PayPal READY FOR LIVE CONFIGURATION | Orders API v2 REST LIVE-only testata offline; BancaSella separato |
 | Area cliente | consolidata su pagine principali | Sidebar/account shell |
 | Wishlist | stabile | AccountSidebar globale |
 | Coupon | da completare | Flow coupon legacy da audit |
@@ -1862,7 +1864,7 @@ Questa sezione raccoglie materiale prudente e riusabile per una brochure tecnica
 - Piattaforma ecommerce collegata a logiche gestionali KeepStore.
 - Area cliente con dashboard, profilo, ordini/documenti, wishlist e cambio password.
 - Supporto documenti/ordini con stati ordine e pagamento separati.
-- Integrazione pagamenti PayPal Express NVP stabilizzata in modalita controllata.
+- Integrazione PayPal Checkout Orders API v2 LIVE-only pronta per configurazione e smoke reale separato.
 - Architettura WebForms consolidata e progressivamente modernizzata con template ONSUS.
 
 ### 17.2 Funzionalita chiave
