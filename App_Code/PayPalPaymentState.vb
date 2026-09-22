@@ -133,7 +133,7 @@ Public Module PayPalPaymentState
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
         If cfg Is Nothing OrElse Not PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg) Then result.Message = "PayPal Checkout: configurazione non disponibile" : Return result
         Dim response As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfg).GetOrder(tx.PayPalOrderId)
-        If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, response.Snapshot) Then result.Message = "PayPal Checkout: verifica non riuscita" : Return result
+        If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, response.Snapshot, tx.Importo, tx.Valuta) Then result.Message = "PayPal Checkout: verifica non riuscita" : Return result
         Dim captureStatus As String = Convert.ToString(response.Snapshot.CaptureStatus).ToUpperInvariant()
         If captureStatus = "COMPLETED" Then
             result.Success = PayPalCheckoutRepository.ApplyAuthoritativeState(tx, response.Snapshot, String.Empty)

@@ -274,15 +274,24 @@ Public Module PayPalCheckoutRepository
         Dim normalized As String = If(snapshot.CaptureStatus, String.Empty).Trim().ToUpperInvariant()
         If normalized = String.Empty Then normalized = If(snapshot.Status, String.Empty).Trim().ToUpperInvariant()
         If normalized <> "COMPLETED" AndAlso normalized <> "PENDING" AndAlso normalized <> "DENIED" AndAlso normalized <> "DECLINED" AndAlso normalized <> "FAILED" Then Return False
-        If normalized = "COMPLETED" AndAlso PayPalPaymentState.SanitizeExternalId(snapshot.CaptureId) = String.Empty Then Return False
+        If normalized = "COMPLETED" AndAlso Not String.Equals(snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then Return False
+        If Not String.IsNullOrWhiteSpace(snapshot.CaptureStatus) AndAlso
+           Not PayPalOrdersV2Client.HasMatchingCapture(snapshot, tx.Importo, tx.Valuta) Then Return False
+        If normalized = "COMPLETED" AndAlso Not PayPalOrdersV2Client.HasMatchingCapture(snapshot, tx.Importo, tx.Valuta) Then Return False
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
                 Using trns As MySqlTransaction = conn.BeginTransaction()
-                    Using docLock As New MySqlCommand("SELECT Id FROM documenti WHERE Id=@doc AND AziendeId=@azienda FOR UPDATE", conn, trns)
+                    Using docLock As New MySqlCommand("SELECT d.PagamentiTipoId,COALESCE(pie.TotaleDocumento,0) FROM documenti d LEFT JOIN documentipie pie ON pie.DocumentiId=d.Id WHERE d.Id=@doc AND d.AziendeId=@azienda FOR UPDATE", conn, trns)
                         docLock.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
                         docLock.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
-                        If docLock.ExecuteScalar() Is Nothing Then trns.Rollback() : Return False
+                        Dim documentMatches As Boolean = False
+                        Using reader As MySqlDataReader = docLock.ExecuteReader()
+                            documentMatches = reader.Read() AndAlso
+                                Convert.ToInt32(reader(0), CultureInfo.InvariantCulture) = tx.PagamentiTipoId AndAlso
+                                Convert.ToDecimal(reader(1), CultureInfo.InvariantCulture) = tx.Importo
+                        End Using
+                        If Not documentMatches Then trns.Rollback() : Return False
                     End Using
                     If Not String.IsNullOrWhiteSpace(eventId) Then
                         Using eventCmd As New MySqlCommand("INSERT IGNORE INTO paypal_checkout_eventi (EventId,TransazioniId,EventType,CaptureId,Stato) VALUES (@eventId,@txId,'WEBHOOK',@capture,@stato)", conn, trns)
@@ -295,13 +304,19 @@ Public Module PayPalCheckoutRepository
                     End If
                     Dim currentSlot As Boolean = False
                     Dim storedState As String = String.Empty
-                    Using cmd As New MySqlCommand("SELECT CurrentSlot,Stato FROM paypal_checkout_transazioni WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda FOR UPDATE", conn, trns)
+                    Using cmd As New MySqlCommand("SELECT CurrentSlot,Stato,Importo,Valuta,PayPalOrderId FROM paypal_checkout_transazioni WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda FOR UPDATE", conn, trns)
                         AddIdentity(cmd, tx)
+                        Dim storedAttemptMatches As Boolean = False
                         Using reader As MySqlDataReader = cmd.ExecuteReader()
-                            If Not reader.Read() Then trns.Rollback() : Return False
-                            currentSlot = Not reader.IsDBNull(0) AndAlso Convert.ToInt32(reader(0), CultureInfo.InvariantCulture) = 1
-                            storedState = Convert.ToString(reader(1))
+                            If reader.Read() Then
+                                currentSlot = Not reader.IsDBNull(0) AndAlso Convert.ToInt32(reader(0), CultureInfo.InvariantCulture) = 1
+                                storedState = Convert.ToString(reader(1))
+                                storedAttemptMatches = Convert.ToDecimal(reader(2), CultureInfo.InvariantCulture) = tx.Importo AndAlso
+                                    String.Equals(Convert.ToString(reader(3)), tx.Valuta, StringComparison.OrdinalIgnoreCase) AndAlso
+                                    String.Equals(Convert.ToString(reader(4)), snapshot.OrderId, StringComparison.Ordinal)
+                            End If
                         End Using
+                        If Not storedAttemptMatches Then trns.Rollback() : Return False
                     End Using
                     If String.Equals(storedState, "COMPLETED", StringComparison.OrdinalIgnoreCase) AndAlso normalized <> "COMPLETED" Then trns.Rollback() : Return True
                     If Not currentSlot AndAlso normalized <> "COMPLETED" Then trns.Commit() : Return True

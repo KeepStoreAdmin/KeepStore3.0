@@ -84,12 +84,18 @@ Public Class PayPalOrderSnapshot
     Public Property ReferenceId As String
     Public Property CustomId As String
     Public Property InvoiceId As String
+    Public Property PurchaseUnitCount As Integer
     Public Property Amount As Decimal
     Public Property CurrencyCode As String
+    Public Property OrderAmountValid As Boolean
     Public Property PayeeEmail As String
     Public Property MerchantId As String
     Public Property CaptureId As String
     Public Property CaptureStatus As String
+    Public Property CaptureCount As Integer
+    Public Property CaptureAmount As Decimal
+    Public Property CaptureCurrencyCode As String
+    Public Property CaptureAmountValid As Boolean
     Public Property ApprovalUrl As String
 End Class
 
@@ -153,6 +159,14 @@ Public Class PayPalOrdersV2Client
                                 ByVal returnUrl As String,
                                 ByVal cancelUrl As String) As PayPalOrdersV2Result
         If doc Is Nothing Then Return Failure("DOCUMENT_REQUIRED")
+        Return SendOrder("POST", "/v2/checkout/orders", requestId,
+                         BuildCreateOrderPayload(doc, returnUrl, cancelUrl), 201, True)
+    End Function
+
+    Public Function BuildCreateOrderPayload(ByVal doc As PayPalPaymentDocumentInfo,
+                                            ByVal returnUrl As String,
+                                            ByVal cancelUrl As String) As String
+        If doc Is Nothing OrElse _config Is Nothing Then Return String.Empty
         Dim unit As New Dictionary(Of String, Object) From {
             {"reference_id", ExpectedReferenceId(doc)},
             {"custom_id", ExpectedCustomId(doc)},
@@ -168,7 +182,7 @@ Public Class PayPalOrdersV2Client
             {"purchase_units", New Object() {unit}},
             {"payment_source", New Dictionary(Of String, Object) From {{"paypal", New Dictionary(Of String, Object) From {{"experience_context", experience}}}}}
         }
-        Return SendOrder("POST", "/v2/checkout/orders", requestId, _serializer.Serialize(payload), 201, True)
+        Return _serializer.Serialize(payload)
     End Function
 
     Public Function GetOrder(ByVal orderId As String) As PayPalOrdersV2Result
@@ -179,7 +193,9 @@ Public Class PayPalOrdersV2Client
     Public Function CaptureOrder(ByVal orderId As String, ByVal requestId As String) As PayPalOrdersV2Result
         If Not IsExternalIdValid(orderId) Then Return Failure("ORDER_ID_INVALID")
         Dim result As PayPalOrdersV2Result = SendOrder("POST", "/v2/checkout/orders/" & Uri.EscapeDataString(orderId) & "/capture", requestId, "{}", 201, True)
-        If result.Success AndAlso (String.IsNullOrWhiteSpace(result.Snapshot.CaptureId) OrElse Not IsCaptureStatusSupported(result.Snapshot.CaptureStatus)) Then
+        If result.Success AndAlso (result.Snapshot.CaptureCount <> 1 OrElse Not result.Snapshot.CaptureAmountValid OrElse
+                                   Not IsExternalIdValid(result.Snapshot.CaptureId) OrElse
+                                   Not IsCaptureStatusSupported(result.Snapshot.CaptureStatus)) Then
             result.Success = False
             result.ErrorCode = "CAPTURE_REPRESENTATION_INCOMPLETE"
         End If
@@ -258,6 +274,7 @@ Public Class PayPalOrdersV2Client
                                             ByVal snapshot As PayPalOrderSnapshot) As Boolean
         If doc Is Nothing OrElse cfg Is Nothing OrElse snapshot Is Nothing Then Return False
         Return cfg.AziendeId = doc.AziendeId AndAlso cfg.PagamentiTipoId = doc.PagamentiTipoId AndAlso
+               snapshot.PurchaseUnitCount = 1 AndAlso snapshot.OrderAmountValid AndAlso
                String.Equals(snapshot.OrderId, expectedOrderId, StringComparison.Ordinal) AndAlso
                String.Equals(snapshot.Intent, "CAPTURE", StringComparison.OrdinalIgnoreCase) AndAlso
                String.Equals(snapshot.ReferenceId, ExpectedReferenceId(doc), StringComparison.Ordinal) AndAlso
@@ -266,7 +283,31 @@ Public Class PayPalOrdersV2Client
                snapshot.Amount = Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) AndAlso
                String.Equals(snapshot.CurrencyCode, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) AndAlso
                String.Equals(snapshot.PayeeEmail, cfg.PayeeEmail, StringComparison.OrdinalIgnoreCase) AndAlso
-               String.Equals(snapshot.MerchantId, cfg.MerchantId, StringComparison.Ordinal)
+               String.Equals(snapshot.MerchantId, cfg.MerchantId, StringComparison.Ordinal) AndAlso
+               snapshot.CaptureCount <= 1 AndAlso
+               (snapshot.CaptureCount = 0 AndAlso Not String.Equals(snapshot.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase) OrElse
+                HasMatchingCapture(snapshot, doc.TotalDocument, cfg.CurrencyCode))
+    End Function
+
+    Public Shared Function ValidateSnapshotAgainstAttempt(ByVal doc As PayPalPaymentDocumentInfo,
+                                                          ByVal cfg As PayPalCheckoutConfig,
+                                                          ByVal expectedOrderId As String,
+                                                          ByVal snapshot As PayPalOrderSnapshot,
+                                                          ByVal attemptAmount As Decimal,
+                                                          ByVal attemptCurrency As String) As Boolean
+        Return ValidateSnapshot(doc, cfg, expectedOrderId, snapshot) AndAlso
+               attemptAmount = Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) AndAlso
+               String.Equals(attemptCurrency, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) AndAlso
+               (snapshot.CaptureCount = 0 OrElse HasMatchingCapture(snapshot, attemptAmount, attemptCurrency))
+    End Function
+
+    Public Shared Function HasMatchingCapture(ByVal snapshot As PayPalOrderSnapshot,
+                                              ByVal expectedAmount As Decimal,
+                                              ByVal expectedCurrency As String) As Boolean
+        Return snapshot IsNot Nothing AndAlso snapshot.CaptureCount = 1 AndAlso snapshot.CaptureAmountValid AndAlso
+               IsExternalIdValid(snapshot.CaptureId) AndAlso IsCaptureStatusSupported(snapshot.CaptureStatus) AndAlso
+               snapshot.CaptureAmount = Math.Round(expectedAmount, 2, MidpointRounding.AwayFromZero) AndAlso
+               String.Equals(snapshot.CaptureCurrencyCode, expectedCurrency, StringComparison.OrdinalIgnoreCase)
     End Function
 
     Private Function SendOrder(ByVal method As String,
@@ -291,8 +332,10 @@ Public Class PayPalOrdersV2Client
 
     Private Shared Function HasAuthoritativeRepresentation(ByVal snapshot As PayPalOrderSnapshot) As Boolean
         Return snapshot IsNot Nothing AndAlso snapshot.Intent <> String.Empty AndAlso snapshot.ReferenceId <> String.Empty AndAlso
+               snapshot.PurchaseUnitCount = 1 AndAlso snapshot.OrderAmountValid AndAlso snapshot.CaptureCount <= 1 AndAlso
                snapshot.CustomId <> String.Empty AndAlso snapshot.InvoiceId <> String.Empty AndAlso snapshot.Amount > 0D AndAlso
-               snapshot.CurrencyCode <> String.Empty AndAlso snapshot.PayeeEmail <> String.Empty AndAlso snapshot.MerchantId <> String.Empty
+               snapshot.CurrencyCode <> String.Empty AndAlso snapshot.PayeeEmail <> String.Empty AndAlso snapshot.MerchantId <> String.Empty AndAlso
+               (snapshot.CaptureCount = 0 OrElse snapshot.CaptureAmountValid)
     End Function
 
     Private Shared Function IsCaptureStatusSupported(ByVal value As String) As Boolean
@@ -314,26 +357,24 @@ Public Class PayPalOrdersV2Client
         Dim snapshot As New PayPalOrderSnapshot With {
             .OrderId = ReadString(root, "id"), .Status = ReadString(root, "status"), .Intent = ReadString(root, "intent")}
         Dim units As IList = ReadList(root, "purchase_units")
+        snapshot.PurchaseUnitCount = If(units Is Nothing, 0, units.Count)
         If units IsNot Nothing AndAlso units.Count > 0 Then
             Dim unit As IDictionary(Of String, Object) = AsDictionary(units(0))
             snapshot.ReferenceId = ReadString(unit, "reference_id")
             snapshot.CustomId = ReadString(unit, "custom_id")
             snapshot.InvoiceId = ReadString(unit, "invoice_id")
-            ReadAmount(ReadDictionary(unit, "amount"), snapshot.Amount, snapshot.CurrencyCode)
+            snapshot.OrderAmountValid = ReadAmount(ReadDictionary(unit, "amount"), snapshot.Amount, snapshot.CurrencyCode)
             Dim payee As IDictionary(Of String, Object) = ReadDictionary(unit, "payee")
             snapshot.PayeeEmail = ReadString(payee, "email_address")
             snapshot.MerchantId = ReadString(payee, "merchant_id")
             Dim payments As IDictionary(Of String, Object) = ReadDictionary(unit, "payments")
             Dim captures As IList = ReadList(payments, "captures")
+            snapshot.CaptureCount = If(captures Is Nothing, 0, captures.Count)
             If captures IsNot Nothing AndAlso captures.Count > 0 Then
                 Dim capture As IDictionary(Of String, Object) = AsDictionary(captures(0))
                 snapshot.CaptureId = ReadString(capture, "id")
                 snapshot.CaptureStatus = ReadString(capture, "status")
-                Dim captureAmount As Decimal = 0D
-                Dim captureCurrency As String = String.Empty
-                ReadAmount(ReadDictionary(capture, "amount"), captureAmount, captureCurrency)
-                If captureAmount > 0D Then snapshot.Amount = captureAmount
-                If captureCurrency <> String.Empty Then snapshot.CurrencyCode = captureCurrency
+                snapshot.CaptureAmountValid = ReadAmount(ReadDictionary(capture, "amount"), snapshot.CaptureAmount, snapshot.CaptureCurrencyCode)
             End If
         End If
         Dim links As IList = ReadList(root, "links")
@@ -377,11 +418,14 @@ Public Class PayPalOrdersV2Client
         Return Convert.ToString(data(key), CultureInfo.InvariantCulture).Trim()
     End Function
 
-    Private Shared Sub ReadAmount(ByVal amount As IDictionary(Of String, Object), ByRef value As Decimal, ByRef currency As String)
+    Private Shared Function ReadAmount(ByVal amount As IDictionary(Of String, Object), ByRef value As Decimal, ByRef currency As String) As Boolean
         value = 0D
         currency = ReadString(amount, "currency_code").ToUpperInvariant()
-        Decimal.TryParse(ReadString(amount, "value"), NumberStyles.Number, CultureInfo.InvariantCulture, value)
-    End Sub
+        Return currency.Length = 3 AndAlso
+               Decimal.TryParse(ReadString(amount, "value"), NumberStyles.AllowLeadingSign Or NumberStyles.AllowDecimalPoint,
+                                CultureInfo.InvariantCulture, value) AndAlso
+               value > 0D AndAlso Decimal.Round(value, 2) = value
+    End Function
 
     Private Function ReadSafeError(ByVal json As String, ByVal fallback As String) As String
         Dim data As IDictionary(Of String, Object) = Parse(json)

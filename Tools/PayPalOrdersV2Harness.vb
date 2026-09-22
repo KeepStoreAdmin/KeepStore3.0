@@ -75,10 +75,19 @@ Module PayPalOrdersV2Harness
 
     Private Function OrderJson(ByVal company As Integer, ByVal status As String, ByVal amount As String, ByVal currency As String,
                                ByVal email As String, ByVal merchant As String, ByVal orderId As String,
-                               Optional ByVal captureStatus As String = "", Optional ByVal approval As String = "https://www.paypal.com/checkoutnow?token=ORDER-123456") As String
+                               Optional ByVal captureStatus As String = "", Optional ByVal approval As String = "https://www.paypal.com/checkoutnow?token=ORDER-123456",
+                               Optional ByVal captureAmountJson As String = Nothing,
+                               Optional ByVal extraCapture As Boolean = False,
+                               Optional ByVal extraUnit As Boolean = False) As String
         Dim capture As String = ""
-        If captureStatus <> "" Then capture = ",""payments"":{""captures"":[{""id"":""CAPTURE-123456"",""status"":""" & captureStatus & """,""amount"":{""currency_code"":""" & currency & """,""value"":""" & amount & """}}]}"
-        Return "{""id"":""" & orderId & """,""status"":""" & status & """,""intent"":""CAPTURE"",""purchase_units"":[{""reference_id"":""KS-" & company & "-267"",""custom_id"":""KS-DOC-" & company & "-267"",""invoice_id"":""KS-INV-" & company & "-267"",""amount"":{""currency_code"":""" & currency & """,""value"":""" & amount & """},""payee"":{""email_address"":""" & email & """,""merchant_id"":""" & merchant & """}" & capture & "}],""links"":[{""rel"":""payer-action"",""href"":""" & approval & """}]}"
+        If captureAmountJson Is Nothing Then captureAmountJson = "{""currency_code"":""" & currency & """,""value"":""" & amount & """}"
+        If captureStatus <> "" Then
+            Dim captureItem As String = "{""id"":""CAPTURE-123456"",""status"":""" & captureStatus & """,""amount"":" & captureAmountJson & "}"
+            capture = ",""payments"":{""captures"":[" & captureItem & If(extraCapture, "," & captureItem, "") & "]}"
+        End If
+        Dim unit As String = "{""reference_id"":""KS-" & company & "-267"",""custom_id"":""KS-DOC-" & company & "-267"",""invoice_id"":""KS-INV-" & company & "-267"",""amount"":{""currency_code"":""" & currency & """,""value"":""" & amount & """},""payee"":{""email_address"":""" & email & """,""merchant_id"":""" & merchant & """}" & capture & "}"
+        Return "{""id"":""" & orderId & """,""status"":""" & status & """,""intent"":""CAPTURE"",""purchase_units"":[" &
+            unit & If(extraUnit, "," & unit, "") & "],""links"":[{""rel"":""payer-action"",""href"":""" & approval & """}]}"
     End Function
 
     Sub Main()
@@ -109,6 +118,19 @@ Module PayPalOrdersV2Harness
         Check(fake.Requests(1).Body.Contains("""experience_context"""), "11 experience context")
         Check(fake.Requests(1).Body.Contains("""payee"""), "12 tenant payee server payload")
         Check(fake.Requests(1).Prefer = "return=representation", "12a Create Prefer representation")
+        Check(fake.Requests(1).Body = New PayPalOrdersV2Client(cfgA, fake).BuildCreateOrderPayload(
+              Doc(1), "https://tenant-a.invalid/paypalreturn.aspx", "https://tenant-a.invalid/paypalreturn.aspx?action=cancel"),
+              "12aa persisted launch fingerprint uses exact transport payload")
+
+        fake = New FakeTransport()
+        fake.Add(200, OAuth()) : fake.Add(0, String.Empty)
+        fake.Add(200, OAuth()) : fake.Add(201, OrderJson(1, "CREATED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId, "ORDER-123456"))
+        Dim recoverClient As New PayPalOrdersV2Client(cfgA, fake)
+        Dim lostCreate As PayPalOrdersV2Result = recoverClient.CreateOrder(Doc(1), "PP-CREATE-1-267-1", "https://tenant-a.invalid/r", "https://tenant-a.invalid/c")
+        Dim recoveredCreate As PayPalOrdersV2Result = recoverClient.CreateOrder(Doc(1), "PP-CREATE-1-267-1", "https://tenant-a.invalid/r", "https://tenant-a.invalid/c")
+        Check(Not lostCreate.Success AndAlso recoveredCreate.Success AndAlso
+              fake.Requests(1).RequestId = fake.Requests(3).RequestId AndAlso
+              fake.Requests(1).Body = fake.Requests(3).Body, "12ab lost Create response retries same RequestId and payload")
 
         fake = New FakeTransport()
         fake.Add(200, OAuth())
@@ -134,8 +156,44 @@ Module PayPalOrdersV2Harness
         fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId, "ORDER-123456", "COMPLETED"))
         Dim capture As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
         Check(capture.Success AndAlso capture.Snapshot.CaptureStatus = "COMPLETED", "18 Capture COMPLETED")
+        Check(PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", capture.Snapshot) AndAlso
+              PayPalOrdersV2Client.HasMatchingCapture(capture.Snapshot, 12.34D, "EUR"), "18a full captured amount matches order")
         Check(fake.Requests(1).RequestId = "PP-CAPTURE-1-267", "19 capture idempotency header")
         Check(fake.Requests(1).Prefer = "return=representation", "19a Capture Prefer representation")
+
+        fake = New FakeTransport()
+        fake.Add(200, OAuth())
+        fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId,
+                                "ORDER-123456", "COMPLETED", captureAmountJson:="{}"))
+        Dim missingCapturedMoney As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
+        Check(Not missingCapturedMoney.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", missingCapturedMoney.Snapshot),
+              "19c completed capture without captured amount rejected")
+
+        Dim badCaptureAmounts() As String = {"{""currency_code"":""EUR"",""value"":""0""}",
+                                             "{""currency_code"":""EUR"",""value"":""-12.34""}",
+                                             "{""currency_code"":""EUR"",""value"":""invalid""}",
+                                             "{""value"":""12.34""}",
+                                             "{""currency_code"":""USD"",""value"":""12.34""}",
+                                             "{""currency_code"":""EUR"",""value"":""10.00""}"}
+        Dim badNames() As String = {"zero", "negative", "non-numeric", "missing currency", "wrong currency", "partial"}
+        For i As Integer = 0 To badCaptureAmounts.Length - 1
+            fake = New FakeTransport() : fake.Add(200, OAuth())
+            fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId,
+                                    "ORDER-123456", "COMPLETED", captureAmountJson:=badCaptureAmounts(i)))
+            Dim bad As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
+            Check(Not bad.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", bad.Snapshot),
+                  "19d captured amount " & badNames(i) & " rejected")
+        Next
+        fake = New FakeTransport() : fake.Add(200, OAuth())
+        fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId,
+                                "ORDER-123456", "COMPLETED", extraCapture:=True))
+        Dim manyCaptures As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
+        Check(Not manyCaptures.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", manyCaptures.Snapshot), "19e multiple captures rejected")
+        fake = New FakeTransport() : fake.Add(200, OAuth())
+        fake.Add(201, OrderJson(1, "COMPLETED", "12.34", "EUR", cfgA.PayeeEmail, cfgA.MerchantId,
+                                "ORDER-123456", "COMPLETED", extraUnit:=True))
+        Dim manyUnits As PayPalOrdersV2Result = New PayPalOrdersV2Client(cfgA, fake).CaptureOrder("ORDER-123456", "PP-CAPTURE-1-267")
+        Check(Not manyUnits.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", manyUnits.Snapshot), "19f multiple purchase units rejected")
 
         fake = New FakeTransport()
         fake.Add(200, OAuth())

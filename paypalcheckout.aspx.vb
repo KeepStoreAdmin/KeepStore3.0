@@ -18,7 +18,7 @@ Partial Class paypalcheckout
         If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE OrElse doc.TotalDocument <= 0D Then Fail(documentId, "Documento non idoneo al pagamento PayPal") : Return
         Dim isWeb As Boolean = String.Equals(doc.OrigineOrdine, "WEB", StringComparison.OrdinalIgnoreCase)
         If isWeb Then
-            If Not PayPalWebLaunchContext.Consume(HttpContext.Current, documentId, owner) Then RedirectTerminal("accessonegato.aspx") : Return
+            If Not PayPalWebLaunchContext.BeginPayPal(HttpContext.Current, documentId, owner) Then RedirectTerminal("accessonegato.aspx") : Return
         ElseIf Not InternalOrderRemotePaymentPolicy.CanPayNow(doc.OrigineOrdine, True, doc.AziendeId = owner.CompanyId,
             doc.ValidOrderType, doc.Pagato, doc.DocumentState, doc.PaymentState, doc.PaymentOnline,
             doc.AllowLaterPayment, doc.HasGatewayAuthorization, doc.TotalDocument) Then
@@ -38,28 +38,43 @@ Partial Class paypalcheckout
            Not String.Equals(tx.MerchantId, cfg.MerchantId, StringComparison.Ordinal) Then
             Fail(documentId, "Impossibile inizializzare il pagamento PayPal") : Return
         End If
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        Dim returnUrl As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&action=return")
+        Dim cancelUrl As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&action=cancel")
+        If String.IsNullOrWhiteSpace(returnUrl) OrElse String.IsNullOrWhiteSpace(cancelUrl) Then Fail(documentId, "Host PayPal Checkout non valido") : Return
+        If isWeb AndAlso Not PayPalWebLaunchContext.BindPayPalAttempt(HttpContext.Current, documentId, owner,
+            tx.TentativoNo, tx.CreateRequestId, client.BuildCreateOrderPayload(doc, returnUrl, cancelUrl)) Then
+            RedirectTerminal("accessonegato.aspx") : Return
+        End If
         If Not String.IsNullOrWhiteSpace(tx.PayPalOrderId) Then
             Dim details As PayPalOrdersV2Result = client.GetOrder(tx.PayPalOrderId)
             If details Is Nothing OrElse Not details.Success OrElse
-               Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, details.Snapshot) Then
+               Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, details.Snapshot, tx.Importo, tx.Valuta) Then
                 Fail(documentId, "Riconciliazione PayPal non disponibile") : Return
             End If
             If String.Equals(details.Snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then
-                If PayPalCheckoutRepository.ApplyAuthoritativeState(tx, details.Snapshot, String.Empty) Then RedirectResult(documentId, "ok") Else Fail(documentId, "Sincronizzazione pagamento non riuscita")
+                If PayPalCheckoutRepository.ApplyAuthoritativeState(tx, details.Snapshot, String.Empty) Then
+                    If isWeb Then PayPalWebLaunchContext.FinishPayPal(HttpContext.Current, documentId, owner)
+                    RedirectResult(documentId, "ok")
+                Else
+                    Fail(documentId, "Sincronizzazione pagamento non riuscita")
+                End If
                 Return
             End If
             If String.Equals(details.Snapshot.CaptureStatus, "PENDING", StringComparison.OrdinalIgnoreCase) Then
-                PayPalCheckoutRepository.ApplyAuthoritativeState(tx, details.Snapshot, String.Empty)
+                If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, details.Snapshot, String.Empty) Then Fail(documentId, "Sincronizzazione pagamento non riuscita") : Return
+                If isWeb Then PayPalWebLaunchContext.FinishPayPal(HttpContext.Current, documentId, owner)
                 RedirectResult(documentId, "ko") : Return
             End If
             If String.Equals(details.Snapshot.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then
                 If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then Fail(documentId, "Capture PayPal non disponibile") : Return
                 Dim captured As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
                 If captured Is Nothing OrElse Not captured.Success OrElse
-                   Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, captured.Snapshot) OrElse
+                   Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, captured.Snapshot, tx.Importo, tx.Valuta) OrElse
                    Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, captured.Snapshot, String.Empty) Then
                     Fail(documentId, "Verifica capture PayPal non riuscita") : Return
                 End If
+                If isWeb Then PayPalWebLaunchContext.FinishPayPal(HttpContext.Current, documentId, owner)
                 RedirectResult(documentId, If(String.Equals(captured.Snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase), "ok", "ko")) : Return
             End If
             If Not isWeb AndAlso (String.Equals(tx.Stato, "CANCELED", StringComparison.OrdinalIgnoreCase) OrElse
@@ -72,17 +87,15 @@ Partial Class paypalcheckout
                 If tx Is Nothing OrElse Not tx.Exists OrElse Not tx.IsCurrent Then Fail(documentId, "Nuovo tentativo PayPal non disponibile") : Return
                 If Not String.IsNullOrWhiteSpace(tx.PayPalOrderId) Then Fail(documentId, "Tentativo PayPal concorrente in corso") : Return
             ElseIf PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(details.Snapshot.ApprovalUrl) Then
+                ' La risposta HTTP del redirect potrebbe perdersi: per pochi minuti
+                ' e consentito soltanto recuperare questo stesso order/attempt.
                 RedirectTerminal(details.Snapshot.ApprovalUrl) : Return
             Else
                 Fail(documentId, "Ordine PayPal non riutilizzabile") : Return
             End If
         End If
-        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
-        Dim returnUrl As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&action=return")
-        Dim cancelUrl As String = StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, "/paypalreturn.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&action=cancel")
-        If String.IsNullOrWhiteSpace(returnUrl) OrElse String.IsNullOrWhiteSpace(cancelUrl) Then Fail(documentId, "Host PayPal Checkout non valido") : Return
         Dim response As PayPalOrdersV2Result = client.CreateOrder(doc, tx.CreateRequestId, returnUrl, cancelUrl)
-        If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, response.Snapshot.OrderId, response.Snapshot) OrElse Not PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(response.Snapshot.ApprovalUrl) Then
+        If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, response.Snapshot.OrderId, response.Snapshot, tx.Importo, tx.Valuta) OrElse Not PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(response.Snapshot.ApprovalUrl) Then
             Fail(documentId, "Creazione pagamento PayPal non riuscita") : Return
         End If
         If Not PayPalCheckoutRepository.RecordOrderCreated(tx, response.Snapshot) Then Fail(documentId, "Persistenza pagamento PayPal non riuscita") : Return

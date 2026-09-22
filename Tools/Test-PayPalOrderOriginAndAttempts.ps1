@@ -36,7 +36,7 @@ $static += Assert ($forward.Contains('`TentativoNo` int NOT NULL') -and $forward
 $static += Assert ($forward.Contains('UX_paypal_checkout_tx_attempt') -and $forward.Contains('UX_paypal_checkout_tx_current') -and -not $forward.Contains('UX_paypal_checkout_tx_document`')) 'one current slot'
 $static += Assert ($forward.Contains('OrigineOrdine') -and $order.Contains("OrigineOrdine='WEB'")) 'origin written with order'
 $static += Assert ($order.Contains('cmdOrigin') -and $order.Contains('conn, trns') -and $order.Contains('OrderDurableIdempotencyService.Complete')) 'origin and idempotency same transaction'
-$static += Assert ($checkout.Contains('PayPalWebLaunchContext.Consume') -and $order.Contains('PayPalWebLaunchContext.Issue')) 'trusted web launch'
+$static += Assert ($checkout.Contains('PayPalWebLaunchContext.BeginPayPal') -and $checkout.Contains('PayPalWebLaunchContext.BindPayPalAttempt') -and $order.Contains('PayPalWebLaunchContext.Issue')) 'trusted web launch and bounded technical retry'
 $static += Assert ($checkout.Contains('InternalOrderRemotePaymentPolicy.CanPayNow') -and $detail.Contains('InternalOrderRemotePaymentPolicy.CanPayNow') -and $sella.Contains('InternalOrderRemotePaymentPolicy.CanPayNow')) 'shared internal policy'
 $static += Assert ($list.Contains('Return "none"') -and $list.Contains('InternalOrderRemotePaymentPolicy.CanPayNow')) 'list no unknown fallback'
 $static += Assert ($repo.Contains('FOR UPDATE') -and $repo.Contains('CurrentSlot=NULL,Stato=''SUPERSEDED''')) 'locked supersede'

@@ -13,6 +13,7 @@ Partial Class paypalwebhook
         Response.ContentType = "text/plain"
         If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then Finish(405, "METHOD_NOT_ALLOWED") : Return
         If Not Request.IsSecureConnection OrElse Request.Url Is Nothing OrElse Not String.Equals(Request.Url.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) Then Finish(403, "HTTPS_REQUIRED") : Return
+        If Not PayPalCheckoutSafetyPolicy.CanUseLiveWebhook(HttpContext.Current) Then Finish(403, "INGRESS_NOT_ALLOWED") : Return
         Dim raw As String
         Using reader As New StreamReader(Request.InputStream)
             raw = reader.ReadToEnd()
@@ -60,7 +61,8 @@ Partial Class paypalwebhook
         End If
 
         Dim snapshot As PayPalOrderSnapshot = BuildSnapshot(resource, orderId, captureId, eventType)
-        If Not MatchesTransaction(tx, cfg, snapshot) Then Finish(409, "EVENT_MISMATCH") : Return
+        Dim captureDoc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForPayment(tx.DocumentiId)
+        If Not MatchesTransaction(tx, cfg, captureDoc, snapshot) Then Finish(409, "EVENT_MISMATCH") : Return
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, snapshot, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return
         raw = String.Empty
         Finish(200, "OK")
@@ -73,7 +75,7 @@ Partial Class paypalwebhook
         If doc Is Nothing OrElse Not doc.Exists OrElse doc.AziendeId <> tx.AziendeId OrElse doc.PagamentiTipoId <> tx.PagamentiTipoId Then Finish(409, "DOCUMENT_MISMATCH") : Return
         Dim client As New PayPalOrdersV2Client(cfg)
         Dim details As PayPalOrdersV2Result = client.GetOrder(tx.PayPalOrderId)
-        If details Is Nothing OrElse Not details.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, details.Snapshot) Then Finish(409, "ORDER_MISMATCH") : Return
+        If details Is Nothing OrElse Not details.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, details.Snapshot, tx.Importo, tx.Valuta) Then Finish(409, "ORDER_MISMATCH") : Return
         Dim authoritative As PayPalOrderSnapshot = details.Snapshot
         If Not tx.IsCurrent AndAlso Not String.Equals(authoritative.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then
             Finish(200, "OK") : Return
@@ -83,7 +85,7 @@ Partial Class paypalwebhook
             If Not String.Equals(authoritative.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Finish(409, "ORDER_NOT_APPROVED") : Return
             If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then Finish(409, "CAPTURE_NOT_CURRENT") : Return
             Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
-            If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, capture.Snapshot) Then Finish(409, "CAPTURE_MISMATCH") : Return
+            If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, capture.Snapshot, tx.Importo, tx.Valuta) Then Finish(409, "CAPTURE_MISMATCH") : Return
             authoritative = capture.Snapshot
         End If
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, authoritative, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return
@@ -125,18 +127,30 @@ Partial Class paypalwebhook
         Dim amount As IDictionary(Of String, Object) = ReadDictionary(resource, "amount")
         Dim payee As IDictionary(Of String, Object) = ReadDictionary(resource, "payee")
         Dim value As Decimal = 0D
-        Decimal.TryParse(ReadString(amount, "value"), NumberStyles.Number, CultureInfo.InvariantCulture, value)
+        Dim validAmount As Boolean = Decimal.TryParse(ReadString(amount, "value"),
+            NumberStyles.AllowLeadingSign Or NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, value) AndAlso
+            value > 0D AndAlso Decimal.Round(value, 2) = value
+        Dim currency As String = ReadString(amount, "currency_code").ToUpperInvariant()
+        validAmount = validAmount AndAlso currency.Length = 3
         Dim state As String = If(eventType.EndsWith("COMPLETED", StringComparison.Ordinal), "COMPLETED", If(eventType.EndsWith("PENDING", StringComparison.Ordinal), "PENDING", "DENIED"))
-        Return New PayPalOrderSnapshot With {.OrderId = orderId, .CaptureId = captureId, .CaptureStatus = state, .Amount = value,
-            .CurrencyCode = ReadString(amount, "currency_code"), .PayeeEmail = ReadString(payee, "email_address"), .MerchantId = ReadString(payee, "merchant_id")}
+        Return New PayPalOrderSnapshot With {.OrderId = orderId, .CaptureId = captureId, .CaptureStatus = state,
+            .CaptureCount = 1, .CaptureAmount = value, .CaptureCurrencyCode = currency, .CaptureAmountValid = validAmount,
+            .PayeeEmail = ReadString(payee, "email_address"), .MerchantId = ReadString(payee, "merchant_id")}
     End Function
 
-    Private Shared Function MatchesTransaction(ByVal tx As PayPalCheckoutTransactionInfo, ByVal cfg As PayPalCheckoutConfig, ByVal snapshot As PayPalOrderSnapshot) As Boolean
-        Return snapshot IsNot Nothing AndAlso snapshot.OrderId = tx.PayPalOrderId AndAlso snapshot.Amount = Math.Round(tx.Importo, 2, MidpointRounding.AwayFromZero) AndAlso
-            String.Equals(snapshot.CurrencyCode, tx.Valuta, StringComparison.OrdinalIgnoreCase) AndAlso
+    Private Shared Function MatchesTransaction(ByVal tx As PayPalCheckoutTransactionInfo, ByVal cfg As PayPalCheckoutConfig,
+                                               ByVal doc As PayPalPaymentDocumentInfo, ByVal snapshot As PayPalOrderSnapshot) As Boolean
+        Return tx IsNot Nothing AndAlso cfg IsNot Nothing AndAlso doc IsNot Nothing AndAlso doc.Exists AndAlso
+            doc.DocumentId = tx.DocumentiId AndAlso doc.AziendeId = tx.AziendeId AndAlso
+            doc.PagamentiTipoId = tx.PagamentiTipoId AndAlso
+            Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) = tx.Importo AndAlso
+            snapshot IsNot Nothing AndAlso snapshot.OrderId = tx.PayPalOrderId AndAlso
+            PayPalOrdersV2Client.HasMatchingCapture(snapshot, tx.Importo, tx.Valuta) AndAlso
             String.Equals(snapshot.PayeeEmail, tx.PayeeEmail, StringComparison.OrdinalIgnoreCase) AndAlso
             String.Equals(snapshot.MerchantId, tx.MerchantId, StringComparison.Ordinal) AndAlso
-            String.Equals(cfg.PayeeEmail, tx.PayeeEmail, StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(cfg.MerchantId, tx.MerchantId, StringComparison.Ordinal)
+            cfg.AziendeId = tx.AziendeId AndAlso cfg.PagamentiTipoId = tx.PagamentiTipoId AndAlso
+            String.Equals(cfg.PayeeEmail, tx.PayeeEmail, StringComparison.OrdinalIgnoreCase) AndAlso
+            String.Equals(cfg.MerchantId, tx.MerchantId, StringComparison.Ordinal)
     End Function
 
     Private Shared Function ReadDictionary(ByVal data As IDictionary(Of String, Object), ByVal key As String) As IDictionary(Of String, Object)

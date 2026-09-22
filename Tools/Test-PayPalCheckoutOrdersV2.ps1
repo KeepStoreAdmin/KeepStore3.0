@@ -56,7 +56,11 @@ $verifyIndex = $webhook.IndexOf('If verification Is Nothing OrElse Not verificat
 $firstDmlIndex = $webhook.IndexOf('ApplyAuthoritativeState', [StringComparison]::Ordinal)
 $results += Assert-Check ($verifyIndex -ge 0 -and $firstDmlIndex -gt $verifyIndex) '62 zero webhook DML before signature success'
 $results += Assert-Check ($verifyMigration.Contains('COUNT(DISTINCT INDEX_NAME)=6') -and $verifyMigration.Contains('UX_paypal_checkout_tx_current') -and $verifyMigration.Contains('UX_paypal_checkout_tx_capture_request')) '63 all six transaction uniques verified'
-$results += Assert-Check ($webhook.Contains('LoadDocumentForPayment') -and $webhook.Contains('ValidateSnapshot(doc, cfg, tx.PayPalOrderId')) '64 approved full authoritative validation'
+$results += Assert-Check ($webhook.Contains('LoadDocumentForPayment') -and $webhook.Contains('ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId')) '64 approved full authoritative validation'
+$ingressIndex = $webhook.IndexOf('CanUseLiveWebhook(HttpContext.Current)', [StringComparison]::Ordinal)
+$transportIndex = $webhook.IndexOf('VerifyWebhookSignature(', [StringComparison]::Ordinal)
+$results += Assert-Check ($ingressIndex -ge 0 -and $transportIndex -gt $ingressIndex -and $firstDmlIndex -gt $ingressIndex) '65 live ingress rejected before PayPal transport and DML'
+$results += Assert-Check ($safety.Contains('If Not HasSafeLiveIngress(context) Then Return False') -and $safety.Contains('CanUseLiveWebhookIngress') -and -not $safety.Contains('ingressTenant.CompanyId = cfg.AziendeId')) '66 shared webhook ingress does not require order-tenant host'
 
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe'
 if (-not (Test-Path $framework)) { $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\vbc.exe' }
