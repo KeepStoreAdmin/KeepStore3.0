@@ -1,5 +1,5 @@
 -- Eseguire soltanto dopo rollback-preflight OK e autorizzazione esplicita.
-START TRANSACTION;
+-- DDL MySQL non e transazionale. Eseguire solo dopo rollback-preflight OK.
 CREATE TABLE `payment_event` (
   `id` int NOT NULL AUTO_INCREMENT, `idDocumento` int DEFAULT 0, `Data_Evento` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `idTransazione` varchar(30) DEFAULT NULL, `Stato_Transazione` varchar(30) DEFAULT NULL,
@@ -34,5 +34,11 @@ DROP TABLE `paypal_checkout_eventi`;
 DROP TABLE `paypal_checkout_transazioni`;
 DROP TABLE `paypal_checkout_azienda`;
 DROP TABLE `paypal_checkout_account`;
-DROP TABLE `paypal_checkout_legacy_audit`;
-COMMIT;
+SET @ks_origin_owned = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='documenti' AND COLUMN_NAME='OrigineOrdine'
+    AND COLUMN_COMMENT='PAYPAL_ORDERS_V2_ORIGIN_20260922');
+SET @ks_origin_sql = IF(@ks_origin_owned=1,
+  'ALTER TABLE `documenti` DROP COLUMN `OrigineOrdine`', 'DO 0');
+PREPARE ks_origin_stmt FROM @ks_origin_sql;
+EXECUTE ks_origin_stmt;
+DEALLOCATE PREPARE ks_origin_stmt;

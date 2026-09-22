@@ -31,6 +31,8 @@ Partial Class documentidettaglio
         Public TotaleDocumento As Decimal
         Public CodiceAutorizzazione As String = ""
         Public PagamentiTipoDescrizione As String = ""
+        Public OrigineOrdine As String = ""
+        Public ValidOrderType As Boolean
     End Class
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
@@ -88,7 +90,7 @@ Partial Class documentidettaglio
             pnlPayReturnMessage.Visible = True
         ElseIf String.Equals(payReturn, "ko", StringComparison.OrdinalIgnoreCase) Then
             pnlPayReturnMessage.CssClass = "alert alert-warning"
-            litPayReturnMessage.Text = "Pagamento non completato. Puoi riprovare da questo ordine o scegliere un altro metodo, se disponibile."
+            litPayReturnMessage.Text = "Pagamento non completato. Controlla lo stato dell'ordine; se hai bisogno di assistenza, contattaci."
             pnlPayReturnMessage.Visible = True
         End If
     End Sub
@@ -565,6 +567,8 @@ Partial Class documentidettaglio
                 Dim sql As String = ""
                 sql &= "SELECT "
                 sql &= "  d.id, d.NDocumento, d.DataDocumento, "
+                sql &= "  COALESCE(d.OrigineOrdine,'') AS OrigineOrdine, "
+                sql &= "  CASE WHEN td.Web=1 AND td.Abilitato=1 AND td.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ValidOrderType, "
                 sql &= "  COALESCE(d.Pagato,0) AS Pagato, "
                 sql &= "  COALESCE(d.StatiId,0) AS StatiId, "
                 sql &= "  COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, "
@@ -574,6 +578,7 @@ Partial Class documentidettaglio
                 sql &= "  COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, "
                 sql &= "  COALESCE(b.codiceAutorizzazione,'') AS CodiceAutorizzazione "
                 sql &= "FROM documenti d "
+                sql &= "LEFT JOIN tipodocumenti td ON td.id = d.TipoDocumentiId "
                 sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
                 sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
                 sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
@@ -601,6 +606,8 @@ Partial Class documentidettaglio
                         info.TotaleDocumento = SafeDecimal(dr("TotaleDocumento"), 0D)
                         info.CodiceAutorizzazione = Convert.ToString(dr("CodiceAutorizzazione")).Trim()
                         info.PagamentiTipoDescrizione = Convert.ToString(dr("PagamentiTipoDescrizione")).Trim()
+                        info.OrigineOrdine = Convert.ToString(dr("OrigineOrdine")).Trim()
+                        info.ValidOrderType = SafeInt(dr("ValidOrderType"), 0) = 1
                         Return info
                     End Using
                 End Using
@@ -614,14 +621,10 @@ Partial Class documentidettaglio
     Private Function CanShowPayNow(ByVal info As PayNowDocumentInfo) As Boolean
         If info Is Nothing Then Return False
 
-        Return info.Pagato = 0 AndAlso
-               info.PagamentiTipoOnline <> 0 AndAlso
-               info.PermettiPagamentoSuccessivo = 1 AndAlso
-               (info.StatoPagamentoWeb = 0 OrElse info.StatoPagamentoWeb = 3 OrElse info.StatoPagamentoWeb = 4 OrElse info.StatoPagamentoWeb = 5) AndAlso
-               String.IsNullOrEmpty(info.CodiceAutorizzazione) AndAlso
-               info.StatiId <> 0 AndAlso
-               info.StatiId <> 3 AndAlso
-               info.TotaleDocumento > 0D
+        Return InternalOrderRemotePaymentPolicy.CanPayNow(info.OrigineOrdine, True, True,
+            info.ValidOrderType, info.Pagato, info.StatiId, info.StatoPagamentoWeb,
+            info.PagamentiTipoOnline, info.PermettiPagamentoSuccessivo,
+            Not String.IsNullOrEmpty(info.CodiceAutorizzazione), info.TotaleDocumento)
     End Function
 
     Private Function GetPayNowSessionContext() As String

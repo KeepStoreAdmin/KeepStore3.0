@@ -10,6 +10,12 @@ Public Class PayPalPaymentDocumentInfo
     Public Property UtentiId As Integer
     Public Property AziendeId As Integer
     Public Property PagamentiTipoId As Integer
+    Public Property TipoDocumentiId As Integer
+    Public Property OrigineOrdine As String
+    Public Property DocumentState As Integer
+    Public Property AllowLaterPayment As Integer
+    Public Property ValidOrderType As Boolean
+    Public Property HasGatewayAuthorization As Boolean
     Public Property DocumentNumber As Integer
     Public Property DocumentDate As DateTime
     Public Property Pagato As Integer
@@ -45,14 +51,31 @@ Public Module PayPalPaymentState
         Dim info As New PayPalPaymentDocumentInfo()
         If documentId <= 0 OrElse (requireUser AndAlso utentiId <= 0) Then Return info
         Try
+            Dim tenantId As Integer = 0
+            If requireUser Then
+                Dim tenant As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+                If tenant Is Nothing OrElse Not tenant.IsComplete OrElse tenant.UtentiId <> utentiId Then Return info
+                tenantId = tenant.CompanyId
+            End If
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Dim sql As String = "SELECT d.id,d.UtentiId,COALESCE(d.AziendeId,0) AziendeId,COALESCE(d.PagamentiTipoId,0) PagamentiTipoId,COALESCE(d.NDocumento,0) NDocumento,d.DataDocumento,COALESCE(d.Pagato,0) Pagato,COALESCE(d.StatoPagamentoWeb,0) StatoPagamentoWeb,COALESCE(p.OnLine,0) PaymentOnline,COALESCE(pie.TotaleDocumento,0) TotaleDocumento,COALESCE(d.IdTransazione,'') IdTransazione FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id"
-                If requireUser Then sql &= " AND d.UtentiId=@uid"
+                Dim sql As String = "SELECT d.id,d.UtentiId,COALESCE(d.AziendeId,0) AziendeId,COALESCE(d.PagamentiTipoId,0) PagamentiTipoId," &
+                    "COALESCE(d.TipoDocumentiId,0) TipoDocumentiId,COALESCE(d.OrigineOrdine,'') OrigineOrdine," &
+                    "COALESCE(d.StatiId,0) DocumentState,COALESCE(p.PermettiPagamentoSuccessivo,0) AllowLaterPayment," &
+                    "CASE WHEN td.Web=1 AND td.Abilitato=1 AND td.ImpegnaQnt=1 THEN 1 ELSE 0 END ValidOrderType," &
+                    "CASE WHEN EXISTS (SELECT 1 FROM bancasella_ordini_pagati b WHERE b.DocumentiId=d.id AND COALESCE(b.codiceAutorizzazione,'')<>'') THEN 1 ELSE 0 END HasGatewayAuthorization," &
+                    "COALESCE(d.NDocumento,0) NDocumento,d.DataDocumento,COALESCE(d.Pagato,0) Pagato,COALESCE(d.StatoPagamentoWeb,0) StatoPagamentoWeb," &
+                    "COALESCE(p.OnLine,0) PaymentOnline,COALESCE(pie.TotaleDocumento,0) TotaleDocumento,COALESCE(d.IdTransazione,'') IdTransazione " &
+                    "FROM documenti d LEFT JOIN pagamentitipo p ON p.id=d.PagamentiTipoId LEFT JOIN tipodocumenti td ON td.id=d.TipoDocumentiId " &
+                    "LEFT JOIN documentipie pie ON pie.DocumentiId=d.id WHERE d.id=@id"
+                If requireUser Then sql &= " AND d.UtentiId=@uid AND d.AziendeId=@azienda"
                 sql &= " LIMIT 1"
                 Using cmd As New MySqlCommand(sql, conn)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
-                    If requireUser Then cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
+                    If requireUser Then
+                        cmd.Parameters.Add("@uid", MySqlDbType.Int32).Value = utentiId
+                        cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tenantId
+                    End If
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
                             info.Exists = True
@@ -60,6 +83,12 @@ Public Module PayPalPaymentState
                             info.UtentiId = SafeInt(dr("UtentiId"))
                             info.AziendeId = SafeInt(dr("AziendeId"))
                             info.PagamentiTipoId = SafeInt(dr("PagamentiTipoId"))
+                            info.TipoDocumentiId = SafeInt(dr("TipoDocumentiId"))
+                            info.OrigineOrdine = Convert.ToString(dr("OrigineOrdine")).Trim()
+                            info.DocumentState = SafeInt(dr("DocumentState"))
+                            info.AllowLaterPayment = SafeInt(dr("AllowLaterPayment"))
+                            info.ValidOrderType = SafeInt(dr("ValidOrderType")) = 1
+                            info.HasGatewayAuthorization = SafeInt(dr("HasGatewayAuthorization")) = 1
                             info.DocumentNumber = SafeInt(dr("NDocumento"))
                             info.DocumentDate = If(dr("DataDocumento") Is DBNull.Value, DateTime.MinValue, Convert.ToDateTime(dr("DataDocumento"), CultureInfo.InvariantCulture))
                             info.Pagato = SafeInt(dr("Pagato"))

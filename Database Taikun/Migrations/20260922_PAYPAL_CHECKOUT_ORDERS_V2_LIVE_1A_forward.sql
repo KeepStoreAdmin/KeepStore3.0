@@ -1,6 +1,16 @@
 -- PAYPAL-CHECKOUT-ORDERS-V2-LIVE-1A / forward
 -- Eseguire soltanto dopo preflight OK e backup verificato.
-START TRANSACTION;
+-- MySQL DDL effettua commit impliciti: backup/preflight sono obbligatori.
+-- Se il campo equivalente esiste, non viene alterato. La migration marca solo
+-- il campo creato da essa, cosi il rollback non rimuove campi preesistenti.
+SET @ks_origin_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='documenti' AND COLUMN_NAME='OrigineOrdine');
+SET @ks_origin_sql = IF(@ks_origin_exists=0,
+  'ALTER TABLE `documenti` ADD COLUMN `OrigineOrdine` varchar(16) NULL COMMENT ''PAYPAL_ORDERS_V2_ORIGIN_20260922''',
+  'DO 0');
+PREPARE ks_origin_stmt FROM @ks_origin_sql;
+EXECUTE ks_origin_stmt;
+DEALLOCATE PREPARE ks_origin_stmt;
 
 CREATE TABLE `paypal_checkout_account` (
   `Id` int NOT NULL AUTO_INCREMENT,
@@ -36,6 +46,8 @@ CREATE TABLE `paypal_checkout_azienda` (
 CREATE TABLE `paypal_checkout_transazioni` (
   `Id` bigint NOT NULL AUTO_INCREMENT,
   `DocumentiId` int NOT NULL,
+  `TentativoNo` int NOT NULL,
+  `CurrentSlot` tinyint(1) DEFAULT NULL,
   `AziendeId` int NOT NULL,
   `PagamentiTipoId` int NOT NULL,
   `PayPalAccountId` int NOT NULL,
@@ -51,11 +63,14 @@ CREATE TABLE `paypal_checkout_transazioni` (
   `UltimoEsito` varchar(255) DEFAULT NULL,
   `CreatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `UpdatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`Id`), UNIQUE KEY `UX_paypal_checkout_tx_document` (`DocumentiId`),
+  PRIMARY KEY (`Id`), UNIQUE KEY `UX_paypal_checkout_tx_attempt` (`DocumentiId`,`TentativoNo`),
+  UNIQUE KEY `UX_paypal_checkout_tx_current` (`DocumentiId`,`CurrentSlot`),
   UNIQUE KEY `UX_paypal_checkout_tx_order` (`PayPalOrderId`), UNIQUE KEY `UX_paypal_checkout_tx_capture` (`PayPalCaptureId`),
   UNIQUE KEY `UX_paypal_checkout_tx_create_request` (`CreateRequestId`), UNIQUE KEY `UX_paypal_checkout_tx_capture_request` (`CaptureRequestId`),
   KEY `IX_paypal_checkout_tx_company` (`AziendeId`), KEY `IX_paypal_checkout_tx_account` (`PayPalAccountId`),
-  CONSTRAINT `FK_paypal_checkout_tx_account` FOREIGN KEY (`PayPalAccountId`) REFERENCES `paypal_checkout_account` (`Id`)
+  CONSTRAINT `FK_paypal_checkout_tx_account` FOREIGN KEY (`PayPalAccountId`) REFERENCES `paypal_checkout_account` (`Id`),
+  CONSTRAINT `CK_paypal_checkout_tx_slot` CHECK (`CurrentSlot` IS NULL OR `CurrentSlot`=1),
+  CONSTRAINT `CK_paypal_checkout_tx_attempt` CHECK (`TentativoNo`>0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `paypal_checkout_eventi` (
@@ -71,25 +86,8 @@ CREATE TABLE `paypal_checkout_eventi` (
   CONSTRAINT `FK_paypal_checkout_event_tx` FOREIGN KEY (`TransazioniId`) REFERENCES `paypal_checkout_transazioni` (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `paypal_checkout_legacy_audit` (
-  `Id` bigint NOT NULL AUTO_INCREMENT, `LegacySource` varchar(64) NOT NULL, `LegacyId` bigint DEFAULT NULL,
-  `DocumentiId` int DEFAULT NULL, `AziendeId` int DEFAULT NULL, `ExternalReferenceMasked` varchar(80) DEFAULT NULL,
-  `Stato` varchar(60) DEFAULT NULL, `Esito` varchar(255) DEFAULT NULL, `OccurredAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`), KEY `IX_paypal_legacy_audit_document` (`DocumentiId`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `paypal_checkout_legacy_audit` (`LegacySource`,`LegacyId`,`DocumentiId`,`AziendeId`,`ExternalReferenceMasked`,`Stato`,`Esito`,`OccurredAt`)
-SELECT 'transaction',id,DocumentiId,AziendeId,CASE WHEN COALESCE(TransactionId,'')='' THEN NULL ELSE CONCAT(LEFT(TransactionId,6),'...',RIGHT(TransactionId,4)) END,Stato,ShortMessage,DataAggiornamento
-FROM `paypal_express_transazioni`;
-INSERT INTO `paypal_checkout_legacy_audit` (`LegacySource`,`LegacyId`,`DocumentiId`,`AziendeId`,`ExternalReferenceMasked`,`Stato`,`Esito`,`OccurredAt`)
-SELECT 'log',id,DocumentiId,AziendeId,TokenMasked,Esito,Messaggio,DataCreazione FROM `paypal_express_log`;
-INSERT INTO `paypal_checkout_legacy_audit` (`LegacySource`,`LegacyId`,`DocumentiId`,`ExternalReferenceMasked`,`Stato`,`OccurredAt`)
-SELECT 'ipn_event',id,idDocumento,CASE WHEN COALESCE(idTransazione,'')='' THEN NULL ELSE CONCAT(LEFT(idTransazione,6),'...',RIGHT(idTransazione,4)) END,Stato_Transazione,Data_Evento
-FROM `payment_event`;
-
 DROP VIEW IF EXISTS `vpaypal_express_azienda`;
 DROP TABLE IF EXISTS `payment_event`;
 DROP TABLE IF EXISTS `paypal_express_log`;
 DROP TABLE IF EXISTS `paypal_express_transazioni`;
 DROP TABLE IF EXISTS `paypal_express_impostazioni_azienda`;
-COMMIT;

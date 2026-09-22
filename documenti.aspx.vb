@@ -539,23 +539,8 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 Return If(CanShowPayNow(documentId), "", "none")
             End If
 
-            Dim pagato As Integer = SafeInt(pagatoObj, 0)
-            Dim statiId As Integer = SafeInt(statiIdObj, 0)
-            Dim pagOnline As Integer = SafeInt(pagamentiTipoOnlineObj, 0)
-            Dim totaleDocumento As Decimal = SafeDecimal(totaleDocumentoObj, 0D)
-            Dim haAutorizzazione As Boolean = HasValue(codAutObj)
-
-            If pagato = 0 AndAlso
-               Not haAutorizzazione AndAlso
-               statiId <> 0 AndAlso
-               statiId <> 3 AndAlso
-               pagOnline <> 0 AndAlso
-               totaleDocumento > 0D Then
-
-                Return ""
-            Else
-                Return "none"
-            End If
+            ' Senza documentId non e possibile provare owner, tenant e provenienza.
+            Return "none"
 
         Catch
             ' In caso di dati sporchi, meglio NON mostrare "Paga Ora"
@@ -583,6 +568,8 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 Dim sql As String = ""
                 sql &= "SELECT "
                 sql &= "  COALESCE(d.Pagato,0) AS Pagato, "
+                sql &= "  COALESCE(d.OrigineOrdine,'') AS OrigineOrdine, "
+                sql &= "  CASE WHEN td.Web=1 AND td.Abilitato=1 AND td.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ValidOrderType, "
                 sql &= "  COALESCE(d.StatiId,0) AS StatiId, "
                 sql &= "  COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, "
                 sql &= "  COALESCE(p.OnLine,0) AS PagamentiTipoOnline, "
@@ -590,6 +577,7 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 sql &= "  COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, "
                 sql &= "  COALESCE(b.codiceAutorizzazione,'') AS CodiceAutorizzazione "
                 sql &= "FROM documenti d "
+                sql &= "LEFT JOIN tipodocumenti td ON td.id = d.TipoDocumentiId "
                 sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
                 sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
                 sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
@@ -613,14 +601,11 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                         Dim totaleDocumento As Decimal = SafeDecimal(dr("TotaleDocumento"), 0D)
                         Dim haAutorizzazione As Boolean = HasValue(dr("CodiceAutorizzazione"))
 
-                        Return pagato = 0 AndAlso
-                               online <> 0 AndAlso
-                               permettePagamentoSuccessivo = 1 AndAlso
-                               (statoPagamentoWeb = 0 OrElse statoPagamentoWeb = 3 OrElse statoPagamentoWeb = 4 OrElse statoPagamentoWeb = 5) AndAlso
-                               Not haAutorizzazione AndAlso
-                               statiId <> 0 AndAlso
-                               statiId <> 3 AndAlso
-                               totaleDocumento > 0D
+                        Return InternalOrderRemotePaymentPolicy.CanPayNow(
+                            Convert.ToString(dr("OrigineOrdine")), True, True,
+                            SafeInt(dr("ValidOrderType"), 0) = 1, pagato, statiId,
+                            statoPagamentoWeb, online, permettePagamentoSuccessivo,
+                            haAutorizzazione, totaleDocumento)
                     End Using
                 End Using
             End Using

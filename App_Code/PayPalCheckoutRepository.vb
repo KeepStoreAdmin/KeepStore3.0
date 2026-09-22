@@ -11,6 +11,8 @@ Public Class PayPalCheckoutTransactionInfo
     Public Property Exists As Boolean
     Public Property Id As Long
     Public Property DocumentiId As Integer
+    Public Property TentativoNo As Integer
+    Public Property IsCurrent As Boolean
     Public Property AziendeId As Integer
     Public Property PagamentiTipoId As Integer
     Public Property PayPalAccountId As Integer
@@ -60,13 +62,28 @@ Public Module PayPalCheckoutRepository
     Public Function EnsureTransaction(ByVal doc As PayPalPaymentDocumentInfo,
                                       ByVal cfg As PayPalCheckoutConfig) As PayPalCheckoutTransactionInfo
         If doc Is Nothing OrElse cfg Is Nothing Then Return New PayPalCheckoutTransactionInfo()
-        Dim createId As String = "PP-CREATE-" & doc.AziendeId.ToString(CultureInfo.InvariantCulture) & "-" & doc.DocumentId.ToString(CultureInfo.InvariantCulture)
-        Dim captureId As String = "PP-CAPTURE-" & doc.AziendeId.ToString(CultureInfo.InvariantCulture) & "-" & doc.DocumentId.ToString(CultureInfo.InvariantCulture)
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
                 Using trns As MySqlTransaction = conn.BeginTransaction()
-                    Using cmd As New MySqlCommand("INSERT IGNORE INTO paypal_checkout_transazioni (DocumentiId,AziendeId,PagamentiTipoId,PayPalAccountId,Stato,Importo,Valuta,PayeeEmail,MerchantId,CreateRequestId,CaptureRequestId,UltimoEsito) VALUES (@doc,@azienda,@pagamento,@account,'CREATING',@importo,@valuta,@payee,@merchant,@createId,@captureId,'Create inizializzata')", conn, trns)
+                    If Not LockUnpaidDocument(conn, trns, doc) Then trns.Rollback() : Return New PayPalCheckoutTransactionInfo()
+                    Dim currentId As Object
+                    Using current As New MySqlCommand("SELECT Id FROM paypal_checkout_transazioni WHERE DocumentiId=@doc AND CurrentSlot=1 FOR UPDATE", conn, trns)
+                        current.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+                        currentId = current.ExecuteScalar()
+                    End Using
+                    If currentId IsNot Nothing Then
+                        trns.Commit()
+                        Return LoadTransactionForDocument(doc.DocumentId)
+                    End If
+                    ' Solo il primo tentativo nasce senza riconciliazione volontaria.
+                    Dim historyCount As Long
+                    Using history As New MySqlCommand("SELECT COUNT(*) FROM paypal_checkout_transazioni WHERE DocumentiId=@doc", conn, trns)
+                        history.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+                        historyCount = Convert.ToInt64(history.ExecuteScalar(), CultureInfo.InvariantCulture)
+                    End Using
+                    If historyCount <> 0 Then trns.Rollback() : Return New PayPalCheckoutTransactionInfo()
+                    Using cmd As New MySqlCommand("INSERT INTO paypal_checkout_transazioni (DocumentiId,TentativoNo,CurrentSlot,AziendeId,PagamentiTipoId,PayPalAccountId,Stato,Importo,Valuta,PayeeEmail,MerchantId,CreateRequestId,CaptureRequestId,UltimoEsito) VALUES (@doc,1,1,@azienda,@pagamento,@account,'CREATING',@importo,@valuta,@payee,@merchant,@createId,@captureId,'Create inizializzata')", conn, trns)
                         cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
                         cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = doc.AziendeId
                         cmd.Parameters.Add("@pagamento", MySqlDbType.Int32).Value = doc.PagamentiTipoId
@@ -75,8 +92,8 @@ Public Module PayPalCheckoutRepository
                         cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = cfg.CurrencyCode
                         cmd.Parameters.Add("@payee", MySqlDbType.VarChar, 254).Value = cfg.PayeeEmail
                         cmd.Parameters.Add("@merchant", MySqlDbType.VarChar, 128).Value = cfg.MerchantId
-                        cmd.Parameters.Add("@createId", MySqlDbType.VarChar, 80).Value = createId
-                        cmd.Parameters.Add("@captureId", MySqlDbType.VarChar, 80).Value = captureId
+                        cmd.Parameters.Add("@createId", MySqlDbType.VarChar, 80).Value = BuildRequestId("CREATE", doc.AziendeId, doc.DocumentId, 1)
+                        cmd.Parameters.Add("@captureId", MySqlDbType.VarChar, 80).Value = BuildRequestId("CAPTURE", doc.AziendeId, doc.DocumentId, 1)
                         cmd.ExecuteNonQuery()
                     End Using
                     trns.Commit()
@@ -90,13 +107,101 @@ Public Module PayPalCheckoutRepository
 
     Public Function LoadTransactionForDocument(ByVal documentId As Integer) As PayPalCheckoutTransactionInfo
         If documentId <= 0 Then Return New PayPalCheckoutTransactionInfo()
-        Return LoadTransaction("SELECT * FROM paypal_checkout_transazioni WHERE DocumentiId=@value LIMIT 1", documentId.ToString(CultureInfo.InvariantCulture), MySqlDbType.Int32)
+        Return LoadTransaction("SELECT * FROM paypal_checkout_transazioni WHERE DocumentiId=@value AND CurrentSlot=1 LIMIT 1", documentId.ToString(CultureInfo.InvariantCulture), MySqlDbType.Int32)
     End Function
 
     Public Function LoadTransactionForExternalReference(ByVal value As String) As PayPalCheckoutTransactionInfo
         Dim clean As String = PayPalPaymentState.SanitizeExternalId(value)
         If clean = String.Empty Then Return New PayPalCheckoutTransactionInfo()
         Return LoadTransaction("SELECT * FROM paypal_checkout_transazioni WHERE PayPalOrderId=@value OR PayPalCaptureId=@value LIMIT 1", clean, MySqlDbType.VarChar)
+    End Function
+
+    Public Function LoadTransactionForOrder(ByVal orderId As String) As PayPalCheckoutTransactionInfo
+        Dim clean As String = PayPalPaymentState.SanitizeExternalId(orderId)
+        If clean = String.Empty Then Return New PayPalCheckoutTransactionInfo()
+        Return LoadTransaction("SELECT * FROM paypal_checkout_transazioni WHERE PayPalOrderId=@value LIMIT 1", clean, MySqlDbType.VarChar)
+    End Function
+
+    Public Function StartNextAttempt(ByVal doc As PayPalPaymentDocumentInfo,
+                                     ByVal cfg As PayPalCheckoutConfig,
+                                     ByVal previous As PayPalCheckoutTransactionInfo,
+                                     ByVal reconciled As PayPalOrderSnapshot) As PayPalCheckoutTransactionInfo
+        If doc Is Nothing OrElse cfg Is Nothing OrElse previous Is Nothing OrElse Not previous.IsCurrent OrElse
+           reconciled Is Nothing OrElse Not String.Equals(doc.OrigineOrdine, "INTERNO", StringComparison.OrdinalIgnoreCase) OrElse
+           String.IsNullOrEmpty(previous.PayPalOrderId) OrElse
+           Not String.Equals(previous.PayPalOrderId, reconciled.OrderId, StringComparison.Ordinal) OrElse
+           Not PayPalAttemptPolicy.MaySupersede(doc.OrigineOrdine, previous.Stato, reconciled.Status, reconciled.CaptureStatus) Then Return New PayPalCheckoutTransactionInfo()
+        Try
+            Using conn As New MySqlConnection(ConnectionString)
+                conn.Open()
+                Using trns As MySqlTransaction = conn.BeginTransaction()
+                    If Not LockUnpaidDocument(conn, trns, doc) Then trns.Rollback() : Return New PayPalCheckoutTransactionInfo()
+                    Dim currentId As Long = 0
+                    Dim currentState As String = String.Empty
+                    Dim currentOrder As String = String.Empty
+                    Using cmd As New MySqlCommand("SELECT Id,Stato,PayPalOrderId FROM paypal_checkout_transazioni WHERE DocumentiId=@doc AND CurrentSlot=1 FOR UPDATE", conn, trns)
+                        cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            If reader.Read() Then
+                                currentId = Convert.ToInt64(reader("Id"), CultureInfo.InvariantCulture)
+                                currentState = Convert.ToString(reader("Stato"))
+                                currentOrder = Convert.ToString(reader("PayPalOrderId"))
+                            End If
+                        End Using
+                    End Using
+                    If currentId <> previous.Id OrElse Not String.Equals(currentState, previous.Stato, StringComparison.OrdinalIgnoreCase) OrElse
+                       Not String.Equals(currentOrder, previous.PayPalOrderId, StringComparison.Ordinal) Then
+                        trns.Commit()
+                        Return LoadTransactionForDocument(doc.DocumentId)
+                    End If
+                    Dim attemptNo As Integer = previous.TentativoNo + 1
+                    Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET CurrentSlot=NULL,Stato='SUPERSEDED',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND CurrentSlot=1 AND Stato=@stato", conn, trns)
+                        cmd.Parameters.Add("@id", MySqlDbType.Int64).Value = previous.Id
+                        cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = previous.Stato
+                        If cmd.ExecuteNonQuery() <> 1 Then trns.Rollback() : Return New PayPalCheckoutTransactionInfo()
+                    End Using
+                    Using cmd As New MySqlCommand("INSERT INTO paypal_checkout_transazioni (DocumentiId,TentativoNo,CurrentSlot,AziendeId,PagamentiTipoId,PayPalAccountId,Stato,Importo,Valuta,PayeeEmail,MerchantId,CreateRequestId,CaptureRequestId,UltimoEsito) VALUES (@doc,@attempt,1,@azienda,@pagamento,@account,'CREATING',@importo,@valuta,@payee,@merchant,@createId,@captureId,'Nuovo tentativo interno')", conn, trns)
+                        cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+                        cmd.Parameters.Add("@attempt", MySqlDbType.Int32).Value = attemptNo
+                        cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = doc.AziendeId
+                        cmd.Parameters.Add("@pagamento", MySqlDbType.Int32).Value = doc.PagamentiTipoId
+                        cmd.Parameters.Add("@account", MySqlDbType.Int32).Value = cfg.AccountId
+                        cmd.Parameters.Add("@importo", MySqlDbType.Decimal).Value = Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero)
+                        cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = cfg.CurrencyCode
+                        cmd.Parameters.Add("@payee", MySqlDbType.VarChar, 254).Value = cfg.PayeeEmail
+                        cmd.Parameters.Add("@merchant", MySqlDbType.VarChar, 128).Value = cfg.MerchantId
+                        cmd.Parameters.Add("@createId", MySqlDbType.VarChar, 80).Value = BuildRequestId("CREATE", doc.AziendeId, doc.DocumentId, attemptNo)
+                        cmd.Parameters.Add("@captureId", MySqlDbType.VarChar, 80).Value = BuildRequestId("CAPTURE", doc.AziendeId, doc.DocumentId, attemptNo)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    trns.Commit()
+                End Using
+            End Using
+        Catch ex As Exception
+            LogFailure("StartNextAttempt", doc.DocumentId, ex)
+            Return New PayPalCheckoutTransactionInfo()
+        End Try
+        Return LoadTransactionForDocument(doc.DocumentId)
+    End Function
+
+    Private Function BuildRequestId(ByVal operation As String, ByVal companyId As Integer,
+                                    ByVal documentId As Integer, ByVal attemptNo As Integer) As String
+        Return "PP-" & operation & "-" & companyId.ToString(CultureInfo.InvariantCulture) & "-" &
+            documentId.ToString(CultureInfo.InvariantCulture) & "-" & attemptNo.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function LockUnpaidDocument(ByVal conn As MySqlConnection, ByVal trns As MySqlTransaction,
+                                        ByVal doc As PayPalPaymentDocumentInfo) As Boolean
+        Using cmd As New MySqlCommand("SELECT COALESCE(Pagato,0),COALESCE(OrigineOrdine,'') FROM documenti WHERE id=@doc AND AziendeId=@azienda AND UtentiId=@utente AND PagamentiTipoId=@pagamento FOR UPDATE", conn, trns)
+            cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
+            cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = doc.AziendeId
+            cmd.Parameters.Add("@utente", MySqlDbType.Int32).Value = doc.UtentiId
+            cmd.Parameters.Add("@pagamento", MySqlDbType.Int32).Value = doc.PagamentiTipoId
+            Using reader As MySqlDataReader = cmd.ExecuteReader()
+                Return reader.Read() AndAlso Convert.ToInt32(reader(0), CultureInfo.InvariantCulture) = 0 AndAlso
+                    String.Equals(Convert.ToString(reader(1)), doc.OrigineOrdine, StringComparison.OrdinalIgnoreCase)
+            End Using
+        End Using
     End Function
 
     Public Function RecordOrderCreated(ByVal tx As PayPalCheckoutTransactionInfo,
@@ -106,8 +211,13 @@ Public Module PayPalCheckoutRepository
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
                 Using trns As MySqlTransaction = conn.BeginTransaction()
+                    Using docLock As New MySqlCommand("SELECT Id FROM documenti WHERE Id=@doc AND AziendeId=@azienda AND COALESCE(Pagato,0)=0 FOR UPDATE", conn, trns)
+                        docLock.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
+                        docLock.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
+                        If docLock.ExecuteScalar() Is Nothing Then trns.Rollback() : Return False
+                    End Using
                     Dim affected As Integer
-                    Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET PayPalOrderId=@orderId,Stato='CREATED',UltimoEsito='Order creato',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda AND (PayPalOrderId IS NULL OR PayPalOrderId=@orderId)", conn, trns)
+                    Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET PayPalOrderId=@orderId,Stato='CREATED',UltimoEsito='Order creato',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda AND CurrentSlot=1 AND Stato IN ('CREATING','CREATED') AND (PayPalOrderId IS NULL OR PayPalOrderId=@orderId)", conn, trns)
                         AddIdentity(cmd, tx)
                         cmd.Parameters.Add("@orderId", MySqlDbType.VarChar, 100).Value = snapshot.OrderId
                         affected = cmd.ExecuteNonQuery()
@@ -129,17 +239,51 @@ Public Module PayPalCheckoutRepository
         End Try
     End Function
 
-    Public Function ApplyAuthoritativeState(ByVal tx As PayPalCheckoutTransactionInfo,
-                                            ByVal snapshot As PayPalOrderSnapshot,
-                                            ByVal eventId As String) As Boolean
-        If tx Is Nothing OrElse Not tx.Exists OrElse snapshot Is Nothing Then Return False
-        Dim normalized As String = Convert.ToString(snapshot.CaptureStatus).Trim().ToUpperInvariant()
-        If normalized = String.Empty Then normalized = Convert.ToString(snapshot.Status).Trim().ToUpperInvariant()
-        If normalized <> "COMPLETED" AndAlso normalized <> "PENDING" AndAlso normalized <> "DENIED" AndAlso normalized <> "DECLINED" AndAlso normalized <> "FAILED" Then Return False
+    Public Function TryBeginCapture(ByVal tx As PayPalCheckoutTransactionInfo) As Boolean
+        If tx Is Nothing OrElse Not tx.Exists OrElse Not tx.IsCurrent Then Return False
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
                 Using trns As MySqlTransaction = conn.BeginTransaction()
+                    Dim paid As Integer = -1
+                    Using cmd As New MySqlCommand("SELECT COALESCE(Pagato,0) FROM documenti WHERE id=@doc AND AziendeId=@azienda FOR UPDATE", conn, trns)
+                        cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
+                        cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
+                        Dim result As Object = cmd.ExecuteScalar()
+                        If result IsNot Nothing Then paid = Convert.ToInt32(result, CultureInfo.InvariantCulture)
+                    End Using
+                    If paid <> 0 Then trns.Rollback() : Return False
+                    Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET Stato='CAPTURING',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda AND CurrentSlot=1 AND Stato IN ('CREATED','APPROVED','CAPTURING','CANCELED','FAILED')", conn, trns)
+                        AddIdentity(cmd, tx)
+                        If cmd.ExecuteNonQuery() <> 1 Then trns.Rollback() : Return False
+                    End Using
+                    trns.Commit()
+                    Return True
+                End Using
+            End Using
+        Catch ex As Exception
+            LogFailure("TryBeginCapture", tx.DocumentiId, ex)
+            Return False
+        End Try
+    End Function
+
+    Public Function ApplyAuthoritativeState(ByVal tx As PayPalCheckoutTransactionInfo,
+                                            ByVal snapshot As PayPalOrderSnapshot,
+                                            ByVal eventId As String) As Boolean
+        If tx Is Nothing OrElse Not tx.Exists OrElse snapshot Is Nothing Then Return False
+        Dim normalized As String = If(snapshot.CaptureStatus, String.Empty).Trim().ToUpperInvariant()
+        If normalized = String.Empty Then normalized = If(snapshot.Status, String.Empty).Trim().ToUpperInvariant()
+        If normalized <> "COMPLETED" AndAlso normalized <> "PENDING" AndAlso normalized <> "DENIED" AndAlso normalized <> "DECLINED" AndAlso normalized <> "FAILED" Then Return False
+        If normalized = "COMPLETED" AndAlso PayPalPaymentState.SanitizeExternalId(snapshot.CaptureId) = String.Empty Then Return False
+        Try
+            Using conn As New MySqlConnection(ConnectionString)
+                conn.Open()
+                Using trns As MySqlTransaction = conn.BeginTransaction()
+                    Using docLock As New MySqlCommand("SELECT Id FROM documenti WHERE Id=@doc AND AziendeId=@azienda FOR UPDATE", conn, trns)
+                        docLock.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
+                        docLock.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
+                        If docLock.ExecuteScalar() Is Nothing Then trns.Rollback() : Return False
+                    End Using
                     If Not String.IsNullOrWhiteSpace(eventId) Then
                         Using eventCmd As New MySqlCommand("INSERT IGNORE INTO paypal_checkout_eventi (EventId,TransazioniId,EventType,CaptureId,Stato) VALUES (@eventId,@txId,'WEBHOOK',@capture,@stato)", conn, trns)
                             eventCmd.Parameters.Add("@eventId", MySqlDbType.VarChar, 100).Value = PayPalPaymentState.SanitizeExternalId(eventId)
@@ -149,23 +293,47 @@ Public Module PayPalCheckoutRepository
                             If eventCmd.ExecuteNonQuery() = 0 Then trns.Rollback() : Return True
                         End Using
                     End If
-                    If String.Equals(tx.Stato, "COMPLETED", StringComparison.OrdinalIgnoreCase) AndAlso normalized <> "COMPLETED" Then trns.Rollback() : Return True
+                    Dim currentSlot As Boolean = False
+                    Dim storedState As String = String.Empty
+                    Using cmd As New MySqlCommand("SELECT CurrentSlot,Stato FROM paypal_checkout_transazioni WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda FOR UPDATE", conn, trns)
+                        AddIdentity(cmd, tx)
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            If Not reader.Read() Then trns.Rollback() : Return False
+                            currentSlot = Not reader.IsDBNull(0) AndAlso Convert.ToInt32(reader(0), CultureInfo.InvariantCulture) = 1
+                            storedState = Convert.ToString(reader(1))
+                        End Using
+                    End Using
+                    If String.Equals(storedState, "COMPLETED", StringComparison.OrdinalIgnoreCase) AndAlso normalized <> "COMPLETED" Then trns.Rollback() : Return True
+                    If Not currentSlot AndAlso normalized <> "COMPLETED" Then trns.Commit() : Return True
                     Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET PayPalCaptureId=COALESCE(NULLIF(@capture,''),PayPalCaptureId),Stato=@stato,UltimoEsito=@esito,UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda", conn, trns)
                         AddIdentity(cmd, tx)
                         cmd.Parameters.Add("@capture", MySqlDbType.VarChar, 100).Value = PayPalPaymentState.SanitizeExternalId(snapshot.CaptureId)
                         cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = normalized
                         cmd.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = "PayPal Checkout: " & normalized
-                        If cmd.ExecuteNonQuery() <> 1 Then trns.Rollback() : Return False
+                        ' La riga e gia stata bloccata e verificata: un replay identico
+                        ' puo risultare in zero righe cambiate su alcune configurazioni MySQL.
+                        cmd.ExecuteNonQuery()
                     End Using
                     Dim paid As Boolean = normalized = "COMPLETED" AndAlso Not String.IsNullOrWhiteSpace(snapshot.CaptureId)
-                    Using cmd As New MySqlCommand("UPDATE documenti SET Pagato=@pagato,StatoPagamentoWeb=@stato,IdTransazione=@marker,DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb=@esito WHERE Id=@doc AND AziendeId=@azienda AND (COALESCE(Pagato,0)=0 OR @pagato=1)", conn, trns)
+                    If Not currentSlot AndAlso Not paid Then trns.Commit() : Return True
+                    Using cmd As New MySqlCommand("UPDATE documenti SET Pagato=@pagato,StatoPagamentoWeb=@stato,IdTransazione=@marker,DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb=@esito WHERE Id=@doc AND AziendeId=@azienda AND COALESCE(Pagato,0)=0", conn, trns)
                         cmd.Parameters.Add("@pagato", MySqlDbType.Int16).Value = If(paid, 1, 0)
                         cmd.Parameters.Add("@stato", MySqlDbType.Int16).Value = If(paid, 2, If(normalized = "PENDING", 1, 3))
                         cmd.Parameters.Add("@marker", MySqlDbType.VarChar, 150).Value = If(paid, PayPalPaymentState.BuildCaptureMarker(snapshot.CaptureId), PayPalPaymentState.BuildOrderMarker(tx.PayPalOrderId))
                         cmd.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = "PayPal Checkout: " & normalized
                         cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
                         cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
-                        If cmd.ExecuteNonQuery() <> 1 Then trns.Rollback() : Return False
+                        If cmd.ExecuteNonQuery() <> 1 Then
+                            Dim priorMarker As String = String.Empty
+                            Using prior As New MySqlCommand("SELECT COALESCE(IdTransazione,'') FROM documenti WHERE Id=@doc AND AziendeId=@azienda AND Pagato=1", conn, trns)
+                                prior.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
+                                prior.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
+                                priorMarker = Convert.ToString(prior.ExecuteScalar())
+                            End Using
+                            If Not paid OrElse Not String.Equals(priorMarker, PayPalPaymentState.BuildCaptureMarker(snapshot.CaptureId), StringComparison.Ordinal) Then
+                                trns.Rollback() : Return False
+                            End If
+                        End If
                     End Using
                     trns.Commit()
                     Return True
@@ -183,9 +351,14 @@ Public Module PayPalCheckoutRepository
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
                 Using trns As MySqlTransaction = conn.BeginTransaction()
-                    Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET Stato='CANCELED',UltimoEsito='Annullato dall''utente',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda AND Stato<>'COMPLETED'", conn, trns)
+                    Using docLock As New MySqlCommand("SELECT Id FROM documenti WHERE Id=@doc AND AziendeId=@azienda AND COALESCE(Pagato,0)=0 FOR UPDATE", conn, trns)
+                        docLock.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
+                        docLock.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
+                        If docLock.ExecuteScalar() Is Nothing Then trns.Rollback() : Return False
+                    End Using
+                    Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET Stato='CANCELED',UltimoEsito='Annullato dall''utente',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda AND CurrentSlot=1 AND Stato IN ('CREATING','CREATED')", conn, trns)
                         AddIdentity(cmd, tx)
-                        cmd.ExecuteNonQuery()
+                        If cmd.ExecuteNonQuery() <> 1 Then trns.Rollback() : Return False
                     End Using
                     Using cmd As New MySqlCommand("UPDATE documenti SET Pagato=0,StatoPagamentoWeb=4,DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb='PayPal Checkout: annullato' WHERE Id=@doc AND AziendeId=@azienda AND COALESCE(Pagato,0)=0", conn, trns)
                         cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
@@ -241,6 +414,8 @@ Public Module PayPalCheckoutRepository
                             info.Exists = True
                             info.Id = Convert.ToInt64(dr("Id"), CultureInfo.InvariantCulture)
                             info.DocumentiId = SafeInt(dr("DocumentiId"))
+                            info.TentativoNo = SafeInt(dr("TentativoNo"))
+                            info.IsCurrent = Not dr.IsDBNull(dr.GetOrdinal("CurrentSlot")) AndAlso SafeInt(dr("CurrentSlot")) = 1
                             info.AziendeId = SafeInt(dr("AziendeId"))
                             info.PagamentiTipoId = SafeInt(dr("PagamentiTipoId"))
                             info.PayPalAccountId = SafeInt(dr("PayPalAccountId"))

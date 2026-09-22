@@ -1220,6 +1220,15 @@ CheckoutFailureRecoveryService.TracePhase(
                 CheckoutFailureRecoveryService.TracePhase(
                     HttpContext.Current, checkoutRequestId, "15-document-resolution", "completed")
 
+                ' Provenienza autorevole nello stesso commit del documento e del claim idempotente.
+                Using cmdOrigin As New MySqlCommand("UPDATE documenti SET OrigineOrdine='WEB' WHERE id=?id AND AziendeId=?azienda AND UtentiId=?utente AND TipoDocumentiId=?tipo AND COALESCE(OrigineOrdine,'')=''", conn, trns)
+                    cmdOrigin.Parameters.Add("?id", MySqlDbType.Int32).Value = id
+                    cmdOrigin.Parameters.Add("?azienda", MySqlDbType.Int32).Value = orderIdentity.CompanyId
+                    cmdOrigin.Parameters.Add("?utente", MySqlDbType.Int64).Value = orderIdentity.UtentiId
+                    cmdOrigin.Parameters.Add("?tipo", MySqlDbType.Int32).Value = TipoDoc
+                    If cmdOrigin.ExecuteNonQuery() <> 1 Then Throw New DataException("Origine ordine WEB non persistita")
+                End Using
+
                 InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)
                 If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
                     PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)
@@ -1327,6 +1336,7 @@ CheckoutFailureRecoveryService.TracePhase(
                 Else
                     ' Ordine normale: banca sella, PayPal o dettaglio documento
                     If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
+                        PayPalWebLaunchContext.Issue(HttpContext.Current, id, orderIdentity, checkoutRequestId)
                         Me.SafeRedirect("/paypalcheckout.aspx?id=" & id.ToString(CultureInfo.InvariantCulture))
                         Exit Sub
                     ElseIf (If(TryCast(Me.Session("Ordine_BancaSellaGestPay_ShopId"), String), "")) <> "" Then
@@ -1387,6 +1397,7 @@ CheckoutFailureRecoveryService.TracePhase(
                                    "&sitoweb=" & sitoWeb &
                                    "&buyername=" & buyerName &
                                    "&buyeremail=" & buyerEmail
+                        PayPalWebLaunchContext.Issue(HttpContext.Current, id, orderIdentity, checkoutRequestId, "SELLA", amountVal)
                     Else
                         redirect = ""
                     End If

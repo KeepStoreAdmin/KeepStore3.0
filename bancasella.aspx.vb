@@ -2,6 +2,7 @@ Imports System.Data
 Imports MySql.Data.MySqlClient
 Imports it.sella.ecomms2s
 Imports System.Xml
+Imports System.Globalization
 
 Partial Class BancaSella
     Inherits System.Web.UI.Page
@@ -11,11 +12,46 @@ Partial Class BancaSella
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
+        ' Solo il checkout WEB appena concluso oppure Paga ora per ordine INTERNO.
+        ' La querystring non autorizza ne origine ne importo.
+        Dim documentId As Integer
+        Dim requestedAmount As Decimal
+        If Not Integer.TryParse(Convert.ToString(Request.QueryString("idDocumento")), documentId) OrElse documentId <= 0 OrElse
+           Not Decimal.TryParse(Convert.ToString(Request.QueryString("amount")), NumberStyles.Number, CultureInfo.InvariantCulture, requestedAmount) OrElse requestedAmount <= 0D Then
+            result = "Pagamento non disponibile."
+            Exit Sub
+        End If
+        Dim owner As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+        If owner Is Nothing OrElse Not owner.IsComplete Then result = "Pagamento non disponibile." : Exit Sub
+        Dim document As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForUser(documentId, CInt(owner.UtentiId))
+        If document Is Nothing OrElse Not document.Exists OrElse document.AziendeId <> owner.CompanyId OrElse document.PaymentOnline <> 3 OrElse document.Pagato <> 0 Then
+            result = "Pagamento non disponibile."
+            Exit Sub
+        End If
+        Dim expectedShopTransaction As String = document.DocumentNumber.ToString(CultureInfo.InvariantCulture) & "/" & document.DocumentDate.Year.ToString(CultureInfo.InvariantCulture)
+        If Not String.Equals(Convert.ToString(Request.QueryString("currency")), "242", StringComparison.Ordinal) OrElse
+           Not String.Equals(Convert.ToString(Request.QueryString("shopTransactionId")), expectedShopTransaction, StringComparison.Ordinal) Then
+            result = "Pagamento non disponibile."
+            Exit Sub
+        End If
+        If String.Equals(document.OrigineOrdine, "WEB", StringComparison.OrdinalIgnoreCase) Then
+            If Not PayPalWebLaunchContext.Consume(HttpContext.Current, documentId, owner, "SELLA", requestedAmount) Then
+                result = "Pagamento non disponibile."
+                Exit Sub
+            End If
+        ElseIf Not InternalOrderRemotePaymentPolicy.CanPayNow(document.OrigineOrdine, True, True,
+            document.ValidOrderType, document.Pagato, document.DocumentState, document.PaymentState,
+            document.PaymentOnline, document.AllowLaterPayment, document.HasGatewayAuthorization,
+            document.TotalDocument) OrElse requestedAmount <> Math.Round(document.TotalDocument, 2, MidpointRounding.AwayFromZero) Then
+            result = "Pagamento non disponibile."
+            Exit Sub
+        End If
+
         '=========================================================
         ' 1) Controllo di base: AziendaId deve esistere in sessione
         '=========================================================
         If Session("AziendaId") Is Nothing OrElse _
-           String.IsNullOrWhiteSpace(Session("AziendaId").ToString()) Then
+           Not String.Equals(Convert.ToString(Session("AziendaId")), owner.CompanyId.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal) Then
 
             result = "Configurazione pagamento non disponibile (AziendaId mancante)."
             Exit Sub
@@ -26,7 +62,7 @@ Partial Class BancaSella
         '    (tabella: bancasella_impostazioni_azienda)
         '=========================================================
         Dim params As New Dictionary(Of String, String)
-        params.Add("@AziendaId", Session("AziendaId").ToString())
+        params.Add("@AziendaId", owner.CompanyId.ToString(CultureInfo.InvariantCulture))
 
         Dim rows As List(Of Dictionary(Of String, Object)) = ExecuteQueryGetDataReader(
             "*",

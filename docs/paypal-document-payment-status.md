@@ -20,6 +20,10 @@ Taikun and Webaffare may reference the same account, merchant and credential key
 
 `paypalcheckout.aspx` creates an Orders v2 order with intent `CAPTURE`, an exact payee, canonical return/cancel URLs and a persisted deterministic `PayPal-Request-Id`. The approval URL must be HTTPS on `www.paypal.com`.
 
+`documenti.OrigineOrdine` is authoritative: `WEB` is persisted in the same transaction as the checkout document and durable idempotency record; `INTERNO` must be written by the desktop management application when it creates a manual order. `NULL` or any other origin fails closed for later payment. Both PayPal and Banca Sella use one internal-order eligibility policy. Web orders may launch the selected gateway only from the initial server-side, session-bound checkout context; they never acquire a later My Account “Pay now” option.
+
+PayPal transactions are attempt-aware: `(DocumentiId,TentativoNo)` is unique and exactly one row per document may own `CurrentSlot=1`. Prior attempts retain `CurrentSlot=NULL`. Technical retries reuse the same create/capture request IDs; a new voluntary internal-order attempt requires authoritative Get Order reconciliation and a locked transition to `SUPERSEDED`. A completed or pending capture, an approved order, ambiguous response or capture in progress never opens a new attempt. Old returns and approved webhooks never capture a superseded order; an authentic old completed capture still marks the document paid, preventing a second payment.
+
 `paypalreturn.aspx` distrusts browser fields. It loads the persisted order, calls Get Order, verifies tenant, document, IDs, amount, currency, payee and merchant, then captures with the already persisted capture request ID. Duplicate return, refresh or retry cannot create another logical capture.
 
 `paypalrecheck.aspx` performs Get Order only. It never recaptures. `paypalwebhook.aspx` accepts HTTPS POST only, verifies the PayPal signature with the configured webhook ID before writes, and processes unique event IDs monotonically.
@@ -33,7 +37,7 @@ Document markers:
 
 ## Database transition
 
-The migration set `20260922_PAYPAL_CHECKOUT_ORDERS_V2_LIVE_1A_*` creates account, tenant, transaction, event-idempotency and sanitized legacy-audit tables. It removes the obsolete PayPal Express view/tables only during the separately authorized deployment. It has not been executed against production by this task.
+The migration set `20260922_PAYPAL_CHECKOUT_ORDERS_V2_LIVE_1A_*` creates only account, tenant, attempt-aware transaction and event-idempotency tables. It adds the nullable document origin when absent and removes obsolete PayPal Express objects without copying their data or secrets. MySQL DDL performs implicit commits: preflight and verified backup are mandatory, and rollback is a separately authorized emergency procedure. This migration has not been executed against production by this task.
 
 ## Security and tests
 

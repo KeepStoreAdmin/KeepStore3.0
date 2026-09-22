@@ -14,13 +14,15 @@ Partial Class paypalreturn
         If doc Is Nothing OrElse Not doc.Exists Then RedirectTerminal("accessonegato.aspx") : Return
         If doc.Pagato = 1 Then RedirectResult(documentId, "ok") : Return
         If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then Fail(documentId, "Metodo di pagamento non coerente") : Return
-        Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForDocument(documentId)
-        If tx Is Nothing OrElse Not tx.Exists OrElse tx.AziendeId <> doc.AziendeId OrElse String.IsNullOrWhiteSpace(tx.PayPalOrderId) Then Fail(documentId, "Transazione PayPal non trovata") : Return
         Dim actionName As String = Convert.ToString(Request.QueryString("action")).Trim()
         Dim rawOrderId As String = Convert.ToString(Request.QueryString("token"))
+        Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForOrder(rawOrderId)
+        If tx Is Nothing OrElse Not tx.Exists OrElse tx.DocumentiId <> documentId OrElse tx.AziendeId <> doc.AziendeId OrElse
+           Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then
+            RedirectResult(documentId, "ko") : Return
+        End If
         If String.Equals(actionName, "cancel", StringComparison.OrdinalIgnoreCase) Then
-            If Not String.IsNullOrWhiteSpace(rawOrderId) AndAlso Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then Fail(documentId, "Riferimento PayPal non coerente") : Return
-            PayPalCheckoutRepository.MarkCanceled(tx)
+            If tx.IsCurrent Then PayPalCheckoutRepository.MarkCanceled(tx)
             RedirectResult(documentId, "ko") : Return
         End If
         If Not String.Equals(actionName, "return", StringComparison.OrdinalIgnoreCase) Then Fail(documentId, "Rientro PayPal non valido") : Return
@@ -41,7 +43,9 @@ Partial Class paypalreturn
             RedirectResult(documentId, "ko")
             Return
         End If
+        If Not tx.IsCurrent Then RedirectResult(documentId, "ko") : Return
         If Not String.Equals(details.Snapshot.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Fail(documentId, "Ordine PayPal non approvato") : Return
+        If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then RedirectResult(documentId, "ko") : Return
         Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
         If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, capture.Snapshot) Then Fail(documentId, "Capture PayPal non verificata") : Return
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, capture.Snapshot, String.Empty) Then Fail(documentId, "Aggiornamento pagamento non riuscito") : Return
@@ -49,7 +53,6 @@ Partial Class paypalreturn
     End Sub
 
     Private Sub Fail(ByVal documentId As Integer, ByVal message As String)
-        PayPalPaymentState.MarkFailed(documentId, message)
         RedirectResult(documentId, "ko")
     End Sub
 

@@ -75,9 +75,13 @@ Partial Class paypalwebhook
         Dim details As PayPalOrdersV2Result = client.GetOrder(tx.PayPalOrderId)
         If details Is Nothing OrElse Not details.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, details.Snapshot) Then Finish(409, "ORDER_MISMATCH") : Return
         Dim authoritative As PayPalOrderSnapshot = details.Snapshot
+        If Not tx.IsCurrent AndAlso Not String.Equals(authoritative.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then
+            Finish(200, "OK") : Return
+        End If
         If Not String.Equals(authoritative.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) AndAlso
            Not String.Equals(authoritative.CaptureStatus, "PENDING", StringComparison.OrdinalIgnoreCase) Then
             If Not String.Equals(authoritative.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Finish(409, "ORDER_NOT_APPROVED") : Return
+            If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then Finish(409, "CAPTURE_NOT_CURRENT") : Return
             Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
             If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshot(doc, cfg, tx.PayPalOrderId, capture.Snapshot) Then Finish(409, "CAPTURE_MISMATCH") : Return
             authoritative = capture.Snapshot

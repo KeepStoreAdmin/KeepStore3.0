@@ -28,7 +28,7 @@ $results += Assert-Check ($client.Contains('/v2/checkout/orders') -and $client.C
 $results += Assert-Check ($client.Contains('PayPal-Request-Id')) '35 request id header'
 $results += Assert-Check ($client.Contains('IPayPalHttpTransport')) '36 fakeable transport'
 $results += Assert-Check ($repository.Contains('UNIQUE') -or $repository.Contains('INSERT IGNORE')) '37 duplicate return persistence guard'
-$results += Assert-Check ($repository.Contains('String.Equals(tx.Stato, "COMPLETED"') -and $repository.Contains('normalized <> "COMPLETED"')) '38 monotonic completed state'
+$results += Assert-Check ($repository.Contains('String.Equals(storedState, "COMPLETED"') -and $repository.Contains('normalized <> "COMPLETED"')) '38 monotonic completed state'
 $results += Assert-Check ($state.Contains('If doc.Pagato = 1 Then') -and $state.Contains('ALREADY_COMPLETED')) '39 recheck completed no recapture'
 $results += Assert-Check ($state.Contains('GetOrder(tx.PayPalOrderId)') -and -not $state.Contains('CaptureOrder(')) '40 recheck REST GET only'
 $results += Assert-Check ($returnPage.Contains('CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)')) '41 deterministic capture retry'
@@ -48,14 +48,14 @@ $results += Assert-Check ($client.Contains('PAYMENT.CAPTURE.COMPLETED') -eq $fal
 $results += Assert-Check ($client.Contains('request.Headers("Prefer") = data.Prefer') -and $client.Contains('"return=representation"')) '55 Prefer representation transport'
 $results += Assert-Check ($client.Contains('BuildWebhookVerificationPayload') -and $client.Contains('serialized.Replace(encodedSentinel, rawWebhookEvent)')) '56 raw webhook verification contract'
 $results += Assert-Check ($webhook.Contains('Request.Headers("PAYPAL-TRANSMISSION-SIG"), raw)') -and -not $webhook.Contains('Request.Headers("PAYPAL-TRANSMISSION-SIG"), eventData)')) '57 raw event passed unchanged'
-$results += Assert-Check ($returnPage.Contains('If Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then') -and $returnPage.IndexOf('IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId)', [StringComparison]::Ordinal) -lt $returnPage.IndexOf('client.GetOrder', [StringComparison]::Ordinal)) '58 mandatory return token before API'
+$results += Assert-Check ($returnPage.Contains('Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then') -and $returnPage.IndexOf('IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId)', [StringComparison]::Ordinal) -lt $returnPage.IndexOf('client.GetOrder', [StringComparison]::Ordinal)) '58 mandatory return token before API'
 $results += Assert-Check ($webhook.Contains('CHECKOUT.ORDER.APPROVED') -and $webhook.Contains('ProcessApprovedOrder')) '59 approved webhook recovery'
 $results += Assert-Check ($webhook.Contains('CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)')) '60 approved uses persisted capture request id'
 $results += Assert-Check ($webhook.Contains('CHECKOUT.PAYMENT-APPROVAL.REVERSED') -and $webhook.Contains('.Status = "FAILED"')) '61 approval reversed fails closed'
 $verifyIndex = $webhook.IndexOf('If verification Is Nothing OrElse Not verification.Success', [StringComparison]::Ordinal)
 $firstDmlIndex = $webhook.IndexOf('ApplyAuthoritativeState', [StringComparison]::Ordinal)
 $results += Assert-Check ($verifyIndex -ge 0 -and $firstDmlIndex -gt $verifyIndex) '62 zero webhook DML before signature success'
-$results += Assert-Check ($verifyMigration.Contains('COUNT(DISTINCT INDEX_NAME)=5') -and $verifyMigration.Contains('UX_paypal_checkout_tx_capture_request')) '63 all five transaction uniques verified'
+$results += Assert-Check ($verifyMigration.Contains('COUNT(DISTINCT INDEX_NAME)=6') -and $verifyMigration.Contains('UX_paypal_checkout_tx_current') -and $verifyMigration.Contains('UX_paypal_checkout_tx_capture_request')) '63 all six transaction uniques verified'
 $results += Assert-Check ($webhook.Contains('LoadDocumentForPayment') -and $webhook.Contains('ValidateSnapshot(doc, cfg, tx.PayPalOrderId')) '64 approved full authoritative validation'
 
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe'

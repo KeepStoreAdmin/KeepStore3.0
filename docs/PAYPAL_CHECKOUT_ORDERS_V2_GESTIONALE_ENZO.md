@@ -54,3 +54,37 @@ Pulsanti previsti: `Nuovo collegamento`, `Salva`, `Disattiva`, `Annulla`, `Verif
 - Nessun fallback globale o cross-tenant.
 - `AccountPaypal` storico non alimenta il runtime Orders v2.
 - La schermata può dichiarare `Configurata` solo dopo migration, impostazioni deploy e verify; non può dichiarare `LIVE VERIFIED` senza smoke reale separatamente autorizzato.
+
+## Ordine interno con pagamento remoto
+
+`documenti.OrigineOrdine` e la fonte autorevole della provenienza. La migration Orders v2 aggiunge `VARCHAR(16) NULL` solo se il campo non esiste gia. Il gestionale desktop, non presente in questo repository, deve scrivere `INTERNO` **nello stesso salvataggio che crea manualmente un nuovo ordine**. Non dedurre `INTERNO` da `Ordine_Web=0`, dall'assenza di `ordini_web_idempotenza` o dalla presenza di PayPal. Non effettuare backfill dei documenti storici. Le importazioni Amazon/eBay non sono ordini interni; se il canale non e certo, lasciare `NULL` finche una fonte autorevole non sara disponibile.
+
+Sequenza per la vendita a distanza/telefonica:
+
+1. Selezionare cliente e azienda/vetrina corretti. Verificare l'associazione del cliente al suo account web: il nuovo `documenti.UtentiId` deve essere proprio l'`UtentiId` che l'account usa nella medesima `AziendeId`.
+2. Creare un documento di tipo **ORDINE** abilitato al web e all'impegno di quantita (`tipodocumenti.Web=1`, `Abilitato=1`, `ImpegnaQnt=1`), non preventivo/fattura o documento annullato.
+3. Salvare `documenti.OrigineOrdine='INTERNO'` al momento della creazione. Il checkout sito scrive invece `WEB` nella transazione dell'ordine; il gestionale non deve sovrascriverlo.
+4. Scegliere il `PagamentiTipoId` della stessa azienda con `pagamentitipo.OnLine=2` per PayPal oppure `OnLine=3` per Banca Sella. Il metodo deve avere `PermettiPagamentoSuccessivo=1`; la coppia azienda/metodo PayPal deve disporre della propria configurazione Orders v2 completa e attiva.
+5. Salvare `documenti.Pagato=0` e `StatoPagamentoWeb=0` (non avviato), senza `bancasella_ordini_pagati.codiceAutorizzazione`. Il totale in `documentipie.TotaleDocumento` deve essere positivo.
+6. Il cliente autenticato nella vetrina corretta vede il proprio ordine nell'area personale e il solo comando pertinente: `Paga con PayPal` oppure `Paga con carta`. Il comando resta disponibile per un ordine interno non pagato; un tentativo PayPal gia in corso viene prima riconciliato, non duplicato.
+7. Solo la conferma autorevole del gateway aggiorna `Pagato=1`. Una creazione ordine PayPal, una approvazione browser, un EC-TOKEN o un rientro non sono prove di pagamento.
+
+Query di verifica gestionale, parametrizzata con ID di documento e azienda risolti dal contesto autenticato (mai da testo libero di un URL):
+
+```sql
+SELECT d.Id, d.AziendeId, d.UtentiId, d.TipoDocumentiId,
+       d.OrigineOrdine, d.PagamentiTipoId, d.Pagato,
+       d.StatoPagamentoWeb, d.StatiId,
+       td.Web, td.Abilitato, td.ImpegnaQnt,
+       p.OnLine, p.PermettiPagamentoSuccessivo,
+       pie.TotaleDocumento
+FROM documenti d
+JOIN tipodocumenti td ON td.Id=d.TipoDocumentiId
+JOIN pagamentitipo p ON p.Id=d.PagamentiTipoId
+JOIN documentipie pie ON pie.DocumentiId=d.Id
+WHERE d.Id=@DocumentiId AND d.AziendeId=@AziendeId;
+```
+
+`NULL`, `UNKNOWN`, `WEB`, `AMAZON`, `EBAY` o qualsiasi provenienza diversa da `INTERNO` non abilitano il pagamento successivo nell'area cliente. L'ordine WEB mantiene il proprio lancio gateway **solo nel checkout iniziale**. La lista documenti conserva il badge generico dello stato saldato/non saldato; non equivale a un invito a pagare.
+
+I quattro oggetti nuovi sono `paypal_checkout_account`, `paypal_checkout_azienda`, `paypal_checkout_transazioni` e `paypal_checkout_eventi`. Non migrare credenziali o storico Express in queste tabelle; `paypal_checkout_legacy_audit` non fa parte dello schema finale.
