@@ -101,7 +101,7 @@ Public Class PayPalCheckoutConfig
             If dbConfig IsNot Nothing Then Return dbConfig
         End If
 
-        Return Load()
+        Return LoadLocalSandboxFallback(HttpContext.Current)
     End Function
 
     Public Shared Function LoadForCompanyPayment(ByVal companyId As Integer,
@@ -112,7 +112,20 @@ Public Class PayPalCheckoutConfig
             If dbConfig IsNot Nothing Then Return dbConfig
         End If
 
-        Return Load()
+        Return LoadLocalSandboxFallback(HttpContext.Current)
+    End Function
+
+    Private Shared Function LoadLocalSandboxFallback(ByVal context As HttpContext) As PayPalCheckoutConfig
+        If Not PayPalProductionSafetyPolicy.IsLocalTestRequest(context) Then Return Nothing
+
+        Dim cfg As PayPalCheckoutConfig = Load()
+        If cfg Is Nothing OrElse
+           Not PayPalProductionSafetyPolicy.IsEnvironmentFallbackAllowed(
+               cfg.EnvironmentName, True) Then
+            Return Nothing
+        End If
+
+        Return cfg
     End Function
 
     Private Shared Function ReadSetting(ByVal key As String) As String

@@ -38,7 +38,7 @@ try {
     }
 
     $runtimeOutput = @(& $executable)
-    Assert-Check ($LASTEXITCODE -eq 0 -and ($runtimeOutput -join "`n") -match 'PAYPAL_PRODUCTION_SAFETY_PASS checks=7') '08_POLICY_MATRIX'
+    Assert-Check ($LASTEXITCODE -eq 0 -and ($runtimeOutput -join "`n") -match 'PAYPAL_PRODUCTION_SAFETY_PASS checks=14') '15_POLICY_MATRIX'
 
     $config = Get-Content -LiteralPath (Join-Path $repo 'App_Code\PayPalCheckoutConfig.vb') -Raw
     $repository = Get-Content -LiteralPath (Join-Path $repo 'App_Code\PayPalExpressRepository.vb') -Raw
@@ -48,32 +48,36 @@ try {
     $paymentState = Get-Content -LiteralPath (Join-Path $repo 'App_Code\PayPalPaymentState.vb') -Raw
 
     Assert-Check ($config -match 'CanCallApiForRequest' -and
-                  $config -match 'PayPalProductionSafetyPolicy\.IsApiCallAllowed') '09_CONFIG_USES_CENTRAL_POLICY'
+                  $config -match 'PayPalProductionSafetyPolicy\.IsApiCallAllowed') '16_CONFIG_USES_CENTRAL_POLICY'
     Assert-Check ($repository -match 'LoadConfigForCompanyPayment' -and
-                  $config -match 'LoadForCompanyPayment') '10_TENANT_PAYMENT_CONFIG_RESOLVED'
+                  $config -match 'LoadForCompanyPayment') '17_TENANT_PAYMENT_CONFIG_RESOLVED'
+    Assert-Check ($config -match 'LoadLocalSandboxFallback' -and
+                  $config -match 'IsEnvironmentFallbackAllowed' -and
+                  $config -notmatch 'LoadForDocument[\s\S]+?Return Load\(\)' -and
+                  $config -notmatch 'LoadForCompanyPayment[\s\S]+?Return Load\(\)') '18_PUBLIC_TENANT_CONFIG_HAS_NO_ENVIRONMENT_FALLBACK'
     Assert-Check ($cart -match 'gvPagamento_RowDataBound' -and
                   $cart -match 'e\.Row\.Visible = False' -and
-                  $cart -match 'cfg\.CanCallApiForRequest\(HttpContext\.Current\)') '11_UNSAFE_PAYPAL_NOT_SELECTABLE'
-    Assert-Check ($cart -match 'IsAuthoritativePaymentValid[\s\S]+PayPalPaymentState\.PAYPAL_ONLINE_VALUE[\s\S]+CanCallApiForRequest') '12_TAMPERED_SELECTION_BLOCKED'
+                  $cart -match 'cfg\.CanCallApiForRequest\(HttpContext\.Current\)') '19_UNSAFE_PAYPAL_NOT_SELECTABLE'
+    Assert-Check ($cart -match 'IsAuthoritativePaymentValid[\s\S]+PayPalPaymentState\.PAYPAL_ONLINE_VALUE[\s\S]+CanCallApiForRequest') '20_TAMPERED_SELECTION_BLOCKED'
 
     $checkoutGate = $checkout.IndexOf('CanCallApiForRequest', [StringComparison]::Ordinal)
     $checkoutCall = $checkout.IndexOf('SetExpressCheckout', [StringComparison]::Ordinal)
-    Assert-Check ($checkoutGate -ge 0 -and $checkoutCall -gt $checkoutGate) '13_CHECKOUT_GATE_PRECEDES_SET'
+    Assert-Check ($checkoutGate -ge 0 -and $checkoutCall -gt $checkoutGate) '21_CHECKOUT_GATE_PRECEDES_SET'
     $returnGate = $returnPage.IndexOf('CanCallApiForRequest', [StringComparison]::Ordinal)
     $returnCall = $returnPage.IndexOf('GetExpressCheckoutDetails', [StringComparison]::Ordinal)
-    Assert-Check ($returnGate -ge 0 -and $returnCall -gt $returnGate) '14_RETURN_GATE_PRECEDES_GET_DO'
+    Assert-Check ($returnGate -ge 0 -and $returnCall -gt $returnGate) '22_RETURN_GATE_PRECEDES_GET_DO'
     $recheckGate = $paymentState.IndexOf('CanCallApiForRequest', [StringComparison]::Ordinal)
     $recheckCall = $paymentState.IndexOf('GetTransactionDetails', [StringComparison]::Ordinal)
-    Assert-Check ($recheckGate -ge 0 -and $recheckCall -gt $recheckGate) '15_RECHECK_GATE_PRECEDES_API'
+    Assert-Check ($recheckGate -ge 0 -and $recheckCall -gt $recheckGate) '23_RECHECK_GATE_PRECEDES_API'
 
     Assert-Check ($paymentState -match 'MarkPendingWithExpressToken[\s\S]+MarkPendingWithTransaction' -and
                   $paymentState -match 'MarkCompleted[\s\S]+Pagato=1' -and
-                  $paymentState -notmatch 'BuildExpressTokenValue[\s\S]{0,300}Pagato=1') '16_EC_TOKEN_NEVER_MARKS_PAID'
+                  $paymentState -notmatch 'BuildExpressTokenValue[\s\S]{0,300}Pagato=1') '24_EC_TOKEN_NEVER_MARKS_PAID'
     Assert-Check ($cart -match 'PaymentOnline.+PAYPAL_ONLINE_VALUE Then Return True' -and
-                  $cart -match 'If SafeIntFromDb\(DataBinder\.Eval\(e\.Row\.DataItem, "OnLine"\), 0\) <> PayPalPaymentState\.PAYPAL_ONLINE_VALUE Then Return') '17_OTHER_PAYMENT_METHODS_UNCHANGED'
+                  $cart -match 'If SafeIntFromDb\(DataBinder\.Eval\(e\.Row\.DataItem, "OnLine"\), 0\) <> PayPalPaymentState\.PAYPAL_ONLINE_VALUE Then Return') '25_OTHER_PAYMENT_METHODS_UNCHANGED'
     $harnessSources = (Get-Content -LiteralPath $policyPath -Raw) + "`n" +
                       (Get-Content -LiteralPath $harnessPath -Raw)
-    Assert-Check ($harnessSources -notmatch '(?i)paypal\.com|HttpWebRequest|WebClient|HttpClient') '18_NO_NETWORK_IN_HARNESS'
+    Assert-Check ($harnessSources -notmatch '(?i)paypal\.com|HttpWebRequest|WebClient|HttpClient') '26_NO_NETWORK_IN_HARNESS'
 
     Write-Output ('PAYPAL_PRODUCTION_SAFETY_TEST_PASS checks=' + $passed)
 } finally {
