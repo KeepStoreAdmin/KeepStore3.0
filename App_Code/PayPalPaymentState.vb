@@ -179,7 +179,7 @@ Public Module PayPalPaymentState
     End Function
 
     Public Function SanitizeExternalId(ByVal value As String) As String
-        Dim clean As String = Convert.ToString(value).Trim()
+        Dim clean As String = If(value, String.Empty).Trim()
         If clean.Length > 100 Then clean = clean.Substring(0, 100)
         For Each ch As Char In clean
             If Not Char.IsLetterOrDigit(ch) AndAlso ch <> "-"c AndAlso ch <> "_"c Then Return String.Empty

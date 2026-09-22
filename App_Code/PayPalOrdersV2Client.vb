@@ -33,6 +33,9 @@ Public Class PayPalHttpWebRequestTransport
     Implements IPayPalHttpTransport
 
     Public Function Send(ByVal data As PayPalHttpRequestData) As PayPalHttpResponseData Implements IPayPalHttpTransport.Send
+#If PAYPAL_WEBHOOK_HARNESS Then
+        Throw New InvalidOperationException("NETWORK_DISABLED_IN_WEBHOOK_HARNESS")
+#Else
         ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
         Dim request As HttpWebRequest = DirectCast(WebRequest.Create(data.Url), HttpWebRequest)
         request.Method = data.Method
@@ -62,6 +65,7 @@ Public Class PayPalHttpWebRequestTransport
                 Return ReadResponse(response)
             End Using
         End Try
+#End If
     End Function
 
     Private Shared Function ReadResponse(ByVal response As HttpWebResponse) As PayPalHttpResponseData
@@ -125,8 +129,23 @@ Public Class PayPalOrdersV2Client
     Private ReadOnly _transport As IPayPalHttpTransport
     Private ReadOnly _serializer As New JavaScriptSerializer()
 
+#If PAYPAL_WEBHOOK_HARNESS Then
+    ' Compiled only by the isolated QA harness. No request, header, query string,
+    ' application setting or production build can enable the fake transport.
+    Friend Shared WebhookHarnessTransportFactory As Func(Of IPayPalHttpTransport)
+
+    Private Shared Function DefaultTransport() As IPayPalHttpTransport
+        If WebhookHarnessTransportFactory Is Nothing Then Throw New InvalidOperationException("WEBHOOK_FAKE_TRANSPORT_REQUIRED")
+        Return WebhookHarnessTransportFactory()
+    End Function
+#Else
+    Private Shared Function DefaultTransport() As IPayPalHttpTransport
+        Return New PayPalHttpWebRequestTransport()
+    End Function
+#End If
+
     Public Sub New(ByVal config As PayPalCheckoutConfig)
-        Me.New(config, New PayPalHttpWebRequestTransport())
+        Me.New(config, DefaultTransport())
     End Sub
 
     Public Sub New(ByVal config As PayPalCheckoutConfig, ByVal transport As IPayPalHttpTransport)

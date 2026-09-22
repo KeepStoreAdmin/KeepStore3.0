@@ -36,6 +36,7 @@ Partial Class paypalwebhook
         Dim orderId As String = ResolveOrderId(eventType, resource, captureId)
         If orderId = String.Empty Then Finish(400, "ORDER_ID_REQUIRED") : Return
         Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForExternalReference(If(orderId <> String.Empty, orderId, captureId))
+        If tx IsNot Nothing AndAlso tx.LoadStatus = PayPalTransactionLookupStatus.TechnicalError Then Finish(503, "LOOKUP_UNAVAILABLE") : Return
         If tx Is Nothing OrElse Not tx.Exists Then Finish(202, "UNKNOWN_TRANSACTION") : Return
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(tx.DocumentiId)
         If cfg Is Nothing OrElse cfg.AziendeId <> tx.AziendeId OrElse cfg.AccountId <> tx.PayPalAccountId OrElse Not cfg.IsWebhookConfigured Then Finish(403, "CONFIGURATION_UNAVAILABLE") : Return

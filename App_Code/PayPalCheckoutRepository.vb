@@ -7,8 +7,15 @@ Imports System.Globalization
 Imports System.Web
 Imports MySql.Data.MySqlClient
 
+Public Enum PayPalTransactionLookupStatus
+    NotFound = 0
+    Found = 1
+    TechnicalError = 2
+End Enum
+
 Public Class PayPalCheckoutTransactionInfo
     Public Property Exists As Boolean
+    Public Property LoadStatus As PayPalTransactionLookupStatus
     Public Property Id As Long
     Public Property DocumentiId As Integer
     Public Property TentativoNo As Integer
@@ -278,6 +285,8 @@ Public Module PayPalCheckoutRepository
         If Not String.IsNullOrWhiteSpace(snapshot.CaptureStatus) AndAlso
            Not PayPalOrdersV2Client.HasMatchingCapture(snapshot, tx.Importo, tx.Valuta) Then Return False
         If normalized = "COMPLETED" AndAlso Not PayPalOrdersV2Client.HasMatchingCapture(snapshot, tx.Importo, tx.Valuta) Then Return False
+        Dim cleanCaptureId As String = PayPalPaymentState.SanitizeExternalId(snapshot.CaptureId)
+        Dim captureDbValue As Object = If(cleanCaptureId = String.Empty, CType(DBNull.Value, Object), cleanCaptureId)
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
@@ -297,7 +306,7 @@ Public Module PayPalCheckoutRepository
                         Using eventCmd As New MySqlCommand("INSERT IGNORE INTO paypal_checkout_eventi (EventId,TransazioniId,EventType,CaptureId,Stato) VALUES (@eventId,@txId,'WEBHOOK',@capture,@stato)", conn, trns)
                             eventCmd.Parameters.Add("@eventId", MySqlDbType.VarChar, 100).Value = PayPalPaymentState.SanitizeExternalId(eventId)
                             eventCmd.Parameters.Add("@txId", MySqlDbType.Int64).Value = tx.Id
-                            eventCmd.Parameters.Add("@capture", MySqlDbType.VarChar, 100).Value = PayPalPaymentState.SanitizeExternalId(snapshot.CaptureId)
+                            eventCmd.Parameters.Add("@capture", MySqlDbType.VarChar, 100).Value = captureDbValue
                             eventCmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = normalized
                             If eventCmd.ExecuteNonQuery() = 0 Then trns.Rollback() : Return True
                         End Using
@@ -322,7 +331,7 @@ Public Module PayPalCheckoutRepository
                     If Not currentSlot AndAlso normalized <> "COMPLETED" Then trns.Commit() : Return True
                     Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET PayPalCaptureId=COALESCE(NULLIF(@capture,''),PayPalCaptureId),Stato=@stato,UltimoEsito=@esito,UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND DocumentiId=@doc AND AziendeId=@azienda", conn, trns)
                         AddIdentity(cmd, tx)
-                        cmd.Parameters.Add("@capture", MySqlDbType.VarChar, 100).Value = PayPalPaymentState.SanitizeExternalId(snapshot.CaptureId)
+                        cmd.Parameters.Add("@capture", MySqlDbType.VarChar, 100).Value = captureDbValue
                         cmd.Parameters.Add("@stato", MySqlDbType.VarChar, 40).Value = normalized
                         cmd.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = "PayPal Checkout: " & normalized
                         ' La riga e gia stata bloccata e verificata: un replay identico
@@ -418,7 +427,6 @@ Public Module PayPalCheckoutRepository
     End Function
 
     Private Function LoadTransaction(ByVal sql As String, ByVal value As String, ByVal dbType As MySqlDbType) As PayPalCheckoutTransactionInfo
-        Dim info As New PayPalCheckoutTransactionInfo()
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
@@ -426,7 +434,7 @@ Public Module PayPalCheckoutRepository
                     cmd.Parameters.Add("@value", dbType).Value = If(dbType = MySqlDbType.Int32, CType(Integer.Parse(value, CultureInfo.InvariantCulture), Object), value)
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
-                            info.Exists = True
+                            Dim info As New PayPalCheckoutTransactionInfo()
                             info.Id = Convert.ToInt64(dr("Id"), CultureInfo.InvariantCulture)
                             info.DocumentiId = SafeInt(dr("DocumentiId"))
                             info.TentativoNo = SafeInt(dr("TentativoNo"))
@@ -443,14 +451,26 @@ Public Module PayPalCheckoutRepository
                             info.MerchantId = Convert.ToString(dr("MerchantId")).Trim()
                             info.CreateRequestId = Convert.ToString(dr("CreateRequestId")).Trim()
                             info.CaptureRequestId = Convert.ToString(dr("CaptureRequestId")).Trim()
+                            If info.Id <= 0 OrElse info.DocumentiId <= 0 OrElse info.TentativoNo <= 0 OrElse
+                               info.AziendeId <= 0 OrElse info.PagamentiTipoId <= 0 OrElse info.PayPalAccountId <= 0 OrElse
+                               info.Importo <= 0D OrElse info.Valuta.Length <> 3 OrElse
+                               info.CreateRequestId = String.Empty OrElse info.CaptureRequestId = String.Empty Then
+                                Throw New FormatException("INVALID_TRANSACTION_ROW")
+                            End If
+                            info.Exists = True
+                            info.LoadStatus = PayPalTransactionLookupStatus.Found
+                            Return info
                         End If
                     End Using
                 End Using
             End Using
         Catch ex As Exception
-            LogFailure("LoadTransaction", 0, ex)
+            ' The raw provider exception may include connection details.  A failed
+            ' query or row mapping must never look like a missing transaction.
+            KeepStoreLog.Error("paypal-checkout-repository", "LoadTransaction type=" & ex.GetType().Name, Nothing, HttpContext.Current)
+            Return New PayPalCheckoutTransactionInfo With {.LoadStatus = PayPalTransactionLookupStatus.TechnicalError}
         End Try
-        Return info
+        Return New PayPalCheckoutTransactionInfo With {.LoadStatus = PayPalTransactionLookupStatus.NotFound}
     End Function
 
     Private Sub AddIdentity(ByVal cmd As MySqlCommand, ByVal tx As PayPalCheckoutTransactionInfo)
