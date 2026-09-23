@@ -1,27 +1,29 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-19
+Aggiornato: 2026-09-23
 
-Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository `KeepStoreAdmin/KeepStore3.0`.
+Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-19.
-- Working copy canonica: `C:\KeepStoreWeb\KeepStore3.0\`.
-- Runtime stabile di base: `frontend-rebuild` / `origin/frontend-rebuild` a `2d6ebd540a29ff906a01fa0820ebf65706150408`.
-- Branch protetto: `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
-- `WORKFLOW-GOVERNANCE-1A` e CHIUSO / A e integrato: il root `AGENTS.md` e la fonte canonica del metodo operativo corrente.
-- Ultimo task chiuso: `MULTI-STOREFRONT-CART-ISOLATION-1A`, esito A, PR #266 integrata fast-forward nel checkpoint `2d6ebd540a29ff906a01fa0820ebf65706150408`.
-- Task corrente: `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`, branch `task/multistorefront-order-provenance-email-1a`, base stabile `2d6ebd540a29ff906a01fa0820ebf65706150408`. La PR #267 resta DRAFT e non merge-safe: la forensica REV4 sul checkout reale si e fermata E per assenza della telemetria persistente necessaria a ricondurre il riferimento assistenza alla prima istruzione fallita; non e autorizzata una correzione ipotetica.
-- Prossimo task soltanto dopo review A, smoke autorizzato e merge della PR #267: (1) `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A`; (2) `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A`; (3) `STOREFRONT-CART-CONVERSION-UX-1A`; (4) `GOOGLE-MERCHANT-CENTER-FEED-1A`; (5) `STOREFRONT-ABANDONED-CART-RECOVERY-1A`, quest'ultimo solo dopo il contratto privacy/consenso. Tutti sono `NON AVVIATO`.
-- La funzione digitale di recesso resta documentata ma differita per decisione del Product Owner: `B2C-WITHDRAWAL-COMPLIANCE-AUDIT-1A` non e il task attivo e non va avviato senza una nuova priorita esplicita di Germano.
-- Directory non tracciate consentite e da preservare: `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/`. `Public/assets/images/vettori/` puo contenere ulteriori loghi locali non tracciati: preservarli e non committare mai l'intera directory; ogni logo puo entrare solo se nominativamente autorizzato dal manifest di uno specifico task.
-- Debiti aperti principali: audit monetario `DOUBLE`; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` chiuso E e differito in attesa di decisione infrastrutturale. Catalogo e PDP restano aree non dichiarate complete; recesso digitale e Coupon/Groupon restano differiti dal Product Owner.
+- Aggiornato: 2026-09-23.
+- Working copy canonica: C:\KeepStoreWeb\KeepStore3.0\.
+- Runtime PayPal stabile: frontend-rebuild integra PAYPAL-CHECKOUT-ORDERS-V2-LIVE-1A (PR #270) e PAYPAL-DB-DRIVEN-CREDENTIALS-1A (PR #271); ultimo SHA runtime PayPal b5e75c28e534c28c8fd7d0e9c25f50d28f5c6dc4.
+- Branch protetto: main / origin/main invariati a 976e99f17cabc8a5c6a8715463444edfeaadcd91.
+- AGENTS.md resta la fonte canonica del metodo operativo corrente e include il contratto permanente MULTITENANT-BY-DESIGN per gateway e integrazioni cliente.
+- Blocco PayPal Checkout Orders API v2: CHIUSO lato web/configurazione e ABILITATO LIVE, senza smoke di pagamento reale per scelta esplicita del Product Owner. Non usare la dicitura LIVE VERIFIED finche non viene eseguita una transazione reale end-to-end.
+- Produzione: migration Orders v2 e migration credenziali DB-driven applicate; account PayPal, mapping azienda e metodi pagamento attivati; Client ID, Client Secret, Merchant ID e Webhook ID sono data-driven nel DB; nessuna credenziale PayPal e richiesta nel web.config condiviso.
+- Webhook REST della LIVE app configurato sul listener HTTPS del sito e verificato via Webhooks Management API con i cinque eventi: CHECKOUT.ORDER.APPROVED, CHECKOUT.PAYMENT-APPROVAL.REVERSED, PAYMENT.CAPTURE.PENDING, PAYMENT.CAPTURE.COMPLETED, PAYMENT.CAPTURE.DENIED.
+- CHECKOUT.PAYMENT-APPROVAL.REVERSED e stato aggiunto/riconciliato tramite API REST perche non risultava selezionabile nella UI Dashboard usata durante il setup; un PATCH successivo ha restituito WEBHOOK_PATCH_REQUEST_NO_CHANGE e il GET autorevole ha confermato l'intero set dei cinque eventi.
+- Multi-tenant PayPal: uno stesso account puo servire piu aziende oppure aziende diverse possono usare account distinti senza patch al codice. Mapping, payee, brand e valuta restano tenant-scoped.
+- Configurazione corrente di riferimento: TAIKUN usa il mapping azienda/metodo previsto; WEBAFFARE usa paypal@webaffare.it. I valori reali di Client Secret e altri segreti non sono documentati.
+- Handoff Enzo: il gestionale desktop deve implementare la nuova schermata PayPal Checkout Orders v2 e scrivere documenti.OrigineOrdine='INTERNO' nello stesso salvataggio che crea un ordine manuale idoneo al pagamento remoto. Fino a tale modifica il flusso ordine interno non e dichiarato completato.
+- Il manuale canonico Enzo e docs/PAYPAL_CHECKOUT_ORDERS_V2_GESTIONALE_ENZO.md; il documento Word consegnato al Product Owner ne rappresenta la versione operativa per il gestionale.
+- Terminato il blocco PayPal, la roadmap generale riprende dalle priorita gia registrate; nessun nuovo task viene avviato automaticamente senza scelta del Product Owner.
+- Directory non tracciate autorizzate e asset locali restano da preservare secondo AGENTS.md.
 
-Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root `AGENTS.md` e delle fonti pertinenti.
-
-Le righe cronologiche che descrivono `LOGIN-RETURN-CONTEXT-1A` come prossimo task o riportano SHA precedenti sono storico autentico superato dal checkpoint corrente, non istruzioni operative vigenti. Catalogo e PDP restano esplicitamente aree non dichiarate complete.
+Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root AGENTS.md e delle fonti pertinenti.
 
 ### Fondamenta SEO tecniche multi-tenant
 

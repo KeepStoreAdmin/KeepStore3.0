@@ -1,80 +1,284 @@
-# PayPal Checkout - Impostazioni Azienda
+# PayPal Checkout Orders API v2 - manuale gestionale Enzo
 
-## Scopo
+## 1. Scopo
 
-Contratto per la nuova schermata gestionale che sostituisce integralmente la UI PayPal Express. Il sorgente desktop non è in questo repository: questo documento specifica dati, query, validazioni e comportamento senza inventare modifiche al gestionale.
+Questa e la specifica operativa per aggiornare il gestionale desktop KeepStore alla nuova integrazione PayPal Checkout Orders API v2 REST LIVE. Sostituisce integralmente la vecchia gestione PayPal Express/NVP-SOAP nel pannello gestionale.
 
-## Sezione Conto PayPal LIVE
+Il gestionale deve rimanere generico e multi-cliente: nessun nome database, dominio, AziendeId, PagamentiTipoId, account PayPal, Merchant ID, Client ID, Client Secret, Webhook ID, payee email o brand deve essere hardcoded nel sorgente desktop.
 
-Campi visibili:
+Lo stesso eseguibile deve funzionare per installazioni KeepStore con database differenti, una o piu aziende per database e uno o piu account PayPal, cambiando esclusivamente dati e configurazione autorizzata.
 
-- Nome profilo;
-- Tecnologia: `PayPal Checkout - Orders API v2`;
-- Chiave logica del profilo (`CredentialKey`), senza dipendenze da environment o `web.config`;
-- Merchant ID, eventualmente mascherato fuori dalla modalità amministrativa;
-- Client ID;
-- Client Secret: campo password/write-only, mai restituito in edit;
-- Webhook ID;
-- Credenziali API: `Configurate` / `Non configurate`, senza mostrare il Client Secret;
-- Webhook: `Configurato` / `Non configurato`;
-- Stato attivo/inattivo;
-- Ambiente fisso: `LIVE`;
-- Ultima verifica e relativo esito sanitizzato;
-- pulsante `Verifica ora`.
+## 2. Architettura dati autorevole
 
-La tabella autorevole è `paypal_checkout_account`. Insert e update gestiscono `NomeProfilo`, `CredentialKey`, `MerchantId`, `ClientId`, `ClientSecret`, `WebhookId`, `Attivo` e `Note`. `CredentialKey` deve rispettare `^[A-Z][A-Z0-9_]{2,63}$` ed essere univoca. Il Client Secret viene scritto nel database senza mai mostrarne il valore: in edit il campo resta vuoto, vuoto significa non sostituire e la sostituzione richiede un'azione esplicita. Non includere il segreto in letture UI, audit, log o export. La protezione generale a riposo rimane un task separato.
+### 2.1 Tabella paypal_checkout_account
 
-`Verifica ora` deve verificare struttura e presenza dei campi del profilo DB tramite un endpoint amministrativo futuro autenticato e auditato; non deve restituire i valori, creare ordini, acquisire pagamenti o diventare un test LIVE implicito.
+Un record identifica un account PayPal REST utilizzabile da una o piu aziende.
 
-## Sezione Aziende collegate
+Campi gestiti:
+- Id: chiave tecnica, sola lettura in edit.
+- NomeProfilo: nome descrittivo.
+- CredentialKey: chiave logica univoca; pattern ^[A-Z][A-Z0-9_]{2,63}$.
+- MerchantId: Merchant ID PayPal.
+- ClientId: Client ID della REST app LIVE.
+- ClientSecret: segreto API riservato.
+- WebhookId: ID del webhook REST della stessa app.
+- Attivo: 0/1.
+- Note: note amministrative non sensibili.
+- CreatedAt, UpdatedAt: sola lettura.
 
-Colonne:
+Regola Client Secret: il valore esistente non deve mai essere caricato in chiaro in un controllo UI, log, export, report o clipboard automatica. In modifica il campo password appare vuoto; vuoto significa non sostituire il segreto esistente. La sostituzione richiede un'azione esplicita dell'operatore.
 
-- Azienda;
-- Tipo pagamento;
-- Email PayPal;
-- Brand checkout;
-- Valuta;
-- Attivo.
+### 2.2 Tabella paypal_checkout_azienda
 
-Configurazione approvata:
+Un record collega l'esatta coppia azienda/metodo di pagamento a un account PayPal.
 
-| Azienda | Email PayPal | Brand checkout | Valuta |
-| --- | --- | --- | --- |
-| TAIKUN | `info@taikun.it` | `TAIKUN` | `EUR` |
-| WEBAFFARE | `info@webaffare.it` | `WEBAFFARE` | `EUR` |
+Campi:
+- Id
+- AziendeId
+- PagamentiTipoId
+- PayPalAccountId
+- PayeeEmail
+- BrandName
+- CurrencyCode
+- Attivo
+- Note
 
-Entrambe le righe puntano allo stesso `PayPalAccountId`, ma restano distinte per `AziendeId + PagamentiTipoId`. Il gestionale legge `aziende`, `pagamentitipo`, `paypal_checkout_account` e `paypal_checkout_azienda`; non deduce aziende compatibili e non copia configurazioni fra tenant.
+Vincolo funzionale: una configurazione appartiene alla coppia AziendeId + PagamentiTipoId. Il gestionale non deve ereditare automaticamente configurazioni di un'altra azienda.
 
-Insert/update richiedono azienda esistente, tipo pagamento con `OnLine=2`, account attivo, email valida, brand non vuoto, valuta ISO a tre lettere e unicità della coppia azienda/pagamento. Un errore mostra un messaggio operativo senza query, credenziali o dati tecnici sensibili.
+### 2.3 Tabelle operative da non modificare manualmente
 
-Pulsanti previsti: `Nuovo collegamento`, `Salva`, `Disattiva`, `Annulla`, `Verifica configurazione`. La disattivazione è logica; la cancellazione è vietata quando esistono transazioni.
+- paypal_checkout_transazioni
+- paypal_checkout_eventi
 
-## Regole vincolanti
+Queste tabelle appartengono al runtime web. Il gestionale puo eventualmente mostrarle in diagnostica read-only, ma non deve creare, correggere o cancellare righe.
 
-- Nessuna seconda schermata Express, NVP/SOAP, password API o signature legacy.
-- Nessun Client Secret visibile, copiabile, esportabile, registrato nei log o inviato al browser; la persistenza riservata è limitata al profilo DB.
-- Nessun fallback globale o cross-tenant.
-- `AccountPaypal` storico non alimenta il runtime Orders v2.
-- La schermata può dichiarare `Configurata` solo dopo migration, dati del profilo DB completi e verify; non può dichiarare `LIVE VERIFIED` senza smoke reale separatamente autorizzato.
+## 3. Nuova schermata: PayPal Checkout - Impostazioni Azienda
 
-## Ordine interno con pagamento remoto
+La vecchia schermata PayPal Express deve essere sostituita, non affiancata.
 
-`documenti.OrigineOrdine` e la fonte autorevole della provenienza. La migration Orders v2 aggiunge `VARCHAR(16) NULL` solo se il campo non esiste gia. Il gestionale desktop, non presente in questo repository, deve scrivere `INTERNO` **nello stesso salvataggio che crea manualmente un nuovo ordine**. Non dedurre `INTERNO` da `Ordine_Web=0`, dall'assenza di `ordini_web_idempotenza` o dalla presenza di PayPal. Non effettuare backfill dei documenti storici. Le importazioni Amazon/eBay non sono ordini interni; se il canale non e certo, lasciare `NULL` finche una fonte autorevole non sara disponibile.
+### 3.1 Intestazione
 
-Sequenza per la vendita a distanza/telefonica:
+Mostrare:
+- Tecnologia: PayPal Checkout - Orders API v2
+- Ambiente: LIVE
+- Stato account: Attivo/Inattivo
+- Stato credenziali: Configurate/Incomplete
+- Stato webhook: Configurato/Non configurato
 
-1. Selezionare cliente e azienda/vetrina corretti. Verificare l'associazione del cliente al suo account web: il nuovo `documenti.UtentiId` deve essere proprio l'`UtentiId` che l'account usa nella medesima `AziendeId`.
-2. Creare un documento di tipo **ORDINE** abilitato al web e all'impegno di quantita (`tipodocumenti.Web=1`, `Abilitato=1`, `ImpegnaQnt=1`), non preventivo/fattura o documento annullato.
-3. Salvare `documenti.OrigineOrdine='INTERNO'` al momento della creazione. Il checkout sito scrive invece `WEB` nella transazione dell'ordine; il gestionale non deve sovrascriverlo.
-4. Scegliere il `PagamentiTipoId` della stessa azienda con `pagamentitipo.OnLine=2` per PayPal oppure `OnLine=3` per Banca Sella. Il metodo deve avere `PermettiPagamentoSuccessivo=1`; la coppia azienda/metodo PayPal deve disporre della propria configurazione Orders v2 completa e attiva.
-5. Salvare `documenti.Pagato=0` e `StatoPagamentoWeb=0` (non avviato), senza `bancasella_ordini_pagati.codiceAutorizzazione`. Il totale in `documentipie.TotaleDocumento` deve essere positivo.
-6. Il cliente autenticato nella vetrina corretta vede il proprio ordine nell'area personale e il solo comando pertinente: `Paga con PayPal` oppure `Paga con carta`. Il comando resta disponibile per un ordine interno non pagato; un tentativo PayPal gia in corso viene prima riconciliato, non duplicato.
-7. Solo la conferma autorevole del gateway aggiorna `Pagato=1`. Una creazione ordine PayPal, una approvazione browser, un EC-TOKEN o un rientro non sono prove di pagamento.
+Non mostrare riferimenti NVP/SOAP, API Username, API Password, Signature, Sandbox o IPN legacy.
 
-Query di verifica gestionale, parametrizzata con ID di documento e azienda risolti dal contesto autenticato (mai da testo libero di un URL):
+### 3.2 Sezione Conto PayPal
 
-```sql
+Controlli previsti:
+1. Nome profilo
+2. Credential Key
+3. Merchant ID
+4. Client ID
+5. Client Secret - PasswordBox write-only
+6. Webhook ID
+7. Note
+8. CheckBox Attivo
+9. Stato sintetico credenziali
+10. Stato sintetico webhook
+
+Pulsanti:
+- Nuovo
+- Salva
+- Sostituisci Client Secret
+- Disattiva
+- Annulla
+- Verifica configurazione
+
+Verifica configurazione deve essere read-only: controlla presenza/validita strutturale del profilo e dei mapping senza creare ordini o acquisire pagamenti.
+
+### 3.3 Sezione Aziende collegate
+
+Griglia:
+- Azienda
+- Metodo pagamento
+- Account PayPal
+- Payee email
+- Brand checkout
+- Valuta
+- Attivo
+
+Pulsanti: Nuovo collegamento, Salva, Disattiva, Annulla, Verifica configurazione.
+
+Non cancellare fisicamente un mapping gia referenziato da transazioni. Preferire disattivazione logica.
+
+## 4. Mockup funzionale
+
++----------------------------------------------------------------------------------+
+| PayPal Checkout - Impostazioni Azienda                         Ambiente: LIVE     |
++----------------------------------------------------------------------------------+
+| CONTO PAYPAL                                                                     |
+| Nome profilo     [___________________________________________]                    |
+| Credential Key   [________________________]  Stato: [ATTIVO / INATTIVO]           |
+| Merchant ID      [___________________________________________]                    |
+| Client ID        [___________________________________________]                    |
+| Client Secret    [***********************] [Sostituisci secret]                   |
+| Webhook ID       [___________________________________________]                    |
+| Note             [___________________________________________]                    |
+| Credenziali: [CONFIGURATE]      Webhook: [CONFIGURATO]                            |
+| [Nuovo] [Salva] [Disattiva] [Annulla] [Verifica configurazione]                  |
++----------------------------------------------------------------------------------+
+| AZIENDE COLLEGATE                                                                |
+| Azienda | Metodo | Account | Payee email | Brand | Valuta | Attivo               |
+| ... dati letti dal database ...                                                  |
+| [Nuovo collegamento] [Salva] [Disattiva] [Annulla] [Verifica]                   |
++----------------------------------------------------------------------------------+
+
+## 5. Letture SQL consigliate
+
+### 5.1 Elenco account senza esporre il Client Secret
+
+SELECT
+    Id,
+    NomeProfilo,
+    CredentialKey,
+    MerchantId,
+    ClientId,
+    WebhookId,
+    Attivo,
+    Note,
+    CreatedAt,
+    UpdatedAt,
+    CASE WHEN ClientSecret IS NULL OR ClientSecret='' THEN 0 ELSE 1 END AS ClientSecretConfigurato
+FROM paypal_checkout_account
+ORDER BY NomeProfilo, Id;
+
+Il gestionale non deve selezionare ClientSecret per popolare la UI.
+
+### 5.2 Mapping aziende
+
+SELECT
+    c.Id,
+    c.AziendeId,
+    c.PagamentiTipoId,
+    c.PayPalAccountId,
+    c.PayeeEmail,
+    c.BrandName,
+    c.CurrencyCode,
+    c.Attivo,
+    c.Note
+FROM paypal_checkout_azienda c
+ORDER BY c.AziendeId, c.PagamentiTipoId;
+
+## 6. Scritture SQL - sempre parametrizzate
+
+### 6.1 Inserimento nuovo account
+
+INSERT INTO paypal_checkout_account
+    (NomeProfilo, CredentialKey, MerchantId, ClientId, ClientSecret, WebhookId, Attivo, Note)
+VALUES
+    (@NomeProfilo, @CredentialKey, @MerchantId, @ClientId, @ClientSecret, @WebhookId, @Attivo, @Note);
+
+### 6.2 Aggiornamento account senza cambiare secret
+
+UPDATE paypal_checkout_account
+SET NomeProfilo=@NomeProfilo,
+    CredentialKey=@CredentialKey,
+    MerchantId=@MerchantId,
+    ClientId=@ClientId,
+    WebhookId=@WebhookId,
+    Attivo=@Attivo,
+    Note=@Note
+WHERE Id=@Id;
+
+### 6.3 Sostituzione esplicita Client Secret
+
+Eseguire solo dopo comando esplicito Sostituisci Client Secret:
+
+UPDATE paypal_checkout_account
+SET ClientSecret=@ClientSecret
+WHERE Id=@Id;
+
+Mai trasformare un campo UI vuoto in ClientSecret=''.
+
+### 6.4 Inserimento mapping azienda
+
+INSERT INTO paypal_checkout_azienda
+    (AziendeId, PagamentiTipoId, PayPalAccountId, PayeeEmail, BrandName, CurrencyCode, Attivo, Note)
+VALUES
+    (@AziendeId, @PagamentiTipoId, @PayPalAccountId, @PayeeEmail, @BrandName, UPPER(@CurrencyCode), @Attivo, @Note);
+
+### 6.5 Aggiornamento mapping
+
+UPDATE paypal_checkout_azienda
+SET PayPalAccountId=@PayPalAccountId,
+    PayeeEmail=@PayeeEmail,
+    BrandName=@BrandName,
+    CurrencyCode=UPPER(@CurrencyCode),
+    Attivo=@Attivo,
+    Note=@Note
+WHERE Id=@Id
+  AND AziendeId=@AziendeId
+  AND PagamentiTipoId=@PagamentiTipoId;
+
+## 7. Validazioni obbligatorie
+
+Prima di salvare un account:
+- NomeProfilo non vuoto.
+- CredentialKey valida e univoca.
+- MerchantId, ClientId, ClientSecret presenti per rendere l'account operativo.
+- WebhookId presente per dichiarare il webhook configurato.
+- nessun segreto scritto in log/error message.
+
+Prima di salvare un mapping:
+- azienda esistente;
+- PagamentiTipoId appartenente alla stessa azienda;
+- pagamentitipo.OnLine=2;
+- account PayPal esistente;
+- email formalmente valida;
+- BrandName non vuoto;
+- CurrencyCode di tre lettere;
+- unicita di AziendeId + PagamentiTipoId.
+
+Un account puo essere condiviso da piu aziende. Aziende diverse possono anche usare account diversi.
+
+## 8. Webhook REST
+
+Per ogni REST app LIVE va registrato un webhook verso il listener HTTPS previsto dall'installazione.
+
+Set eventi supportato dal runtime KeepStore:
+1. CHECKOUT.ORDER.APPROVED
+2. CHECKOUT.PAYMENT-APPROVAL.REVERSED
+3. PAYMENT.CAPTURE.PENDING
+4. PAYMENT.CAPTURE.COMPLETED
+5. PAYMENT.CAPTURE.DENIED
+
+Se la Dashboard PayPal non espone uno degli eventi, la gestione puo essere completata con la Webhooks Management API REST. Il WebhookId restituito va salvato nell'account DB corretto.
+
+Il gestionale non deve usare la pagina/app legacy NVP SOAP Webhooks.
+
+## 9. Ordine interno con pagamento remoto
+
+### 9.1 Nuovo requisito obbligatorio
+
+Quando il gestionale crea manualmente un nuovo ordine che deve poter essere pagato successivamente dal cliente, deve salvare:
+
+documenti.OrigineOrdine = 'INTERNO'
+
+nello stesso salvataggio/transazione che crea il documento.
+
+Non eseguire backfill dei documenti storici.
+
+Non impostare INTERNO per ordini importati da Amazon, eBay o altri canali. Se la provenienza non e autorevole, lasciare NULL oppure il valore di canale previsto dal relativo contratto.
+
+### 9.2 Prerequisiti ordine interno
+
+- cliente collegato all'account web della medesima azienda;
+- documento di tipo ordine idoneo al web;
+- documenti.Pagato=0;
+- totale positivo;
+- metodo della stessa azienda;
+- PayPal: pagamentitipo.OnLine=2;
+- Banca Sella: pagamentitipo.OnLine=3;
+- PermettiPagamentoSuccessivo=1;
+- per PayPal, account e mapping Orders v2 completi e attivi.
+
+### 9.3 Query di verifica
+
 SELECT d.Id, d.AziendeId, d.UtentiId, d.TipoDocumentiId,
        d.OrigineOrdine, d.PagamentiTipoId, d.Pagato,
        d.StatoPagamentoWeb, d.StatiId,
@@ -85,9 +289,92 @@ FROM documenti d
 JOIN tipodocumenti td ON td.Id=d.TipoDocumentiId
 JOIN pagamentitipo p ON p.Id=d.PagamentiTipoId
 JOIN documentipie pie ON pie.DocumentiId=d.Id
-WHERE d.Id=@DocumentiId AND d.AziendeId=@AziendeId;
-```
+WHERE d.Id=@DocumentiId
+  AND d.AziendeId=@AziendeId;
 
-`NULL`, `UNKNOWN`, `WEB`, `AMAZON`, `EBAY` o qualsiasi provenienza diversa da `INTERNO` non abilitano il pagamento successivo nell'area cliente. L'ordine WEB mantiene il proprio lancio gateway **solo nel checkout iniziale**. La lista documenti conserva il badge generico dello stato saldato/non saldato; non equivale a un invito a pagare.
+Il sito abilita il pagamento successivo solo quando la provenienza autorevole e INTERNO. WEB, NULL, AMAZON, EBAY o valori sconosciuti non devono essere trattati come ordine interno.
 
-I quattro oggetti nuovi sono `paypal_checkout_account`, `paypal_checkout_azienda`, `paypal_checkout_transazioni` e `paypal_checkout_eventi`. Non migrare credenziali o storico Express in queste tabelle; `paypal_checkout_legacy_audit` non fa parte dello schema finale.
+## 10. Stato pagamento
+
+Il gestionale non deve impostare un ordine come pagato sulla base di:
+- creazione PayPal Order;
+- approvazione browser;
+- redirect di ritorno;
+- presenza di un PayPal Order ID.
+
+Solo una capture PayPal COMPLETED verificata dal runtime web puo produrre:
+- documenti.Pagato=1;
+- documenti.StatoPagamentoWeb=2;
+- marker TXN:<CaptureId>.
+
+## 11. Procedura di onboarding di un nuovo cliente
+
+1. Applicare le migration KeepStore approvate al database del cliente.
+2. Creare la REST app PayPal LIVE del cliente.
+3. Inserire un record paypal_checkout_account.
+4. Registrare il webhook REST con i cinque eventi previsti.
+5. Salvare il relativo WebhookId.
+6. Creare uno o piu mapping paypal_checkout_azienda.
+7. Verificare che i metodi PayPal abbiano OnLine=2.
+8. Abilitare account, mapping e metodo solo dopo configurazione completa.
+9. Verificare isolamento tra aziende quando il DB contiene piu storefront.
+10. Non modificare sorgente, stored procedure o web.config per valori PayPal specifici del cliente.
+
+## 12. Configurazione corrente di riferimento
+
+| Azienda | Payee email | Brand | Valuta | Account |
+| --- | --- | --- | --- | --- |
+| TAIKUN | info@taikun.it | TAIKUN | EUR | condiviso |
+| WEBAFFARE | paypal@webaffare.it | WEBAFFARE | EUR | condiviso |
+
+Questi sono dati della specifica installazione, non valori da hardcodare nel gestionale.
+
+## 13. Cosa rimuovere dal vecchio gestionale
+
+Non usare piu come configurazione runtime PayPal Orders v2:
+- Express Checkout;
+- NVP/SOAP;
+- API Username;
+- API Password legacy;
+- Signature;
+- EC-TOKEN;
+- IPN legacy;
+- Sandbox runtime;
+- vecchie tabelle PayPal Express rimosse dalla migration.
+
+La colonna storica aziende.AccountPaypal non alimenta il runtime web Orders v2.
+
+## 14. Collaudo Enzo
+
+Test account:
+- nuovo account valido;
+- modifica account senza sostituire il secret;
+- sostituzione esplicita del secret;
+- CredentialKey duplicata rifiutata;
+- account incompleto non dichiarato configurato.
+
+Test mapping:
+- stessa azienda/metodo duplicato rifiutato;
+- due aziende sullo stesso account;
+- due aziende su account differenti;
+- metodo non OnLine=2 rifiutato;
+- mapping disattivato non operativo.
+
+Test ordine interno:
+- nuovo ordine manuale: OrigineOrdine='INTERNO';
+- ordine web esistente: non sovrascritto;
+- Amazon/eBay: non convertiti in INTERNO;
+- cliente/azienda errati: nessun pagamento successivo;
+- ordine gia pagato: nessun nuovo pagamento.
+
+## 15. Criteri di accettazione
+
+Il lavoro Enzo e accettabile solo se:
+- nessun valore cliente e hardcoded;
+- nessuna credenziale PayPal e richiesta nel web.config;
+- Client Secret non compare in UI/log/export;
+- account e mapping sono gestibili dal DB;
+- schermata legacy Express non e piu la configurazione autorevole;
+- ordine interno scrive OrigineOrdine='INTERNO' nella creazione;
+- nessuna modifica manuale alle tabelle transazioni/eventi;
+- due tenant sintetici possono usare configurazioni distinte senza contaminazione.

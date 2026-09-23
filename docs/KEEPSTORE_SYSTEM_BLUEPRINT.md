@@ -612,6 +612,18 @@ Stato verificato per la PR #267: l'autenticazione applicativa dipende da `Sessio
 - Per PayPal, `pagamentitipo.OnLine=2` identifica il metodo; `paypal_checkout_azienda` e `paypal_checkout_account` autorizzano l'esatta coppia azienda/pagamento. Merchant ID, Client ID, Client Secret e Webhook ID derivano dall'account DB mappato, senza fallback environment/`appSettings`; Client ID o Secret mancanti bloccano il checkout, Webhook ID mancante lascia il webhook non configurato. Il segreto non viene esposto al browser o ai log; la protezione generale a riposo resta separata.
 - Taikun e Webaffare possono condividere account, Merchant ID e `CredentialKey`, mantenendo payee/brand separati. Il browser non fornisce nessuno di questi valori.
 
+### 5.8.1 PayPal Checkout Orders API v2 - stato operativo 2026-09-23
+
+- Il runtime PayPal usa esclusivamente REST Orders API v2 LIVE; NVP/SOAP, Express Checkout classico, Sandbox runtime e IPN legacy non fanno parte del percorso attivo.
+- paypal_checkout_account contiene il profilo account e i dati DB-driven MerchantId, ClientId, ClientSecret, WebhookId; il runtime non legge credenziali PayPal da environment o appSettings.
+- paypal_checkout_azienda lega in modo esatto AziendeId + PagamentiTipoId a un PayPalAccountId, payee email, brand e valuta. Sono supportati sia account condivisi fra aziende sia account distinti.
+- Il Client Secret e riservato: persiste nel DB del profilo, non viene inviato al browser, scritto nei log o restituito dalla futura UI gestionale. La cifratura at-rest generale resta un task trasversale separato.
+- Il webhook REST della LIVE app e registrato sul listener HTTPS dell'installazione e usa il set esatto: CHECKOUT.ORDER.APPROVED, CHECKOUT.PAYMENT-APPROVAL.REVERSED, PAYMENT.CAPTURE.PENDING, PAYMENT.CAPTURE.COMPLETED, PAYMENT.CAPTURE.DENIED.
+- Durante l'attivazione 2026-09-23 l'evento CHECKOUT.PAYMENT-APPROVAL.REVERSED non era esposto nella selezione Dashboard usata dall'operatore ed e stato gestito tramite Webhooks Management API; GET autorevole successivo ha confermato tutti e cinque gli eventi.
+- Migration Orders v2 e credenziali DB-driven sono state applicate all'installazione autorizzata; account, mapping e metodi PayPal risultano attivi. OAuth LIVE ha risposto HTTP 200.
+- Stato operativo: LIVE CONFIGURED / ENABLED. Il Product Owner ha scelto di non eseguire il pagamento reale di smoke; pertanto non usare LIVE VERIFIED come attestazione di transazione end-to-end.
+- Il gestionale desktop resta responsabile dell'handoff ordine interno: alla creazione manuale di un ordine idoneo deve persistire documenti.OrigineOrdine='INTERNO' nella stessa operazione di salvataggio. Nessun backfill storico.
+
 ### 5.9 Deployment/staging/live
 
 - Ambiente smoke ricorrente: `https://www.taikun.it/`.
