@@ -65,7 +65,7 @@
                                                 <p class="body-text ks-home-hero-copy mb-0"><%# SafeText(Eval("Description")) %></p>
                                                 <div class="ks-home-hero-actions d-flex align-items-center gap-2 mt-2">
                                                     <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="tf-btn btn-large animate-btn bg-primary text-white">
-                                                        <span>Scopri le offerte</span>
+                                                        <span><%# HomeHeroCtaText(Eval("LinkUrl")) %></span>
                                                     </a>
                                                     <a href="Contattaci.aspx" class="tf-btn btn-line-white btn-large">
                                                         <span>Richiedi assistenza</span>
@@ -258,14 +258,14 @@
     <section id="HomeCollectionSection" runat="server" visible="false" class="ks-home-section ks-home-collection-block">
         <div class="container">
             <div class="ks-home-collection-grid">
-                <a href="articoli.aspx?q=computer%20notebook" class="ks-home-collection-card d-flex flex-column gap-2">
+                <a id="HomeCollectionInformaticaLink" runat="server" href="articoli.aspx?q=computer%20notebook" class="ks-home-collection-card d-flex flex-column gap-2">
                     <span class="mb-0">Informatica</span>
                     <div class="mb-0">
                         <strong>PC, notebook, monitor e periferiche</strong>
                         <em>Scopri prodotti per lavoro e casa</em>
                     </div>
                 </a>
-                <a href="articoli.aspx?q=smartphone%20accessori" class="ks-home-collection-card d-flex flex-column gap-2">
+                <a id="HomeCollectionTelefoniaLink" runat="server" href="articoli.aspx?q=smartphone%20accessori" class="ks-home-collection-card d-flex flex-column gap-2">
                     <span class="mb-0">Telefonia</span>
                     <div class="mb-0">
                         <strong>Smartphone, accessori e supporto</strong>
@@ -381,7 +381,7 @@
     <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product">
         <div class="container">
             <div class="ks-home-bottom-promo-grid">
-                <a href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card d-flex flex-column gap-2">
+                <a id="HomeBottomRicondizionatiLink" runat="server" href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card d-flex flex-column gap-2">
                     <span class="mb-0">Ricondizionati</span>
                     <div class="mb-0">
                         <strong>Soluzioni controllate per spendere meglio</strong>

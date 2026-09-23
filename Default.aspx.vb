@@ -105,6 +105,12 @@ Partial Public Class _Default
             HomeMainCategoriesSection.Visible = (sectorRows.Count > 0)
         End If
 
+        ' Editorial shortcuts reuse the same enabled taxonomy as the catalog menu.
+        ' If a label is absent or ambiguous, keep its existing search destination.
+        HomeCollectionInformaticaLink.HRef = ResolveHomeSectorUrl(sectors, "Informatica", "articoli.aspx?q=computer%20notebook")
+        HomeCollectionTelefoniaLink.HRef = ResolveHomeSectorUrl(sectors, "Telefonia", "articoli.aspx?q=smartphone%20accessori")
+        HomeBottomRicondizionatiLink.HRef = ResolveHomeSectorUrl(sectors, "Ricondizionato", "articoli.aspx?q=ricondizionato")
+
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim dealPool As DataTable = GetDealOfferPool(96)
@@ -172,6 +178,44 @@ Partial Public Class _Default
             HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
         End If
     End Sub
+
+    Private Function ResolveHomeSectorUrl(ByVal sectors As List(Of CatalogMenuSector), ByVal label As String, ByVal fallback As String) As String
+        If sectors Is Nothing Then Return fallback
+
+        Dim matchId As Integer = 0
+        For Each sector As CatalogMenuSector In sectors
+            If sector Is Nothing OrElse sector.Id <= 0 OrElse
+               Not String.Equals(Convert.ToString(sector.Descrizione).Trim(), label, StringComparison.OrdinalIgnoreCase) Then
+                Continue For
+            End If
+            If matchId > 0 Then Return fallback
+            matchId = sector.Id
+        Next
+
+        If matchId <= 0 Then Return fallback
+        Return "articoli.aspx?st=" & matchId.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Protected Function HomeHeroCtaText(ByVal value As Object) As String
+        Dim link As String = ResolveLink(value, "articoli.aspx?inpromo=1")
+        Dim queryStart As Integer = link.IndexOf("?"c)
+        Dim path As String = If(queryStart >= 0, link.Substring(0, queryStart), link).TrimEnd("/"c)
+
+        If IsHomeRoute(path, "articolo.aspx") Then Return "Vedi il prodotto"
+        If IsHomeRoute(path, "articoli.aspx") Then
+            If queryStart >= 0 AndAlso
+               String.Equals(HttpUtility.ParseQueryString(link.Substring(queryStart + 1))("inpromo"), "1", StringComparison.Ordinal) Then
+                Return "Scopri le offerte"
+            End If
+            Return "Esplora il catalogo"
+        End If
+        Return "Scopri di più"
+    End Function
+
+    Private Shared Function IsHomeRoute(ByVal path As String, ByVal routeName As String) As Boolean
+        Return String.Equals(path, routeName, StringComparison.OrdinalIgnoreCase) OrElse
+               path.EndsWith("/" & routeName, StringComparison.OrdinalIgnoreCase)
+    End Function
 
     Private Function BuildHomeFallbackSectors() As List(Of CatalogMenuSector)
         Dim result As New List(Of CatalogMenuSector)()
