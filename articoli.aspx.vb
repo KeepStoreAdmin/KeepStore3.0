@@ -871,8 +871,12 @@ End Sub
         Dim inTp As String = ""
         Dim inGr As String = ""
         Dim inSg As String = ""
-If SettoriId > 0 And OfferteId = 0 Then
-            ' logica per settore (lasciata commentata come nel codice originale)
+        ' Il settore selezionato deve restringere sia i prodotti sia i conteggi
+        ' dei facet. Entrambe le query usano la stessa riga/listino autorevole.
+        If SettoriId > 0 Then
+            strWhere &= " AND (vsuperarticoli.SettoriId=?SettoriId) "
+            strWhere2 &= " AND (vsuperarticoli.SettoriId=?SettoriId) "
+            Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("SettoriId", TypeCode.Int32, SettoriId.ToString()))
         End If
 
         If CategorieId > 0 Then
