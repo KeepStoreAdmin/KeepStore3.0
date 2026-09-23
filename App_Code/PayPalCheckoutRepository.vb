@@ -40,7 +40,7 @@ Public Module PayPalCheckoutRepository
     Public Function LoadConfigForDocument(ByVal documentId As Integer) As PayPalCheckoutConfig
         If documentId <= 0 Then Return Nothing
         Const sql As String =
-            "SELECT a.Id AccountId,c.Id CompanyConfigId,c.AziendeId,c.PagamentiTipoId,a.CredentialKey,a.MerchantId," &
+            "SELECT a.Id AccountId,c.Id CompanyConfigId,c.AziendeId,c.PagamentiTipoId,a.CredentialKey,a.MerchantId,a.ClientId,a.ClientSecret,a.WebhookId," &
             "c.PayeeEmail,c.BrandName,c.CurrencyCode,a.Attivo AccountActive,c.Attivo CompanyActive " &
             "FROM documenti d INNER JOIN paypal_checkout_azienda c ON c.AziendeId=d.AziendeId AND c.PagamentiTipoId=d.PagamentiTipoId " &
             "INNER JOIN paypal_checkout_account a ON a.Id=c.PayPalAccountId " &
@@ -55,7 +55,7 @@ Public Module PayPalCheckoutRepository
                                                 ByVal paymentMethodId As Integer) As PayPalCheckoutConfig
         If companyId <= 0 OrElse paymentMethodId <= 0 Then Return Nothing
         Const sql As String =
-            "SELECT a.Id AccountId,c.Id CompanyConfigId,c.AziendeId,c.PagamentiTipoId,a.CredentialKey,a.MerchantId," &
+            "SELECT a.Id AccountId,c.Id CompanyConfigId,c.AziendeId,c.PagamentiTipoId,a.CredentialKey,a.MerchantId,a.ClientId,a.ClientSecret,a.WebhookId," &
             "c.PayeeEmail,c.BrandName,c.CurrencyCode,a.Attivo AccountActive,c.Attivo CompanyActive " &
             "FROM paypal_checkout_azienda c INNER JOIN paypal_checkout_account a ON a.Id=c.PayPalAccountId " &
             "INNER JOIN pagamentitipo p ON p.Id=c.PagamentiTipoId AND p.OnLine=@online " &
@@ -412,10 +412,12 @@ Public Module PayPalCheckoutRepository
                                 .AccountId = SafeInt(dr("AccountId")), .CompanyConfigId = SafeInt(dr("CompanyConfigId")),
                                 .AziendeId = SafeInt(dr("AziendeId")), .PagamentiTipoId = SafeInt(dr("PagamentiTipoId")),
                                 .CredentialKey = Convert.ToString(dr("CredentialKey")).Trim(), .MerchantId = Convert.ToString(dr("MerchantId")).Trim(),
+                                .ClientId = Convert.ToString(dr("ClientId")), .ClientSecret = Convert.ToString(dr("ClientSecret")),
+                                .WebhookId = Convert.ToString(dr("WebhookId")),
                                 .PayeeEmail = Convert.ToString(dr("PayeeEmail")).Trim(), .BrandName = Convert.ToString(dr("BrandName")).Trim(),
                                 .CurrencyCode = Convert.ToString(dr("CurrencyCode")).Trim().ToUpperInvariant(),
                                 .AccountActive = SafeInt(dr("AccountActive")) = 1, .CompanyActive = SafeInt(dr("CompanyActive")) = 1}
-                            Return PayPalCheckoutConfig.HydrateServerCredentials(cfg)
+                            Return cfg
                         End If
                     End Using
                 End Using

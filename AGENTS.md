@@ -88,6 +88,7 @@ KeepStore e un prodotto multi-cliente: lo stesso sorgente deve poter servire azi
 - zero nomi cliente, domini cliente, nomi database o tabelle qualificate per database nel codice condiviso;
 - zero logica progettata esclusivamente per una singola azienda e nessuna supposizione sulla merceologia;
 - configurazione, dati e asset tenant separati dal codice; un nuovo cliente deve essere installabile senza patch o ricompilazione del sorgente;
+- Gateway e integrazioni specifiche cliente usano dati tenant/installazione: nessun valore cliente nel codice o nelle stored procedure e nessuna credenziale/valore commerciale gateway obbligatorio nel `web.config` condiviso, che resta infrastrutturale.
 - host e alias validati server-side contro la sorgente autorevole; host sconosciuti o contaminazione cross-tenant falliscono chiusi;
 - funzioni tenant-aware provate con almeno due tenant sintetici, verificando isolamento degli URL e assenza di dati incrociati;
 - catalogo e numerazione documenti possono essere condivisi, mentre identita, account, carrello e regole di prezzo restano storefront-scoped; il listino anonimo deriva da `ListinoDefault`, `ListinoUser` vale solo come assegnazione iniziale in registrazione e poi prevale il listino dell'anagrafica utente;

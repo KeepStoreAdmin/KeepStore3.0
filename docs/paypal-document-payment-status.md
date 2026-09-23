@@ -8,9 +8,9 @@ No NVP/SOAP, classic Express Checkout, runtime Sandbox or legacy IPN path remain
 
 ## Authoritative configuration
 
-- `paypal_checkout_account` identifies one PayPal business account through a validated `CredentialKey`; it contains no client secret.
+- `paypal_checkout_account` identifies one PayPal business account through a validated `CredentialKey` and stores Merchant ID, Client ID, Client Secret and Webhook ID as confidential account data. The secret is never sent to the browser or logged; general at-rest protection is separate work.
 - `paypal_checkout_azienda` maps an exact `AziendeId + PagamentiTipoId` to account, payee email, checkout brand and currency.
-- Server/deploy settings resolve `<CredentialKey>_CLIENT_ID`, `<CredentialKey>_CLIENT_SECRET` and `<CredentialKey>_WEBHOOK_ID` fail-closed.
+- The exact mapped account supplies Client ID, Client Secret and Webhook ID from the database. Missing Client ID or Client Secret fails checkout closed; a missing Webhook ID leaves webhook processing unconfigured. No environment or `appSettings` fallback is allowed.
 - A tenant without its own active mapping cannot inherit another tenant's configuration.
 - The public runtime accepts only HTTPS on the authoritative tenant host and rejects localhost/loopback.
 
@@ -49,4 +49,4 @@ Security release gate: a previous precompile copied an operational configuration
 
 ## Remaining LIVE gate
 
-Before the first real payment, Enzo must deploy the migration, configure the shared account plus the two tenant mappings, provision the three server settings, configure the production webhook and run read-only verification. Only then may an explicitly authorized controlled LIVE payment establish `LIVE VERIFIED`.
+Before the first real payment, the authorized operator must deploy the DB-driven credential migration, configure the account and exact tenant mappings in the database, configure the production webhook and run read-only verification. No PayPal credential is required in shared `web.config`. Only then may an explicitly authorized controlled LIVE payment establish `LIVE VERIFIED`.

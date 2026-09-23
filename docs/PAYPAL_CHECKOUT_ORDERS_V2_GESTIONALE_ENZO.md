@@ -10,18 +10,21 @@ Campi visibili:
 
 - Nome profilo;
 - Tecnologia: `PayPal Checkout - Orders API v2`;
-- Profilo credenziali server: chiave logica, inizialmente `PAYPAL_MAIN`;
+- Chiave logica del profilo (`CredentialKey`), senza dipendenze da environment o `web.config`;
 - Merchant ID, eventualmente mascherato fuori dalla modalità amministrativa;
-- Credenziali API: `Configurate` / `Non configurate`, senza mostrare Client ID completo o Client Secret;
+- Client ID;
+- Client Secret: campo password/write-only, mai restituito in edit;
+- Webhook ID;
+- Credenziali API: `Configurate` / `Non configurate`, senza mostrare il Client Secret;
 - Webhook: `Configurato` / `Non configurato`;
 - Stato attivo/inattivo;
 - Ambiente fisso: `LIVE`;
 - Ultima verifica e relativo esito sanitizzato;
 - pulsante `Verifica ora`.
 
-La tabella autorevole è `paypal_checkout_account`. Insert e update possono modificare solo `NomeProfilo`, `CredentialKey`, `MerchantId`, `Attivo` e `Note`. `CredentialKey` deve rispettare `^[A-Z][A-Z0-9_]{2,63}$` ed essere univoca. Nessun segreto API viene letto o scritto dal gestionale.
+La tabella autorevole è `paypal_checkout_account`. Insert e update gestiscono `NomeProfilo`, `CredentialKey`, `MerchantId`, `ClientId`, `ClientSecret`, `WebhookId`, `Attivo` e `Note`. `CredentialKey` deve rispettare `^[A-Z][A-Z0-9_]{2,63}$` ed essere univoca. Il Client Secret viene scritto nel database senza mai mostrarne il valore: in edit il campo resta vuoto, vuoto significa non sostituire e la sostituzione richiede un'azione esplicita. Non includere il segreto in letture UI, audit, log o export. La protezione generale a riposo rimane un task separato.
 
-`Verifica ora` deve verificare struttura e presenza della configurazione deploy tramite un endpoint amministrativo futuro autenticato e auditato; non deve restituire i valori, creare ordini, acquisire pagamenti o diventare un test LIVE implicito.
+`Verifica ora` deve verificare struttura e presenza dei campi del profilo DB tramite un endpoint amministrativo futuro autenticato e auditato; non deve restituire i valori, creare ordini, acquisire pagamenti o diventare un test LIVE implicito.
 
 ## Sezione Aziende collegate
 
@@ -50,10 +53,10 @@ Pulsanti previsti: `Nuovo collegamento`, `Salva`, `Disattiva`, `Annulla`, `Verif
 ## Regole vincolanti
 
 - Nessuna seconda schermata Express, NVP/SOAP, password API o signature legacy.
-- Nessun Client Secret visibile, copiabile, esportabile o persistito nel database.
+- Nessun Client Secret visibile, copiabile, esportabile, registrato nei log o inviato al browser; la persistenza riservata è limitata al profilo DB.
 - Nessun fallback globale o cross-tenant.
 - `AccountPaypal` storico non alimenta il runtime Orders v2.
-- La schermata può dichiarare `Configurata` solo dopo migration, impostazioni deploy e verify; non può dichiarare `LIVE VERIFIED` senza smoke reale separatamente autorizzato.
+- La schermata può dichiarare `Configurata` solo dopo migration, dati del profilo DB completi e verify; non può dichiarare `LIVE VERIFIED` senza smoke reale separatamente autorizzato.
 
 ## Ordine interno con pagamento remoto
 

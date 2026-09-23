@@ -67,6 +67,31 @@ try {
     }
     if (-not $ready) { throw 'WEBHOOK_ISOLATED_MYSQL_NOT_READY' }
 
+    $migrationDatabase = 'ks_paypal_credentials_' + [Guid]::NewGuid().ToString('N').Substring(0, 12)
+    $migrationPrefix = Join-Path $RepositoryRoot 'Database Taikun\Migrations\20260923_PAYPAL_DB_DRIVEN_CREDENTIALS_1A_'
+    $migrationArgs = @('--no-defaults','--protocol=pipe',('--socket=' + $pipeName),'-uroot','-N','-s')
+    try {
+        & $mysql @migrationArgs -e ("CREATE DATABASE ``$migrationDatabase`` CHARACTER SET utf8mb4")
+        if ($LASTEXITCODE -ne 0) { throw 'CREDENTIAL_MIGRATION_LAB_CREATE_FAILED' }
+        & $mysql @migrationArgs $migrationDatabase -e 'CREATE TABLE paypal_checkout_account (Id int PRIMARY KEY, NomeProfilo varchar(100), CredentialKey varchar(64), MerchantId varchar(128), Attivo tinyint, Note varchar(500), CreatedAt timestamp DEFAULT CURRENT_TIMESTAMP, UpdatedAt timestamp DEFAULT CURRENT_TIMESTAMP); INSERT INTO paypal_checkout_account (Id,NomeProfilo,CredentialKey,MerchantId,Attivo,Note) VALUES (1,''Synthetic'',''PAYPAL_LAB'',''LAB-MERCHANT'',0,''preserve'')'
+        if ($LASTEXITCODE -ne 0) { throw 'CREDENTIAL_MIGRATION_LAB_SEED_FAILED' }
+        $preflight = Get-Content -LiteralPath ($migrationPrefix + 'preflight.sql') -Raw | & $mysql @migrationArgs $migrationDatabase
+        if ($LASTEXITCODE -ne 0 -or @($preflight | Where-Object { $_ -match '^READY$' }).Count -ne 1) { throw 'CREDENTIAL_MIGRATION_PREFLIGHT_FAILED' }
+        Get-Content -LiteralPath ($migrationPrefix + 'forward.sql') -Raw | & $mysql @migrationArgs $migrationDatabase
+        if ($LASTEXITCODE -ne 0) { throw 'CREDENTIAL_MIGRATION_FORWARD_FAILED' }
+        $verify = Get-Content -LiteralPath ($migrationPrefix + 'verify.sql') -Raw | & $mysql @migrationArgs $migrationDatabase
+        if ($LASTEXITCODE -ne 0 -or @($verify | Where-Object { $_ -match '^OK$' }).Count -ne 2) { throw 'CREDENTIAL_MIGRATION_VERIFY_FAILED' }
+        $secondPreflight = Get-Content -LiteralPath ($migrationPrefix + 'preflight.sql') -Raw | & $mysql @migrationArgs $migrationDatabase
+        if ($LASTEXITCODE -ne 0 -or @($secondPreflight | Where-Object { $_ -match '^ALREADY_COMPLIANT$' }).Count -ne 1) { throw 'CREDENTIAL_MIGRATION_IDEMPOTENCY_FAILED' }
+        $preserved = & $mysql @migrationArgs $migrationDatabase -e "SELECT COUNT(*) FROM paypal_checkout_account WHERE Id=1 AND Note='preserve' AND Attivo=0 AND ClientId IS NULL AND ClientSecret IS NULL AND WebhookId IS NULL"
+        if ($LASTEXITCODE -ne 0 -or ([string]$preserved).Trim() -ne '1') { throw 'CREDENTIAL_MIGRATION_PRESERVATION_FAILED' }
+        'CREDENTIAL_MIGRATION_LAB=PASS'
+    } finally {
+        if ($migrationDatabase -match '^ks_paypal_credentials_[0-9a-f]{12}$') {
+            & $mysql @migrationArgs -e ("DROP DATABASE IF EXISTS ``$migrationDatabase``") 2>$null | Out-Null
+        }
+    }
+
     $dependencies = @('MySql.Data.dll','Google.Protobuf.dll','BouncyCastle.Cryptography.dll',
         'System.Buffers.dll','System.Memory.dll','System.Runtime.CompilerServices.Unsafe.dll',
         'System.Threading.Tasks.Extensions.dll','System.Numerics.Vectors.dll','System.Formats.Asn1.dll')
@@ -132,12 +157,6 @@ End Class
         /r:System.dll /r:System.Web.dll /r:$assemblyPath (Join-Path $RepositoryRoot 'Tools\PayPalWebhookFlowHarness.vb')
     if ($LASTEXITCODE -ne 0) { throw 'WEBHOOK_FLOW_RUNNER_COMPILE_FAILED' }
 
-    $env:PAYPAL_LAB_A_CLIENT_ID = 'LAB_A_CLIENT'
-    $env:PAYPAL_LAB_A_CLIENT_SECRET = 'LAB_A_SYNTHETIC'
-    $env:PAYPAL_LAB_A_WEBHOOK_ID = 'LAB-WEBHOOK-A'
-    $env:PAYPAL_LAB_B_CLIENT_ID = 'LAB_B_CLIENT'
-    $env:PAYPAL_LAB_B_CLIENT_SECRET = 'LAB_B_SYNTHETIC'
-    $env:PAYPAL_LAB_B_WEBHOOK_ID = 'LAB-WEBHOOK-B'
     & $runnerPath $appDirectory
     $runnerExit = $LASTEXITCODE
     $cleanupQuery = "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='" + $labName + "'"
@@ -146,7 +165,6 @@ End Class
     'WEBHOOK_LAB_DATABASE_CLEAN=PASS'
     if ($runnerExit -ne 0) { throw 'WEBHOOK_FLOW_FAILED' }
 } finally {
-    Remove-Item Env:PAYPAL_LAB_A_CLIENT_ID,Env:PAYPAL_LAB_A_CLIENT_SECRET,Env:PAYPAL_LAB_A_WEBHOOK_ID,Env:PAYPAL_LAB_B_CLIENT_ID,Env:PAYPAL_LAB_B_CLIENT_SECRET,Env:PAYPAL_LAB_B_WEBHOOK_ID -ErrorAction SilentlyContinue
     if ($null -ne $serverProcess -and -not $serverProcess.HasExited) {
         if ($ownedPipe) { & $mysqladmin --no-defaults --protocol=pipe --socket=$pipeName -uroot shutdown 2>$null | Out-Null }
         if (-not $serverProcess.WaitForExit(10000)) { Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue }

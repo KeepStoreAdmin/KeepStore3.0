@@ -605,11 +605,11 @@ Stato verificato per la PR #267: l'autenticazione applicativa dipende da `Sessio
 
 ### 5.8 Integrazioni esterne
 
-- PayPal Checkout Orders API v2 REST LIVE-only; credenziali deploy, mapping tenant DB e nessun fallback cross-tenant.
+- PayPal Checkout Orders API v2 REST LIVE-only; credenziali del profilo account e mapping tenant nel DB, senza fallback environment/appSettings o cross-tenant.
 - BancaSella legacy.
 - Email SMTP configurata da dati azienda/sessione.
 - Eventuali integrazioni Amazon/eBay/CheckVat presenti nel codice: da completare con audit dedicato.
-- Per PayPal, `pagamentitipo.OnLine=2` identifica il metodo; `paypal_checkout_azienda` e `paypal_checkout_account` autorizzano l'esatta coppia azienda/pagamento. La visibilità fallisce chiusa se mapping o credenziali deploy non sono completi.
+- Per PayPal, `pagamentitipo.OnLine=2` identifica il metodo; `paypal_checkout_azienda` e `paypal_checkout_account` autorizzano l'esatta coppia azienda/pagamento. Merchant ID, Client ID, Client Secret e Webhook ID derivano dall'account DB mappato, senza fallback environment/`appSettings`; Client ID o Secret mancanti bloccano il checkout, Webhook ID mancante lascia il webhook non configurato. Il segreto non viene esposto al browser o ai log; la protezione generale a riposo resta separata.
 - Taikun e Webaffare possono condividere account, Merchant ID e `CredentialKey`, mantenendo payee/brand separati. Il browser non fornisce nessuno di questi valori.
 
 ### 5.9 Deployment/staging/live

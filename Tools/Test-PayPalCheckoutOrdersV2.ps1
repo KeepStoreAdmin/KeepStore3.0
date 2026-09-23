@@ -9,6 +9,7 @@ function Assert-Check([bool]$Condition, [string]$Name) {
 function Read-Source([string]$Path) { Get-Content -Raw -LiteralPath (Join-Path $RepositoryRoot $Path) }
 $client = Read-Source 'App_Code\PayPalOrdersV2Client.vb'
 $repository = Read-Source 'App_Code\PayPalCheckoutRepository.vb'
+$config = Read-Source 'App_Code\PayPalCheckoutConfig.vb'
 $state = Read-Source 'App_Code\PayPalPaymentState.vb'
 $checkout = Read-Source 'paypalcheckout.aspx.vb'
 $returnPage = Read-Source 'paypalreturn.aspx.vb'
@@ -44,6 +45,13 @@ $results += Assert-Check ($repository.Contains('Pagato=@pagato') -and $repositor
 $results += Assert-Check (-not ($runtime -match 'SetExpressCheckout|GetExpressCheckoutDetails|DoExpressCheckoutPayment|api-3t|EC-TOKEN|ApiUsername|ApiPasswordProtetta|ApiSignatureProtetta|sandbox\.paypal\.com')) '51 zero legacy runtime references'
 $results += Assert-Check (-not (Test-Path (Join-Path $RepositoryRoot 'ipn.aspx')) -and -not (Test-Path (Join-Path $RepositoryRoot 'ipn.aspx.vb'))) '52 legacy IPN removed'
 $results += Assert-Check (-not $runtime.Contains('ClientSecret = "')) '53 no hardcoded secret'
+$results += Assert-Check ($repository.Contains('a.ClientId,a.ClientSecret,a.WebhookId') -and
+    $repository.Contains('.ClientId = Convert.ToString(dr("ClientId"))') -and
+    $repository.Contains('.ClientSecret = Convert.ToString(dr("ClientSecret"))') -and
+    $repository.Contains('.WebhookId = Convert.ToString(dr("WebhookId"))')) '53a account credentials loaded from database'
+$results += Assert-Check (-not (($config + $repository) -match 'HydrateServerCredentials|ReadServerSetting|Environment\.GetEnvironmentVariable|ConfigurationManager\.AppSettings') -and
+    $config.Contains('Not String.IsNullOrWhiteSpace(ClientId)') -and
+    $config.Contains('Not String.IsNullOrWhiteSpace(ClientSecret)')) '53b no PayPal environment fallback'
 $results += Assert-Check ($client.Contains('PAYMENT.CAPTURE.COMPLETED') -eq $false -and $webhook.Contains('PAYMENT.CAPTURE.COMPLETED')) '54 webhook event scope'
 $results += Assert-Check ($client.Contains('request.Headers("Prefer") = data.Prefer') -and $client.Contains('"return=representation"')) '55 Prefer representation transport'
 $results += Assert-Check ($client.Contains('BuildWebhookVerificationPayload') -and $client.Contains('serialized.Replace(encodedSentinel, rawWebhookEvent)')) '56 raw webhook verification contract'

@@ -102,6 +102,7 @@ Public Class WebhookFlowHost
         CreateLabDatabase()
         Try
             CreateSchemaAndFixtures()
+            VerifyDbDrivenConfiguration()
             CheckInvariant("sanitize_capture_id_nothing", PayPalPaymentState.SanitizeExternalId(Nothing) = String.Empty)
             CheckInvariant("sanitize_capture_id_empty", PayPalPaymentState.SanitizeExternalId(String.Empty) = String.Empty)
             CheckInvariant("sanitize_capture_id_whitespace", PayPalPaymentState.SanitizeExternalId("  " & vbTab) = String.Empty)
@@ -434,18 +435,45 @@ Public Class WebhookFlowHost
             Sql(connection, "CREATE TABLE bancasella_ordini_pagati (DocumentiId int, codiceAutorizzazione varchar(100)) ENGINE=InnoDB")
             Sql(connection, "CREATE TABLE documenti (Id int PRIMARY KEY, UtentiId int, AziendeId int, PagamentiTipoId int, TipoDocumentiId int, OrigineOrdine varchar(16), StatiId int, NDocumento int, DataDocumento datetime, Pagato int, StatoPagamentoWeb int, IdTransazione varchar(150), DataStatoPagamentoWeb datetime, UltimoEsitoPagamentoWeb varchar(255)) ENGINE=InnoDB")
             Sql(connection, "CREATE TABLE documentipie (DocumentiId int PRIMARY KEY, TotaleDocumento decimal(15,2)) ENGINE=InnoDB")
-            Sql(connection, "CREATE TABLE paypal_checkout_account (Id int PRIMARY KEY, NomeProfilo varchar(100), CredentialKey varchar(64), MerchantId varchar(128), Attivo int) ENGINE=InnoDB")
+            Sql(connection, "CREATE TABLE paypal_checkout_account (Id int PRIMARY KEY, NomeProfilo varchar(100), CredentialKey varchar(64), MerchantId varchar(128), ClientId varchar(255) NULL, ClientSecret varchar(512) NULL, WebhookId varchar(128) NULL, Attivo int) ENGINE=InnoDB")
             Sql(connection, "CREATE TABLE paypal_checkout_azienda (Id int PRIMARY KEY, AziendeId int, PagamentiTipoId int, PayPalAccountId int, PayeeEmail varchar(254), BrandName varchar(127), CurrencyCode char(3), Attivo int) ENGINE=InnoDB")
             Sql(connection, "CREATE TABLE paypal_checkout_transazioni (Id bigint PRIMARY KEY, DocumentiId int, TentativoNo int, CurrentSlot int NULL, AziendeId int, PagamentiTipoId int, PayPalAccountId int, PayPalOrderId varchar(100), PayPalCaptureId varchar(100), Stato varchar(40), Importo decimal(15,2), Valuta char(3), PayeeEmail varchar(254), MerchantId varchar(128), CreateRequestId varchar(80), CaptureRequestId varchar(80), UltimoEsito varchar(255), UpdatedAt timestamp DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY UX_tx_attempt(DocumentiId,TentativoNo), UNIQUE KEY UX_tx_current(DocumentiId,CurrentSlot), UNIQUE KEY UX_tx_order(PayPalOrderId), UNIQUE KEY UX_tx_capture(PayPalCaptureId), UNIQUE KEY UX_tx_create_request(CreateRequestId), UNIQUE KEY UX_tx_capture_request(CaptureRequestId)) ENGINE=InnoDB")
             Sql(connection, "CREATE TABLE paypal_checkout_eventi (Id bigint AUTO_INCREMENT PRIMARY KEY, EventId varchar(100) NOT NULL UNIQUE, TransazioniId bigint, EventType varchar(80), CaptureId varchar(100), Stato varchar(40)) ENGINE=InnoDB")
             Sql(connection, "INSERT INTO aziende VALUES (1,'Lab A','','https://store-a.invalid','','',1),(2,'Lab B','','https://store-b.invalid','','',1)")
             Sql(connection, "INSERT INTO pagamentitipo VALUES (19,2,1)")
             Sql(connection, "INSERT INTO tipodocumenti VALUES (4,1,1,1)")
-            Sql(connection, "INSERT INTO paypal_checkout_account VALUES (1,'Lab A','PAYPAL_LAB_A','MERCHANT_A',1),(2,'Lab B','PAYPAL_LAB_B','MERCHANT_B',1)")
+            Sql(connection, "INSERT INTO paypal_checkout_account VALUES (1,'Lab A','PAYPAL_LAB_A','MERCHANT_A','LAB_A_CLIENT','LAB_A_SYNTHETIC','LAB-WEBHOOK-A',1),(2,'Lab B','PAYPAL_LAB_B','MERCHANT_B','LAB_B_CLIENT','LAB_B_SYNTHETIC','LAB-WEBHOOK-B',1)")
             Sql(connection, "INSERT INTO paypal_checkout_azienda VALUES (1,1,19,1,'a@example.invalid','Lab A','EUR',1),(2,2,19,2,'b@example.invalid','Lab B','EUR',1)")
         End Using
         InsertFixture(1001, 1)
         InsertFixture(2001, 2)
+    End Sub
+
+    Private Sub VerifyDbDrivenConfiguration()
+        Dim a As PayPalCheckoutConfig = PayPalCheckoutRepository.LoadConfigForCompanyPayment(1, 19)
+        Dim b As PayPalCheckoutConfig = PayPalCheckoutRepository.LoadConfigForCompanyPayment(2, 19)
+        CheckInvariant("db_account_complete", a IsNot Nothing AndAlso a.IsConfigured AndAlso a.IsWebhookConfigured)
+        CheckInvariant("db_separate_accounts", b IsNot Nothing AndAlso b.IsConfigured AndAlso b.IsWebhookConfigured AndAlso
+                       a.AccountId <> b.AccountId AndAlso a.ClientId <> b.ClientId AndAlso a.ClientSecret <> b.ClientSecret AndAlso
+                       a.WebhookId <> b.WebhookId)
+        CheckInvariant("db_document_mapping", PayPalCheckoutRepository.LoadConfigForDocument(1001).AccountId = a.AccountId AndAlso
+                       PayPalCheckoutRepository.LoadConfigForDocument(2001).AccountId = b.AccountId)
+        Execute("UPDATE paypal_checkout_azienda SET PayPalAccountId=1 WHERE AziendeId=2")
+        Dim sharedAccount As PayPalCheckoutConfig = PayPalCheckoutRepository.LoadConfigForCompanyPayment(2, 19)
+        CheckInvariant("db_shared_account_distinct_tenant", sharedAccount IsNot Nothing AndAlso sharedAccount.IsConfigured AndAlso
+                       sharedAccount.AccountId = a.AccountId AndAlso sharedAccount.ClientId = a.ClientId AndAlso
+                       sharedAccount.ClientSecret = a.ClientSecret AndAlso sharedAccount.WebhookId = a.WebhookId AndAlso
+                       sharedAccount.AziendeId <> a.AziendeId AndAlso sharedAccount.PayeeEmail <> a.PayeeEmail)
+        Execute("UPDATE paypal_checkout_azienda SET PayPalAccountId=2 WHERE AziendeId=2")
+        Execute("UPDATE paypal_checkout_account SET ClientId=NULL WHERE Id=1")
+        CheckInvariant("db_missing_client_id_closed", Not PayPalCheckoutRepository.LoadConfigForCompanyPayment(1, 19).IsConfigured)
+        Execute("UPDATE paypal_checkout_account SET ClientId='LAB_A_CLIENT',ClientSecret=NULL WHERE Id=1")
+        CheckInvariant("db_missing_client_secret_closed", Not PayPalCheckoutRepository.LoadConfigForCompanyPayment(1, 19).IsConfigured)
+        Execute("UPDATE paypal_checkout_account SET ClientSecret='LAB_A_SYNTHETIC',WebhookId=NULL WHERE Id=1")
+        Dim noWebhook As PayPalCheckoutConfig = PayPalCheckoutRepository.LoadConfigForCompanyPayment(1, 19)
+        CheckInvariant("db_missing_webhook_only", noWebhook.IsConfigured AndAlso Not noWebhook.IsWebhookConfigured)
+        Execute("UPDATE paypal_checkout_account SET WebhookId='LAB-WEBHOOK-A' WHERE Id=1")
+        CheckInvariant("db_no_cross_tenant_fallback", PayPalCheckoutRepository.LoadConfigForCompanyPayment(3, 19) Is Nothing)
     End Sub
 
     Private Shared Sub Sql(ByVal connection As MySqlConnection, ByVal statement As String)
