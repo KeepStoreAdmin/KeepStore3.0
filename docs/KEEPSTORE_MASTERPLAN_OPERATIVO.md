@@ -1,13 +1,13 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-09-23
+Aggiornato: 2026-09-24
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-- Aggiornato: 2026-09-23.
+- Aggiornato: 2026-09-24.
 - Working copy canonica: C:\KeepStoreWeb\KeepStore3.0\.
 - Runtime PayPal stabile: frontend-rebuild integra PAYPAL-CHECKOUT-ORDERS-V2-LIVE-1A (PR #270) e PAYPAL-DB-DRIVEN-CREDENTIALS-1A (PR #271); ultimo SHA runtime PayPal b5e75c28e534c28c8fd7d0e9c25f50d28f5c6dc4.
 - Branch protetto: main / origin/main invariati a 976e99f17cabc8a5c6a8715463444edfeaadcd91.
@@ -22,6 +22,7 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 - Il manuale canonico Enzo e docs/PAYPAL_CHECKOUT_ORDERS_V2_GESTIONALE_ENZO.md; il documento Word consegnato al Product Owner ne rappresenta la versione operativa per il gestionale.
 - Terminato il blocco PayPal, la roadmap generale riprende dalle priorita gia registrate; nessun nuovo task viene avviato automaticamente senza scelta del Product Owner.
 - Directory non tracciate autorizzate e asset locali restano da preservare secondo AGENTS.md.
+- `HOME-CATALOG-NAVIGATION-1A` / PR #274: CHIUSO / A, merge fast-forward su `frontend-rebuild` a `7f2e9c37a8afe64fc7e3b0bdd9aeb163bbac4915`; `main` resta a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Precompile e smoke funzionale PASS; visual responsive non certificato e nessun deploy pubblico dichiarato. La chiusura riguarda solo il micro-task, non la HOME intera.
 
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root AGENTS.md e delle fonti pertinenti.
 
@@ -72,6 +73,15 @@ Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripa
 ### Contratto permanente MULTITENANT-BY-DESIGN e onboarding
 
 KeepStore deve installare lo stesso commit presso clienti con azienda, dominio, database, asset e merceologia differenti senza modificare o ricompilare il codice condiviso. Sono supportati entrambi i modelli: database separato per installazione e piu vetrine/righe `aziende` nello stesso database e catalogo. L'identita runtime e la combinazione database configurato + host autorevole + unica riga `aziende`, mai il solo database. Sono vietati nomi cliente, domini, database, tabelle qualificate per database e logica dedicata a una sola azienda nel runtime comune. Configurazione e dati tenant restano separati dal sorgente; host sconosciuti, duplicati e contaminazione cross-tenant falliscono chiusi; ogni funzione tenant-aware usa almeno due tenant sintetici nei test. Migrazioni e stored procedure sono standard, senza `USE` o riferimenti cliente nel corpo canonico. Attributi prodotto mancanti o non applicabili sono omessi, mai inventati.
+
+#### Sottocontratto ADAPTIVE-MULTI-MERCHANDISE-STOREFRONT
+
+Questa e un'estensione di `MULTITENANT-BY-DESIGN`, non un contratto concorrente. KeepStore e un solo prodotto: stesso sorgente e stessa release per cataloghi di merceologie differenti, senza fork, branch o patch per cliente o settore. Informatica/elettronica, Pittura Vintage/decorazione, abiti da sposa, Food & Beverage, ferramenta, olio, pane/panini e alimentari, abbigliamento e scarpe sono esempi illustrativi, non una tassonomia chiusa ne valori da codificare nel runtime.
+
+- HOME, catalogo, PDP, filtri/facet, ricerca, suggerimenti, raccomandazioni, merchandising, SEO e futura AI si adattano a tenant risolto, catalogo e tassonomia reali e ad attributi/capacita effettivamente disponibili. Settori, categorie, tipologie, marche, varianti, attributi e contenuti non si inventano.
+- Il codice condiviso non fissa categorie o ID settore/categoria, non usa testi o fallback elettronica come regola generale e non presume che ogni prodotto abbia marca, taglia o specifiche tecniche. Una funzione compare solo se supportata da dati autorevoli e pertinente: taglia/colore per alcuni cataloghi moda, caratteristiche tecniche per alcuni cataloghi elettronica/ferramenta, formati/pesi per altri sono esempi condizionali. Attributi mancanti, non applicabili o non affidabili vengono omessi, mai simulati o inferiti arbitrariamente. Ingredienti, allergeni, resa pittura e misure specialistiche non sono dichiarati capacita correnti: richiedono audit schema e task dedicati.
+- `StorefrontCapabilityProfile` e soltanto una direzione architetturale futura: profilo server-side deterministico da dati/configurazione autorevoli, non una classificazione LLM opaca o basata solo su keyword descrittive. Estensioni verticali mancanti entrano tramite capability, modulo o configurazione riutilizzabile e task dedicato, non con fork cliente.
+- Le future funzioni adattive richiedono test con almeno due tenant/cataloghi sintetici di merceologia differente: stesso codice condiviso, nessun testo o categoria di un altro tenant, nessuna funzione irrilevante e nessun dato inventato. ONSUS resta riferimento UI/UX, non modello merceologico: KeepStore fornisce dati, tassonomia e capacita; il template non impone categorie o contenuti demo.
 
 Origine e responsabilita verificate sul runtime dopo PR #261:
 
