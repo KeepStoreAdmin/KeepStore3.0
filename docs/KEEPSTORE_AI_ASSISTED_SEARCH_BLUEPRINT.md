@@ -62,6 +62,96 @@ Stato storefront mobile/cart/catalog corrente, senza impatto sulla logica AI/sea
 - `PDP-COMMERCIAL-INFO-SHIPPING-1A` e CHIUSO / A a `91cbc10b3b343217e18c5a9a6707b72997467b00`, dopo implementazione `afc4c72c148984ba729c6cb20de38161dc56e2b4` e REV1 IVA allineata al carrello; merge fast-forward, nessun merge commit, smoke Germano A. Il micro-task riguarda informazioni commerciali e tariffe reali del singolo articolo; non modifica search, ranking o runtime AI e non dichiara complete PDP o catalogo.
 - Nota storica: `LOGIN-RETURN-CONTEXT-1A` era il prossimo runtime ufficiale ed e ora chiuso / A, insieme a `LOGIN-ACCESS-AUDIT-1A`. La precedente roadmap che partiva dall'hotfix `Demo` e dall'audit promo ONSUS e superata dalle chiusure promo correnti e dalla roadmap route/UX/HOME async sopra. Side cart, parity P1/P2 e blocchi ecommerce restano separati; SEO/AI/Gemini/LLMS rimane priorita finale. Catalogo e PDP non sono dichiarati completi.
 
+
+## 0. Decisione architetturale SEO/AI 2026
+
+Questo blueprint adotta come contratto prevalente il **Semantic Commerce Layer multi-tenant**. La strategia non e "aggiungere un LLM alla ricerca" ne creare un SEO separato per i motori generativi: e rendere disponibili a search, Merchant, structured data, AI e automazioni gli stessi facts autorevoli gia usati dal runtime commerciale KeepStore.
+
+### 0.1 Portfolio e isolamento
+
+KeepStore serve gia storefront con merceologie differenti: Taikun, Webaffare, PittureShabby, I Filandari, Marea Distribuzione, NDA Food, VP Sposa, Italcomed e ulteriori tenant in arrivo. I nomi database/infrastruttura non sono documentati.
+
+Taikun e Webaffare possono condividere catalogo/database ma non sono la stessa entita commerciale per search/SEO/AI. Possono avere account/clienti, listini, prezzi, offerte e promozioni differenti. Le tabelle/strutture esistenti dedicate a listini, offerte e promo e i relativi resolver KeepStore sono la source of truth; AI/search non ricostruiscono tali valori.
+
+Il modello corretto e:
+`shared Product semantics -> ProductId/candidati -> tenant commercial resolver -> live Offer`.
+
+### 0.2 Semantic Commerce Layer
+
+Cinque domini autorevoli:
+1. **Identity**: tenant host-scoped da `aziende`, con Business Description, dominio, logo e contatti.
+2. **Taxonomy**: Settori/Categorie/Tipologie/Gruppi/Sottogruppi e altre gerarchie reali.
+3. **Product Facts**: testo prodotto, brand, codici, GTIN/MPN, immagini e attributi verificati.
+4. **Commercial Context**: azienda, listino, owner, prezzo, offerta/promo, stock/disponibilita e spedizione risolti live.
+5. **Editorial Knowledge**: pagine CMS, banner, guide e contenuti tenant esplicitamente configurati.
+
+`aziende.Descrizione` e Business Description ufficiale dello storefront e puo fornire contesto ad AI/search; non e una tassonomia, non dimostra servizi e non deve essere usata come classificatore prodotto.
+
+### 0.3 SEO generativa: nessun canale parallelo
+
+Google AI Overviews/AI Mode e Bing AI/Copilot devono ricevere le stesse pagine e gli stessi facts coerenti destinati agli utenti e ai crawler ordinari. Priorita: crawlability, canonical corretta, contenuti utili/visibili, internal linking, Product/Offer reale, Merchant e freshness. File come `llms.txt`/`llms.ashx` o markup "AI SEO" non standard non sono una foundation: restano esperimenti opzionali dopo evidenza di un consumer rilevante.
+
+Il codice SEO tecnico gia sano non viene riscritto integralmente. Si mantengono tenant resolver, canonical/host policy, robots/sitemap, noindex e Product/Offer; si rifattorizzano solo duplicazioni, copy merceologico hardcoded e metadata/editorial logic sparsi.
+
+### 0.4 Embeddings, vector DB e RAG
+
+Vector DB/embeddings sono destinati a **semantic retrieval**, non a sostituire il database commerciale:
+- embedding: Product facts durevoli, tassonomia e knowledge editoriale autorizzata;
+- esclusi dall'embedding come verita statica: prezzi, offerte, promo, disponibilita, owner/account e dati personali;
+- indice sempre scoped almeno per identita catalogo/database sanitizzata e ProductId; nessun leakage tra cataloghi;
+- Taikun/Webaffare possono riusare la rappresentazione semantica del prodotto condiviso, ma l'Offer viene sempre risolta dopo il retrieval nel tenant corrente;
+- aggiornamento/invalidazione dell'indice segue cambi Product facts/tassonomia, non ogni variazione prezzo/promo.
+
+RAG futuro = retrieval di prodotti/knowledge reali + generazione vincolata + commercial resolver live. Se un fact non e recuperato o verificato, l'assistente chiede chiarimento o omette: non inventa.
+
+### 0.5 Hybrid Search target
+
+Ordine architetturale:
+1. identificatori esatti: EAN/GTIN, codice, SKU commerciale;
+2. retrieval testuale deterministico e tassonomico;
+3. semantic/vector candidates;
+4. ranking/guardrail deterministici;
+5. filtro tenant/catalogo;
+6. risoluzione live prezzo/promo/disponibilita;
+7. risposta/card reale e spiegabile.
+
+L'LLM non decide quale prodotto esiste, quale prezzo applicare o quale promo e valida.
+
+### 0.6 Merchant e discovery
+
+Merchant e parte del Semantic Commerce Layer:
+- feed separato per storefront quando Offer/domain/identita commerciale differiscono;
+- `product_type` dalla tassonomia KeepStore reale;
+- `google_product_category` come mapping/override separato e verificabile quando utile, non come categoria inventata dal modello;
+- Product/Offer del feed deve usare gli stessi resolver commerciali della PDP;
+- sitemap/IndexNow/structured data non diventano cataloghi paralleli con business logic propria.
+
+### 0.7 Autonomous SEO/Search Audit
+
+Direzione futura: motore read-only che segnala, senza correggere automaticamente facts commerciali:
+- title/description/canonical/indexability incoerenti;
+- GTIN/brand/image mancanti o invalidi;
+- differenze tra HTML visibile, JSON-LD, sitemap e feed;
+- Product/Offer non coerente con prezzo/promo/disponibilita runtime;
+- tassonomia insufficiente o `product_type` incompleto;
+- zero-results/search reformulation;
+- segnali Search Console/Bing/AI visibility quando disponibili.
+
+Le correzioni proposte dall'AI restano suggerimenti finche non derivano deterministicamente da dati autorevoli o non vengono approvate nel workflow KeepStore.
+
+### 0.8 Roadmap prevalente
+
+P0 storefront multi-tenant/multi-merceologia corretto.
+P1 Semantic SEO Foundation.
+P2 discovery standard: structured data, sitemap/canonical, IndexNow dove applicabile.
+P3 Merchant Center per storefront.
+P4 Autonomous SEO Audit.
+P5 Hybrid Search semantica.
+P6 RAG Shopping Assistant.
+
+Questa sequenza sostituisce i riferimenti storici che collocavano genericamente "Gemini/LLMS" come fase finale SEO. La scelta tra servizio embeddings/vector esterno, motore locale o nessun vector DB resta un decision gate futuro basato su metriche reali di ricerca, costi, privacy e qualita.
+
+
 ## 1. Principio multi-merceologia
 
 L'assistente acquisto non deve contenere domande hardcoded valide per tutti i negozi. KeepStore e rivendibile e multi-azienda: installazioni presenti e future possono avere merceologie molto diverse.

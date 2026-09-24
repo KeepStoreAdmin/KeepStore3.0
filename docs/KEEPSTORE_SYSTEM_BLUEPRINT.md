@@ -41,7 +41,47 @@ Relazione con le fonti operative: il root `AGENTS.md` governa il metodo permanen
 - `/robots.txt` e `/sitemap.xml` sono instradati da IIS a handler ASP.NET dinamici. Robots e sitemap condividono la stessa identita tenant; non coesistono file statici. La sitemap legge soltanto dati pubblici con query parametrizzate/read-only, usa la connection string applicativa senza dipendere dal nome database, emette XML `application/xml`, supporta GET/HEAD, deduplica e filtra le route ammesse.
 - Metadati esistenti verificati: HOME con Open Graph e grafo WebSite/Organization; catalogo con `CollectionPage`; PDP con Open Graph. Cart/checkout non espongono `CheckoutPage` pubblico. Il contratto Google `Product/Offer` e ora implementato esclusivamente sulla PDP dal modulo descritto sotto; feed, Merchant Center, IndexNow, Search Console, LLMS e AI restano fuori perimetro.
 - Anti-regressione: harness VB compilato insieme alla policy effettiva con due identita sintetiche, alias, host cross-tenant e alterato; route matrix HTTP non mutativa; validazione XML e JSON-LD; precompile .NET Framework 4.8; controllo che resolver promo, card, CSS/JavaScript, ordine e servizi carrello restino byte/diff invariati.
-- Roadmap corrente: SEO tecnica, onboarding, Product structured data, asset runtime, prezzi/account e carrello same-database sono chiusi A. Il checkpoint stabile di base e `2d6ebd540a29ff906a01fa0820ebf65706150408`; `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` e il task corrente e la PR #267 resta DRAFT/non merge-safe dopo lo stop forense REV4 per telemetria checkout non persistita. Dopo review A e merge seguono, senza avviarli, password-manager autofill, persistent anonymous cart, cart conversion UX, Merchant Center e infine abandoned-cart recovery subordinato a privacy/consenso.
+- Roadmap SEO/AI: le fondamenta tecniche, Product structured data e isolamento commerciale restano patrimonio da preservare; la roadmap SEO/AI prevalente e definita in `2.0.1.0` e non dipende piu da una sequenza storica pagina-per-pagina. I task commerciali/account/cart gia pianificati mantengono il proprio ordine indipendente e non autorizzano automaticamente Merchant, semantic search o RAG.
+
+
+#### 2.0.1.0 Strategia SEO/AI 2026 e Semantic Commerce Layer
+
+Questa decisione architetturale sostituisce l'approccio storico "SEO pagina per pagina" e i riferimenti che trattavano `llms.*` o una generica "Gemini SEO" come obiettivo prioritario. **Non si riscrive la SEO tecnica stabilizzata**: tenant resolver, canonical/host policy, robots, sitemap, matrice index/noindex e Product/Offer deterministico restano infrastruttura `KEEP` e vengono sottoposti solo ad audit 2026. Il lavoro nuovo deve invece far convergere la semantica editoriale e commerciale in un **Semantic Commerce Layer sottile**, riusando componenti e dati esistenti.
+
+Il portfolio reale comprende storefront con merceologie differenti, tra cui Taikun, Webaffare, PittureShabby, I Filandari, Marea Distribuzione, NDA Food, VP Sposa e Italcomed, oltre a tenant futuri. Identificativi infrastrutturali e nomi database non vengono versionati nei manuali.
+
+Taikun/Webaffare definiscono il caso same-catalog: la descrizione tecnica del prodotto puo essere comune, mentre l'`Offer` e storefront-scoped. I due storefront possono avere dominio, `AziendaID`, account/clienti, listino, prezzo, promozioni e offerte differenti pur insistendo sullo stesso catalogo. Le strutture/tabelle offerte/promozioni e i resolver commerciali KeepStore gia esistenti restano la source of truth; SEO, structured data, feed e AI non introducono un secondo calcolo prezzo/promo.
+
+Contratto dati:
+- **Store Identity** = riga `aziende` risolta per host, con nome, Business Description, canonical/alias, logo e contatti autorizzati.
+- **Catalog Taxonomy** = gerarchia KeepStore reale, senza tassonomia demo ONSUS e senza hardcoding merceologico.
+- **Product Facts** = facts durevoli del prodotto: nome, descrizioni, marca, codici, GTIN/MPN, immagini e attributi reali.
+- **Commercial Context** = azienda/listino/owner + prezzo/offerta/promo/disponibilita/spedizione risolti live dai contratti commerciali correnti.
+- **Editorial Content** = pagine/banner/configurazioni tenant; servizi e claim non vengono dedotti da categorie o keyword.
+
+`aziende.Descrizione` e la Business Description pubblica autorevole dello storefront. E ammessa per UI HOME, meta/OG/Twitter description, grafo OnlineStore/Organization, profilo Merchant e futuro contesto AI; non prova servizi, non classifica prodotti, non abilita capability e non sostituisce tassonomia o Product facts.
+
+Separazione Product/Offer permanente:
+- dati semantici Product condivisibili quando il catalogo e realmente condiviso;
+- `Offer` sempre risolta nel contesto tenant/listino/owner corrente;
+- prezzi/promozioni/disponibilita non entrano come facts statici in embedding/vector index/RAG;
+- semantic retrieval restituisce identita prodotto/candidati e il livello commerciale KeepStore completa la risposta live.
+
+Direzione SEO/discovery 2026:
+1. P0 multi-tenant storefront correctness;
+2. P1 Semantic SEO Foundation;
+3. P2 structured data + sitemap/canonical + IndexNow dove applicabile;
+4. P3 Merchant Center per storefront, con `product_type` dalla tassonomia KeepStore e mapping `google_product_category` separato/controllato quando necessario;
+5. P4 Autonomous SEO Audit Engine;
+6. P5 hybrid semantic search;
+7. P6 RAG shopping assistant.
+
+AI Overviews/AI Mode e Bing AI/Copilot non giustificano un SEO parallelo o testi generati automaticamente senza source of truth. `llms.txt`, `llms.ashx` e markup AI non standard restano opzionali e subordinati a utilita verificabile. Vector DB, embeddings e RAG sono capability di search/assistenza future, non prerequisiti SEO.
+
+Anti-pattern vietati: nuovo hardcoding cliente/merceologia; claim servizi inferiti dal catalogo; prezzo/promozione calcolati da SEO/AI; feed con logica commerciale duplicata; patch SEO isolate in pagine diverse quando una regola puo essere centralizzata; riscrittura distruttiva di canonical/robots/sitemap/Product-Offer gia certificati.
+
+Sequenza runtime approvabile dopo il merge docs: `HOME-TENANT-IDENTITY-SEO-1A`, `HOME-MULTIMERCH-FALLBACK-DEHARDEN-1A`, quindi `SEO-2026-CENTRALIZATION-1A`. Ogni passaggio resta un micro-task autonomo con test multi-tenant e nessun DDL implicito.
+
 
 #### 2.0.1.1 Modulo Product structured data deterministico
 
