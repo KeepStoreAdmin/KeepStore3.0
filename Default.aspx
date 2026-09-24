@@ -2,7 +2,7 @@
 <%@ Register Src="~/Public/ui/controls/HomeIconBoxes.ascx" TagPrefix="uc" TagName="HomeIconBoxes" %>
 
 <asp:Content ID="cntTitle" ContentPlaceHolderID="TitleContent" runat="server">
-    KeepStore - Informatica, telefonia, assistenza e accessori
+    <asp:Literal ID="litHomePageTitle" runat="server" Mode="Encode" />
 </asp:Content>
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -414,90 +414,18 @@
         </div>
     </section>
 
-    <section id="HomeServicesSection" runat="server" class="ks-home-section ks-home-services-section">
-        <div class="container">
-            <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <div>
-                    <h5 class="fw-semibold">Servizi KeepStore</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Tecnici e consulenti per gestire dispositivi, software, reti e acquisti senza complicazioni.</p>
-                </div>
-                <a href="Contattaci.aspx" class="tf-btn btn-line">
-                    <span>Parla con noi</span>
-                </a>
-            </div>
-            <div class="ks-home-services-grid">
-                <article class="ks-home-service-item d-flex flex-column gap-2">
-                    <span class="ks-home-service-icon"><i class="icon-computer"></i></span>
-                    <div class="mb-0">
-                        <h6>Riparazione PC e notebook</h6>
-                        <p>Diagnosi, upgrade, sostituzione componenti e ottimizzazione dei tuoi dispositivi.</p>
-                    </div>
-                </article>
-                <article class="ks-home-service-item d-flex flex-column gap-2">
-                    <span class="ks-home-service-icon"><i class="icon-phone"></i></span>
-                    <div class="mb-0">
-                        <h6>Assistenza smartphone</h6>
-                        <p>Supporto per configurazione, trasferimento dati e problemi ricorrenti.</p>
-                    </div>
-                </article>
-                <article class="ks-home-service-item d-flex flex-column gap-2">
-                    <span class="ks-home-service-icon"><i class="icon-tool"></i></span>
-                    <div class="mb-0">
-                        <h6>Installazione software</h6>
-                        <p>Setup sistemi, applicativi, sicurezza e strumenti per lavoro o casa.</p>
-                    </div>
-                </article>
-                <article class="ks-home-service-item d-flex flex-column gap-2">
-                    <span class="ks-home-service-icon"><i class="icon-computer-wifi"></i></span>
-                    <div class="mb-0">
-                        <h6>Configurazione reti e periferiche</h6>
-                        <p>Router, stampanti, periferiche e postazioni pronte all'uso.</p>
-                    </div>
-                </article>
-                <article class="ks-home-service-item d-flex flex-column gap-2">
-                    <span class="ks-home-service-icon"><i class="icon-shield"></i></span>
-                    <div class="mb-0">
-                        <h6>Recupero dati</h6>
-                        <p>Valutazione e supporto per recuperare file importanti quando possibile.</p>
-                    </div>
-                </article>
-                <article class="ks-home-service-item d-flex flex-column gap-2">
-                    <span class="ks-home-service-icon"><i class="icon-headphone-2"></i></span>
-                    <div class="mb-0">
-                        <h6>Consulenza acquisto</h6>
-                        <p>Scelta guidata di computer, telefonia, consumabili e accessori compatibili.</p>
-                    </div>
-                </article>
-            </div>
-        </div>
-    </section>
-
     <section id="HomeTrustSection" runat="server" class="ks-home-section ks-home-trust-section">
         <div class="container">
             <div class="ks-home-trust-panel">
                 <div class="ks-home-trust-copy">
-                    <p class="caption text-primary fw-semibold mb-2">Fiducia e conversione</p>
+                    <p class="caption text-primary fw-semibold mb-2">Chi siamo</p>
                     <div class="mb-0">
-                        <h5 class="fw-semibold mb-2">Un negozio tech con assistenza reale prima e dopo l'acquisto</h5>
-                        <p class="body-text-3 text-main-2 mb-0">KeepStore unisce catalogo ecommerce, disponibilita controllate e contatto diretto con il negozio per aiutarti a scegliere meglio.</p>
+                        <h5 class="fw-semibold mb-2"><asp:Literal ID="litHomeCompanyName" runat="server" Mode="Encode" /></h5>
+                        <p class="body-text-3 text-main-2 mb-0"><asp:Literal ID="litHomeCompanyDescription" runat="server" Mode="Encode" /></p>
                     </div>
-                </div>
-                <div class="ks-home-trust-list">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="icon-check-3"></i>
-                        <span>Esperienza tecnica su informatica e periferiche</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="icon-support-2"></i>
-                        <span>Assistenza diretta e supporto post-vendita</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="icon-payment"></i>
-                        <span>Pagamenti e checkout tramite flusso ecommerce esistente</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="icon-phone"></i>
-                        <span>Contatto rapido con il negozio</span>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a href="articoli.aspx" class="tf-btn btn-line"><span>Esplora il catalogo</span></a>
+                        <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Contattaci</span></a>
                     </div>
                 </div>
             </div>

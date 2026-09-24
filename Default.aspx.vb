@@ -52,22 +52,56 @@ Partial Public Class _Default
     End Sub
 
     Private Sub ApplyHomeSeo()
-        Dim brandName As String = StorefrontSeoTenantContext.BrandName(HttpContext.Current)
-        Dim pageTitle As String = brandName & " - Informatica, telefonia, assistenza e accessori"
-        Dim description As String = "Tecnologia, assistenza e accessori per lavoro e casa: computer, telefonia, stampanti, consumabili, periferiche e supporto tecnico " & brandName & "."
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant Is Nothing Then
+            HomeTrustSection.Visible = False
+            Return
+        End If
+
+        Dim brandName As String = CleanMarketingText(tenant.CompanyName, "KeepStore")
+        Dim businessDescription As String = CleanMarketingText(tenant.CompanyDescription, String.Empty)
+        Dim pageTitle As String = brandName & " | Negozio online"
+        Dim description As String = If(String.IsNullOrWhiteSpace(businessDescription),
+                                       "Scopri il catalogo online di " & brandName & ".",
+                                       businessDescription)
         Dim canonical As String = HomeCanonicalUrl()
-        Dim heroImage As String = BuildRuntimeAssetUrl("/Public/assets/images/banner/Banner_PC_ricondizionati_1200x560.png")
-        Dim logoUrl As String = BuildRuntimeAssetUrl("/Public/assets/images/logo/logo.webp")
+        Dim logoUrl As String = String.Empty
+
+        litHomePageTitle.Text = pageTitle
+        litHomeCompanyName.Text = brandName
+        litHomeCompanyDescription.Text = businessDescription
+        HomeTrustSection.Visible = Not String.IsNullOrWhiteSpace(businessDescription)
+
+        Dim logoFileName As String = Convert.ToString(tenant.LogoFileName).Trim()
+        If logoFileName <> "" AndAlso
+           String.Equals(IO.Path.GetFileName(logoFileName), logoFileName, StringComparison.Ordinal) AndAlso
+           Not logoFileName.Contains("..") Then
+            Dim logoPath As String = "/Public/assets/images/logo/" & logoFileName
+            If String.Equals(Convert.ToString(Session("AziendaLogo")).Trim(), logoPath, StringComparison.OrdinalIgnoreCase) Then
+                Try
+                    If IO.File.Exists(Server.MapPath("~" & logoPath)) Then
+                        Dim candidateUrl As String = BuildRuntimeAssetUrl("/Public/assets/images/logo/" & Uri.EscapeDataString(logoFileName))
+                        Dim candidateUri As Uri = Nothing
+                        If Uri.TryCreate(candidateUrl, UriKind.Absolute, candidateUri) AndAlso
+                           String.Equals(candidateUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) AndAlso
+                           String.Equals(candidateUri.DnsSafeHost, tenant.CanonicalHost, StringComparison.OrdinalIgnoreCase) Then
+                            logoUrl = candidateUrl
+                        End If
+                    End If
+                Catch
+                    logoUrl = String.Empty
+                End Try
+            End If
+        End If
 
         Page.Title = pageTitle
         SeoBuilder.AddOrReplaceMeta(Me, "description", description)
         SeoBuilder.AddOrReplaceMeta(Me, "robots", "index,follow")
         SeoBuilder.SetCanonical(Me, canonical)
-        SeoBuilder.ApplyOpenGraph(Me, pageTitle, description, canonical, heroImage)
-        SeoBuilder.AddOrReplaceMeta(Me, "twitter:card", "summary_large_image")
+        SeoBuilder.ApplyOpenGraph(Me, pageTitle, description, canonical, String.Empty)
+        SeoBuilder.AddOrReplaceMeta(Me, "twitter:card", "summary")
         SeoBuilder.AddOrReplaceMeta(Me, "twitter:title", pageTitle)
         SeoBuilder.AddOrReplaceMeta(Me, "twitter:description", description)
-        SeoBuilder.AddOrReplaceMeta(Me, "twitter:image", heroImage)
         SeoBuilder.ApplyJsonLd(Me, SeoBuilder.BuildHomeJsonLd(Me, pageTitle, description, canonical, logoUrl))
     End Sub
 
