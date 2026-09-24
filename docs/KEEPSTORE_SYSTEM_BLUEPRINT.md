@@ -174,6 +174,12 @@ Questa policy estende il metodo Token-Safe / One-Shot senza sostituirlo.
 20. **Esecuzione tecnica completa.** ChatGPT controlla e autorizza l'avanzamento; Germano approva le decisioni finali; Codex esegue tutte le operazioni tecniche autorizzate. Dopo A ChatGPT e autorizzazione Germano, Codex esegue merge FF-only, sincronizza locale/remoto e verifica parent, assenza merge commit, `main`, staging, tracked tree e asset. Se strumenti, autenticazione o permessi lo impediscono, si ferma con B e prova precisa senza aggiramenti o delega automatica a Germano.
 21. **Compatibilita e continuita.** Restano vincolanti micro-task, un solo task attivo, manifest, branch separato, base SHA verificata, `main` protetto, stack WebForms/VB.NET/.NET Framework/MySQL, mobile-first, sicurezza, push/PR, review ChatGPT, A/B/E, merge FF-only, no false closure e Git come source of truth.
 
+#### 2.1.2 Contratto WORKING-COPY-CANONICA
+
+`C:\KeepStoreWeb\KeepStore3.0\` e la copia operativa da cui il Product Owner preleva i file approvati per il server: deve rappresentare il commit stabile approvato di `frontend-rebuild`. Branch e worktree di task non ancora mergeati possono restare isolati, ma file runtime non approvati non rimangono permanentemente nella copia canonica. Uno smoke temporaneo su quella copia richiede backup fuori repository, ripristino byte-per-byte e verifica di hash/stato Git.
+
+Dopo ogni merge runtime autorizzato, la chiusura tecnica richiede il fast-forward della copia canonica al nuovo SHA: `frontend-rebuild` locale, `origin/frontend-rebuild` e working copy devono coincidere. Codex verifica staging vuoto, preservazione di `web.config` e di ogni modifica/configurazione locale autorizzata, untracked e asset; i file runtime approvati devono essere presenti nella cartella canonica, non solo sul remoto. Se il riallineamento e bloccato, il task resta B e il motivo viene riportato senza reset, stash, clean o sovrascritture. Per un task docs-only i manuali si allineano al normale merge stabile senza introdurre build o smoke runtime.
+
 ### 2.2 Contratto permanente stack, linguaggio e sicurezza
 
 Ogni prompt Codex runtime del progetto KeepStore 3.0 deve dichiarare esplicitamente la sezione "Stack e divieti tecnici".
@@ -403,11 +409,19 @@ Contratto tecnico product card:
 Contratto operativo stabile, con dettaglio canonico nel Masterplan:
 
 - Il root `AGENTS.md` e la fonte canonica del metodo. Prima dei prompt importanti ChatGPT verifica Git/codice reale e legge checkpoint, sezioni, contratti e file pertinenti; la lettura integrale e riservata ad audit ampi e riconciliazioni trasversali. Gerarchia: richiesta approvata da Germano; stato tecnico reale; `AGENTS.md`; checkpoint Masterplan; System Blueprint; AI Blueprint solo per search/AI; handoff e memoria non autoritativi.
-- Working copy canonica `C:\KeepStoreWeb\KeepStore3.0\`; branch runtime/docs pushato su origin prima del report; preflight con fetch/SHA; dopo merge `frontend-rebuild == origin/frontend-rebuild`; solo fast-forward, niente reset/rebase/force non autorizzati e nessuna modifica a `main`.
-- Mobile-first: progettazione e QA iniziano da `360px` e `390px`; niente funzioni essenziali hover-only; nessun A visuale senza browser mobile reale e smoke Germano quando previsto.
+- Working copy canonica e sincronizzazione post-merge seguono `2.1.2`; branch runtime/docs pushato su origin prima del report, solo fast-forward, niente reset/rebase/force non autorizzati e nessuna modifica a `main`.
+- Mobile-first e parity funzionale touch seguono `2.6.1`; nessun A visuale senza browser mobile pertinente e smoke Germano quando previsto.
 - Codex esegue tutti i test e smoke tecnici/browser automatizzabili; Germano solo conferme umane realmente necessarie e non automatizzabili, mai Git/GitHub. Codex apre/aggiorna la PR; dopo A ChatGPT e autorizzazione Germano esegue merge FF-only e verifiche post-merge.
 - Un solo task attivo; prompt one-shot con HEAD, manifest, divieti, verifiche e output espliciti. Solo A/B/E secondo le definizioni canoniche di `AGENTS.md`; un blocker individuato prima di una modifica pericolosa e normalmente B.
 - Preservare fuori staging `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/` e `Public/assets/images/vettori/`, salvo asset nominativamente autorizzati.
+
+### 2.6.1 Contratto MOBILE-EXCELLENCE
+
+Smartphone e tablet sono superfici ecommerce primarie: non sono versioni ridotte del desktop. Progettazione e QA procedono `360px` -> `390px` -> tablet -> desktop, puntando a parita funzionale e qualita UX almeno pari per i compiti pertinenti di consultazione e acquisto. Differenze tra viewport sono ammesse se intenzionali e non nascondono capacita essenziali; responsive non significa soltanto assenza di rotture del layout.
+
+- Navigazione, ricerca, catalogo, filtri, PDP, varianti, wishlist/compare quando pertinenti, carrello, login/account, checkout e funzioni commerciali devono essere utilizzabili con touch. Nessuna funzione ecommerce essenziale dipende da desktop o solo hover.
+- Il QA controlla touch target, leggibilita, ordine visuale, densita, layout responsive, offcanvas/menu, scrolling, modali, immagini, CTA, form/input, assenza di overflow orizzontale e di contenuto essenziale nascosto.
+- ONSUS guida UI/UX anche sul responsive, non dati, tassonomia o funzioni: un pattern incompatibile con le capacita reali KeepStore va adattato. Un task UI/UX non dichiara certificazione visuale mobile senza browser pertinente; gli esiti non verificati restano espliciti, senza promessa di perfezione assoluta.
 
 ### 2.7 Contratto catalog cart asincrono e CTA compatte
 

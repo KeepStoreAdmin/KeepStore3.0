@@ -444,19 +444,21 @@ Ordine vincolante delle fonti:
 
 Gli SHA e lo stato Git reale prevalgono sui checkpoint documentali non ancora aggiornati. Handoff, memoria e allegati sono supporto, non source of truth. Nessuna richiesta corrente autorizza implicitamente modifiche a `main`, esposizione di segreti o merge non approvati.
 
-Regole di sincronizzazione:
+#### Contratto permanente WORKING-COPY-CANONICA e sincronizzazione post-merge
 
-- Tutte le modifiche Codex avvengono nella working copy canonica `C:\KeepStoreWeb\KeepStore3.0\`.
+- `C:\KeepStoreWeb\KeepStore3.0\` e la working copy operativa canonica del Product Owner: da qui Germano preleva i file approvati per copiarli sul server. Deve rappresentare il `frontend-rebuild` stabile approvato, non conservare permanentemente file runtime di task non ancora approvati/mergeati. I task possono usare worktree isolate; durante uno smoke e ammessa una sostituzione temporanea nella copia canonica solo con backup e ripristino byte-per-byte verificati.
 - Ogni branch runtime o docs deve essere pushato su origin prima del report; una modifica solo locale o solo descritta in chat non e chiusa.
-- Ogni task parte con `git fetch` e verifica degli SHA. Dopo ogni merge deve risultare `frontend-rebuild == origin/frontend-rebuild`.
+- Ogni task parte con `git fetch` e verifica degli SHA. Dopo ogni merge runtime autorizzato, la chiusura tecnica richiede la sincronizzazione fast-forward della copia canonica allo stesso SHA di `frontend-rebuild == origin/frontend-rebuild`: i file runtime approvati devono essere realmente presenti nella cartella da cui Germano distribuisce. Verificare staging vuoto e preservare modifiche locali/configurazioni autorizzate, incluso `web.config`, e tutti gli untracked autorizzati. Se la sincronizzazione e bloccata, esito B: non dichiarare chiuso il runtime lasciando la copia canonica indietro.
+- Per task docs-only, i manuali si allineano nel normale merge/sincronizzazione stabile; la sincronizzazione runtime non impone build o smoke non pertinenti.
 - Gli aggiornamenti locali sono esclusivamente fast-forward; reset, rebase e force non autorizzati sono vietati. `main` non va modificato.
 - Le directory non tracciate `Public/assets/images/articoli/`, `Public/assets/images/marche/`, `Public/assets/images/settori/` e `Public/assets/images/vettori/` vanno sempre preservate fuori da staging e commit, salvo asset nominativamente autorizzati dal manifest.
 
-### Mobile-first e divisione efficiente dei test
+### Contratto permanente MOBILE-FIRST / MOBILE-EXCELLENCE e divisione efficiente dei test
 
-- Il mobile e l'esperienza primaria, non un adattamento secondario del desktop. Progettazione, gerarchia, interazioni e QA iniziano da `360px` e `390px`; tablet e desktop vengono dopo.
-- Nessuna funzione essenziale puo dipendere dal solo hover. Touch target, offcanvas, ordine contenuti, leggibilita, densita commerciale e scrolling devono essere progettati mobile-first.
-- Nessun esito A visuale senza browser mobile reale. Una verifica desktop non certifica mobile; se mobile non e verificato, va dichiarato esplicitamente.
+- Smartphone e tablet sono superfici ecommerce primarie, non versioni ridotte o secondarie: progettazione e QA sono mobile-first, nell'ordine `360px`, `390px`, tablet, desktop. Le funzioni pertinenti devono mantenere parita funzionale e qualita UX almeno pari nei compiti di consultazione e acquisto; differenze desktop/mobile sono intenzionali e non eliminano capacita essenziali. Responsive significa uso agevole, non solo layout che non si rompe.
+- Navigazione, ricerca, catalogo, filtri, PDP, varianti, wishlist/compare quando pertinenti, carrello, login/account, checkout e funzioni commerciali devono funzionare con touch; nessuna funzione ecommerce essenziale e desktop-only o hover-only.
+- QA UI/UX: verificare touch target, leggibilita, ordine visuale, densita, layout responsive, offcanvas/menu, scrolling, modali, immagini, CTA, form/input, assenza di overflow orizzontale e di contenuti essenziali nascosti. ONSUS resta riferimento UI/UX anche responsive, ma non impone pattern incompatibili con dati e funzioni reali KeepStore.
+- Nessun task UI/UX dichiara A visuale mobile senza verifica browser pertinente. Una verifica desktop non certifica smartphone/tablet; se la verifica visuale mobile manca, dichiararlo esplicitamente senza promettere perfezione assoluta.
 - Codex esegue per impostazione predefinita tutti i test e smoke tecnici/browser automatizzabili: build/precompile, JavaScript, DOM/computed style, console/runtime, sicurezza, diff, manifest, branch e working tree.
 - Germano interviene soltanto per conferme umane visive, commerciali o funzionali realmente non automatizzabili o dipendenti da sue fixture/dispositivi; ChatGPT fornisce pochi passaggi semplici. Germano non esegue Git/GitHub.
 - Un blocco tecnico di strumenti, autenticazione o permessi produce B con prova precisa: non va aggirato e l'operazione non va trasferita automaticamente a Germano. Merge e task docs-only non ripetono test gia conclusi e non pertinenti.
