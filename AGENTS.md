@@ -13,6 +13,24 @@ Fonte canonica del metodo. I manuali in `docs/` conservano checkpoint, architett
 - Un solo task attivo; il successivo attende chiusura, stop o sostituzione esplicita di Germano.
 - Ogni task inizia con `git fetch`, verifica ref/SHA, staging vuoto e tracked tree pulito. Censire e preservare gli untracked autorizzati.
 
+
+### Modalita permanente LOCAL-FIRST + GITHUB SOURCE OF TRUTH
+
+Questa modalita e obbligatoria per i task runtime KeepStore salvo deroga esplicita del Product Owner.
+
+- Codex lavora **direttamente nella working copy canonica** `C:\KeepStoreWeb\KeepStore3.0\` durante investigazione, modifica e test. Non deve lavorare in una copia temporanea o clone alternativo lasciando la cartella canonica indietro rispetto al task.
+- GitHub resta la **source of truth versionata** per branch, commit, diff, PR e merge. La working copy locale e la superficie operativa; GitHub e la superficie di controllo e storico.
+- Prima di creare il branch task, Codex sincronizza `frontend-rebuild` nella working copy solo con fast-forward al preciso SHA autorizzato, preservando configurazioni locali e untracked autorizzati; una divergenza non risolvibile senza rebase/reset/force produce STOP B.
+- Durante il task, i file finali modificati restano materialmente nella working copy canonica. Dopo PASS tecnico, commit e push, la working copy deve essere sul task branch e i file tracked del manifest devono corrispondere al commit pubblicato.
+- Dopo PASS tecnico e PR DRAFT, Codex deve dichiarare esplicitamente `FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER` e fornire la lista **esatta** dei file manifest che Germano puo copiare sul server. Nessun file fuori manifest e implicitamente autorizzato al deploy/smoke.
+- Lo smoke server del Product Owner, quando richiesto o utile, avviene **prima del merge stabile** usando solo i file indicati. Un upload manuale per smoke non equivale a deploy definitivo e non autorizza merge.
+- ChatGPT effettua la review indipendente del branch/commit/diff pubblicato su GitHub e assegna A/B/E. Il fatto che Codex abbia modificato la working copy locale non sostituisce la review Git.
+- Dopo A di ChatGPT e autorizzazione esplicita di Germano, il merge resta esclusivamente fast-forward. Dopo il merge Codex riallinea la working copy canonica al nuovo `frontend-rebuild` stabile e verifica che i file runtime del task coincidano con lo stable, preservando lo stato locale autorizzato.
+- Germano non deve eseguire operazioni Git: puo limitarsi a copiare sul server i file manifest dichiarati pronti e a fare verifiche umane/commerciali che non siano automatizzabili.
+- ChatGPT, quando non dispone di accesso diretto al filesystem Windows locale, non dichiara di avere modificato o verificato `C:\...` direttamente: usa GitHub per la review indipendente e il report Codex per lo stato locale. Codex, eseguito sul PC, e responsabile della verifica reale della working copy canonica.
+- Nei prompt runtime futuri questa modalita va considerata **default permanente** e non deve essere reintrodotta come eccezione della singola chat.
+
+
 ## Ruoli e autorita
 
 - **Germano** decide priorita, perimetro e risultato commerciale e concede le autorizzazioni finali richieste. Non esegue operazioni Git/GitHub.

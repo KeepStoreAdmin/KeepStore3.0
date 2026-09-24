@@ -184,6 +184,37 @@ La checklist operativa e il modello `Manifest installazione cliente` sono canoni
 - Regola permanente: Codex pusha il task branch e apre/aggiorna la PR prima della review ChatGPT. PR e merge sono separati; Codex esegue il merge fast-forward solo dopo A di ChatGPT e autorizzazione esplicita di Germano.
 - Esempio corrente: checkout note ordine + consenso condizioni chiuso e validato live; PR #171 sessione/logout post-ordine resta backlog non attivo perche il test manuale ha dato esito A e il problema non e riproducibile ora.
 
+
+#### 2.1.0 LOCAL-FIRST + GITHUB SOURCE OF TRUTH
+
+Il workflow runtime standard usa la stessa cartella locale del Product Owner come working copy reale:
+
+`C:\KeepStoreWeb\KeepStore3.0\`
+
+Responsabilita e separazione delle fonti:
+- **working copy locale** = superficie operativa in cui Codex legge, modifica, compila e testa;
+- **GitHub** = source of truth versionata per branch, commit, diff, PR e merge;
+- **server online di smoke** = superficie temporanea di verifica Product Owner, mai source of truth;
+- **ChatGPT** = review e decision gate indipendente tramite GitHub e fonti tecniche disponibili.
+
+Sequenza obbligatoria:
+1. sync FF-only dello stable autorizzato nella working copy canonica;
+2. branch task dalla base esatta;
+3. implementazione/test direttamente nella working copy;
+4. commit/push/PR DRAFT;
+5. working copy lasciata sul task branch con file manifest identici al commit;
+6. dichiarazione `FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER` + lista file esatta;
+7. eventuale smoke manuale server pre-merge;
+8. review ChatGPT A/B/E;
+9. autorizzazione Germano;
+10. merge FF-only;
+11. sync working copy al nuovo stable con preservazione dello stato locale autorizzato.
+
+Questo contratto evita due classi di errore storiche: file Git corretti ma cartella operativa locale non aggiornata, oppure file testati/coperti sul server non corrispondenti al commit realmente revisionato. Per un task runtime la corrispondenza `working copy task branch <-> commit pubblicato` e un gate tecnico esplicito.
+
+Se Codex non puo verificare o modificare la working copy canonica sul PC, non simula il risultato: STOP B con evidenza. Se ChatGPT non ha accesso diretto al filesystem Windows, non sostituisce la verifica locale con una supposizione; verifica GitHub e richiede al report Codex la certificazione dello stato locale.
+
+
 #### 2.1.1 Policy permanente qualita, efficienza e decision gate
 
 Questa policy estende il metodo Token-Safe / One-Shot senza sostituirlo.

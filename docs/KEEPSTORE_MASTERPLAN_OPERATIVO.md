@@ -27,6 +27,32 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 Questo checkpoint va aggiornato dopo ogni blocco importante. E una mappa di ripartenza, non sostituisce la verifica diretta di Git, del root AGENTS.md e delle fonti pertinenti.
 
 
+
+### Modalita operativa permanente LOCAL-FIRST + GITHUB SOURCE OF TRUTH
+
+Decisione Product Owner del 2026-09-24: la working copy `C:\KeepStoreWeb\KeepStore3.0\` non e soltanto una copia da sincronizzare a fine merge, ma la **working copy operativa primaria** dei task runtime. Questa regola deve sopravvivere a nuove chat ed e vincolante insieme a `AGENTS.md`.
+
+Flusso standard:
+1. ChatGPT definisce micro-task, base SHA, manifest, test e stop condition.
+2. Codex lavora direttamente nella working copy canonica, sincronizzata FF-only allo stable autorizzato, preservando configurazioni locali e untracked autorizzati.
+3. Codex implementa e testa localmente nella stessa cartella; i file finali del manifest restano disponibili sul PC.
+4. Dopo PASS tecnico, Codex crea un singolo commit, pusha il task branch e apre/aggiorna la PR DRAFT.
+5. Codex dichiara `FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER` e fornisce l'elenco esatto dei file che Germano puo copiare sul server per lo smoke reale pre-merge.
+6. Germano puo effettuare lo smoke server senza operazioni Git e senza considerarlo deploy definitivo.
+7. ChatGPT controlla indipendentemente GitHub/PR/diff, assegna A/B/E e decide se servono REV.
+8. Solo dopo A + autorizzazione esplicita di Germano si integra con fast-forward.
+9. Codex riallinea quindi la working copy canonica al nuovo stable e verifica locale/origin, parent, staging e stato autorizzato.
+
+Regole:
+- GitHub resta la source of truth per versionamento, review e merge; la cartella locale resta la source operativa dei file su cui Codex lavora.
+- Vietato usare come normale workflow un clone/copia temporanea che lasci `C:\KeepStoreWeb\KeepStore3.0\` non allineata al task.
+- Nessun upload server durante una modifica incompleta: il Product Owner copia file solo dopo PASS tecnico/commit/PR e dalla lista manifest dichiarata.
+- Nessun file fuori manifest e autorizzato allo smoke/deploy per implicazione.
+- Il server di smoke non diventa source of truth e non sostituisce GitHub.
+- Il mancato accesso diretto di ChatGPT al filesystem locale non cambia il modello: Codex verifica il locale, ChatGPT verifica GitHub in modo indipendente.
+- Questa modalita e il default per tutte le nuove chat KeepStore e deve essere letta da `AGENTS.md` prima di ogni task importante.
+
+
 ### Decisione architetturale SEO/AI 2026 - Semantic Commerce Layer
 
 Decisione Product Owner/ChatGPT del 2026-09-24: KeepStore non deve ne riscrivere integralmente la SEO tecnica gia stabilizzata ne continuare ad aggiungere correzioni SEO isolate pagina per pagina. Le fondamenta tecniche sane restano in uso e vengono classificate `KEEP`; la logica editoriale/semantica dispersa o merceologia-specifica viene classificata `REFACTOR/REMOVE` e fatta convergere progressivamente in un unico **Semantic Commerce Layer multi-tenant**. Questa sezione prevale sui riferimenti storici di roadmap che trattavano `llms.txt`, `llms.ashx`, "Gemini SEO" o patch SEO pagina-per-pagina come obiettivi prioritari.
