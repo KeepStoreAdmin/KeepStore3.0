@@ -4,7 +4,7 @@
 <%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
 <asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
-    Catalogo
+    <asp:Literal ID="litCatalogTitle" runat="server" Mode="Encode" EnableViewState="false" />
 </asp:Content>
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">

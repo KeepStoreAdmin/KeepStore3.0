@@ -81,23 +81,12 @@ Public NotInheritable Class SeoBuilder
         Dim page As Page = ResolvePage(ctx)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
-        Dim found As HtmlMeta = Nothing
-        For Each ctrl As Control In page.Header.Controls
-            Dim m As HtmlMeta = TryCast(ctrl, HtmlMeta)
-            If m IsNot Nothing AndAlso String.Equals(m.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
-                found = m
-                Exit For
-            End If
-        Next
+        Dim found As HtmlMeta = FindHeadMeta(page.Header, "name", metaName)
 
         If found Is Nothing Then
             found = New HtmlMeta()
             found.Name = metaName
-            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
-                        If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
-                        If headC IsNot Nothing Then
-                            headC.Controls.Add(found)
-                        End If
+            GetHeadInsertionContainer(page.Header).Controls.Add(found)
         End If
 
         found.Content = If(metaContent, "")
@@ -114,26 +103,12 @@ Public NotInheritable Class SeoBuilder
         Dim page As Page = ResolvePage(ctx)
         If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
 
-        Dim found As HtmlMeta = Nothing
-        For Each ctrl As Control In page.Header.Controls
-            Dim m As HtmlMeta = TryCast(ctrl, HtmlMeta)
-            If m IsNot Nothing Then
-                Dim prop As String = m.Attributes("property")
-                If Not String.IsNullOrEmpty(prop) AndAlso String.Equals(prop, propertyName, StringComparison.OrdinalIgnoreCase) Then
-                    found = m
-                    Exit For
-                End If
-            End If
-        Next
+        Dim found As HtmlMeta = FindHeadMeta(page.Header, "property", propertyName)
 
         If found Is Nothing Then
             found = New HtmlMeta()
             found.Attributes("property") = propertyName
-            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
-                        If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
-                        If headC IsNot Nothing Then
-                            headC.Controls.Add(found)
-                        End If
+            GetHeadInsertionContainer(page.Header).Controls.Add(found)
         End If
 
         found.Content = If(metaContent, "")
@@ -146,27 +121,55 @@ Public NotInheritable Class SeoBuilder
         Dim href As String = If(canonicalUrl, "").Trim()
         If href = "" Then Exit Sub
 
-        Dim found As HtmlLink = Nothing
-        For Each ctrl As Control In page.Header.Controls
-            Dim l As HtmlLink = TryCast(ctrl, HtmlLink)
-            If l IsNot Nothing AndAlso String.Equals(Convert.ToString(l.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then
-                found = l
-                Exit For
-            End If
-        Next
+        Dim found As HtmlLink = FindHeadCanonical(page.Header)
 
         If found Is Nothing Then
             found = New HtmlLink()
             found.Attributes("rel") = "canonical"
-            Dim headC As Control = FindControlRecursive(page, "phHeadDynamic")
-            If headC Is Nothing Then headC = FindControlRecursive(page, "phHeadLinks")
-            If headC IsNot Nothing Then
-                headC.Controls.Add(found)
-            End If
+            GetHeadInsertionContainer(page.Header).Controls.Add(found)
         End If
 
         found.Href = href
     End Sub
+
+    Private Shared Function FindHeadMeta(ByVal head As Control, ByVal attributeName As String, ByVal attributeValue As String) As HtmlMeta
+        If head Is Nothing Then Return Nothing
+        Dim pending As New System.Collections.Generic.Stack(Of Control)()
+        pending.Push(head)
+        While pending.Count > 0
+            Dim current As Control = pending.Pop()
+            Dim meta As HtmlMeta = TryCast(current, HtmlMeta)
+            If meta IsNot Nothing Then
+                Dim value As String = If(String.Equals(attributeName, "name", StringComparison.Ordinal), meta.Name, meta.Attributes("property"))
+                If String.Equals(value, attributeValue, StringComparison.OrdinalIgnoreCase) Then Return meta
+            End If
+            For i As Integer = current.Controls.Count - 1 To 0 Step -1
+                pending.Push(current.Controls(i))
+            Next
+        End While
+        Return Nothing
+    End Function
+
+    Private Shared Function FindHeadCanonical(ByVal head As Control) As HtmlLink
+        If head Is Nothing Then Return Nothing
+        Dim pending As New System.Collections.Generic.Stack(Of Control)()
+        pending.Push(head)
+        While pending.Count > 0
+            Dim current As Control = pending.Pop()
+            Dim link As HtmlLink = TryCast(current, HtmlLink)
+            If link IsNot Nothing AndAlso String.Equals(Convert.ToString(link.Attributes("rel")), "canonical", StringComparison.OrdinalIgnoreCase) Then Return link
+            For i As Integer = current.Controls.Count - 1 To 0 Step -1
+                pending.Push(current.Controls(i))
+            Next
+        End While
+        Return Nothing
+    End Function
+
+    Private Shared Function GetHeadInsertionContainer(ByVal head As Control) As Control
+        Dim container As Control = FindControlRecursiveInternal(head, "phHeadDynamic")
+        If container Is Nothing Then container = FindControlRecursiveInternal(head, "phHeadLinks")
+        Return If(container, head)
+    End Function
 
     ' Utility opzionale: OpenGraph base
     Public Shared Sub ApplyOpenGraph(ByVal ctx As Object, ByVal title As String, ByVal descr As String, ByVal url As String, ByVal imageUrl As String)

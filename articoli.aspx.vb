@@ -2747,16 +2747,10 @@ strWhere = strWhere & " GROUP BY id"
             Dim robots As String = If(allowIndex, "index,follow", "noindex,follow")
             Context.Items("KeepStore.CatalogCanonical") = canonical
 
-            Dim sb As New StringBuilder()
             If Not String.IsNullOrEmpty(canonical) Then
-                sb.Append("<link rel=""canonical"" href=""")
-                sb.Append(HttpUtility.HtmlAttributeEncode(canonical))
-                sb.Append(""" />").Append(vbCrLf)
+                SeoBuilder.SetCanonical(Me.Page, canonical)
             End If
-            sb.Append("<meta name=""robots"" content=""")
-            sb.Append(robots)
-            sb.Append(""" />").Append(vbCrLf)
-            litSeoHead.Text = sb.ToString()
+            SeoBuilder.AddOrReplaceMeta(Me.Page, "robots", robots)
 
             If Not allowIndex Then
                 Try
@@ -3475,127 +3469,24 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Private Sub EnsureCatalogSeo()
-        If String.IsNullOrEmpty(Page.Title) Then
-            Page.Title = "Catalogo prodotti"
-        End If
-
         Dim brandName As String = StorefrontSeoTenantContext.BrandName(HttpContext.Current)
         Dim catalogPageTitle As String = "Catalogo prodotti " & brandName
-        AddOrReplaceMeta(Me.Page, "description", catalogPageTitle & " — cerca articoli, marche e categorie disponibili online.")
+        Page.Title = catalogPageTitle
+        litCatalogTitle.Text = catalogPageTitle
+        SeoBuilder.AddOrReplaceMeta(Me.Page, "description", catalogPageTitle & " — cerca articoli, marche e categorie disponibili online.")
 
         Dim canonical As String = Convert.ToString(Context.Items("KeepStore.CatalogCanonical"))
         If String.IsNullOrEmpty(canonical) Then
             canonical = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/articoli.aspx")
         End If
 
-        Dim jsonLd As String = BuildSimplePageJsonLd(catalogPageTitle, "Catalogo prodotti", canonical)
+        Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(catalogPageTitle, "Catalogo prodotti", canonical, "CollectionPage")
         If litSeoHead IsNot Nothing AndAlso
            litSeoHead.Text.IndexOf("application/ld+json", StringComparison.OrdinalIgnoreCase) < 0 Then
             litSeoHead.Text &= "<script type=""application/ld+json"">" & jsonLd & "</script>"
         End If
     End Sub
 
-    ' ============================================================
-    ' SEO helpers locali (compatibilità: SeoBuilder non disponibile)
-    ' ============================================================
-
-    Private Shared Sub AddOrReplaceMeta(ByVal page As System.Web.UI.Page, ByVal metaName As String, ByVal metaContent As String)
-        If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
-
-        Dim found As System.Web.UI.HtmlControls.HtmlMeta = FindMetaRecursive(page.Header, metaName)
-
-        If found Is Nothing Then
-            found = New System.Web.UI.HtmlControls.HtmlMeta()
-            found.Name = metaName
-            Dim container As Control = SeoBuilder.FindControlRecursive(page, "phHeadDynamic")
-            If container Is Nothing Then container = SeoBuilder.FindControlRecursive(page, "phHeadLinks")
-            If container Is Nothing Then container = page.Header
-            container.Controls.Add(found)
-        End If
-
-        found.Content = metaContent
-    End Sub
-
-    Private Shared Function FindMetaRecursive(ByVal root As Control, ByVal metaName As String) As System.Web.UI.HtmlControls.HtmlMeta
-        If root Is Nothing Then Return Nothing
-        Dim candidate As System.Web.UI.HtmlControls.HtmlMeta = TryCast(root, System.Web.UI.HtmlControls.HtmlMeta)
-        If candidate IsNot Nothing AndAlso String.Equals(candidate.Name, metaName, StringComparison.OrdinalIgnoreCase) Then
-            Return candidate
-        End If
-        For Each child As Control In root.Controls
-            Dim found As System.Web.UI.HtmlControls.HtmlMeta = FindMetaRecursive(child, metaName)
-            If found IsNot Nothing Then Return found
-        Next
-        Return Nothing
-    End Function
-
-    Private Shared Sub SetCanonical(ByVal page As System.Web.UI.Page, ByVal canonicalUrl As String)
-        If page Is Nothing OrElse page.Header Is Nothing Then Exit Sub
-        If String.IsNullOrWhiteSpace(canonicalUrl) Then Exit Sub
-
-        Dim found As System.Web.UI.HtmlControls.HtmlLink = Nothing
-        For Each ctrl As Control In page.Header.Controls
-            Dim l As System.Web.UI.HtmlControls.HtmlLink = TryCast(ctrl, System.Web.UI.HtmlControls.HtmlLink)
-            If l IsNot Nothing Then
-                Dim rel As String = Convert.ToString(l.Attributes("rel"))
-                If String.Equals(rel, "canonical", StringComparison.OrdinalIgnoreCase) Then
-                    found = l
-                    Exit For
-                End If
-            End If
-        Next
-
-        If found Is Nothing Then
-            found = New System.Web.UI.HtmlControls.HtmlLink()
-            found.Attributes("rel") = "canonical"
-            page.Header.Controls.Add(found)
-        End If
-
-        found.Href = canonicalUrl
-    End Sub
-    Private Shared Function BuildSimplePageJsonLd(ByVal pageTitle As String, ByVal descr As String, ByVal canonicalUrl As String) As String
-        Dim sb As New StringBuilder()
-        sb.Append("{""@context"":""https://schema.org"",""@type"":""CollectionPage""")
-        sb.Append(",""name"":""").Append(JsonEscape(pageTitle)).Append("""")
-        sb.Append(",""url"":""").Append(JsonEscape(canonicalUrl)).Append("""")
-        If Not String.IsNullOrEmpty(descr) Then
-            sb.Append(",""description"":""").Append(JsonEscape(descr)).Append("""")
-        End If
-        sb.Append("}")
-        Return sb.ToString()
-    End Function
-
-    Private Shared Function JsonEscape(ByVal s As String) As String
-        If s Is Nothing Then Return ""
-        Dim sb As New StringBuilder(s.Length + 16)
-
-        For Each ch As Char In s
-            Select Case ch
-                Case """"c
-                    ' JSON: \"
-                    sb.Append("\\")
-                    sb.Append(ChrW(34))
-                Case "\"c
-                    ' JSON: \\
-                    sb.Append("\\\\")
-                Case ControlChars.Cr
-                    sb.Append("\\r")
-                Case ControlChars.Lf
-                    sb.Append("\\n")
-                Case ControlChars.Tab
-                    sb.Append("\\t")
-                Case Else
-                    Dim code As Integer = AscW(ch)
-                    If code < 32 Then
-                        sb.Append("\\u").Append(code.ToString("x4"))
-                    Else
-                        sb.Append(ch)
-                    End If
-            End Select
-        Next
-
-        Return sb.ToString()
-    End Function
     Private Shared Sub SetJsonLdOnMaster(ByVal page As System.Web.UI.Page, ByVal jsonLd As String)
         Try
             Dim seoMaster As ISeoMaster = TryCast(page.Master, ISeoMaster)
