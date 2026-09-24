@@ -78,6 +78,8 @@ Il modello corretto e:
 
 ### 0.2 Semantic Commerce Layer
 
+IndexNow e un futuro livello di discovery/freshness complementare a sitemap e structured data, non un requisito di AI, RAG o ricerca semantica. L'audit IndexNow A ha escluso la sitemap `lastmod` corrente come segnale affidabile. La foundation locale inattiva conserva per host soltanto fingerprint dello stato pubblico e outbox pending; Product e Offer rimangono nelle fonti e nei resolver KeepStore. Reconciler, verifica key e invio di rete richiedono task separati; nessun valore cliente o key entra nel sorgente condiviso.
+
 Cinque domini autorevoli:
 1. **Identity**: tenant host-scoped da `aziende`, con Business Description, dominio, logo e contatti.
 2. **Taxonomy**: Settori/Categorie/Tipologie/Gruppi/Sottogruppi e altre gerarchie reali.

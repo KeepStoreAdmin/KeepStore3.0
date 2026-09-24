@@ -106,6 +106,8 @@ Il layer non e un nuovo database e non autorizza una mega-riscrittura. E un cont
 
 #### Strategia discovery 2026
 
+`INDEXNOW-DISCOVERY-AUDIT-1A` e chiuso A: nel runtime precedente non esisteva un sender IndexNow; la sitemap tenant-aware emette Product/catalog con `lastmod` assente, e le tabelle commerciali esaminate non forniscono un watermark uniforme affidabile. Architettura approvata: **hybrid tenant-scoped**, con eventi web dove disponibili e riconciliazione dei fingerprint dello stato pubblico per intercettare anche modifiche dal gestionale. Key e outbox sono separate per host canonico; la sitemap resta complementare. `INDEXNOW-TENANT-SNAPSHOT-FOUNDATION-1A` introduce soltanto contratto configurazione/candidate e stato operativo versionato in `App_Data/IndexNow`: nessuna key reale, rete, sender, scheduler, endpoint, query commerciali o DDL. Prossimo task `INDEXNOW-PUBLIC-STATE-RECONCILER-1A`: `NON AVVIATO`, deve usare resolver autorevoli e una scansione read-only completa prima di rilevare cancellazioni. Verifica key e sender restano successivi e distinti. Lo stato file non e fonte di verita di Product/Offer.
+
 Per Google AI Overviews/AI Mode e Bing AI/Copilot non viene creato un SEO parallelo. La priorita e produrre pagine crawlable, utili, veloci, coerenti, semanticamente chiare e con structured data aderente al contenuto visibile e ai facts commerciali reali.
 
 Roadmap di discovery:
@@ -139,7 +141,7 @@ Nessuno dei tre autorizza DDL, nuovo motore promo, vector DB, embeddings, RAG, M
 - Inventario metadati: HOME mantiene title, description, canonical, Open Graph e JSON-LD esistente; catalogo mantiene title/description/canonical e `CollectionPage` JSON-LD valido; PDP mantiene title/description/canonical e Open Graph. Il contratto `Product`/`Offer` avanzato e ora implementato nel micro-task dedicato descritto sotto, senza estenderlo a HOME o catalogo.
 - Problemi risolti: host cliente hardcoded in policy, HOME, robots e sitemap; canonical ricavate dall'authority della richiesta; risoluzione azienda tramite confronto SQL parziale dell'host; segnali statici/dinamici conflittuali; pagine private con canonical/checkout JSON-LD; sitemap su route inesistente e connection key specifica; link social condivisi specifici di un cliente.
 - Prove anti-regressione: harness compilato sulla policy reale con due tenant sintetici e host alterato; canonical/robots/sitemap isolati; matrice HTTP con header `Purpose: prefetch`; XML sitemap valido e univoco; JSON-LD esistente parseabile; precompile ASP.NET Framework 4.8, diff check, secret scan e confronto delle aree commerciali protette. Nessuna DDL/DML, ordine, carrello, pagamento, e-mail o modifica dati appartiene al task.
-- Residui separati: Merchant Center, IndexNow, Search Console/Bing performance, feed e integrazioni AI restano `NON AVVIATI`; la loro priorita segue ora la sezione `Decisione architetturale SEO/AI 2026 - Semantic Commerce Layer`. `llms.txt`/`llms.ashx` sono esperimenti opzionali e non una foundation SEO.
+- Residui separati: Merchant Center, sender/reconciler IndexNow, Search Console/Bing performance, feed e integrazioni AI restano `NON AVVIATI`; la loro priorita segue ora la sezione `Decisione architetturale SEO/AI 2026 - Semantic Commerce Layer`. La sola foundation IndexNow inattiva e descritta sopra. `llms.txt`/`llms.ashx` sono esperimenti opzionali e non una foundation SEO.
 
 ### Contratto Google Product structured data
 
