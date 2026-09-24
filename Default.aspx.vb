@@ -85,10 +85,10 @@ Partial Public Class _Default
         rptSideBanners.DataBind()
         ApplyHeroMode(ResolveHeroMode(rptHeroSlides.Items.Count > 0, If(sideBanners Is Nothing, 0, sideBanners.Rows.Count)))
 
-        Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
-        If sectors Is Nothing Then
-            sectors = New List(Of CatalogMenuSector)()
-        End If
+        Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
+        If realSectors Is Nothing Then realSectors = New List(Of CatalogMenuSector)()
+        Dim editorialSectors As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(realSectors)
+        Dim sectors As List(Of CatalogMenuSector) = realSectors
         If sectors.Count = 0 Then
             sectors = BuildHomeFallbackSectors()
         End If
@@ -105,11 +105,22 @@ Partial Public Class _Default
             HomeMainCategoriesSection.Visible = (sectorRows.Count > 0)
         End If
 
-        ' Editorial shortcuts reuse the same enabled taxonomy as the catalog menu.
-        ' If a label is absent or ambiguous, keep its existing search destination.
-        HomeCollectionInformaticaLink.HRef = ResolveHomeSectorUrl(sectors, "Informatica", "articoli.aspx?q=computer%20notebook")
-        HomeCollectionTelefoniaLink.HRef = ResolveHomeSectorUrl(sectors, "Telefonia", "articoli.aspx?q=smartphone%20accessori")
-        HomeBottomRicondizionatiLink.HRef = ResolveHomeSectorUrl(sectors, "Ricondizionato", "articoli.aspx?q=ricondizionato")
+        ' Editorial navigation and search examples use only the real enabled catalog taxonomy.
+        Dim collectionCount As Integer = Math.Min(4, editorialSectors.Count)
+        Dim bottomCount As Integer = Math.Min(3, editorialSectors.Count - collectionCount)
+        Dim collectionRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(0, collectionCount)
+        Dim bottomRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(collectionCount, bottomCount)
+        Dim searchRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(0, Math.Min(5, editorialSectors.Count))
+        rptHomeCollection.DataSource = collectionRows
+        rptHomeCollection.DataBind()
+        rptHomeBottomPromo.DataSource = bottomRows
+        rptHomeBottomPromo.DataBind()
+        rptHomeAiExamples.DataSource = searchRows
+        rptHomeAiExamples.DataBind()
+        rptHomeAiQuickLinks.DataSource = searchRows
+        rptHomeAiQuickLinks.DataBind()
+        HomeAiExamplesPanel.Visible = (searchRows.Count > 0)
+        HomeAiQuickLinksPanel.Visible = (searchRows.Count > 0)
 
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
@@ -144,8 +155,8 @@ Partial Public Class _Default
         End If
 
         If HomeWidePromoSection IsNot Nothing Then HomeWidePromoSection.Visible = True
-        If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = True
-        If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = True
+        If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = (collectionRows.Count > 0)
+        If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = (bottomRows.Count > 0)
 
         If HomeLegacyEditorialSection IsNot Nothing Then
             HomeLegacyEditorialSection.Visible = False
@@ -179,21 +190,35 @@ Partial Public Class _Default
         End If
     End Sub
 
-    Private Function ResolveHomeSectorUrl(ByVal sectors As List(Of CatalogMenuSector), ByVal label As String, ByVal fallback As String) As String
-        If sectors Is Nothing Then Return fallback
+    Private Shared Function SelectHomeEditorialSectors(ByVal source As List(Of CatalogMenuSector)) As List(Of CatalogMenuSector)
+        Dim result As New List(Of CatalogMenuSector)()
+        If source Is Nothing Then Return result
 
-        Dim matchId As Integer = 0
-        For Each sector As CatalogMenuSector In sectors
-            If sector Is Nothing OrElse sector.Id <= 0 OrElse
-               Not String.Equals(Convert.ToString(sector.Descrizione).Trim(), label, StringComparison.OrdinalIgnoreCase) Then
-                Continue For
-            End If
-            If matchId > 0 Then Return fallback
-            matchId = sector.Id
+        Dim seenIds As New HashSet(Of Integer)()
+        For Each sector As CatalogMenuSector In source
+            If sector Is Nothing OrElse sector.Id <= 0 OrElse String.IsNullOrWhiteSpace(sector.Descrizione) Then Continue For
+            Dim expectedUrl As String = "articoli.aspx?st=" & sector.Id.ToString(CultureInfo.InvariantCulture)
+            If Not String.Equals(sector.DefaultUrl, expectedUrl, StringComparison.OrdinalIgnoreCase) Then Continue For
+            If seenIds.Add(sector.Id) Then result.Add(sector)
+            If result.Count >= 9 Then Exit For
         Next
+        Return result
+    End Function
 
-        If matchId <= 0 Then Return fallback
-        Return "articoli.aspx?st=" & matchId.ToString(CultureInfo.InvariantCulture)
+    Protected Function HomeSectorMicrocopy(ByVal value As Object) As String
+        Dim categories As List(Of CatalogMenuCategory) = TryCast(value, List(Of CatalogMenuCategory))
+        If categories Is Nothing Then Return "Esplora gli articoli del reparto"
+
+        Dim names As New List(Of String)()
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each category As CatalogMenuCategory In categories
+            If category Is Nothing OrElse String.IsNullOrWhiteSpace(category.Descrizione) Then Continue For
+            Dim name As String = category.Descrizione.Trim()
+            If seen.Add(name) Then names.Add(name)
+            If names.Count >= 3 Then Exit For
+        Next
+        If names.Count = 0 Then Return "Esplora gli articoli del reparto"
+        Return String.Join(", ", names.ToArray())
     End Function
 
     Protected Function HomeHeroCtaText(ByVal value As Object) As String

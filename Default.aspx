@@ -113,7 +113,7 @@
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
                     <h5 class="fw-semibold">Categorie principali</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Naviga i reparti KeepStore e trova rapidamente prodotti, ricambi e accessori tech.</p>
+                    <p class="body-text-3 text-main-2 mb-0">Esplora i settori del catalogo e trova rapidamente ciò che cerchi.</p>
                 </div>
                 <a href="articoli.aspx" class="tf-btn btn-line">
                     <span>Vai al catalogo</span>
@@ -143,23 +143,20 @@
                     <h5>Chiedimi cosa stai cercando</h5>
                     <p>Interpreta la richiesta e interroga il catalogo articoli KeepStore usando descrizioni, codice, EAN/GTIN, marca, reparto e categoria.</p>
                     <div class="ks-ai130-form" role="search">
-                        <input type="search" autocomplete="off" placeholder="Es. Cerco un toner compatibile sotto 50 euro" aria-label="Cerca con AI locale KeepStore" />
+                        <input type="search" autocomplete="off" placeholder="Descrivi ciò che cerchi nel catalogo" aria-label="Cerca con AI locale KeepStore" />
                         <button type="button">Ragiona</button>
                     </div>
-                    <div class="ks-ai130-examples">
-                        <button type="button">smartphone samsung</button>
-                        <button type="button">monitor 27 pollici gaming</button>
-                        <button type="button">Cerco toner compatibile Pantum</button>
-                        <button type="button">Voglio un notebook ricondizionato</button>
-                        <button type="button">Mi serve un adattatore USB-C</button>
-                    </div>
+                    <asp:Panel ID="HomeAiExamplesPanel" runat="server" CssClass="ks-ai130-examples" Visible="false">
+                        <asp:Repeater ID="rptHomeAiExamples" runat="server">
+                            <ItemTemplate><button type="button"><%# SafeText(Eval("Descrizione")) %></button></ItemTemplate>
+                        </asp:Repeater>
+                    </asp:Panel>
                     <div class="ks-ai130-answer"><i></i><p>Scrivi cosa stai cercando: usero il catalogo articoli reale per proporti prodotti pertinenti.</p></div>
-                    <div class="ks-ai130-tools">
-                        <a href="articoli.aspx?q=toner%20compatibile">Toner</a>
-                        <a href="articoli.aspx?q=custodia%20samsung">Custodie</a>
-                        <a href="articoli.aspx?q=notebook%20ricondizionato">Notebook</a>
-                        <a href="articoli.aspx?q=hub%20usb">USB</a>
-                    </div>
+                    <asp:Panel ID="HomeAiQuickLinksPanel" runat="server" CssClass="ks-ai130-tools" Visible="false">
+                        <asp:Repeater ID="rptHomeAiQuickLinks" runat="server">
+                            <ItemTemplate><a href='<%# SafeText(Eval("DefaultUrl")) %>'><%# SafeText(Eval("Descrizione")) %></a></ItemTemplate>
+                        </asp:Repeater>
+                    </asp:Panel>
                 </div>
                 <div class="ks-ai130-results-wrap">
                     <div class="ks-ai130-head"><span>Risposta e prodotti consigliati</span><small data-ks-ai-count>Catalogo articoli</small></div>
@@ -242,15 +239,15 @@
         <div class="container">
             <div class="ks-home-wide-promo-inner">
                 <div class="ks-home-wide-promo-copy">
-                    <p class="caption text-primary fw-semibold mb-2">Catalogo e assistenza</p>
+                    <p class="caption text-primary fw-semibold mb-2">Esplora il catalogo</p>
                     <div class="mb-0">
-                        <h5 class="fw-semibold mb-2">Computer, telefonia, stampanti e assistenza specializzata</h5>
-                        <p class="body-text-3 text-main-2 mb-0">Una fascia promozionale pulita per guidare l'utente verso catalogo e supporto, senza prezzi o sconti inventati.</p>
+                        <h5 class="fw-semibold mb-2">Scopri gli articoli disponibili nel catalogo</h5>
+                        <p class="body-text-3 text-main-2 mb-0">Esplora i prodotti oppure contattaci per maggiori informazioni.</p>
                     </div>
                 </div>
                 <div class="ks-home-wide-promo-actions d-flex align-items-center gap-2">
                     <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
-                    <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Richiedi assistenza</span></a>
+                    <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Contattaci</span></a>
                 </div>
             </div>
         </div>
@@ -258,34 +255,17 @@
     <section id="HomeCollectionSection" runat="server" visible="false" class="ks-home-section ks-home-collection-block">
         <div class="container">
             <div class="ks-home-collection-grid">
-                <a id="HomeCollectionInformaticaLink" runat="server" href="articoli.aspx?q=computer%20notebook" class="ks-home-collection-card d-flex flex-column gap-2">
-                    <span class="mb-0">Informatica</span>
-                    <div class="mb-0">
-                        <strong>PC, notebook, monitor e periferiche</strong>
-                        <em>Scopri prodotti per lavoro e casa</em>
-                    </div>
-                </a>
-                <a id="HomeCollectionTelefoniaLink" runat="server" href="articoli.aspx?q=smartphone%20accessori" class="ks-home-collection-card d-flex flex-column gap-2">
-                    <span class="mb-0">Telefonia</span>
-                    <div class="mb-0">
-                        <strong>Smartphone, accessori e supporto</strong>
-                        <em>Trova ricambi, cover e dispositivi</em>
-                    </div>
-                </a>
-                <a href="articoli.aspx?q=toner%20stampante" class="ks-home-collection-card d-flex flex-column gap-2">
-                    <span class="mb-0">Stampa</span>
-                    <div class="mb-0">
-                        <strong>Toner, cartucce e consumabili</strong>
-                        <em>Rifornisci casa e ufficio</em>
-                    </div>
-                </a>
-                <a href="Contattaci.aspx" class="ks-home-collection-card ks-home-collection-card--service d-flex flex-column gap-2">
-                    <span class="mb-0">Assistenza</span>
-                    <div class="mb-0">
-                        <strong>Riparazioni, reti e configurazioni</strong>
-                        <em>Parla con un tecnico KeepStore</em>
-                    </div>
-                </a>
+                <asp:Repeater ID="rptHomeCollection" runat="server">
+                    <ItemTemplate>
+                        <a href='<%# SafeText(Eval("DefaultUrl")) %>' class="ks-home-collection-card d-flex flex-column gap-2">
+                            <span class="mb-0"><%# SafeText(Eval("Descrizione")) %></span>
+                            <div class="mb-0">
+                                <strong><%# SafeText(HomeSectorMicrocopy(Eval("Categories"))) %></strong>
+                                <em>Scopri il reparto</em>
+                            </div>
+                        </a>
+                    </ItemTemplate>
+                </asp:Repeater>
             </div>
         </div>
     </section>
@@ -381,27 +361,17 @@
     <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product">
         <div class="container">
             <div class="ks-home-bottom-promo-grid">
-                <a id="HomeBottomRicondizionatiLink" runat="server" href="articoli.aspx?q=ricondizionato" class="ks-home-bottom-promo-card d-flex flex-column gap-2">
-                    <span class="mb-0">Ricondizionati</span>
-                    <div class="mb-0">
-                        <strong>Soluzioni controllate per spendere meglio</strong>
-                        <em>Consulta gli articoli disponibili a catalogo</em>
-                    </div>
-                </a>
-                <a href="Contattaci.aspx" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--service d-flex flex-column gap-2">
-                    <span class="mb-0">Supporto tecnico</span>
-                    <div class="mb-0">
-                        <strong>Hai dubbi su compatibilita o configurazione?</strong>
-                        <em>Parla con KeepStore prima dell'acquisto</em>
-                    </div>
-                </a>
-                <a href="articoli.aspx?q=toner%20cartuccia%20stampante" class="ks-home-bottom-promo-card ks-home-bottom-promo-card--print d-flex flex-column gap-2">
-                    <span class="mb-0">Stampa e consumabili</span>
-                    <div class="mb-0">
-                        <strong>Toner, cartucce e prodotti per ufficio</strong>
-                        <em>Apri il catalogo e filtra gli articoli reali</em>
-                    </div>
-                </a>
+                <asp:Repeater ID="rptHomeBottomPromo" runat="server">
+                    <ItemTemplate>
+                        <a href='<%# SafeText(Eval("DefaultUrl")) %>' class="ks-home-bottom-promo-card d-flex flex-column gap-2">
+                            <span class="mb-0"><%# SafeText(Eval("Descrizione")) %></span>
+                            <div class="mb-0">
+                                <strong><%# SafeText(HomeSectorMicrocopy(Eval("Categories"))) %></strong>
+                                <em>Scopri il reparto</em>
+                            </div>
+                        </a>
+                    </ItemTemplate>
+                </asp:Repeater>
             </div>
         </div>
     </section>
