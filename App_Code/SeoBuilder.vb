@@ -236,7 +236,7 @@ Public NotInheritable Class SeoBuilder
         Dim webPageId As String = canonicalUrl.TrimEnd("/"c) & "#webpage"
 
         Dim organization As New Dictionary(Of String, Object)()
-        organization("@type") = "Organization"
+        organization("@type") = "OnlineStore"
         organization("@id") = orgId
         organization("name") = orgName
         organization("url") = siteUrl
