@@ -1,6 +1,4 @@
 <%@ Page Language="VB" AutoEventWireup="false" MasterPageFile="~/Page.master" CodeFile="Default.aspx.vb" Inherits="_Default" %>
-<%@ Register Src="~/Public/ui/controls/HomeIconBoxes.ascx" TagPrefix="uc" TagName="HomeIconBoxes" %>
-
 <asp:Content ID="cntTitle" ContentPlaceHolderID="TitleContent" runat="server">
     <asp:Literal ID="litHomePageTitle" runat="server" Mode="Encode" />
 </asp:Content>
@@ -56,19 +54,21 @@
                                 <ItemTemplate>
                                     <div class="swiper-slide">
                                         <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel">
-                                            <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="img-style img-item ks-home-hero-media" aria-label='<%# SafeText(Eval("Caption")) %>'>
+                                            <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-style ks-home-hero-media position-absolute top-0 start-0 w-100" aria-label='<%# SafeText(Eval("Caption")) %>'>
                                                 <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
                                             <div class="content ks-home-hero-content d-flex flex-column gap-2">
                                                 <p class="caption fw-semibold ks-home-hero-eyebrow mb-0"><%# SafeText(Eval("Eyebrow")) %></p>
                                                 <h1 class="fw-semibold ks-home-hero-title mb-0"><%# SafeText(Eval("Caption")) %></h1>
-                                                <p class="body-text ks-home-hero-copy mb-0"><%# SafeText(Eval("Description")) %></p>
+                                                <asp:PlaceHolder runat="server" Visible='<%# Not String.IsNullOrWhiteSpace(Convert.ToString(Eval("Description"))) %>'>
+                                                    <p class="body-text ks-home-hero-copy mb-0"><%# SafeText(Eval("Description")) %></p>
+                                                </asp:PlaceHolder>
                                                 <div class="ks-home-hero-actions d-flex align-items-center gap-2 mt-2">
-                                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx?inpromo=1") %>' class="tf-btn btn-large animate-btn bg-primary text-white">
+                                                    <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="tf-btn btn-large animate-btn bg-primary text-white">
                                                         <span><%# HomeHeroCtaText(Eval("LinkUrl")) %></span>
                                                     </a>
                                                     <a href="Contattaci.aspx" class="tf-btn btn-line-white btn-large">
-                                                        <span>Richiedi assistenza</span>
+                                                        <span>Contattaci</span>
                                                     </a>
                                                 </div>
                                             </div>
@@ -77,9 +77,6 @@
                                 </ItemTemplate>
                             </asp:Repeater>
                         </div>
-                        <div class="swiper-button-prev nav-swiper ks-hero-prev"><i class="icon-arrow-left-lg" aria-hidden="true"></i></div>
-                        <div class="swiper-button-next nav-swiper ks-hero-next"><i class="icon-arrow-right-lg" aria-hidden="true"></i></div>
-                        <div class="sw-dot-default ks-hero-pagination"></div>
                     </div>
                 </div>
 
@@ -93,7 +90,9 @@
                                 <div class="content d-flex flex-column gap-2">
                                     <span class="box-sale-wrap"><span class="small-text"><%# SafeText(Eval("Badge")) %></span></span>
                                     <div class="box-title mb-1">
-                                        <p class="caption text-white mb-1"><%# SafeText(Eval("Description")) %></p>
+                                        <asp:PlaceHolder runat="server" Visible='<%# Not String.IsNullOrWhiteSpace(Convert.ToString(Eval("Description"))) %>'>
+                                            <p class="caption text-white mb-1"><%# SafeText(Eval("Description")) %></p>
+                                        </asp:PlaceHolder>
                                         <h6 class="text-white mb-0"><%# SafeText(Eval("Title")) %></h6>
                                     </div>
                                     <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="tf-btn btn-line-white mt-1"><span>Scopri ora</span></a>
@@ -105,8 +104,6 @@
             </div>
         </div>
     </section>
-
-    <uc:HomeIconBoxes ID="HomeIconBoxes1" runat="server" />
 
     <section id="HomeMainCategoriesSection" runat="server" class="ks-home-section ks-home-categories">
         <div class="container">
@@ -139,11 +136,11 @@
         <div class="container">
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
-                    <span class="ks-ai130-kicker">AI locale KeepStore</span>
+                    <span class="ks-ai130-kicker">Ricerca nel catalogo</span>
                     <h5>Chiedimi cosa stai cercando</h5>
-                    <p>Interpreta la richiesta e interroga il catalogo articoli KeepStore usando descrizioni, codice, EAN/GTIN, marca, reparto e categoria.</p>
+                    <p>Interpreta la richiesta e cerca tra i prodotti usando descrizioni, codice, EAN/GTIN, marca, reparto e categoria.</p>
                     <div class="ks-ai130-form" role="search">
-                        <input type="search" autocomplete="off" placeholder="Descrivi ciò che cerchi nel catalogo" aria-label="Cerca con AI locale KeepStore" />
+                        <input type="search" autocomplete="off" placeholder="Descrivi ciò che cerchi nel catalogo" aria-label="Cerca nel catalogo" />
                         <button type="button">Ragiona</button>
                     </div>
                     <asp:Panel ID="HomeAiExamplesPanel" runat="server" CssClass="ks-ai130-examples" Visible="false">
@@ -173,7 +170,7 @@
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
                     <h5 class="fw-semibold" data-ks-i18n="home.featured">In Evidenza</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Articoli selezionati disponibili a catalogo, con immagini e schede pronte per l'acquisto.</p>
+                    <p class="body-text-3 text-main-2 mb-0">Scopri gli articoli disponibili nel catalogo.</p>
                 </div>
                 <a href="articoli.aspx" class="tf-btn btn-line">
                     <span>Vedi tutti</span>
@@ -196,28 +193,13 @@
                     <h5 class="fw-semibold text-primary flat-title-has-icon">
                         <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span data-ks-i18n="home.deal">Occasione Imperdibile</span>
                     </h5>
-                    <p class="body-text-3 text-main-2 mb-0">Promozioni e occasioni caricate dal catalogo KeepStore.</p>
+                    <p class="body-text-3 text-main-2 mb-0">Promozioni e occasioni disponibili nel catalogo.</p>
                 </div>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
                 </div>
             </div>
-            <asp:Panel ID="HomeOffersFallback" runat="server" CssClass="ks-home-offers-fallback" Visible="false">
-                <div class="ks-home-promo-institutional">
-                    <div>
-                        <p class="caption text-primary fw-semibold mb-2">Promozioni KeepStore</p>
-                        <div class="mb-0">
-                            <h5 class="fw-semibold mb-2">Tecnologia, accessori e assistenza in un unico negozio</h5>
-                            <p class="body-text-3 text-main-2 mb-0">Le offerte reali vengono mostrate quando disponibili a catalogo. Nel frattempo puoi consultare i reparti o richiedere supporto tecnico.</p>
-                        </div>
-                    </div>
-                    <div class="ks-home-promo-actions d-flex align-items-center gap-2">
-                        <a href="articoli.aspx" class="tf-btn btn-line"><span>Vai al catalogo</span></a>
-                        <a href="Contattaci.aspx" class="tf-btn btn-line"><span>Richiedi assistenza</span></a>
-                    </div>
-                </div>
-            </asp:Panel>
             <asp:Panel ID="HomeOffersSliderWrap" runat="server" CssClass="box-btn-slide-2 sw-nav-effect">
                 <div class="swiper tf-sw-products slider-thumb-deal" data-preview="4" data-tablet="3" data-mobile-sm="2" data-mobile="1" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="4">
                     <div class="swiper-wrapper">
@@ -434,7 +416,7 @@
 
     <section id="HomeBrandsSection" runat="server" class="ks-home-section ks-home-brands">
         <div class="container">
-            <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Rivenditori Ufficiali - I migliori Brand</h5></div>
+            <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Marche del catalogo</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">
                 <div class="swiper-wrapper">
                     <asp:Repeater ID="rptBrands" runat="server">
