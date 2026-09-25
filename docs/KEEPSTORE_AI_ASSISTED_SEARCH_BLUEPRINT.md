@@ -121,6 +121,8 @@ L'LLM non decide quale prodotto esiste, quale prezzo applicare o quale promo e v
 
 ### 0.6 Merchant e discovery
 
+`aziende_seo` e il futuro control plane 1:1 di configurazione SEO/discovery/provider per storefront, non una fonte di conoscenza prodotto. Gli ID Merchant, proprietà Search Console, key IndexNow, social URL e token cifrati dicono **dove e come** autorizzare servizi esterni; non dimostrano che un prodotto esista, non sono embedding/vector DB/RAG, non calcolano prezzo/promo/disponibilita e non autorizzano claim commerciali. `aziende.Descrizione` resta la Business Description autorevole; Product/tassonomia e Offer continuano a provenire dalle rispettive fonti. La migration `SEO-DISCOVERY-CONFIG-SCHEMA-1A` non cambia reader, feed, sender o runtime e non installa dati su alcun database in questo task.
+
 Merchant e parte del Semantic Commerce Layer:
 - feed separato per storefront quando Offer/domain/identita commerciale differiscono;
 - `product_type` dalla tassonomia KeepStore reale;
