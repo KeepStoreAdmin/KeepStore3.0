@@ -128,8 +128,145 @@ Friend Class ProductPromotionEligibilityRawOffer
     Public Property EndsOn As Nullable(Of Date)
 End Class
 
+' A batch owns one commercial scope and one loaded snapshot. It never uses the
+' request cache, so it can be shared by a background operation without Session.
+Public NotInheritable Class ProductPromotionEligibilityBatch
+    Implements IProductPromotionEligibilityBatch
+    Private ReadOnly _commercialContext As ProductPromotionEligibilityContext
+    Private ReadOnly _loadedSnapshot As ProductPromotionEligibilitySnapshot
+
+    Friend Sub New(ByVal context As ProductPromotionEligibilityContext,
+                   ByVal snapshot As ProductPromotionEligibilitySnapshot)
+        If context IsNot Nothing Then
+            _commercialContext = New ProductPromotionEligibilityContext() With {
+                .DatabaseScopeKey = context.DatabaseScopeKey,
+                .CompanyId = context.CompanyId,
+                .Listino = context.Listino,
+                .CurrentUserId = context.CurrentUserId,
+                .IsAuthenticated = context.IsAuthenticated,
+                .EvaluationDate = context.EvaluationDate,
+                .CampaignId = context.CampaignId
+            }
+        End If
+        _loadedSnapshot = snapshot
+    End Sub
+
+    Public ReadOnly Property CommercialContext As ProductPromotionEligibilityContext
+        Get
+            If _commercialContext Is Nothing Then Return Nothing
+            Return New ProductPromotionEligibilityContext() With {
+                .DatabaseScopeKey = _commercialContext.DatabaseScopeKey,
+                .CompanyId = _commercialContext.CompanyId,
+                .Listino = _commercialContext.Listino,
+                .CurrentUserId = _commercialContext.CurrentUserId,
+                .IsAuthenticated = _commercialContext.IsAuthenticated,
+                .EvaluationDate = _commercialContext.EvaluationDate,
+                .CampaignId = _commercialContext.CampaignId
+            }
+        End Get
+    End Property
+
+    Friend ReadOnly Property LoadedSnapshot As ProductPromotionEligibilitySnapshot
+        Get
+            Return _loadedSnapshot
+        End Get
+    End Property
+
+    Public ReadOnly Property Status As ProductPromotionEligibilityLoadStatus
+        Get
+            If _loadedSnapshot Is Nothing Then Return ProductPromotionEligibilityLoadStatus.TechnicalError
+            Return _loadedSnapshot.Status
+        End Get
+    End Property
+
+    Public ReadOnly Property ScopeKey As String
+        Get
+            If _commercialContext Is Nothing Then Return String.Empty
+            Return _commercialContext.CacheKey
+        End Get
+    End Property
+
+    Public Function ResolveForProduct(ByVal articleId As Integer,
+                                      ByVal tcId As Integer,
+                                      ByVal quantity As Decimal,
+                                      ByVal basePriceNet As Decimal,
+                                      ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult _
+                                      Implements IProductPromotionEligibilityBatch.ResolveForProduct
+        Return ProductPromotionEligibilityResolver.Resolve(Me, articleId, tcId, quantity,
+                                                           basePriceNet, basePriceGross)
+    End Function
+End Class
+
 Public Module ProductPromotionEligibilityResolver
     Private Const RequestCachePrefix As String = "KeepStore.ProductPromotionEligibility."
+
+    Public Function CreateAnonymousContext(ByVal databaseScopeKey As String,
+                                           ByVal companyId As Integer,
+                                           ByVal listino As Integer,
+                                           ByVal evaluationDate As Date) As ProductPromotionEligibilityContext
+        Return New ProductPromotionEligibilityContext() With {
+            .DatabaseScopeKey = databaseScopeKey,
+            .CompanyId = companyId,
+            .Listino = listino,
+            .CurrentUserId = 0,
+            .IsAuthenticated = False,
+            .EvaluationDate = evaluationDate.Date,
+            .CampaignId = 0
+        }
+    End Function
+
+    Public Function CreateBatch(ByVal connectionString As String,
+                                ByVal eligibilityContext As ProductPromotionEligibilityContext) As ProductPromotionEligibilityBatch
+        Dim contextCopy As ProductPromotionEligibilityContext = CopyContext(eligibilityContext)
+        If String.IsNullOrWhiteSpace(connectionString) OrElse
+           contextCopy Is Nothing OrElse
+           String.IsNullOrWhiteSpace(contextCopy.DatabaseScopeKey) OrElse
+           contextCopy.CompanyId <= 0 OrElse contextCopy.Listino <= 0 Then
+            Return New ProductPromotionEligibilityBatch(contextCopy, New ProductPromotionEligibilitySnapshot() With {
+                .Status = ProductPromotionEligibilityLoadStatus.InvalidRequest
+            })
+        End If
+
+        ' False deliberately bypasses HttpContext.Current.Items even inside a request.
+        Return New ProductPromotionEligibilityBatch(contextCopy,
+                                                     LoadAuthorizedSnapshot(connectionString, contextCopy, False))
+    End Function
+
+    Public Function Resolve(ByVal batch As ProductPromotionEligibilityBatch,
+                            ByVal articleId As Integer,
+                            ByVal tcId As Integer,
+                            ByVal quantity As Decimal,
+                            ByVal basePriceNet As Decimal,
+                            ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult
+        Dim result As New ProductPromotionEligibilityResult() With {
+            .BasePriceNet = basePriceNet,
+            .BasePriceGross = basePriceGross
+        }
+        If batch Is Nothing OrElse batch.CommercialContext Is Nothing OrElse
+           articleId <= 0 OrElse basePriceNet <= 0D OrElse basePriceGross <= 0D Then
+            result.Status = ProductPromotionEligibilityLoadStatus.InvalidRequest
+            Return result
+        End If
+        If batch.Status <> ProductPromotionEligibilityLoadStatus.Success Then
+            result.Status = batch.Status
+            Return result
+        End If
+        Return ResolveFromSnapshot(result, batch.LoadedSnapshot, batch.CommercialContext,
+                                   articleId, tcId, quantity, basePriceNet, basePriceGross)
+    End Function
+
+    Private Function CopyContext(ByVal source As ProductPromotionEligibilityContext) As ProductPromotionEligibilityContext
+        If source Is Nothing Then Return Nothing
+        Return New ProductPromotionEligibilityContext() With {
+            .DatabaseScopeKey = source.DatabaseScopeKey,
+            .CompanyId = source.CompanyId,
+            .Listino = source.Listino,
+            .CurrentUserId = source.CurrentUserId,
+            .IsAuthenticated = source.IsAuthenticated,
+            .EvaluationDate = source.EvaluationDate.Date,
+            .CampaignId = source.CampaignId
+        }
+    End Function
 
     Public Function CreateContext(ByVal ctx As HttpContext,
                                   ByVal companyId As Integer,
@@ -285,10 +422,11 @@ Public Module ProductPromotionEligibilityResolver
     End Function
 
     Private Function LoadAuthorizedSnapshot(ByVal connectionString As String,
-                                            ByVal eligibilityContext As ProductPromotionEligibilityContext) As ProductPromotionEligibilitySnapshot
-        Dim current As HttpContext = HttpContext.Current
+                                            ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                                            Optional ByVal useRequestCache As Boolean = True) As ProductPromotionEligibilitySnapshot
+        Dim current As HttpContext = If(useRequestCache, HttpContext.Current, Nothing)
         Dim cacheKey As String = RequestCachePrefix & eligibilityContext.CacheKey
-        If current IsNot Nothing AndAlso current.Items IsNot Nothing Then
+        If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
             Dim cached As ProductPromotionEligibilitySnapshot = TryCast(current.Items(cacheKey), ProductPromotionEligibilitySnapshot)
             If cached IsNot Nothing Then Return cached
         End If
@@ -296,7 +434,7 @@ Public Module ProductPromotionEligibilityResolver
         Try
             Using conn As New MySqlConnection(connectionString)
                 conn.Open()
-                Return LoadAuthorizedSnapshot(conn, Nothing, eligibilityContext, True, False, 0)
+                Return LoadAuthorizedSnapshot(conn, Nothing, eligibilityContext, useRequestCache, False, 0)
             End Using
         Catch ex As Exception
             Dim snapshot As New ProductPromotionEligibilitySnapshot()
@@ -315,7 +453,7 @@ Public Module ProductPromotionEligibilityResolver
                                             ByVal articleId As Integer,
                                             Optional ByVal propagateTransactionTransientErrors As Boolean = False) As ProductPromotionEligibilitySnapshot
         Dim cacheKey As String = RequestCachePrefix & eligibilityContext.CacheKey
-        Dim current As HttpContext = HttpContext.Current
+        Dim current As HttpContext = If(useRequestCache, HttpContext.Current, Nothing)
         If useRequestCache AndAlso current IsNot Nothing AndAlso current.Items IsNot Nothing Then
             Dim cached As ProductPromotionEligibilitySnapshot = TryCast(current.Items(cacheKey), ProductPromotionEligibilitySnapshot)
             If cached IsNot Nothing Then Return cached
@@ -485,7 +623,7 @@ Public Module ProductPromotionEligibilityResolver
         Return best
     End Function
 
-    Private Function IsOwnerAuthorized(ByVal ownerUserId As Integer,
+    Friend Function IsOwnerAuthorized(ByVal ownerUserId As Integer,
                                        ByVal eligibilityContext As ProductPromotionEligibilityContext) As Boolean
         If ownerUserId <= 0 Then Return True
         Return eligibilityContext IsNot Nothing AndAlso

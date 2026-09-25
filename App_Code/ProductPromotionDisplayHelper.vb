@@ -54,6 +54,16 @@ Public Class ProductPromotionDisplayModel
     Public Property Html As String
 End Class
 
+' The display core accepts an explicit, reusable commercial resolution source.
+' Web callers still use the existing connection-string overload.
+Public Interface IProductPromotionEligibilityBatch
+    Function ResolveForProduct(ByVal articleId As Integer,
+                               ByVal tcId As Integer,
+                               ByVal quantity As Decimal,
+                               ByVal basePriceNet As Decimal,
+                               ByVal basePriceGross As Decimal) As ProductPromotionEligibilityResult
+End Interface
+
 Public Module ProductPromotionDisplayHelper
     Private ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
@@ -63,6 +73,48 @@ Public Module ProductPromotionDisplayHelper
                                     ByVal eligibilityContext As ProductPromotionEligibilityContext,
                                     ByVal baseNetPrice As Decimal,
                                     ByVal baseGrossPrice As Decimal) As ProductPromotionDisplayModel
+        Dim eligibility As ProductPromotionEligibilityResult = Nothing
+        If Not String.IsNullOrWhiteSpace(connectionString) AndAlso articleId > 0 AndAlso
+           eligibilityContext IsNot Nothing AndAlso baseGrossPrice > 0D Then
+            Try
+                eligibility = ProductPromotionEligibilityResolver.Resolve(connectionString,
+                                                                          eligibilityContext,
+                                                                          articleId,
+                                                                          tcId,
+                                                                          1D,
+                                                                          baseNetPrice,
+                                                                          baseGrossPrice)
+            Catch ex As Exception
+                Return BuildFromEligibility(Nothing, baseNetPrice, baseGrossPrice,
+                                            UseNetPriceDisplay(), ex.GetType().Name)
+            End Try
+        End If
+        Return BuildFromEligibility(eligibility, baseNetPrice, baseGrossPrice, UseNetPriceDisplay())
+    End Function
+
+    Public Function BuildForProduct(ByVal batch As IProductPromotionEligibilityBatch,
+                                    ByVal articleId As Integer,
+                                    ByVal tcId As Integer,
+                                    ByVal baseNetPrice As Decimal,
+                                    ByVal baseGrossPrice As Decimal,
+                                    Optional ByVal useNetPrices As Boolean = False) As ProductPromotionDisplayModel
+        Dim eligibility As ProductPromotionEligibilityResult = Nothing
+        If batch IsNot Nothing AndAlso articleId > 0 AndAlso baseGrossPrice > 0D Then
+            Try
+                eligibility = batch.ResolveForProduct(articleId, tcId, 1D, baseNetPrice, baseGrossPrice)
+            Catch ex As Exception
+                Return BuildFromEligibility(Nothing, baseNetPrice, baseGrossPrice,
+                                            useNetPrices, ex.GetType().Name)
+            End Try
+        End If
+        Return BuildFromEligibility(eligibility, baseNetPrice, baseGrossPrice, useNetPrices)
+    End Function
+
+    Private Function BuildFromEligibility(ByVal eligibility As ProductPromotionEligibilityResult,
+                                          ByVal baseNetPrice As Decimal,
+                                          ByVal baseGrossPrice As Decimal,
+                                          ByVal useNetPrices As Boolean,
+                                          Optional ByVal resolverErrorType As String = Nothing) As ProductPromotionDisplayModel
         Dim model As New ProductPromotionDisplayModel()
         model.Offers = New List(Of ProductPromotionOffer)()
         model.ListPriceNet = baseNetPrice
@@ -75,24 +127,14 @@ Public Module ProductPromotionDisplayHelper
         model.BestDefaultQuantityPriceGross = baseGrossPrice
         model.ResolutionState = ProductPromotionDisplayResolutionState.ResolvedWithoutOffers
 
-        If String.IsNullOrWhiteSpace(connectionString) OrElse articleId <= 0 OrElse eligibilityContext Is Nothing OrElse baseGrossPrice <= 0D Then
+        If baseGrossPrice <= 0D Then
             SetTechnicalError(model, baseNetPrice, baseGrossPrice, "validation", "InvalidRequest")
             Return model
         End If
-
-        Dim eligibility As ProductPromotionEligibilityResult = Nothing
-        Try
-            eligibility = ProductPromotionEligibilityResolver.Resolve(connectionString,
-                                                                      eligibilityContext,
-                                                                      articleId,
-                                                                      tcId,
-                                                                      1D,
-                                                                      baseNetPrice,
-                                                                      baseGrossPrice)
-        Catch ex As Exception
-            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "resolver", ex.GetType().Name)
+        If Not String.IsNullOrWhiteSpace(resolverErrorType) Then
+            SetTechnicalError(model, baseNetPrice, baseGrossPrice, "resolver", resolverErrorType)
             Return model
-        End Try
+        End If
 
         If eligibility Is Nothing OrElse eligibility.Status <> ProductPromotionEligibilityLoadStatus.Success Then
             Dim statusName As String = If(eligibility Is Nothing, "NullResult", eligibility.Status.ToString())
@@ -116,7 +158,7 @@ Public Module ProductPromotionDisplayHelper
         model.ResolutionState = If(model.HasOffers,
                                    ProductPromotionDisplayResolutionState.ResolvedWithOffers,
                                    ProductPromotionDisplayResolutionState.ResolvedWithoutOffers)
-        model.Html = RenderHtml(model)
+        model.Html = RenderHtml(model, useNetPrices)
         Return model
     End Function
 
@@ -199,12 +241,12 @@ Public Module ProductPromotionDisplayHelper
         model.BestQuantityTierEndsOn = offer.EndsOn
     End Sub
 
-    Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel) As String
+    Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel,
+                                ByVal useNetPrices As Boolean) As String
         If model Is Nothing OrElse
            model.ResolutionState <> ProductPromotionDisplayResolutionState.ResolvedWithOffers OrElse
            Not model.HasOffers Then Return String.Empty
 
-        Dim useNetPrices As Boolean = UseNetPriceDisplay()
         Dim sb As New StringBuilder()
         Dim offerCountLabel As String = model.Offers.Count.ToString(CultureInfo.InvariantCulture) &
                                         If(model.Offers.Count = 1, " offerta attiva", " offerte attive")

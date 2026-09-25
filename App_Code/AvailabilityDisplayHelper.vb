@@ -70,19 +70,59 @@ Public Module AvailabilityDisplayHelper
         Return model
     End Function
 
+    Public Function BuildFromDataItemExplicit(ByVal dataItem As Object,
+                                              ByVal displayMode As Integer,
+                                              ByVal tenantLowStockThreshold As Decimal) As AvailabilityDisplayModel
+        Dim stockQty As Decimal = Quantity(dataItem, "Giacenza")
+        Dim committedQty As Decimal = Quantity(dataItem, "Impegnata")
+        Dim incomingQty As Decimal = Quantity(dataItem, "InOrdine")
+        Dim rawAvailableQty As Decimal = Quantity(dataItem, "Disponibilita")
+        Dim productThreshold As Decimal = Quantity(dataItem, "ScortaMinima")
+        Dim threshold As Decimal = If(productThreshold > 0D, productThreshold, tenantLowStockThreshold)
+        Dim model As AvailabilityDisplayModel = BuildFromValuesExplicit(stockQty, rawAvailableQty,
+                                                                         committedQty, incomingQty,
+                                                                         threshold, displayMode)
+        model.LegacyText = BuildLegacyStatusText(dataItem, model.AvailableQty, model.IncomingQty)
+        CompletePresentation(model)
+        Return model
+    End Function
+
+    Public Function BuildFromValuesExplicit(ByVal stockQty As Decimal,
+                                            ByVal rawAvailableQty As Decimal,
+                                            ByVal committedQty As Decimal,
+                                            ByVal incomingQty As Decimal,
+                                            ByVal lowStockThreshold As Decimal,
+                                            ByVal displayMode As Integer) As AvailabilityDisplayModel
+        Return BuildFromValuesCore(stockQty, rawAvailableQty, committedQty, incomingQty,
+                                   If(lowStockThreshold > 0D, lowStockThreshold, DefaultLowStockThreshold),
+                                   If(displayMode = 2, 2, DefaultDisplayMode))
+    End Function
+
     Public Function BuildFromValues(ByVal stockQty As Decimal,
                                     ByVal rawAvailableQty As Decimal,
                                     ByVal committedQty As Decimal,
                                     ByVal incomingQty As Decimal,
                                     ByVal lowStockThreshold As Decimal,
                                     Optional ByVal ctx As HttpContext = Nothing) As AvailabilityDisplayModel
+        Dim displayMode As Integer = GetDisplayMode(ctx)
+        Dim resolvedThreshold As Decimal = ResolveLowStockThreshold(lowStockThreshold, ctx)
+        Return BuildFromValuesCore(stockQty, rawAvailableQty, committedQty, incomingQty,
+                                   resolvedThreshold, displayMode)
+    End Function
+
+    Private Function BuildFromValuesCore(ByVal stockQty As Decimal,
+                                         ByVal rawAvailableQty As Decimal,
+                                         ByVal committedQty As Decimal,
+                                         ByVal incomingQty As Decimal,
+                                         ByVal lowStockThreshold As Decimal,
+                                         ByVal displayMode As Integer) As AvailabilityDisplayModel
         Dim model As New AvailabilityDisplayModel()
-        model.DisplayMode = GetDisplayMode(ctx)
+        model.DisplayMode = displayMode
         model.StockQty = stockQty
         model.CommittedQty = committedQty
         model.IncomingQty = incomingQty
         model.AvailableQty = EffectiveAvailableQty(rawAvailableQty, stockQty, committedQty)
-        model.LowStockThreshold = ResolveLowStockThreshold(lowStockThreshold, ctx)
+        model.LowStockThreshold = lowStockThreshold
         model.IncomingTooltipText = DefaultIncomingTooltipText
 
         ApplySyntheticStatus(model)
