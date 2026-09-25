@@ -3043,7 +3043,20 @@ strWhere = strWhere & " GROUP BY id"
             Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using conn As New MySqlConnection(connStr)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT SettoriId FROM categorie WHERE id=@id LIMIT 1", conn)
+                Dim columnName As String = String.Empty
+                Using columnCmd As New MySqlCommand("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'categorie' AND COLUMN_NAME IN ('SettoriId', 'Id_settore') ORDER BY CASE WHEN COLUMN_NAME = 'SettoriId' THEN 0 ELSE 1 END LIMIT 1", conn)
+                    Dim resolved As Object = columnCmd.ExecuteScalar()
+                    If resolved Is Nothing OrElse resolved Is DBNull.Value Then Return 0
+                    If String.Equals(Convert.ToString(resolved), "SettoriId", StringComparison.OrdinalIgnoreCase) Then
+                        columnName = "SettoriId"
+                    ElseIf String.Equals(Convert.ToString(resolved), "Id_settore", StringComparison.OrdinalIgnoreCase) Then
+                        columnName = "Id_settore"
+                    Else
+                        Return 0
+                    End If
+                End Using
+
+                Using cmd As New MySqlCommand("SELECT `" & columnName & "` FROM categorie WHERE id=@id LIMIT 1", conn)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = categoriaId
                     Dim obj As Object = cmd.ExecuteScalar()
                     If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
