@@ -119,7 +119,7 @@
                                 </a>
                             </li>
                             <li class="d-flex align-items-center d-xl-none">
-                    <a href="#" class="mobile-button" role="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu"><span></span></a>
+                    <button type="button" class="mobile-button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-label="Apri menu"><span></span></button>
                             </li>
                         </ul>
                     </div>
@@ -188,7 +188,7 @@
 
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
     <h5 class="offcanvas-title visually-hidden" id="mobileMenuLabel">Menu</h5>
-    <span class="icon-close btn-close-mb link" data-bs-dismiss="offcanvas" aria-label="Chiudi"></span>
+    <button type="button" class="icon-close btn-close-mb link" data-bs-dismiss="offcanvas" aria-label="Chiudi menu"></button>
     <div class="logo-site">
         <a href="Default.aspx" aria-label="Home">
             <asp:Image ID="imgLogoDrawer" runat="server" AlternateText="KeepStore" CssClass="d-block" ImageUrl="" />
@@ -214,32 +214,32 @@
                 <ul class="nav-ul-mb content-append ks-mobile-primary-nav">
                     <li class="nav-mb-item"><a href="Default.aspx" class="mb-menu-link"><span data-ks-i18n="nav.home">Home</span></a></li>
                     <li class="nav-mb-item ks-mobile-catalog-root">
-                        <a href="#ks-mobile-catalog-root" class="collapsed mb-menu-link" role="button" data-bs-toggle="collapse" aria-expanded="false" aria-controls="ks-mobile-catalog-root">
+                        <button type="button" class="collapsed mb-menu-link" data-bs-toggle="collapse" data-bs-target="#ks-mobile-catalog-root" aria-expanded="false" aria-controls="ks-mobile-catalog-root">
                             <span data-ks-i18n="nav.catalog">Catalogo</span>
-                            <span class="btn-open-sub"></span>
-                        </a>
+                            <span class="btn-open-sub" aria-hidden="true"></span>
+                        </button>
                         <div id="ks-mobile-catalog-root" class="collapse">
                             <ul class="sub-nav-menu ks-mobile-catalog-list">
                                 <asp:Repeater ID="rptNavSettoriMobile" runat="server" OnItemDataBound="rptNavSettoriMobile_ItemDataBound">
                                     <ItemTemplate>
                                         <li class="nav-mb-item ks-mobile-sector-item">
-                                            <a href="#" class="sub-nav-link collapsed" role="button" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
+                                            <button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
                                                 <span class="ks-mobile-nav-entry">
                                                     <span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span>
                                                     <span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
                                                 </span>
-                                                <span class="btn-open-sub"></span>
-                                            </a>
+                                                <span class="btn-open-sub" aria-hidden="true"></span>
+                                            </button>
                                             <div id='ks-mobile-sector-<%# Eval("Id") %>' class="collapse">
                                                 <ul class="sub-nav-menu">
                                                     <li><a class="sub-nav-link active" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewSector">Vedi tutto il settore</a></li>
                                                     <asp:Repeater ID="rptNavCategorieMobile" runat="server" OnItemDataBound="rptNavCategorieMobile_ItemDataBound">
                                                         <ItemTemplate>
                                                             <li class="nav-mb-item ks-mobile-category-item">
-                                                                <a href="#" class="sub-nav-link collapsed" role="button" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'>
+                                                                <button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'>
                                                                     <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
-                                                                    <span class="btn-open-sub"></span>
-                                                                </a>
+                                                                    <span class="btn-open-sub" aria-hidden="true"></span>
+                                                                </button>
                                                                 <div id='ks-mobile-category-<%# Eval("Id") %>' class="collapse">
                                                                     <ul class="sub-nav-menu sub-menu-level-2">
                                                                         <li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewCategory">Vedi tutta la categoria</a></li>

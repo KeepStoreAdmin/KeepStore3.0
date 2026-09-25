@@ -514,44 +514,6 @@
       item.addEventListener('mouseleave', function () { setOpen(false); });
     });
 
-    all(document, '.mobile-button[data-bs-target="#mobileMenu"],.mobile-button[aria-controls="mobileMenu"]').forEach(function (btn) {
-      if (btn.getAttribute('data-ks-mobile-menu-bound') === '1') return;
-      btn.setAttribute('data-ks-mobile-menu-bound', '1');
-      btn.addEventListener('click', function (e) {
-        var menu = document.getElementById('mobileMenu');
-        if (!menu) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.bootstrap && bootstrap.Offcanvas) {
-          bootstrap.Offcanvas.getOrCreateInstance(menu).show();
-        } else {
-          menu.classList.add('show');
-          menu.style.visibility = 'visible';
-          document.body.classList.add('offcanvas-open');
-        }
-      }, true);
-    });
-
-    all(document, '#mobileMenu [data-bs-toggle="collapse"][data-bs-target]').forEach(function (trigger) {
-      if (trigger.getAttribute('data-ks-collapse-bound') === '1') return;
-      trigger.setAttribute('data-ks-collapse-bound', '1');
-      trigger.addEventListener('click', function (e) {
-        var targetId = trigger.getAttribute('data-bs-target') || '';
-        var target = targetId ? document.querySelector(targetId) : null;
-        if (!target) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (window.bootstrap && bootstrap.Collapse) {
-          bootstrap.Collapse.getOrCreateInstance(target, { toggle: false }).toggle();
-        } else {
-          target.classList.toggle('show');
-        }
-        var expanded = target.classList.contains('show');
-        trigger.classList.toggle('collapsed', !expanded);
-        trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      }, true);
-    });
-
     if (!document.__ksCatalogCloseBound135) {
       document.__ksCatalogCloseBound135 = true;
       document.addEventListener('click', function (e) {

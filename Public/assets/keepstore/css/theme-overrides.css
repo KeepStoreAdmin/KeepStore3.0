@@ -228,6 +228,74 @@ body.ks-page-home {
   }
 }
 
+/* Mobile catalog: Bootstrap owns offcanvas/collapse state; buttons own actions. */
+.mobile-button[data-bs-target="#mobileMenu"] {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.mobile-button[data-bs-target="#mobileMenu"] span,
+.mobile-button[data-bs-target="#mobileMenu"]::before,
+.mobile-button[data-bs-target="#mobileMenu"]::after {
+  left: 9px;
+  width: 26px;
+}
+
+.mobile-button[data-bs-target="#mobileMenu"] span { top: 21px; }
+.mobile-button[data-bs-target="#mobileMenu"]::before { top: 14px; }
+.mobile-button[data-bs-target="#mobileMenu"]::after { bottom: 14px; }
+
+#mobileMenu .btn-close-mb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+}
+
+#mobileMenu .ks-mobile-primary-nav .mb-menu-link,
+#mobileMenu .ks-mobile-primary-nav .sub-nav-link,
+#mobileMenu .ks-mobile-utility-nav .mb-menu-link {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+
+#mobileMenu .ks-mobile-primary-nav button.mb-menu-link,
+#mobileMenu .ks-mobile-primary-nav button.sub-nav-link {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#mobileMenu .ks-mobile-primary-nav button.mb-menu-link {
+  line-height: 40px;
+}
+
+#mobileMenu .ks-mobile-primary-nav button.sub-nav-link {
+  line-height: 32px;
+}
+
+.mobile-button[data-bs-target="#mobileMenu"]:focus-visible,
+#mobileMenu .btn-close-mb:focus-visible,
+#mobileMenu .ks-mobile-primary-nav button:focus-visible,
+#mobileMenu .ks-mobile-primary-nav a:focus-visible,
+#mobileMenu .ks-mobile-utility-nav a:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .preload-container.ks-preload {
   position: fixed;
   inset: 0;
