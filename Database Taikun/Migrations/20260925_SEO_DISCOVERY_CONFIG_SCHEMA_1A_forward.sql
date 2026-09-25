@@ -117,12 +117,18 @@ CREATE TABLE `aziende_seo` (
   `TikTokMerchantScopes` TEXT NOT NULL DEFAULT (''),
   `TikTokMerchantAccessTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
   `TikTokMerchantRefreshTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
+  `TikTokShopAbilitato` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   `TikTokShopAppKey` VARCHAR(128) NOT NULL DEFAULT '',
   `TikTokShopAppSecretEnc` TEXT NOT NULL DEFAULT (''),
+  `TikTokShopServiceId` VARCHAR(128) NOT NULL DEFAULT '',
+  `TikTokShopSellerOpenId` VARCHAR(128) NOT NULL DEFAULT '',
+  `TikTokShopShopId` VARCHAR(128) NOT NULL DEFAULT '',
   `TikTokShopShopCipher` VARCHAR(255) NOT NULL DEFAULT '',
+  `TikTokShopRegion` VARCHAR(32) NOT NULL DEFAULT '',
+  `TikTokShopEnvironment` VARCHAR(16) NOT NULL DEFAULT '',
   `TikTokShopAccessTokenEnc` TEXT NOT NULL DEFAULT (''),
   `TikTokShopRefreshTokenEnc` TEXT NOT NULL DEFAULT (''),
-  `TikTokShopScopes` TEXT NOT NULL DEFAULT (''),
+  `TikTokShopGrantedScopes` TEXT NOT NULL DEFAULT (''),
   `TikTokShopAccessTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
   `TikTokShopRefreshTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
   `TikTokAdsBusinessCenterId` VARCHAR(128) NOT NULL DEFAULT '',
@@ -187,6 +193,32 @@ CREATE TABLE `aziende_seo` (
   `SnapOAuthRefreshTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
   `SnapConversionsTokenEnc` TEXT NOT NULL DEFAULT (''),
 
+  `AmazonAbilitato` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `AmazonApplicationId` VARCHAR(128) NOT NULL DEFAULT '',
+  `AmazonSellerId` VARCHAR(128) NOT NULL DEFAULT '',
+  `AmazonMarketplaceIds` JSON NOT NULL DEFAULT (JSON_ARRAY()),
+  `AmazonRegion` VARCHAR(16) NOT NULL DEFAULT '',
+  `AmazonLwaClientId` VARCHAR(255) NOT NULL DEFAULT '',
+  `AmazonLwaClientSecretEnc` TEXT NOT NULL DEFAULT (''),
+  `AmazonLwaRefreshTokenEnc` TEXT NOT NULL DEFAULT (''),
+  `AmazonLwaRefreshTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
+
+  `EbayAbilitato` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `EbayEnvironment` VARCHAR(16) NOT NULL DEFAULT '',
+  `EbayClientId` VARCHAR(255) NOT NULL DEFAULT '',
+  `EbayClientSecretEnc` TEXT NOT NULL DEFAULT (''),
+  `EbayRedirectUriName` VARCHAR(255) NOT NULL DEFAULT '',
+  `EbayAccessTokenEnc` TEXT NOT NULL DEFAULT (''),
+  `EbayRefreshTokenEnc` TEXT NOT NULL DEFAULT (''),
+  `EbayScopes` TEXT NOT NULL DEFAULT (''),
+  `EbayAccessTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
+  `EbayRefreshTokenExpiresAt` DATETIME NOT NULL DEFAULT '1000-01-01 00:00:00',
+  `EbayMarketplaceId` VARCHAR(32) NOT NULL DEFAULT '',
+  `EbayMerchantLocationKey` VARCHAR(50) NOT NULL DEFAULT '',
+  `EbayPaymentPolicyId` VARCHAR(128) NOT NULL DEFAULT '',
+  `EbayReturnPolicyId` VARCHAR(128) NOT NULL DEFAULT '',
+  `EbayFulfillmentPolicyId` VARCHAR(128) NOT NULL DEFAULT '',
+
   `FacebookUrl` TEXT NOT NULL DEFAULT (''),
   `InstagramUrl` TEXT NOT NULL DEFAULT (''),
   `ThreadsUrl` TEXT NOT NULL DEFAULT (''),
@@ -209,7 +241,7 @@ CREATE TABLE `aziende_seo` (
   `NoteInterne` TEXT NOT NULL DEFAULT (''),
   PRIMARY KEY (`Id`),
   UNIQUE KEY `uq_aziende_seo_aziende` (`AziendeId`)
-) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
 -- Solo righe vuote/default: non migra automaticamente alcun valore legacy.
 INSERT INTO `aziende_seo` (`AziendeId`)

@@ -2,13 +2,14 @@
 -- e prima della copia manuale dei quattro valori legacy. Ogni Stato deve essere OK.
 
 SELECT 'TABLE_PRESENT_INNODB_UTF8MB4' AS Controllo,
-       IF(COUNT(*) = 1 AND MAX(ENGINE) = 'InnoDB' AND MAX(TABLE_COLLATION) = 'utf8mb4_0900_ai_ci', 'OK', 'STOP') AS Stato
+       IF(COUNT(*) = 1 AND MAX(ENGINE) = 'InnoDB' AND MAX(ROW_FORMAT) = 'Dynamic'
+          AND MAX(TABLE_COLLATION) = 'utf8mb4_0900_ai_ci', 'OK', 'STOP') AS Stato
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND TABLE_TYPE = 'BASE TABLE';
 
-SELECT 'COLUMN_MANIFEST_193' AS Controllo,
-       IF(COUNT(*) = 193
-          AND SUM(CRC32(CONCAT(LPAD(ORDINAL_POSITION, 3, '0'), ':', COLUMN_NAME))) = 420414212908,
+SELECT 'COLUMN_MANIFEST_223' AS Controllo,
+       IF(COUNT(*) = 223
+          AND SUM(CRC32(CONCAT(LPAD(ORDINAL_POSITION, 3, '0'), ':', COLUMN_NAME))) = 461956624465,
           'OK', 'STOP') AS Stato
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo';
@@ -29,16 +30,20 @@ SELECT 'CORE_COLUMN_TYPES' AS Controllo,
           AND SUM(COLUMN_NAME = 'AziendeId' AND DATA_TYPE = 'int') = 1
           AND SUM(COLUMN_NAME = 'AltriSocialJson' AND DATA_TYPE = 'json') = 1
           AND SUM(COLUMN_NAME = 'ExtraProviderConfigJson' AND DATA_TYPE = 'json') = 1
+          AND SUM(COLUMN_NAME = 'AmazonMarketplaceIds' AND DATA_TYPE = 'json') = 1
+          AND SUM(COLUMN_NAME = 'TikTokShopAbilitato' AND DATA_TYPE = 'tinyint') = 1
+          AND SUM(COLUMN_NAME = 'AmazonAbilitato' AND DATA_TYPE = 'tinyint') = 1
+          AND SUM(COLUMN_NAME = 'EbayAbilitato' AND DATA_TYPE = 'tinyint') = 1
           AND SUM(COLUMN_NAME = 'SecretsCryptoVersion' AND DATA_TYPE = 'smallint') = 1, 'OK', 'STOP') AS Stato
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo';
 
 SELECT 'TYPE_GROUPS' AS Controllo,
        IF(SUM(DATA_TYPE = 'bigint') = 1 AND SUM(DATA_TYPE = 'int') = 2
-          AND SUM(DATA_TYPE = 'smallint') = 2 AND SUM(DATA_TYPE = 'tinyint') = 1
-          AND SUM(DATA_TYPE = 'varchar') = 75 AND SUM(DATA_TYPE = 'char') = 2
-          AND SUM(DATA_TYPE = 'text') = 82 AND SUM(DATA_TYPE = 'longtext') = 1
-          AND SUM(DATA_TYPE = 'json') = 2 AND SUM(DATA_TYPE = 'datetime') = 25,
+          AND SUM(DATA_TYPE = 'smallint') = 2 AND SUM(DATA_TYPE = 'tinyint') = 4
+          AND SUM(DATA_TYPE = 'varchar') = 92 AND SUM(DATA_TYPE = 'char') = 2
+          AND SUM(DATA_TYPE = 'text') = 88 AND SUM(DATA_TYPE = 'longtext') = 1
+          AND SUM(DATA_TYPE = 'json') = 3 AND SUM(DATA_TYPE = 'datetime') = 28,
           'OK', 'STOP') AS Stato
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo';
@@ -63,7 +68,8 @@ SELECT 'DEFAULTS_AND_EMPTY_JSON' AS Controllo,
           AND (SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND COLUMN_NAME = 'SecretsCryptoVersion') = '0'
           AND (SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND COLUMN_NAME = 'GoogleOAuthAccessTokenExpiresAt') = '1000-01-01 00:00:00'
           AND (SELECT COUNT(*) FROM aziende_seo WHERE JSON_TYPE(AltriSocialJson) <> 'OBJECT' OR JSON_LENGTH(AltriSocialJson) <> 0
-                      OR JSON_TYPE(ExtraProviderConfigJson) <> 'OBJECT' OR JSON_LENGTH(ExtraProviderConfigJson) <> 0) = 0,
+                      OR JSON_TYPE(ExtraProviderConfigJson) <> 'OBJECT' OR JSON_LENGTH(ExtraProviderConfigJson) <> 0
+                      OR JSON_TYPE(AmazonMarketplaceIds) <> 'ARRAY' OR JSON_LENGTH(AmazonMarketplaceIds) <> 0) = 0,
           'OK', 'STOP') AS Stato;
 
 SELECT 'NO_AUTO_LEGACY_COPY' AS Controllo,
@@ -71,10 +77,19 @@ SELECT 'NO_AUTO_LEGACY_COPY' AS Controllo,
 FROM aziende_seo
 WHERE GoogleMerchantId <> '' OR MetaPixelId <> '' OR TrackingScriptLegacy <> '' OR FacebookUrl <> '';
 
-SELECT 'NO_INITIAL_SECRETS' AS Controllo,
+SELECT 'NO_INITIAL_CRYPTO_METADATA' AS Controllo,
        IF(COUNT(*) = 0, 'OK', 'STOP') AS Stato
 FROM aziende_seo
 WHERE SecretsCryptoVersion <> 0 OR SecretsKeyId <> '';
 
--- Il checksum di nome + posizione delle 193 colonne e derivato staticamente
+SELECT 'NO_INITIAL_MARKETPLACE_CONFIG' AS Controllo,
+       IF(COUNT(*) = 0, 'OK', 'STOP') AS Stato
+FROM aziende_seo
+WHERE TikTokShopAbilitato <> 0 OR TikTokShopShopId <> '' OR TikTokShopAccessTokenEnc <> ''
+   OR TikTokShopRefreshTokenEnc <> '' OR AmazonAbilitato <> 0 OR AmazonSellerId <> ''
+   OR AmazonLwaClientSecretEnc <> '' OR AmazonLwaRefreshTokenEnc <> ''
+   OR EbayAbilitato <> 0 OR EbayMarketplaceId <> '' OR EbayClientSecretEnc <> ''
+   OR EbayAccessTokenEnc <> '' OR EbayRefreshTokenEnc <> '';
+
+-- Il checksum di nome + posizione delle 223 colonne e derivato staticamente
 -- dal forward. Questo verify non espone valori legacy o credenziali.
