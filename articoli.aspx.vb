@@ -2915,7 +2915,7 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     '==========================================================
-    ' STEP 3 (CATALOGO): st/ct/tp defaults + Session sync
+    ' STEP 3 (CATALOGO): normalizzazione st/ct + Session sync
     '==========================================================
     Private Sub EnsureCatalogQueryDefaults()
         Try
@@ -2933,9 +2933,6 @@ strWhere = strWhere & " GROUP BY id"
             Integer.TryParse(Request.QueryString("st"), stId)
             Integer.TryParse(Request.QueryString("ct"), ctId)
 
-            Dim tpRaw As String = Convert.ToString(Request.QueryString("tp"))
-            Dim tpCanonical As String = tpRaw
-
             Dim needRedirect As Boolean = False
 
             ' 1) Se ho ct ma st mancante o incoerente, ricavo st dalla categoria (tabelle reali)
@@ -2947,25 +2944,7 @@ strWhere = strWhere & " GROUP BY id"
                 End If
             End If
 
-            ' 2) Se ho st ma ct mancante, prendo una categoria di default del settore
-            If stId > 0 AndAlso ctId <= 0 Then
-                Dim defaultCt As Integer = LookupDefaultCategoriaIdBySettore(stId)
-                If defaultCt > 0 Then
-                    ctId = defaultCt
-                    needRedirect = True
-                End If
-            End If
-
-            ' 3) Se manca tp ma ho ct, prendo una tipologia di default della categoria
-            If String.IsNullOrEmpty(tpRaw) AndAlso ctId > 0 Then
-                Dim defaultTp As Integer = LookupDefaultTipologiaIdByCategoria(ctId)
-                If defaultTp > 0 Then
-                    tpCanonical = defaultTp.ToString()
-                    needRedirect = True
-                End If
-            End If
-
-            ' 4) Redirect solo se ho completato / corretto i parametri base di navigazione
+            ' 2) Redirect solo se il settore richiesto e assente o incoerente con la categoria
             If needRedirect Then
                 Dim dict As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
@@ -2984,12 +2963,6 @@ strWhere = strWhere & " GROUP BY id"
                     dict("ct") = ctId.ToString()
                 ElseIf dict.ContainsKey("ct") Then
                     dict.Remove("ct")
-                End If
-
-                If Not String.IsNullOrEmpty(tpCanonical) Then
-                    dict("tp") = tpCanonical
-                ElseIf dict.ContainsKey("tp") Then
-                    dict.Remove("tp")
                 End If
 
                 Dim qs As String = BuildQueryString(dict)
@@ -3070,7 +3043,7 @@ strWhere = strWhere & " GROUP BY id"
             Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using conn As New MySqlConnection(connStr)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT Id_settore FROM categorie WHERE id=@id LIMIT 1", conn)
+                Using cmd As New MySqlCommand("SELECT SettoriId FROM categorie WHERE id=@id LIMIT 1", conn)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = categoriaId
                     Dim obj As Object = cmd.ExecuteScalar()
                     If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
@@ -3083,48 +3056,6 @@ strWhere = strWhere & " GROUP BY id"
             Return 0
         End Try
     End Function
-
-    Private Function LookupDefaultCategoriaIdBySettore(ByVal settoreId As Integer) As Integer
-        If settoreId <= 0 Then Return 0
-        Try
-            Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            Using conn As New MySqlConnection(connStr)
-                conn.Open()
-                Using cmd As New MySqlCommand("SELECT id FROM categorie WHERE Abilitato=1 AND Id_settore=@st ORDER BY Ordinamento, Descrizione, id LIMIT 1", conn)
-                    cmd.Parameters.Add("@st", MySqlDbType.Int32).Value = settoreId
-                    Dim obj As Object = cmd.ExecuteScalar()
-                    If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
-                    Dim ct As Integer = 0
-                    Integer.TryParse(Convert.ToString(obj), ct)
-                    Return ct
-                End Using
-            End Using
-        Catch
-            Return 0
-        End Try
-    End Function
-
-    Private Function LookupDefaultTipologiaIdByCategoria(ByVal categoriaId As Integer) As Integer
-        If categoriaId <= 0 Then Return 0
-        Try
-            Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            Using conn As New MySqlConnection(connStr)
-                conn.Open()
-                Using cmd As New MySqlCommand("SELECT id FROM tipologie WHERE Abilitato=1 AND CategorieId=@ct ORDER BY Ordinamento, Descrizione, id LIMIT 1", conn)
-                    cmd.Parameters.Add("@ct", MySqlDbType.Int32).Value = categoriaId
-                    Dim obj As Object = cmd.ExecuteScalar()
-                    If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
-                    Dim tp As Integer = 0
-                    Integer.TryParse(Convert.ToString(obj), tp)
-                    Return tp
-                End Using
-            End Using
-        Catch
-            Return 0
-        End Try
-    End Function
-
-
 
     Function getFilterIds(ByVal parName As String) As String()
         If Not String.IsNullOrEmpty(Request.QueryString(parName)) Then
