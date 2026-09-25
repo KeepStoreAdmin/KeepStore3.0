@@ -1,5 +1,5 @@
--- SEO-DISCOVERY-CONFIG-SCHEMA-1A. Solo SELECT; eseguire subito dopo il forward
--- e prima della copia manuale dei quattro valori legacy. Ogni Stato deve essere OK.
+-- SEO-DISCOVERY-CONFIG-SCHEMA-1A REV2. SOLO SELECT; DRAFT NON INSTALLATO.
+-- Ogni Stato deve essere OK. Verifica soltanto aziende_seo, non i moduli separati.
 
 SELECT 'TABLE_PRESENT_INNODB_UTF8MB4' AS Controllo,
        IF(COUNT(*) = 1 AND MAX(ENGINE) = 'InnoDB' AND MAX(ROW_FORMAT) = 'Dynamic'
@@ -7,9 +7,9 @@ SELECT 'TABLE_PRESENT_INNODB_UTF8MB4' AS Controllo,
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND TABLE_TYPE = 'BASE TABLE';
 
-SELECT 'COLUMN_MANIFEST_223' AS Controllo,
-       IF(COUNT(*) = 223
-          AND SUM(CRC32(CONCAT(LPAD(ORDINAL_POSITION, 3, '0'), ':', COLUMN_NAME))) = 461956624465,
+SELECT 'COLUMN_MANIFEST_30' AS Controllo,
+       IF(COUNT(*) = 30
+          AND SUM(CRC32(CONCAT(LPAD(ORDINAL_POSITION, 3, '0'), ':', COLUMN_NAME))) = 62524129960,
           'OK', 'STOP') AS Stato
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo';
@@ -25,25 +25,8 @@ FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo'
   AND COLUMN_NAME NOT IN ('Id', 'AziendeId') AND COLUMN_DEFAULT IS NULL;
 
-SELECT 'CORE_COLUMN_TYPES' AS Controllo,
-       IF(SUM(COLUMN_NAME = 'Id' AND DATA_TYPE = 'bigint' AND EXTRA LIKE '%auto_increment%') = 1
-          AND SUM(COLUMN_NAME = 'AziendeId' AND DATA_TYPE = 'int') = 1
-          AND SUM(COLUMN_NAME = 'AltriSocialJson' AND DATA_TYPE = 'json') = 1
-          AND SUM(COLUMN_NAME = 'ExtraProviderConfigJson' AND DATA_TYPE = 'json') = 1
-          AND SUM(COLUMN_NAME = 'AmazonMarketplaceIds' AND DATA_TYPE = 'json') = 1
-          AND SUM(COLUMN_NAME = 'TikTokShopAbilitato' AND DATA_TYPE = 'tinyint') = 1
-          AND SUM(COLUMN_NAME = 'AmazonAbilitato' AND DATA_TYPE = 'tinyint') = 1
-          AND SUM(COLUMN_NAME = 'EbayAbilitato' AND DATA_TYPE = 'tinyint') = 1
-          AND SUM(COLUMN_NAME = 'SecretsCryptoVersion' AND DATA_TYPE = 'smallint') = 1, 'OK', 'STOP') AS Stato
-FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo';
-
 SELECT 'TYPE_GROUPS' AS Controllo,
-       IF(SUM(DATA_TYPE = 'bigint') = 1 AND SUM(DATA_TYPE = 'int') = 2
-          AND SUM(DATA_TYPE = 'smallint') = 2 AND SUM(DATA_TYPE = 'tinyint') = 4
-          AND SUM(DATA_TYPE = 'varchar') = 92 AND SUM(DATA_TYPE = 'char') = 2
-          AND SUM(DATA_TYPE = 'text') = 88 AND SUM(DATA_TYPE = 'longtext') = 1
-          AND SUM(DATA_TYPE = 'json') = 3 AND SUM(DATA_TYPE = 'datetime') = 28,
+       IF(SUM(DATA_TYPE = 'bigint') = 1 AND SUM(DATA_TYPE = 'int') = 2 AND SUM(DATA_TYPE = 'smallint') = 2 AND SUM(DATA_TYPE = 'varchar') = 6 AND SUM(DATA_TYPE = 'char') = 1 AND SUM(DATA_TYPE = 'text') = 13 AND SUM(DATA_TYPE = 'tinyint') = 1 AND SUM(DATA_TYPE = 'datetime') = 4,
           'OK', 'STOP') AS Stato
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo';
@@ -63,33 +46,22 @@ SELECT 'NO_DUPLICATE_OR_ORPHAN_AZIENDE' AS Controllo,
           AND (SELECT COUNT(*) FROM aziende_seo s LEFT JOIN aziende a ON a.id = s.AziendeId WHERE a.id IS NULL) = 0,
           'OK', 'STOP') AS Stato;
 
-SELECT 'DEFAULTS_AND_EMPTY_JSON' AS Controllo,
+SELECT 'SEO_DEFAULTS_AND_NO_SECRETS' AS Controllo,
        IF((SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND COLUMN_NAME = 'ConfigVersion') = '1'
           AND (SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND COLUMN_NAME = 'SecretsCryptoVersion') = '0'
-          AND (SELECT COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo' AND COLUMN_NAME = 'GoogleOAuthAccessTokenExpiresAt') = '1000-01-01 00:00:00'
-          AND (SELECT COUNT(*) FROM aziende_seo WHERE JSON_TYPE(AltriSocialJson) <> 'OBJECT' OR JSON_LENGTH(AltriSocialJson) <> 0
-                      OR JSON_TYPE(ExtraProviderConfigJson) <> 'OBJECT' OR JSON_LENGTH(ExtraProviderConfigJson) <> 0
-                      OR JSON_TYPE(AmazonMarketplaceIds) <> 'ARRAY' OR JSON_LENGTH(AmazonMarketplaceIds) <> 0) = 0,
-          'OK', 'STOP') AS Stato;
+          AND (SELECT COUNT(*) FROM aziende_seo
+               WHERE IndexNowEnabled <> 0 OR IndexNowKey <> '' OR SecretsCryptoVersion <> 0
+                  OR SecretsKeyId <> '' OR BingWebmasterApiKeyEnc <> ''
+                  OR BingOAuthClientSecretEnc <> '' OR BingOAuthAccessTokenEnc <> ''
+                  OR BingOAuthRefreshTokenEnc <> '') = 0, 'OK', 'STOP') AS Stato;
 
-SELECT 'NO_AUTO_LEGACY_COPY' AS Controllo,
+SELECT 'NO_PROVIDER_CROSS_MODULE_COLUMNS' AS Controllo,
        IF(COUNT(*) = 0, 'OK', 'STOP') AS Stato
-FROM aziende_seo
-WHERE GoogleMerchantId <> '' OR MetaPixelId <> '' OR TrackingScriptLegacy <> '' OR FacebookUrl <> '';
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende_seo'
+  AND (COLUMN_NAME LIKE 'Google%' OR COLUMN_NAME LIKE 'Meta%'
+       OR COLUMN_NAME LIKE 'TikTok%' OR COLUMN_NAME LIKE 'Amazon%'
+       OR COLUMN_NAME LIKE 'Ebay%' OR COLUMN_NAME LIKE 'Facebook%'
+       OR COLUMN_NAME LIKE 'Paypal%');
 
-SELECT 'NO_INITIAL_CRYPTO_METADATA' AS Controllo,
-       IF(COUNT(*) = 0, 'OK', 'STOP') AS Stato
-FROM aziende_seo
-WHERE SecretsCryptoVersion <> 0 OR SecretsKeyId <> '';
-
-SELECT 'NO_INITIAL_MARKETPLACE_CONFIG' AS Controllo,
-       IF(COUNT(*) = 0, 'OK', 'STOP') AS Stato
-FROM aziende_seo
-WHERE TikTokShopAbilitato <> 0 OR TikTokShopShopId <> '' OR TikTokShopAccessTokenEnc <> ''
-   OR TikTokShopRefreshTokenEnc <> '' OR AmazonAbilitato <> 0 OR AmazonSellerId <> ''
-   OR AmazonLwaClientSecretEnc <> '' OR AmazonLwaRefreshTokenEnc <> ''
-   OR EbayAbilitato <> 0 OR EbayMarketplaceId <> '' OR EbayClientSecretEnc <> ''
-   OR EbayAccessTokenEnc <> '' OR EbayRefreshTokenEnc <> '';
-
--- Il checksum di nome + posizione delle 223 colonne e derivato staticamente
--- dal forward. Questo verify non espone valori legacy o credenziali.
+-- Checksum nome+posizione calcolato staticamente dal forward REV2.

@@ -1,4 +1,6 @@
--- SOLO su autorizzazione separata del Product Owner, dopo backup e analisi.
--- Elimina esclusivamente la tabella nuova; NON tocca aziende, Product o Offer.
--- Il rollback perde le configurazioni inserite nella tabella dopo il forward.
+-- SEO-DISCOVERY-CONFIG-SCHEMA-1A REV2. DRAFT NON INSTALLATO.
+-- DISTRUTTIVO: usare soltanto con backup verificato e autorizzazione separata.
+-- NON e una procedura ordinaria per disabilitare un modulo/licenza.
+-- Non elimina aziende, campi legacy o configurazioni di altri moduli.
+
 DROP TABLE `aziende_seo`;

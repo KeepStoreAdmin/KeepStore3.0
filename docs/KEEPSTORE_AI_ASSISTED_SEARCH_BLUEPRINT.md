@@ -1,5 +1,7 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
+Checkpoint prevalente 2026-09-25: `SEO-DISCOVERY-CONFIG-SCHEMA-1A` / PR #285 e progettazione modulare **non installata**. `aziende_seo` riguarda soltanto SEO avanzata/Bing/IndexNow; Google, Social/Marketing e TikTok Shop hanno draft distinti, Amazon/eBay riusano strutture esistenti da auditare. Nessuna configurazione provider e Product knowledge, embedding store, vector DB, RAG knowledge base o fonte di prezzo/promo/stock. IndexNow reconciler/sender e nuove integrazioni sono **RINVIATI**; la priorita e HOME -> catalogo/PDP -> MyAccount. I checkpoint storici sotto non riavviano task chiusi o rinviati.
+
 Checkpoint `MULTITENANT-BY-DESIGN`: fondamenta SEO, onboarding, Product structured data, asset runtime, prezzi/account e carrello sono integrate; il checkpoint stabile di base e `2d6ebd540a29ff906a01fa0820ebf65706150408`. `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` estende ora lo stesso confine a ordine, replay, documenti e conferme e-mail; la PR #267 resta DRAFT/non merge-safe dopo lo stop forense REV4 per telemetria checkout non persistita. Search, AI, feed e structured data devono riusare identita tenant e dati autorevoli, mai inferire il cliente da host grezzi, nomi database, esempi merceologici o dati di un altro tenant.
 
 Guardrail permanente: nessun nome cliente, dominio, database o merceologia nel nucleo condiviso; host sconosciuti, ambigui e contaminazione cross-tenant falliscono chiusi; ogni funzione tenant-aware richiede almeno due tenant sintetici. KeepStore supporta database separati e piu vetrine nello stesso database/catalogo, incluse applicazioni IIS separate con configurazioni di deploy distinte: identita, canonical, seller e asset derivano dalla combinazione database configurato + host esatto + unica riga `aziende`, mai dal solo database o dalla prima riga. Login e listino utente sono azienda-scoped; cache e output promo includono database, azienda, listino e owner, e gli errori tecnici non vengono memorizzati come assenza di offerta. Account, carrelli, prezzi e output commerciali non possono attraversare il confine storefront. Nome, descrizione, marca, codice commerciale, EAN/GTIN/MPN, prezzo/valuta, disponibilita, immagini, spedizione e resi sono pubblicabili solo quando reali. Taglia, colore, compatibilita, materiale, peso, alimentazione e altri attributi specifici sono omessi quando mancanti o non applicabili, mai inventati. Migrazioni e stored procedure restano standard e prive di riferimenti cliente.
@@ -121,7 +123,7 @@ L'LLM non decide quale prodotto esiste, quale prezzo applicare o quale promo e v
 
 ### 0.6 Merchant e discovery
 
-`aziende_seo` e il futuro control plane 1:1 di configurazione SEO/discovery/provider per storefront, non una fonte di conoscenza prodotto. Gli ID Merchant, proprietà Search Console, key IndexNow, social URL e token cifrati dicono **dove e come** autorizzare servizi esterni; non dimostrano che un prodotto esista, non sono embedding/vector DB/RAG, non calcolano prezzo/promo/disponibilita e non autorizzano claim commerciali. `aziende.Descrizione` resta la Business Description autorevole; Product/tassonomia e Offer continuano a provenire dalle rispettive fonti. La migration `SEO-DISCOVERY-CONFIG-SCHEMA-1A` non cambia reader, feed, sender o runtime e non installa dati su alcun database in questo task.
+La configurazione provider appartiene ai rispettivi moduli, non a un control plane universale: `aziende_seo` e solo SEO avanzata/Bing/IndexNow; `aziende_google` e i suoi account/grant sono il draft Google; i profili Social sono distinti dai grant API e TikTok Shop Seller e un modulo separato. Merchant ID, property Search Console, key IndexNow, social URL e token cifrati indicano **dove e come** autorizzare un servizio; non dimostrano che un prodotto esista, non sono embedding/vector DB/RAG, non calcolano prezzo/promo/disponibilita e non autorizzano claim commerciali. `aziende.Descrizione` resta Business Description autorevole; Product/tassonomia e Offer vengono dalle rispettive fonti Core. Gli schemi `SEO-DISCOVERY-CONFIG-SCHEMA-1A` sono draft non installati e non cambiano reader, feed, sender o runtime. Dettagli e dizionario nel `KEEPSTORE_MODULAR_PLATFORM_BLUEPRINT.md`.
 
 Merchant e parte del Semantic Commerce Layer:
 - feed separato per storefront quando Offer/domain/identita commerciale differiscono;
@@ -143,7 +145,7 @@ Direzione futura: motore read-only che segnala, senza correggere automaticamente
 
 Le correzioni proposte dall'AI restano suggerimenti finche non derivano deterministicamente da dati autorevoli o non vengono approvate nel workflow KeepStore.
 
-### 0.8 Roadmap prevalente
+### 0.8 Roadmap discovery storica — sviluppo rinviato
 
 P0 storefront multi-tenant/multi-merceologia corretto.
 P1 Semantic SEO Foundation.

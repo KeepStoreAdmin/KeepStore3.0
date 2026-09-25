@@ -13,6 +13,10 @@ Fonte canonica del metodo. I manuali in `docs/` conservano checkpoint, architett
 - Un solo task attivo; il successivo attende chiusura, stop o sostituzione esplicita di Germano.
 - Ogni task inizia con `git fetch`, verifica ref/SHA, staging vuoto e tracked tree pulito. Censire e preservare gli untracked autorizzati.
 
+### Priorita ecommerce e moduli futuri
+
+Prima si stabilizzano HOME, catalogo/PDP, funzioni commerciali residue e MyAccount. Le nuove integrazioni Google, social, marketplace, licenze, IndexNow autonomo e AI sono progettate/documentate ma rinviate: una nuova chat non le riavvia automaticamente. KeepStore resta un'applicazione modulare sullo stack attuale; Core commerciale e SEO tecnica di base non dipendono da licenze. Ogni provider conserva configurazione, schermata e dati operativi nel proprio dominio, senza duplicare i resolver Product/Offer o usare un token come prova di diritto d'uso. Il blueprint modulare vigente e `docs/KEEPSTORE_MODULAR_PLATFORM_BLUEPRINT.md`; nessuno schema draft e installato da questa decisione.
+
 
 ### Modalita permanente LOCAL-FIRST + GITHUB SOURCE OF TRUTH
 

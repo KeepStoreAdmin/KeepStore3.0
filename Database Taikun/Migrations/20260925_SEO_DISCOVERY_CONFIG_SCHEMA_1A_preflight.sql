@@ -1,5 +1,6 @@
--- SEO-DISCOVERY-CONFIG-SCHEMA-1A. Solo SELECT; eseguire prima del forward.
--- Ogni Stato deve essere OK. Il database e quello selezionato in SQLyog.
+-- SEO-DISCOVERY-CONFIG-SCHEMA-1A REV2. SOLO SELECT. DRAFT NON INSTALLATO.
+-- Eseguire soltanto in futuro, dopo review MySQL/ambiente e allowlist Product Owner.
+-- Ogni Stato deve essere OK; un SELECT STOP non blocca automaticamente il DDL.
 
 SELECT 'DATABASE_SELECTED' AS Controllo,
        IF(DATABASE() IS NOT NULL AND DATABASE() <> '', 'OK', 'STOP') AS Stato,
@@ -10,8 +11,7 @@ SELECT 'MYSQL_8_0_42' AS Controllo,
        VERSION() AS Versione;
 
 SELECT 'AZIENDE_PRESENT' AS Controllo,
-       IF(COUNT(*) = 1 AND MAX(ENGINE) = 'InnoDB', 'OK', 'STOP') AS Stato,
-       MAX(TABLE_COLLATION) AS CollationLegacy
+       IF(COUNT(*) = 1 AND MAX(ENGINE) = 'InnoDB', 'OK', 'STOP') AS Stato
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende' AND TABLE_TYPE = 'BASE TABLE';
 
@@ -25,12 +25,6 @@ SELECT 'AZIENDE_ID_TYPE' AS Controllo,
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende' AND COLUMN_NAME = 'id';
 
-SELECT 'FOUR_LEGACY_COLUMNS' AS Controllo,
-       IF(COUNT(*) = 4, 'OK', 'STOP') AS Stato
-FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'aziende'
-  AND COLUMN_NAME IN ('google_merchant_id', 'facebook_pixel_id', 'statistiche_visite', 'facebookLink');
-
 SELECT 'AZIENDE_SEO_ABSENT' AS Controllo,
        IF(COUNT(*) = 0, 'OK', 'STOP') AS Stato
 FROM information_schema.TABLES
@@ -42,6 +36,4 @@ FROM (SELECT id FROM aziende GROUP BY id HAVING COUNT(*) > 1) AS duplicate_ids;
 
 SELECT 'AZIENDE_ROWS' AS Controllo, COUNT(*) AS NumeroAziende FROM aziende;
 
--- Il dump Git di riferimento ha PK composta (id,IvaTipo), ENGINE InnoDB,
--- default charset latin1 e singole colonne legacy in utf8mb4_0900_ai_ci.
--- Per questo la nuova tabella usa UNIQUE(AziendeId) ma nessuna FK in questa migration.
+-- Nessuna FK su aziende(id): PK legacy composta (id,IvaTipo).
