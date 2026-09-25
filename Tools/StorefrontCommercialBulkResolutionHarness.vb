@@ -10,22 +10,8 @@ Imports System.Web
 Imports System.Xml
 Imports MySql.Data.MySqlClient
 
-' Compile this fixture with the three production helpers. These stubs replace
-' unrelated infrastructure only; promotion and availability logic is real.
-Public Module StorefrontCommercialIsolationPolicy
-    Public Function BuildCommercialScope(ByVal scope As String, ByVal company As Integer,
-                                          ByVal listino As Integer, ByVal authenticated As Boolean,
-                                          ByVal userId As Integer) As String
-        Return scope & ":" & company.ToString() & ":" & listino.ToString() & ":" &
-               authenticated.ToString() & ":" & userId.ToString()
-    End Function
-End Module
-
-Public Module StorefrontSeoTenantContext
-    Public Function ConfiguredDatabaseScopeKey() As String
-        Return "synthetic"
-    End Function
-End Module
+' Compile this fixture with the three production helpers and the canonical
+' tenant/scope policies. Only unrelated logging and UI dependencies are stubbed.
 
 Public Module KeepStoreLog
     Public Sub [Error](ByVal component As String, ByVal message As String,
@@ -115,9 +101,9 @@ Module StorefrontCommercialBulkResolutionHarness
     End Function
 
     Sub Main(ByVal args As String())
-        If args IsNot Nothing AndAlso args.Length = 2 AndAlso args(0) = "--live" Then
+        If args IsNot Nothing AndAlso args.Length = 3 AndAlso args(0) = "--live" Then
             Try
-                RunLiveReadOnly(args(1))
+                RunLiveReadOnly(args(1), args(2))
             Catch ex As Exception
                 Console.Error.WriteLine("LIVE_ERROR_TYPE=" & ex.GetType().Name)
                 Environment.ExitCode = 1
@@ -221,29 +207,54 @@ Module StorefrontCommercialBulkResolutionHarness
         Return ProductPromotionDisplayHelper.BuildForProduct(batchValue, 2, -1, 10D, 12D).ResolutionState
     End Function
 
-    Private Sub RunLiveReadOnly(ByVal configPath As String)
+    Private Sub RunLiveReadOnly(ByVal configPath As String, ByVal requestedHost As String)
+        If String.IsNullOrWhiteSpace(requestedHost) Then Throw New InvalidOperationException("Host missing")
         Dim config As New XmlDocument()
         config.Load(configPath)
         Dim node As XmlNode = config.SelectSingleNode("/configuration/connectionStrings/add[@name='EntropicConnectionString']")
         If node Is Nothing Then Throw New InvalidOperationException("Connection configuration missing")
         Dim connectionString As String = node.Attributes("connectionString").Value
-        Dim scope As String = New MySqlConnectionStringBuilder(connectionString).Database
-        Dim listino As Integer = 0
-        Dim mode As Integer = 0
-        Dim minimum As Decimal = 0D
+        Dim scope As String = StorefrontSeoTenantContext.BuildDatabaseScopeKey(connectionString)
+        If String.IsNullOrWhiteSpace(scope) Then Throw New InvalidOperationException("Database scope missing")
+        Dim identities As New List(Of StorefrontSeoTenantIdentity)()
+        Dim availabilityByCompany As New Dictionary(Of Integer, Tuple(Of Integer, Decimal))()
         Dim rows As New List(Of Tuple(Of Integer, Integer, Decimal, Decimal))()
+        Dim tenant As StorefrontSeoTenantIdentity = Nothing
         Using connection As New MySqlConnection(connectionString)
             connection.Open()
-            Using command As New MySqlCommand("SELECT ListinoDefault, DispoTipo, DispoMinima FROM aziende WHERE Id=1 LIMIT 1", connection)
+            Using command As New MySqlCommand("SELECT Id, Nome, Descrizione, url1, url2, LogoWeb, ListinoDefault, DispoTipo, DispoMinima FROM aziende ORDER BY Id", connection)
                 Using reader As MySqlDataReader = command.ExecuteReader()
-                    If Not reader.Read() Then Throw New InvalidOperationException("Company missing")
-                    listino = Convert.ToInt32(reader("ListinoDefault"), CultureInfo.InvariantCulture)
-                    mode = Convert.ToInt32(reader("DispoTipo"), CultureInfo.InvariantCulture)
-                    minimum = Convert.ToDecimal(reader("DispoMinima"), CultureInfo.InvariantCulture)
+                    While reader.Read()
+                        Dim companyId As Integer = ReadInteger(reader, "Id")
+                        Dim identity As StorefrontSeoTenantIdentity = StorefrontCanonicalHostPolicy.CreateTenant(
+                            companyId,
+                            ReadString(reader, "Nome"),
+                            ReadString(reader, "Descrizione"),
+                            ReadString(reader, "url1"),
+                            ReadString(reader, "url2"),
+                            ReadString(reader, "LogoWeb"),
+                            ReadInteger(reader, "ListinoDefault"))
+                        If identity Is Nothing Then Continue While
+                        identities.Add(identity)
+                        If availabilityByCompany.ContainsKey(companyId) Then Throw New InvalidOperationException("Duplicate company")
+                        availabilityByCompany.Add(companyId,
+                            Tuple.Create(ReadInteger(reader, "DispoTipo"), ReadDecimal(reader, "DispoMinima")))
+                    End While
                 End Using
             End Using
+            tenant = StorefrontCanonicalHostPolicy.SelectExactTenant(identities, requestedHost, False)
+            If tenant Is Nothing OrElse tenant.CompanyId <= 0 OrElse tenant.DefaultPriceListId <= 0 OrElse
+               Not availabilityByCompany.ContainsKey(tenant.CompanyId) Then
+                Throw New InvalidOperationException("Tenant not uniquely resolved")
+            End If
+            Dim tenantAvailability As Tuple(Of Integer, Decimal) = availabilityByCompany(tenant.CompanyId)
+            Console.WriteLine("LIVE_TENANT_RESOLVED=PASS")
+            Console.WriteLine("LIVE_COMPANY_ID=" & tenant.CompanyId.ToString(CultureInfo.InvariantCulture))
+            Console.WriteLine("LIVE_LISTINO=" & tenant.DefaultPriceListId.ToString(CultureInfo.InvariantCulture))
+            Console.WriteLine("LIVE_DATABASE_SCOPE=PASS")
+            Console.WriteLine("LIVE_AVAILABILITY_CONFIG=" & If(tenantAvailability.Item1 > 0 AndAlso tenantAvailability.Item2 >= 0D, "PASS", "FAIL"))
             Using command As New MySqlCommand("SELECT id, COALESCE(TCId,-1) AS TCId, Prezzo, PrezzoIvato FROM vsuperarticoli WHERE NListino=@listino AND Prezzo>0 AND PrezzoIvato>0 LIMIT 5000", connection)
-                command.Parameters.AddWithValue("@listino", listino)
+                command.Parameters.AddWithValue("@listino", tenant.DefaultPriceListId)
                 Using reader As MySqlDataReader = command.ExecuteReader()
                     While reader.Read()
                         rows.Add(Tuple.Create(Convert.ToInt32(reader("id"), CultureInfo.InvariantCulture),
@@ -255,7 +266,12 @@ Module StorefrontCommercialBulkResolutionHarness
             End Using
         End Using
 
-        Dim context As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateAnonymousContext(scope, 1, listino, Date.Today)
+        Dim context As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateAnonymousContext(scope, tenant.CompanyId, tenant.DefaultPriceListId, Date.Today)
+        If context.CompanyId <> tenant.CompanyId OrElse context.Listino <> tenant.DefaultPriceListId OrElse
+           context.CurrentUserId <> 0 OrElse context.IsAuthenticated OrElse context.CampaignId <> 0 OrElse
+           Not String.Equals(context.DatabaseScopeKey, scope, StringComparison.Ordinal) Then
+            Throw New InvalidOperationException("Anonymous context mismatch")
+        End If
         Dim batchValue As ProductPromotionEligibilityBatch = ProductPromotionEligibilityResolver.CreateBatch(connectionString, context)
         If batchValue.Status <> ProductPromotionEligibilityLoadStatus.Success Then Throw New InvalidOperationException("Batch failed")
         Dim selected As New Dictionary(Of String, Tuple(Of Integer, Integer, Decimal, Decimal))(StringComparer.Ordinal)
@@ -275,7 +291,6 @@ Module StorefrontCommercialBulkResolutionHarness
             If selected.Count = 3 Then Exit For
         Next
         Console.WriteLine("LIVE_CANDIDATE_ROWS=" & rows.Count.ToString(CultureInfo.InvariantCulture))
-        Console.WriteLine("LIVE_AVAILABILITY_CONFIG=" & If(mode > 0 AndAlso minimum >= 0D, "PASS", "FAIL"))
         For Each category As String In {"normal", "immediate", "tier"}
             If Not selected.ContainsKey(category) Then
                 Console.WriteLine("LIVE_" & category.ToUpperInvariant() & "=MISSING")
@@ -321,5 +336,23 @@ Module StorefrontCommercialBulkResolutionHarness
             If Not SameProperties(left(index), right(index), String.Empty) Then Return False
         Next
         Return True
+    End Function
+
+    Private Function ReadString(ByVal reader As MySqlDataReader, ByVal fieldName As String) As String
+        Dim value As Object = reader(fieldName)
+        If value Is Nothing OrElse value Is DBNull.Value Then Return String.Empty
+        Return Convert.ToString(value, CultureInfo.InvariantCulture).Trim()
+    End Function
+
+    Private Function ReadInteger(ByVal reader As MySqlDataReader, ByVal fieldName As String) As Integer
+        Dim result As Integer = 0
+        Integer.TryParse(ReadString(reader, fieldName), NumberStyles.Integer, CultureInfo.InvariantCulture, result)
+        Return result
+    End Function
+
+    Private Function ReadDecimal(ByVal reader As MySqlDataReader, ByVal fieldName As String) As Decimal
+        Dim result As Decimal = 0D
+        Decimal.TryParse(ReadString(reader, fieldName), NumberStyles.Any, CultureInfo.InvariantCulture, result)
+        Return result
     End Function
 End Module
