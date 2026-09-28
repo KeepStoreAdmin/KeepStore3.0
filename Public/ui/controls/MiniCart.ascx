@@ -3,49 +3,53 @@
 <div class="offcanvas offcanvas-end popup-style popup-shopping-cart" tabindex="-1" id="ksMiniCartCanvas" aria-labelledby="ksMiniCartLabel">
     <div class="canvas-header">
         <h5 class="title fw-semibold" id="ksMiniCartLabel">Carrello</h5>
-        <span class="icon-close icon-close-popup link" data-bs-dismiss="offcanvas" aria-label="Chiudi"></span>
+        <button type="button" class="icon-close icon-close-popup link ks-mini-cart-close" data-bs-dismiss="offcanvas" aria-label="Chiudi"></button>
     </div>
 
-    <div class="offcanvas-body">
+    <div class="ks-mini-cart-content">
         <asp:PlaceHolder ID="phMiniCartEmpty" runat="server" Visible="false">
-            <div class="minicart-empty text-center">
-                <p class="mb-3">Il carrello e' vuoto.</p>
-                <a class="tf-btn btn-fill w-100" href="articoli.aspx">Vai al catalogo</a>
+            <div class="offcanvas-body">
+                <div class="minicart-empty text-center">
+                    <p class="mb-3">Il carrello e' vuoto.</p>
+                    <a class="tf-btn btn-fill w-100" href="articoli.aspx">Vai al catalogo</a>
+                </div>
             </div>
         </asp:PlaceHolder>
 
         <asp:PlaceHolder ID="phMiniCartList" runat="server" Visible="false">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="text-muted small">Articoli nel carrello</span>
-                <asp:Literal ID="litMiniClearCart" runat="server" />
-            </div>
+            <div class="offcanvas-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">Articoli nel carrello</span>
+                    <asp:Literal ID="litMiniClearCart" runat="server" />
+                </div>
 
-            <asp:Repeater ID="rptMiniCart" runat="server">
-                <ItemTemplate>
-                    <div class="d-flex gap-3 align-items-start py-2 border-bottom ks-mini-cart-item">
-                        <a class="flex-shrink-0 ks-mini-product-link" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>' aria-label="Vai al prodotto">
-                            <img class="rounded ks-mini-product-image" src='<%# GetProductImg(Eval("Img1")) %>' alt="" />
-                        </a>
-
-                        <div class="flex-grow-1 ks-mini-cart-info">
-                            <a class="link fw-semibold d-block mb-1" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>'>
-                                <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
+                <asp:Repeater ID="rptMiniCart" runat="server">
+                    <ItemTemplate>
+                        <div class="d-flex gap-3 align-items-start py-2 border-bottom ks-mini-cart-item">
+                            <a class="flex-shrink-0 ks-mini-product-link" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>' aria-label="Vai al prodotto">
+                                <img class="rounded ks-mini-product-image" src='<%# GetProductImg(Eval("Img1")) %>' alt="" />
                             </a>
 
-                            <div class="small text-muted">Q.ta: <%# Eval("Qnt") %></div>
-                            <div class="small">Prezzo: <%# GetUnitPriceText(Eval("Prezzo"), Eval("PrezzoIvato")) %></div>
-                            <div class="small">Totale riga: <%# GetLineTotalText(Eval("Importo"), Eval("ImportoIvato")) %></div>
-                        </div>
+                            <div class="flex-grow-1 ks-mini-cart-info">
+                                <a class="link fw-semibold d-block mb-1" href='<%# GetProductUrl(Eval("ArticoliId"), Eval("TCId")) %>'>
+                                    <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
+                                </a>
 
-                        <div class="text-end">
-                            <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("Id")) %>'
-                                class="btn btn-sm btn-outline-secondary ks-mini-remove" title="Rimuovi articolo" aria-label="Rimuovi articolo"><span class="icon-close" aria-hidden="true"></span><span class="visually-hidden">Rimuovi articolo</span></button>
-                        </div>
-                    </div>
-                </ItemTemplate>
-            </asp:Repeater>
+                                <div class="small text-muted">Q.ta: <%# Eval("Qnt") %></div>
+                                <div class="small">Prezzo: <%# GetUnitPriceText(Eval("Prezzo"), Eval("PrezzoIvato")) %></div>
+                                <div class="small">Totale riga: <%# GetLineTotalText(Eval("Importo"), Eval("ImportoIvato")) %></div>
+                            </div>
 
-            <div class="mt-3">
+                            <div class="text-end">
+                                <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("Id")) %>'
+                                    class="btn btn-sm btn-outline-secondary ks-mini-remove" title="Rimuovi articolo" aria-label="Rimuovi articolo"><span class="icon-close" aria-hidden="true"></span><span class="visually-hidden">Rimuovi articolo</span></button>
+                            </div>
+                        </div>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+
+            <div class="ks-mini-cart-footer">
                 <div class="d-flex justify-content-between mb-2">
                     <span class="fw-semibold">Totale</span>
                     <span class="fw-semibold"><asp:Label ID="lblMiniCartTotale" runat="server" Text="0,00" /></span>

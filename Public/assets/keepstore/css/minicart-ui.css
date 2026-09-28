@@ -1,7 +1,45 @@
 /* KeepStore MiniCart: global component contract, scoped to the cart offcanvas. */
+.popup-shopping-cart .ks-mini-cart-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
 .popup-shopping-cart .offcanvas-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
+}
+
+.popup-shopping-cart .ks-mini-cart-footer {
+    flex: 0 0 auto;
+    padding: 16px 20px max(16px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line, #e5e5e5);
+    background: var(--white, #fff);
+    box-shadow: 0 -4px 12px rgba(64, 72, 87, .08);
+}
+
+.popup-shopping-cart .canvas-header .ks-mini-cart-close {
+    display: inline-flex;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.popup-shopping-cart .ks-mini-cart-close:focus-visible {
+    outline: 3px solid rgba(216, 0, 39, .45);
+    outline-offset: 2px;
 }
 
 .popup-shopping-cart .ks-mini-cart-item {

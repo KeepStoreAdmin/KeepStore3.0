@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/minicart-ui.css") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/minicart-ui.css") & "?v=20260928-minicart-onsus-shell-ux-a11y-1a" %>" />
 
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
         <script type="application/ld+json"><asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" /></script>
