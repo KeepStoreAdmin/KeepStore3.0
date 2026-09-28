@@ -479,8 +479,12 @@
     initialize();
   }
   window.addEventListener('pageshow', function (event) {
-    if (historyRestored(event)) reconcileHistory(event);
-    else refreshBadges();
+    if (historyRestored(event)) {
+      reconcileHistory(event);
+    } else {
+      clearReloadGuard();
+      refreshBadges();
+    }
   });
   window.addEventListener('pagehide', function () {
     reconcileGeneration += 1;
