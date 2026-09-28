@@ -2883,9 +2883,13 @@ Partial Class articolo
 
     Private Sub ApplyPdpCartState(ByVal existingQty As Integer, ByVal initializeInput As Boolean)
         Dim hasCartQuantity As Boolean = existingQty > 0
-        pnlPdpCartState.Visible = hasCartQuantity
+        pnlPdpCartState.Visible = True
+        pnlPdpCartState.Attributes("data-ks-id") = _id.ToString(CultureInfo.InvariantCulture)
+        pnlPdpCartState.Attributes("data-ks-tcid") = _tcid.ToString(CultureInfo.InvariantCulture)
 
         If hasCartQuantity Then
+            pnlPdpCartState.Attributes.Remove("hidden")
+            pnlPdpCartState.Style.Remove("display")
             Dim quantityText As String = existingQty.ToString(CultureInfo.GetCultureInfo("it-IT"))
             Dim label As String = "Nel carrello attivo: " & quantityText & " pz."
             litPdpCartQty.Text = quantityText
@@ -2893,6 +2897,8 @@ Partial Class articolo
             pnlPdpCartState.Attributes("aria-label") = label
             If initializeInput Then txtQty.Text = existingQty.ToString(CultureInfo.InvariantCulture)
         Else
+            pnlPdpCartState.Attributes("hidden") = "hidden"
+            pnlPdpCartState.Style("display") = "none"
             litPdpCartQty.Text = ""
             pnlPdpCartState.ToolTip = ""
             pnlPdpCartState.Attributes.Remove("aria-label")

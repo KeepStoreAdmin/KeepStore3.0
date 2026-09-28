@@ -40,6 +40,7 @@
 
 <body id="PageBody" runat="server">
 <form id="form1" runat="server">
+        <span id="ksCartStateReconcile" hidden="hidden" data-ks-cart-state-endpoint="<%= ResolveUrl("~/cart_state_async.aspx") %>"></span>
 
         <button id="goTop" type="button" aria-label="Torna su">
             <span class="border-progress"></span>
@@ -314,7 +315,7 @@
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20260925-mobile-catalog-a11y1"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
-        <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260903-shoppingreturn1a"></script>
+        <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260928-cart-bfcache-authoritative-1a"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
         <script type="text/javascript">

@@ -297,10 +297,10 @@
                                                     <i class="icon-plus"></i>
                                                 </button>
                                             </div>
-                                            <asp:Panel ID="pnlPdpCartState" runat="server" CssClass="ks-pdp-cart-state ks-cart-awareness" Visible="false" role="status" aria-live="polite">
+                                            <asp:Panel ID="pnlPdpCartState" runat="server" CssClass="ks-pdp-cart-state ks-cart-awareness" role="status" aria-live="polite" data-ks-pdp-cart-state="1">
                                                 <span class="ks-cart-awareness__icon icon-cart-2" aria-hidden="true"></span>
                                                 <span>Nel carrello attivo:</span>
-                                                <strong><asp:Literal ID="litPdpCartQty" runat="server" Mode="Encode" /> pz.</strong>
+                                                <strong><span data-ks-pdp-cart-qty><asp:Literal ID="litPdpCartQty" runat="server" Mode="Encode" /></span> pz.</strong>
                                             </asp:Panel>
                                             <div class="small text-danger mt-1">
                                                 <asp:Literal ID="litQtyHelp" runat="server" />

@@ -10,6 +10,10 @@ Partial Class MiniCart
     ' 1 = prezzi + IVA (netto), 2 = prezzi IVA inclusa (ivato)
     Private _ivaTipo As Integer = 2
 
+    ' Only the read-only cart snapshot endpoint uses this mode. Normal pages retain
+    ' their progressive request IDs and existing native POST behavior.
+    Public Property StatelessActionRequestIds As Boolean
+
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreRender
         BindMiniCartSafe()
         RenderClearCartAction()
@@ -65,17 +69,21 @@ Partial Class MiniCart
         Dim rowId As Integer = SafeInt(rowIdObj, 0)
         If rowId <= 0 Then Return String.Empty
         Dim payload As String = CartMutationIdempotencyService.BuildRemoveRowPayload(rowId)
-        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
-            HttpContext.Current, "cart-remove:mini:" & rowId.ToString(CultureInfo.InvariantCulture),
-            "cart-remove-row", payload)
+        Dim requestId As String = If(StatelessActionRequestIds,
+            CartMutationIdempotencyService.CreateRequestId(),
+            CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+                HttpContext.Current, "cart-remove:mini:" & rowId.ToString(CultureInfo.InvariantCulture),
+                "cart-remove-row", payload))
         Return HttpUtility.HtmlAttributeEncode(
             CartMutationIdempotencyService.BuildNativeRemoveRowActionValue(rowId, requestId))
     End Function
 
     Public Function BuildClearCartActionValue() As String
         Dim payload As String = CartMutationIdempotencyService.BuildClearCartPayload()
-        Dim requestId As String = CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
-            HttpContext.Current, "cart-clear:mini", "cart-clear", payload)
+        Dim requestId As String = If(StatelessActionRequestIds,
+            CartMutationIdempotencyService.CreateRequestId(),
+            CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(
+                HttpContext.Current, "cart-clear:mini", "cart-clear", payload))
         Return HttpUtility.HtmlAttributeEncode(
             CartMutationIdempotencyService.BuildNativeClearCartActionValue(requestId))
     End Function
