@@ -507,25 +507,80 @@
 }
 
 .ks-cart-page .checkout-status .checkout-wrap {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     max-width: 760px;
     margin-left: auto;
     margin-right: auto;
 }
 
+.ks-cart-page .checkout-status .step-payment{
+    width: 100%;
+    min-width: 0;
+    gap: 8px;
+    padding: 0 4px;
+}
+
 .ks-cart-page .checkout-status .ks-checkout-step-link{
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    min-height: 44px;
+    padding: 4px;
+    line-height: 1.25;
     text-align: center;
+    white-space: normal;
+    overflow-wrap: break-word;
 }
 
 .ks-cart-page .checkout-status .ks-checkout-step-link[aria-current="step"]{
     cursor: default;
     opacity: 1;
+    font-weight: 700;
 }
 
 .ks-cart-page .checkout-status .ks-checkout-step-disabled{
     cursor: default;
+}
+
+.ks-cart-page .checkout-status .ks-checkout-step-link:focus-visible{
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.ks-cart-page .checkout-status .checkout-bar.first ~ .step-payment:nth-of-type(n+2),
+.ks-cart-page .checkout-status .checkout-bar.next ~ .step-payment:nth-of-type(3){
+    opacity: .65;
+}
+
+.ks-cart-page .checkout-status .checkout-bar.first ~ .step-payment:nth-of-type(n+2) .icon,
+.ks-cart-page .checkout-status .checkout-bar.next ~ .step-payment:nth-of-type(3) .icon{
+    background-color: #e5e9ee;
+    color: #4b5563;
+}
+
+.ks-cart-page .checkout-status .checkout-bar.first ~ .step-payment:nth-of-type(1) .icon,
+.ks-cart-page .checkout-status .checkout-bar.next ~ .step-payment:nth-of-type(2) .icon,
+.ks-cart-page .checkout-status .checkout-bar.end ~ .step-payment:nth-of-type(3) .icon{
+    box-shadow: 0 0 0 4px rgba(216, 0, 39, .16);
+}
+
+@media (max-width: 575.98px){
+    .ks-cart-page .checkout-status .step-payment{
+        padding: 0 2px;
+    }
+
+    .ks-cart-page .checkout-status .ks-checkout-step-link{
+        font-size: 12px;
+    }
+
+    .ks-cart-page .checkout-status .icon{
+        width: 44px;
+        height: 44px;
+    }
 }
 
 .ks-cart-page .cart-bottom.ks-cart-bottom {

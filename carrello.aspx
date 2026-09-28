@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260915-order-terminal-outcome-rev5" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260928-cart-checkout-step-context-1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -49,32 +49,32 @@
     <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>">
         <div class="container">
 
-            <div class="checkout-status tf-sp-2 pt-0">
+            <nav class="checkout-status tf-sp-2 pt-0" aria-label="Fasi dell'ordine">
                 <div class="checkout-wrap">
-                    <span class="checkout-bar <%= CheckoutStatusBarClass() %>"></span>
+                    <span class="checkout-bar <%= CheckoutStatusBarClass() %>" aria-hidden="true"></span>
                     <div class="step-payment">
                         <span class="icon">
-                            <i class="icon-shop-cart-1"></i>
+                            <i class="icon-shop-cart-1" aria-hidden="true"></i>
                         </span>
                         <asp:LinkButton ID="lnkCheckoutStep1" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep1_Click">Carrello</asp:LinkButton>
                     </div>
                     <div class="step-payment">
                         <span class="icon">
-                            <i class="icon-shop-cart-2"></i>
+                            <i class="icon-shop-cart-2" aria-hidden="true"></i>
                         </span>
-                        <asp:LinkButton ID="lnkCheckoutStep2" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep2_Click">Spedizione e checkout</asp:LinkButton>
+                        <asp:LinkButton ID="lnkCheckoutStep2" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep2_Click">Spedizione e pagamento</asp:LinkButton>
                     </div>
                     <div class="step-payment">
                         <span class="icon">
-                            <i class="icon-shop-cart-3"></i>
+                            <i class="icon-shop-cart-3" aria-hidden="true"></i>
                         </span>
-                        <asp:LinkButton ID="lnkCheckoutStep3" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep3_Click">Conferma</asp:LinkButton>
+                        <asp:LinkButton ID="lnkCheckoutStep3" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-checkout-step-link" OnClick="lnkCheckoutStep3_Click">Riepilogo ordine</asp:LinkButton>
                     </div>
                 </div>
-            </div>
+            </nav>
 
             <div class="heading-section mb-3">
-                <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Conferma ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e checkout<% Else %>Il tuo carrello<% End If %></h3>
+                <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Riepilogo ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e pagamento<% Else %>Il tuo carrello<% End If %></h3>
                 <div class="body-text-3 ks-cart-heading-meta">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
@@ -542,7 +542,7 @@
                     <asp:Literal ID="litClearCartAction" runat="server" />
                 </asp:Panel>
                 <div class="ks-right">
-                    <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Procedi con l'ordine" />
+                    <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Continua con spedizione e pagamento" />
                 </div>
             </div>
             </div>
@@ -1207,12 +1207,12 @@
     <div class="line"></div>
         <div class="wrap ks-checkout-section ks-confirm-section">
             <div class="ks-confirm-copy">
-                <h5 class="title fw-semibold">Conferma ordine</h5>
-                <p class="body-text-3 text-main-2">Controlla spedizione e pagamento prima del riepilogo finale. Il pagamento parte solo dal passaggio di conferma.</p>
+                <h5 class="title fw-semibold">Prima del riepilogo</h5>
+                <p class="body-text-3 text-main-2">Controlla spedizione e pagamento. Nel passaggio successivo potrai rivedere l'ordine prima dell'invio.</p>
             </div>
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
-                <asp:LinkButton CausesValidation="false" ID="btnVaiConfermaOrdine" runat="server" CssClass="tf-btn" OnClick="btnVaiConfermaOrdine_Click">Rivedi e conferma</asp:LinkButton>
+                <asp:LinkButton CausesValidation="false" ID="btnVaiConfermaOrdine" runat="server" CssClass="tf-btn" OnClick="btnVaiConfermaOrdine_Click">Rivedi ordine</asp:LinkButton>
             </div>
         </div>
         <asp:Panel ID="pnlCheckoutConfirm" runat="server" Visible="false" CssClass="wrap ks-checkout-section ks-final-confirm-section">
