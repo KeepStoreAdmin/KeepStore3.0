@@ -1069,6 +1069,8 @@
 
     .ks-cart-page .tf-table-page-cart .tf-cart-item > td{
         display: flex;
+        width: auto;
+        max-width: 100%;
         min-width: 0;
         align-items: center;
         padding: 4px 0;
