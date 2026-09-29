@@ -107,6 +107,60 @@
     color: rgba(0,0,0,.8);
 }
 
+.ks-cart-page .ks-cart-recovery{
+    max-width: 100%;
+    margin: 0 0 1rem;
+    padding: .85rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #253445;
+    overflow-wrap: anywhere;
+}
+
+.ks-cart-page .ks-cart-recovery[hidden]{
+    display: none !important;
+}
+
+.ks-cart-page .ks-cart-recovery strong{
+    display: block;
+    line-height: 1.35;
+}
+
+.ks-cart-page .ks-cart-recovery p{
+    margin: .3rem 0 0;
+    line-height: 1.5;
+}
+
+.ks-cart-page .ks-cart-recovery--info{
+    border-color: #b6d6c0;
+    background: #f3faf5;
+    color: #174b2b;
+}
+
+.ks-cart-page .ks-cart-recovery--warning{
+    border-color: #e4cc8b;
+    background: #fffaf0;
+    color: #654b15;
+}
+
+.ks-cart-page .ks-cart-recovery--error{
+    border-color: #edb5bb;
+    background: #fff4f5;
+    color: #8c1d2a;
+}
+
+.ks-cart-page .ks-cart-recovery:focus-visible{
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+@media (max-width: 390px){
+    .ks-cart-page .ks-cart-recovery{
+        padding: .75rem .85rem;
+    }
+}
+
 .ks-cart-page .ks-price-revalidation-list{
     margin: .5rem 0 0;
     padding-left: 1.15rem;

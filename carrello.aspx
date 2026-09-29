@@ -6,9 +6,9 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260929-cart-quantity-async-ux-1b" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260929-cart-mutation-recovery-1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20260929-cart-quantity-async-ux-1b" %>" defer></script>
+    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20260929-cart-mutation-recovery-1a" %>" defer></script>
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -81,6 +81,11 @@
                 </div>
                 <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial" CssClass="ks-cart-price-note"></asp:Label>
             </div>
+
+            <asp:Panel ID="pnlCartRecovery" runat="server" ClientIDMode="Static" CssClass="ks-alert ks-cart-recovery" hidden="hidden" role="status" aria-live="polite" aria-labelledby="ksCartRecoveryTitle" tabindex="-1" data-ks-cart-recovery="true">
+                <strong id="ksCartRecoveryTitle" data-ks-cart-recovery-title><asp:Literal ID="litCartRecoveryTitle" runat="server" /></strong>
+                <p data-ks-cart-recovery-message><asp:Literal ID="litCartRecoveryMessage" runat="server" /></p>
+            </asp:Panel>
 
             <asp:ObjectDataSource ID="sdsArticoli" runat="server"
                 TypeName="CartAuthoritativeReadDataSource" SelectMethod="SelectStandardItems">

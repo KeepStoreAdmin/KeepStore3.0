@@ -10,6 +10,8 @@ Partial Class cart_add
     Inherits AntiCsrfPage
 
     Private Const IndeterminateMessage As String = "Non è stato possibile confermare l'aggiornamento. Aggiorna il carrello e riprova."
+    Private Const CartRecoveryCodeKey As String = "ks_cart_recovery_code"
+    Private Const CartRecoveryCreatedUtcKey As String = "ks_cart_recovery_created_utc"
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
             Response.StatusCode = 405
@@ -39,14 +41,18 @@ Partial Class cart_add
         Dim packedAction As String = Convert.ToString(Request.Form("ksCartAction"))
         If Not String.IsNullOrWhiteSpace(packedAction) Then actionValues = HttpUtility.ParseQueryString(packedAction)
 
-        Dim requestId As String = String.Empty
-        If Not CartMutationIdempotencyService.NormalizeRequestId(ReadActionValue(actionValues, "requestId"), requestId) Then
-            RedirectMutationFailure(cartReturnUrl)
-            Return
-        End If
-
         Dim operation As String = ReadActionValue(actionValues, "operation").Trim().ToLowerInvariant()
         If operation = String.Empty Then operation = "cart-add"
+
+        Dim requestId As String = String.Empty
+        If Not CartMutationIdempotencyService.NormalizeRequestId(ReadActionValue(actionValues, "requestId"), requestId) Then
+            If IsRemovalOperation(operation) Then
+                RedirectRemovalOutcome(cartReturnUrl, "mutation_failed")
+            Else
+                RedirectMutationFailure(cartReturnUrl)
+            End If
+            Return
+        End If
 
         Select Case operation
             Case "cart-add"
@@ -71,7 +77,7 @@ Partial Class cart_add
         Dim cartRowId As Integer = 0
         If Not clearAll AndAlso
            (Not Integer.TryParse(ReadActionValue(actionValues, "rowId"), cartRowId) OrElse cartRowId <= 0) Then
-            RedirectMutationFailure(cartReturnUrl)
+            RedirectRemovalOutcome(cartReturnUrl, "mutation_failed")
             Return
         End If
 
@@ -86,10 +92,10 @@ Partial Class cart_add
             CartMutationService.RemoveCartRowForCurrentOwner(HttpContext.Current, cartRowId))
         If result Is Nothing OrElse Not result.Succeeded OrElse (Not clearAll AndAlso result.AffectedRows <> 1) Then
             If result IsNot Nothing AndAlso result.IsIndeterminate Then
-                RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
+                RedirectRemovalOutcome(cartReturnUrl, "mutation_indeterminate")
             Else
                 CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
-                RedirectMutationFailure(cartReturnUrl)
+                RedirectRemovalOutcome(cartReturnUrl, "mutation_failed")
             End If
             Return
         End If
@@ -97,14 +103,8 @@ Partial Class cart_add
         CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
         CartMutationIdempotencyService.ClearProgressiveRequestIds(
             HttpContext.Current, If(clearAll, "cart-clear:", "cart-remove:"))
-        If result.WasNoOp Then
-            Session(CartPriceRevalidationHelper.SessionMessageKey) = "Il carrello è già vuoto."
-            Session(CartPriceRevalidationHelper.SessionChangedKey) = 0
-        Else
-            Session(CartPriceRevalidationHelper.SessionMessageKey) = "Il carrello è stato aggiornato."
-            Session(CartPriceRevalidationHelper.SessionChangedKey) = 1
-        End If
-        RedirectAfterPost(cartReturnUrl)
+        RedirectRemovalOutcome(cartReturnUrl, If(result.WasNoOp, "clear_already_empty",
+                                                 If(clearAll, "clear_ok", "remove_ok")))
     End Sub
 
     Private Sub HandleStandardAction(ByVal actionValues As NameValueCollection,
@@ -230,11 +230,16 @@ Partial Class cart_add
         Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
             HttpContext.Current, requestId, operationType, payload)
         If decision = CartMutationIntentDecision.Completed Then
-            RedirectAfterPost(cartReturnUrl)
+            If IsRemovalOperation(operationType) Then
+                RedirectRemovalOutcome(cartReturnUrl, "cart_already_updated")
+            Else
+                RedirectAfterPost(cartReturnUrl)
+            End If
             Return False
         End If
         If decision = CartMutationIntentDecision.Indeterminate Then
-            RedirectIntentFailure(cartReturnUrl, articleId, tcId, IndeterminateMessage)
+            RedirectIntentOrRemovalFailure(cartReturnUrl, operationType, articleId, tcId,
+                                           "mutation_indeterminate", IndeterminateMessage)
             Return False
         End If
         If decision = CartMutationIntentDecision.Collision Then
@@ -242,33 +247,42 @@ Partial Class cart_add
                 KeepStoreLog.Info("cart_add.aspx", "Richiesta carrello rifiutata per collisione idempotente.", HttpContext.Current)
             Catch
             End Try
-            RedirectIntentFailure(cartReturnUrl, articleId, tcId)
+            RedirectIntentOrRemovalFailure(cartReturnUrl, operationType, articleId, tcId, "mutation_failed")
             Return False
         End If
         If decision = CartMutationIntentDecision.Invalid Then
-            RedirectIntentFailure(cartReturnUrl, articleId, tcId)
+            RedirectIntentOrRemovalFailure(cartReturnUrl, operationType, articleId, tcId, "mutation_failed")
             Return False
         End If
         If decision = CartMutationIntentDecision.Processing OrElse decision = CartMutationIntentDecision.CapacityExceeded Then
             Response.Headers("Retry-After") = "1"
-            RedirectIntentFailure(cartReturnUrl, articleId, tcId, "Aggiornamento carrello in corso. Riprova tra poco.")
+            RedirectIntentOrRemovalFailure(cartReturnUrl, operationType, articleId, tcId,
+                                           "mutation_processing", "Aggiornamento carrello in corso. Riprova tra poco.")
             Return False
         End If
 
         Dim beginDecision As CartMutationIntentDecision = CartMutationIdempotencyService.BeginIntent(
             HttpContext.Current, requestId, operationType, payload)
         If beginDecision = CartMutationIntentDecision.Completed Then
-            RedirectAfterPost(cartReturnUrl)
+            If IsRemovalOperation(operationType) Then
+                RedirectRemovalOutcome(cartReturnUrl, "cart_already_updated")
+            Else
+                RedirectAfterPost(cartReturnUrl)
+            End If
             Return False
         End If
         If beginDecision = CartMutationIntentDecision.Indeterminate Then
-            RedirectIntentFailure(cartReturnUrl, articleId, tcId, IndeterminateMessage)
+            RedirectIntentOrRemovalFailure(cartReturnUrl, operationType, articleId, tcId,
+                                           "mutation_indeterminate", IndeterminateMessage)
             Return False
         End If
         If beginDecision <> CartMutationIntentDecision.Accepted Then
             If beginDecision = CartMutationIntentDecision.Processing OrElse
                beginDecision = CartMutationIntentDecision.CapacityExceeded Then Response.Headers("Retry-After") = "1"
-            RedirectIntentFailure(cartReturnUrl, articleId, tcId)
+            RedirectIntentOrRemovalFailure(cartReturnUrl, operationType, articleId, tcId,
+                                           If(beginDecision = CartMutationIntentDecision.Processing OrElse
+                                              beginDecision = CartMutationIntentDecision.CapacityExceeded,
+                                              "mutation_processing", "mutation_failed"))
             Return False
         End If
         Return True
@@ -335,6 +349,48 @@ Partial Class cart_add
             RedirectMutationFailure(returnUrl, message)
         End If
     End Sub
+
+    Private Shared Function IsRemovalOperation(ByVal operationType As String) As Boolean
+        Return String.Equals(operationType, "cart-remove-row", StringComparison.Ordinal) OrElse
+               String.Equals(operationType, "cart-clear", StringComparison.Ordinal)
+    End Function
+
+    Private Sub RedirectIntentOrRemovalFailure(ByVal returnUrl As String,
+                                               ByVal operationType As String,
+                                               ByVal articleId As Integer,
+                                               ByVal tcId As Integer,
+                                               ByVal recoveryCode As String,
+                                               Optional ByVal legacyMessage As String = "")
+        If IsRemovalOperation(operationType) Then
+            RedirectRemovalOutcome(returnUrl, recoveryCode)
+        Else
+            RedirectIntentFailure(returnUrl, articleId, tcId, legacyMessage)
+        End If
+    End Sub
+
+    Private Sub RedirectRemovalOutcome(ByVal returnUrl As String, ByVal recoveryCode As String)
+        Session.Remove(CartRecoveryCodeKey)
+        Session.Remove(CartRecoveryCreatedUtcKey)
+        If IsCartRecoveryTarget(returnUrl) Then
+            Select Case recoveryCode
+                Case "remove_ok", "clear_ok", "clear_already_empty", "cart_already_updated",
+                     "mutation_failed", "mutation_indeterminate", "mutation_processing"
+                    Session(CartRecoveryCodeKey) = recoveryCode
+                    Session(CartRecoveryCreatedUtcKey) = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+            End Select
+        End If
+        RedirectAfterPost(returnUrl)
+    End Sub
+
+    Private Function IsCartRecoveryTarget(ByVal returnUrl As String) As Boolean
+        If String.IsNullOrWhiteSpace(returnUrl) OrElse Request.Url Is Nothing Then Return False
+        Dim target As Uri = Nothing
+        If Not Uri.TryCreate(Request.Url, returnUrl, target) OrElse target Is Nothing Then Return False
+        Return String.Equals(target.Scheme, Request.Url.Scheme, StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(target.Host, Request.Url.Host, StringComparison.OrdinalIgnoreCase) AndAlso
+               target.Port = Request.Url.Port AndAlso
+               String.Equals(target.AbsolutePath, ResolveUrl("~/carrello.aspx"), StringComparison.OrdinalIgnoreCase)
+    End Function
 
     Private Sub RedirectPdpFailure(ByVal articleId As Integer,
                                    ByVal tcId As Integer)

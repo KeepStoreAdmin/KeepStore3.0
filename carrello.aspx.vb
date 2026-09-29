@@ -17,6 +17,8 @@ Public Partial Class carrello
     Inherits System.Web.UI.Page
 
 Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
+Private Const CartRecoveryCodeKey As String = "ks_cart_recovery_code"
+Private Const CartRecoveryCreatedUtcKey As String = "ks_cart_recovery_created_utc"
 Private _cartHasItems As Boolean = True
 
 Private Class InventoryAvailabilityDisplayLine
@@ -1139,6 +1141,55 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         litCartPriceRevalidation.Text = msg
         Session(CartPriceRevalidationHelper.SessionMessageKey) = Nothing
         Session(CartPriceRevalidationHelper.SessionChangedKey) = Nothing
+    End Sub
+
+    Private Sub ShowCartRecoveryMessage()
+        If Session Is Nothing Then Return
+
+        Dim code As String = Convert.ToString(Session(CartRecoveryCodeKey))
+        Dim createdRaw As String = Convert.ToString(Session(CartRecoveryCreatedUtcKey))
+        Session.Remove(CartRecoveryCodeKey)
+        Session.Remove(CartRecoveryCreatedUtcKey)
+
+        Dim createdUtc As DateTime
+        If Not DateTime.TryParseExact(createdRaw, "o", CultureInfo.InvariantCulture,
+                                      DateTimeStyles.RoundtripKind, createdUtc) Then Return
+        Dim age As TimeSpan = DateTime.UtcNow.Subtract(createdUtc.ToUniversalTime())
+        If age < TimeSpan.Zero OrElse age > TimeSpan.FromMinutes(5) Then Return
+
+        Dim severity As String = ""
+        Dim title As String = ""
+        Dim message As String = ""
+        Select Case code
+            Case "remove_ok"
+                severity = "info" : title = "Articolo rimosso" : message = "Il carrello è stato aggiornato."
+            Case "clear_ok"
+                severity = "info" : title = "Carrello svuotato" : message = "Non ci sono più articoli nel carrello."
+            Case "clear_already_empty"
+                severity = "info" : title = "Il carrello è già vuoto" : message = "Non è stata necessaria alcuna modifica."
+            Case "cart_already_updated"
+                severity = "info" : title = "Carrello già aggiornato" : message = "Lo stato corrente è già quello richiesto."
+            Case "mutation_failed"
+                severity = "error" : title = "Non è stato possibile aggiornare il carrello" : message = "Controlla il carrello e riprova."
+            Case "mutation_indeterminate"
+                severity = "warning" : title = "Controlla lo stato del carrello" : message = "Non possiamo confermare l'esito della richiesta precedente. Verifica il carrello attuale prima di riprovare."
+            Case "mutation_processing"
+                severity = "warning" : title = "Aggiornamento in corso" : message = "Attendi qualche secondo, controlla il carrello e riprova se necessario."
+            Case Else
+                Return
+        End Select
+
+        If pnlCartRecovery Is Nothing OrElse litCartRecoveryTitle Is Nothing OrElse litCartRecoveryMessage Is Nothing Then Return
+        litCartRecoveryTitle.Text = HttpUtility.HtmlEncode(title)
+        litCartRecoveryMessage.Text = HttpUtility.HtmlEncode(message)
+        pnlCartRecovery.CssClass = "ks-alert ks-cart-recovery ks-cart-recovery--" & severity
+        pnlCartRecovery.Attributes.Remove("hidden")
+        pnlCartRecovery.Attributes("role") = If(severity = "error", "alert", "status")
+        pnlCartRecovery.Attributes("aria-live") = If(severity = "error", "assertive", "polite")
+        If severity = "error" Then
+            ScriptManager.RegisterStartupScript(Me, Me.GetType(), "focusCartRecovery",
+                "setTimeout(function(){var e=document.getElementById('pnlCartRecovery');if(e){e.focus();}},0);", True)
+        End If
     End Sub
 
     Private Sub ShowOrderInventoryAvailabilityMessage()
@@ -2456,6 +2507,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         ApplyCheckoutStepUi()
     End If
     ShowCartPriceRevalidationMessage()
+    ShowCartRecoveryMessage()
     ShowOrderInventoryAvailabilityMessage()
     ShowCheckoutFailureFromSession()
     StabilizeCartAddressEditUi()

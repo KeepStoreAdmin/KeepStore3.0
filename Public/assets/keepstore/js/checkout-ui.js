@@ -482,7 +482,11 @@
     var subtotal = qs('.ks-cart-subtotal-value', page);
     var headingCount = qs('.ks-cart-heading-count', page);
     var commercialNotice = document.getElementById('ksCartQuantityCommercialNotice');
-    if (!rowNodes.length || !subtotal || !headingCount || !commercialNotice) return;
+    var recoveryNotice = document.getElementById('pnlCartRecovery');
+    var recoveryTitle = recoveryNotice && qs('[data-ks-cart-recovery-title]', recoveryNotice);
+    var recoveryMessage = recoveryNotice && qs('[data-ks-cart-recovery-message]', recoveryNotice);
+    if (!rowNodes.length || !subtotal || !headingCount || !commercialNotice ||
+        !recoveryNotice || !recoveryTitle || !recoveryMessage) return;
 
     var rows = [];
     var byId = {};
@@ -518,6 +522,7 @@
     var reloadStarted = false;
     var reloadKey = 'KeepStore:cart-quantity-failure:' + window.location.pathname;
     var scrollKey = 'KeepStore:cart-quantity-scroll:' + window.location.pathname;
+    var recoveryKey = 'KeepStore:cart-quantity-notice:' + window.location.pathname;
     var checkoutTargets = qsa('[id$="_btCompleta"],[id$="_lnkCheckoutStep2"],[id$="_lnkCheckoutStep3"]', document);
     var waitMessage = qs('[data-ks-cart-checkout-wait]', page);
     var checkoutOriginal = checkoutTargets.map(function (target) {
@@ -526,6 +531,39 @@
 
     function hasPending() {
       return !!inFlight || rows.some(function (row) { return row.desired !== null || row.rawDirty; });
+    }
+    function showRecovery(code) {
+      var notices = {
+        reconciled: { severity: 'warning', title: 'Stato del carrello aggiornato',
+                      message: 'Controlla le quantità prima di riprovare.' },
+        commercial_unavailable: { severity: 'warning', title: 'Condizioni non disponibili',
+                                  message: 'Aggiorna il carrello e controlla prezzi e quantità prima di continuare.' },
+        technical_failure: { severity: 'error', title: 'Verifica il carrello',
+                             message: 'Non è stato possibile ricaricare automaticamente il carrello. Aggiorna la pagina prima di continuare.' }
+      };
+      var notice = notices[code];
+      if (!notice) return;
+      recoveryNotice.classList.remove('ks-cart-recovery--info', 'ks-cart-recovery--warning', 'ks-cart-recovery--error');
+      recoveryNotice.classList.add('ks-cart-recovery--' + notice.severity);
+      recoveryNotice.setAttribute('role', notice.severity === 'error' ? 'alert' : 'status');
+      recoveryNotice.setAttribute('aria-live', notice.severity === 'error' ? 'assertive' : 'polite');
+      recoveryNotice.removeAttribute('hidden');
+      recoveryTitle.textContent = notice.title;
+      recoveryMessage.textContent = notice.message;
+    }
+    function consumeReloadRecovery() {
+      try {
+        var guard = window.sessionStorage.getItem(reloadKey);
+        var raw = window.sessionStorage.getItem(recoveryKey);
+        window.sessionStorage.removeItem(recoveryKey);
+        window.sessionStorage.removeItem(reloadKey);
+        if (guard !== window.location.href || !raw || !recoveryNotice.hasAttribute('hidden')) return;
+        var stored = JSON.parse(raw);
+        var age = Date.now() - Number(stored && stored.createdUtc);
+        if (stored && stored.code === 'reconciled' && isFinite(age) && age >= 0 && age <= 300000) {
+          showRecovery('reconciled');
+        }
+      } catch (ignore) {}
     }
     function protectCheckout() {
       var busy = hasPending() || fatal;
@@ -539,7 +577,10 @@
         }
         original.node.classList.toggle('ks-cart-checkout-guarded', busy);
       });
-      if (waitMessage) waitMessage.hidden = !busy;
+      if (waitMessage) {
+        waitMessage.textContent = fatal ? 'Aggiorna il carrello prima di continuare.' : 'Attendi il salvataggio della quantità.';
+        waitMessage.hidden = !busy;
+      }
     }
     function setStatus(row, state, message) {
       if (row.savedTimer) { window.clearTimeout(row.savedTimer); row.savedTimer = null; }
@@ -567,9 +608,13 @@
       if (reloadStarted) return;
       reloadStarted = true;
       try {
-        if (window.sessionStorage.getItem(reloadKey) === window.location.href) return;
+        if (window.sessionStorage.getItem(reloadKey) === window.location.href) {
+          showRecovery('technical_failure');
+          return;
+        }
         window.sessionStorage.setItem(reloadKey, window.location.href);
         window.sessionStorage.setItem(scrollKey, String(Math.max(0, Math.round(window.scrollY || 0))));
+        window.sessionStorage.setItem(recoveryKey, JSON.stringify({ code: 'reconciled', createdUtc: Date.now() }));
       } catch (ignore) {}
       window.location.reload();
     }
@@ -674,7 +719,10 @@
           inFlight = null;
           setStatus(target.row, 'error', data.code === 'invalid_quantity' ? 'Inserisci una quantità da 1 a 9999. Per rimuovere usa Rimuovi.' :
                     'Condizioni non disponibili. Aggiorna il carrello prima di proseguire.');
-          if (data.code === 'commercial_unavailable') failClosed(target.row, 'Condizioni non disponibili. Aggiorna il carrello prima di proseguire.');
+          if (data.code === 'commercial_unavailable') {
+            failClosed(target.row, 'Condizioni non disponibili. Aggiorna il carrello prima di proseguire.');
+            showRecovery('commercial_unavailable');
+          }
           else { protectCheckout(); pump(); }
           return;
         }
@@ -774,6 +822,7 @@
     page.classList.add('ks-cart-quantity-async-ready');
     cartQuantityEngine = { page: page, firstRow: rowNodes[0] };
     protectCheckout();
+    consumeReloadRecovery();
   }
 
   function protectServerCartCommands() {
