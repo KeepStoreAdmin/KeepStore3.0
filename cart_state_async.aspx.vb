@@ -11,7 +11,7 @@ Partial Class CartStateAsync
     Inherits Page
 
     Private _statusCode As Integer = 500
-    Private _miniCart As MiniCart
+    Private _miniCart As Control
     Private _snapshot As CartStateSnapshotProvider
     Private _cart As CartAuthoritativeReadModel
 
@@ -59,16 +59,34 @@ Partial Class CartStateAsync
         End If
 
         _snapshot = CartStateSnapshotProvider.GetCurrent(HttpContext.Current)
-        _miniCart = TryCast(LoadControl("~/Public/ui/controls/MiniCart.ascx"), MiniCart)
-        If _miniCart Is Nothing Then
-            _statusCode = 500
+        Try
+            _miniCart = LoadControl("~/Public/ui/controls/MiniCart.ascx")
+        Catch
+            _statusCode = 503
+            Return
+        End Try
+        If Not ConfigureStatelessMiniCart(_miniCart) Then
+            _statusCode = 503
             Return
         End If
         _miniCart.ID = "MiniCartReadOnly"
-        _miniCart.StatelessActionRequestIds = True
         Controls.Add(_miniCart)
         _statusCode = 200
     End Sub
+
+    Private Shared Function ConfigureStatelessMiniCart(ByVal control As Control) As Boolean
+        If control Is Nothing Then Return False
+        Try
+            Dim setting As System.Reflection.PropertyInfo = control.GetType().GetProperty(
+                "StatelessActionRequestIds",
+                System.Reflection.BindingFlags.Public Or System.Reflection.BindingFlags.Instance)
+            If setting Is Nothing OrElse Not setting.CanWrite OrElse setting.PropertyType IsNot GetType(Boolean) Then Return False
+            setting.SetValue(control, True, Nothing)
+            Return True
+        Catch
+            Return False
+        End Try
+    End Function
 
     Protected Overrides Sub Render(ByVal writer As HtmlTextWriter)
         Dim payload As New Dictionary(Of String, Object) From {{"ok", False}}

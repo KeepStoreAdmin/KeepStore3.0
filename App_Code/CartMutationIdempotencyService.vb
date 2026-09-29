@@ -190,6 +190,12 @@ Public NotInheritable Class CartMutationIdempotencyService
                desiredQuantity.ToString("0.####", CultureInfo.InvariantCulture)
     End Function
 
+    Public Shared Function BuildSetRowQuantityPayload(ByVal cartRowId As Integer,
+                                                      ByVal desiredQuantity As Decimal) As String
+        Return "row-target|" & cartRowId.ToString(CultureInfo.InvariantCulture) & "|" &
+               desiredQuantity.ToString("0.########", CultureInfo.InvariantCulture)
+    End Function
+
     Public Shared Function BuildRemoveRowPayload(ByVal cartRowId As Integer) As String
         Return "remove-row|" & cartRowId.ToString(CultureInfo.InvariantCulture)
     End Function

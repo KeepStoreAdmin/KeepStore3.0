@@ -89,6 +89,9 @@
             <asp:ObjectDataSource ID="sdsArticoli_Spedizione_Gratis" runat="server"
                 TypeName="CartAuthoritativeReadDataSource" SelectMethod="SelectFreeShippingItems">
             </asp:ObjectDataSource>
+            <span id="ksCartQuantityAsyncConfig" hidden="hidden"
+                data-endpoint="<%= ResolveUrl("~/cart_quantity_async.aspx") %>"
+                data-csrf="<%= System.Web.HttpUtility.HtmlAttributeEncode(CatalogAsyncCartSupport.GetOrCreateCsrfToken(System.Web.HttpContext.Current)) %>"></span>
             <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
@@ -108,7 +111,8 @@
                         <!-- Sezione degli Articoli Spediti GRATIS -->
                         <asp:Repeater ID="gvArticoliGratis" runat="server" DataSourceID="sdsArticoli_Spedizione_Gratis" OnItemCommand="gvArticoliGratis_ItemCommand" OnItemDataBound="CartInventoryItemDataBound">
                             <ItemTemplate>
-                                <tr id="CartItemRow" runat="server" class="tf-cart-item">
+                                <tr id="CartItemRow" runat="server" class="tf-cart-item"
+                                    data-ks-cart-row-id='<%#: Eval("id") %>' data-ks-article-id='<%#: Eval("ArticoliId") %>' data-ks-tcid='<%#: Eval("TCId") %>'>
                                     <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
@@ -225,7 +229,8 @@
                         <!-- Sezione degli Articoli normali, senza spedizione Gratis -->
                         <asp:Repeater ID="Repeater1" runat="server" DataSourceID="sdsArticoli" OnItemCommand="Repeater1_ItemCommand" OnItemDataBound="CartInventoryItemDataBound">
                             <ItemTemplate>
-                                <tr id="CartItemRow" runat="server" class="tf-cart-item">
+                                <tr id="CartItemRow" runat="server" class="tf-cart-item"
+                                    data-ks-cart-row-id='<%#: Eval("id") %>' data-ks-article-id='<%#: Eval("ArticoliId") %>' data-ks-tcid='<%#: Eval("TCId") %>'>
                                     <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                             <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
