@@ -1053,6 +1053,7 @@
 
     .ks-cart-page .tf-table-page-cart .tf-cart-item{
         display: grid;
+        width: auto;
         grid-template-columns: minmax(0, 1fr) auto;
         grid-template-areas:
             "product remove"
