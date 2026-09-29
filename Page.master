@@ -278,7 +278,7 @@
         <script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/shop.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/count-down.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/main.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/main.js") %>?v=20260929-cart-authoritative-guard-1b-rev1"></script>
         <script>
         (function () {
             function hidePreload() {
