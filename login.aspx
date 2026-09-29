@@ -66,10 +66,8 @@
                             <div class="form-content">
 
                                 <fieldset>
-                                    <label class="fw-semibold body-md-2">
-                                        <asp:Label ID="lblUsername" runat="server" Text="Username *" Visible="True"></asp:Label>
-                                    </label>
-                                    <asp:TextBox ID="tbUsername" CssClass="form-control" AutoPostBack="false" runat="server" Visible="True"></asp:TextBox>
+                                    <asp:Label ID="lblUsername" runat="server" Text="Username *" Visible="True" CssClass="fw-semibold body-md-2" AssociatedControlID="tbUsername"></asp:Label>
+                                    <asp:TextBox ID="tbUsername" CssClass="form-control" AutoPostBack="false" autocomplete="username" runat="server" Visible="True"></asp:TextBox>
                                     <div class="validator">
                                         <asp:RequiredFieldValidator ID="RequiredFieldValidatorUser" runat="server"
                                             ControlToValidate="tbUsername"
@@ -80,11 +78,9 @@
                                 </fieldset>
 
                                 <fieldset>
-                                    <label class="fw-semibold body-md-2">
-                                        <asp:Label ID="lblPassword" runat="server" Text="Password *" Visible="True"></asp:Label>
-                                    </label>
+                                    <asp:Label ID="lblPassword" runat="server" Text="Password *" Visible="True" CssClass="fw-semibold body-md-2" AssociatedControlID="tbPassword"></asp:Label>
                                     <div class="ks-login-password-wrap">
-                                        <asp:TextBox ID="tbPassword" CssClass="form-control" AutoPostBack="false" TextMode="Password" runat="server" Visible="True"></asp:TextBox>
+                                        <asp:TextBox ID="tbPassword" CssClass="form-control" AutoPostBack="false" TextMode="Password" autocomplete="current-password" runat="server" Visible="True"></asp:TextBox>
                                         <button type="button"
                                             id="btnToggleLoginPassword"
                                             class="ks-login-password-toggle"
