@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260928-cart-checkout-step-context-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260929-cart-product-card-details-1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
 
@@ -96,11 +96,11 @@
                         <table class="tf-table-page-cart">
                     <thead>
                         <tr>
-                            <th>Prodotto</th>
-                            <th>Prezzo</th>
-                            <th>Q.tà</th>
-                            <th>Totale</th>
-                            <th></th>
+                            <th scope="col">Prodotto</th>
+                            <th scope="col">Prezzo</th>
+                            <th scope="col">Q.tà</th>
+                            <th scope="col">Totale</th>
+                            <th scope="col"><span class="visually-hidden">Rimuovi</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -117,11 +117,11 @@
                                             <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                                 <span class="ks-cart-title">
                                                     <asp:Label ID="Label2" runat="server" Text='<%#: Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
-                                                    <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
+                                                    <span><%#: Eval("Descrizione1") %></span>
                                                 </span>
                                             </asp:HyperLink>
 
-                                            <div class="variant-box">
+                                            <div class="variant-box" style='<%# If(String.IsNullOrWhiteSpace(Convert.ToString(Eval("taglia")) & Convert.ToString(Eval("colore"))), "display:none;", "") %>'>
                                                 <p class="body-text-3">Variante:</p>
                                                 <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%#: Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
                                             </div>
@@ -149,7 +149,8 @@
                                         </div>
                                     </td>
 
-                                    <td data-cart-title="Prezzo" class="tf-cart-item_price">
+                                    <td data-cart-title="Prezzo unitario" class="tf-cart-item_price">
+                                        <span class="ks-cart-mobile-label">Prezzo unitario</span>
                                         <p class="cart-price price-text fw-medium">
                                             <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label>
                                             <asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label>
@@ -158,6 +159,7 @@
                                     </td>
 
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
+                                        <span class="ks-cart-mobile-label">Quantità</span>
                                         <div id="qtyWrap" runat="server" class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
                                             <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
@@ -169,7 +171,8 @@
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
 
-                                    <td data-cart-title="Totale" class="tf-cart-item_total">
+                                    <td data-cart-title="Totale riga" class="tf-cart-item_total">
+                                        <span class="ks-cart-mobile-label">Totale riga</span>
                                         <p class="cart-total total-price price-text fw-medium">
                                             <asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label>
                                             <asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label>
@@ -231,11 +234,11 @@
                                             <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
                                                 <span class="ks-cart-title">
                                                     <asp:Label ID="Label2" runat="server" Text='<%#: Eval("MarcheDescrizione") %>' CssClass="ks-brand"></asp:Label>
-                                                    <span><%# controllaLunghezzaTesto(Eval("Descrizione1"), 60) %></span>
+                                                    <span><%#: Eval("Descrizione1") %></span>
                                                 </span>
                                             </asp:HyperLink>
 
-                                            <div class="variant-box">
+                                            <div class="variant-box" style='<%# If(String.IsNullOrWhiteSpace(Convert.ToString(Eval("taglia")) & Convert.ToString(Eval("colore"))), "display:none;", "") %>'>
                                                 <p class="body-text-3">Variante:</p>
                                                 <asp:Label ID="tagliecolori" runat="server" CssClass="body-text-3" Text='<%#: Eval("taglia") & " " & Eval("colore") %>'></asp:Label>
                                             </div>
@@ -261,7 +264,8 @@
                                         </div>
                                     </td>
 
-                                    <td data-cart-title="Prezzo" class="tf-cart-item_price">
+                                    <td data-cart-title="Prezzo unitario" class="tf-cart-item_price">
+                                        <span class="ks-cart-mobile-label">Prezzo unitario</span>
                                         <p class="cart-price price-text fw-medium">
                                             <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label>
                                             <asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label>
@@ -270,6 +274,7 @@
                                     </td>
 
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
+                                        <span class="ks-cart-mobile-label">Quantità</span>
                                         <div id="qtyWrap" runat="server" class="wg-quantity ks-wg-quantity">
                                             <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
                                             <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
@@ -281,7 +286,8 @@
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
 
-                                    <td data-cart-title="Totale" class="tf-cart-item_total">
+                                    <td data-cart-title="Totale riga" class="tf-cart-item_total">
+                                        <span class="ks-cart-mobile-label">Totale riga</span>
                                         <p class="cart-total total-price price-text fw-medium">
                                             <asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label>
                                             <asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label>
