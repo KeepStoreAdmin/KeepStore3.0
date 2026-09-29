@@ -12,12 +12,23 @@ FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'carrello_anonimo_persistenza'
   AND TABLE_TYPE = 'BASE TABLE';
 
-SELECT 'SESSIONID_MIGRATED' AS Controllo,
-       CASE WHEN COUNT(*) = 1 THEN 'OK' ELSE 'STOP' END AS Esito
-FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'carrello'
-  AND COLUMN_NAME = 'SessionId' AND COLUMN_TYPE = 'varchar(50)'
-  AND COLLATION_NAME = 'utf8mb4_0900_bin' AND IS_NULLABLE = 'YES';
+SELECT 'ROLLBACK_STATE' AS Controllo,
+       s.Stato,
+       CASE WHEN s.Stato = 'STOP' THEN 'STOP' ELSE 'OK' END AS Esito
+FROM (
+  SELECT CASE
+           WHEN COUNT(*) = 1 AND MAX(COLLATION_NAME) = 'utf8mb4_0900_ai_ci'
+             THEN 'PARTIAL_REGISTRY_ONLY'
+           WHEN COUNT(*) = 1 AND MAX(COLLATION_NAME) = 'utf8mb4_0900_bin'
+             THEN 'FULL_FOUNDATION_PRE_RUNTIME'
+           ELSE 'STOP'
+         END AS Stato
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'carrello'
+    AND COLUMN_NAME = 'SessionId' AND COLUMN_TYPE = 'varchar(50)'
+    AND CHARACTER_SET_NAME = 'utf8mb4' AND IS_NULLABLE = 'YES'
+    AND COLUMN_DEFAULT IS NULL
+) AS s;
 
 -- Data section: no owner value or token is returned.
 SELECT 'REGISTRY_EMPTY' AS Controllo, COUNT(*) AS Righe,

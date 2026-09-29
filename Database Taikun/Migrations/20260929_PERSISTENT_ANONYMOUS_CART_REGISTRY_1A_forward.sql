@@ -1,16 +1,13 @@
 -- DRAFT NON INSTALLATO
 -- NON ESEGUIRE SENZA REVIEW CHATGPT E ALLOWLIST PRODUCT OWNER.
 -- Eseguire soltanto dopo preflight interamente OK e backup autorizzato.
--- DDL con commit impliciti: ALTER e CREATE non sono una transazione atomica.
--- ALGORITHM=COPY blocca le scritture su carrello: non e zero downtime.
+-- DDL con commit impliciti: CREATE e ALTER non sono una transazione atomica.
+-- Stage 1 crea la registry prima dell'ALTER: se CREATE fallisce, carrello resta
+-- invariato; se l'ALTER successivo fallisce, resta solo una registry vuota e
+-- inattiva, recuperabile con rollback_preflight e rollback autorizzati.
 -- Nessun runtime ksc2 puo essere attivato finche verify non e interamente OK.
 
-ALTER TABLE `carrello`
-  MODIFY COLUMN `SessionId` VARCHAR(50)
-    CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NULL DEFAULT NULL,
-  ALGORITHM=COPY,
-  LOCK=SHARED;
-
+-- Stage 1: registry ancora inerte, senza dati o runtime ksc2.
 -- ACTIVE scaduti: pulizia futura. CONSUMED/REVOKED: tombstone anti-replay.
 -- Conservare i tombstone almeno per l'intera finestra utile dei vecchi cookie;
 -- poi pulirli a batch con gli indici dedicati. Nessuna pulizia in questa migration.
@@ -42,3 +39,10 @@ CREATE TABLE `carrello_anonimo_persistenza` (
         OR (`Status` = 'CONSUMED' AND `ConsumedUtc` IS NOT NULL AND `RevokedUtc` IS NULL)
         OR (`Status` = 'REVOKED' AND `ConsumedUtc` IS NULL AND `RevokedUtc` IS NOT NULL))
 ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin;
+
+-- Stage 2: ALGORITHM=COPY blocca le scritture su carrello; non e zero downtime.
+ALTER TABLE `carrello`
+  MODIFY COLUMN `SessionId` VARCHAR(50)
+    CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NULL DEFAULT NULL,
+  ALGORITHM=COPY,
+  LOCK=SHARED;
