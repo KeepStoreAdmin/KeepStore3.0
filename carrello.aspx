@@ -6,9 +6,9 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260929-cart-product-card-details-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260929-cart-quantity-async-ux-1b" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") %>" defer></script>
+    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20260929-cart-quantity-async-ux-1b" %>" defer></script>
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -46,7 +46,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>">
+    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>" data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>">
         <div class="container">
 
             <nav class="checkout-status tf-sp-2 pt-0" aria-label="Fasi dell'ordine">
@@ -76,7 +76,7 @@
             <div class="heading-section mb-3">
                 <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Riepilogo ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e pagamento<% Else %>Il tuo carrello<% End If %></h3>
                 <div class="body-text-3 ks-cart-heading-meta">
-                    <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825"></asp:Label>
+                    <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825" CssClass="ks-cart-heading-count" data-ks-cart-heading-count="true"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
                 </div>
                 <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial" CssClass="ks-cart-price-note"></asp:Label>
@@ -91,7 +91,9 @@
             </asp:ObjectDataSource>
             <span id="ksCartQuantityAsyncConfig" hidden="hidden"
                 data-endpoint="<%= ResolveUrl("~/cart_quantity_async.aspx") %>"
-                data-csrf="<%= System.Web.HttpUtility.HtmlAttributeEncode(CatalogAsyncCartSupport.GetOrCreateCsrfToken(System.Web.HttpContext.Current)) %>"></span>
+                data-csrf="<%= System.Web.HttpUtility.HtmlAttributeEncode(CatalogAsyncCartSupport.GetOrCreateCsrfToken(System.Web.HttpContext.Current)) %>"
+                data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>"></span>
+            <p id="ksCartQuantityCommercialNotice" class="ks-cart-quantity-commercial-notice" role="status" hidden="hidden">Prezzi e condizioni del carrello sono stati aggiornati.</p>
             <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
@@ -135,7 +137,7 @@
                                             </div>
                                             <div class="ks-cart-availability mt-2"><%# AvailabilityDisplayHelper.BuildHtml(Container.DataItem, System.Web.HttpContext.Current) %></div>
 
-                                            <span class="ks-cart-badge-free mt-2">Spedizione gratis</span>
+                                            <span class="ks-cart-badge-free mt-2" data-ks-free-shipping-badge>Spedizione gratis</span>
 
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
@@ -156,8 +158,9 @@
                                     <td data-cart-title="Prezzo unitario" class="tf-cart-item_price">
                                         <span class="ks-cart-mobile-label">Prezzo unitario</span>
                                         <p class="cart-price price-text fw-medium">
-                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label>
-                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label></span>
+                                            <span data-ks-cart-price-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %></span>
+                                            <span data-ks-cart-price-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %></span>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
@@ -165,12 +168,13 @@
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
                                         <span class="ks-cart-mobile-label">Quantità</span>
                                         <div id="qtyWrap" runat="server" class="wg-quantity ks-wg-quantity">
-                                            <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
-                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
-                                            <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
+                                            <button type="button" class="btn-quantity btn-decrease" aria-label="Diminuisci quantità"><i class="icon icon-minus" aria-hidden="true"></i></button>
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" TextMode="SingleLine" MaxLength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Quantità articolo" />
+                                            <button type="button" class="btn-quantity btn-increase" aria-label="Aumenta quantità"><i class="icon icon-plus" aria-hidden="true"></i></button>
                                         </div>
+                                        <span class="ks-cart-qty-status" data-ks-cart-qty-status aria-live="polite"></span>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-cart-qty-fallback">Aggiorna</asp:LinkButton>
                                         </div>
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
@@ -178,8 +182,9 @@
                                     <td data-cart-title="Totale riga" class="tf-cart-item_total">
                                         <span class="ks-cart-mobile-label">Totale riga</span>
                                         <p class="cart-total total-price price-text fw-medium">
-                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label>
-                                            <asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label></span>
+                                            <span data-ks-cart-total-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %></span>
+                                            <span data-ks-cart-total-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %></span>
                                         </p>
                                     </td>
 
@@ -253,6 +258,8 @@
                                             </div>
                                             <div class="ks-cart-availability mt-2"><%# AvailabilityDisplayHelper.BuildHtml(Container.DataItem, System.Web.HttpContext.Current) %></div>
 
+                                            <span class="ks-cart-badge-free mt-2" data-ks-free-shipping-badge hidden="hidden">Spedizione gratis</span>
+
                                             <!-- Hidden / technical fields (used by VB code-behind) -->
                                             <asp:TextBox ID="tbArtID" runat="server" Text='<%#: Eval("ArticoliID") %>' Visible="false"></asp:TextBox>
                                             <asp:TextBox ID="tbTCID" runat="server" Text='<%#: Eval("TCId") %>' Visible="false"></asp:TextBox>
@@ -272,8 +279,9 @@
                                     <td data-cart-title="Prezzo unitario" class="tf-cart-item_price">
                                         <span class="ks-cart-mobile-label">Prezzo unitario</span>
                                         <p class="cart-price price-text fw-medium">
-                                            <asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label>
-                                            <asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label></span>
+                                            <span data-ks-cart-price-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %></span>
+                                            <span data-ks-cart-price-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %></span>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
@@ -281,12 +289,13 @@
                                     <td data-cart-title="Q.tà" class="tf-cart-item_quantity">
                                         <span class="ks-cart-mobile-label">Quantità</span>
                                         <div id="qtyWrap" runat="server" class="wg-quantity ks-wg-quantity">
-                                            <span class="btn-quantity btn-decrease"><i class="icon icon-minus"></i></span>
-                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" MaxLength="4" />
-                                            <span class="btn-quantity btn-increase"><i class="icon icon-plus"></i></span>
+                                            <button type="button" class="btn-quantity btn-decrease" aria-label="Diminuisci quantità"><i class="icon icon-minus" aria-hidden="true"></i></button>
+                                            <asp:TextBox ID="tbQta" runat="server" Text='<%#: Eval("qnt") %>' CssClass="quantity-product" TextMode="SingleLine" MaxLength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" aria-label="Quantità articolo" />
+                                            <button type="button" class="btn-quantity btn-increase" aria-label="Aumenta quantità"><i class="icon icon-plus" aria-hidden="true"></i></button>
                                         </div>
+                                        <span class="ks-cart-qty-status" data-ks-cart-qty-status aria-live="polite"></span>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3">Aggiorna</asp:LinkButton>
+                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-cart-qty-fallback">Aggiorna</asp:LinkButton>
                                         </div>
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
@@ -294,8 +303,9 @@
                                     <td data-cart-title="Totale riga" class="tf-cart-item_total">
                                         <span class="ks-cart-mobile-label">Totale riga</span>
                                         <p class="cart-total total-price price-text fw-medium">
-                                            <asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label>
-                                            <asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label></span>
+                                            <span data-ks-cart-total-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %></span>
+                                            <span data-ks-cart-total-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %></span>
                                         </p>
                                     </td>
 
@@ -480,7 +490,7 @@
                             <h4 class="title">Riepilogo ordine</h4>
                             <div class="ks-cart-subtotal-card">
                                 <span class="ks-info-label">Totale articoli</span>
-                                <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="&#8364; 0,00"></asp:Label></strong>
+                                <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="&#8364; 0,00" CssClass="ks-cart-subtotal-value" data-ks-cart-subtotal="true"></asp:Label></strong>
                                 <p class="body-text-3">Spedizione, pagamento e costi checkout saranno calcolati nello step successivo.</p>
                             </div>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
@@ -548,12 +558,13 @@
 
             <div class="box-btn ks-cart-buttons ks-cart-actions">
                 <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
-                <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
+                <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray ks-cart-qty-fallback" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
                 <asp:Panel ID="btSvuota" runat="server" style="display:contents">
                     <asp:Literal ID="litClearCartAction" runat="server" />
                 </asp:Panel>
                 <div class="ks-right">
                     <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Continua con spedizione e pagamento" />
+                    <span class="ks-cart-checkout-wait" data-ks-cart-checkout-wait role="status" hidden="hidden">Attendi il salvataggio della quantità.</span>
                 </div>
             </div>
             </div>

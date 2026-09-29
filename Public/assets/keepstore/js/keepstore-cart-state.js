@@ -293,6 +293,15 @@
     refreshBadges();
   }
 
+  window.KeepStoreCartStateApi = {
+    applyAuthoritativeResponse: function (data) {
+      var validated = validatedCartResponse(data);
+      if (!validated) return false;
+      applyCartResponse(validated);
+      return true;
+    }
+  };
+
   var reconcileGeneration = 0;
   var reconcileController = null;
   var reconcilePending = false;
