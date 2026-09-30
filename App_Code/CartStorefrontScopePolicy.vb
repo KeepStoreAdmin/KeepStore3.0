@@ -8,6 +8,7 @@ Imports System.Text
 
 Public NotInheritable Class CartStorefrontScopePolicy
     Public Const AnonymousOwnerPrefix As String = "ksc1_"
+    Public Const PersistentAnonymousOwnerPrefix As String = "ksc2_"
     Public Const AnonymousOwnerMaxLength As Integer = 50
 
     Private Sub New()
@@ -59,10 +60,12 @@ Public NotInheritable Class CartStorefrontScopePolicy
 
     Public Shared Function IsAnonymousOwnerToken(ByVal value As String) As Boolean
         Dim token As String = Convert.ToString(value)
-        If token.Length <> AnonymousOwnerPrefix.Length + 43 OrElse
-           Not token.StartsWith(AnonymousOwnerPrefix, StringComparison.Ordinal) Then Return False
+        Dim prefix As String = If(token.StartsWith(AnonymousOwnerPrefix, StringComparison.Ordinal),
+                                  AnonymousOwnerPrefix, PersistentAnonymousOwnerPrefix)
+        If token.Length <> prefix.Length + 43 OrElse
+           Not token.StartsWith(prefix, StringComparison.Ordinal) Then Return False
 
-        For index As Integer = AnonymousOwnerPrefix.Length To token.Length - 1
+        For index As Integer = prefix.Length To token.Length - 1
             Dim character As Char = token(index)
             If Not ((character >= "A"c AndAlso character <= "Z"c) OrElse
                     (character >= "a"c AndAlso character <= "z"c) OrElse

@@ -49,7 +49,8 @@ Assert-Source ($snapshot -notmatch 'MySqlConnection|FROM\s+carrello') 'CART_SNAP
 Assert-Source ($mutation -match 'ownedRowIds\.Contains\(cartRowId\)[\s\S]+?Else[\s\S]+?CartTransactionWorkResult\(Of CartOwnerRemovalResult\)\.Abort') 'REMOVE_MISSING_OWNER_ROW_FAILS_CLOSED'
 Assert-Source ($mutation -match 'CartAuthoritativeReadModel\.Invalidate\(ctx\)') 'CART_MUTATIONS_INVALIDATE_READ_MODEL'
 Assert-Source ($nativeEndpoint -match 'Not clearAll AndAlso result\.AffectedRows <> 1') 'REMOVE_SUCCESS_REQUIRES_ONE_AFFECTED_ROW'
-Assert-Source ($nativeEndpoint -match 'If result\.WasNoOp Then[\s\S]+?SessionChangedKey\) = 0') 'CLEAR_NOOP_DOES_NOT_REPORT_UPDATED'
+Assert-Source ($nativeEndpoint -match 'If\(result\.WasNoOp, "clear_already_empty"' -and
+               $cartCode -match 'Case "clear_already_empty"[\s\S]+?Non . stata necessaria alcuna modifica') 'CLEAR_NOOP_DOES_NOT_REPORT_UPDATED'
 Assert-Source ($ownership -match 'MergeRequestCacheKey') 'LOGIN_MERGE_RUNS_ONCE_PER_REQUEST'
 Assert-Source ($ownership -match 'CartAuthoritativeReadModel\.Invalidate\(ctx\)') 'LOGIN_MERGE_INVALIDATES_READ_MODEL'
 

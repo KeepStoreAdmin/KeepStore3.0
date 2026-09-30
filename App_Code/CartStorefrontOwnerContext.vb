@@ -47,8 +47,18 @@ Public NotInheritable Class CartStorefrontOwnerContext
             If Not CartStorefrontScopePolicy.IsAuthenticatedScopeValid(
                    tenant.CompanyId, authenticatedCompanyId, loginId) Then Return Nothing
         Else
-            ownerSessionId = CartStorefrontScopePolicy.BuildAnonymousOwnerToken(
-                databaseScope, tenant.CompanyId, Convert.ToString(context.Session.SessionID))
+            Dim persistent As PersistentAnonymousCartOwnerResolution =
+                PersistentAnonymousCartOwnerService.Resolve(context, databaseScope, tenant.CompanyId)
+            If persistent.State = PersistentAnonymousCartOwnerState.TECHNICAL_ERROR Then
+                KeepStoreLog.Error("persistent-cart-owner", "Registry lookup failed", Nothing, context)
+                Throw New HttpException(503, "Carrello temporaneamente non disponibile.")
+            End If
+            If persistent.State = PersistentAnonymousCartOwnerState.ACTIVE Then
+                ownerSessionId = persistent.OwnerToken
+            Else
+                ownerSessionId = CartStorefrontScopePolicy.BuildAnonymousOwnerToken(
+                    databaseScope, tenant.CompanyId, Convert.ToString(context.Session.SessionID))
+            End If
             If String.IsNullOrEmpty(ownerSessionId) Then Return Nothing
         End If
 
