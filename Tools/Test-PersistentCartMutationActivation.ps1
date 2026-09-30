@@ -30,6 +30,8 @@ try{
     $activation -notmatch 'AuthorizeAnonymousOwnerTransitionForCurrentIntent'){throw 'SHARED_OWNER_OR_INTENT_CONTRACT_MISSING'}
  if($activation -match '(?i)Session\s*\([^)]*\)\s*=|\.Domain\s*=|KeepStoreLog\.|Trace\.|Request\.QueryString|ViewState|INSERT[\s\S]*?CookieValue[\s\S]*?ExecuteNonQuery'){throw 'ACTIVATION_SECRET_OR_COOKIE_BOUNDARY_VIOLATION'}
  if($activation -match '(?i)CONSUMED''|REVOKED''|SET\s+ExpiresUtc|SET\s+LastActivityUtc'){throw 'LIFECYCLE_OUT_OF_SCOPE'}
+ if($activation -match 'DateTime.UtcNow' -or $activation -notmatch 'candidate.CreatedUtc = ReadDatabaseUtc\(connection, transaction\)' -or
+    $activation -notmatch 'SELECT UTC_TIMESTAMP\(6\)'){throw 'ACTIVATION_DB_CLOCK_REQUIRED'}
  if($activation -notmatch 'Not context.Response.HeadersWritten' -or $activation -notmatch 'context.Request.IsSecureConnection' -or
     $activation -notmatch 'context.Response IsNot Nothing'){throw 'COOKIE_HEADER_GATE_MISSING'}
  $authorizeAt=$activation.IndexOf('CartMutationIdempotencyService.AuthorizeAnonymousOwnerTransitionForCurrentIntent')
@@ -55,6 +57,7 @@ try{
  Write-Output 'PASS NO_POST_COMMIT_COOKIE_WRITE'
  Write-Output 'PASS INDETERMINATE_TRANSITION_ONLY_FOR_STAGED_ACTIVATION'
  Write-Output 'PASS READ_ONLY_NOT_FOUND_KSC1_FALLBACK'
+ Write-Output 'PASS ACTIVATION_TIMESTAMPS_FROM_TRANSACTION_DB_CLOCK'
 }finally{
  $cs=$null;$x=$null
  $resolved=[IO.Path]::GetFullPath($testDir)

@@ -99,6 +99,7 @@ Public Module CartMutationService
 
         Dim operationName As String = If(clearAll, "clear-cart", "remove-cart-row")
         Dim activation As PersistentCartActivationCandidate = If(clearAll, Nothing, PersistentAnonymousCartMutationActivation.Prepare(ctx))
+        Dim lifecycle As PersistentCartLifecycleCandidate = PersistentAnonymousCartLifecycleService.Prepare(ctx)
         Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartOwnerRemovalResult) =
             CartTransactionRetryPolicy.Execute(Of CartOwnerRemovalResult)(
@@ -107,6 +108,7 @@ Public Module CartMutationService
                 operationName,
                 CartMutationIdempotencyService.GetCurrentRequestId(ctx),
                 Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartOwnerRemovalResult)
+            Dim lifecycleBefore As PersistentCartActivationSnapshot = PersistentAnonymousCartLifecycleService.BeginAttempt(ctx, conn, transaction, lifecycle)
             Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, 0, String.Empty, 1)
             If owner Is Nothing Then
                 Return CartTransactionWorkResult(Of CartOwnerRemovalResult).Abort(
@@ -147,6 +149,7 @@ Public Module CartMutationService
                 conn, transaction, owner.LoginId, owner.SessionId, If(clearAll, 0, cartRowId))
             If remaining <> 0 Then Throw New InvalidOperationException("Owned cart removal final verification failed.")
 
+            PersistentAnonymousCartLifecycleService.Apply(ctx, conn, transaction, lifecycle, lifecycleBefore)
             activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
 
             Return CartTransactionWorkResult(Of CartOwnerRemovalResult).Commit(
@@ -159,6 +162,7 @@ Public Module CartMutationService
                 End Function)
 
         PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
+        PersistentAnonymousCartLifecycleService.FinalizeExecution(ctx, lifecycle, execution.Status)
         If execution.IsIndeterminate Then
             Return New CartOwnerRemovalResult With {
                 .IsIndeterminate = True,
@@ -247,6 +251,7 @@ Public Module CartMutationService
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
 
         Dim activation As PersistentCartActivationCandidate = PersistentAnonymousCartMutationActivation.Prepare(ctx)
+        Dim lifecycle As PersistentCartLifecycleCandidate = PersistentAnonymousCartLifecycleService.Prepare(ctx)
         Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartStandardBatchMutationResult) =
             CartTransactionRetryPolicy.Execute(Of CartStandardBatchMutationResult)(
@@ -255,6 +260,7 @@ Public Module CartMutationService
                 "standard-batch",
                 CartMutationIdempotencyService.GetCurrentRequestId(ctx),
                 Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartStandardBatchMutationResult)
+            Dim lifecycleBefore As PersistentCartActivationSnapshot = PersistentAnonymousCartLifecycleService.BeginAttempt(ctx, conn, transaction, lifecycle)
             Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, loginId, sessionId, listino)
             If owner Is Nothing Then
                 Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(
@@ -377,11 +383,13 @@ Public Module CartMutationService
                 .Items = confirmedItems,
                 .ErrorMessage = String.Empty
             }
+            PersistentAnonymousCartLifecycleService.Apply(ctx, conn, transaction, lifecycle, lifecycleBefore)
             activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
             Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Commit(attemptResult)
                 End Function)
 
         PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
+        PersistentAnonymousCartLifecycleService.FinalizeExecution(ctx, lifecycle, execution.Status)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
@@ -410,6 +418,7 @@ Public Module CartMutationService
 
         Dim operationName As String = If(setAbsoluteQuantity, "set-standard", "add-standard")
         Dim activation As PersistentCartActivationCandidate = PersistentAnonymousCartMutationActivation.Prepare(ctx)
+        Dim lifecycle As PersistentCartLifecycleCandidate = PersistentAnonymousCartLifecycleService.Prepare(ctx)
         Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartStandardMutationResult) =
             CartTransactionRetryPolicy.Execute(Of CartStandardMutationResult)(
@@ -418,6 +427,7 @@ Public Module CartMutationService
                 operationName,
                 CartMutationIdempotencyService.GetCurrentRequestId(ctx),
                 Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartStandardMutationResult)
+            Dim lifecycleBefore As PersistentCartActivationSnapshot = PersistentAnonymousCartLifecycleService.BeginAttempt(ctx, conn, transaction, lifecycle)
             Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, loginId, sessionId, listino)
             If owner Is Nothing Then
                 Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(
@@ -494,11 +504,13 @@ Public Module CartMutationService
                 .OfferDetailId = resolved.OfferDetailId,
                 .ErrorMessage = String.Empty
             }
+            PersistentAnonymousCartLifecycleService.Apply(ctx, conn, transaction, lifecycle, lifecycleBefore)
             activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
             Return CartTransactionWorkResult(Of CartStandardMutationResult).Commit(attemptResult)
                 End Function)
 
         PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
+        PersistentAnonymousCartLifecycleService.FinalizeExecution(ctx, lifecycle, execution.Status)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
@@ -552,6 +564,7 @@ Public Module CartMutationService
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return TechnicalResult()
 
         Dim activation As PersistentCartActivationCandidate = PersistentAnonymousCartMutationActivation.Prepare(ctx)
+        Dim lifecycle As PersistentCartLifecycleCandidate = PersistentAnonymousCartLifecycleService.Prepare(ctx)
         Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartPriceRevalidationResult) =
             CartTransactionRetryPolicy.Execute(Of CartPriceRevalidationResult)(
@@ -560,6 +573,7 @@ Public Module CartMutationService
                 "update-quantities",
                 CartMutationIdempotencyService.GetCurrentRequestId(ctx),
                 Function(conn As MySqlConnection, transaction As MySqlTransaction) As CartTransactionWorkResult(Of CartPriceRevalidationResult)
+            Dim lifecycleBefore As PersistentCartActivationSnapshot = PersistentAnonymousCartLifecycleService.BeginAttempt(ctx, conn, transaction, lifecycle)
             Dim owner As CartMutationOwnerContext = ResolveOwnerContext(ctx, loginId, sessionId, listino)
             If owner Is Nothing Then
                 Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(TechnicalResult())
@@ -574,11 +588,13 @@ Public Module CartMutationService
                 Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(
                     If(result, TechnicalResult()))
             End If
+            PersistentAnonymousCartLifecycleService.Apply(ctx, conn, transaction, lifecycle, lifecycleBefore)
             activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
             Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Commit(result)
                 End Function)
 
         PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
+        PersistentAnonymousCartLifecycleService.FinalizeExecution(ctx, lifecycle, execution.Status)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value

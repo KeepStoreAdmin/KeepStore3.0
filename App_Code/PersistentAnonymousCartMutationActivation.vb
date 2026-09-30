@@ -62,8 +62,6 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
             End Using
             Dim ownerToken As String = PersistentAnonymousCartOwnerService.DeriveOwnerToken(
                 source.DatabaseScopeKey, source.CompanyId, secret)
-            Dim now As DateTime = DateTime.UtcNow
-            now = New DateTime(now.Ticks - (now.Ticks Mod TimeSpan.TicksPerSecond), DateTimeKind.Utc)
             Dim candidate As New PersistentCartActivationCandidate With {
                 .Source = source,
                 .Target = New CartStorefrontOwnerScope With {
@@ -72,8 +70,7 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
                     .IsCanonicalMutationHost = source.IsCanonicalMutationHost,
                     .OwnerScopeKey = CartStorefrontScopePolicy.BuildOwnerScopeKey(
                         source.DatabaseScopeKey, source.CompanyId, 0, ownerToken)},
-                .CookieValue = "v2." & Convert.ToBase64String(secret).TrimEnd("="c).Replace("+", "-").Replace("/", "_"),
-                .CreatedUtc = now, .ExpiresUtc = now.AddDays(30)}
+                .CookieValue = "v2." & Convert.ToBase64String(secret).TrimEnd("="c).Replace("+", "-").Replace("/", "_")}
             context.Items(CandidateItemKey) = candidate
             Return candidate
         Finally
@@ -87,10 +84,16 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
                                   ByVal transaction As MySqlTransaction,
                                   ByVal candidate As PersistentCartActivationCandidate) As PersistentCartActivationSnapshot
         If candidate Is Nothing Then Return Nothing
+        Return CaptureOwner(connection, transaction, candidate.Source)
+    End Function
+
+    Friend Shared Function CaptureOwner(ByVal connection As MySqlConnection,
+                                       ByVal transaction As MySqlTransaction,
+                                       ByVal owner As CartStorefrontOwnerScope) As PersistentCartActivationSnapshot
         Dim count As Integer = 0
         Dim serialized As New StringBuilder()
         Using command As New MySqlCommand("SELECT * FROM carrello WHERE " & AnonymousPredicate & " ORDER BY ID FOR UPDATE", connection, transaction)
-            command.Parameters.Add("@owner", MySqlDbType.VarChar, 50).Value = candidate.Source.SessionId
+            command.Parameters.Add("@owner", MySqlDbType.VarChar, 50).Value = owner.SessionId
             Using reader As MySqlDataReader = command.ExecuteReader()
                 While reader.Read()
                     count += 1
@@ -134,6 +137,8 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
         If CountRows(connection, transaction, candidate.Target.SessionId) <> 0 Then
             Throw New InvalidOperationException("Persistent cart activation target is not empty.")
         End If
+        candidate.CreatedUtc = ReadDatabaseUtc(connection, transaction)
+        candidate.ExpiresUtc = candidate.CreatedUtc.AddDays(30)
         Using command As New MySqlCommand(
             "INSERT INTO carrello_anonimo_persistenza " &
             "(AziendeId,OwnerToken,Status,CreatedUtc,LastActivityUtc,ExpiresUtc,ConsumedUtc,RevokedUtc) " &
@@ -212,10 +217,17 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
         candidate.CookieStaged = False
     End Sub
 
-    Private Shared Function CanStageCookie(ByVal context As HttpContext) As Boolean
+    Friend Shared Function CanStageCookie(ByVal context As HttpContext) As Boolean
         Return context IsNot Nothing AndAlso context.Request IsNot Nothing AndAlso
                context.Request.IsSecureConnection AndAlso context.Response IsNot Nothing AndAlso
                Not context.Response.HeadersWritten
+    End Function
+
+    Friend Shared Function ReadDatabaseUtc(ByVal connection As MySqlConnection,
+                                          ByVal transaction As MySqlTransaction) As DateTime
+        Using command As New MySqlCommand("SELECT UTC_TIMESTAMP(6)", connection, transaction)
+            Return DateTime.SpecifyKind(Convert.ToDateTime(command.ExecuteScalar(), CultureInfo.InvariantCulture), DateTimeKind.Utc)
+        End Using
     End Function
 
     Friend Shared Function CommittedOwner(ByVal context As HttpContext,

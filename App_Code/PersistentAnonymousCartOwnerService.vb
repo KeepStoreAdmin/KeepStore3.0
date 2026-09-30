@@ -190,7 +190,7 @@ Public NotInheritable Class PersistentAnonymousCartOwnerService
         End Using
     End Function
 
-    Private Shared Function TryDecodeCookie(ByVal value As String, ByRef secret As Byte()) As Boolean
+    Friend Shared Function TryDecodeCookie(ByVal value As String, ByRef secret As Byte()) As Boolean
         If value Is Nothing OrElse value.Length <> 46 OrElse
            Not value.StartsWith(CookiePrefix, StringComparison.Ordinal) Then Return False
         Dim payload As String = value.Substring(CookiePrefix.Length)

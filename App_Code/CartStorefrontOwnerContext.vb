@@ -54,8 +54,8 @@ Public NotInheritable Class CartStorefrontOwnerContext
                 PersistentAnonymousCartOwnerService.Resolve(context, databaseScope, tenant.CompanyId)
             If persistent.State = PersistentAnonymousCartOwnerState.TECHNICAL_ERROR Then
                 KeepStoreLog.Error("persistent-cart-owner", "Registry lookup failed", Nothing, context)
-                Throw New HttpException(503, "Carrello temporaneamente non disponibile.")
             End If
+            PersistentAnonymousCartLifecycleService.HandleReadResolution(context, persistent)
             If persistent.State = PersistentAnonymousCartOwnerState.ACTIVE Then
                 ownerSessionId = persistent.OwnerToken
             Else

@@ -121,7 +121,11 @@ Module PersistentCartMutationActivationHarness
                     Case "remove"
                         Exec(conn, tx, "DELETE FROM carrello WHERE BINARY SessionId=@owner ORDER BY ID LIMIT 1", candidate.Source.SessionId)
                 End Select
+                Dim clockBefore = PersistentAnonymousCartMutationActivation.ReadDatabaseUtc(conn, tx)
                 Dim activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, tx, candidate, before)
+                Dim clockAfter = PersistentAnonymousCartMutationActivation.ReadDatabaseUtc(conn, tx)
+                Check(operation & "_ACTIVATION_DB_CLOCK_" & mutation, Not expected OrElse
+                      (candidate.CreatedUtc >= clockBefore AndAlso candidate.CreatedUtc <= clockAfter AndAlso candidate.CreatedUtc.Kind = DateTimeKind.Utc))
                 Check(operation & "_EFFECTIVE_ACTIVATION_" & mutation, activated = expected)
                 Check(operation & "_COOKIE_STAGED_BEFORE_COMMIT_" & mutation,
                       candidate.CookieStaged = expected AndAlso ctx.Response.Cookies.Count = If(expected, 1, 0) AndAlso Not ctx.Response.HeadersWritten)
