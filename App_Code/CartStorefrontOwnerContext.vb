@@ -47,6 +47,9 @@ Public NotInheritable Class CartStorefrontOwnerContext
             If Not CartStorefrontScopePolicy.IsAuthenticatedScopeValid(
                    tenant.CompanyId, authenticatedCompanyId, loginId) Then Return Nothing
         Else
+            Dim committed As CartStorefrontOwnerScope = PersistentAnonymousCartMutationActivation.CommittedOwner(
+                context, databaseScope, tenant.CompanyId)
+            If committed IsNot Nothing Then Return committed
             Dim persistent As PersistentAnonymousCartOwnerResolution =
                 PersistentAnonymousCartOwnerService.Resolve(context, databaseScope, tenant.CompanyId)
             If persistent.State = PersistentAnonymousCartOwnerState.TECHNICAL_ERROR Then

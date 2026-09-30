@@ -98,6 +98,8 @@ Public Module CartMutationService
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return fallback
 
         Dim operationName As String = If(clearAll, "clear-cart", "remove-cart-row")
+        Dim activation As PersistentCartActivationCandidate = If(clearAll, Nothing, PersistentAnonymousCartMutationActivation.Prepare(ctx))
+        Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartOwnerRemovalResult) =
             CartTransactionRetryPolicy.Execute(Of CartOwnerRemovalResult)(
                 settings.ConnectionString,
@@ -113,6 +115,8 @@ Public Module CartMutationService
 
             Dim ownedRowIds As List(Of Integer) = LoadOwnedRowIds(
                 conn, transaction, owner.LoginId, owner.SessionId)
+            activated = False
+            Dim before As PersistentCartActivationSnapshot = PersistentAnonymousCartMutationActivation.Capture(conn, transaction, activation)
             Dim affected As Integer = 0
 
             If clearAll Then
@@ -143,6 +147,8 @@ Public Module CartMutationService
                 conn, transaction, owner.LoginId, owner.SessionId, If(clearAll, 0, cartRowId))
             If remaining <> 0 Then Throw New InvalidOperationException("Owned cart removal final verification failed.")
 
+            activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
+
             Return CartTransactionWorkResult(Of CartOwnerRemovalResult).Commit(
                 New CartOwnerRemovalResult With {
                     .Succeeded = True,
@@ -160,6 +166,7 @@ Public Module CartMutationService
             }
         End If
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
@@ -240,6 +247,8 @@ Public Module CartMutationService
         Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
 
+        Dim activation As PersistentCartActivationCandidate = PersistentAnonymousCartMutationActivation.Prepare(ctx)
+        Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartStandardBatchMutationResult) =
             CartTransactionRetryPolicy.Execute(Of CartStandardBatchMutationResult)(
                 settings.ConnectionString,
@@ -257,6 +266,8 @@ Public Module CartMutationService
             Dim attemptListino As Integer = owner.Listino
             Dim ownerRows As List(Of CartMutationExistingRow) = LoadOwnedRows(
                 conn, transaction, attemptLoginId, attemptSessionId)
+            activated = False
+            Dim before As PersistentCartActivationSnapshot = PersistentAnonymousCartMutationActivation.Capture(conn, transaction, activation)
             Dim eligibilityContext As ProductPromotionEligibilityContext =
                 ProductPromotionEligibilityResolver.CreateContext(ctx, attemptListino)
 
@@ -367,11 +378,13 @@ Public Module CartMutationService
                 .Items = confirmedItems,
                 .ErrorMessage = String.Empty
             }
+            activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
             Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Commit(attemptResult)
                 End Function)
 
         If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
@@ -398,6 +411,8 @@ Public Module CartMutationService
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
 
         Dim operationName As String = If(setAbsoluteQuantity, "set-standard", "add-standard")
+        Dim activation As PersistentCartActivationCandidate = PersistentAnonymousCartMutationActivation.Prepare(ctx)
+        Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartStandardMutationResult) =
             CartTransactionRetryPolicy.Execute(Of CartStandardMutationResult)(
                 settings.ConnectionString,
@@ -420,6 +435,8 @@ Public Module CartMutationService
 
             Dim ownedArticleRows As List(Of CartMutationExistingRow) = LoadOwnedArticleRows(
                 conn, transaction, attemptLoginId, attemptSessionId, articleId)
+            activated = False
+            Dim before As PersistentCartActivationSnapshot = PersistentAnonymousCartMutationActivation.Capture(conn, transaction, activation)
             Dim eligibilityContext As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateContext(ctx, attemptListino)
             Dim probeQuantity As Decimal = If(quantityValue > 0D, quantityValue, 1D)
             Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
@@ -479,11 +496,13 @@ Public Module CartMutationService
                 .OfferDetailId = resolved.OfferDetailId,
                 .ErrorMessage = String.Empty
             }
+            activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
             Return CartTransactionWorkResult(Of CartStandardMutationResult).Commit(attemptResult)
                 End Function)
 
         If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
@@ -535,6 +554,8 @@ Public Module CartMutationService
         Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return TechnicalResult()
 
+        Dim activation As PersistentCartActivationCandidate = PersistentAnonymousCartMutationActivation.Prepare(ctx)
+        Dim activated As Boolean = False
         Dim execution As CartTransactionExecutionResult(Of CartPriceRevalidationResult) =
             CartTransactionRetryPolicy.Execute(Of CartPriceRevalidationResult)(
                 settings.ConnectionString,
@@ -546,6 +567,8 @@ Public Module CartMutationService
             If owner Is Nothing Then
                 Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(TechnicalResult())
             End If
+            activated = False
+            Dim before As PersistentCartActivationSnapshot = PersistentAnonymousCartMutationActivation.Capture(conn, transaction, activation)
             Dim attemptOverrides As New Dictionary(Of Integer, Decimal)(quantityOverrides)
             Dim result As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(
                 ctx, conn, transaction, owner.LoginId, owner.SessionId, owner.Listino,
@@ -554,11 +577,13 @@ Public Module CartMutationService
                 Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(
                     If(result, TechnicalResult()))
             End If
+            activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, transaction, activation, before)
             Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Commit(result)
                 End Function)
 
         If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
+            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
