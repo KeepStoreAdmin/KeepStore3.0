@@ -23,6 +23,7 @@ Public NotInheritable Class CartMutationIdempotencyService
     Private Const RegistrySessionKey As String = "KeepStore:CartMutation:Intents"
     Private Const ProgressiveSlotSessionKey As String = "KeepStore:CartMutation:ProgressiveSlots"
     Private Const ActiveIntentItemKey As String = "KeepStore:CartMutation:ActiveIntent"
+    Private Const ActiveIntentDescriptorItemKey As String = "KeepStore:CartMutation:ActiveIntentDescriptor"
     Private Const MaxEntries As Integer = 64
     Private Shared ReadOnly EntryTtl As TimeSpan = TimeSpan.FromMinutes(15)
     Private Shared ReadOnly ProcessingLease As TimeSpan = TimeSpan.FromMinutes(2)
@@ -34,6 +35,18 @@ Public NotInheritable Class CartMutationIdempotencyService
         Public Property TransitionOwnerScopeHash As String
         Public Property State As String
         Public Property UpdatedUtc As DateTime
+    End Class
+
+    Private NotInheritable Class ActiveIntentDescriptor
+        Public ReadOnly RequestId As String
+        Public ReadOnly OperationType As String
+        Public ReadOnly Payload As String
+
+        Public Sub New(ByVal requestId As String, ByVal operationType As String, ByVal payload As String)
+            Me.RequestId = requestId
+            Me.OperationType = operationType
+            Me.Payload = payload
+        End Sub
     End Class
 
     Private Sub New()
@@ -196,6 +209,30 @@ Public NotInheritable Class CartMutationIdempotencyService
                                                       ByVal desiredQuantity As Decimal) As String
         Return "row-target|" & cartRowId.ToString(CultureInfo.InvariantCulture) & "|" &
                desiredQuantity.ToString("0.########", CultureInfo.InvariantCulture)
+    End Function
+
+    Public Shared Function BuildSetRowsQuantityPayload(
+        ByVal requests As IEnumerable(Of CartQuantityMutationRequest)) As String
+        If requests Is Nothing Then Return String.Empty
+        Dim rows As New List(Of CartQuantityMutationRequest)()
+        Dim seen As New HashSet(Of Integer)()
+        For Each request As CartQuantityMutationRequest In requests
+            If request Is Nothing OrElse request.CartRowId <= 0 OrElse
+               request.Quantity <= 0D OrElse request.Quantity > 9999999.99999999D OrElse
+               Decimal.Round(request.Quantity, 8, MidpointRounding.ToEven) <> request.Quantity OrElse
+               Not seen.Add(request.CartRowId) Then Return String.Empty
+            rows.Add(request)
+        Next
+        If rows.Count = 0 Then Return String.Empty
+        rows.Sort(Function(left As CartQuantityMutationRequest, right As CartQuantityMutationRequest) As Integer
+                      Return left.CartRowId.CompareTo(right.CartRowId)
+                  End Function)
+        Dim parts As New List(Of String)(rows.Count)
+        For Each row As CartQuantityMutationRequest In rows
+            parts.Add(row.CartRowId.ToString(CultureInfo.InvariantCulture) & ":" &
+                      row.Quantity.ToString("0.########", CultureInfo.InvariantCulture))
+        Next
+        Return "rows-target-v1|" & String.Join(";", parts.ToArray())
     End Function
 
     Public Shared Function BuildRemoveRowPayload(ByVal cartRowId As Integer) As String
@@ -366,7 +403,35 @@ Public NotInheritable Class CartMutationIdempotencyService
         existing.UpdatedUtc = DateTime.UtcNow
         context.Session(RegistrySessionKey) = registry
         context.Items(ActiveIntentItemKey) = normalized
+        context.Items(ActiveIntentDescriptorItemKey) = New ActiveIntentDescriptor(
+            normalized, existing.OperationType, payload)
         Return CartMutationIntentDecision.Accepted
+    End Function
+
+    Friend Shared Function TryGetCurrentIntentDescriptor(ByVal context As HttpContext,
+                                                         ByRef operationType As String,
+                                                         ByRef payload As String) As Boolean
+        operationType = String.Empty
+        payload = String.Empty
+        If context Is Nothing OrElse context.Items Is Nothing OrElse context.Session Is Nothing Then Return False
+        Dim normalized As String = String.Empty
+        If Not NormalizeRequestId(Convert.ToString(context.Items(ActiveIntentItemKey)), normalized) Then Return False
+        Dim descriptor As ActiveIntentDescriptor = TryCast(context.Items(ActiveIntentDescriptorItemKey), ActiveIntentDescriptor)
+        If descriptor Is Nothing OrElse Not String.Equals(descriptor.RequestId, normalized, StringComparison.Ordinal) Then Return False
+        Dim registry As Dictionary(Of String, IntentEntry) = GetRegistry(context.Session, False)
+        If registry Is Nothing Then Return False
+        Dim existing As IntentEntry = Nothing
+        If Not registry.TryGetValue(normalized, existing) OrElse existing Is Nothing OrElse
+           Not String.Equals(existing.State, "processing", StringComparison.Ordinal) OrElse
+           Not String.Equals(descriptor.OperationType, existing.OperationType, StringComparison.Ordinal) OrElse
+           String.IsNullOrWhiteSpace(descriptor.Payload) OrElse
+           Not FixedTimeEquals(existing.PayloadFingerprint,
+                               BuildPayloadFingerprint(descriptor.OperationType, descriptor.Payload)) Then Return False
+        If Not MatchesIntent(context, existing, BuildFingerprint(context, descriptor.OperationType, descriptor.Payload),
+                             descriptor.OperationType, descriptor.Payload) Then Return False
+        operationType = descriptor.OperationType
+        payload = descriptor.Payload
+        Return True
     End Function
 
     ' Called only by the server-side activation flow after BeginIntent and a committed
@@ -438,6 +503,9 @@ Public NotInheritable Class CartMutationIdempotencyService
         Dim requestId As String = GetCurrentRequestId(context)
         If requestId = String.Empty Then Return
         SetState(context, requestId, "indeterminate", False)
+        If context IsNot Nothing AndAlso context.Items IsNot Nothing Then
+            context.Items.Remove(ActiveIntentDescriptorItemKey)
+        End If
     End Sub
 
     Private Shared Function MatchesIntent(ByVal context As HttpContext,
@@ -541,6 +609,7 @@ Public NotInheritable Class CartMutationIdempotencyService
         If NormalizeRequestId(Convert.ToString(context.Items(ActiveIntentItemKey)), active) AndAlso
            String.Equals(active, normalized, StringComparison.Ordinal) Then
             context.Items.Remove(ActiveIntentItemKey)
+            context.Items.Remove(ActiveIntentDescriptorItemKey)
         End If
     End Sub
 

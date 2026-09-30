@@ -3,6 +3,7 @@ Option Explicit On
 
 Imports System
 Imports System.Collections
+Imports System.Collections.Generic
 Imports System.IO
 Imports System.Reflection
 Imports System.Security.Cryptography
@@ -29,6 +30,11 @@ Public Class CartStandardBatchMutationRequest
     Public Property ArticleId As Integer
     Public Property RequestedTCId As Integer
     Public Property QuantityDelta As Decimal
+End Class
+
+Public Class CartQuantityMutationRequest
+    Public Property CartRowId As Integer
+    Public Property Quantity As Decimal
 End Class
 
 Module CartIntentOwnerTransitionHarness
@@ -111,6 +117,88 @@ Module CartIntentOwnerTransitionHarness
     Sub Main()
         Dim requestId As String
         Dim context As HttpContext
+
+        Dim one As New List(Of CartQuantityMutationRequest) From {
+            New CartQuantityMutationRequest With {.CartRowId = 7, .Quantity = 2D}}
+        Dim two As New List(Of CartQuantityMutationRequest) From {
+            New CartQuantityMutationRequest With {.CartRowId = 9, .Quantity = 1.25D},
+            New CartQuantityMutationRequest With {.CartRowId = 7, .Quantity = 2D}}
+        Dim reversed As New List(Of CartQuantityMutationRequest) From {two(1), two(0)}
+        Check("BATCH_PAYLOAD_SINGLE", CartMutationIdempotencyService.BuildSetRowsQuantityPayload(one) = "rows-target-v1|7:2")
+        Check("BATCH_PAYLOAD_MULTI_SORTED", CartMutationIdempotencyService.BuildSetRowsQuantityPayload(two) = "rows-target-v1|7:2;9:1.25")
+        Check("BATCH_PAYLOAD_ORDER_INDEPENDENT", CartMutationIdempotencyService.BuildSetRowsQuantityPayload(two) =
+              CartMutationIdempotencyService.BuildSetRowsQuantityPayload(reversed))
+        Check("BATCH_PAYLOAD_DUPLICATE_REJECTED", String.IsNullOrEmpty(
+              CartMutationIdempotencyService.BuildSetRowsQuantityPayload(New List(Of CartQuantityMutationRequest) From {one(0), one(0)})))
+        Check("BATCH_PAYLOAD_INVALID_QUANTITY_REJECTED", String.IsNullOrEmpty(
+              CartMutationIdempotencyService.BuildSetRowsQuantityPayload(New List(Of CartQuantityMutationRequest) From {
+                  New CartQuantityMutationRequest With {.CartRowId = 7, .Quantity = 0D}})))
+        Check("BATCH_PAYLOAD_INVALID_SCALE_REJECTED", String.IsNullOrEmpty(
+              CartMutationIdempotencyService.BuildSetRowsQuantityPayload(New List(Of CartQuantityMutationRequest) From {
+                  New CartQuantityMutationRequest With {.CartRowId = 7, .Quantity = 1.123456789D}})))
+        Check("BATCH_PAYLOAD_INVARIANT_DECIMAL", CartMutationIdempotencyService.BuildSetRowsQuantityPayload(two).Contains("9:1.25"))
+        Check("ASYNC_ROW_PAYLOAD_UNCHANGED", CartMutationIdempotencyService.BuildSetRowQuantityPayload(7, 2D) = "row-target|7|2")
+
+        context = NewContext() : requestId = Guid.NewGuid().ToString("N")
+        Dim batchPayload As String = CartMutationIdempotencyService.BuildSetRowsQuantityPayload(two)
+        Check("TRADITIONAL_REGISTER", CartMutationIdempotencyService.RegisterIntent(context, requestId, "cart-set-batch", batchPayload) =
+              CartMutationIntentDecision.Accepted)
+        Dim descriptorOperation As String = Nothing
+        Dim descriptorPayload As String = Nothing
+        Check("DESCRIPTOR_NOT_PENDING", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+        Check("TRADITIONAL_BEGIN", CartMutationIdempotencyService.BeginIntent(context, requestId, "cart-set-batch", batchPayload) =
+              CartMutationIntentDecision.Accepted)
+        Check("DESCRIPTOR_PROCESSING", CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+        Check("DESCRIPTOR_EXACT_OPERATION", descriptorOperation = "cart-set-batch")
+        Check("DESCRIPTOR_EXACT_PAYLOAD", descriptorPayload = batchPayload)
+        CartMutationIdempotencyService.CompleteIntent(context, requestId)
+        Check("DESCRIPTOR_CLEARED_COMPLETE", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+        Check("TRADITIONAL_REPLAY_COMPLETED", CartMutationIdempotencyService.RegisterIntent(
+              context, requestId, "cart-set-batch", batchPayload) = CartMutationIntentDecision.Completed)
+        Check("TRADITIONAL_COLLISION", CartMutationIdempotencyService.RegisterIntent(
+              context, requestId, "cart-set-batch", "rows-target-v1|7:3;9:1.25") = CartMutationIntentDecision.Collision)
+
+        context = NewContext() : requestId = Guid.NewGuid().ToString("N")
+        CartMutationIdempotencyService.RegisterIntent(context, requestId, "cart-set-batch", batchPayload)
+        CartMutationIdempotencyService.BeginIntent(context, requestId, "cart-set-batch", batchPayload)
+        context.Items("KeepStore:CartMutation:ActiveIntentDescriptor") = "tampered"
+        Check("DESCRIPTOR_TAMPER_REJECTED", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+
+        Dim descriptorType As Type = GetType(CartMutationIdempotencyService).GetNestedType(
+            "ActiveIntentDescriptor", BindingFlags.NonPublic)
+        Dim descriptorConstructor As ConstructorInfo = descriptorType.GetConstructor(
+            BindingFlags.Instance Or BindingFlags.Public Or BindingFlags.NonPublic, Nothing,
+            New Type() {GetType(String), GetType(String), GetType(String)}, Nothing)
+        context.Items("KeepStore:CartMutation:ActiveIntentDescriptor") = descriptorConstructor.Invoke(
+            New Object() {requestId, "cart-set-batch", "rows-target-v1|7:99"})
+        Check("DESCRIPTOR_PAYLOAD_MISMATCH_REJECTED", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+        context.Items("KeepStore:CartMutation:ActiveIntentDescriptor") = descriptorConstructor.Invoke(
+            New Object() {requestId, "cart-remove", batchPayload})
+        Check("DESCRIPTOR_OPERATION_MISMATCH_REJECTED", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+
+        context = NewContext() : requestId = Guid.NewGuid().ToString("N")
+        CartMutationIdempotencyService.RegisterIntent(context, requestId, "cart-set-batch", batchPayload)
+        CartMutationIdempotencyService.BeginIntent(context, requestId, "cart-set-batch", batchPayload)
+        CartMutationIdempotencyService.AbandonIntent(context, requestId)
+        Check("DESCRIPTOR_CLEARED_ABANDON", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+        Check("BUSINESS_ABORT_RETRY_PENDING", CartMutationIdempotencyService.RegisterIntent(
+              context, requestId, "cart-set-batch", batchPayload) = CartMutationIntentDecision.Pending)
+
+        context = NewContext() : requestId = Guid.NewGuid().ToString("N")
+        CartMutationIdempotencyService.RegisterIntent(context, requestId, "cart-set-batch", batchPayload)
+        CartMutationIdempotencyService.BeginIntent(context, requestId, "cart-set-batch", batchPayload)
+        CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(context)
+        Check("DESCRIPTOR_CLEARED_INDETERMINATE", Not CartMutationIdempotencyService.TryGetCurrentIntentDescriptor(
+              context, descriptorOperation, descriptorPayload))
+        Check("INDETERMINATE_REPLAY_BLOCKED", CartMutationIdempotencyService.RegisterIntent(
+              context, requestId, "cart-set-batch", batchPayload) = CartMutationIntentDecision.Indeterminate)
 
         context = NewContext() : requestId = Guid.NewGuid().ToString("N")
         Check("REGISTER_NEW", Register(context, requestId) = CartMutationIntentDecision.Accepted)

@@ -181,6 +181,7 @@ Private Const CHECKOUT_TOKEN_PURPOSE As String = "KeepStore.OrderCheckout.Idempo
 Private Const CHECKOUT_SUBMIT_CSRF_PURPOSE As String = "KeepStore.OrderCheckout.SubmitCsrf.V1"
 Private Const CHECKOUT_SUBMIT_VALIDATION_GROUP As String = "checkoutSubmit"
 Private Const CHECKOUT_REQUEST_VIEWSTATE_KEY As String = "CheckoutRequestId"
+Private Const CART_UPDATE_REQUEST_VIEWSTATE_KEY As String = "CartUpdateRequestId"
 Private Const SessCheckoutStep As String = "CartCheckoutStep"
 Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare con il checkout."
 Private Const OrderNotesMaxLength As Integer = 255
@@ -2575,6 +2576,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         ' One logical checkout key is protected by the rendered ViewState. Two
         ' concurrent postbacks from this page therefore claim the same DB row.
         EnsureCheckoutRequestId()
+        EnsureCartUpdateRequestId()
         EnsureCheckoutSubmitCsrfToken()
         Me.Title = Me.Title & " - Il tuo Carrello"
 		
@@ -4409,9 +4411,26 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
         Return 1
     End Function
 
-    Sub Aggiorna_Prezzi_Carrello()
-        If _carrelloAggiornatoThisRequest Then Exit Sub
-        _carrelloAggiornatoThisRequest = True
+    Private Sub EnsureCartUpdateRequestId()
+        Dim normalized As String = String.Empty
+        If Not CartMutationIdempotencyService.NormalizeRequestId(
+            Convert.ToString(ViewState(CART_UPDATE_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture), normalized) Then
+            ViewState(CART_UPDATE_REQUEST_VIEWSTATE_KEY) = CartMutationIdempotencyService.CreateRequestId()
+        End If
+    End Sub
+
+    Private Sub StoreCartUpdateIntentError()
+        _cartPriceRevalidationBlockedThisRequest = True
+        CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current,
+            New CartPriceRevalidationResult With {
+                .HasBlockingError = True,
+                .ErrorMessage = "Non è stato possibile aggiornare il carrello. Ricarica la pagina e riprova."
+            })
+    End Sub
+
+    Private Function TryBuildCartQuantityMutationRequests(
+        ByRef requests As List(Of CartQuantityMutationRequest)) As Boolean
+        requests = New List(Of CartQuantityMutationRequest)()
 
         Dim rows As New List(Of CartRowInfo)()
         If Repeater1 IsNot Nothing AndAlso Repeater1.Items IsNot Nothing Then
@@ -4427,9 +4446,8 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
             Next
         End If
 
-        If rows.Count = 0 Then Exit Sub
+        If rows.Count = 0 Then Return True
 
-        Dim requests As New List(Of CartQuantityMutationRequest)()
         For Each row As CartRowInfo In rows
             If row.Qnt <= 0D Then
                 Qnt_Errata.Visible = True
@@ -4439,26 +4457,43 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
                 }
                 _cartPriceRevalidationBlockedThisRequest = True
                 CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, invalidQuantity)
-                Exit Sub
+                Return False
             End If
             requests.Add(New CartQuantityMutationRequest() With {.CartRowId = row.Id, .Quantity = row.Qnt})
         Next
+        Return True
+    End Function
+
+    Function Aggiorna_Prezzi_Carrello(
+        Optional ByVal preparedRequests As IList(Of CartQuantityMutationRequest) = Nothing) As CartPriceRevalidationResult
+        If _carrelloAggiornatoThisRequest Then Return Nothing
+        _carrelloAggiornatoThisRequest = True
+        Dim requests As IList(Of CartQuantityMutationRequest) = preparedRequests
+        If requests Is Nothing Then
+            Dim built As List(Of CartQuantityMutationRequest) = Nothing
+            If Not TryBuildCartQuantityMutationRequests(built) Then Return Nothing
+            requests = built
+        End If
+        If requests.Count = 0 Then Return Nothing
 
         Dim owner As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(HttpContext.Current)
         If owner Is Nothing Then
             _cartPriceRevalidationBlockedThisRequest = True
-            Exit Sub
+            Return Nothing
         End If
         Dim loginId As Integer = owner.LoginId
         Dim sessionId As String = owner.SessionId
         Dim listino As Integer = owner.Listino
         Dim revalidation As CartPriceRevalidationResult = CartMutationService.UpdateStandardQuantities(
             HttpContext.Current, loginId, sessionId, listino, requests)
-        If revalidation Is Nothing OrElse revalidation.HasBlockingError OrElse revalidation.HasChanges Then
+        If revalidation Is Nothing OrElse revalidation.HasBlockingError OrElse
+           revalidation.HasTechnicalError OrElse revalidation.HasCommercialRuleError OrElse
+           revalidation.HasChanges Then
             _cartPriceRevalidationBlockedThisRequest = True
             CartPriceRevalidationHelper.StoreResultInSession(HttpContext.Current, revalidation)
         End If
-    End Sub
+        Return revalidation
+    End Function
     Protected Sub btCompleta_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btCompleta.Click
         If Not IsAddressEditorActionAllowed(sender) Then Return
         If GetLoginIdSafe(0) <= 0 Then
@@ -5563,7 +5598,50 @@ End Sub
 
 Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btAggiorna.Click
     If Not IsAddressEditorActionAllowed(sender) Then Return
-    Aggiorna_Prezzi_Carrello()
+    Dim requests As List(Of CartQuantityMutationRequest) = Nothing
+    If Not TryBuildCartQuantityMutationRequests(requests) OrElse requests.Count = 0 Then
+        Response.Redirect("carrello.aspx")
+        Return
+    End If
+    Dim payload As String = CartMutationIdempotencyService.BuildSetRowsQuantityPayload(requests)
+    Dim requestId As String = String.Empty
+    If String.IsNullOrEmpty(payload) OrElse
+       Not CartMutationIdempotencyService.NormalizeRequestId(
+           Convert.ToString(ViewState(CART_UPDATE_REQUEST_VIEWSTATE_KEY), CultureInfo.InvariantCulture), requestId) Then
+        StoreCartUpdateIntentError()
+        Response.Redirect("carrello.aspx")
+        Return
+    End If
+
+    Const operationType As String = "cart-set-batch"
+    Dim decision As CartMutationIntentDecision = CartMutationIdempotencyService.RegisterIntent(
+        HttpContext.Current, requestId, operationType, payload)
+    If decision = CartMutationIntentDecision.Accepted OrElse decision = CartMutationIntentDecision.Pending Then
+        decision = CartMutationIdempotencyService.BeginIntent(HttpContext.Current, requestId, operationType, payload)
+    End If
+    If decision = CartMutationIntentDecision.Accepted Then
+        Dim result As CartPriceRevalidationResult = Nothing
+        Try
+            result = Aggiorna_Prezzi_Carrello(requests)
+        Catch ex As Exception
+            ' The transaction may already have committed. Never release this intent
+            ' for another mutation when the outcome is not certain.
+            CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(HttpContext.Current)
+            StoreCartUpdateIntentError()
+            Response.Redirect("carrello.aspx")
+            Return
+        End Try
+        If result IsNot Nothing AndAlso Not result.HasBlockingError AndAlso
+           Not result.HasTechnicalError AndAlso Not result.HasCommercialRuleError Then
+            CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+        ElseIf CartMutationIdempotencyService.RegisterIntent(HttpContext.Current, requestId, operationType, payload) <>
+               CartMutationIntentDecision.Indeterminate Then
+            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            If result Is Nothing Then StoreCartUpdateIntentError()
+        End If
+    ElseIf decision <> CartMutationIntentDecision.Completed Then
+        StoreCartUpdateIntentError()
+    End If
 
     ' Session("Click_AggiornaCarrello") = 1 
     Response.Redirect("carrello.aspx")
