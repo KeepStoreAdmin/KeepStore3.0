@@ -30,6 +30,8 @@ Public NotInheritable Class CartMutationIdempotencyService
     Private NotInheritable Class IntentEntry
         Public Property Fingerprint As String
         Public Property OperationType As String
+        Public Property PayloadFingerprint As String
+        Public Property TransitionOwnerScopeHash As String
         Public Property State As String
         Public Property UpdatedUtc As DateTime
     End Class
@@ -310,7 +312,9 @@ Public NotInheritable Class CartMutationIdempotencyService
         Dim fingerprint As String = BuildFingerprint(context, operationType, payload)
         Dim existing As IntentEntry = Nothing
         If registry.TryGetValue(normalized, existing) Then
-            If Not FixedTimeEquals(existing.Fingerprint, fingerprint) Then Return CartMutationIntentDecision.Collision
+            If Not MatchesIntent(context, existing, fingerprint, operationType, payload) Then
+                Return CartMutationIntentDecision.Collision
+            End If
             Select Case existing.State
                 Case "completed" : Return CartMutationIntentDecision.Completed
                 Case "processing" : Return CartMutationIntentDecision.Processing
@@ -323,6 +327,8 @@ Public NotInheritable Class CartMutationIdempotencyService
         registry(normalized) = New IntentEntry With {
             .Fingerprint = fingerprint,
             .OperationType = operationType.Trim().ToLowerInvariant(),
+            .PayloadFingerprint = BuildPayloadFingerprint(operationType, payload),
+            .TransitionOwnerScopeHash = Nothing,
             .State = "pending",
             .UpdatedUtc = DateTime.UtcNow
         }
@@ -335,7 +341,8 @@ Public NotInheritable Class CartMutationIdempotencyService
                                        ByVal operationType As String,
                                        ByVal payload As String) As CartMutationIntentDecision
         Dim normalized As String = String.Empty
-        If Not IsUsableContext(context) OrElse Not NormalizeRequestId(requestId, normalized) Then
+        If Not IsUsableContext(context) OrElse Not NormalizeRequestId(requestId, normalized) OrElse
+           String.IsNullOrWhiteSpace(operationType) OrElse String.IsNullOrWhiteSpace(payload) Then
             Return CartMutationIntentDecision.Invalid
         End If
 
@@ -347,8 +354,8 @@ Public NotInheritable Class CartMutationIdempotencyService
         If Not String.Equals(existing.OperationType, If(operationType, String.Empty).Trim(), StringComparison.OrdinalIgnoreCase) Then
             Return CartMutationIntentDecision.Collision
         End If
-        If Not String.IsNullOrWhiteSpace(payload) AndAlso
-           Not FixedTimeEquals(existing.Fingerprint, BuildFingerprint(context, operationType, payload)) Then
+        If Not MatchesIntent(context, existing, BuildFingerprint(context, operationType, payload),
+                             operationType, payload) Then
             Return CartMutationIntentDecision.Collision
         End If
         If existing.State = "completed" Then Return CartMutationIntentDecision.Completed
@@ -360,6 +367,54 @@ Public NotInheritable Class CartMutationIdempotencyService
         context.Session(RegistrySessionKey) = registry
         context.Items(ActiveIntentItemKey) = normalized
         Return CartMutationIntentDecision.Accepted
+    End Function
+
+    ' Called only by the server-side activation flow after BeginIntent and a committed
+    ' promotion. The target scope must be derived from a newly generated persistent
+    ' owner, never from request input. This helper itself performs no promotion.
+    Friend Shared Function AuthorizeAnonymousOwnerTransitionForCurrentIntent(
+        ByVal context As HttpContext,
+        ByVal operationType As String,
+        ByVal payload As String,
+        ByVal target As CartStorefrontOwnerScope) As Boolean
+
+        If Not IsUsableContext(context) OrElse target Is Nothing OrElse context.Items Is Nothing OrElse
+           String.IsNullOrWhiteSpace(operationType) OrElse String.IsNullOrWhiteSpace(payload) Then Return False
+        Dim normalized As String = String.Empty
+        If Not NormalizeRequestId(Convert.ToString(context.Items(ActiveIntentItemKey)), normalized) Then Return False
+
+        Dim registry As Dictionary(Of String, IntentEntry) = GetRegistry(context.Session, False)
+        If registry Is Nothing Then Return False
+        Dim existing As IntentEntry = Nothing
+        If Not registry.TryGetValue(normalized, existing) OrElse existing Is Nothing OrElse
+           Not String.Equals(existing.State, "processing", StringComparison.Ordinal) OrElse
+           String.IsNullOrEmpty(existing.PayloadFingerprint) Then Return False
+
+        Dim source As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(context)
+        If source Is Nothing OrElse source.LoginId <> 0 OrElse target.LoginId <> 0 OrElse
+           source.CompanyId <= 0 OrElse source.CompanyId <> target.CompanyId OrElse
+           Not String.Equals(If(source.DatabaseScopeKey, String.Empty).Trim(),
+                             If(target.DatabaseScopeKey, String.Empty).Trim(),
+                             StringComparison.OrdinalIgnoreCase) OrElse
+           Not IsCanonicalOwnerToken(source.SessionId, CartStorefrontScopePolicy.AnonymousOwnerPrefix) OrElse
+           Not IsCanonicalOwnerToken(target.SessionId, CartStorefrontScopePolicy.PersistentAnonymousOwnerPrefix) Then Return False
+
+        Dim sourceKey As String = CartStorefrontScopePolicy.BuildOwnerScopeKey(
+            source.DatabaseScopeKey, source.CompanyId, 0, source.SessionId)
+        Dim targetKey As String = CartStorefrontScopePolicy.BuildOwnerScopeKey(
+            target.DatabaseScopeKey, target.CompanyId, 0, target.SessionId)
+        If String.IsNullOrEmpty(sourceKey) OrElse String.IsNullOrEmpty(targetKey) OrElse
+           Not FixedTimeEquals(source.OwnerScopeKey, sourceKey) OrElse
+           Not String.Equals(existing.OperationType, operationType.Trim(), StringComparison.OrdinalIgnoreCase) OrElse
+           Not FixedTimeEquals(existing.Fingerprint, BuildFingerprint(context, operationType, payload)) OrElse
+           Not FixedTimeEquals(existing.PayloadFingerprint, BuildPayloadFingerprint(operationType, payload)) Then Return False
+
+        Dim targetHash As String = HashUtf8("KeepStoreCartTransitionOwner/v1|" & targetKey)
+        If Not String.IsNullOrEmpty(existing.TransitionOwnerScopeHash) AndAlso
+           Not FixedTimeEquals(existing.TransitionOwnerScopeHash, targetHash) Then Return False
+        existing.TransitionOwnerScopeHash = targetHash
+        context.Session(RegistrySessionKey) = registry
+        Return True
     End Function
 
     Public Shared Sub CompleteIntent(ByVal context As HttpContext, ByVal requestId As String)
@@ -384,6 +439,61 @@ Public NotInheritable Class CartMutationIdempotencyService
         If requestId = String.Empty Then Return
         SetState(context, requestId, "indeterminate", False)
     End Sub
+
+    Private Shared Function MatchesIntent(ByVal context As HttpContext,
+                                          ByVal existing As IntentEntry,
+                                          ByVal currentFingerprint As String,
+                                          ByVal operationType As String,
+                                          ByVal payload As String) As Boolean
+        If existing Is Nothing Then Return False
+        ' Keep the original owner-bound digest as the primary check, including for
+        ' pre-upgrade Session entries that have no transition metadata.
+        If FixedTimeEquals(existing.Fingerprint, currentFingerprint) Then Return True
+        If String.IsNullOrEmpty(existing.TransitionOwnerScopeHash) OrElse
+           String.IsNullOrEmpty(existing.PayloadFingerprint) OrElse
+           Not String.Equals(existing.OperationType, operationType.Trim(), StringComparison.OrdinalIgnoreCase) OrElse
+           Not FixedTimeEquals(existing.PayloadFingerprint, BuildPayloadFingerprint(operationType, payload)) Then Return False
+
+        Dim current As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(context)
+        If current Is Nothing OrElse current.LoginId <> 0 OrElse
+           Not IsCanonicalOwnerToken(current.SessionId, CartStorefrontScopePolicy.PersistentAnonymousOwnerPrefix) Then Return False
+        Dim currentKey As String = CartStorefrontScopePolicy.BuildOwnerScopeKey(
+            current.DatabaseScopeKey, current.CompanyId, 0, current.SessionId)
+        Return Not String.IsNullOrEmpty(currentKey) AndAlso
+               FixedTimeEquals(current.OwnerScopeKey, currentKey) AndAlso
+               FixedTimeEquals(existing.TransitionOwnerScopeHash,
+                               HashUtf8("KeepStoreCartTransitionOwner/v1|" & currentKey))
+    End Function
+
+    Private Shared Function BuildPayloadFingerprint(ByVal operationType As String,
+                                                     ByVal payload As String) As String
+        Dim operation As String = operationType.Trim().ToLowerInvariant()
+        Dim canonical As String = "KeepStoreCartIntentPayload/v1|" &
+                                  operation.Length.ToString(CultureInfo.InvariantCulture) & ":" & operation &
+                                  payload.Length.ToString(CultureInfo.InvariantCulture) & ":" & payload
+        Return HashUtf8(canonical)
+    End Function
+
+    Private Shared Function HashUtf8(ByVal value As String) As String
+        Using sha As SHA256 = SHA256.Create()
+            Return Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(value)))
+        End Using
+    End Function
+
+    Private Shared Function IsCanonicalOwnerToken(ByVal token As String,
+                                                  ByVal prefix As String) As Boolean
+        If String.IsNullOrEmpty(token) OrElse Not token.StartsWith(prefix, StringComparison.Ordinal) OrElse
+           Not CartStorefrontScopePolicy.IsAnonymousOwnerToken(token) Then Return False
+        Dim encoded As String = token.Substring(prefix.Length)
+        Try
+            Dim decoded As Byte() = Convert.FromBase64String(encoded.Replace("-", "+").Replace("_", "/") & "=")
+            Return decoded.Length = 32 AndAlso
+                   String.Equals(Convert.ToBase64String(decoded).TrimEnd("="c).Replace("+", "-").Replace("/", "_"),
+                                 encoded, StringComparison.Ordinal)
+        Catch ex As FormatException
+            Return False
+        End Try
+    End Function
 
     Private Shared Function BuildFingerprint(ByVal context As HttpContext,
                                              ByVal operationType As String,
@@ -414,6 +524,10 @@ Public NotInheritable Class CartMutationIdempotencyService
                (String.Equals(existing.State, "completed", StringComparison.OrdinalIgnoreCase) OrElse
                 String.Equals(existing.State, "indeterminate", StringComparison.OrdinalIgnoreCase)) Then Return
             existing.State = state
+            If String.Equals(state, "pending", StringComparison.Ordinal) OrElse
+               String.Equals(state, "indeterminate", StringComparison.Ordinal) Then
+                existing.TransitionOwnerScopeHash = Nothing
+            End If
             existing.UpdatedUtc = DateTime.UtcNow
         End If
         context.Session(RegistrySessionKey) = registry
@@ -442,6 +556,7 @@ Public NotInheritable Class CartMutationIdempotencyService
             ElseIf String.Equals(pair.Value.State, "processing", StringComparison.OrdinalIgnoreCase) AndAlso
                    pair.Value.UpdatedUtc < processingCutoff Then
                 pair.Value.State = "indeterminate"
+                pair.Value.TransitionOwnerScopeHash = Nothing
                 pair.Value.UpdatedUtc = nowUtc
             ElseIf pair.Value.UpdatedUtc < cutoff AndAlso
                    (String.Equals(pair.Value.State, "completed", StringComparison.OrdinalIgnoreCase) OrElse

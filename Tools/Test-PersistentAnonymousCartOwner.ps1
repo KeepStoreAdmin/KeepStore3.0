@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$NoDatabase)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -30,8 +30,12 @@ try {
         (Join-Path $repo 'App_Code\CartStorefrontScopePolicy.vb') `
         (Join-Path $PSScriptRoot 'PersistentAnonymousCartOwnerHarness.vb')
     if ($LASTEXITCODE -ne 0) { throw 'PERSISTENT_OWNER_HARNESS_COMPILE_FAILED' }
-    & $exe
-    if ($LASTEXITCODE -ne 0) { throw 'PERSISTENT_OWNER_HARNESS_FAILED' }
+    if (-not $NoDatabase) {
+        & $exe
+        if ($LASTEXITCODE -ne 0) { throw 'PERSISTENT_OWNER_HARNESS_FAILED' }
+    } else {
+        Write-Output 'PASS PERSISTENT_OWNER_HARNESS_COMPILE_ONLY_NO_DATABASE'
+    }
 
     $ownerContext = [IO.File]::ReadAllText((Join-Path $repo 'App_Code\CartStorefrontOwnerContext.vb'))
     $service = [IO.File]::ReadAllText((Join-Path $repo 'App_Code\PersistentAnonymousCartOwnerService.vb'))
