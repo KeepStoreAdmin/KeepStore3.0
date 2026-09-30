@@ -158,15 +158,14 @@ Public Module CartMutationService
                 })
                 End Function)
 
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
         If execution.IsIndeterminate Then
-            CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
             Return New CartOwnerRemovalResult With {
                 .IsIndeterminate = True,
                 .ErrorMessage = GenericMutationError
             }
         End If
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
-            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
@@ -382,9 +381,8 @@ Public Module CartMutationService
             Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Commit(attemptResult)
                 End Function)
 
-        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
-            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
@@ -500,9 +498,8 @@ Public Module CartMutationService
             Return CartTransactionWorkResult(Of CartStandardMutationResult).Commit(attemptResult)
                 End Function)
 
-        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
-            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
@@ -581,9 +578,8 @@ Public Module CartMutationService
             Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Commit(result)
                 End Function)
 
-        If execution.IsIndeterminate Then CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(ctx)
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, activation, execution.Status, activated)
         If execution.Succeeded AndAlso execution.Value IsNot Nothing Then
-            PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, activation, True, activated)
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If

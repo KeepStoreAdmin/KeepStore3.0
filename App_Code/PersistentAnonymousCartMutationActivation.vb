@@ -14,6 +14,7 @@ Friend NotInheritable Class PersistentCartActivationCandidate
     Friend Property CookieValue As String
     Friend Property CreatedUtc As DateTime
     Friend Property ExpiresUtc As DateTime
+    Friend Property CookieStaged As Boolean
 End Class
 
 Friend NotInheritable Class PersistentCartActivationSnapshot
@@ -45,8 +46,8 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
             Case Else
                 Return Nothing
         End Select
-        ' A __Host- cookie cannot establish ownership over insecure transport.
-        If Not context.Request.IsSecureConnection Then Return Nothing
+        ' Ownership cannot be promoted unless its cookie can still be staged.
+        If Not CanStageCookie(context) Then Return Nothing
         Dim existing As PersistentCartActivationCandidate = TryCast(context.Items(CandidateItemKey), PersistentCartActivationCandidate)
         If existing IsNot Nothing Then
             If Not String.Equals(existing.Source.OwnerScopeKey, source.OwnerScopeKey, StringComparison.Ordinal) Then
@@ -123,6 +124,7 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
                                    ByVal candidate As PersistentCartActivationCandidate,
                                    ByVal before As PersistentCartActivationSnapshot) As Boolean
         If candidate Is Nothing OrElse before Is Nothing Then Return False
+        If Not CanStageCookie(context) Then Return False
         Dim current As CartStorefrontOwnerScope = CartStorefrontOwnerContext.ResolveForMutation(context)
         If current Is Nothing OrElse Not String.Equals(current.OwnerScopeKey, candidate.Source.OwnerScopeKey, StringComparison.Ordinal) Then
             Throw New InvalidOperationException("Persistent cart activation owner mismatch.")
@@ -166,21 +168,55 @@ Friend NotInheritable Class PersistentAnonymousCartMutationActivation
                context, operation, payload, candidate.Target) Then
             Throw New InvalidOperationException("Persistent cart intent transition was rejected.")
         End If
+        StageCookie(context, candidate)
         Return True
     End Function
 
-    ' Caller supplies true only for this attempt's activation AND a certain commit.
-    Friend Shared Sub PublishAfterCommit(ByVal context As HttpContext,
-                                       ByVal candidate As PersistentCartActivationCandidate,
-                                       ByVal succeeded As Boolean,
-                                       ByVal activated As Boolean)
-        If Not succeeded OrElse Not activated OrElse candidate Is Nothing Then Return
-        context.Items(CommittedOwnerItemKey) = candidate.Target
+    ' Runs inside the transaction callback, AFTER verified promotion/authorization.
+    ' Any cookie failure propagates to Execute so that the DB transaction rolls back.
+    Private Shared Sub StageCookie(ByVal context As HttpContext,
+                                   ByVal candidate As PersistentCartActivationCandidate)
+        If Not CanStageCookie(context) Then
+            Throw New InvalidOperationException("Persistent cart response cannot stage ownership.")
+        End If
         Dim cookie As New HttpCookie(PersistentAnonymousCartOwnerService.CookieName, candidate.CookieValue) With {
             .Path = "/", .Secure = True, .HttpOnly = True, .SameSite = SameSiteMode.Lax,
             .Expires = candidate.ExpiresUtc}
         context.Response.Cookies.Set(cookie)
+        candidate.CookieStaged = True
     End Sub
+
+    ' No post-commit Cookies.Set. A commit with an unknown outcome keeps the staged
+    ' cookie: the next request's read-only registry resolution establishes reality.
+    Friend Shared Sub FinalizeExecution(ByVal context As HttpContext,
+                                       ByVal candidate As PersistentCartActivationCandidate,
+                                       ByVal status As CartTransactionExecutionStatus,
+                                       ByVal activated As Boolean)
+        Dim stagedActivation As Boolean = activated AndAlso candidate IsNot Nothing AndAlso candidate.CookieStaged
+        If status = CartTransactionExecutionStatus.Indeterminate Then
+            If Not stagedActivation Then RemoveStagedCookie(context, candidate)
+            CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(context, stagedActivation)
+        ElseIf status = CartTransactionExecutionStatus.Succeeded AndAlso stagedActivation Then
+            context.Items(CommittedOwnerItemKey) = candidate.Target
+        Else
+            ' Also discard staging left by a rolled-back retry whose final attempt
+            ' committed without activation (for example, a no-op).
+            RemoveStagedCookie(context, candidate)
+        End If
+    End Sub
+
+    Private Shared Sub RemoveStagedCookie(ByVal context As HttpContext,
+                                         ByVal candidate As PersistentCartActivationCandidate)
+        If candidate Is Nothing OrElse Not candidate.CookieStaged Then Return
+        context.Response.Cookies.Remove(PersistentAnonymousCartOwnerService.CookieName)
+        candidate.CookieStaged = False
+    End Sub
+
+    Private Shared Function CanStageCookie(ByVal context As HttpContext) As Boolean
+        Return context IsNot Nothing AndAlso context.Request IsNot Nothing AndAlso
+               context.Request.IsSecureConnection AndAlso context.Response IsNot Nothing AndAlso
+               Not context.Response.HeadersWritten
+    End Function
 
     Friend Shared Function CommittedOwner(ByVal context As HttpContext,
                                          ByVal databaseScope As String,

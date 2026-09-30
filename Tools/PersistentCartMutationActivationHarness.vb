@@ -44,15 +44,17 @@ End Class
 Friend Class LocalPostWorker
     Inherits SimpleWorkerRequest
     Private ReadOnly _verb As String
-    Public Sub New(verb As String)
+    Private ReadOnly _secure As Boolean
+    Public Sub New(verb As String, Optional secure As Boolean = True)
         MyBase.New("/", AppDomain.CurrentDomain.BaseDirectory, "test.aspx", "", New StringWriter())
         _verb = verb
+        _secure = secure
     End Sub
     Public Overrides Function GetHttpVerbName() As String
         Return _verb
     End Function
     Public Overrides Function IsSecure() As Boolean
-        Return True
+        Return _secure
     End Function
 End Class
 
@@ -64,8 +66,8 @@ Module PersistentCartMutationActivationHarness
         If Not condition Then Throw New InvalidOperationException(code)
         _passed += 1 : Console.WriteLine("PASS " & code)
     End Sub
-    Private Function Context(operation As String, payload As String, Optional login As Integer = 0, Optional verb As String = "POST") As HttpContext
-        Dim ctx As New HttpContext(New LocalPostWorker(verb))
+    Private Function Context(operation As String, payload As String, Optional login As Integer = 0, Optional verb As String = "POST", Optional secure As Boolean = True) As HttpContext
+        Dim ctx As New HttpContext(New LocalPostWorker(verb, secure))
         HttpContext.Current = ctx
         Dim sessionId = Guid.NewGuid().ToString("N")
         Dim container As New HttpSessionStateContainer(sessionId, New SessionStateItemCollection(),
@@ -121,14 +123,18 @@ Module PersistentCartMutationActivationHarness
                 End Select
                 Dim activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, tx, candidate, before)
                 Check(operation & "_EFFECTIVE_ACTIVATION_" & mutation, activated = expected)
-                Check(operation & "_NO_COOKIE_BEFORE_COMMIT_" & mutation, ctx.Response.Cookies.Count = 0)
+                Check(operation & "_COOKIE_STAGED_BEFORE_COMMIT_" & mutation,
+                      candidate.CookieStaged = expected AndAlso ctx.Response.Cookies.Count = If(expected, 1, 0) AndAlso Not ctx.Response.HeadersWritten)
                 tx.Commit()
-                PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, candidate, True, activated)
+                PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, candidate, CartTransactionExecutionStatus.Succeeded, activated)
             End Using
             Check(operation & "_REGISTRY_" & mutation, Count(conn, "carrello_anonimo_persistenza", candidate.Target.SessionId) = If(expected, 1, 0))
             If expected Then
+                Check(operation & "_COOKIE_EXACTLY_ONCE_" & mutation, ctx.Response.Cookies.Count = 1)
                 Check(operation & "_ALL_OLD_ROWS_ADOPTED_" & mutation, Count(conn, "carrello", candidate.Source.SessionId) = 0)
                 Dim cookie = ctx.Response.Cookies(PersistentAnonymousCartOwnerService.CookieName)
+                Dim resolution = PersistentAnonymousCartOwnerService.ResolveCookieValue(cookie.Value, candidate.Source.DatabaseScopeKey, 1, _connectionString)
+                Check(operation & "_RESOLVES_ACTIVE_" & mutation, resolution.State = PersistentAnonymousCartOwnerState.ACTIVE AndAlso resolution.OwnerToken = candidate.Target.SessionId)
                 Check(operation & "_COOKIE_FLAGS_" & mutation, cookie IsNot Nothing AndAlso cookie.Value.Length = 46 AndAlso
                     cookie.Secure AndAlso cookie.HttpOnly AndAlso cookie.SameSite = SameSiteMode.Lax AndAlso cookie.Path = "/" AndAlso String.IsNullOrEmpty(cookie.Domain))
                 Check(operation & "_THIRTY_DAYS_" & mutation, candidate.ExpiresUtc - candidate.CreatedUtc = TimeSpan.FromDays(30) AndAlso cookie.Expires = candidate.ExpiresUtc)
@@ -158,6 +164,7 @@ Module PersistentCartMutationActivationHarness
                 Check("ACTIVATION_BEFORE_ROLLBACK_" & number, PersistentAnonymousCartMutationActivation.Activate(ctx, conn, tx, candidate, before))
                 tx.Rollback()
             End Using
+            PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, candidate, CartTransactionExecutionStatus.Failed, True)
             Check("ROLLBACK_KSC1_INTACT_" & number, Count(conn, "carrello", candidate.Source.SessionId) = 1)
             Check("ROLLBACK_NO_REGISTRY_" & number, Count(conn, "carrello_anonimo_persistenza", candidate.Target.SessionId) = 0 AndAlso Count(conn, "carrello", candidate.Target.SessionId) = 0)
             Check("ROLLBACK_NO_COOKIE_" & number, ctx.Response.Cookies.Count = 0)
@@ -178,11 +185,126 @@ Module PersistentCartMutationActivationHarness
                 Return CartTransactionWorkResult(Of Boolean).Commit(activated)
             End Function)
         Check("RETRY_COMPLETED_" & number, execution.Succeeded AndAlso execution.Attempts = 2 AndAlso execution.Value)
-        PersistentAnonymousCartMutationActivation.PublishAfterCommit(ctx, candidate, execution.Succeeded, activated)
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, candidate, execution.Status, activated)
+        Check("RETRY_COOKIE_EXACTLY_ONCE_" & number, candidate.CookieStaged AndAlso ctx.Response.Cookies.Count = 1)
         Using conn As New MySqlConnection(_connectionString)
             conn.Open()
             Check("RETRY_ONE_REGISTRY_" & number, Count(conn, "carrello_anonimo_persistenza", candidate.Target.SessionId) = 1)
             Check("RETRY_NO_DUPLICATE_ROWS_" & number, Count(conn, "carrello", candidate.Target.SessionId) = 2)
+        End Using
+    End Sub
+
+    Private Sub CookieSetFailure()
+        Dim ctx = Context("cart-add", "cookie-failure"), candidate = Prepare(ctx)
+        Using conn As New MySqlConnection(_connectionString)
+            conn.Open() : Insert(conn, Nothing, candidate.Source.SessionId)
+        End Using
+        ' Harness-only failure injection into the real HttpCookieCollection. No
+        ' production hook, mocked activation, or exception after commit is used.
+        Dim readOnlyProperty = GetType(Collections.Specialized.NameObjectCollectionBase).GetProperty(
+            "IsReadOnly", BindingFlags.NonPublic Or BindingFlags.Instance)
+        Dim cookies = ctx.Response.Cookies
+        Dim cookieSetFailed As Boolean = False, activated As Boolean = False
+        readOnlyProperty.SetValue(cookies, True, Nothing)
+        Dim execution As CartTransactionExecutionResult(Of Boolean)
+        Try
+            execution = CartTransactionRetryPolicy.Execute(Of Boolean)(_connectionString, IsolationLevel.Serializable, "cookie-failure-harness", Guid.NewGuid().ToString(),
+                Function(conn As MySqlConnection, tx As MySqlTransaction) As CartTransactionWorkResult(Of Boolean)
+                    Dim before = PersistentAnonymousCartMutationActivation.Capture(conn, tx, candidate)
+                    Insert(conn, tx, candidate.Source.SessionId)
+                    Try
+                        activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, tx, candidate, before)
+                    Catch ex As NotSupportedException
+                        cookieSetFailed = True
+                        Throw
+                    End Try
+                    Return CartTransactionWorkResult(Of Boolean).Commit(True)
+                End Function)
+        Finally
+            readOnlyProperty.SetValue(cookies, False, Nothing)
+        End Try
+        Check("COOKIE_SET_FAILURE_IN_CALLBACK", cookieSetFailed AndAlso execution.Status = CartTransactionExecutionStatus.Failed AndAlso
+              execution.Phase = CartTransactionPhase.TransactionActive AndAlso execution.RollbackStatus = CartTransactionRollbackStatus.Succeeded)
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, candidate, execution.Status, activated)
+        Check("COOKIE_SET_FAILURE_NO_COOKIE", Not candidate.CookieStaged AndAlso ctx.Response.Cookies.Count = 0)
+        Using conn As New MySqlConnection(_connectionString)
+            conn.Open()
+            Check("COOKIE_SET_FAILURE_ROLLBACK_REGISTRY_ZERO", Count(conn, "carrello_anonimo_persistenza", candidate.Target.SessionId) = 0)
+            Check("COOKIE_SET_FAILURE_ROLLBACK_KSC1_INTACT", Count(conn, "carrello", candidate.Source.SessionId) = 1 AndAlso Count(conn, "carrello", candidate.Target.SessionId) = 0)
+        End Using
+        CartMutationIdempotencyService.AbandonIntent(ctx, CStr(ctx.Items("HarnessRequestId")))
+    End Sub
+
+    Private Sub CertainAbort()
+        Dim ctx = Context("cart-add", "certain-abort"), candidate = Prepare(ctx)
+        Using conn As New MySqlConnection(_connectionString)
+            conn.Open() : Insert(conn, Nothing, candidate.Source.SessionId)
+        End Using
+        Dim activated As Boolean = False
+        Dim execution = CartTransactionRetryPolicy.Execute(Of Boolean)(_connectionString, IsolationLevel.Serializable, "certain-abort-harness", Guid.NewGuid().ToString(),
+            Function(conn As MySqlConnection, tx As MySqlTransaction) As CartTransactionWorkResult(Of Boolean)
+                Dim before = PersistentAnonymousCartMutationActivation.Capture(conn, tx, candidate)
+                Insert(conn, tx, candidate.Source.SessionId)
+                activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, tx, candidate, before)
+                Check("CERTAIN_FAILURE_WAS_STAGED", activated AndAlso candidate.CookieStaged AndAlso ctx.Response.Cookies.Count = 1)
+                Return CartTransactionWorkResult(Of Boolean).Abort(False)
+            End Function)
+        PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, candidate, execution.Status, activated)
+        Check("CERTAIN_FAILURE_COOKIE_REMOVAL", execution.Status = CartTransactionExecutionStatus.Failed AndAlso Not candidate.CookieStaged AndAlso ctx.Response.Cookies.Count = 0)
+        Using conn As New MySqlConnection(_connectionString)
+            conn.Open()
+            Check("CERTAIN_FAILURE_KSC1_AND_REGISTRY", Count(conn, "carrello", candidate.Source.SessionId) = 1 AndAlso Count(conn, "carrello_anonimo_persistenza", candidate.Target.SessionId) = 0)
+        End Using
+        CartMutationIdempotencyService.AbandonIntent(ctx, CStr(ctx.Items("HarnessRequestId")))
+    End Sub
+
+    Private Function ReplayContext(original As HttpContext, owner As CartStorefrontOwnerScope) As HttpContext
+        Dim ctx As New HttpContext(New LocalPostWorker("POST"))
+        Dim items As New SessionStateItemCollection()
+        items("KeepStore:CartMutation:Intents") = original.Session("KeepStore:CartMutation:Intents")
+        Dim container As New HttpSessionStateContainer(original.Session.SessionID, items,
+            New HttpStaticObjectsCollection(), 20, False, HttpCookieMode.UseCookies, SessionStateMode.InProc, False)
+        SessionStateUtility.AddHttpSessionStateToContext(ctx, container)
+        ctx.Items("SyntheticOwner") = owner
+        HttpContext.Current = ctx
+        Return ctx
+    End Function
+
+    Private Sub IndeterminateOutcome(committed As Boolean)
+        Dim code = If(committed, "INDETERMINATE_COMMITTED", "INDETERMINATE_ROLLED_BACK")
+        Dim ctx = Context("cart-add", "indeterminate-payload"), candidate = Prepare(ctx)
+        Dim activated As Boolean
+        Using conn As New MySqlConnection(_connectionString)
+            conn.Open() : Insert(conn, Nothing, candidate.Source.SessionId)
+            Using tx = conn.BeginTransaction()
+                Dim before = PersistentAnonymousCartMutationActivation.Capture(conn, tx, candidate)
+                Insert(conn, tx, candidate.Source.SessionId)
+                activated = PersistentAnonymousCartMutationActivation.Activate(ctx, conn, tx, candidate, before)
+                Check(code & "_STAGED_BEFORE_OUTCOME", activated AndAlso candidate.CookieStaged AndAlso ctx.Response.Cookies.Count = 1)
+                ' Simulate the two possible realities of an ambiguous commit, not
+                ' a production fault hook or a changed retry policy.
+                If committed Then tx.Commit() Else tx.Rollback()
+            End Using
+            PersistentAnonymousCartMutationActivation.FinalizeExecution(ctx, candidate, CartTransactionExecutionStatus.Indeterminate, activated)
+            Check(code & "_COOKIE_KEPT", candidate.CookieStaged AndAlso ctx.Response.Cookies.Count = 1)
+            Check(code & "_NO_CERTAIN_OWNER_OVERRIDE", PersistentAnonymousCartMutationActivation.CommittedOwner(ctx, candidate.Source.DatabaseScopeKey, 1) Is Nothing)
+            Dim resolution = PersistentAnonymousCartOwnerService.ResolveCookieValue(ctx.Response.Cookies(PersistentAnonymousCartOwnerService.CookieName).Value,
+                                                                                   candidate.Source.DatabaseScopeKey, 1, _connectionString)
+            Check(code & "_REGISTRY_REALITY", resolution.State = If(committed, PersistentAnonymousCartOwnerState.ACTIVE, PersistentAnonymousCartOwnerState.NOT_FOUND))
+            Check(code & "_ROWS", Count(conn, "carrello", candidate.Source.SessionId) = If(committed, 0, 1) AndAlso
+                  Count(conn, "carrello", candidate.Target.SessionId) = If(committed, 2, 0))
+            Dim replayOwner = If(resolution.State = PersistentAnonymousCartOwnerState.ACTIVE, candidate.Target, candidate.Source)
+            If Not committed Then
+                Check("KSC1_FALLBACK", resolution.OwnerToken Is Nothing AndAlso replayOwner.SessionId =
+                      CartStorefrontScopePolicy.BuildAnonymousOwnerToken(candidate.Source.DatabaseScopeKey, 1, ctx.Session.SessionID))
+            End If
+            Dim nextRequest = ReplayContext(ctx, replayOwner)
+            Dim requestId = CStr(ctx.Items("HarnessRequestId"))
+            Check(code & "_REPLAY_INDETERMINATE", CartMutationIdempotencyService.RegisterIntent(nextRequest, requestId, "cart-add", "indeterminate-payload") = CartMutationIntentDecision.Indeterminate)
+            Check(code & "_BEGIN_BLOCKED", CartMutationIdempotencyService.BeginIntent(nextRequest, requestId, "cart-add", "indeterminate-payload") = CartMutationIntentDecision.Indeterminate)
+            Check(code & "_CHANGED_PAYLOAD_COLLISION", CartMutationIdempotencyService.RegisterIntent(nextRequest, requestId, "cart-add", "different") = CartMutationIntentDecision.Collision)
+            Check(code & "_NO_REPLAY_DML", Count(conn, "carrello", candidate.Target.SessionId) = If(committed, 2, 0) AndAlso
+                  Count(conn, "carrello_anonimo_persistenza", candidate.Target.SessionId) = If(committed, 1, 0))
         End Using
     End Sub
     Public Sub Main()
@@ -208,12 +330,18 @@ Module PersistentCartMutationActivationHarness
             Scenario("cart-remove-row", "remove", True, 2)
             Scenario("cart-remove-row", "remove", False, 1)
             RollbackAndRetry(1213) : RollbackAndRetry(1205)
-            Check("GET_NO_CANDIDATE", Prepare(Context("cart-add", "get", 0, "GET")) Is Nothing)
-            Check("AUTHENTICATED_NO_CANDIDATE", Prepare(Context("cart-add", "authenticated", 42)) Is Nothing)
+            CookieSetFailure() : CertainAbort()
+            IndeterminateOutcome(True) : IndeterminateOutcome(False)
+            Dim read = Context("cart-add", "get", 0, "GET")
+            Check("GET_NO_COOKIE", Prepare(read) Is Nothing AndAlso read.Response.Cookies.Count = 0)
+            Dim authenticated = Context("cart-add", "authenticated", 42)
+            Check("AUTHENTICATED_NO_COOKIE", Prepare(authenticated) Is Nothing AndAlso authenticated.Response.Cookies.Count = 0)
             Check("CLEAR_NO_CANDIDATE", Prepare(Context("cart-clear", "clear")) Is Nothing)
-            Dim failed = Context("cart-add", "failed"), candidate = Prepare(failed)
-            PersistentAnonymousCartMutationActivation.PublishAfterCommit(failed, candidate, False, True)
-            Check("FAILED_OR_INDETERMINATE_NO_COOKIE", failed.Response.Cookies.Count = 0)
+            Dim insecure = Context("cart-add", "insecure", 0, "POST", False)
+            Check("INSECURE_NO_COOKIE", Prepare(insecure) Is Nothing AndAlso insecure.Response.Cookies.Count = 0)
+            Dim sent = Context("cart-add", "headers-sent")
+            sent.Response.Flush()
+            Check("HEADERS_WRITTEN_SKIP_ACTIVATION", sent.Response.HeadersWritten AndAlso Prepare(sent) Is Nothing AndAlso sent.Response.Cookies.Count = 0)
             Console.WriteLine("TOTAL_PASS=" & _passed)
         Catch ex As Exception
             Dim e = ex

@@ -434,8 +434,8 @@ Public NotInheritable Class CartMutationIdempotencyService
         Return True
     End Function
 
-    ' Called only by the server-side activation flow after BeginIntent and a committed
-    ' promotion. The target scope must be derived from a newly generated persistent
+    ' Called only by the server-side activation flow after BeginIntent and verified
+    ' transactional promotion, before requesting commit. The target scope is a new persistent
     ' owner, never from request input. This helper itself performs no promotion.
     Friend Shared Function AuthorizeAnonymousOwnerTransitionForCurrentIntent(
         ByVal context As HttpContext,
@@ -499,10 +499,11 @@ Public NotInheritable Class CartMutationIdempotencyService
         Return String.Empty
     End Function
 
-    Public Shared Sub MarkCurrentIntentIndeterminate(ByVal context As HttpContext)
+    Public Shared Sub MarkCurrentIntentIndeterminate(ByVal context As HttpContext,
+                                                    Optional ByVal preserveAuthorizedTransition As Boolean = False)
         Dim requestId As String = GetCurrentRequestId(context)
         If requestId = String.Empty Then Return
-        SetState(context, requestId, "indeterminate", False)
+        SetState(context, requestId, "indeterminate", False, False, preserveAuthorizedTransition)
         If context IsNot Nothing AndAlso context.Items IsNot Nothing Then
             context.Items.Remove(ActiveIntentDescriptorItemKey)
         End If
@@ -578,7 +579,8 @@ Public NotInheritable Class CartMutationIdempotencyService
                                 ByVal requestId As String,
                                 ByVal state As String,
                                 ByVal remove As Boolean,
-                                Optional ByVal preserveTerminalState As Boolean = False)
+                                Optional ByVal preserveTerminalState As Boolean = False,
+                                Optional ByVal preserveAuthorizedTransition As Boolean = False)
         Dim normalized As String = String.Empty
         If Not IsUsableContext(context) OrElse Not NormalizeRequestId(requestId, normalized) Then Return
         Dim registry As Dictionary(Of String, IntentEntry) = GetRegistry(context.Session, False)
@@ -593,7 +595,7 @@ Public NotInheritable Class CartMutationIdempotencyService
                 String.Equals(existing.State, "indeterminate", StringComparison.OrdinalIgnoreCase)) Then Return
             existing.State = state
             If String.Equals(state, "pending", StringComparison.Ordinal) OrElse
-               String.Equals(state, "indeterminate", StringComparison.Ordinal) Then
+               (String.Equals(state, "indeterminate", StringComparison.Ordinal) AndAlso Not preserveAuthorizedTransition) Then
                 existing.TransitionOwnerScopeHash = Nothing
             End If
             existing.UpdatedUtc = DateTime.UtcNow
