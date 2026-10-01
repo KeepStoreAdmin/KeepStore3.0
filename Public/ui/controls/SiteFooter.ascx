@@ -26,7 +26,7 @@
                                     <li><a class="link" href="Contattaci.aspx">Informazioni consegna</a></li>
                                     <li><a class="link" href="Contattaci.aspx">Condizioni di vendita</a></li>
                                     <li><a class="link" href="Contattaci.aspx">Resi e rimborsi</a></li>
-                                    <li><a class="link" href="Contattaci.aspx">Privacy</a></li>
+                                    <li><a class="link" href="privacy.aspx">Privacy</a></li>
                                     <li><a class="link" href="Contattaci.aspx">Domande frequenti</a></li>
                                 </ul>
                             </div>
