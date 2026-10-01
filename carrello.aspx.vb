@@ -733,7 +733,6 @@ Private Function UrlIsLocal(ByVal url As String) As Boolean
 End Function
 
 
-Protected differenzaTrasportoGratis As Double = 0
 
 ' === MARKUP HELPERS (migrated from inline <script runat="server"> blocks) ===
 Protected Function stampa_iva_applicata(ByVal DescrizioneEsenzioneIva As String, ByVal DescrizioneIvaRC As String) As String
@@ -761,31 +760,14 @@ Protected Function mancano_ancora(ByVal soglia As Double, ByVal imponibileLocal 
     End Try
 
     Dim diff As Double = soglia - (imponibileLocal - imponibileGratisLocal)
-    If diff < 0 Then
-        Return "** SOGLIA SUPERATA **"
+    If diff <= 0 Then
+        Return "Soglia di spesa raggiunta per questa tariffa promozionale. Restano validi il limite di peso e il costo indicati."
     End If
 
     Dim diffIvato As Double = diff * ((ivaVettori / 100) + 1)
-    Return "Per usufruire della PROMO mancano ancora " & FormatCurrencyIt(diffIvato) & " - Non vengono conteggiati gli articoli con SPEDIZIONE GRATIS"
+    Return "Ti mancano " & UiPriceFormatter.FormatStorefrontValue(diffIvato) & " per raggiungere la soglia di questa tariffa promozionale. Gli articoli con spedizione gratuita non concorrono alla soglia. Restano validi il limite di peso e il costo indicati."
 End Function
 
-Protected Function mancano_ancora_number(ByVal soglia As Double, ByVal imponibileLocal As Double, ByVal imponibileGratisLocal As Double) As Integer
-    Dim ivaVettori As Double = 0
-    Try
-        Dim o As Object = Session("Iva_Vettori")
-        If o IsNot Nothing AndAlso o IsNot DBNull.Value Then Double.TryParse(o.ToString(), ivaVettori)
-    Catch
-    End Try
-
-    Dim diff As Double = soglia - (imponibileLocal - imponibileGratisLocal)
-    If diff > 0 Then
-        differenzaTrasportoGratis = diff * ((ivaVettori / 100) + 1)
-        Return 1
-    End If
-
-    differenzaTrasportoGratis = 0
-    Return 0
-End Function
 
 Protected Function controllo_img(ByVal temp As Object) As String
     If temp Is Nothing OrElse temp Is DBNull.Value Then
@@ -1162,6 +1144,8 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Dim title As String = ""
         Dim message As String = ""
         Select Case code
+            Case "cart_updated"
+                severity = "info" : title = "Carrello aggiornato" : message = "Le modifiche sono state salvate."
             Case "remove_ok"
                 severity = "info" : title = "Articolo rimosso" : message = "Il carrello è stato aggiornato."
             Case "clear_ok"
@@ -5598,6 +5582,8 @@ End Sub
 
 Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btAggiorna.Click
     If Not IsAddressEditorActionAllowed(sender) Then Return
+    Session.Remove(CartRecoveryCodeKey)
+    Session.Remove(CartRecoveryCreatedUtcKey)
     Dim requests As List(Of CartQuantityMutationRequest) = Nothing
     If Not TryBuildCartQuantityMutationRequests(requests) OrElse requests.Count = 0 Then
         Response.Redirect("carrello.aspx")
@@ -5620,6 +5606,7 @@ Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventAr
         decision = CartMutationIdempotencyService.BeginIntent(HttpContext.Current, requestId, operationType, payload)
     End If
     If decision = CartMutationIntentDecision.Accepted Then
+        Dim quantityRecoveryCode As String = GetQuantityUpdateRecoveryCode(requests)
         Dim result As CartPriceRevalidationResult = Nothing
         Try
             result = Aggiorna_Prezzi_Carrello(requests)
@@ -5634,6 +5621,8 @@ Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventAr
         If result IsNot Nothing AndAlso Not result.HasBlockingError AndAlso
            Not result.HasTechnicalError AndAlso Not result.HasCommercialRuleError Then
             CartMutationIdempotencyService.CompleteIntent(HttpContext.Current, requestId)
+            If result.HasChanges Then quantityRecoveryCode = "cart_updated"
+            StoreQuantityUpdateRecovery(quantityRecoveryCode)
         ElseIf CartMutationIdempotencyService.RegisterIntent(HttpContext.Current, requestId, operationType, payload) <>
                CartMutationIntentDecision.Indeterminate Then
             CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
@@ -5641,10 +5630,42 @@ Protected Sub btAggiorna_Click(ByVal sender As Object, ByVal e As System.EventAr
         End If
     ElseIf decision <> CartMutationIntentDecision.Completed Then
         StoreCartUpdateIntentError()
+    Else
+        StoreQuantityUpdateRecovery("cart_already_updated")
     End If
 
     ' Session("Click_AggiornaCarrello") = 1 
     Response.Redirect("carrello.aspx")
+End Sub
+
+Private Function GetQuantityUpdateRecoveryCode(ByVal requests As IList(Of CartQuantityMutationRequest)) As String
+    ' Presentation only: compare targets with the existing owner-scoped read model.
+    ' An unavailable snapshot must not turn into a claim of a completed change.
+    Try
+        Dim cart As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+        If Not cart.HasOwner OrElse Not cart.LoadSucceeded Then Return String.Empty
+        Dim items As DataTable = cart.GetAllItems()
+        Dim changed As Boolean = False
+        For Each request As CartQuantityMutationRequest In requests
+            Dim found As Boolean = False
+            For Each row As DataRow In items.Rows
+                If Convert.ToInt32(row("ID"), CultureInfo.InvariantCulture) <> request.CartRowId Then Continue For
+                changed = changed OrElse Convert.ToDecimal(row("Qnt"), CultureInfo.InvariantCulture) <> request.Quantity
+                found = True
+                Exit For
+            Next
+            If Not found Then Return String.Empty
+        Next
+        Return If(changed, "cart_updated", "cart_already_updated")
+    Catch
+        Return String.Empty
+    End Try
+End Function
+
+Private Sub StoreQuantityUpdateRecovery(ByVal code As String)
+    If code <> "cart_updated" AndAlso code <> "cart_already_updated" Then Return
+    Session(CartRecoveryCodeKey) = code
+    Session(CartRecoveryCreatedUtcKey) = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
 End Sub
 
 

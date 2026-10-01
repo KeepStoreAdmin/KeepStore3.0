@@ -487,6 +487,8 @@
     var subtotal = qs('.ks-cart-subtotal-value', page);
     var headingCount = qs('.ks-cart-heading-count', page);
     var commercialNotice = document.getElementById('ksCartQuantityCommercialNotice');
+    var globalSaveStatus = document.getElementById('ksCartSaveStatus');
+    var globalSaveMessage = globalSaveStatus && qs('[data-ks-cart-save-message]', globalSaveStatus);
     var recoveryNotice = document.getElementById('pnlCartRecovery');
     var recoveryTitle = recoveryNotice && qs('[data-ks-cart-recovery-title]', recoveryNotice);
     var recoveryMessage = recoveryNotice && qs('[data-ks-cart-recovery-message]', recoveryNotice);
@@ -524,6 +526,7 @@
 
     var inFlight = null;
     var fatal = false;
+    var snapshotConfirmed = false;
     var reloadStarted = false;
     var reloadKey = 'KeepStore:cart-quantity-failure:' + window.location.pathname;
     var scrollKey = 'KeepStore:cart-quantity-scroll:' + window.location.pathname;
@@ -536,6 +539,15 @@
 
     function hasPending() {
       return !!inFlight || rows.some(function (row) { return row.desired !== null || row.rawDirty; });
+    }
+    function presentGlobalSaveState() {
+      if (!globalSaveStatus || !globalSaveMessage) return;
+      var error = rows.some(function (row) { return row.status.getAttribute('data-state') === 'error'; });
+      var pending = hasPending();
+      var state = fatal || error ? 'idle' : pending ? 'saving' : snapshotConfirmed ? 'saved' : 'idle';
+      globalSaveStatus.hidden = state === 'idle';
+      globalSaveStatus.setAttribute('data-state', state);
+      globalSaveMessage.textContent = state === 'saving' ? 'Salvataggio in corso…' : state === 'saved' ? 'Carrello aggiornato' : '';
     }
     function showRecovery(code) {
       var notices = {
@@ -571,6 +583,7 @@
       } catch (ignore) {}
     }
     function protectCheckout() {
+      presentGlobalSaveState();
       var busy = hasPending() || fatal;
       checkoutOriginal.forEach(function (original) {
         if (original.node.tagName === 'INPUT' || original.node.tagName === 'BUTTON') {
@@ -588,12 +601,14 @@
       }
     }
     function setStatus(row, state, message) {
+      if (state === 'dirty' || state === 'error') snapshotConfirmed = false;
       if (row.savedTimer) { window.clearTimeout(row.savedTimer); row.savedTimer = null; }
       row.status.textContent = message || '';
       row.status.setAttribute('data-state', state);
       if (state === 'error') row.status.setAttribute('role', 'alert');
       else row.status.removeAttribute('role');
       row.node.setAttribute('aria-busy', state === 'saving' ? 'true' : 'false');
+      presentGlobalSaveState();
       if (state === 'saved') row.savedTimer = window.setTimeout(function () {
         if (row.desired === null && !row.rawDirty && (!inFlight || inFlight.row !== row)) setStatus(row, 'idle', '');
       }, 1500);
@@ -604,6 +619,7 @@
     }
     function failClosed(row, message) {
       fatal = true;
+      snapshotConfirmed = false;
       page.classList.remove('ks-cart-quantity-async-ready');
       if (row) setStatus(row, 'error', message || 'Aggiorna il carrello prima di proseguire.');
       protectCheckout();
@@ -710,6 +726,7 @@
         if (data && data.reconcile === true) { safeReload(target.row); return; }
         if (response.ok && applySnapshot(data, target)) {
           inFlight = null;
+          snapshotConfirmed = true;
           var unresolved = target.row.desired !== null || target.row.rawDirty;
           setStatus(target.row, unresolved ? 'dirty' : 'saved', unresolved ? '' : 'Salvato');
           try { window.sessionStorage.removeItem(reloadKey); } catch (ignore) {}

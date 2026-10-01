@@ -6,9 +6,9 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261001-cart-checkout-cta1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261001-cart-conversion1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-storefront-currency1a" %>" defer></script>
+    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-cart-conversion1a" %>" defer></script>
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -98,7 +98,14 @@
                 data-endpoint="<%= ResolveUrl("~/cart_quantity_async.aspx") %>"
                 data-csrf="<%= System.Web.HttpUtility.HtmlAttributeEncode(CatalogAsyncCartSupport.GetOrCreateCsrfToken(System.Web.HttpContext.Current)) %>"
                 data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>"></span>
-            <p id="ksCartQuantityCommercialNotice" class="ks-cart-quantity-commercial-notice" role="status" hidden="hidden">Prezzi e condizioni del carrello sono stati aggiornati.</p>
+            <div id="ksCartSaveStatus" class="ks-cart-save-status" aria-hidden="true" hidden="hidden">
+                <span class="ks-cart-save-status__icon"></span>
+                <span data-ks-cart-save-message></span>
+            </div>
+            <div id="ksCartQuantityCommercialNotice" class="ks-cart-quantity-commercial-notice" role="status" hidden="hidden">
+                <strong>Condizioni del carrello aggiornate</strong>
+                <p>Uno o più prezzi o condizioni sono cambiati. Controlla le righe prima di continuare.</p>
+            </div>
             <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
@@ -383,6 +390,7 @@
             </div>
 
             <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">
+                <div class="ks-cart-conditions-heading">Prezzi e condizioni del carrello</div>
                 <asp:Literal ID="litCartPriceRevalidation" runat="server" />
             </asp:Panel>
 
@@ -689,10 +697,9 @@
                         Percentuale:<asp:Label ID="lblPercentuale" runat="server" Text='<%#: Eval("Costo_Percentuale") %>'></asp:Label>
                     </ItemTemplate>
                 </asp:TemplateField>
-                <asp:TemplateField HeaderText="Spesa Minima (IVA incl)">
+                <asp:TemplateField HeaderText="Soglia tariffa promo (IVA incl)">
                     <ItemTemplate>
                         <asp:Label ID="Label2" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue((Convert.ToDecimal(Eval("Soglia_Minima"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) %>'></asp:Label>
-<span style="display:none;"><%# mancano_ancora_number(Eval("Soglia_Minima"), imponibile, imponibile_gratis)%></span>
                         <img src="Public/Images/interrogativo.png" alt="" title="<%# mancano_ancora(Eval("Soglia_Minima"),imponibile, imponibile_gratis)%>" />
                     </ItemTemplate>
                     <HeaderStyle HorizontalAlign="Right" VerticalAlign="Middle" Wrap="True" />
@@ -707,11 +714,6 @@
             <HeaderStyle Font-Bold="False" Font-Size="7pt" HorizontalAlign="Left" ForeColor="#2050AF" Font-Strikeout="False" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
         </asp:GridView>
-        <%If differenzaTrasportoGratis > 0 Then%>
-            <div class="ks-free-shipping-progress">
-                <%="Trasporto gratuito se spendi ancora <b>" & UiPriceFormatter.FormatStorefrontValue(differenzaTrasportoGratis) & "</b>"%>
-            </div>
-        <%End If%>    
         <br />
         <div id="gvVettori_tooltip">
         <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid">
