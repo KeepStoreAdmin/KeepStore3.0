@@ -230,21 +230,30 @@ Partial Class SiteHeader
             Return
         End If
 
+        phFreeShippingTop.Visible = False
+        litFreeShippingTop.Text = String.Empty
+
         Dim minAmount As Decimal = 0D
         Dim hasPromo As Boolean = False
 
         Try
+            If Session Is Nothing Then Return
+            Dim rawListino As Object = Session("Listino")
+            If rawListino Is Nothing Then rawListino = Session("listino")
+            Dim listino As Integer = 0
+            If Not Integer.TryParse(Convert.ToString(rawListino, CultureInfo.InvariantCulture), NumberStyles.Integer, CultureInfo.InvariantCulture, listino) OrElse listino <= 0 Then Return
+
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 conn.Open()
-                Using cmd As New MySqlCommand("SELECT MIN(COALESCE(CostoMinimo,0)) AS CostoMinimo FROM vettori WHERE COALESCE(Promo,0)=1 AND COALESCE(AziendeID,0)=@companyId", conn)
-                    cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
+                Dim companyId As Integer = ResolveHeaderCompanyId(conn)
+                If companyId <= 0 Then Return
+                Using cmd As New MySqlCommand("SELECT MIN(v.CostoMinimo) FROM vettori v WHERE v.Id >= 0 AND v.AziendeID=@companyId AND v.Abilitato=1 AND v.Web=1 AND v.Promo=1 AND v.Promo_Data_Inizio <= CURDATE() AND v.Promo_Data_Fine >= CURDATE() AND LOCATE(CONCAT(';', @listino, ';'), CONCAT(';', COALESCE(v.Listini_Abilitati,''), ';')) > 0 AND v.CostoMinimo > 0 AND EXISTS (SELECT 1 FROM vettoricosti c WHERE c.VettoriId=v.Id AND c.CostoFisso=0 AND c.Costo_Percentuale=0 AND c.Soglia_Minima > 0 AND c.PesoMax > 0)", conn)
+                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
+                    cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
                     Dim raw As Object = cmd.ExecuteScalar()
                     If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
-                        Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.InvariantCulture, minAmount)
-                        If minAmount = 0D Then
-                            Decimal.TryParse(Convert.ToString(raw), NumberStyles.Any, CultureInfo.GetCultureInfo("it-IT"), minAmount)
-                        End If
-                        hasPromo = (minAmount >= 0D)
+                        minAmount = Convert.ToDecimal(raw, CultureInfo.InvariantCulture)
+                        hasPromo = (minAmount > 0D)
                     End If
                 End Using
             End Using
@@ -254,9 +263,9 @@ Partial Class SiteHeader
 
         phFreeShippingTop.Visible = hasPromo
         If hasPromo Then
-            litFreeShippingTop.Text = "Spedizione gratuita per ordini oltre <span class=""fw-semibold text-main"">" &
-                                     HttpUtility.HtmlEncode(minAmount.ToString("C0", CultureInfo.GetCultureInfo("it-IT"))) &
-                                     "</span>"
+            litFreeShippingTop.Text = "Spedizione gratuita da <span class=""fw-semibold text-main"">" &
+                                     HttpUtility.HtmlEncode(UiPriceFormatter.FormatStorefrontValue(minAmount)) &
+                                     "</span> su ordini idonei"
         End If
     End Sub
 
