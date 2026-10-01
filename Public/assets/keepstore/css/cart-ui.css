@@ -467,6 +467,8 @@
 
 .ks-cart-page .ks-cart-buttons .ks-right{
     margin-left: auto;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .ks-cart-page .tf-btn{
@@ -500,6 +502,8 @@
 
 .ks-cart-page .ks-cart-buttons .ks-right .tf-btn{
     min-width: 220px;
+    width: max-content;
+    max-width: 100%;
 }
 
 @media (max-width: 576px){
@@ -546,6 +550,7 @@
     }
     .ks-cart-page .ks-cart-buttons .ks-right{
         margin-left: 0;
+        width: 100%;
     }
     .ks-cart-page .ks-coupon-input{
         max-width: 100%;
