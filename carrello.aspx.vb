@@ -3337,7 +3337,7 @@ End Sub
             End Try
 
             Dim costoVal As Double = SafeMoney(If(Costo IsNot Nothing, Costo.Text, "0"), 0)
-            If costoVal < costo_promo_minimo Then
+            If indice_riga_da_selezionare < 0 OrElse costoVal < costo_promo_minimo Then
                 costo_promo_minimo = costoVal
                 indice_riga_da_selezionare = cont_indice_riga
             End If
