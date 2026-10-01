@@ -1,8 +1,20 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
+## Checkpoint prevalente 2026-10-01 — carrello persistente e guardrail AI
+
+`frontend-rebuild` / `origin/frontend-rebuild` = `a4238abfc8eae7fefbb985672d4cd5bddabf4118`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Persistent anonymous cart = CLOSED A / INTEGRATED: runtime #297 `6789fc1784bd695e3ec2bd0041d13b43154b08de`, cleanup #298 `44016ffc2f29cae1cf235e46e6b115d8035ab6d6`, privacy #299 `a4238abfc8eae7fefbb985672d4cd5bddabf4118`, tutti FF-only senza merge commit. Runtime commerciale integrato non significa runtime AI implementato o production rollout certificato: per il rilascio vale [il runbook](PERSISTENT_ANONYMOUS_CART_DEPLOYMENT_RUNBOOK.md).
+
+Cookie `__Host-KeepStoreCart`, raw secret, `ksc1`, `ksc2`, `OwnerToken`, registry `carrello_anonimo_persistenza`, righe carrello anonime, `LoginId` e dati carrello **NON sono fonti per RAG, embeddings, vector DB, ranking, feed, analytics AI, personalizzazione AI o logging AI**. Nessun crawler/feed/assistant deve esporli o indicizzarli. Il cookie tecnico usato per continuita del carrello non costituisce consenso a impieghi ulteriori; persistenza e merge non ampliano il confine dei dati autorizzati alle integrazioni.
+
+`CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta il separato debito CHIUSO E / DIFFERITO sulla durabilita dei registri anti-replay Session/InProc, non risolto dal registry anonimo. Nessuna logica search/AI viene implementata da questa chiusura.
+
+Prossimo task commerciale storefront: `STOREFRONT-CART-CONVERSION-UX-1A`, NON AVVIATO, dopo review/merge del closeout documentale; poi `GOOGLE-MERCHANT-CENTER-FEED-1A` e `STOREFRONT-ABANDONED-CART-RECOVERY-1A` solo utenti autenticati dopo contratto privacy/consenso. Le integrazioni restano subordinate alle priorita ecommerce e a nuova autorizzazione. Ogni roadmap sotto che descrive persistent cart come futuro o NON AVVIATO e **storica e superata**; non riapre i task integrati.
+
+## Checkpoint precedenti — storico preservato
+
 Checkpoint prevalente 2026-09-25: `SEO-DISCOVERY-CONFIG-SCHEMA-1A` / PR #285 e progettazione modulare **non installata**. `aziende_seo` riguarda soltanto SEO avanzata/Bing/IndexNow; Google, Social/Marketing e TikTok Shop hanno draft distinti, Amazon/eBay riusano strutture esistenti da auditare. Nessuna configurazione provider e Product knowledge, embedding store, vector DB, RAG knowledge base o fonte di prezzo/promo/stock. IndexNow reconciler/sender e nuove integrazioni sono **RINVIATI**; la priorita e HOME -> catalogo/PDP -> MyAccount. I checkpoint storici sotto non riavviano task chiusi o rinviati.
 
-Checkpoint `MULTITENANT-BY-DESIGN`: fondamenta SEO, onboarding, Product structured data, asset runtime, prezzi/account e carrello sono integrate; il checkpoint stabile di base e `2d6ebd540a29ff906a01fa0820ebf65706150408`. `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` estende ora lo stesso confine a ordine, replay, documenti e conferme e-mail; la PR #267 resta DRAFT/non merge-safe dopo lo stop forense REV4 per telemetria checkout non persistita. Search, AI, feed e structured data devono riusare identita tenant e dati autorevoli, mai inferire il cliente da host grezzi, nomi database, esempi merceologici o dati di un altro tenant.
+Checkpoint storico `MULTITENANT-BY-DESIGN` (stato PR superato; guardrail ancora validi): fondamenta SEO, onboarding, Product structured data, asset runtime, prezzi/account e carrello sono integrate; il checkpoint stabile di base e `2d6ebd540a29ff906a01fa0820ebf65706150408`. `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A` estende ora lo stesso confine a ordine, replay, documenti e conferme e-mail; la PR #267 resta DRAFT/non merge-safe dopo lo stop forense REV4 per telemetria checkout non persistita. Search, AI, feed e structured data devono riusare identita tenant e dati autorevoli, mai inferire il cliente da host grezzi, nomi database, esempi merceologici o dati di un altro tenant.
 
 Guardrail permanente: nessun nome cliente, dominio, database o merceologia nel nucleo condiviso; host sconosciuti, ambigui e contaminazione cross-tenant falliscono chiusi; ogni funzione tenant-aware richiede almeno due tenant sintetici. KeepStore supporta database separati e piu vetrine nello stesso database/catalogo, incluse applicazioni IIS separate con configurazioni di deploy distinte: identita, canonical, seller e asset derivano dalla combinazione database configurato + host esatto + unica riga `aziende`, mai dal solo database o dalla prima riga. Login e listino utente sono azienda-scoped; cache e output promo includono database, azienda, listino e owner, e gli errori tecnici non vengono memorizzati come assenza di offerta. Account, carrelli, prezzi e output commerciali non possono attraversare il confine storefront. Nome, descrizione, marca, codice commerciale, EAN/GTIN/MPN, prezzo/valuta, disponibilita, immagini, spedizione e resi sono pubblicabili solo quando reali. Taglia, colore, compatibilita, materiale, peso, alimentazione e altri attributi specifici sono omessi quando mancanti o non applicabili, mai inventati. Migrazioni e stored procedure restano standard e prive di riferimenti cliente.
 
@@ -18,7 +30,7 @@ Regola stato: chiudere un micro-task su `articoli.aspx` non significa dichiarare
 
 Nota anti-false-closure: `articoli.aspx` non e una pagina dichiarata completa. I micro-task chiusi non equivalgono alla parita ONSUS completa. Restano sidebar/facet residui, tassonomie/load-more, active filters legacy/reset, Price/Deals/Condition, Reviews con dati reali, performance, componenti commerciali e responsive complessivo. Pager, posizione recent, quattro viste mobile, compact grid e containment recent non vanno invece lasciati come gap aperti.
 
-Checkpoint corrente 2026-09-19: `frontend-rebuild` / `origin/frontend-rebuild` a `2d6ebd540a29ff906a01fa0820ebf65706150408`; `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. SEO, Product structured data, asset, account/prezzi e carrello multi-storefront sono integrati. Il task corrente certifica provenienza ordine, replay, visibilita documenti ed e-mail tenant-aware senza abilitare dati ordine per search/AI/feed; la PR #267 resta DRAFT. Dopo chiusura e merge, la sequenza e `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A`, persistent anonymous cart, cart conversion UX, Merchant Center e abandoned-cart recovery subordinato a privacy/consenso; tutti `NON AVVIATO`.
+Checkpoint storico 2026-09-19 (superato dal checkpoint 2026-10-01): `frontend-rebuild` / `origin/frontend-rebuild` a `2d6ebd540a29ff906a01fa0820ebf65706150408`; `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. SEO, Product structured data, asset, account/prezzi e carrello multi-storefront sono integrati. Il task corrente certifica provenienza ordine, replay, visibilita documenti ed e-mail tenant-aware senza abilitare dati ordine per search/AI/feed; la PR #267 resta DRAFT. Dopo chiusura e merge, la sequenza e `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A`, persistent anonymous cart, cart conversion UX, Merchant Center e abandoned-cart recovery subordinato a privacy/consenso; tutti `NON AVVIATO`.
 
 Guardrail checkout rilevante anche per future superfici AI/search: ogni esito terminale ha una sola destinazione, interrompe esplicitamente tutti i chiamanti ed e coperto end-to-end; `documenti.aspx` non e mai un fallback per errori checkout. Search e assistenza non devono inventare, sostituire o pilotare destinazioni di checkout, ne diventare fonte di verita per stock, owner, RequestId o idempotenza.
 
@@ -32,13 +44,13 @@ La presentazione anonima usa valori `Decimal` reali: nessuna conversione da test
 
 Vincoli discovery promo/EAN: le label umane `EAN/GTIN` migliorano la chiarezza semantica, ma identificatori strutturati `gtin`, `gtin13`, `gtin14`, JSON-LD, feed, CSV/XML e integrazioni non sono stati modificati. Dopo la parita certificata dalla PR #255, `promozioni.aspx` e ritirata come UI/query e resta soltanto uno shim verso `articoli.aspx?inpromo=1`; e fuori sitemap e non puo comparire in link o canonical. Il listing promo moderno filtrato resta prudenzialmente `noindex,follow`. Questo non dichiara KeepStore `SEO completo`, `Google pronto` o `AI ready`.
 
-Roadmap vigente: parity, retirement, UX promo, HOME async cart, hardening error-state, bulk performance, fondamenta SEO, onboarding, Product structured data, asset, prezzi/account e carrello same-database hanno completato il rispettivo perimetro. Canonical, robots, sitemap e dati strutturati PDP usano l'identita tenant autorevole; host grezzi/alterati e contaminazione cross-tenant falliscono chiusi. Il task corrente e `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`; dopo review A e merge la sequenza e password-manager autofill, persistent anonymous cart, cart conversion UX, Merchant Center e abandoned-cart recovery dopo privacy/consenso. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta un debito distinto, chiuso E e differito; Coupon/Groupon e recesso digitale restano differiti dal Product Owner.
+Roadmap storica superata dal checkpoint 2026-10-01: parity, retirement, UX promo, HOME async cart, hardening error-state, bulk performance, fondamenta SEO, onboarding, Product structured data, asset, prezzi/account e carrello same-database hanno completato il rispettivo perimetro. Canonical, robots, sitemap e dati strutturati PDP usano l'identita tenant autorevole; host grezzi/alterati e contaminazione cross-tenant falliscono chiusi. Il task corrente e `MULTI-STOREFRONT-ORDER-PROVENANCE-EMAIL-1A`; dopo review A e merge la sequenza e password-manager autofill, persistent anonymous cart, cart conversion UX, Merchant Center e abandoned-cart recovery dopo privacy/consenso. `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta un debito distinto, chiuso E e differito; Coupon/Groupon e recesso digitale restano differiti dal Product Owner.
 
-Guardrail login per future superfici AI/search: `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A` e soltanto pianificato e resta `NON AVVIATO`. Potra dichiarare semantica browser standard `username`/`current-password` su HTTPS, ma password e autenticazione non diventano mai dati di retrieval, personalizzazione, log, cookie, Web Storage, Session, ViewState, hidden field, query string o output; salvataggio e riempimento restano una decisione del browser e dell'utente, mentre il logout invalida sempre l'autenticazione.
+Guardrail login per future superfici AI/search: `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A` e gia integrato con #295 (CHIUSO A). Potra dichiarare semantica browser standard `username`/`current-password` su HTTPS, ma password e autenticazione non diventano mai dati di retrieval, personalizzazione, log, cookie, Web Storage, Session, ViewState, hidden field, query string o output; salvataggio e riempimento restano una decisione del browser e dell'utente, mentre il logout invalida sempre l'autenticazione.
 
 Guardrail SEO/AI: crawler, feed e futuri assistenti devono usare esclusivamente URL HTTPS del tenant risolto server-side; non possono fidarsi di `Host`/`X-Forwarded-Host`, mescolare domini, indicizzare carrello/account/documenti/checkout o trasformare query di ricerca, campagne e token in canonical. La sitemap non e un catalogo AI parallelo. Il contratto Google `Product/Offer` riusa prezzo quantita `1`, disponibilita, marca, codice commerciale, GTIN e immagini reali senza duplicare resolver o query; non pubblica owner, sessione, ID tecnici o stock stimato. Un errore commerciale/tenant produce assenza di markup. Feed, resi, spedizioni, varianti e qualunque arricchimento successivo devono consumare lo stesso contratto autorevole e restano task separati.
 
-Guardrail roadmap carrello: il futuro token anonimo persistente e i dati del carrello non diventano input per feed, search, cache condivise o AI. `STOREFRONT-ABANDONED-CART-RECOVERY-1A` puo riguardare soltanto utenti autenticati dopo un contratto esplicito privacy/consenso; non autorizza profilazione, retrieval o messaggi non richiesti. La persistenza delle righe anonime resta distinta dall'idempotenza delle mutazioni.
+Guardrail roadmap carrello: il token anonimo persistente integrato e i dati del carrello non diventano input per feed, search, cache condivise o AI. `STOREFRONT-ABANDONED-CART-RECOVERY-1A` puo riguardare soltanto utenti autenticati dopo un contratto esplicito privacy/consenso; non autorizza profilazione, retrieval o messaggi non richiesti. La persistenza delle righe anonime resta distinta dall'idempotenza delle mutazioni.
 
 Guardrail promo per future superfici search/AI: prezzi, badge, condizioni quantitative e owner derivano dalla risoluzione server-side corrente, anche nei `Visti di recente`; localStorage conserva soltanto cronologia minima e non dati commerciali. Prezzo quantita `1`, vecchio prezzo valido, label `Promo` e percentuale valida non devono duplicarsi; il tier futuro resta separato come `Da ...` con condizione. HOME puo ordinare una vetrina solo dopo lo snapshot autorizzato e deve deduplicare business/display key; percentuale venduta, stock e scadenza devono essere dati reali e non segnali di urgenza inventati. La PDP puo dettagliare le offerte senza ripetere il prezzo principale, inventare date o esporre ID tecnici; il logo marca deriva da `Marche_img` e fallisce sul nome testuale, mai su demo o immagine rotta. Le card con stati opzionali mantengono slot geometrici uniformi senza inventare contenuti. La presentazione non modifica resolver o logica commerciale. La route legacy ritirata non e una fonte dati: input non rappresentabili, incluso `part`, devono fallire chiusi e non allargare i risultati; ReturnUrl e redirect restano locali, non annidati e whitelist-based. Un task UI richiede misure o screenshot reali sui quattro viewport: harness, precompile e HTTP 200 non autorizzano Esito A visuale; disponibilita browser prima dell'audit, test focalizzati durante il fix e suite completa unica alla fine sono guardrail permanenti.
 
@@ -172,7 +184,7 @@ Il comportamento futuro deve derivare il piu possibile da:
 - attributi/varianti gia presenti, come taglia, colore e TC;
 - disponibilita, promo, prezzo, listino e immagini;
 - prodotti visti di recente e ricerche recenti client-side;
-- lo stato UI dei prodotti in carrello esiste gia nello storefront tramite snapshot server-side; il suo eventuale uso come contesto dell'assistente AI/search resta futuro e richiede task privacy/consenso esplicito;
+- lo stato UI dei prodotti in carrello esiste gia nello storefront tramite snapshot server-side, ma non e una fonte dell'assistente AI/search: i dati carrello sono esclusi dal contratto corrente (checkpoint 2026-10-01);
 - configurazioni azienda/sito solo con task dedicato.
 
 Gli esempi merceologici sono linee guida, non logiche da hardcodare:
@@ -349,7 +361,7 @@ AI/LLM resta opzionale e successiva:
 - solo con task dedicato;
 - nessuna API esterna senza autorizzazione;
 - invio fuori sistema solo di dati minimi e autorizzati;
-- nessun dato personale, account o carrello senza task privacy esplicito;
+- nessun dato carrello, cookie/owner o account in retrieval, personalizzazione o logging AI; gli eventuali altri dati personali richiedono un contratto privacy esplicito;
 - risposte vincolate ai prodotti reali;
 - niente consigli inventati;
 - niente promesse su prezzo/disponibilita se non presenti nei dati.
@@ -414,7 +426,7 @@ Regole:
 Vincoli:
 
 - non inviare dati personali a modelli esterni senza autorizzazione;
-- non inviare carrello/account senza task privacy esplicito;
+- non inviare carrello/account, cookie o owner ai modelli e non indicizzarli: esclusione permanente del checkpoint persistent cart;
 - non esporre query SQL o errori tecnici;
 - non restituire `ex.Message` agli utenti;
 - output HTML/JSON sempre encoded;
@@ -522,7 +534,7 @@ Il recesso digitale resta separato da questa roadmap AI e il relativo audit e di
    - audit chiuso B diagnostico/procedibile e runtime chiuso A al commit `68325c1879e2859628b59f297fe2a329b5aadb35`;
    - stato server-side unico per HOME, catalogo e PDP tramite `CartStateSnapshotProvider`, senza N+1 e senza localStorage source-of-truth;
    - PDP totale desiderato/delta e vecchi task `ARTICOLO-CART-QTY-IN-PDP-*` assorbiti;
-   - nessuna abilitazione dei dati carrello per AI/search: uso AI resta futuro e soggetto a privacy/consenso.
+   - nessuna abilitazione dei dati carrello per AI/search: il checkpoint 2026-10-01 li esclude da retrieval, personalizzazione, feed e logging AI.
 
 16. `AI-ASSISTANT-DATA-PROFILE-AUDIT-1A`
    - audit campi e vocabolario per merceologie;
@@ -569,7 +581,7 @@ Ogni task futuro deve dichiarare esplicitamente:
 
 Questa blueprint non implementa AI, chatbot, endpoint, DB, UI runtime o correzioni search. Registra solo architettura e roadmap.
 
-Checkpoint storico cart: `CART-REMOVE-TRANSACTION-HARDENING-1A`, mobile UX, runtime recovery e `ORDER-DURABLE-IDEMPOTENCY-1A` sono chiusi A e integrati. Il checkpoint operativo vigente e quello iniziale del documento; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, relativo al registro anti-replay delle mutazioni, resta E/differito ed e distinto dal futuro carrello anonimo persistente. Recesso digitale e Coupon/Groupon restano differiti.
+Checkpoint storico cart: `CART-REMOVE-TRANSACTION-HARDENING-1A`, mobile UX, runtime recovery e `ORDER-DURABLE-IDEMPOTENCY-1A` sono chiusi A e integrati. Il checkpoint operativo vigente e quello iniziale del documento; `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, relativo al registro anti-replay delle mutazioni, resta E/differito ed e distinto dal carrello anonimo persistente ora integrato. Recesso digitale e Coupon/Groupon restano differiti.
 
 Checkpoint mobile cart: `CART-MOBILE-RESPONSIVE-UX-1A` chiuso A con PR #249 e HEAD `4e1c84a7f0d3528e6479b1b5e2fa6604a8649423`. Il carrello usa card/grid sui viewport touch e conserva la tabella desktop; target 44×44, gerarchia MiniCart ONSUS, accessibilità e assenza di overflow sono verificati. Questo è solo un guardrail storefront: nessun impatto su search, ranking, feed, LLMS, JSON-LD o runtime AI. L’audit di idempotenza persistente resta E/differito e non è risolto.
 
@@ -586,7 +598,7 @@ La compatibilità strutturale non costituisce autorizzazione al deployment. L’
 
 `MULTI-STOREFRONT-CART-ISOLATION-1A` certifica il contratto server-side `database + AziendaId + owner`: `LoginId` autenticato con marker azienda coerente oppure token anonimo opaco tenant-scoped. Snapshot carrello, MiniCart/header, mutazioni, merge login, prezzi/promo e fingerprint idempotente condividono lo stesso scope; un cambio storefront incompatibile fallisce chiuso.
 
-Guardrail AI/search: dati, cache o retrieval futuri non possono usare il solo `LoginId`, `SessionID`, database o articolo come confine; devono includere database sanitizzato, azienda, listino, stato autenticato e owner, senza esporre token o identificativi. Ordini, documenti, ricevute e contenuti e-mail sono inoltre vincolati al `documenti.AziendeId` persistito; non diventano input AI/RAG o feed. Persistent cart e conversion UX precedono Merchant Center nella roadmap corrente, ma restano `NON AVVIATO` fino a review e merge del checkpoint ordine.
+Guardrail AI/search: dati, cache o retrieval futuri non possono usare il solo `LoginId`, `SessionID`, database o articolo come confine; devono includere database sanitizzato, azienda, listino, stato autenticato e owner, senza esporre token o identificativi. Ordini, documenti, ricevute e contenuti e-mail sono inoltre vincolati al `documenti.AziendeId` persistito; non diventano input AI/RAG o feed. Persistent cart e integrato CHIUSO A (#297–#299); conversion UX precede Merchant Center ed e il prossimo task commerciale NON AVVIATO secondo il checkpoint 2026-10-01.
 
 ## Checkpoint ordine multi-storefront
 
