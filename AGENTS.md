@@ -79,15 +79,18 @@ Regola centrale: **CODEX CERCA, ANALIZZA, TESTA E PROPONE; CHATGPT DECIDE; CODEX
 
 ## Profili, modello e investigazione
 
-Ogni prompt dichiara profilo, modello, reasoning e motivazione. Rivalutare la policy se cambiano i modelli; niente rate card.
+Ogni prompt dichiara profilo, modello, reasoning e motivazione, scegliendo il profilo meno costoso compatibile con il rischio. Rivalutare la policy se cambiano i modelli; niente rate card. La disponibilita reale mostrata nel selettore Codex del Product Owner prevale sui modelli storici non piu necessari.
 
-- `ECONOMY`: GPT-5.6 Luna, Medium; docs semplici o modifica meccanica a rischio minimo.
-- `STANDARD`: GPT-5.6 Terra, Medium; sviluppo o bugfix circoscritto.
-- `DEEP`: GPT-5.6 Sol, High; causa incerta, piu componenti, DB, sicurezza o regressioni.
-- `CRITICAL`: GPT-5.6 Sol, Extra High; prezzi, promo, carrello, auth, dati, checkout, ordine, pagamento o cambi trasversali.
-- GPT-6 Astra: solo casi eccezionali trasversali scelti da ChatGPT. Max e Ultra non sono default; Ultra non si usa ordinariamente.
+- `ECONOMY`: GPT-6 Luna, Medium; documentazione semplice, Git/merge, modifiche meccaniche, verifiche circoscritte e operazioni a rischio minimo.
+- `STANDARD`: GPT-6.1 Sol, Medium; sviluppo o bugfix circoscritto con causa nota, UI/UX non critica e implementazioni localizzate.
+- `DEEP`: GPT-6.1 Sol, High; root cause incerta, piu componenti, DB, sicurezza, regressioni e investigazioni tecniche non banali.
+- `CRITICAL`: GPT-6.1 Sol, Extra High/xhigh; modifiche effettive a prezzi, promozioni, carrello, autenticazione, dati, checkout, ordini, pagamenti o contratti trasversali ad alto rischio.
+- `EXCEPTIONAL`: GPT-6 Astra, High, Extra High/xhigh o Max soltanto se giustificato; problemi eccezionalmente complessi e trasversali, architettura ad altissimo rischio o casi in cui GPT-6.1 Sol non e sufficiente, con scelta esplicita di ChatGPT.
+- GPT-6 Sol non e il default: e il modello precedente/fallback rispetto a GPT-6.1 Sol. Usarlo solo se GPT-6.1 Sol non e disponibile oppure per confronto/compatibilita esplicitamente richiesti.
 
-Con causa dimostrata, `ECONOMY`/`STANDARD` possono implementare direttamente. `DEEP` con root cause incerta parte read-only. `CRITICAL` richiede preflight prima delle modifiche, salvo fix gia dimostrato e autorizzato. Il preflight copre secondo pertinenza Git, manifest, chiamanti, schema/indici DB, dipendenze, build, fixture e test. Non separare investigazione e implementazione se cio duplica il lavoro senza ridurre il rischio.
+Il profilo deriva dalla modifica effettivamente richiesta, non dal solo dominio nominale: un merge FF-only di un task cart e `ECONOMY`; documentazione checkout e `ECONOMY`; un fix UI circoscritto e `STANDARD`; audit root cause DB/cart e `DEEP`; una modifica runtime owner/pricing/auth/checkout e `CRITICAL`. Citare carrello, autenticazione o ordini senza modificare il relativo runtime non assegna automaticamente `CRITICAL`.
+
+Con causa dimostrata, `ECONOMY`/`STANDARD` possono implementare direttamente. `DEEP` con root cause incerta parte read-only. `CRITICAL` richiede preflight proporzionato al rischio prima delle modifiche, salvo fix gia dimostrato e autorizzato. Il preflight copre secondo pertinenza Git, manifest, chiamanti, schema/indici DB, dipendenze, build, fixture e test. Non separare investigazione e implementazione se cio duplica il lavoro senza ridurre il rischio. Un test fallito non comporta da solo l'escalation: distinguere prima errore ambiente, fixture, prerequisito disattivato e difetto reale del codice. Escalare modello o reasoning solo quando aumenta concretamente la probabilita di risolvere un problema tecnico complesso. Astra richiede escalation esplicita.
 
 ## Stack e divieti tecnici
 
