@@ -3746,7 +3746,7 @@ strWhere = strWhere & " GROUP BY id"
         End If
 
         If price <= 0D Then Return "Prezzo su richiesta"
-        Return price.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+        Return UiPriceFormatter.FormatStorefrontAmount(price)
     End Function
 
     Protected Function CatalogPriceHtml(ByVal dataItem As Object) As String
@@ -3797,7 +3797,7 @@ strWhere = strWhere & " GROUP BY id"
 
         If hasDefaultQuantityPromo Then
             If basePrice > 0D Then
-                oldPriceText = basePrice.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+                oldPriceText = UiPriceFormatter.FormatStorefrontAmount(basePrice)
             End If
 
             Dim promoPrice As Decimal = CatalogDefaultQuantityPromoPrice(promoModel)

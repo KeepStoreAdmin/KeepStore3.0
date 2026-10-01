@@ -34,7 +34,7 @@ Protected Overrides Sub InitializeCulture()
 End Sub
 
 Private Shared Function FormatCurrencyIt(ByVal value As Double) As String
-    Return value.ToString("N2", CartCulture) & " " & ChrW(8364)
+    Return UiPriceFormatter.FormatStorefrontAmount(value)
 End Function
 
 Private Shared Function FormatPromoDateOnly(ByVal value As Object) As String
@@ -3162,7 +3162,7 @@ End Sub
         If Me.cbAssicurazione.Checked Then
             Me.lblSpeseAss.Text = Me.lblAssicurazione.Text
         Else
-            Me.lblSpeseAss.Text = ChrW(8364) & " 0,00"
+            Me.lblSpeseAss.Text = FormatCurrencyIt(0D)
         End If
     End Sub
 
@@ -3273,7 +3273,7 @@ End Sub
         Try
             If lbl IsNot Nothing Then lbl.Text = FormatCurrencyIt(totPagamento)
         Catch
-            If lbl IsNot Nothing Then lbl.Text = ChrW(8364) & " 0,00"
+            If lbl IsNot Nothing Then lbl.Text = FormatCurrencyIt(0D)
         End Try
 
         If rb IsNot Nothing AndAlso RbGetChecked(rb) = True AndAlso RbGetEnabled(rb) = True Then

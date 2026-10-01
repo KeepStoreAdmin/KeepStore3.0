@@ -84,9 +84,9 @@
     <br />
     Prezzo Min &nbsp;
     <asp:TextBox ID="TextBox_PrezzoMin" runat="server" Width="50px">,00</asp:TextBox>
-    € &nbsp; Max &nbsp;
+    &nbsp; Max &nbsp;
     <asp:TextBox ID="TextBox_PrezzoMax" runat="server" Width="50px">,00</asp:TextBox>
-    €<br />
+    <br />
     <br />
     Descrizione &nbsp;
     <asp:TextBox ID="Text_Descrizione" runat="server" Width="200px"></asp:TextBox><br />

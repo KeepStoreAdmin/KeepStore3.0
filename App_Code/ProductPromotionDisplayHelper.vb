@@ -363,7 +363,7 @@ Public Module ProductPromotionDisplayHelper
     End Function
 
     Private Function FormatMoney(ByVal value As Decimal) As String
-        Return value.ToString("C2", ItCulture)
+        Return UiPriceFormatter.FormatStorefrontAmount(value)
     End Function
 
     Private Function FormatDateRange(ByVal startDate As Nullable(Of Date), ByVal endDate As Nullable(Of Date)) As String

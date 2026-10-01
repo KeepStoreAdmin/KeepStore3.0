@@ -185,7 +185,7 @@
                                 </div>
                                 <div class="infor-center">
                                     <div class="product-info-price">
-                                        <h4 class="text-primary" id="ksQuickViewPrice">€0,00</h4>
+                                        <h4 class="text-primary" id="ksQuickViewPrice">0,00</h4>
                                     </div>
                                     <div class="product-progress-sale mt-3">
                                         <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
@@ -313,7 +313,7 @@
         })();
         </script>
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20260925-mobile-catalog-a11y1"></script>
+        <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20261001-storefront-currency1a"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
         <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260929-cart-quantity-async-ux-1b"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />

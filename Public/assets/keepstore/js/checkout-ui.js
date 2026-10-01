@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  // Presentation only: preserve server text separators and never parse amounts.
+  function storefrontMoneyText(value) {
+    return String(value).replace(/\u20ac/g, '').trim();
+  }
+
   // KeepStore UI - Checkout enhancements (stabili)
   // Obiettivo: migliorare UX senza alterare markup/ID/server logic.
 
@@ -660,8 +665,9 @@
         [['price-net', item.priceNetText], ['price-gross', item.priceGrossText],
          ['total-net', item.rowTotalNetText], ['total-gross', item.rowTotalGrossText]].forEach(function (pair) {
           var display = qs('[data-ks-cart-' + pair[0] + ']', row.node);
-          if (pair[0].indexOf('price-') === 0 && display.textContent.trim() !== pair[1].trim()) commercialVisualChange = true;
-          display.textContent = pair[1];
+          var visualText = storefrontMoneyText(pair[1]);
+          if (pair[0].indexOf('price-') === 0 && storefrontMoneyText(display.textContent) !== visualText) commercialVisualChange = true;
+          display.textContent = visualText;
         });
         var badge = qs('[data-ks-free-shipping-badge]', row.node);
         if (badge.hidden === item.freeShipping) commercialVisualChange = true;
@@ -677,7 +683,7 @@
         }
         updateMinus(row);
       });
-      subtotal.textContent = ivaTipo === '1' ? data.cart.subtotalNetText : data.cart.subtotalGrossText;
+      subtotal.textContent = storefrontMoneyText(ivaTipo === '1' ? data.cart.subtotalNetText : data.cart.subtotalGrossText);
       headingCount.textContent = String(data.cart.count);
       if (data.commercialChanges === true || commercialVisualChange) commercialNotice.hidden = false;
       return true;

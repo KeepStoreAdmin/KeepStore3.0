@@ -2507,7 +2507,7 @@ Partial Class articolo
     End Function
 
     Private Function FormatMoney(value As Decimal) As String
-        Return value.ToString("C2", ItCulture)
+        Return UiPriceFormatter.FormatStorefrontAmount(value)
     End Function
 
     Private Function FirstPositiveDecimal(ParamArray values() As Nullable(Of Decimal)) As Nullable(Of Decimal)

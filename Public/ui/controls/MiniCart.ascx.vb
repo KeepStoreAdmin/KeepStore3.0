@@ -126,9 +126,9 @@ Partial Class MiniCart
 
     Private Function FormatCurrency(ByVal amount As Decimal) As String
         Try
-            Return amount.ToString("N2", CultureInfo.GetCultureInfo("it-IT")) & " " & ChrW(8364)
+            Return UiPriceFormatter.FormatStorefrontAmount(amount)
         Catch
-            Return amount.ToString("N2") & " " & ChrW(8364)
+            Return amount.ToString("N2")
         End Try
     End Function
 

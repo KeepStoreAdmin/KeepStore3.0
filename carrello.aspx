@@ -6,9 +6,9 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20260929-cart-mutation-recovery-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261001-storefront-currency1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20260929-cart-mutation-recovery-1a" %>" defer></script>
+    <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-storefront-currency1a" %>" defer></script>
 
 </asp:Content>
 <asp:Content ID="Content2" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -163,9 +163,9 @@
                                     <td data-cart-title="Prezzo unitario" class="tf-cart-item_price">
                                         <span class="ks-cart-mobile-label">Prezzo unitario</span>
                                         <p class="cart-price price-text fw-medium">
-                                            <span class="ks-cart-server-value"><asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label></span>
-                                            <span data-ks-cart-price-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %></span>
-                                            <span data-ks-cart-price-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %></span>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("PrezzoIvato")) %>'></asp:Label><asp:Label ID="lblPrezzo" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("Prezzo")) %>'></asp:Label></span>
+                                            <span data-ks-cart-price-net><%# UiPriceFormatter.FormatStorefrontValue(Eval("Prezzo")) %></span>
+                                            <span data-ks-cart-price-gross><%# UiPriceFormatter.FormatStorefrontValue(Eval("PrezzoIvato")) %></span>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
@@ -187,9 +187,9 @@
                                     <td data-cart-title="Totale riga" class="tf-cart-item_total">
                                         <span class="ks-cart-mobile-label">Totale riga</span>
                                         <p class="cart-total total-price price-text fw-medium">
-                                            <span class="ks-cart-server-value"><asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label></span>
-                                            <span data-ks-cart-total-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %></span>
-                                            <span data-ks-cart-total-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %></span>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblImportoIvato" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("ImportoIvato")) %>'></asp:Label><asp:Label ID="lblImporto" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("Importo")) %>' Visible="false"></asp:Label></span>
+                                            <span data-ks-cart-total-net><%# UiPriceFormatter.FormatStorefrontValue(Eval("Importo")) %></span>
+                                            <span data-ks-cart-total-gross><%# UiPriceFormatter.FormatStorefrontValue(Eval("ImportoIvato")) %></span>
                                         </p>
                                     </td>
 
@@ -284,9 +284,9 @@
                                     <td data-cart-title="Prezzo unitario" class="tf-cart-item_price">
                                         <span class="ks-cart-mobile-label">Prezzo unitario</span>
                                         <p class="cart-price price-text fw-medium">
-                                            <span class="ks-cart-server-value"><asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblPrezzo" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %>'></asp:Label></span>
-                                            <span data-ks-cart-price-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Prezzo")) & " " & ChrW(8364) %></span>
-                                            <span data-ks-cart-price-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("PrezzoIvato")) & " " & ChrW(8364) %></span>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblPrezzoIvato" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("PrezzoIvato")) %>'></asp:Label><asp:Label ID="lblPrezzo" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("Prezzo")) %>'></asp:Label></span>
+                                            <span data-ks-cart-price-net><%# UiPriceFormatter.FormatStorefrontValue(Eval("Prezzo")) %></span>
+                                            <span data-ks-cart-price-gross><%# UiPriceFormatter.FormatStorefrontValue(Eval("PrezzoIvato")) %></span>
                                         </p>
                                         <p class="body-text-3 text-secondary"><%= IIf(Me.Session("IvaTipo") = 1, "+", "")%>IVA. <%#: Eval("ValoreIva")%>%</p>
                                     </td>
@@ -308,9 +308,9 @@
                                     <td data-cart-title="Totale riga" class="tf-cart-item_total">
                                         <span class="ks-cart-mobile-label">Totale riga</span>
                                         <p class="cart-total total-price price-text fw-medium">
-                                            <span class="ks-cart-server-value"><asp:Label ID="lblImportoIvato" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %>'></asp:Label><asp:Label ID="lblImporto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %>' Visible="false"></asp:Label></span>
-                                            <span data-ks-cart-total-net><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364) %></span>
-                                            <span data-ks-cart-total-gross><%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364) %></span>
+                                            <span class="ks-cart-server-value"><asp:Label ID="lblImportoIvato" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("ImportoIvato")) %>'></asp:Label><asp:Label ID="lblImporto" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("Importo")) %>' Visible="false"></asp:Label></span>
+                                            <span data-ks-cart-total-net><%# UiPriceFormatter.FormatStorefrontValue(Eval("Importo")) %></span>
+                                            <span data-ks-cart-total-gross><%# UiPriceFormatter.FormatStorefrontValue(Eval("ImportoIvato")) %></span>
                                         </p>
                                     </td>
 
@@ -495,41 +495,41 @@
                             <h4 class="title">Riepilogo ordine</h4>
                             <div class="ks-cart-subtotal-card">
                                 <span class="ks-info-label">Totale articoli</span>
-                                <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="&#8364; 0,00" CssClass="ks-cart-subtotal-value" data-ks-cart-subtotal="true"></asp:Label></strong>
+                                <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="0,00" CssClass="ks-cart-subtotal-value" data-ks-cart-subtotal="true"></asp:Label></strong>
                                 <p class="body-text-3">Spedizione, pagamento e costi checkout saranno calcolati nello step successivo.</p>
                             </div>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
                                 <td align="right">Imponibile:</td>
-                                <td align="right"><asp:Label ID="lblImponibile" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblImponibile" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">Spedizione:</td>
-                                <td align="right"><asp:Label ID="lblSpeseSped" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblSpeseSped" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">Assicurazione:</td>
-                                <td align="right"><asp:Label ID="lblSpeseAss" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblSpeseAss" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">IVA:</td>
-                                <td align="right"><asp:Label ID="lblIva" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblIva" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">Pagamento:</td>
-                                <td align="right"><asp:Label ID="lblPagamento" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblPagamento" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">Buono Sconto:</td>
-                                <td align="right"><asp:Label ID="lblBuonoSconto" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblBuonoSconto" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr>
                                 <td align="right">Buono Sconto IVA:</td>
-                                <td align="right"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="&#8364; 0,00" Font-Bold="true"></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblBuonoScontoIVA" runat="server" Text="0,00" Font-Bold="true"></asp:Label></td>
                             </tr>
                             <tr class="ks-summary-total-row">
                                 <td align="right"><b>Totale:</b></td>
-                                <td align="right"><asp:Label ID="lblTotale" runat="server" Text="&#8364; 0,00" Font-Bold="true" CssClass="ks-total" ></asp:Label></td>
+                                <td align="right"><asp:Label ID="lblTotale" runat="server" Text="0,00" Font-Bold="true" CssClass="ks-total" ></asp:Label></td>
                             </tr>
                         </table>
                         <div class="ks-cart-trust-list">
@@ -674,9 +674,9 @@
                 <asp:TemplateField HeaderText="Costo">
                     <ItemTemplate>
                     <% If (Me.Session("IvaTipo") = 1) Then%>
-                        <asp:Label ID="lblCosto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("CostoFisso")) & " " & ChrW(8364) %>'></asp:Label>
+                        <asp:Label ID="lblCosto" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("CostoFisso")) %>'></asp:Label>
                     <%Else%>
-                        <asp:Label ID="Label10" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", (Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) & " " & ChrW(8364) %>'></asp:Label>
+                        <asp:Label ID="Label10" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue((Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) %>'></asp:Label>
                     <%End If%>
                     </ItemTemplate>
                     <ItemStyle Width="130px" Wrap="False" Font-Size="7pt" HorizontalAlign="Right" VerticalAlign="Middle" />
@@ -691,7 +691,7 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Spesa Minima (IVA incl)">
                     <ItemTemplate>
-                        <asp:Label ID="Label2" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", (Convert.ToDecimal(Eval("Soglia_Minima"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) & " " & ChrW(8364) %>'></asp:Label>
+                        <asp:Label ID="Label2" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue((Convert.ToDecimal(Eval("Soglia_Minima"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) %>'></asp:Label>
 <span style="display:none;"><%# mancano_ancora_number(Eval("Soglia_Minima"), imponibile, imponibile_gratis)%></span>
                         <img src="Public/Images/interrogativo.png" alt="" title="<%# mancano_ancora(Eval("Soglia_Minima"),imponibile, imponibile_gratis)%>" />
                     </ItemTemplate>
@@ -709,7 +709,7 @@
         </asp:GridView>
         <%If differenzaTrasportoGratis > 0 Then%>
             <div class="ks-free-shipping-progress">
-                <%="Trasporto gratuito se spendi ancora <b>" & String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", differenzaTrasportoGratis) & " " & ChrW(8364) & "</b>"%>
+                <%="Trasporto gratuito se spendi ancora <b>" & UiPriceFormatter.FormatStorefrontValue(differenzaTrasportoGratis) & "</b>"%>
             </div>
         <%End If%>    
         <br />
@@ -798,9 +798,9 @@
                     </EditItemTemplate>
                     <ItemTemplate>
                     <% If (Me.Session("IvaTipo") = 1) Then%>
-                        <asp:Label ID="lblCosto" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("CostoFisso")) & " " & ChrW(8364) %>'></asp:Label>
+                        <asp:Label ID="lblCosto" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue(Eval("CostoFisso")) %>'></asp:Label>
                     <%else %>
-                        <asp:Label ID="Label9" runat="server" Text='<%# String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", (Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) & " " & ChrW(8364) %>'></asp:Label>
+                        <asp:Label ID="Label9" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue((Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) %>'></asp:Label>
                     <%End If%>
                     </ItemTemplate>
                     <HeaderStyle HorizontalAlign="Right" />
@@ -856,11 +856,11 @@
                                 <asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" />
                                 <span>Aggiungi assicurazione spedizione</span>
                             </label>
-                            <span class="text-primary fw-semibold"><asp:Label ID="lblAssicurazione" runat="server" Text="€ 0,00" /></span>
+                            <span class="text-primary fw-semibold"><asp:Label ID="lblAssicurazione" runat="server" Text="0,00" /></span>
                         </div>
                         <div class="d-none">
                             <asp:CheckBox ID="cbContrassegno" runat="server" AutoPostBack="True" />
-                            <asp:Label ID="lblContrassegno" runat="server" Text="€ 0,00" />
+                            <asp:Label ID="lblContrassegno" runat="server" Text="0,00" />
                         </div>
 					<table cellpadding="1" width="100%">
 					</table>
@@ -946,7 +946,7 @@
 							</asp:TemplateField>
 							<asp:TemplateField HeaderText="Costo">
 								<ItemTemplate>
-									<asp:Label ID="lblCosto" runat="server" Text='&#8364; 0,00'></asp:Label>
+									<asp:Label ID="lblCosto" runat="server" Text='0,00'></asp:Label>
 								</ItemTemplate>
 								<ItemStyle HorizontalAlign="Right" Wrap="False" />
 							</asp:TemplateField>
@@ -1390,7 +1390,7 @@
                                                         <span>Q.tà <strong><%# Eval("Qnt") %></strong></span>
                                                         <span class="ks-summary-free">Spedizione gratis</span>
                                                     </div>
-                                                    <span class="price-text fw-semibold"><%# IIf(Me.Session("IvaTipo") = 1, String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364), String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364)) %></span>
+                                                    <span class="price-text fw-semibold"><%# IIf(Me.Session("IvaTipo") = 1, UiPriceFormatter.FormatStorefrontValue(Eval("Importo")), UiPriceFormatter.FormatStorefrontValue(Eval("ImportoIvato"))) %></span>
                                                 </div>
                                             </li>
                                         </ItemTemplate>
@@ -1410,7 +1410,7 @@
                                                         <span>Q.tà <strong><%# Eval("Qnt") %></strong></span>
                                                         <span><%# Eval("Codice") %></span>
                                                     </div>
-                                                    <span class="price-text fw-semibold"><%# IIf(Me.Session("IvaTipo") = 1, String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("Importo")) & " " & ChrW(8364), String.Format(System.Globalization.CultureInfo.GetCultureInfo("it-IT"), "{0:N2}", Eval("ImportoIvato")) & " " & ChrW(8364)) %></span>
+                                                    <span class="price-text fw-semibold"><%# IIf(Me.Session("IvaTipo") = 1, UiPriceFormatter.FormatStorefrontValue(Eval("Importo")), UiPriceFormatter.FormatStorefrontValue(Eval("ImportoIvato"))) %></span>
                                                 </div>
                                             </li>
                                         </ItemTemplate>

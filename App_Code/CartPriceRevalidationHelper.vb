@@ -505,7 +505,7 @@ Public Module CartPriceRevalidationHelper
     End Function
 
     Private Function FormatCurrencyIt(ByVal value As Decimal) As String
-        Return value.ToString("N2", PriceCulture) & " " & ChrW(8364)
+        Return UiPriceFormatter.FormatStorefrontAmount(value)
     End Function
 
     Private Function SessionText(ByVal ctx As HttpContext, ByVal key As String, ByVal defaultValue As String) As String

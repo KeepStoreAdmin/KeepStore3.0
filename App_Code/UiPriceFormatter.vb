@@ -141,8 +141,28 @@ Public Module UiPriceFormatter
         Return 0D
     End Function
 
+    ' Storefront presentation only: currency remains in the global EUR context.
+    ' Never use these helpers for gateway amounts or machine-readable contracts.
+    Public Function FormatStorefrontAmount(ByVal value As Decimal, Optional ByVal decimalPlaces As Integer = 2) As String
+        Return value.ToString(StorefrontNumberFormat(decimalPlaces), PriceCulture)
+    End Function
+
+    ' Preserve legacy Double formatting without converting commercial values.
+    Public Function FormatStorefrontAmount(ByVal value As Double, Optional ByVal decimalPlaces As Integer = 2) As String
+        Return value.ToString(StorefrontNumberFormat(decimalPlaces), PriceCulture)
+    End Function
+
+    Public Function FormatStorefrontValue(ByVal value As Object, Optional ByVal decimalPlaces As Integer = 2) As String
+        Return String.Format(PriceCulture, "{0:" & StorefrontNumberFormat(decimalPlaces) & "}", value)
+    End Function
+
+    Private Function StorefrontNumberFormat(ByVal decimalPlaces As Integer) As String
+        If decimalPlaces < 0 OrElse decimalPlaces > 99 Then Throw New ArgumentOutOfRangeException("decimalPlaces")
+        Return "N" & decimalPlaces.ToString(CultureInfo.InvariantCulture)
+    End Function
+
     Private Function FormatPrice(ByVal value As Decimal) As String
-        Return value.ToString("N2", PriceCulture) & " " & ChrW(8364)
+        Return FormatStorefrontAmount(value)
     End Function
 
     Private Function NormalizeDecimalString(ByVal value As String) As String

@@ -25,7 +25,7 @@
                             <i class="icon icon-budget"></i>
                             <div class="tf-curs">
                                 <select class="image-select center style-default type-cur" aria-label="Valuta" disabled="disabled">
-                                    <option selected>EUR (&euro;)</option>
+                                    <option selected>EUR</option>
                                 </select>
                             </div>
                         </div>
@@ -279,7 +279,7 @@
             <div class="bottom-bar-language bar-lang">
                 <div class="tf-curs">
                     <select class="image-select center style-default type-cur" aria-label="Valuta" disabled="disabled">
-                        <option selected>EUR (&euro;)</option>
+                        <option selected>EUR</option>
                     </select>
                 </div>
                 <div class="tf-lans">

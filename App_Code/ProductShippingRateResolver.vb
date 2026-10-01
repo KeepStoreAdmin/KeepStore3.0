@@ -80,7 +80,7 @@ Public NotInheritable Class ProductShippingRateResolver
                             .SortOrder = ReaderInt(rdr, "Ordinamento", 0),
                             .MaximumWeightKg = ReaderDecimal(rdr, "PesoMax", 0D),
                             .NetCost = netCost,
-                            .DisplayCost = displayCostValue.ToString("N2", ItCulture) & " " & ChrW(8364),
+                            .DisplayCost = UiPriceFormatter.FormatStorefrontAmount(displayCostValue),
                             .LogoUrl = ResolveLogoUrl(ReaderString(rdr, "Img"), carrierLogoPhysicalRoot),
                             .LogoAlt = "Logo " & description
                         })

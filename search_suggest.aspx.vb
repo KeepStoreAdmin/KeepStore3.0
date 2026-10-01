@@ -488,7 +488,7 @@ Partial Public Class search_suggest
 
     Private Function SerializeIntent(ByVal intent As QueryIntent, ByVal filters As SearchFilters, ByVal count As Integer) As Dictionary(Of String, Object)
         Dim summary As String = "Ho interpretato la richiesta come ricerca " & intent.IntentName & "."
-        If intent.MaxPrice > 0D OrElse filters.MaxPrice > 0D Then summary &= " Budget massimo: " & If(filters.MaxPrice > 0D, filters.MaxPrice, intent.MaxPrice).ToString("C0", ItCulture) & "."
+        If intent.MaxPrice > 0D OrElse filters.MaxPrice > 0D Then summary &= " Budget massimo: " & UiPriceFormatter.FormatStorefrontAmount(If(filters.MaxPrice > 0D, filters.MaxPrice, intent.MaxPrice), 0) & "."
         If filters.SoloDisponibili Then summary &= " Priorita ai prodotti disponibili."
         If filters.SoloPromo Then summary &= " Priorita alle offerte."
         If filters.SoloRicondizionati Then summary &= " Filtro ricondizionati attivo."

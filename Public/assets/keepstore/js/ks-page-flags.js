@@ -322,7 +322,7 @@
     window.location.href = item.url;
     return true;
   }
-  function priceText(value) { return value ? ('&euro;' + esc(value)) : ''; }
+  function priceText(value) { return value ? esc(value) : ''; }
   function renderSuggestMessage(root, message) {
     var box = ensureSuggest(root);
     box.innerHTML = '<div class="ks-suggest-empty">' + esc(message) + '</div>';
@@ -562,9 +562,12 @@
       if (!src || /logo|brand|payment|placeholder|nofoto/i.test(src)) return;
       var title = txt(q(card, '.name-product a,.product-title a,h6 a,h5 a,.title a') || a);
       if (!title || title.length < 4 || /scopri|catalogo|categoria/i.test(title)) return;
-      var priceMatch = txt(card).match(/\d{1,5}(?:[\.,]\d{2})\s*€/g);
+      // Use authoritative price markup, never scrape arbitrary card numbers.
+      var priceNode = q(card, '.ks-home-price-value--current');
+      var priceSource = q(card, '[data-ks-price]');
+      var price = priceNode ? txt(priceNode) : (priceSource ? priceSource.getAttribute('data-ks-price') || '' : '');
       seen[id] = 1;
-      out.push({ id: id, url: href, title: title, image: src, image_fallback: src, price: priceMatch && priceMatch.length ? priceMatch[priceMatch.length - 1].replace('€','').trim() : '', brand: '', category: 'HOME', reason: 'Fallback locale dalla HOME.', badges: ['HOME'] });
+      out.push({ id: id, url: href, title: title, image: src, image_fallback: src, price: price, brand: '', category: 'HOME', reason: 'Fallback locale dalla HOME.', badges: ['HOME'] });
     });
     return out;
   }

@@ -360,8 +360,9 @@ End Sub
                 cifre_da_visualizzare = "Images/cifre_no/"
             End If
 
-            If temp.Length >= 6 Then
-                temp = temp.Substring(2)
+            img_cifra9.Visible = False
+            If temp.Length >= 4 Then
+                ' Numeric text has no currency prefix: preserve every price digit.
                 img_cifra1.ImageUrl = cifre_da_visualizzare & temp(temp.Length - 1) & ".png"
                 img_cifra2.ImageUrl = cifre_da_visualizzare & temp(temp.Length - 2) & ".png"
                 img_cifra3.ImageUrl = cifre_da_visualizzare & "v.png"
@@ -396,8 +397,6 @@ End Sub
                     img_cifra8.Visible = False
                 End If
 
-                img_cifra9.ImageUrl = cifre_da_visualizzare & "e.png"
-                img_cifra9.Visible = True
             End If
             ' ---------------------------------------------------------------------------------
 
@@ -561,15 +560,15 @@ End Sub
             End If
 
             If IvaTipo = 1 Then
-                Offerta.Text = Offerta.Text & " A € " & FormatNumber(PrezzoPromo.Text, 2)
-                ParentPrezzoPromo.Text = "€ " & FormatNumber(PrezzoPromo.Text, 2)
+                Offerta.Text = Offerta.Text & " A " & FormatNumber(PrezzoPromo.Text, 2)
+                ParentPrezzoPromo.Text = FormatNumber(PrezzoPromo.Text, 2)
                 ParentPrezzo.Visible = True
                 ParentPrezzo.Font.Strikeout = True
 
                 temp = ParentPrezzoPromo.Text
             ElseIf IvaTipo = 2 Then
-                Offerta.Text = Offerta.Text & " A € " & FormatNumber(PrezzoPromoIvato.Text, 2)
-                ParentPrezzoPromo.Text = "€ " & FormatNumber(PrezzoPromoIvato.Text, 2)
+                Offerta.Text = Offerta.Text & " A " & FormatNumber(PrezzoPromoIvato.Text, 2)
+                ParentPrezzoPromo.Text = FormatNumber(PrezzoPromoIvato.Text, 2)
                 ParentPrezzoIvato.Visible = True
                 ParentPrezzoIvato.Font.Strikeout = True
 
@@ -584,7 +583,8 @@ End Sub
                 cifre_da_visualizzare = "Images/cifre_no/"
             End If
 
-            temp = temp.Substring(2)
+            ' Match the standard digits renderer; separators are not digit assets.
+            temp = temp.Replace(".", "")
             img_cifra1.ImageUrl = cifre_da_visualizzare & temp(temp.Length - 1) & ".png"
             img_cifra2.ImageUrl = cifre_da_visualizzare & temp(temp.Length - 2) & ".png"
             img_cifra3.ImageUrl = cifre_da_visualizzare & "v.png"
@@ -611,8 +611,8 @@ End Sub
                 img_cifra8.Visible = True
             End If
 
-            img_cifra9.ImageUrl = cifre_da_visualizzare & "e.png"
-            img_cifra9.Visible = True
+            ' Keep the legacy digits renderer; omit only its currency glyph.
+            img_cifra9.Visible = False
 
             ' ---------------------------------------------------------------------------------
         End If

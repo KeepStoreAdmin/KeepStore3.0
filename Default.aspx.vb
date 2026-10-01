@@ -2180,7 +2180,7 @@ Partial Public Class _Default
 
     Protected Function FormatMoney(ByVal value As Object) As String
         Dim amount As Decimal = ToDecimal(value)
-        Return amount.ToString("N2", ItCulture) & " " & ChrW(8364)
+        Return UiPriceFormatter.FormatStorefrontAmount(amount)
     End Function
 
     Protected Function AvailabilityPercent(ByVal giacenza As Object, ByVal sold As Object) As Decimal
