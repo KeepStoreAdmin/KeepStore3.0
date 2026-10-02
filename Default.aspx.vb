@@ -18,6 +18,7 @@ Partial Public Class _Default
 
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private Shared ReadOnly Rng As New Random()
+    Private _priceDisplayContext As StorefrontPriceDisplayContext
     Private ReadOnly _homePromotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
 
     Protected ReadOnly Property HomeAsyncCartToken As String
@@ -27,6 +28,16 @@ Partial Public Class _Default
     End Property
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
+        _priceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        If _priceDisplayContext Is Nothing OrElse
+           _priceDisplayContext.CompanyId <> GetCurrentAziendaId() OrElse
+           _priceDisplayContext.PriceListId <= 0 Then
+            Response.StatusCode = 421
+            Response.TrySkipIisCustomErrors = True
+            HomePriceDisplayNote.Visible = False
+            Return
+        End If
+        litHomePriceDisplayLabel.Text = HttpUtility.HtmlEncode(_priceDisplayContext.DisplayLabel)
         MarkBodyAsHome()
         ApplyHomeSeo()
         If Not IsPostBack Then
@@ -209,6 +220,10 @@ Partial Public Class _Default
         If HomeRecentlyViewedSection IsNot Nothing Then
             HomeRecentlyViewedSection.Visible = True
         End If
+
+        HomePriceDisplayNote.Visible = Not IsTableEmpty(featuredRows) OrElse
+                                       Not IsTableEmpty(dealRows) OrElse
+                                       Not IsTableEmpty(bestRows) OrElse Not IsTableEmpty(recentRows)
 
         If HomeLowerColumnsSection IsNot Nothing Then
             HomeLowerColumnsSection.Visible = False
@@ -925,8 +940,12 @@ Partial Public Class _Default
                                      ByVal orderClause As String,
                                      ByVal limit As Integer,
                                      Optional ByVal requireAuthorizedPromotion As Boolean = False) As DataTable
-        Dim prezzoIvatoSql As String = BuildPrezzoIvatoSql()
-        Dim prezzoPromoIvatoSql As String = BuildPrezzoPromoIvatoSql()
+        Dim prezzoIvatoSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+            "v.Prezzo", "v.PrezzoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
+            "@ksRcEnabled", "@ksHasVatOverride", "@ksVatOverride")
+        Dim prezzoPromoIvatoSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+            "v.PrezzoPromo", "v.PrezzoPromoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
+            "@ksRcEnabled", "@ksHasVatOverride", "@ksVatOverride")
 
         Dim sql As New StringBuilder()
         sql.Append("SELECT ")
@@ -990,6 +1009,9 @@ Partial Public Class _Default
             Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
                 Using cmd As New MySqlCommand(sql.ToString(), conn)
                     cmd.Parameters.AddWithValue("@listino", GetCurrentListino())
+                    cmd.Parameters.Add("@ksRcEnabled", MySqlDbType.Int32).Value = If(_priceDisplayContext.ReverseChargeEnabled, 1, 0)
+                    cmd.Parameters.Add("@ksHasVatOverride", MySqlDbType.Int32).Value = If(_priceDisplayContext.VatOverride.HasValue, 1, 0)
+                    cmd.Parameters.Add("@ksVatOverride", MySqlDbType.Decimal).Value = _priceDisplayContext.VatOverride.GetValueOrDefault()
                     cmd.Parameters.AddWithValue("@closedState", GetClosedOrderState())
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
@@ -1018,7 +1040,7 @@ Partial Public Class _Default
         Dim listino As Integer = GetCurrentListino()
         Dim eligibilityContext As ProductPromotionEligibilityContext =
             ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, GetCurrentAziendaId(), listino)
-        Dim useNetPrices As Boolean = UseNetPriceDisplay()
+        Dim useNetPrices As Boolean = _priceDisplayContext.IsVatExcluded
 
         For Each row As DataRow In products.Rows
             row("DisplayPromoSnapshotReady") = False
@@ -1079,7 +1101,8 @@ Partial Public Class _Default
         Dim cacheKey As String = articleId.ToString(CultureInfo.InvariantCulture) & ":" &
                                  tcId.ToString(CultureInfo.InvariantCulture) & ":" & contextKey & ":" &
                                  baseNetPrice.ToString(CultureInfo.InvariantCulture) & ":" &
-                                 baseGrossPrice.ToString(CultureInfo.InvariantCulture)
+                                 baseGrossPrice.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 _priceDisplayContext.IsVatExcluded.ToString(CultureInfo.InvariantCulture)
         Dim cached As ProductPromotionDisplayModel = Nothing
         If _homePromotionModelCache.TryGetValue(cacheKey, cached) Then Return cached
 
@@ -1089,7 +1112,8 @@ Partial Public Class _Default
             tcId,
             eligibilityContext,
             baseNetPrice,
-            baseGrossPrice)
+            baseGrossPrice,
+            _priceDisplayContext.IsVatExcluded)
         If model IsNot Nothing AndAlso
            model.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError Then
             _homePromotionModelCache(cacheKey) = model
@@ -1138,49 +1162,6 @@ Partial Public Class _Default
         Return state
     End Function
 
-    Private Function GetReverseChargeEnabled() As Integer
-        Dim flag As Integer = 0
-        If Session("AbilitatoIvaReverseCharge") IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(Session("AbilitatoIvaReverseCharge")), flag)
-        End If
-        If flag <> 1 Then
-            flag = 0
-        End If
-        Return flag
-    End Function
-
-    Private Function GetCurrentUserIva() As Integer
-        Dim ivaUtente As Integer = 0
-        If Session("Iva_Utente") IsNot Nothing Then
-            Integer.TryParse(Convert.ToString(Session("Iva_Utente")), ivaUtente)
-        End If
-        If ivaUtente < 0 Then
-            ivaUtente = 0
-        End If
-        Return ivaUtente
-    End Function
-
-    Private Function BuildPrezzoIvatoSql() As String
-        Dim abilRC As Integer = GetReverseChargeEnabled()
-        Dim ivaUtente As Integer = GetCurrentUserIva()
-
-        Return "IF((" & abilRC.ToString(CultureInfo.InvariantCulture) & "=1) AND (COALESCE(v.ValoreIvaRC,-1)>-1)," &
-               " (COALESCE(v.Prezzo,0)*((COALESCE(v.ValoreIvaRC,0)/100)+1))," &
-               " IF(" & ivaUtente.ToString(CultureInfo.InvariantCulture) & ">0,(COALESCE(v.Prezzo,0)*((" & ivaUtente.ToString(CultureInfo.InvariantCulture) & "/100)+1)),COALESCE(v.PrezzoIvato,0))" &
-               " )"
-    End Function
-
-    Private Function BuildPrezzoPromoIvatoSql() As String
-        Dim abilRC As Integer = GetReverseChargeEnabled()
-        Dim ivaUtente As Integer = GetCurrentUserIva()
-
-        Return "IF(COALESCE(v.PrezzoPromoIvato,0)>0,COALESCE(v.PrezzoPromoIvato,0)," &
-               " IF((" & abilRC.ToString(CultureInfo.InvariantCulture) & "=1) AND (COALESCE(v.ValoreIvaRC,-1)>-1)," &
-               " (COALESCE(v.PrezzoPromo,0)*((COALESCE(v.ValoreIvaRC,0)/100)+1))," &
-               " IF(" & ivaUtente.ToString(CultureInfo.InvariantCulture) & ">0,(COALESCE(v.PrezzoPromo,0)*((" & ivaUtente.ToString(CultureInfo.InvariantCulture) & "/100)+1)),COALESCE(v.PrezzoPromo,0))" &
-               " ))"
-    End Function
-
     Private Function StockWhereClause() As String
         Return "COALESCE(stk.Giacenza, COALESCE(v.Giacenza,0))"
     End Function
@@ -1194,15 +1175,11 @@ Partial Public Class _Default
     End Function
 
     Private Function OfferWhereClause() As String
-        Dim prezzoBaseSql As String = BuildPrezzoIvatoSql()
-        Dim prezzoPromoSql As String = BuildPrezzoPromoIvatoSql()
-
+        ' Coarse candidate filter only; the authorized snapshot decides eligibility.
         Return "COALESCE(v.InOfferta,0)=1 AND " &
                "(v.OfferteDaListino IS NULL OR @listino >= v.OfferteDaListino) AND " &
                "(v.OfferteAListino IS NULL OR @listino <= v.OfferteAListino) AND " &
-               "((" & prezzoPromoSql & ">0 AND " & prezzoPromoSql & " < " & prezzoBaseSql & ") " &
-               "OR (" & prezzoPromoSql & "=0 AND COALESCE(v.PrezzoPromo,0)>0 AND COALESCE(v.PrezzoPromo,0) < COALESCE(v.Prezzo,0))) " &
-               "AND " & StockWhereClause() & ">=1"
+               StockWhereClause() & ">=1"
     End Function
 
     Private Function GetRecentlyViewedIds() As List(Of Integer)
@@ -1803,9 +1780,7 @@ Partial Public Class _Default
 
 
     Private Function GetCurrentListino() As Integer
-        Return StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(
-            Session("Listino"),
-            Session("listino"))
+        Return _priceDisplayContext.PriceListId
     End Function
 
     Private Function GetCurrentAziendaId() As Integer
@@ -2102,16 +2077,9 @@ Partial Public Class _Default
             Return 0D
         End If
 
-        Dim useNetPrice As Boolean = UseNetPriceDisplay()
-        Dim listino As Decimal = If(useNetPrice AndAlso row.Table.Columns.Contains("Prezzo"), ToDecimal(row("Prezzo")), 0D)
-        If Not useNetPrice AndAlso row.Table.Columns.Contains("PrezzoIvato") Then
-            listino = ToDecimal(row("PrezzoIvato"))
-        End If
-        If listino <= 0D Then
-            Dim fallbackField As String = If(useNetPrice, "PrezzoIvato", "Prezzo")
-            If row.Table.Columns.Contains(fallbackField) Then listino = ToDecimal(row(fallbackField))
-        End If
-        Return listino
+        Dim netPrice As Decimal = If(row.Table.Columns.Contains("Prezzo"), ToDecimal(row("Prezzo")), 0D)
+        Dim grossPrice As Decimal = If(row.Table.Columns.Contains("PrezzoIvato"), ToDecimal(row("PrezzoIvato")), 0D)
+        Return _priceDisplayContext.SelectPrice(netPrice, grossPrice).GetValueOrDefault()
     End Function
 
     Protected Function SavingsAmount(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
@@ -2223,7 +2191,7 @@ Partial Public Class _Default
         Dim listino As Decimal = ToDecimal(priceIvato)
         Dim promoGross As Decimal = ToDecimal(promoIvato)
         Dim promoNet As Decimal = ToDecimal(promo)
-        Dim candidate As Decimal = If(promoGross > 0D, promoGross, promoNet)
+        Dim candidate As Decimal = _priceDisplayContext.SelectPromoPrice(promoNet, promoGross).GetValueOrDefault()
 
         If candidate <= 0D Then
             Return False
@@ -2298,10 +2266,8 @@ Partial Public Class _Default
         appliesToInitialQuantity = IsQuantityCompatible(1D, qntMinima, multipli)
 
         Dim basePrice As Decimal = GetBasePrice(row)
-        Dim candidate As Decimal = promoNet
-        If Not UseNetPriceDisplay() Then
-            candidate = If(row.Table.Columns.Contains("PrezzoPromoIvato"), ToDecimal(row("PrezzoPromoIvato")), 0D)
-        End If
+        Dim promoGross As Decimal = If(row.Table.Columns.Contains("PrezzoPromoIvato"), ToDecimal(row("PrezzoPromoIvato")), 0D)
+        Dim candidate As Decimal = _priceDisplayContext.SelectPromoPrice(promoNet, promoGross).GetValueOrDefault()
 
         If basePrice <= 0D OrElse candidate <= 0D OrElse candidate >= basePrice Then Return False
 
@@ -2315,13 +2281,6 @@ Partial Public Class _Default
         If qntMinima > 0D Then Return quantity >= qntMinima
         If multipli <= 0D Then Return False
         Return Decimal.Remainder(quantity, multipli) = 0D
-    End Function
-
-    Private Function UseNetPriceDisplay() As Boolean
-        Dim ivaTipo As Integer = 0
-        Return Session("IvaTipo") IsNot Nothing AndAlso
-               Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaTipo) AndAlso
-               ivaTipo = 1
     End Function
 
     Private Function IsPromoRowValid(ByVal row As DataRow) As Boolean
@@ -2622,7 +2581,8 @@ Partial Public Class _Default
         Dim code As String = Convert.ToString(row("Codice")).Trim()
         Dim url As String = ProductUrl(row("id"))
         Dim img As String = ProductImageFull(row("Img1"))
-        Dim priceText As String = FormatMoney(CurrentPrice(row))
+        Dim current As Decimal = CurrentPrice(row)
+        Dim priceText As String = If(current > 0D, FormatMoney(current), "Prezzo su richiesta")
         Dim soldText As String = FormatQuantity(row("VendutiAnno"))
         Dim availableText As String = AvailabilityDisplayHelper.BuildText(row, HttpContext.Current)
         Dim description As String = QuickViewDescription(row)
@@ -2773,7 +2733,8 @@ Partial Public Class _Default
         sb.Append("<div class='ks-home-price-stack ").Append(stackClass).Append("'>")
         If reserveDealSlots Then sb.Append("<div class='ks-deal-price-amount-slot'>")
         sb.Append("<p class='price-wrap fw-medium ks-home-price-slot ").Append(slotClass).Append("'>")
-        sb.Append("<span class='").Append(priceClass).Append("'>").Append(FormatMoney(CurrentPrice(row))).Append("</span>")
+        Dim current As Decimal = CurrentPrice(row)
+        sb.Append("<span class='").Append(priceClass).Append("'>").Append(If(current > 0D, FormatMoney(current), "Prezzo su richiesta")).Append("</span>")
         If ShowDiscount(row) Then
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(GetBasePrice(row))).Append("</span>")
         End If

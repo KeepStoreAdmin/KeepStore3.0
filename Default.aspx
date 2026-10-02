@@ -165,6 +165,10 @@
         </div>
     </section>
 
+    <asp:Panel ID="HomePriceDisplayNote" runat="server" CssClass="container" Visible="false">
+        <p class="body-text-3 text-main-2"><asp:Literal ID="litHomePriceDisplayLabel" runat="server" /></p>
+    </asp:Panel>
+
     <section id="HomeFeaturedProductsSection" runat="server" class="ks-home-section ks-home-featured">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
