@@ -222,6 +222,7 @@
                                             <div class="price-text fw-medium text-primary">
                                                 <asp:Literal ID="litPriceHtml2" runat="server" />
                                             </div>
+                                            <p class="body-text-3 text-main-2"><asp:Literal ID="litPriceDisplayLabel" runat="server" Mode="Encode" /></p>
                                             <p>
                                                 <i class="icon-delivery-2"></i>
                                                 <asp:Literal ID="litBuyBoxAvailability" runat="server" />

@@ -18,14 +18,13 @@ Partial Class articolo
     Private _tcid As Integer
     Private _tcidPresent As Boolean
     Private _listino As Integer
+    Private _priceDisplayContext As StorefrontPriceDisplayContext
     Private _tcEnabled As Boolean
     Private _pdpMainCartRequestId As String
     Private _pdpBundleCartRequestId As String
     Private _pdpCommercialCode As String
     Private ReadOnly _promotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
-    Private _pdpStructuredPrice As PriceContext
     Private _pdpStructuredAvailability As AvailabilityDisplayModel
-    Private _pdpStructuredPromotion As ProductPromotionDisplayModel
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
     Private Class ImgItem
@@ -181,15 +180,17 @@ Partial Class articolo
             Return
         End If
 
-        EnsureArticleCompanyContext()
-
-        ' ==========================================================
-        ' LISTINO: nel progetto è gestito principalmente tramite Session("Listino")
-        ' (default anonimi = 1). Alcune parti legacy usano anche Session("listino").
-        ' Se qui leggiamo 0, la query su vsuperarticoli (NListino=@nlistino) non
-        ' ritorna righe e si ottiene "Articolo non trovato" con ID valido.
-        ' ==========================================================
-        _listino = GetCurrentListino()
+        ' The master has already validated the tenant and fiscal/account state.
+        _priceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        If _priceDisplayContext Is Nothing OrElse
+           _priceDisplayContext.CompanyId <> GetCurrentAziendaId() OrElse
+           _priceDisplayContext.PriceListId <= 0 Then
+            Response.StatusCode = 421
+            Response.TrySkipIisCustomErrors = True
+            pnlProduct.Visible = False
+            Return
+        End If
+        _listino = _priceDisplayContext.PriceListId
         _tcEnabled = (GetSessionInt("TC", 0) = 1)
 
         If Not IsPostBack Then LoadPage()
@@ -505,11 +506,11 @@ Partial Class articolo
         Dim price As PriceContext = BuildAuthorizedPriceContext(_id,
                                                                 tcidVal,
                                                                 GetRowDecimal(row, "Prezzo"),
-                                                                GetRowDecimal(row, "PrezzoIvato"))
+                                                                ResolveEffectiveProductGross(row))
         Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(_id,
                                                                                           tcidVal,
                                                                                           GetRowDecimal(row, "Prezzo"),
-                                                                                          GetRowDecimal(row, "PrezzoIvato"))
+                                                                                          ResolveEffectiveProductGross(row))
         Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
 
         Dim item As New RelatedItem() With {
@@ -522,7 +523,7 @@ Partial Class articolo
             .PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
             .InOfferta = price.IsPromo,
             .PromotionBadgeHtml = BuildRelatedPromotionBadgeHtml(promotionModel),
-            .PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel),
+            .PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel, _priceDisplayContext.IsVatExcluded),
             .Codice = codiceVal,
             .Ean = eanVal,
             .BrandName = brandName,
@@ -636,7 +637,7 @@ Partial Class articolo
         Return "SELECT v.id, v.TCid, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.Img1, v.Img2, v.InOfferta, " &
                "v.CategorieId, v.TipologieId, v.MarcheId, " &
                "v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.MarcheDescrizione, " &
-               "v.Prezzo, v.PrezzoIvato, v.PrezzoPromo, v.PrezzoPromoIvato, " &
+               "v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.PrezzoPromo, v.PrezzoPromoIvato, " &
                "v.Giacenza, v.Impegnata, v.Disponibilita, v.InOrdine, " &
                "IFNULL(tg.Descrizione,'') AS TCTaglia, IFNULL(cl.Descrizione,'') AS TCColore, " &
                "TRIM(CONCAT(IFNULL(tg.Descrizione,''), ' ', IFNULL(cl.Descrizione,''), ' ', IFNULL(atc.Barcode,''))) AS TCDescrizione " &
@@ -1163,14 +1164,18 @@ Partial Class articolo
                 If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
                 If String.IsNullOrEmpty(imgVal) Then imgVal = ThemeManager.PlaceholderProductImageUrl()
                 If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
+                Dim netPrice As Nullable(Of Decimal) = SafeDec(rdr("Prezzo"), 0D)
+                Dim effectiveGross As Nullable(Of Decimal) = ResolveEffectiveGross(netPrice,
+                    SafeDec(rdr("PrezzoIvato"), 0D), SafeInt(rdr("IdIvaRC"), -1),
+                    SafeDec(rdr("ValoreIvaRC"), -1D))
                 Dim price As PriceContext = BuildAuthorizedPriceContext(idVal,
                                                                         tcidVal,
-                                                                        SafeDec(rdr("Prezzo"), 0D),
-                                                                        SafeDec(rdr("PrezzoIvato"), 0D))
+                                                                        netPrice,
+                                                                        effectiveGross)
                 Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(idVal,
                                                                                                   tcidVal,
-                                                                                                  SafeDec(rdr("Prezzo"), 0D),
-                                                                                                  SafeDec(rdr("PrezzoIvato"), 0D))
+                                                                                                  netPrice,
+                                                                                                  effectiveGross)
 
                 Dim item As New RelatedItem()
                 item.Id = idVal
@@ -1182,7 +1187,7 @@ Partial Class articolo
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = price.IsPromo
                 item.PromotionBadgeHtml = BuildRelatedPromotionBadgeHtml(promotionModel)
-                item.PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel)
+                item.PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel, _priceDisplayContext.IsVatExcluded)
                 item.Codice = codiceVal
                 item.Ean = eanVal
                 item.BrandName = SafeReaderString(rdr, "MarcheDescrizione")
@@ -1355,13 +1360,18 @@ Partial Class articolo
     End Function
 
     Private Function TryGetProductRowInternal(id As Integer, tcid As Integer, includeTcidFilter As Boolean) As DataRow
+        Return TryGetProductRowInternal(id, tcid, includeTcidFilter, _listino)
+    End Function
+
+    Private Function TryGetProductRowInternal(id As Integer, tcid As Integer, includeTcidFilter As Boolean, explicitListino As Integer) As DataRow
+        If explicitListino <= 0 Then Return Nothing
         Dim sql As String = BuildProductSql(includeTcidFilter)
 
         Using cn As New MySqlConnection(GetConnectionString())
             cn.Open()
             Using cmd As New MySqlCommand(sql, cn)
                 cmd.Parameters.AddWithValue("@id", id)
-                cmd.Parameters.AddWithValue("@nlistino", _listino)
+                cmd.Parameters.AddWithValue("@nlistino", explicitListino)
 
                 If includeTcidFilter Then
                     cmd.Parameters.AddWithValue("@tcid", tcid)
@@ -1417,7 +1427,7 @@ Partial Class articolo
         Dim price As PriceContext = BuildAuthorizedPriceContext(productId,
                                                                 selectedTcid,
                                                                 GetRowDecimal(row, "Prezzo"),
-                                                                GetRowDecimal(row, "PrezzoIvato"))
+                                                                ResolveEffectiveProductGross(row))
 
         Dim shortDesc As String = FirstNonEmpty(GetRowString(row, "Descrizione2"), GetRowString(row, "Sottotitolo"))
         Dim shortDescHtml As String = String.Empty
@@ -1606,18 +1616,17 @@ Partial Class articolo
         Dim promotionModel As ProductPromotionDisplayModel = GetAuthorizedPromotionModel(_id,
                                                                                           selectedTcid,
                                                                                           GetRowDecimal(row, "Prezzo"),
-                                                                                          GetRowDecimal(row, "PrezzoIvato"))
+                                                                                          ResolveEffectiveProductGross(row))
         Dim price As PriceContext = BuildAuthorizedPriceContext(_id,
                                                                 selectedTcid,
                                                                 GetRowDecimal(row, "Prezzo"),
-                                                                GetRowDecimal(row, "PrezzoIvato"),
+                                                                ResolveEffectiveProductGross(row),
                                                                 promotionModel)
-        _pdpStructuredPrice = price
-        _pdpStructuredPromotion = promotionModel
 
         litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         ' Box prezzo sticky (stesso HTML del prezzo principale)
         litPriceHtml2.Text = litPriceHtml.Text
+        litPriceDisplayLabel.Text = _priceDisplayContext.DisplayLabel
         litPriceInfo.Text = BuildPriceText(price.CurrentPrice)
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
         BindCommercialProductInfo(row)
@@ -1710,7 +1719,7 @@ Partial Class articolo
                 rates = ProductShippingRateResolver.LoadApplicableRates(GetConnectionString(),
                                                                          GetCurrentAziendaId(),
                                                                          shippingInfo.WeightValue.Value,
-                                                                         GetSessionInt("IvaTipo", 2),
+                                                                         CInt(_priceDisplayContext.DisplayMode),
                                                                          GetSessionDecimal("Iva_Vettori", -1D),
                                                                          Server.MapPath("~/Public/assets/images/vettori/"))
             Catch ex As Exception
@@ -1876,26 +1885,13 @@ Partial Class articolo
     Private Function ResolveOfficialListPrice(row As DataRow) As Nullable(Of Decimal)
         Dim netValue As Nullable(Of Decimal) = GetRowDecimal(row, "ListinoUfficiale")
         If Not netValue.HasValue OrElse netValue.Value <= 0D Then Return Nothing
-        If GetSessionInt("IvaTipo", 2) = 1 Then Return netValue
-
-        Dim vatRate As Nullable(Of Decimal) = Nothing
-        Dim reverseChargeEnabled As Boolean = (GetSessionInt("AbilitatoIvaReverseCharge", 0) = 1)
-        Dim reverseChargeId As Integer = GetRowInt(row, "IdIvaRC", -1)
-        Dim reverseChargeRate As Nullable(Of Decimal) = GetRowDecimal(row, "ValoreIvaRC")
-        If reverseChargeEnabled AndAlso reverseChargeId > -1 AndAlso reverseChargeRate.HasValue AndAlso reverseChargeRate.Value >= 0D Then
-            vatRate = reverseChargeRate
-        Else
-            Dim userVat As Decimal = GetSessionDecimal("Iva_Utente", -1D)
-            If userVat >= 0D Then
-                vatRate = userVat
-            Else
-                Dim productVat As Nullable(Of Decimal) = GetRowDecimal(row, "Valoreiva")
-                If productVat.HasValue AndAlso productVat.Value >= 0D Then vatRate = productVat
-            End If
+        Dim productVat As Nullable(Of Decimal) = GetRowDecimal(row, "Valoreiva")
+        Dim standardGross As Nullable(Of Decimal) = Nothing
+        If productVat.HasValue AndAlso productVat.Value >= 0D Then
+            standardGross = netValue.Value * (1D + productVat.Value / 100D)
         End If
-
-        If Not vatRate.HasValue Then Return Nothing
-        Return netValue.Value * ((vatRate.Value / 100D) + 1D)
+        Return _priceDisplayContext.SelectPrice(netValue, ResolveEffectiveGross(netValue,
+            standardGross, GetRowInt(row, "IdIvaRC", -1), GetRowDecimal(row, "ValoreIvaRC")))
     End Function
 
     Private Sub BindVariantsIfNeeded(id As Integer, currentTcid As Integer)
@@ -2119,14 +2115,22 @@ Partial Class articolo
     Private Function BuildProductJsonLd(row As DataRow, canonical As String, metaDesc As String) As String
         Try
             Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
-            If tenant Is Nothing OrElse _pdpStructuredPrice Is Nothing OrElse
-               _pdpStructuredAvailability Is Nothing OrElse _pdpStructuredPromotion Is Nothing Then Return String.Empty
+            If tenant Is Nothing OrElse _pdpStructuredAvailability Is Nothing Then Return String.Empty
+
+            ' Machine-readable offers are anonymous, on the public tenant listino.
+            ' Never publish the visitor's account price, exemption or private offer.
+            Dim publicPromotion As ProductPromotionEligibilityResult = ResolvePublicProductPromotion(row, tenant)
+            Dim publicResolved As Boolean = (publicPromotion IsNot Nothing AndAlso
+                publicPromotion.Status = ProductPromotionEligibilityLoadStatus.Success)
+            Dim publicGross As Nullable(Of Decimal) = Nothing
+            If publicResolved AndAlso publicPromotion.EffectivePriceGross > 0D Then
+                publicGross = publicPromotion.EffectivePriceGross
+            End If
 
             Dim validUntil As Nullable(Of DateTime) = Nothing
-            If _pdpStructuredPrice.IsPromo AndAlso
-               _pdpStructuredPromotion.HasDefaultQuantityOffer AndAlso
-               _pdpStructuredPromotion.BestDefaultQuantityEndsOn.HasValue Then
-                validUntil = _pdpStructuredPromotion.BestDefaultQuantityEndsOn.Value
+            If publicResolved AndAlso publicPromotion.HasAppliedOffer AndAlso
+               publicPromotion.AppliedOffer.EndsOn.HasValue Then
+                validUntil = publicPromotion.AppliedOffer.EndsOn.Value
             End If
 
             Dim input As New ProductStructuredDataInput() With {
@@ -2145,11 +2149,11 @@ Partial Class articolo
                 .CategoryName = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione")),
                 .Gtin = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN")),
                 .ProductImages = BuildStructuredDataProductImages(row, tenant),
-                .OfferPrice = _pdpStructuredPrice.CurrentPrice,
+                .OfferPrice = publicGross,
                 .CurrencyCode = "EUR",
                 .IsAvailable = _pdpStructuredAvailability.IsAvailable,
                 .PriceValidUntil = validUntil,
-                .CommercialResolutionSucceeded = (_pdpStructuredPromotion.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError)
+                .CommercialResolutionSucceeded = publicResolved
             }
 
             Dim json As String = ProductStructuredDataBuilder.BuildJson(input)
@@ -2433,6 +2437,48 @@ Partial Class articolo
         Return "Prezzo su richiesta"
     End Function
 
+    Private Function ResolvePublicProductPromotion(ByVal displayRow As DataRow,
+                                                   ByVal tenant As StorefrontSeoTenantIdentity) As ProductPromotionEligibilityResult
+        If displayRow Is Nothing OrElse tenant Is Nothing OrElse tenant.DefaultPriceListId <= 0 Then Return Nothing
+        Try
+            Dim selectedTcid As Integer = GetRowInt(displayRow, "TCid", _tcid)
+            Dim publicRow As DataRow = displayRow
+            If _listino <> tenant.DefaultPriceListId Then
+                publicRow = TryGetProductRowInternal(_id, selectedTcid, True, tenant.DefaultPriceListId)
+                ' -1/0 are the same non-variant convention. Never cross to a positive variant.
+                If publicRow Is Nothing AndAlso selectedTcid <= 0 Then
+                    publicRow = TryGetProductRowInternal(_id, If(selectedTcid = -1, 0, -1), True, tenant.DefaultPriceListId)
+                End If
+            End If
+            If publicRow Is Nothing Then Return Nothing
+            Dim publicContext As ProductPromotionEligibilityContext =
+                ProductPromotionEligibilityResolver.CreateAnonymousContext(
+                    StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey(), tenant.CompanyId,
+                    tenant.DefaultPriceListId, Date.Today)
+            Return ProductPromotionEligibilityResolver.Resolve(GetConnectionString(), publicContext,
+                _id, GetRowInt(publicRow, "TCid", selectedTcid), 1D,
+                GetRowDecimal(publicRow, "Prezzo").GetValueOrDefault(0D),
+                GetRowDecimal(publicRow, "PrezzoIvato").GetValueOrDefault(0D))
+        Catch ex As Exception
+            KeepStoreLog.Error("product-structured-data", "Errore risoluzione prezzo pubblico PDP", ex, HttpContext.Current)
+            Return Nothing
+        End Try
+    End Function
+
+    Private Function ResolveEffectiveProductGross(ByVal row As DataRow) As Nullable(Of Decimal)
+        Return ResolveEffectiveGross(GetRowDecimal(row, "Prezzo"), GetRowDecimal(row, "PrezzoIvato"),
+                                     GetRowInt(row, "IdIvaRC", -1), GetRowDecimal(row, "ValoreIvaRC"))
+    End Function
+
+    Private Function ResolveEffectiveGross(ByVal baseNet As Nullable(Of Decimal),
+                                           ByVal baseGross As Nullable(Of Decimal),
+                                           ByVal reverseChargeId As Integer,
+                                           ByVal reverseChargeRate As Nullable(Of Decimal)) As Nullable(Of Decimal)
+        Return StorefrontEffectivePriceResolver.ResolveEffectiveGross(baseNet, baseGross,
+            _priceDisplayContext.ReverseChargeEnabled, _priceDisplayContext.VatOverride,
+            reverseChargeId, reverseChargeRate)
+    End Function
+
     Private Function GetAuthorizedPromotionModel(ByVal articleId As Integer,
                                                   ByVal tcId As Integer,
                                                   ByVal baseNet As Nullable(Of Decimal),
@@ -2445,7 +2491,8 @@ Partial Class articolo
                                  tcId.ToString(CultureInfo.InvariantCulture) & ":" &
                                  context.CacheKey & ":" &
                                  netValue.ToString(CultureInfo.InvariantCulture) & ":" &
-                                 grossValue.ToString(CultureInfo.InvariantCulture)
+                                 grossValue.ToString(CultureInfo.InvariantCulture) & ":" &
+                                 _priceDisplayContext.IsVatExcluded.ToString(CultureInfo.InvariantCulture)
         Dim cached As ProductPromotionDisplayModel = Nothing
         If _promotionModelCache.TryGetValue(cacheKey, cached) Then Return cached
 
@@ -2454,7 +2501,8 @@ Partial Class articolo
                                                                                                     tcId,
                                                                                                     context,
                                                                                                     netValue,
-                                                                                                    grossValue)
+                                                                                                    grossValue,
+                                                                                                    _priceDisplayContext.IsVatExcluded)
         If model IsNot Nothing AndAlso
            model.ResolutionState <> ProductPromotionDisplayResolutionState.TechnicalError Then
             _promotionModelCache(cacheKey) = model
@@ -2468,27 +2516,22 @@ Partial Class articolo
                                                   ByVal baseGross As Nullable(Of Decimal),
                                                   Optional ByVal promotionModel As ProductPromotionDisplayModel = Nothing) As PriceContext
         Dim price As New PriceContext()
-        Dim ivaTipo As Integer = GetSessionInt("IvaTipo", 2)
-        price.IvaLabel = If(ivaTipo = 1, "IVA esclusa", "IVA inclusa")
-        price.CurrentPrice = If(ivaTipo = 1, baseNet, baseGross)
+        price.IvaLabel = If(_priceDisplayContext.IsVatExcluded, "IVA esclusa", "IVA inclusa")
+        price.CurrentPrice = _priceDisplayContext.SelectPrice(baseNet, baseGross)
 
         Dim model As ProductPromotionDisplayModel = promotionModel
         If model Is Nothing Then model = GetAuthorizedPromotionModel(articleId, tcId, baseNet, baseGross)
         If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
-            Dim authorizedPrice As Decimal = If(ivaTipo = 1,
-                                                model.BestDefaultQuantityPriceNet,
-                                                model.BestDefaultQuantityPriceGross)
-            Dim oldPrice As Nullable(Of Decimal) = If(ivaTipo = 1, baseNet, baseGross)
-            If authorizedPrice > 0D AndAlso oldPrice.HasValue AndAlso authorizedPrice < oldPrice.Value Then
+            Dim authorizedPrice As Nullable(Of Decimal) = _priceDisplayContext.SelectPromoPrice(
+                model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross)
+            Dim oldPrice As Nullable(Of Decimal) = _priceDisplayContext.SelectPrice(baseNet, baseGross)
+            If authorizedPrice.HasValue AndAlso oldPrice.HasValue AndAlso authorizedPrice.Value < oldPrice.Value Then
                 price.CurrentPrice = authorizedPrice
                 price.OldPrice = oldPrice
                 price.IsPromo = True
             End If
         End If
 
-        If Not price.CurrentPrice.HasValue OrElse price.CurrentPrice.Value <= 0D Then
-            price.CurrentPrice = FirstPositiveDecimal(baseGross, baseNet)
-        End If
         Return price
     End Function
 
@@ -3491,72 +3534,6 @@ Partial Class articolo
                                 GetSessionInt("AziendeId", 0))
     End Function
 
-    Private Sub EnsureArticleCompanyContext()
-        Try
-            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
-            If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then Return
-
-            Using cn As New MySqlConnection(GetConnectionString())
-                cn.Open()
-                Using cmd As New MySqlCommand("SELECT Id, ListinoDefault, ListinoUser, IvaTipo, DispoTipo, url1, url2 FROM aziende WHERE Id=@companyId LIMIT 1", cn)
-                    cmd.Parameters.AddWithValue("@companyId", tenant.CompanyId)
-                    Using rdr As MySqlDataReader = cmd.ExecuteReader()
-                        If Not rdr.Read() Then Return
-
-                        Dim aziendaId As Integer = SafeReaderInt(rdr, "Id", 0)
-                        If aziendaId <= 0 Then Return
-
-                        Session("AziendaID") = aziendaId
-                        Session("AziendaId") = aziendaId
-                        Session("AziendeId") = aziendaId
-
-                        Dim ivaTipo As Integer = SafeReaderInt(rdr, "IvaTipo", 0)
-                        If ivaTipo > 0 Then Session("IvaTipo") = ivaTipo
-
-                        Dim dispoTipo As Integer = SafeReaderInt(rdr, "DispoTipo", 0)
-                        If dispoTipo > 0 Then Session("DispoTipo") = dispoTipo
-
-                        Dim isLogged As Boolean = (GetSessionInt("LoginId", 0) > 0 OrElse GetSessionInt("LoginID", 0) > 0)
-                        Dim defaultListino As Integer = SafeReaderInt(rdr, "ListinoDefault", 0)
-                        If defaultListino > 0 AndAlso (Not isLogged OrElse GetCurrentListinoValueOnly() <= 0) Then
-                            Session("Listino") = defaultListino
-                            Session("listino") = defaultListino
-                        End If
-
-                        Dim listinoUser As Integer = SafeReaderInt(rdr, "ListinoUser", 0)
-                        If listinoUser > 0 Then Session("ListinoUser") = listinoUser
-
-                        Session("AziendaUrl") = Convert.ToString(rdr("url1"))
-                        Session("AziendaUrl2") = Convert.ToString(rdr("url2"))
-                    End Using
-                End Using
-            End Using
-        Catch ex As Exception
-            KeepStoreLog.Error("articolo.aspx", "Errore EnsureArticleCompanyContext", ex, HttpContext.Current)
-        End Try
-    End Sub
-
-    Private Function GetCurrentListinoValueOnly() As Integer
-        Dim n As Integer = GetSessionInt("Listino", 0)
-        If n <= 0 Then n = GetSessionInt("listino", 0)
-        Return n
-    End Function
-
-    ' Listino robusto: usa Session("Listino") come fonte principale, con fallback a Session("listino").
-    ' Imposta anche in Session per coerenza con le altre pagine.
-    Private Function GetCurrentListino() As Integer
-        Dim n As Integer = StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(
-            Session("Listino"),
-            Session("listino"))
-
-        ' Mantengo entrambe le chiavi per compatibilità con codice legacy
-        If n > 0 Then
-            Session("Listino") = n
-            Session("listino") = n
-        End If
-
-        Return n
-    End Function
 
 
 

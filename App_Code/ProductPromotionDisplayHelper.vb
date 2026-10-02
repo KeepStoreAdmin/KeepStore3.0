@@ -73,6 +73,17 @@ Public Module ProductPromotionDisplayHelper
                                     ByVal eligibilityContext As ProductPromotionEligibilityContext,
                                     ByVal baseNetPrice As Decimal,
                                     ByVal baseGrossPrice As Decimal) As ProductPromotionDisplayModel
+        Return BuildForProduct(connectionString, articleId, tcId, eligibilityContext,
+                               baseNetPrice, baseGrossPrice, UseNetPriceDisplay())
+    End Function
+
+    Public Function BuildForProduct(ByVal connectionString As String,
+                                    ByVal articleId As Integer,
+                                    ByVal tcId As Integer,
+                                    ByVal eligibilityContext As ProductPromotionEligibilityContext,
+                                    ByVal baseNetPrice As Decimal,
+                                    ByVal baseGrossPrice As Decimal,
+                                    ByVal useNetPrices As Boolean) As ProductPromotionDisplayModel
         Dim eligibility As ProductPromotionEligibilityResult = Nothing
         If Not String.IsNullOrWhiteSpace(connectionString) AndAlso articleId > 0 AndAlso
            eligibilityContext IsNot Nothing AndAlso baseGrossPrice > 0D Then
@@ -86,10 +97,10 @@ Public Module ProductPromotionDisplayHelper
                                                                           baseGrossPrice)
             Catch ex As Exception
                 Return BuildFromEligibility(Nothing, baseNetPrice, baseGrossPrice,
-                                            UseNetPriceDisplay(), ex.GetType().Name)
+                                            useNetPrices, ex.GetType().Name)
             End Try
         End If
-        Return BuildFromEligibility(eligibility, baseNetPrice, baseGrossPrice, UseNetPriceDisplay())
+        Return BuildFromEligibility(eligibility, baseNetPrice, baseGrossPrice, useNetPrices)
     End Function
 
     Public Function BuildForProduct(ByVal batch As IProductPromotionEligibilityBatch,
@@ -302,12 +313,16 @@ Public Module ProductPromotionDisplayHelper
     End Function
 
     Public Function RenderCatalogSummaryHtml(ByVal model As ProductPromotionDisplayModel) As String
+        Return RenderCatalogSummaryHtml(model, UseNetPriceDisplay())
+    End Function
+
+    Public Function RenderCatalogSummaryHtml(ByVal model As ProductPromotionDisplayModel,
+                                             ByVal useNetPrices As Boolean) As String
         If model Is Nothing OrElse
            model.ResolutionState <> ProductPromotionDisplayResolutionState.ResolvedWithOffers OrElse
            Not model.HasOffers Then Return String.Empty
         If Not model.HasQuantityTierOffer AndAlso model.Offers.Count <= 1 Then Return String.Empty
 
-        Dim useNetPrices As Boolean = UseNetPriceDisplay()
         Dim sb As New StringBuilder()
         sb.Append("<div class=""ks-catalog-promos"" aria-label=""Dettagli promozione"">")
         If model.HasQuantityTierOffer Then
