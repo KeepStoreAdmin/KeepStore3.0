@@ -90,3 +90,274 @@
 .popup-shopping-cart .ks-mini-remove .icon-close {
     pointer-events: none;
 }
+
+/* ONSUS presentation only: preserve the server-rendered dynamic shell and native actions. */
+#ksMiniCartCanvas {
+    width: min(100vw, 460px);
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    color: var(--gray, #333e48);
+    background: var(--white, #fff);
+}
+
+#ksMiniCartCanvas .canvas-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px;
+    border-bottom: 1px solid var(--line, #e5e5e5);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-heading {
+    min-width: 0;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-heading .title {
+    margin: 0 0 4px;
+    font-size: 22px;
+    line-height: 1.3;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-heading p,
+#ksMiniCartCanvas .ks-mini-cart-total-note {
+    margin: 0;
+    color: var(--text-2, #73787d);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-close {
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #f5f6f7;
+}
+
+#ksMiniCartCanvas .offcanvas-body {
+    padding: 12px 20px 20px;
+    overscroll-behavior-y: contain;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2, #73787d);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-toolbar button {
+    min-height: 44px;
+    padding: 8px !important;
+    border-radius: 8px;
+    color: var(--gray, #333e48);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-item {
+    grid-template-columns: 64px minmax(0, 1fr) 44px;
+    align-items: start;
+    gap: 12px;
+    margin: 0 0 12px;
+    padding: 14px;
+    border: 1px solid var(--line, #e5e5e5);
+    border-radius: 12px;
+    background: var(--white, #fff);
+}
+
+#ksMiniCartCanvas .ks-mini-product-link {
+    padding: 4px;
+    border: 1px solid #f0f1f2;
+    border-radius: 8px;
+    background: var(--white, #fff);
+}
+
+#ksMiniCartCanvas .ks-mini-product-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+#ksMiniCartCanvas .ks-mini-quantity {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #f5f6f7;
+    color: var(--text-2, #73787d);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#ksMiniCartCanvas .ks-mini-quantity strong {
+    color: var(--gray, #333e48);
+    font-variant-numeric: tabular-nums;
+}
+
+#ksMiniCartCanvas .ks-mini-remove {
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: #f5f6f7;
+    color: var(--text-2, #73787d);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-costs {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid #f0f1f2;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-costs > div {
+    min-width: 0;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-costs > div:last-child {
+    text-align: right;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-costs dt {
+    margin-bottom: 3px;
+    color: var(--text-2, #73787d);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-costs dd {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-footer {
+    padding: 18px 20px max(18px, env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(51, 62, 72, .06);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-total strong {
+    font-size: 24px;
+    line-height: 1.25;
+    color: var(--primary, #ff3d3d);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-total-note {
+    margin: 4px 0 14px;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-footer .tf-btn,
+#ksMiniCartCanvas .minicart-empty .tf-btn {
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+#ksMiniCartCanvas .ks-mini-cart-primary {
+    margin-bottom: 8px;
+    color: #fff;
+    background: var(--primary-2, #d80027);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-continue {
+    color: var(--gray, #333e48);
+    background: #fff;
+    border-color: var(--line, #e5e5e5);
+}
+
+#ksMiniCartCanvas .ks-mini-cart-close:hover,
+#ksMiniCartCanvas .ks-mini-remove:hover {
+    background: #fff1f1;
+    color: var(--primary, #ff3d3d);
+}
+
+#ksMiniCartCanvas a:focus-visible,
+#ksMiniCartCanvas button:focus-visible {
+    outline: 3px solid rgba(216, 0, 39, .45);
+    outline-offset: 2px;
+}
+
+#ksMiniCartCanvas .minicart-empty {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: 36px 4px;
+}
+
+#ksMiniCartCanvas .ks-mini-empty-icon {
+    display: flex;
+    width: 80px;
+    height: 80px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: var(--primary, #ff3d3d);
+    background: #fff1f1;
+    font-size: 32px;
+}
+
+#ksMiniCartCanvas .minicart-empty h6 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+#ksMiniCartCanvas .minicart-empty p {
+    margin: 0;
+    color: var(--text-2, #73787d);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+@media (max-width: 575.98px) {
+    /* Override ONSUS' mobile .popup-shopping-cart width: 340px !important. */
+    #ksMiniCartCanvas {
+        width: 100% !important;
+    }
+
+    #ksMiniCartCanvas .canvas-header {
+        padding: 16px;
+    }
+
+    #ksMiniCartCanvas .offcanvas-body {
+        padding: 8px 16px 16px;
+    }
+
+    #ksMiniCartCanvas .ks-mini-cart-item {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    #ksMiniCartCanvas .ks-mini-cart-footer {
+        padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    }
+}
