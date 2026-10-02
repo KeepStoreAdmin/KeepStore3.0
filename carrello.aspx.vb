@@ -390,6 +390,14 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
     Dim paymentId As Integer = GetSessionInt("Ordine_Pagamento", 0)
     Dim shippingAddressId As Integer = GetCartShippingAddressId()
 
+    If Not _shippingEligibilityRebuiltThisRequest OrElse
+       Not _shippingSelectionValidatedThisRequest OrElse
+       deliveryId = 0 OrElse deliveryId <> _validatedDeliveryIdThisRequest OrElse
+       tbVettoriId Is Nothing OrElse SafeIntFromDb(tbVettoriId.Text, 0) <> deliveryId Then
+        failureReason = CheckoutFailureReason.ShippingMethodMissing
+        Return False
+    End If
+
     Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
         connection.Open()
         If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, identity) Then Return False
@@ -531,6 +539,218 @@ Private Function IsAuthoritativeDeliveryValid(ByVal connection As MySqlConnectio
         Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) = 1
     End Using
 End Function
+
+Private Function TryBuildCurrentCartShippingSnapshot(ByRef snapshot As CurrentCartShippingSnapshot) As Boolean
+    snapshot = Nothing
+    _shippingSnapshotReadAttemptedThisRequest = True
+    ' Revalidation can have populated the request cache before the shipping gate.
+    CartAuthoritativeReadModel.Invalidate(HttpContext.Current)
+    Dim cart As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+    If cart Is Nothing OrElse Not cart.HasOwner OrElse Not cart.LoadSucceeded Then Return False
+    Dim items As DataTable = cart.GetAllItems()
+    Dim freeItems As DataTable = cart.GetFreeShippingItems()
+    Dim standardItems As DataTable = cart.GetStandardItems()
+    If items Is Nothing OrElse freeItems Is Nothing OrElse standardItems Is Nothing OrElse
+       items.Rows.Count = 0 Then Return False
+    Dim current As New CurrentCartShippingSnapshot() With {
+        .HasItems = True, .AllItemsFreeShipping = standardItems.Rows.Count = 0
+    }
+    Dim checkedNet As Decimal = 0D
+    Dim checkedGross As Decimal = 0D
+    For Each row As DataRow In items.Rows
+        Dim quantity As Decimal
+        Dim amount As Decimal
+        Dim grossAmount As Decimal
+        Dim weight As Decimal
+        If Not TryReadShippingColumn(row, "Qnt", quantity) OrElse quantity <= 0D OrElse
+           Not TryReadShippingLineValue(row, "Importo", "Prezzo", amount) OrElse
+           Not TryReadShippingLineValue(row, "ImportoIvato", "PrezzoIvato", grossAmount) OrElse
+           Not TryReadShippingLineValue(row, "PesoRiga", "Peso", weight) OrElse weight < 0D Then Return False
+        checkedNet += amount
+        checkedGross += grossAmount
+        current.TotalWeight += weight
+    Next
+    current.TotalNet = cart.TotalNet
+    current.TotalGross = cart.TotalGross
+    If current.TotalNet <> checkedNet OrElse current.TotalGross <> checkedGross Then Return False
+    For Each row As DataRow In freeItems.Rows
+        Dim amount As Decimal
+        Dim grossAmount As Decimal
+        If Not TryReadShippingLineValue(row, "Importo", "Prezzo", amount) OrElse
+           Not TryReadShippingLineValue(row, "ImportoIvato", "PrezzoIvato", grossAmount) Then Return False
+        current.FreeShippingNet += amount
+        current.FreeShippingGross += grossAmount
+    Next
+    current.QualifyingNet = current.TotalNet - current.FreeShippingNet
+    current.QualifyingGross = RoundShippingMoney(current.TotalGross - current.FreeShippingGross)
+    snapshot = current
+    Return True
+End Function
+
+Private Shared Function RoundShippingMoney(ByVal value As Decimal) As Decimal
+    Return Math.Round(value, 2, MidpointRounding.AwayFromZero)
+End Function
+
+Private Function TryGetCurrentShippingSnapshot(ByRef snapshot As CurrentCartShippingSnapshot) As Boolean
+    If _currentShippingSnapshot Is Nothing AndAlso Not _shippingSnapshotReadAttemptedThisRequest Then
+        Try
+            If Not TryBuildCurrentCartShippingSnapshot(_currentShippingSnapshot) Then Return False
+        Catch
+            _currentShippingSnapshot = Nothing
+            Return False
+        End Try
+    End If
+    snapshot = _currentShippingSnapshot
+    Return snapshot IsNot Nothing AndAlso snapshot.HasItems
+End Function
+
+Private Function TryReadShippingColumn(ByVal row As DataRow, ByVal column As String,
+                                       ByRef value As Decimal) As Boolean
+    value = 0D
+    If row Is Nothing OrElse row.Table Is Nothing OrElse Not row.Table.Columns.Contains(column) Then Return False
+    Dim raw As Object = row(column)
+    If TryReadDatabaseDecimal(raw, value) Then Return True
+    If raw Is Nothing OrElse raw Is DBNull.Value Then Return False
+    Return Decimal.TryParse(Convert.ToString(raw, CultureInfo.InvariantCulture),
+                            NumberStyles.Float, CultureInfo.InvariantCulture, value)
+End Function
+
+Private Function TryReadShippingLineValue(ByVal row As DataRow, ByVal amountColumn As String,
+                                          ByVal unitColumn As String, ByRef value As Decimal) As Boolean
+    value = 0D
+    If row Is Nothing OrElse row.Table Is Nothing Then Return False
+    If row.Table.Columns.Contains(amountColumn) AndAlso Not row.IsNull(amountColumn) Then
+        Return TryReadShippingColumn(row, amountColumn, value)
+    End If
+    Dim quantity As Decimal
+    Dim unitValue As Decimal
+    If Not TryReadShippingColumn(row, "Qnt", quantity) OrElse
+       Not TryReadShippingColumn(row, unitColumn, unitValue) Then Return False
+    value = quantity * unitValue
+    Return True
+End Function
+
+Private Function IsCheckedDeliveryRow(ByVal grid As GridView, ByVal deliveryId As Integer,
+                                      Optional ByVal selectMatchingRow As Boolean = False) As Boolean
+    If grid Is Nothing OrElse deliveryId = 0 Then Return False
+    For Each row As GridViewRow In grid.Rows
+        Dim label As Label = TryCast(row.FindControl("lblId"), Label)
+        Dim radio As Control = row.FindControl("rbSpedizione")
+        If label IsNot Nothing AndAlso radio IsNot Nothing AndAlso
+           SafeIntFromDb(label.Text, 0) = deliveryId AndAlso RbGetEnabled(radio) Then
+            If selectMatchingRow Then RbSetChecked(radio, True)
+            If RbGetChecked(radio) Then Return True
+        End If
+    Next
+    Return False
+End Function
+
+Private Sub ClearCurrentDeliverySelection()
+    _shippingSelectionValidatedThisRequest = False
+    _validatedDeliveryIdThisRequest = 0
+    For Each grid As GridView In New GridView() {gvVettoriPromo, gvVettori}
+        If grid Is Nothing Then Continue For
+        For Each row As GridViewRow In grid.Rows
+            RbSetChecked(row.FindControl("rbSpedizione"), False)
+        Next
+    Next
+    If rbSpedizioneGratis IsNot Nothing Then RbSetChecked(rbSpedizioneGratis, False)
+    If tbVettoriId IsNot Nothing Then tbVettoriId.Text = "0"
+End Sub
+
+Private Function TryRebuildAndValidateCurrentDeliverySelection(ByVal requireExistingSelection As Boolean,
+                                                              ByRef validatedDeliveryId As Integer) As Boolean
+    validatedDeliveryId = 0
+    If _shippingRebuildAttemptedThisRequest Then
+        If Not _shippingSelectionValidatedThisRequest OrElse tbVettoriId Is Nothing OrElse
+           SafeIntFromDb(tbVettoriId.Text, 0) <> _validatedDeliveryIdThisRequest Then Return False
+        validatedDeliveryId = _validatedDeliveryIdThisRequest
+        Return True
+    End If
+    _shippingRebuildAttemptedThisRequest = True
+    Dim requestedId As Integer = SafeIntFromDb(If(tbVettoriId Is Nothing, "0", tbVettoriId.Text), 0)
+    Dim selectedInGrid As Boolean = IsCheckedDeliveryRow(gvVettoriPromo, requestedId) OrElse
+                                    IsCheckedDeliveryRow(gvVettori, requestedId)
+    Dim selectedSpecial As Boolean = rbSpedizioneGratis IsNot Nothing AndAlso
+                                    RbGetChecked(rbSpedizioneGratis) AndAlso
+                                    requestedId = GetConfiguredSpecialFreeShippingCarrierId()
+    Try
+        If Not TryBuildCurrentCartShippingSnapshot(_currentShippingSnapshot) Then
+            ClearCurrentDeliverySelection()
+            Return False
+        End If
+        imponibile = CDbl(_currentShippingSnapshot.TotalNet)
+        imponibile_gratis = CDbl(_currentShippingSnapshot.FreeShippingNet)
+        pesoTotale = CDbl(_currentShippingSnapshot.TotalWeight)
+        tbPeso.Text = _currentShippingSnapshot.TotalWeight.ToString(CultureInfo.CurrentCulture)
+        lblImponibile.Text = FormatCurrencyIt(imponibile)
+        Session("Imponibile") = _currentShippingSnapshot.QualifyingNet
+        indice_riga_da_selezionare = -1
+        cont_indice_riga = 0
+        costo_promo_minimo = 0
+        Selezionato_Vettore_Promo = 0
+        gvVettoriPromo.DataBind()
+        gvVettori.DataBind()
+        _shippingEligibilityRebuiltThisRequest = True
+        ApplyPromoCandidate(False)
+        ClearCurrentDeliverySelection()
+
+        Dim isSpecial As Boolean = _currentShippingSnapshot.AllItemsFreeShipping
+        Dim hasRequestedSelection As Boolean = If(isSpecial, selectedSpecial, selectedInGrid)
+        If requireExistingSelection AndAlso
+           (requestedId = 0 OrElse Not hasRequestedSelection) Then Return False
+        If isSpecial Then
+            If Not requireExistingSelection Then requestedId = GetConfiguredSpecialFreeShippingCarrierId()
+            If requestedId <> GetConfiguredSpecialFreeShippingCarrierId() OrElse
+               (requireExistingSelection AndAlso Not selectedSpecial) Then Return False
+            RbSetChecked(rbSpedizioneGratis, True)
+        ElseIf Not IsCheckedDeliveryRow(gvVettoriPromo, requestedId, True) AndAlso
+               Not IsCheckedDeliveryRow(gvVettori, requestedId, True) Then
+            If requireExistingSelection Then Return False
+            ApplyPromoCandidate(True)
+            LeggiVettori(True)
+            requestedId = SafeIntFromDb(tbVettoriId.Text, 0)
+        End If
+
+        Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+        Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            connection.Open()
+            If identity Is Nothing OrElse Not identity.IsComplete OrElse
+               Not IsAuthoritativeDeliveryValid(connection, identity, requestedId) Then
+                ClearCurrentDeliverySelection()
+                Return False
+            End If
+        End Using
+        If isSpecial Then
+            If Not ApplySpecialFreeShippingSelection() Then
+                ClearCurrentDeliverySelection()
+                Return False
+            End If
+        Else
+            LeggiVettori(False)
+        End If
+        If SafeIntFromDb(tbVettoriId.Text, 0) <> requestedId Then
+            ClearCurrentDeliverySelection()
+            Return False
+        End If
+        _validatedDeliveryIdThisRequest = requestedId
+        _shippingSelectionValidatedThisRequest = True
+        validatedDeliveryId = requestedId
+        Return True
+    Catch ex As Exception
+        ClearCurrentDeliverySelection()
+        LogCheckoutSubmitFailure(ex, "shipping-rebuild")
+        Return False
+    End Try
+End Function
+
+Private Sub ShowCurrentShippingSelectionFailure()
+    SetCheckoutStep("checkout")
+    If tOrdine IsNot Nothing Then tOrdine.Visible = True
+    SetAddressSelectionMessage(CheckoutFailureRecoveryService.BuildUserMessage(
+        CheckoutFailureReason.ShippingMethodMissing, String.Empty))
+    ApplyCheckoutStepUi()
+End Sub
 
 Private Function IsAuthoritativePaymentValid(ByVal connection As MySqlConnection,
                                              ByVal identity As OrderStorefrontIdentity,
@@ -751,22 +971,92 @@ Protected Function controllaLunghezzaTesto(ByVal testo As Object, ByVal lunghezz
     Return s
 End Function
 
-Protected Function mancano_ancora(ByVal soglia As Double, ByVal imponibileLocal As Double, ByVal imponibileGratisLocal As Double) As String
-    Dim ivaVettori As Double = 0
-    Try
-        Dim o As Object = Session("Iva_Vettori")
-        If o IsNot Nothing AndAlso o IsNot DBNull.Value Then Double.TryParse(o.ToString(), ivaVettori)
-    Catch
-    End Try
-
-    Dim diff As Double = soglia - (imponibileLocal - imponibileGratisLocal)
-    If diff <= 0 Then
-        Return "Soglia di spesa raggiunta per questa tariffa promozionale. Restano validi il limite di peso e il costo indicati."
-    End If
-
-    Dim diffIvato As Double = diff * ((ivaVettori / 100) + 1)
-    Return "Ti mancano " & UiPriceFormatter.FormatStorefrontValue(diffIvato) & " per raggiungere la soglia di questa tariffa promozionale. Gli articoli con spedizione gratuita non concorrono alla soglia. Restano validi il limite di peso e il costo indicati."
+Protected Function FormatManagedPromoThreshold(ByVal value As Object) As String
+    Dim threshold As Decimal
+    If Not TryReadDatabaseDecimal(value, threshold) OrElse threshold <= 0D Then Return "—"
+    Return UiPriceFormatter.FormatStorefrontValue(RoundShippingMoney(threshold))
 End Function
+
+Protected Function mancano_ancora(ByVal managedThreshold As Object, ByVal fixedCost As Object,
+                                 ByVal percentage As Object, ByVal maxWeight As Object) As String
+    Dim threshold As Decimal
+    Dim weight As Decimal
+    Dim snapshot As CurrentCartShippingSnapshot = Nothing
+    If Not TryReadDatabaseDecimal(managedThreshold, threshold) OrElse threshold <= 0D Then
+        Return "Tariffa legacy: disponibilità verificata sul valore netto degli articoli idonei e sul peso del carrello."
+    End If
+    If Not TryGetCurrentShippingSnapshot(snapshot) OrElse
+       Not TryReadDatabaseDecimal(maxWeight, weight) Then Return "Disponibilità da verificare."
+    If snapshot.TotalWeight > weight Then Return "Questa tariffa non è disponibile per il peso attuale del carrello."
+    Dim fixed As Decimal
+    Dim percent As Decimal
+    Dim isFree As Boolean = TryReadDatabaseDecimal(fixedCost, fixed) AndAlso
+                            TryReadDatabaseDecimal(percentage, percent) AndAlso fixed = 0D AndAlso percent = 0D
+    Dim benefit As String = If(isFree, "della spedizione gratuita", "di questa tariffa promozionale")
+    Dim remaining As Decimal = RoundShippingMoney(RoundShippingMoney(threshold) - snapshot.QualifyingGross)
+    If remaining <= 0D Then Return "Hai raggiunto la soglia " & benefit & "."
+    Return "Ti mancano " & UiPriceFormatter.FormatStorefrontValue(remaining) &
+           " per raggiungere la soglia " & benefit & "."
+End Function
+
+Protected Sub gvVettoriPromo_DataBinding(ByVal sender As Object, ByVal e As EventArgs) Handles gvVettoriPromo.DataBinding
+    _shippingGoalCandidatesReadThisRequest = True
+    _minimumFreeShippingThreshold = Nothing
+    If phFreeShippingGoal IsNot Nothing Then phFreeShippingGoal.Visible = False
+    If litFreeShippingGoal IsNot Nothing Then litFreeShippingGoal.Text = String.Empty
+End Sub
+
+Private Sub TrackFreeShippingGoal(ByVal row As DataRow, ByVal snapshot As CurrentCartShippingSnapshot)
+    Dim threshold As Decimal
+    Dim fixed As Decimal
+    Dim percent As Decimal
+    Dim maxWeight As Decimal
+    Dim deliveryId As Decimal
+    If row Is Nothing OrElse snapshot Is Nothing OrElse
+       Not TryReadShippingColumn(row, "id", deliveryId) OrElse deliveryId = 0D OrElse
+       Not TryReadShippingColumn(row, "CostoMinimo", threshold) OrElse threshold <= 0D OrElse
+       Not TryReadShippingColumn(row, "CostoFisso", fixed) OrElse fixed <> 0D OrElse
+       Not TryReadShippingColumn(row, "Costo_Percentuale", percent) OrElse percent <> 0D OrElse
+       Not TryReadShippingColumn(row, "PesoMax", maxWeight) OrElse maxWeight < snapshot.TotalWeight Then Return
+    threshold = RoundShippingMoney(threshold)
+    If threshold <= 0D Then Return
+    If Not _minimumFreeShippingThreshold.HasValue OrElse threshold < _minimumFreeShippingThreshold.Value Then
+        _minimumFreeShippingThreshold = threshold
+    End If
+End Sub
+
+Private Sub RefreshFreeShippingGoalCandidates(ByVal snapshot As CurrentCartShippingSnapshot)
+    If _shippingGoalCandidatesReadThisRequest Then Return
+    _shippingGoalCandidatesReadThisRequest = True
+    _minimumFreeShippingThreshold = Nothing
+    Try
+        ' A normal postback may restore grid rows without RowDataBound. Read the
+        ' same filtered datasource, without rebinding or changing radio choices.
+        Dim candidates As DataView = TryCast(sdsVettoriPromo.Select(DataSourceSelectArguments.Empty), DataView)
+        If candidates Is Nothing Then Return
+        For Each candidate As DataRowView In candidates
+            TrackFreeShippingGoal(candidate.Row, snapshot)
+        Next
+    Catch
+        _minimumFreeShippingThreshold = Nothing
+    End Try
+End Sub
+
+Private Sub UpdateFreeShippingGoalNotice()
+    If phFreeShippingGoal Is Nothing OrElse litFreeShippingGoal Is Nothing Then Return
+    phFreeShippingGoal.Visible = False
+    litFreeShippingGoal.Text = String.Empty
+    Dim snapshot As CurrentCartShippingSnapshot = Nothing
+    If Not TryGetCurrentShippingSnapshot(snapshot) OrElse snapshot.AllItemsFreeShipping Then Return
+    RefreshFreeShippingGoalCandidates(snapshot)
+    If Not _minimumFreeShippingThreshold.HasValue Then Return
+    Dim remaining As Decimal = RoundShippingMoney(_minimumFreeShippingThreshold.Value - snapshot.QualifyingGross)
+    If remaining <= 0D Then Return
+    litFreeShippingGoal.Text = "Ti mancano <strong>" &
+        HttpUtility.HtmlEncode(UiPriceFormatter.FormatStorefrontValue(remaining)) &
+        "</strong> per ottenere la spedizione gratuita."
+    phFreeShippingGoal.Visible = True
+End Sub
 
 
 Protected Function controllo_img(ByVal temp As Object) As String
@@ -967,6 +1257,28 @@ Private indice_riga_da_selezionare As Integer = -1
 Private cont_indice_riga As Integer = 0
 Private costo_promo_minimo As Double = 0
 Private Selezionato_Vettore_Promo As Integer = 0
+
+Private Class CurrentCartShippingSnapshot
+    Public HasItems As Boolean
+    Public TotalNet As Decimal
+    Public TotalGross As Decimal
+    Public FreeShippingNet As Decimal
+    Public FreeShippingGross As Decimal
+    Public QualifyingNet As Decimal
+    Public QualifyingGross As Decimal
+    Public TotalWeight As Decimal
+    Public AllItemsFreeShipping As Boolean
+End Class
+
+Private _shippingRebuildAttemptedThisRequest As Boolean
+Private _shippingEligibilityRebuiltThisRequest As Boolean
+Private _shippingSelectionValidatedThisRequest As Boolean
+Private _validatedDeliveryIdThisRequest As Integer
+Private _currentShippingSnapshot As CurrentCartShippingSnapshot
+Private _shippingSnapshotReadAttemptedThisRequest As Boolean
+Private _minimumFreeShippingThreshold As Nullable(Of Decimal)
+Private _shippingGoalCandidatesReadThisRequest As Boolean
+Private _specialFreeShippingAppliedThisRequest As Boolean
 
 Private Cookie As String = ""
 Private RitiroSede As Boolean = False
@@ -2733,7 +3045,9 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
                     Not IsBlankLabel(lblTab_CittaSpedizione) AndAlso
                     Not IsBlankLabel(lblTab_ProvinciaSpedizione)
             Case "cvCheckoutShippingMethod"
-                args.IsValid = tbVettoriId IsNot Nothing AndAlso SafeIntFromDb(tbVettoriId.Text, 0) > 0
+                ' Early validation is structural; capture also requires this
+                ' request's rebuilt choices and tenant-aware carrier validation.
+                args.IsValid = tbVettoriId IsNot Nothing AndAlso SafeIntFromDb(tbVettoriId.Text, 0) <> 0
             Case "cvCheckoutPaymentMethod"
                 args.IsValid = tbPagamenti IsNot Nothing AndAlso SafeIntFromDb(tbPagamenti.Text, 0) > 0
             Case "cvCheckoutTerms"
@@ -2804,11 +3118,13 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
     Session("TotaleMerce") = TotaleMerce
 
-    imponibile = imponibile + SafeDblFromText(importo.Text, 0)
+    If Not _shippingEligibilityRebuiltThisRequest Then
+        imponibile = imponibile + SafeDblFromText(importo.Text, 0)
+    End If
     calcolo_iva = calcolo_iva + (SafeDblFromText(importoIvato.Text, 0) - SafeDblFromText(importo.Text, 0))
     totale = totale + SafeDblFromText(importoIvato.Text, 0)
 
-    If peso IsNot Nothing AndAlso peso.Text <> "" Then
+    If Not _shippingEligibilityRebuiltThisRequest AndAlso peso IsNot Nothing AndAlso peso.Text <> "" Then
         pesoTotale = pesoTotale + SafeDblFromText(peso.Text, 0)
     End If
 
@@ -2915,6 +3231,12 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
         Try
             If Not ValidateOrderNotesLength() Then Return
+            Dim currentDeliveryId As Integer
+            If Not TryRebuildAndValidateCurrentDeliverySelection(True, currentDeliveryId) Then
+                ShowCurrentShippingSelectionFailure()
+                Return
+            End If
+            LeggiPagamenti()
             StoreCheckoutOrderSession(4, "Ordine")
             Dim draft As CheckoutDraftState = Nothing
             Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
@@ -2932,11 +3254,13 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Sub
 
     Protected Sub gvVettori_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettori.PreRender
+        If _shippingRebuildAttemptedThisRequest Then Return
         RestoreCheckoutOptionSelections()
         LeggiVettori()
     End Sub
 
     Private Sub RestoreCheckoutOptionSelections()
+        If _shippingRebuildAttemptedThisRequest Then Return
         Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
         Dim draft As CheckoutDraftState = Nothing
         If identity Is Nothing OrElse Not identity.IsComplete OrElse
@@ -2959,7 +3283,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Next
     End Sub
 
-    Public Sub LeggiVettori()
+    Public Sub LeggiVettori(Optional ByVal allowAutomaticSelection As Boolean = True)
 
     Dim i As Integer
     Dim rb As Control
@@ -3058,12 +3382,12 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             End If
         Next
 
-        If sel = False Then
+        If sel = False AndAlso allowAutomaticSelection Then
             If (gvVettori.Rows.Count > 0) And (Selezionato_Vettore_Promo = 0) Then
                 rb = TryCast(gvVettori.Rows(0).FindControl("rbSpedizione"), Control)
                 If rb IsNot Nothing Then
                     RbSetChecked(rb, True)
-                    LeggiVettori()
+                    LeggiVettori(allowAutomaticSelection)
                     Exit Sub
                 End If
             End If
@@ -3075,7 +3399,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
             rb = TryCast(gvVettoriPromo.Rows(i).FindControl("rbSpedizione"), Control)
 
-            If rb IsNot Nothing AndAlso RbGetEnabled(rb) = True Then
+            If allowAutomaticSelection AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) = True Then
                 RbSetChecked(rb, True)
             End If
 
@@ -3299,58 +3623,49 @@ End Sub
 
 End Sub
 
-    Protected Sub gvVettoriPromo_RowDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.GridViewRowEventArgs) Handles gvVettoriPromo.RowDataBound
 
-    Dim Soglia As Label
-    Dim Peso As Label
-    Dim Costo As Label
-    Dim Percentuale As Label
-    Dim Selezione As Control
-
-    cont_indice_riga += 1
-
-    If e.Row.RowType = DataControlRowType.DataRow Then
-
-        Selezione = TryCast(e.Row.FindControl("rbSpedizione"), Control)
-        Soglia = TryCast(e.Row.FindControl("lblSogliaMinima"), Label)
-        Peso = TryCast(e.Row.FindControl("lblPeso"), Label)
-        Costo = TryCast(e.Row.FindControl("lblCosto"), Label)
-        Percentuale = TryCast(e.Row.FindControl("lblPercentuale"), Label)
-
-        Dim sogliaVal As Double = SafeDblFromText(If(Soglia IsNot Nothing, Soglia.Text, "0"), 0)
-        Dim pesoVal As Double = SafeDblFromText(If(Peso IsNot Nothing, Peso.Text, "0"), 0)
-
-        If (sogliaVal <= (imponibile - imponibile_gratis)) AndAlso (pesoVal >= pesoTotale) Then
-
-            If Selezione IsNot Nothing Then
-                RbSetEnabled(Selezione, False)
-                RbSetChecked(Selezione, False)
-            End If
-
-            Try
-                Dim percVal As Double = SafeDblFromText(If(Percentuale IsNot Nothing, Percentuale.Text, "0"), 0)
-                If percVal > 0 AndAlso Costo IsNot Nothing Then
-                    Costo.Text = FormatCurrencyIt(((imponibile - imponibile_gratis) / 100) * percVal)
-                End If
-            Catch
-                If Percentuale IsNot Nothing Then Percentuale.Text = "0"
-            End Try
-
-            Dim costoVal As Double = SafeMoney(If(Costo IsNot Nothing, Costo.Text, "0"), 0)
-            If indice_riga_da_selezionare < 0 OrElse costoVal < costo_promo_minimo Then
-                costo_promo_minimo = costoVal
-                indice_riga_da_selezionare = cont_indice_riga
-            End If
-
+    Protected Sub gvVettoriPromo_RowDataBound(ByVal sender As Object, ByVal e As GridViewRowEventArgs) Handles gvVettoriPromo.RowDataBound
+        cont_indice_riga += 1
+        If e.Row.RowType <> DataControlRowType.DataRow Then Return
+        Dim selection As Control = e.Row.FindControl("rbSpedizione")
+        RbSetEnabled(selection, False)
+        RbSetChecked(selection, False)
+        Dim data As DataRowView = TryCast(e.Row.DataItem, DataRowView)
+        Dim snapshot As CurrentCartShippingSnapshot = Nothing
+        If data Is Nothing OrElse Not TryGetCurrentShippingSnapshot(snapshot) Then Return
+        Dim row As DataRow = data.Row
+        Dim deliveryId As Decimal
+        Dim managedThreshold As Decimal = 0D
+        Dim maxWeight As Decimal
+        Dim percent As Decimal
+        If Not TryReadShippingColumn(row, "id", deliveryId) OrElse deliveryId = 0D OrElse
+           Not row.Table.Columns.Contains("CostoMinimo") OrElse
+           Not TryReadShippingColumn(row, "PesoMax", maxWeight) OrElse
+           Not TryReadShippingColumn(row, "Costo_Percentuale", percent) Then Return
+        If Not row.IsNull("CostoMinimo") AndAlso
+           Not TryReadShippingColumn(row, "CostoMinimo", managedThreshold) Then Return
+        TrackFreeShippingGoal(row, snapshot)
+        Dim thresholdEligible As Boolean
+        If managedThreshold > 0D Then
+            Dim threshold As Decimal = RoundShippingMoney(managedThreshold)
+            thresholdEligible = threshold > 0D AndAlso snapshot.QualifyingGross >= threshold
         Else
-            If Selezione IsNot Nothing Then
-                RbSetEnabled(Selezione, False)
-            End If
+            Dim legacyThreshold As Decimal
+            If Not TryReadShippingColumn(row, "Soglia_Minima", legacyThreshold) Then Return
+            thresholdEligible = legacyThreshold <= snapshot.QualifyingNet
         End If
-
-    End If
-
-End Sub
+        If Not thresholdEligible OrElse maxWeight < snapshot.TotalWeight Then Return
+        Dim cost As Label = TryCast(e.Row.FindControl("lblCosto"), Label)
+        ' Preserve the existing percentage-cost base: qualifying merchandise net.
+        If percent > 0D AndAlso cost IsNot Nothing Then
+            cost.Text = FormatCurrencyIt(CDbl((snapshot.QualifyingNet / 100D) * percent))
+        End If
+        Dim costValue As Double = SafeMoney(If(cost IsNot Nothing, cost.Text, "0"), 0)
+        If indice_riga_da_selezionare < 0 OrElse costValue < costo_promo_minimo Then
+            costo_promo_minimo = costValue
+            indice_riga_da_selezionare = cont_indice_riga
+        End If
+    End Sub
 
 
     Public Sub BindLstDestinazioneLstScegliIndirizzo
@@ -4065,14 +4380,16 @@ End Function
         Dim impNetto As Double = SafeDblFromText(If(importo IsNot Nothing, importo.Text, "0"), 0)
         Dim impIvato As Double = SafeDblFromText(If(importoIvato IsNot Nothing, importoIvato.Text, "0"), 0)
 
-        imponibile += impNetto
+        If Not _shippingEligibilityRebuiltThisRequest Then
+            imponibile += impNetto
+            imponibile_gratis += impNetto
+        End If
         calcolo_iva += (impIvato - impNetto)
 
-        imponibile_gratis += impNetto
         totale += impIvato
 
         Dim pesoVal As Double = SafeDblFromText(If(peso IsNot Nothing, peso.Text, "0"), 0)
-        If pesoVal <> 0 Then
+        If Not _shippingEligibilityRebuiltThisRequest AndAlso pesoVal <> 0 Then
             pesoTotale += pesoVal
         End If
 
@@ -4118,98 +4435,82 @@ End Function
     ApplyRepeaterItemLock(gvArticoliGratis, Not IsAddressEditModeActive())
     End Sub
 
+
     Protected Sub gvVettoriPromo_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles gvVettoriPromo.PreRender
+        UpdateFreeShippingGoalNotice()
+        If _shippingRebuildAttemptedThisRequest Then Return
+        ApplyPromoCandidate(True)
+    End Sub
 
-    Dim Selezione_Vettore As Control
-
-    If indice_riga_da_selezionare > -1 Then
-        ' (indice_riga_da_selezionare - 2) e non (indice_riga_da_selezionare - 1) perchÃ¨ il DataRowBound viene fatto una volta in piÃ¹
-        Selezione_Vettore = TryCast(Me.gvVettoriPromo.Rows(indice_riga_da_selezionare - 2).FindControl("rbSpedizione"), Control)
-        If Selezione_Vettore IsNot Nothing Then
-            RbSetEnabled(Selezione_Vettore, True)
-            RbSetChecked(Selezione_Vettore, True)
+Private Sub ApplyPromoCandidate(ByVal selectAsDefault As Boolean)
+    If indice_riga_da_selezionare >= 2 AndAlso
+       indice_riga_da_selezionare - 2 < gvVettoriPromo.Rows.Count Then
+        Dim radio As Control = gvVettoriPromo.Rows(indice_riga_da_selezionare - 2).FindControl("rbSpedizione")
+        If radio IsNot Nothing Then
+            RbSetEnabled(radio, True)
+            If selectAsDefault Then
+                RbSetChecked(radio, True)
+                Selezionato_Vettore_Promo = 1
+            End If
         End If
-
-        Selezionato_Vettore_Promo = 1
     End If
-
-    ' Nel caso ci sia nel carrello SOLO prodotti GRATIS
-    If (imponibile - imponibile_gratis = 0) Then
-        Me.Panel_SpedizioneGratis.Visible = True
-    Else
-        Me.Panel_SpedizioneGratis.Visible = False
-    End If
-
+    Panel_SpedizioneGratis.Visible = If(_currentShippingSnapshot Is Nothing,
+        imponibile - imponibile_gratis = 0, _currentShippingSnapshot.AllItemsFreeShipping)
 End Sub
 
+Private Function GetConfiguredSpecialFreeShippingCarrierId() As Integer
+    ' Preserve the existing legacy mapping; it is not a new tenant policy.
+    Return If(GetSessionInt("AziendaID", 0) = 1, -1, -2)
+End Function
+
     Protected Sub rbSpedizioneGratis_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles rbSpedizioneGratis.PreRender
-        Dim conn As New MySqlConnection
-        Dim cmd As New MySqlCommand
-
-        Dim AsssicurazionePercentuale As Double
-        Dim AssicurazioneMinimo As Double
-        Dim TotAssicurazione As Double
-
-        If Me.rbSpedizioneGratis.Checked = True Then
-            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            cmd.Connection = conn
-
-            conn.Open()
-
-            cmd.CommandType = CommandType.Text
-            If Session("AziendaID") = 1 Then
-                cmd.CommandText = "SELECT * FROM vettori WHERE id=-1"
-            Else
-                cmd.CommandText = "SELECT * FROM vettori WHERE id=-2"
-            End If
-
-            Dim dr As MySqlDataReader = cmd.ExecuteReader()
-            dr.Read()
-
-            If dr.HasRows Then
-                'Spedizione
-                Me.lblSpeseSped.Text = FormatCurrencyIt(0D)
-
-                If Session("AziendaID") = 1 Then
-                    Me.tbVettoriId.Text = "-1"
-                Else
-                    Me.tbVettoriId.Text = "-2"
-                End If
-
-                'Assicurazione
-                AsssicurazionePercentuale = dr.Item("AssicurazionePercentuale")
-                AssicurazioneMinimo = dr.Item("AssicurazioneMinimo")
-
-                Dim imponibileBase As Double = SafeMoney(Me.lblImponibile.Text, 0)
-                TotAssicurazione = (AsssicurazionePercentuale * imponibileBase) / 100
-                If TotAssicurazione < AssicurazioneMinimo Then
-                    TotAssicurazione = AssicurazioneMinimo
-                End If
-
-                Me.lblAssicurazione.Text = FormatCurrencyIt(TotAssicurazione)
-
-                'Contrassegno
-                Me.tbContrFisso.Text = dr.Item("ContrassegnoFisso")
-                Me.tbContrPerc.Text = dr.Item("ContrassegnoPercentuale")
-                Me.tbContrMinimo.Text = dr.Item("ContrassegnoMinimo")
-
-                AggiornaSpeseAssicurazione()
-
-                If AsssicurazionePercentuale = 0 Then
-                    Me.cbAssicurazione.Checked = False
-                    Me.cbAssicurazione.Enabled = False
-                Else
-                    Me.cbAssicurazione.Enabled = True
-                End If
-
-                If dr.Item("ContrassegnoPercentuale") = 0 Then
-                    RitiroSede = True
-                Else
-                    RitiroSede = False
-                End If
-            End If
-        End If
+        If _shippingRebuildAttemptedThisRequest Then Return
+        If RbGetChecked(rbSpedizioneGratis) Then ApplySpecialFreeShippingSelection()
     End Sub
+
+Private Function ApplySpecialFreeShippingSelection() As Boolean
+    Dim carrierId As Integer = GetConfiguredSpecialFreeShippingCarrierId()
+    If _specialFreeShippingAppliedThisRequest Then
+        Return SafeIntFromDb(tbVettoriId.Text, 0) = carrierId
+    End If
+    If Not RbGetChecked(rbSpedizioneGratis) Then Return False
+    Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+        connection.Open()
+        Using command As New MySqlCommand(
+            "SELECT * FROM vettori WHERE id=?id AND AziendeId=?aziendaId AND Abilitato=1 AND Web=1",
+            connection)
+            command.Parameters.Add("?id", MySqlDbType.Int32).Value = carrierId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = GetSessionInt("AziendaID", 0)
+            Using reader As MySqlDataReader = command.ExecuteReader()
+                If Not reader.Read() Then Return False
+                For Each grid As GridView In New GridView() {gvVettoriPromo, gvVettori}
+                    For Each row As GridViewRow In grid.Rows
+                        RbSetChecked(row.FindControl("rbSpedizione"), False)
+                    Next
+                Next
+                lblSpeseSped.Text = FormatCurrencyIt(0D)
+                tbVettoriId.Text = carrierId.ToString(CultureInfo.InvariantCulture)
+                rbSpedizioneGratis.Value = carrierId.ToString(CultureInfo.InvariantCulture)
+                Dim percentage As Double = SafeDbl(reader("AssicurazionePercentuale"), 0)
+                Dim minimum As Double = SafeDbl(reader("AssicurazioneMinimo"), 0)
+                Dim insurance As Double = (percentage * SafeMoney(lblImponibile.Text, 0)) / 100
+                If insurance < minimum Then insurance = minimum
+                lblAssicurazione.Text = FormatCurrencyIt(insurance)
+                tbContrFisso.Text = Convert.ToString(reader("ContrassegnoFisso"), CultureInfo.CurrentCulture)
+                tbContrPerc.Text = Convert.ToString(reader("ContrassegnoPercentuale"), CultureInfo.CurrentCulture)
+                tbContrMinimo.Text = Convert.ToString(reader("ContrassegnoMinimo"), CultureInfo.CurrentCulture)
+                If percentage = 0 Then cbAssicurazione.Checked = False
+                cbAssicurazione.Enabled = percentage <> 0
+                AggiornaSpeseAssicurazione()
+                RitiroSede = SafeDbl(reader("ContrassegnoPercentuale"), 0) = 0
+            End Using
+        End Using
+    End Using
+    Session("Iva_Vettori") = IvaVettore(carrierId)
+    _specialFreeShippingAppliedThisRequest = True
+    Return True
+End Function
+
 
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
         Dim imponibileVal As Double = SafeDbl(lblImponibile.Text, 0)
@@ -4576,7 +4877,11 @@ Private Sub MoveToCheckoutConfirmStep()
         SafeRedirectLocal("carrello.aspx?pricechanged=1")
         Return
     End If
-    LeggiVettori()
+    Dim currentDeliveryId As Integer
+    If Not TryRebuildAndValidateCurrentDeliverySelection(True, currentDeliveryId) Then
+        ShowCurrentShippingSelectionFailure()
+        Return
+    End If
     LeggiPagamenti()
     StoreCheckoutOrderSession(4, "Ordine")
     If Not ValidateCheckoutBeforeConfirm() Then
@@ -5685,6 +5990,17 @@ Protected Sub btSalvaPreventivo_click(ByVal sender As Object, ByVal e As System.
     If Not ValidateOrderNotesLength() Then Return
     Me.PnlDestinazione.Visible = False
 
+    Aggiorna_Prezzi_Carrello()
+    If _cartPriceRevalidationBlockedThisRequest Then
+        SafeRedirectLocal("carrello.aspx?pricechanged=1")
+        Return
+    End If
+    Dim currentDeliveryId As Integer
+    If Not TryRebuildAndValidateCurrentDeliverySelection(True, currentDeliveryId) Then
+        ShowCurrentShippingSelectionFailure()
+        Return
+    End If
+    LeggiPagamenti()
     StoreCheckoutOrderSession(2, "Preventivo")
     Session("Ordine_DescrizioneBuonoSconto") = ""
     Session("Ordine_TotaleBuonoSconto") = 0
@@ -5759,11 +6075,15 @@ Protected Sub btInviaOrdine_Click(ByVal sender As Object, ByVal e As System.Even
 
     Dim shouldSendOrder As Boolean = False
     Try
-        LeggiVettori()
         Aggiorna_Prezzi_Carrello()
         If _cartPriceRevalidationBlockedThisRequest Then
             SetCheckoutStep("confirm")
             SafeRedirectLocal("carrello.aspx?pricechanged=1")
+            Return
+        End If
+        Dim currentDeliveryId As Integer
+        If Not TryRebuildAndValidateCurrentDeliverySelection(True, currentDeliveryId) Then
+            ShowCurrentShippingSelectionFailure()
             Return
         End If
         ApplyCurrentShippingAddress()

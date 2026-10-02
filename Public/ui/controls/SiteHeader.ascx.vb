@@ -247,7 +247,7 @@ Partial Class SiteHeader
                 conn.Open()
                 Dim companyId As Integer = ResolveHeaderCompanyId(conn)
                 If companyId <= 0 Then Return
-                Using cmd As New MySqlCommand("SELECT MIN(v.CostoMinimo) FROM vettori v WHERE v.Id >= 0 AND v.AziendeID=@companyId AND v.Abilitato=1 AND v.Web=1 AND v.Promo=1 AND v.Promo_Data_Inizio <= CURDATE() AND v.Promo_Data_Fine >= CURDATE() AND LOCATE(CONCAT(';', @listino, ';'), CONCAT(';', COALESCE(v.Listini_Abilitati,''), ';')) > 0 AND v.CostoMinimo > 0 AND EXISTS (SELECT 1 FROM vettoricosti c WHERE c.VettoriId=v.Id AND c.CostoFisso=0 AND c.Costo_Percentuale=0 AND c.Soglia_Minima > 0 AND c.PesoMax > 0)", conn)
+                Using cmd As New MySqlCommand("SELECT MIN(v.CostoMinimo) FROM vettori v WHERE v.Id <> 0 AND v.AziendeID=@companyId AND v.Abilitato=1 AND v.Web=1 AND v.Promo=1 AND v.Promo_Data_Inizio <= CURDATE() AND v.Promo_Data_Fine >= CURDATE() AND LOCATE(CONCAT(';', @listino, ';'), CONCAT(';', COALESCE(v.Listini_Abilitati,''), ';')) > 0 AND v.CostoMinimo > 0 AND EXISTS (SELECT 1 FROM vettoricosti c WHERE c.VettoriId=v.Id AND c.CostoFisso=0 AND c.Costo_Percentuale=0 AND c.PesoMax > 0)", conn)
                     cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
                     cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
                     Dim raw As Object = cmd.ExecuteScalar()

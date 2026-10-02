@@ -944,7 +944,7 @@ CheckoutFailureRecoveryService.TracePhase(
                     Exit Sub
                 End If
 
-                If Vettore <= 0 Then
+                If Vettore = 0 Then
                     Dim shippingRetryPersisted As Boolean = OrderDurableIdempotencyService.RecordRetryRequired(
                         conn, checkoutRequestId, LoginId, orderIdentity.CompanyId,
                         TipoDoc, checkoutPayloadFingerprint)

@@ -597,6 +597,10 @@
     <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap ks-checkout-section ks-shipping-section">
                 <h5 class="title fw-semibold">Spedizione</h5>
                 <p class="body-text-3 text-main-2 ks-section-help">Scegli il metodo di consegna disponibile per peso, listino e destinazione corrente.</p>
+                <asp:Panel ID="phFreeShippingGoal" runat="server" Visible="false" CssClass="ks-cart-quantity-commercial-notice" role="status" aria-live="polite">
+                    <p><asp:Literal ID="litFreeShippingGoal" runat="server" /></p>
+                    <p class="body-text-3 text-main-2">La soglia si applica agli articoli idonei e resta soggetta al limite di peso.</p>
+                </asp:Panel>
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
 <asp:GridView ID="gvVettoriPromo" runat="server"
         AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettoriPromo"
@@ -699,8 +703,8 @@
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="Soglia tariffa promo (IVA incl)">
                     <ItemTemplate>
-                        <asp:Label ID="Label2" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue((Convert.ToDecimal(Eval("Soglia_Minima"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) %>'></asp:Label>
-                        <img src="Public/Images/interrogativo.png" alt="" title="<%# mancano_ancora(Eval("Soglia_Minima"),imponibile, imponibile_gratis)%>" />
+                        <asp:Label ID="Label2" runat="server" Text='<%# FormatManagedPromoThreshold(Eval("CostoMinimo")) %>'></asp:Label>
+                        <img src="Public/Images/interrogativo.png" alt="" title="<%#: mancano_ancora(Eval("CostoMinimo"), Eval("CostoFisso"), Eval("Costo_Percentuale"), Eval("PesoMax")) %>" />
                     </ItemTemplate>
                     <HeaderStyle HorizontalAlign="Right" VerticalAlign="Middle" Wrap="True" />
                     <ItemStyle HorizontalAlign="Right" VerticalAlign="Middle" Width="130px" Wrap="False" Font-Size="7pt" />
@@ -843,7 +847,7 @@
         </asp:SqlDataSource>
         <asp:SqlDataSource ID="sdsVettoriPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-            SelectCommand="SELECT vettori.id, vettori.Descrizione, vettori.Informazioni, vettori.Ordinamento, vettori.Predefinito, vettori.AssicurazionePercentuale, vettori.AssicurazioneMinimo, vettori.ContrassegnoPercentuale, vettori.ContrassegnoFisso, vettori.ContrassegnoMinimo, vettori.Promo_Data_Fine, vettori.Promo_Data_Inizio, vettori.Img, vettoricosti.CostoFisso, vettoricosti.Costo_Percentuale, vettoricosti.Soglia_Minima, vettoricosti.PesoMax FROM vettoricosti INNER JOIN vettori ON vettoricosti.VettoriId = vettori.id WHERE (vettori.Abilitato = 1) AND (vettori.Web = 1) AND (vettori.AziendeId = @AziendaId) AND (vettori.Promo = 1) AND (vettori.Promo_Data_Inizio <= CURDATE()) AND (vettori.Promo_Data_Fine >= CURDATE()) AND (vettori.Listini_Abilitati LIKE CONCAT('%', @Param1, ';%')) GROUP BY vettori.id, vettori.Descrizione, vettori.Informazioni, vettori.Ordinamento, vettori.Predefinito, vettori.AssicurazionePercentuale, vettori.AssicurazioneMinimo, vettori.ContrassegnoPercentuale, vettori.ContrassegnoFisso, vettori.ContrassegnoMinimo, vettori.Img, vettoricosti.CostoFisso, vettoricosti.Costo_Percentuale, vettoricosti.PesoMax, vettoricosti.Soglia_Minima, vettori.Listini_Abilitati, vettori.Promo_Data_Inizio, vettori.Promo_Data_Fine HAVING (vettori.id >= 0) ORDER BY vettoricosti.Soglia_Minima">
+            SelectCommand="SELECT vettori.id, vettori.CostoMinimo, vettori.Descrizione, vettori.Informazioni, vettori.Ordinamento, vettori.Predefinito, vettori.AssicurazionePercentuale, vettori.AssicurazioneMinimo, vettori.ContrassegnoPercentuale, vettori.ContrassegnoFisso, vettori.ContrassegnoMinimo, vettori.Promo_Data_Fine, vettori.Promo_Data_Inizio, vettori.Img, vettoricosti.CostoFisso, vettoricosti.Costo_Percentuale, vettoricosti.Soglia_Minima, vettoricosti.PesoMax FROM vettoricosti INNER JOIN vettori ON vettoricosti.VettoriId = vettori.id WHERE (vettori.Abilitato = 1) AND (vettori.Web = 1) AND (vettori.AziendeId = @AziendaId) AND (vettori.Promo = 1) AND (vettori.Promo_Data_Inizio <= CURDATE()) AND (vettori.Promo_Data_Fine >= CURDATE()) AND (LOCATE(CONCAT(';', @Param1, ';'), CONCAT(';', COALESCE(vettori.Listini_Abilitati,''), ';')) > 0) GROUP BY vettori.id, vettori.CostoMinimo, vettori.Descrizione, vettori.Informazioni, vettori.Ordinamento, vettori.Predefinito, vettori.AssicurazionePercentuale, vettori.AssicurazioneMinimo, vettori.ContrassegnoPercentuale, vettori.ContrassegnoFisso, vettori.ContrassegnoMinimo, vettori.Img, vettoricosti.CostoFisso, vettoricosti.Costo_Percentuale, vettoricosti.PesoMax, vettoricosti.Soglia_Minima, vettori.Listini_Abilitati, vettori.Promo_Data_Inizio, vettori.Promo_Data_Fine ORDER BY vettoricosti.Soglia_Minima">
             <SelectParameters>
                 <asp:SessionParameter Name="Param1" SessionField="Listino" />
                 <asp:SessionParameter Name="AziendaId" SessionField="AziendaId" />
