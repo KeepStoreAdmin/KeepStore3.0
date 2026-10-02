@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261001-cart-conversion1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261002-checkout-onsus-r4" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-cart-conversion1a" %>" defer></script>
 
@@ -587,7 +587,7 @@
 <asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
     
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
-    <section class="tf-page-checkout flat-spacing-11 ks-cart-page ks-checkout-shell <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
+    <section class="tf-page-checkout flat-spacing-11 ks-cart-page ks-checkout-shell ks-checkout-modern <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
         <div class="container">
             <div class="tf-checkout-wrap flex-lg-nowrap">
                 <div class="page-checkout">
@@ -595,23 +595,28 @@
 <asp:Panel ID="tOrdine" runat="server" Visible="false" CssClass="ks-checkout">
     <div id="promo_vettori">
     <asp:Panel ID="pSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;" CssClass="wrap ks-checkout-section ks-shipping-section">
-                <h5 class="title fw-semibold">Spedizione</h5>
-                <p class="body-text-3 text-main-2 ks-section-help">Scegli il metodo di consegna disponibile per peso, listino e destinazione corrente.</p>
-                <asp:Panel ID="phFreeShippingGoal" runat="server" Visible="false" CssClass="ks-cart-quantity-commercial-notice" role="status" aria-live="polite">
-                    <p><asp:Literal ID="litFreeShippingGoal" runat="server" /></p>
-                    <p class="body-text-3 text-main-2">La soglia si applica agli articoli idonei e resta soggetta al limite di peso.</p>
+                <h5 id="ksShippingTitle" class="title fw-semibold"><i class="icon-delivery-2" aria-hidden="true"></i> Scegli la consegna</h5>
+                <p class="body-text-3 text-main-2 ks-section-help">Seleziona una delle opzioni disponibili. Il riepilogo si aggiorna con le spese di consegna.</p>
+                <asp:Panel ID="phFreeShippingGoal" runat="server" Visible="false" CssClass="ks-cart-quantity-commercial-notice ks-free-shipping-goal" role="status" aria-live="polite">
+                    <i class="icon-delivery-2" aria-hidden="true"></i>
+                    <div>
+                        <strong class="ks-free-shipping-goal-title">Il tuo obiettivo: spedizione gratuita</strong>
+                        <p><asp:Literal ID="litFreeShippingGoal" runat="server" /></p>
+                        <p class="ks-free-shipping-goal-note">La soglia riguarda gli articoli idonei e il limite di peso della promozione.</p>
+                    </div>
                 </asp:Panel>
+                <div class="ks-delivery-choices" role="group" aria-labelledby="ksShippingTitle">
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
 <asp:GridView ID="gvVettoriPromo" runat="server"
         AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettoriPromo"
-        Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" BorderColor="#383838" BorderStyle="Solid" BorderWidth="2px" CssClass="ks-checkout-grid">
+        GridLines="None" Width="100%" DataKeyNames="id" CssClass="ks-checkout-grid ks-option-list ks-promo-options">
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
                         <ccwc:RadioButton ID="rbSpedizione" runat="server" AutoPostBack="True" Checked='false'
-                            GroupName="spedizione" Value='<%#: Eval("Id") %>' />
+                            GroupName="spedizione" Value='<%#: Eval("Id") %>' aria-label='<%#: Eval("Descrizione") %>' />
                     </ItemTemplate>
-                    <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
+                    <ItemStyle CssClass="ks-option-select" HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
                 <asp:TemplateField InsertVisible="False" SortExpression="id" Visible="False" ShowHeader="False">
                     <EditItemTemplate>
@@ -622,15 +627,24 @@
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
-                <asp:TemplateField InsertVisible="False" ShowHeader="False">
+                <asp:TemplateField InsertVisible="False" ShowHeader="False" Visible="False">
                      <ItemTemplate>
                         <img src='<%# "Public/Vettori/" & Eval("Img") %>' title='PROMO fino al <%#: Eval("Promo_Data_Fine","{0:dd/MM/yyyy}") %>' alt="" />
                     </ItemTemplate>
                     <ItemStyle HorizontalAlign="Left" VerticalAlign="Middle" />
                 </asp:TemplateField>
-                <asp:BoundField DataField="Descrizione" SortExpression="Descrizione" ShowHeader="False" >
-                    <ItemStyle Width="150px" HorizontalAlign="Center" VerticalAlign="Middle" />
-                </asp:BoundField>
+                <asp:TemplateField SortExpression="Descrizione" ShowHeader="False">
+                    <ItemTemplate>
+                        <label class="ks-option-name" for='<%# CType(Container, System.Web.UI.Control).FindControl("rbSpedizione").ClientID %>'><%#: Eval("Descrizione") %></label>
+                        <span class="ks-option-badge">Tariffa promozionale</span>
+                        <div class="ks-option-conditions">
+                            <span>Soglia IVA inclusa: <strong><%# FormatManagedPromoThreshold(Eval("CostoMinimo")) %></strong></span>
+                            <span>Peso massimo: <strong><%#: Eval("PesoMax", "{0:0.#} kg") %></strong></span>
+                        </div>
+                        <span class="ks-option-detail"><%#: mancano_ancora(Eval("CostoMinimo"), Eval("CostoFisso"), Eval("Costo_Percentuale"), Eval("PesoMax")) %></span>
+                    </ItemTemplate>
+                    <ItemStyle CssClass="ks-option-copy" HorizontalAlign="Left" VerticalAlign="Middle" />
+                </asp:TemplateField>
                 <asp:TemplateField SortExpression="AssicurazionePercentuale" ShowHeader="False">
                     <EditItemTemplate>
                         <asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("AssicurazionePercentuale") %>'></asp:TextBox>
@@ -691,7 +705,7 @@
                         <asp:Label ID="Label10" runat="server" Text='<%# UiPriceFormatter.FormatStorefrontValue((Convert.ToDecimal(Eval("CostoFisso"), System.Globalization.CultureInfo.InvariantCulture)*((Convert.ToDecimal(Session("Iva_Vettori"), System.Globalization.CultureInfo.InvariantCulture)/100D)+1D))) %>'></asp:Label>
                     <%End If%>
                     </ItemTemplate>
-                    <ItemStyle Width="130px" Wrap="False" Font-Size="7pt" HorizontalAlign="Right" VerticalAlign="Middle" />
+                    <ItemStyle CssClass="ks-option-price" Wrap="False" HorizontalAlign="Right" VerticalAlign="Middle" />
                     <HeaderStyle HorizontalAlign="Right" VerticalAlign="Middle" />
                 </asp:TemplateField>
                 <asp:TemplateField Visible="False">
@@ -701,7 +715,7 @@
                         Percentuale:<asp:Label ID="lblPercentuale" runat="server" Text='<%#: Eval("Costo_Percentuale") %>'></asp:Label>
                     </ItemTemplate>
                 </asp:TemplateField>
-                <asp:TemplateField HeaderText="Soglia tariffa promo (IVA incl)">
+                <asp:TemplateField HeaderText="Soglia tariffa promo (IVA incl)" Visible="False">
                     <ItemTemplate>
                         <asp:Label ID="Label2" runat="server" Text='<%# FormatManagedPromoThreshold(Eval("CostoMinimo")) %>'></asp:Label>
                         <img src="Public/Images/interrogativo.png" alt="" title="<%#: mancano_ancora(Eval("CostoMinimo"), Eval("CostoFisso"), Eval("Costo_Percentuale"), Eval("PesoMax")) %>" />
@@ -709,26 +723,26 @@
                     <HeaderStyle HorizontalAlign="Right" VerticalAlign="Middle" Wrap="True" />
                     <ItemStyle HorizontalAlign="Right" VerticalAlign="Middle" Width="130px" Wrap="False" Font-Size="7pt" />
                 </asp:TemplateField>
-                <asp:BoundField DataField="PesoMax" DataFormatString="{0:0.0} Kg" HeaderText="Peso Massimo">
+                <asp:BoundField DataField="PesoMax" DataFormatString="{0:0.0} Kg" HeaderText="Peso Massimo" Visible="False">
                     <HeaderStyle HorizontalAlign="Right" VerticalAlign="Middle" />
                     <ItemStyle HorizontalAlign="Right" VerticalAlign="Middle" Width="130px" Wrap="False" Font-Size="7pt" />
                 </asp:BoundField>
             </Columns>
             <SelectedRowStyle BackColor="#FFFFC0" />
-            <HeaderStyle Font-Bold="False" Font-Size="7pt" HorizontalAlign="Left" ForeColor="#2050AF" Font-Strikeout="False" />
+            <HeaderStyle CssClass="ks-option-header" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
         </asp:GridView>
-        <br />
         <div id="gvVettori_tooltip">
-        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" Font-Size="8pt" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid">
+        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid ks-option-list">
             <HeaderStyle Font-Bold="False" Font-Size="8pt" HorizontalAlign="Left" ForeColor="#2050AF" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
             <Columns>
                 <asp:TemplateField HeaderText="Seleziona">
                     <ItemTemplate>
                         <ccwc:radiobutton id="rbSpedizione" runat="server" autopostback="True" checked='false'
-                            groupname="spedizione" value='<%#: Eval("Id") %>'></ccwc:radiobutton>
+                            groupname="spedizione" value='<%#: Eval("Id") %>' aria-label='<%#: Eval("Descrizione") %>'></ccwc:radiobutton>
                     </ItemTemplate>
+                    <ItemStyle CssClass="ks-option-select" />
                 </asp:TemplateField>
                 <asp:TemplateField HeaderText="id" InsertVisible="False" SortExpression="id" Visible="False">
                     <EditItemTemplate>
@@ -738,14 +752,18 @@
                         <asp:Label ID="lblId" runat="server" Text='<%# Bind("id") %>'></asp:Label>
                     </ItemTemplate>
                 </asp:TemplateField>
-                <asp:TemplateField InsertVisible="False" ShowHeader="False">
+                <asp:TemplateField InsertVisible="False" ShowHeader="False" Visible="False">
                      <ItemTemplate>
                         <img class="ml-2" src='<%# "Public/Vettori/" & Eval("Img") %>' title='<%#: Eval("Informazioni") %>' alt="" />
                     </ItemTemplate>
                 </asp:TemplateField>
-                <asp:BoundField DataField="Descrizione" HeaderText="Descrizione" SortExpression="Descrizione" >
-                    <ItemStyle Width="100%" />
-                </asp:BoundField>
+                <asp:TemplateField HeaderText="Descrizione" SortExpression="Descrizione">
+                    <ItemTemplate>
+                        <label class="ks-option-name" for='<%# CType(Container, System.Web.UI.Control).FindControl("rbSpedizione").ClientID %>'><%#: Eval("Descrizione") %></label>
+                        <span class="ks-option-detail"><%#: Eval("Informazioni") %></span>
+                    </ItemTemplate>
+                    <ItemStyle CssClass="ks-option-copy" />
+                </asp:TemplateField>
                 <asp:TemplateField HeaderText="Ass.P" SortExpression="AssicurazionePercentuale">
                     <EditItemTemplate>
                         <asp:TextBox ID="TextBox1" runat="server" Text='<%# Bind("AssicurazionePercentuale") %>'></asp:TextBox>
@@ -810,31 +828,31 @@
                     <%End If%>
                     </ItemTemplate>
                     <HeaderStyle HorizontalAlign="Right" />
-                    <ItemStyle HorizontalAlign="Right" Wrap="False" />
+                    <ItemStyle CssClass="ks-option-price" HorizontalAlign="Right" Wrap="False" />
                 </asp:TemplateField>
             </Columns>
             <SelectedRowStyle BackColor="#FFFFC0" />
         </asp:GridView>
         </div>
         <asp:Panel ID="Panel_SpedizioneGratis" runat="server" Visible="False"
-            Width="100%" Font-Size="8pt" CssClass="ks-free-shipping-card">
+            Width="100%" CssClass="ks-free-shipping-card ks-special-free-option">
             <table>
                 <tr>
                     <td style=" text-align:left; vertical-align:middle;">
                       <ccwc:RadioButton ID="rbSpedizioneGratis" runat="server" AutoPostBack="True" Checked='True'
                       Font-Bold="True" Font-Names="Arial" ForeColor="Red" GroupName="spedizione"
-                      Text="" Value='<%#: Eval("Id") %>' />
+                      Text="" Value='<%#: Eval("Id") %>' aria-label="Spedizione gratuita per gli articoli del carrello" />
                     </td>
                     <td>
-                        <img src="Public/Vettori/free.jpg"  alt=""/>
+                        <i class="icon-delivery-2" aria-hidden="true"></i>
                     </td>
                     <td style="color:Red; font-weight:bold;">
-                        Spedizione Gratis
+                        <label for="<%= rbSpedizioneGratis.ClientID %>">Spedizione gratuita</label>
                     </td>
                 </tr>
             </table>        
         </asp:Panel>
-        <br />
+                </div>
     </asp:Panel>   
     </div>
         <asp:SqlDataSource ID="sdsVettori" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
@@ -853,11 +871,11 @@
                 <asp:SessionParameter Name="AziendaId" SessionField="AziendaId" />
             </SelectParameters>
         </asp:SqlDataSource>
-		<div class="row">
-			<div class="col-12 col-md-6">
+		<div class="row ks-checkout-methods">
+			<div class="col-12">
 				<asp:Panel ID="pAssicurazione" runat="server" Width="100%"  Visible="true" style="overflow:hidden; margin-bottom: 15px"  CssClass="wrap ks-checkout-section ks-insurance-section">
-					<h5 class="title fw-semibold">Assicurazione</h5>
-                        <div class="d-flex align-items-center justify-content-between gap-3 py-2 flex-wrap">
+                    <h5 class="title fw-semibold">Assicurazione <span class="ks-optional-label">Opzionale</span></h5>
+                        <div class="d-flex align-items-center justify-content-between gap-3 py-2 flex-wrap ks-insurance-choice">
                             <label class="d-inline-flex align-items-center gap-2 m-0 body-text-3" for="<%= cbAssicurazione.ClientID %>">
                                 <asp:CheckBox ID="cbAssicurazione" runat="server" AutoPostBack="True" />
                                 <span>Aggiungi assicurazione spedizione</span>
@@ -872,10 +890,10 @@
 					</table>
 				</asp:Panel>   
 			</div>
-			<div class="col-12 col-md-6">
-			  <asp:Panel ID="pPagamento" runat="server" Width="99.5%" Visible="true" CssClass="wrap ks-checkout-section ks-payment-section">
-					<h5 class="title fw-semibold">Pagamento</h5>
-                    <p class="body-text-3 text-main-2 ks-section-help">Seleziona un metodo di pagamento abilitato per il tuo listino e totale ordine.</p>
+			<div class="col-12">
+			  <asp:Panel ID="pPagamento" runat="server" Width="100%" Visible="true" CssClass="wrap ks-checkout-section ks-payment-section">
+                    <h5 id="ksPaymentTitle" class="title fw-semibold"><i class="icon-money-bag" aria-hidden="true"></i> Scegli il pagamento</h5>
+                    <p class="body-text-3 text-main-2 ks-section-help">Scegli come pagare. Potrai controllare tutti i dati nel riepilogo prima dell'invio.</p>
 					<asp:SqlDataSource ID="sdsPagamento" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
 						ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
 						SelectCommand="SELECT * FROM vpagamentitipo WHERE Abilitato=1 AND CostoMassimo >= ?CostoMassimo AND (Web=1 OR UtenteID=?UtenteID) AND AziendeID=?AziendaID GROUP BY id ORDER BY Ordinamento, Descrizione">
@@ -885,18 +903,19 @@
 						   <asp:SessionParameter Name="AziendaID" SessionField="AziendaID" />
 						</SelectParameters>    
 					</asp:SqlDataSource>
-					<div id="gvPagamento_tooltip">
-					<asp:GridView ID="gvPagamento" runat="server" CssClass="ks-checkout-grid"
+					<div id="gvPagamento_tooltip" role="group" aria-labelledby="ksPaymentTitle">
+					<asp:GridView ID="gvPagamento" runat="server" CssClass="ks-checkout-grid ks-option-list"
 					AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsPagamento"
-					Font-Size="8pt" GridLines="None" Width="100%" ShowHeader="False" DataKeyNames="id">
+					GridLines="None" Width="100%" ShowHeader="False" DataKeyNames="id">
 						<Columns>
 							<asp:TemplateField HeaderText="sel">
 								<ItemTemplate>
 									<ccwc:radiobutton id="rbPagamento" runat="server" checked='<%#: Eval("Predefinito") %>'
-										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True"></ccwc:radiobutton>
+										groupname="pagamento" value='<%# eval("id") %>' AutoPostBack="True" aria-label='<%#: Eval("Descrizione") %>'></ccwc:radiobutton>
 								</ItemTemplate>
+                                <ItemStyle CssClass="ks-option-select" />
 							</asp:TemplateField>
-							<asp:TemplateField>
+							<asp:TemplateField Visible="False">
 							<ItemTemplate>
 								<img class="ml-2" src='<%# "/Public/assets/images/pagamenti/" & Eval("Img") %>' title='<%#: Eval("Informazioni") %>' alt="" />
 							</ItemTemplate>
@@ -909,9 +928,13 @@
 									<asp:Label ID="lblId" runat="server" Text='<%# Bind("id") %>'></asp:Label>
 								</ItemTemplate>
 							</asp:TemplateField>
-							<asp:BoundField DataField="Descrizione" HeaderText="Descrizione" SortExpression="Descrizione" >
-								<ItemStyle Width="100%" />
-							</asp:BoundField>
+                            <asp:TemplateField HeaderText="Descrizione" SortExpression="Descrizione">
+                                <ItemTemplate>
+                                    <label class="ks-option-name" for='<%# CType(Container, System.Web.UI.Control).FindControl("rbPagamento").ClientID %>'><%#: Eval("Descrizione") %></label>
+                                    <span class="ks-option-detail"><%#: Eval("Informazioni") %></span>
+                                </ItemTemplate>
+                                <ItemStyle CssClass="ks-option-copy" />
+                            </asp:TemplateField>
 							<asp:BoundField DataField="Predefinito" HeaderText="Predefinito" SortExpression="Predefinito"
 								Visible="False" />
 							<asp:TemplateField HeaderText="CostoP" SortExpression="CostoPercentuale">
@@ -954,7 +977,7 @@
 								<ItemTemplate>
 									<asp:Label ID="lblCosto" runat="server" Text='0,00'></asp:Label>
 								</ItemTemplate>
-								<ItemStyle HorizontalAlign="Right" Wrap="False" />
+								<ItemStyle CssClass="ks-option-price" HorizontalAlign="Right" Wrap="False" />
 							</asp:TemplateField>
 						</Columns>
 						<SelectedRowStyle BackColor="#FFFFC0" />
@@ -963,18 +986,17 @@
 					</asp:GridView>
 					</div>
 				</asp:Panel>   
-				<br />
 			</div>
 			<!--<td>&nbsp;</td>-->
 		</div>
         <div id="CheckoutCouponSlot" class="wrap ks-checkout-section ks-discount-section ks-checkout-coupon-slot">
             <div class="ks-coupon-slot-heading">
                 <h5 class="title fw-semibold">Codice sconto</h5>
-                <p class="body-text-3 text-main-2 ks-section-help">Inserisci un codice sconto prima di confermare l'ordine.</p>
+                <p class="body-text-3 text-main-2 ks-section-help">Hai un codice? Applicalo qui prima del riepilogo.</p>
             </div>
         </div>
     <asp:Panel ID="PnlFatturazione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-billing-section">
-							<h5 class="title fw-semibold">Dati fatturazione</h5>
+                            <h5 class="title fw-semibold"><i class="icon-user" aria-hidden="true"></i> Dati di fatturazione</h5>
         <div class="ks-info-card-grid">
             <div class="ks-info-card ks-info-card-wide">
                 <span class="ks-info-label">Intestatario</span>
@@ -1005,7 +1027,7 @@
         </div>
         </asp:Panel>
     <asp:Panel ID="PnlSpedizione" runat="server" Width="100%" Visible="true" style="overflow:hidden;"  CssClass="wrap ks-checkout-section ks-delivery-address-section">
-							<h5 class="title fw-semibold">Indirizzo di spedizione</h5>
+                            <h5 class="title fw-semibold"><i class="icon-location" aria-hidden="true"></i> Dove consegniamo</h5>
         <div class="ks-address-header">
             <asp:Label ID="lblAddressSelectionBadge" runat="server" CssClass="ks-address-status-badge" EnableViewState="false" />
             <p class="body-text-3 text-main-2 ks-section-help">Scegli dove consegnare questo ordine. Puoi verificare tutti i dati prima della conferma.</p>
@@ -1050,14 +1072,6 @@
             <div class="ks-address-smart-note">
                 <i class="icon-delivery-2"></i>
                 <asp:Label ID="lblAddressQualityHint" runat="server" EnableViewState="false" />
-            </div>
-            <div class="ks-address-smart-note">
-                <i class="icon-shield"></i>
-                <span>Pagamento sicuro nel passaggio finale, dopo il controllo dei dati ordine.</span>
-            </div>
-            <div class="ks-address-smart-note">
-                <i class="icon-user"></i>
-                <span>Puoi aggiungere o aggiornare una sede alternativa direttamente da questo carrello.</span>
             </div>
         </div>
         <div class="ks-address-actions">
@@ -1230,9 +1244,9 @@
             </asp:Panel>
 			</div>
 		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap ks-checkout-section ks-note-section">
-					<h5 class="title fw-semibold">Note</h5>
-                <p class="body-text-3 text-main-2 ks-section-help">Aggiungi eventuali indicazioni utili per evasione, consegna o amministrazione ordine.</p>
-				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="5" runat="server" Width="100%" MaxLength="255"></asp:TextBox>
+                    <h5 class="title fw-semibold">Note per l'ordine <span class="ks-optional-label">Opzionali</span></h5>
+                <p class="body-text-3 text-main-2 ks-section-help">Aggiungi solo le indicazioni utili alla preparazione o alla consegna.</p>
+				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="3" runat="server" Width="100%" MaxLength="255"></asp:TextBox>
                 <p class="body-text-3 text-main-2 mt-2 mb-0">
                     <span id="ksOrderNotesCounter">0 / 255 caratteri</span>
                 </p>
@@ -1240,8 +1254,8 @@
     <div class="line"></div>
         <div class="wrap ks-checkout-section ks-confirm-section">
             <div class="ks-confirm-copy">
-                <h5 class="title fw-semibold">Prima del riepilogo</h5>
-                <p class="body-text-3 text-main-2">Controlla spedizione e pagamento. Nel passaggio successivo potrai rivedere l'ordine prima dell'invio.</p>
+                <h5 class="title fw-semibold">Passiamo al riepilogo</h5>
+                <p class="body-text-3 text-main-2">Puoi ancora controllare e modificare i dati. L'ordine non verrà inviato in questo passaggio.</p>
             </div>
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
@@ -1449,13 +1463,13 @@
                                 <span><%= lblBuonoSconto.Text %></span>
                             </div>
 
-                            <div class="d-flex justify-content-between mt-3 pt-3 border-top">
+                            <div class="d-flex justify-content-between mt-3 pt-3 border-top ks-checkout-grand-total">
                                 <span class="fw-semibold">Totale</span>
                                 <span class="fw-semibold"><%= lblTotale.Text %></span>
                             </div>
 
                             <div class="mt-3 body-text-3 text-secondary ks-sidebar-terms-note">
-                                Procedendo con l&#39;ordine confermi di aver letto e accettato le condizioni di vendita.
+                                Controlla il riepilogo prima di inviare l'ordine nel passaggio finale.
                             </div>
                             <div class="ks-checkout-trust-list">
                                 <div class="ks-checkout-trust-item">

@@ -2808,3 +2808,556 @@
     opacity: .55;
     cursor: not-allowed;
 }
+
+/* PR303 R4: ONSUS checkout presentation; existing server controls/values stay authoritative. */
+.ks-cart-page.ks-cart-step-checkout .checkout-status,
+.ks-cart-page.ks-cart-step-confirm .checkout-status{
+    padding-bottom: 28px;
+}
+
+.ks-cart-page.ks-cart-step-checkout .heading-section,
+.ks-cart-page.ks-cart-step-confirm .heading-section{
+    margin-bottom: 0;
+    padding-bottom: 24px;
+}
+
+.ks-cart-page.ks-checkout-modern{
+    --ks-checkout-ink: #333e48;
+    --ks-checkout-muted: #626970;
+    --ks-checkout-border: #ebebeb;
+    --ks-checkout-primary: #ff3d3d;
+    color: var(--ks-checkout-ink);
+    padding-bottom: 48px;
+}
+
+.ks-cart-page.ks-checkout-modern .tf-checkout-wrap{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 32px;
+    align-items: start;
+}
+
+.ks-cart-page.ks-checkout-modern .page-checkout,
+.ks-cart-page.ks-checkout-modern .ks-checkout-side{
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-side{
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.ks-cart-page.ks-checkout-modern .sidebar-checkout-content{
+    display: block;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-section,
+.ks-cart-page.ks-checkout-modern .ks-order-summary-card{
+    border: 1px solid var(--ks-checkout-border);
+    border-radius: 12px;
+    padding: 24px;
+    background: #fff;
+    box-shadow: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-section{
+    margin-bottom: 20px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-section .title,
+.ks-cart-page.ks-checkout-modern .sidebar-checkout-header h5{
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: var(--ks-checkout-ink);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-section .title > i{
+    color: var(--ks-checkout-primary);
+    font-size: 22px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-section-help{
+    margin: 0 0 20px;
+    color: var(--ks-checkout-muted);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-free-shipping-goal{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0 0 20px;
+    padding: 16px;
+    border: 1px solid #d7e3f6;
+    border-radius: 8px;
+    background: #f6f9fe;
+    color: var(--ks-checkout-ink);
+}
+
+.ks-cart-page.ks-checkout-modern .ks-free-shipping-goal > i{
+    flex: 0 0 auto;
+    color: #004ec3;
+    font-size: 24px;
+    line-height: 1.4;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-free-shipping-goal-title{
+    display: block;
+    margin-bottom: 4px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-free-shipping-goal p{
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-free-shipping-goal strong:not(.ks-free-shipping-goal-title){
+    color: #004ec3;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-free-shipping-goal .ks-free-shipping-goal-note{
+    margin-top: 6px;
+    color: var(--ks-checkout-muted);
+    font-size: 12px;
+}
+
+/* GridView rows are selection cards, not a miniature tariff spreadsheet.
+   Keep header/control creation intact: shipping RowDataBound depends on that lifecycle. */
+.ks-cart-page.ks-checkout-modern .ks-option-list{
+    display: block;
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-spacing: 0;
+    color: var(--ks-checkout-ink);
+    font-size: 15px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list > tbody{
+    display: grid;
+    gap: 10px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list .ks-option-header{
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr:not(.ks-option-header){
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 64px;
+    padding: 12px 16px;
+    border: 1px solid #d9dde1;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr > td{
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: inherit;
+    box-shadow: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr > td:not(.ks-option-select):not(.ks-option-copy):not(.ks-option-price){
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list .ks-option-select{
+    grid-column: 1;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list .ks-option-copy{
+    grid-column: 2;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list .ks-option-price{
+    grid-column: 3;
+    align-self: start;
+    padding-top: 10px;
+    color: var(--ks-checkout-ink);
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-name{
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin: 0;
+    color: var(--ks-checkout-ink);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.45;
+    cursor: pointer;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list input[type="radio"]{
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--ks-checkout-primary);
+    cursor: pointer;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr:has(input:checked),
+.ks-cart-page.ks-checkout-modern .ks-option-list tr.is-selected{
+    border-color: var(--ks-checkout-primary);
+    /* GridView can emit an inline alternating-row background. */
+    background: #fff8f8 !important;
+    box-shadow: inset 0 0 0 1px var(--ks-checkout-primary);
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr:has(input:disabled){
+    border-style: dashed;
+    background: #fafafa !important;
+    cursor: default;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr:has(input:disabled) .ks-option-name,
+.ks-cart-page.ks-checkout-modern .ks-option-list tr:has(input:disabled) input{
+    color: var(--ks-checkout-muted);
+    cursor: not-allowed;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-list tr:focus-within{
+    outline: 3px solid #004ec3;
+    outline-offset: 3px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-badge,
+.ks-cart-page.ks-checkout-modern .ks-optional-label{
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #f5f5f5;
+    color: var(--ks-checkout-muted);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-conditions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 8px;
+    color: var(--ks-checkout-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-conditions strong{
+    color: var(--ks-checkout-ink);
+    font-weight: 600;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-detail{
+    display: block;
+    margin-top: 6px;
+    color: var(--ks-checkout-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-option-detail:empty{
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-delivery-choices > #gvVettori_tooltip{
+    margin-top: 10px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-special-free-option{
+    padding: 12px 16px;
+    border: 1px solid var(--ks-checkout-primary);
+    border-radius: 8px;
+    background: #fff8f8;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-special-free-option tr{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 0;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-special-free-option td{
+    padding: 0;
+    border: 0;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-special-free-option label{
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--ks-checkout-ink);
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-special-free-option input[type="radio"]{
+    width: 20px;
+    height: 20px;
+    accent-color: var(--ks-checkout-primary);
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-methods{
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-methods > .col-12{
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-insurance-section{
+    padding: 16px 24px;
+    background: #fafafa;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-insurance-section .title{
+    font-size: 15px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-insurance-choice label{
+    min-height: 44px;
+    color: var(--ks-checkout-ink);
+    font-size: 14px;
+}
+
+.ks-cart-page.ks-checkout-shell.ks-checkout-modern .ks-info-card-grid{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+}
+
+.ks-cart-page.ks-checkout-shell.ks-checkout-modern .ks-info-card{
+    display: grid;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-info-label{
+    color: var(--ks-checkout-muted);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-info-card strong,
+.ks-cart-page.ks-checkout-modern .ks-info-card > span:not(.ks-info-label){
+    display: block;
+    color: var(--ks-checkout-ink);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-info-card-wide{
+    grid-column: auto;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-delivery-address-section .ks-address-picker-card{
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 16px;
+    border: 1px solid var(--ks-checkout-border);
+    background: #fafafa;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-address-picker-copy{
+    display: grid;
+    gap: 4px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-address-picker-control .form-select{
+    width: 100%;
+    max-width: none;
+    font-size: 16px;
+    text-overflow: ellipsis;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-address-inline-status:empty{
+    display: none;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-address-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-address-actions .tf-btn{
+    min-height: 44px;
+    min-width: 0;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-note-section textarea{
+    min-height: 88px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-confirm-section{
+    border-color: #d7e3f6;
+    background: #f6f9fe;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-confirm-section .ks-checkout-actions{
+    margin-top: 16px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-actions .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger){
+    min-height: 48px;
+    background: #e12825;
+    border-color: #e12825;
+    font-size: 15px;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-actions .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):hover{
+    background: #df2525;
+    border-color: #df2525;
+}
+
+.ks-cart-page.ks-checkout-modern .list-product{
+    gap: 12px;
+    max-height: 320px;
+    padding: 0;
+}
+
+.ks-cart-page.ks-checkout-modern .list-product .item-product{
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 0;
+    border: 0;
+    border-bottom: 1px solid var(--ks-checkout-border);
+    border-radius: 0;
+    background: #fff;
+}
+
+.ks-cart-page.ks-checkout-modern .list-product .img-product{
+    width: 64px;
+    height: 64px;
+}
+
+.ks-cart-page.ks-checkout-modern .list-product .link-secondary{
+    color: var(--ks-checkout-ink);
+    font-size: 14px;
+    line-height: 1.5;
+    text-transform: none;
+    -webkit-line-clamp: 3;
+}
+
+.ks-cart-page.ks-checkout-modern .list-product .price-text{
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ks-cart-page.ks-checkout-modern .sidebar-checkout-content > .d-flex{
+    margin-top: 0 !important;
+    padding: 8px 0;
+    border: 0;
+    font-size: 14px;
+}
+
+.ks-cart-page.ks-checkout-modern .sidebar-checkout-content > .ks-checkout-grand-total{
+    margin-top: 16px !important;
+    padding-top: 20px;
+    border-top: 1px solid var(--ks-checkout-border);
+}
+
+.ks-cart-page.ks-checkout-modern .ks-checkout-grand-total span:last-child{
+    color: var(--ks-checkout-primary);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.ks-cart-page.ks-checkout-modern .ks-sidebar-terms-note,
+.ks-cart-page.ks-checkout-modern .ks-checkout-trust-item{
+    color: var(--ks-checkout-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+@media (max-width: 1023.98px){
+    .ks-cart-page.ks-checkout-modern .tf-checkout-wrap{
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .ks-cart-page.ks-checkout-modern .tf-sidebar-checkout{
+        position: static;
+    }
+}
+
+@media (max-width: 575.98px){
+    .ks-cart-page.ks-checkout-modern .ks-checkout-section,
+    .ks-cart-page.ks-checkout-modern .ks-order-summary-card{
+        padding: 18px;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-checkout-section .title,
+    .ks-cart-page.ks-checkout-modern .sidebar-checkout-header h5{
+        font-size: 18px;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-free-shipping-goal{
+        padding: 12px;
+        gap: 10px;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-option-list tr:not(.ks-option-header){
+        grid-template-columns: 20px minmax(0, 1fr);
+        gap: 4px 10px;
+        padding: 10px 12px;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-option-list .ks-option-price{
+        grid-column: 2;
+        padding-top: 4px;
+        text-align: left;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-option-list .ks-option-select{
+        align-self: start;
+        padding-top: 12px;
+    }
+    .ks-cart-page.ks-checkout-shell.ks-checkout-modern .ks-info-card-grid,
+    .ks-cart-page.ks-checkout-modern .ks-delivery-address-section .ks-address-summary{
+        grid-template-columns: 1fr;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-address-actions .tf-btn{
+        width: 100%;
+    }
+    .ks-cart-page.ks-checkout-modern .ks-checkout-grand-total span:last-child{
+        font-size: 24px;
+    }
+}
