@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261002-checkout-onsus-r4" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261002-cart-onsus-r5" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-cart-conversion1a" %>" defer></script>
 
@@ -46,7 +46,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2 ks-cart-page <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>" data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>">
+    <section class="s-shoping-cart tf-sp-2 ks-cart-page ks-cart-modern <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>" data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>">
         <div class="container">
 
             <nav class="checkout-status tf-sp-2 pt-0" aria-label="Fasi dell'ordine">
@@ -75,6 +75,7 @@
 
             <div class="heading-section mb-3">
                 <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Riepilogo ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e pagamento<% Else %>Il tuo carrello<% End If %></h3>
+                <p class="ks-cart-step-intro"><% If IsCheckoutConfirmStep() Then %>Un ultimo controllo dei dati e degli importi prima di inviare l'ordine.<% ElseIf IsCheckoutStepVisible() Then %>Scegli come ricevere i prodotti e come pagare. Puoi rivedere tutto prima dell'invio.<% Else %>Controlla i prodotti e le quantità, poi continua con la consegna.<% End If %></p>
                 <div class="body-text-3 ks-cart-heading-meta">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825" CssClass="ks-cart-heading-count" data-ks-cart-heading-count="true"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
@@ -106,6 +107,8 @@
                 <strong>Condizioni del carrello aggiornate</strong>
                 <p>Uno o più prezzi o condizioni sono cambiati. Controlla le righe prima di continuare.</p>
             </div>
+            <div class="ks-cart-stage-layout">
+            <div class="ks-cart-stage-products">
             <div id="CartItemsWrap" runat="server" class="row g-4 ks-cart-step-cart-body">
                 <div class="col-12">
                     <div class="form-discount ks-cart-form">
@@ -500,11 +503,11 @@
                 <div id="CartSummaryColumn" runat="server" class="col-12 col-lg-4 ks-cart-side">
                     <div class="tf-page-cart-footer">
                         <div class="tf-cart-summery ks-summary-card">
-                            <h4 class="title">Riepilogo ordine</h4>
+                            <h4 class="title">Riepilogo carrello</h4>
                             <div class="ks-cart-subtotal-card">
                                 <span class="ks-info-label">Totale articoli</span>
                                 <strong><asp:Label ID="lblCartSubtotalOnly" runat="server" Text="0,00" CssClass="ks-cart-subtotal-value" data-ks-cart-subtotal="true"></asp:Label></strong>
-                                <p class="body-text-3">Spedizione, pagamento e costi checkout saranno calcolati nello step successivo.</p>
+                                <p class="body-text-3">Consegna e costi del pagamento vengono indicati nel prossimo passaggio, prima di inviare l'ordine.</p>
                             </div>
                         <table width="100%" id="TableConteggi" runat="server" visible="false" class="ks-summary-table">
                             <tr>
@@ -570,15 +573,16 @@
             </div>
 
             <div class="box-btn ks-cart-buttons ks-cart-actions">
+                <div class="ks-right">
+                    <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Continua con spedizione e pagamento" />
+                    <span class="ks-cart-checkout-wait" data-ks-cart-checkout-wait role="status" hidden="hidden">Attendi il salvataggio della quantità.</span>
+                </div>
                 <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
                 <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray ks-cart-qty-fallback" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
                 <asp:Panel ID="btSvuota" runat="server" style="display:contents">
                     <asp:Literal ID="litClearCartAction" runat="server" />
                 </asp:Panel>
-                <div class="ks-right">
-                    <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Continua con spedizione e pagamento" />
-                    <span class="ks-cart-checkout-wait" data-ks-cart-checkout-wait role="status" hidden="hidden">Attendi il salvataggio della quantità.</span>
-                </div>
+            </div>
             </div>
             </div>
         </div>
@@ -587,7 +591,7 @@
 <asp:Panel ID="Panel_Unico" runat="server" CssClass="ks-checkout-panel">   
     
     <% If tOrdine IsNot Nothing AndAlso tOrdine.Visible Then %>
-    <section class="tf-page-checkout flat-spacing-11 ks-cart-page ks-checkout-shell ks-checkout-modern <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
+    <section class="tf-page-checkout flat-spacing-11 ks-cart-page ks-cart-modern ks-checkout-shell ks-checkout-modern <%= If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", "ks-cart-step-checkout") %>">
         <div class="container">
             <div class="tf-checkout-wrap flex-lg-nowrap">
                 <div class="page-checkout">
@@ -1269,25 +1273,25 @@
             <asp:CustomValidator ID="cvCheckoutPaymentMethod" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Seleziona un metodo di pagamento." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
             <asp:CustomValidator ID="cvCheckoutTerms" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Accetta le Condizioni Generali di Vendita." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
             <div class="ks-confirm-copy">
-                <h5 class="title fw-semibold">Riepilogo finale</h5>
-                <p class="body-text-3 text-main-2">Verifica indirizzo, spedizione, pagamento, note e importi prima di confermare. Nessun pagamento viene avviato prima di questo pulsante finale.</p>
+                <h5 class="title fw-semibold"><i class="icon-shield" aria-hidden="true"></i> Controlla e conferma</h5>
+                <p class="body-text-3 text-main-2">Questi sono i dati che verranno utilizzati per l'ordine. Controllali prima dell'invio.</p>
             </div>
             <div class="ks-final-confirm-grid">
-                <div class="ks-final-confirm-card">
-                    <span class="ks-info-label">Fatturazione</span>
+                <div class="ks-final-confirm-card ks-final-address-card">
+                    <span class="ks-info-label"><i class="icon-user" aria-hidden="true"></i> Fatturazione</span>
                     <strong><asp:Label ID="lblConfirmBillingName" runat="server" /></strong>
                     <span><asp:Label ID="lblConfirmBillingAddress" runat="server" /></span>
                 </div>
-                <div class="ks-final-confirm-card">
-                    <span class="ks-info-label">Spedizione</span>
+                <div class="ks-final-confirm-card ks-final-address-card">
+                    <span class="ks-info-label"><i class="icon-delivery-2" aria-hidden="true"></i> Indirizzo di consegna</span>
                     <strong><asp:Label ID="lblConfirmShippingName" runat="server" /></strong>
                     <span><asp:Label ID="lblConfirmShippingAddress" runat="server" /></span>
                 </div>
-                <div class="ks-final-confirm-card">
+                <div class="ks-final-confirm-card ks-final-method-card">
                     <span class="ks-info-label">Metodo di consegna</span>
                     <strong><asp:Label ID="lblConfirmShippingMethod" runat="server" /></strong>
                 </div>
-                <div class="ks-final-confirm-card">
+                <div class="ks-final-confirm-card ks-final-method-card">
                     <span class="ks-info-label">Pagamento</span>
                     <strong><asp:Label ID="lblConfirmPaymentMethod" runat="server" /></strong>
                 </div>
@@ -1295,21 +1299,12 @@
                     <span class="ks-info-label">Note</span>
                     <strong><asp:Label ID="lblConfirmNotes" runat="server" /></strong>
                 </div>
-                <div class="ks-final-confirm-card">
+                <div class="ks-final-confirm-card ks-final-confirm-total">
                     <span class="ks-info-label">Totale ordine</span>
                     <strong><asp:Label ID="lblConfirmTotal" runat="server" /></strong>
                 </div>
             </div>
-            <div class="ks-address-smart-notes">
-                <div class="ks-address-smart-note">
-                    <i class="icon-shield"></i>
-                    <span>Pagamento sicuro: l'invio parte solo dopo questa conferma finale.</span>
-                </div>
-                <div class="ks-address-smart-note">
-                    <i class="icon-delivery-2"></i>
-                    <span>Per modificare spedizione o pagamento torna al passaggio precedente.</span>
-                </div>
-            </div>
+            <p class="ks-final-review-help">Vuoi cambiare qualcosa? Puoi modificare spedizione e pagamento prima di inviare l'ordine.</p>
             <div id="FinalCheckoutActionsInlineSlot" class="ks-final-actions-inline-slot">
                 <div class="ks-checkout-actions">
                     <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
