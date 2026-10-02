@@ -16,6 +16,13 @@ Partial Class PageMaster
     Implements ISeoMaster
 
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
+    Private Const TenantPriceDisplayCompanyKey As String = "KeepStore.PriceDisplay.TenantCompanyId"
+    Private Const TenantPriceDisplayListKey As String = "KeepStore.PriceDisplay.TenantPriceListId"
+    Private Const TenantPriceDisplayModeKey As String = "KeepStore.PriceDisplay.TenantMode"
+    Private _priceDisplayCompanyId As Integer
+    Private _priceDisplayDefaultListId As Integer
+    Private _priceDisplayTenantMode As StorefrontVatDisplayMode
+    Private _priceDisplayCarrierVat As Nullable(Of Decimal)
     Private Const CartFeedbackKindKey As String = "ks_cart_feedback_kind"
     Private Const CartFeedbackProductNameKey As String = "ks_cart_feedback_product_name"
     Private Const CartFeedbackArticleIdKey As String = "ks_cart_feedback_article_id"
@@ -61,22 +68,79 @@ Partial Class PageMaster
             "LoginId", "LoginID", "LoginEmail", "LoginNomeCognome", "LoginUltimoAccesso", "Login_User",
             "UtentiId", "UtentiID", "UtentiTipoId", "AuthenticatedAziendaID",
             "AbilitaListino", "genera_html_mail", "Iva_Utente", "DescrizioneEsenzioneIva",
-            "IdEsenzioneIva", "AbilitatoIvaReverseCharge", "DataPassword"
+            "IdEsenzioneIva", "AbilitatoIvaReverseCharge", "DataPassword", "IvaTipo", "Iva_Vettori"
         }
         For Each key As String In authenticationKeys
             Me.Session.Remove(key)
         Next
+        StorefrontPriceDisplayContextProvider.Invalidate(HttpContext.Current)
+    End Sub
+
+    Private Sub RequirePriceDisplayTenant()
+        If _priceDisplayCompanyId <= 0 OrElse _priceDisplayDefaultListId <= 0 OrElse
+           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AziendaID")) <> _priceDisplayCompanyId Then
+            Throw New InvalidOperationException("Validated storefront price display tenant is unavailable.")
+        End If
+    End Sub
+
+    Private Function TenantCarrierVatDefault() As Decimal
+        RequirePriceDisplayTenant()
+        If Not _priceDisplayCarrierVat.HasValue Then
+            _priceDisplayCarrierVat = Convert.ToDecimal(IvaVettoreDefault(_priceDisplayCompanyId), System.Globalization.CultureInfo.InvariantCulture)
+        End If
+        Return _priceDisplayCarrierVat.Value
+    End Function
+
+    ' Also used by login.aspx: its Load runs after master Init, so clearing a
+    ' rejected login must restore browsing defaults now, not on a later GET.
+    Public Sub RestoreAnonymousPriceDisplayState()
+        RequirePriceDisplayTenant()
+        Dim anonymousPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAnonymousPriceList(
+            _priceDisplayCompanyId, _priceDisplayDefaultListId)
+        Session("Listino") = anonymousPriceListId
+        Session("listino") = anonymousPriceListId
+        Session("IvaTipo") = CInt(_priceDisplayTenantMode)
+        Session("Iva_Utente") = -1D
+        Session("IdEsenzioneIva") = -1
+        Session("DescrizioneEsenzioneIva") = String.Empty
+        Session("AbilitatoIvaReverseCharge") = 0
+        Session("Iva_Vettori") = TenantCarrierVatDefault()
+        StorefrontPriceDisplayContextProvider.Invalidate(HttpContext.Current)
+    End Sub
+
+    Public Sub ApplyAuthenticatedPriceDisplayState(ByVal accountMode As Object,
+                                                   ByVal exemptionIdValue As Object,
+                                                   ByVal vatOverrideValue As Object,
+                                                   ByVal exemptionDescriptionValue As Object,
+                                                   ByVal reverseChargeValue As Object)
+        RequirePriceDisplayTenant()
+        If CurrentLoginIdSafe() <= 0 OrElse
+           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")) <> _priceDisplayCompanyId OrElse
+           StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Session("Listino"), Session("listino")) <= 0 Then
+            Throw New InvalidOperationException("Validated storefront account price scope is unavailable.")
+        End If
+        Dim exemptionId As Integer = StorefrontPriceDisplayContextProvider.NormalizeExemptionId(exemptionIdValue)
+        Dim vatOverride As Nullable(Of Decimal) = Nothing
+        If exemptionId >= 0 Then vatOverride = StorefrontPriceDisplayContextProvider.NormalizeVatOverride(vatOverrideValue)
+        Session("IvaTipo") = CInt(StorefrontPriceDisplayContextProvider.ResolveDisplayMode(accountMode, _priceDisplayTenantMode))
+        Session("Iva_Utente") = If(vatOverride.HasValue, vatOverride.GetValueOrDefault(), -1D)
+        Session("IdEsenzioneIva") = If(vatOverride.HasValue, exemptionId, -1)
+        Session("DescrizioneEsenzioneIva") = If(vatOverride.HasValue, Convert.ToString(exemptionDescriptionValue), String.Empty)
+        Session("AbilitatoIvaReverseCharge") = If(StorefrontCommercialIsolationPolicy.PositiveInteger(reverseChargeValue) = 1, 1, 0)
+        If vatOverride.HasValue Then
+            Session("Iva_Vettori") = vatOverride.Value
+        Else
+            Session("Iva_Vettori") = TenantCarrierVatDefault()
+        End If
+        StorefrontPriceDisplayContextProvider.Invalidate(HttpContext.Current)
     End Sub
 
     Private Sub EnsureAuthenticatedStorefrontScope(ByVal companyId As Integer,
                                                    ByVal defaultPriceListId As Integer)
-        Dim anonymousPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAnonymousPriceList(
-            companyId,
-            defaultPriceListId)
         Dim loginId As Integer = CurrentLoginIdSafe()
         If loginId <= 0 Then
-            Me.Session("Listino") = anonymousPriceListId
-            Me.Session("listino") = anonymousPriceListId
+            ClearStorefrontAuthenticationState()
+            RestoreAnonymousPriceDisplayState()
             Return
         End If
 
@@ -86,8 +150,10 @@ Partial Class PageMaster
             If authenticatedCompanyId <> companyId OrElse
                StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Me.Session("Listino"), Me.Session("listino")) <= 0 Then
                 ClearStorefrontAuthenticationState()
-                Me.Session("Listino") = anonymousPriceListId
-                Me.Session("listino") = anonymousPriceListId
+                RestoreAnonymousPriceDisplayState()
+            Else
+                ApplyAuthenticatedPriceDisplayState(Session("IvaTipo"), Session("IdEsenzioneIva"),
+                    Session("Iva_Utente"), Session("DescrizioneEsenzioneIva"), Session("AbilitatoIvaReverseCharge"))
             End If
             Return
         End If
@@ -98,7 +164,8 @@ Partial Class PageMaster
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using authenticationConnection As New MySqlConnection(connectionString)
                 authenticationConnection.Open()
-                Const sql As String = "SELECT id, AziendeID, listino, utentiid, utentitipoid FROM vlogin " &
+                Const sql As String = "SELECT id, AziendeID, listino, utentiid, utentitipoid, IvaTipo, " &
+                                      "IdEsenzioneIva, ValoreEsenzioneIva, DescrizioneEsenzioneIva, AbilitatoIvaReverseCharge FROM vlogin " &
                                       "WHERE id=@loginId AND AziendeID=@companyId AND Abilitato=1 AND UtentiAbilitato=1 LIMIT 0, 1"
                 Using authenticationCommand As New MySqlCommand(sql, authenticationConnection)
                     authenticationCommand.Parameters.AddWithValue("@loginId", loginId)
@@ -116,6 +183,8 @@ Partial Class PageMaster
                                 Me.Session("UtentiTipoId") = reader("utentitipoid")
                                 Me.Session("Listino") = persistedPriceListId
                                 Me.Session("listino") = persistedPriceListId
+                                ApplyAuthenticatedPriceDisplayState(reader("IvaTipo"), reader("IdEsenzioneIva"),
+                                    reader("ValoreEsenzioneIva"), reader("DescrizioneEsenzioneIva"), reader("AbilitatoIvaReverseCharge"))
                                 Return
                             End If
                         End If
@@ -127,8 +196,7 @@ Partial Class PageMaster
         End Try
 
         ClearStorefrontAuthenticationState()
-        Me.Session("Listino") = anonymousPriceListId
-        Me.Session("listino") = anonymousPriceListId
+        RestoreAnonymousPriceDisplayState()
     End Sub
 
     '==========================================================
@@ -1138,7 +1206,14 @@ End Function
                authenticatedCompanyId) Then
             ClearStorefrontAuthenticationState()
         End If
-        If sessionCompanyId <> resolvedTenant.CompanyId Then
+        ' Retain only scalar, host-validated tenant defaults in Session. Old
+        ' sessions hydrate them once; account IvaTipo is never a tenant default.
+        Dim cachedTenantMode As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(Session(TenantPriceDisplayModeKey))
+        Dim hasTenantPriceDisplayDefaults As Boolean =
+            StorefrontCommercialIsolationPolicy.PositiveInteger(Session(TenantPriceDisplayCompanyKey)) = resolvedTenant.CompanyId AndAlso
+            StorefrontCommercialIsolationPolicy.PositiveInteger(Session(TenantPriceDisplayListKey)) = resolvedTenant.DefaultPriceListId AndAlso
+            (cachedTenantMode = 1 OrElse cachedTenantMode = 2)
+        If sessionCompanyId <> resolvedTenant.CompanyId OrElse Not hasTenantPriceDisplayDefaults Then
 
             localConn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             localCmd.Connection = localConn
@@ -1202,6 +1277,10 @@ End Function
                     localConn.Close()
                     Return
                 End If
+                Session(TenantPriceDisplayCompanyKey) = configuredTenant.CompanyId
+                Session(TenantPriceDisplayListKey) = configuredTenant.DefaultPriceListId
+                Session(TenantPriceDisplayModeKey) = CInt(StorefrontPriceDisplayContextProvider.NormalizeTenantDisplayMode(dr.Item("IvaTipo"), HttpContext.Current))
+                If sessionCompanyId <> resolvedTenant.CompanyId Then
                 Me.Session("AziendaID") = dr.Item("Id")
                 Me.Session("AziendaEmail") = dr.Item("Email")
                 Me.Session("AziendaNome") = dr.Item("Nome")
@@ -1216,7 +1295,7 @@ End Function
                 Me.Session("Listino") = dr.Item("ListinoDefault")
                 Me.Session("listino") = dr.Item("ListinoDefault")
                 Me.Session("ListinoUser") = dr.Item("ListinoUser")
-                Me.Session("IvaTipo") = dr.Item("IvaTipo")
+                Me.Session("IvaTipo") = Session(TenantPriceDisplayModeKey)
                 Me.Session("CanOrder") = dr.Item("CanOrder")
                 Me.Session("MagazzinoDefault") = dr.Item("MagazzinoDefault")
                 Me.Session("DispoTipo") = dr.Item("DispoTipo")
@@ -1256,25 +1335,12 @@ End Function
                 'Setto l'id del documento che mi indica il Coupon
                 Session("IdDocumentoCoupon") = 18
 
-                'Iva da applicare al vettore
-                If Session("Iva_Utente") IsNot Nothing AndAlso CInt(Session("Iva_Utente")) > -1 Then
-                    Session("Iva_Vettori") = Session("Iva_Utente")
-                Else
-                    Session("Iva_Vettori") = IvaVettoreDefault(CInt(Session("AziendaID")))
-                End If
-
-                'Setto l'abilitazione dell'utente all'IVA Reverse Charge o meno
-                If Session("AbilitatoIvaReverseCharge") IsNot Nothing AndAlso CInt(Session("AbilitatoIvaReverseCharge")) = 1 Then
-                    Session("AbilitatoIvaReverseCharge") = 1
-                Else
-                    Session("AbilitatoIvaReverseCharge") = 0
-                End If
-
                 Try
                     Me.Session("AccountIwBank") = dr.Item("AccountIwBank")
                 Catch ex As Exception
                     Me.Session("AccountIwBank") = "000000"
                 End Try
+                End If
             End If
 
             dr.Close()
@@ -1286,6 +1352,11 @@ End Function
             localCmd.Dispose()
         End If
 
+        _priceDisplayCompanyId = resolvedTenant.CompanyId
+        _priceDisplayDefaultListId = resolvedTenant.DefaultPriceListId
+        _priceDisplayTenantMode = StorefrontPriceDisplayContextProvider.NormalizeTenantDisplayMode(Session(TenantPriceDisplayModeKey), HttpContext.Current)
+        StorefrontPriceDisplayContextProvider.SetTenantDefaults(HttpContext.Current, _priceDisplayCompanyId,
+            _priceDisplayDefaultListId, CInt(_priceDisplayTenantMode))
         EnsureAuthenticatedStorefrontScope(resolvedTenant.CompanyId, resolvedTenant.DefaultPriceListId)
         ImpostaTemplate()
     End Sub
@@ -1600,22 +1671,10 @@ End Function
                 Me.Session("AuthenticatedAziendaID") = dr.Item("AziendeID")
                 Me.Session("genera_html_mail") = dr.Item("genera_html_mail")
 
-                If dr.Item("idEsenzioneIva") <> -1 Then
-                    Me.Session("Iva_Utente") = dr.Item("ValoreEsenzioneIva")
-                    Session("DescrizioneEsenzioneIva") = dr.Item("DescrizioneEsenzioneIva")
-                    Session("IdEsenzioneIva") = dr.Item("IdEsenzioneIva")
-                    Session("Iva_Vettori") = Session("Iva_Utente")
-                Else
-                    Session("IdEsenzioneIva") = -1
-                    Session("DescrizioneEsenzioneIva") = ""
-                    Me.Session("Iva_Utente") = -1
-                End If
-
-                Session("AbilitatoIvaReverseCharge") = dr.Item("AbilitatoIvaReverseCharge")
-
                 Me.Session("Listino") = dr.Item("listino")
                 Me.Session("listino") = dr.Item("listino")
-                Me.Session("IvaTipo") = dr.Item("IvaTipo")
+                ApplyAuthenticatedPriceDisplayState(dr.Item("IvaTipo"), dr.Item("IdEsenzioneIva"),
+                    dr.Item("ValoreEsenzioneIva"), dr.Item("DescrizioneEsenzioneIva"), dr.Item("AbilitatoIvaReverseCharge"))
                 Me.Session("DataPassword") = dr.Item("DataPassword")
                 ' Cookie username (OK)
                 Try

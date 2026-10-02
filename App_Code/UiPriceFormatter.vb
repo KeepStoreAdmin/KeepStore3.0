@@ -14,6 +14,46 @@ Imports System.Web
 Public Module UiPriceFormatter
     Private ReadOnly PriceCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
+    ' Separate adapter names preserve legacy overload resolution, including
+    ' Object/Nothing callers. All prices supplied here are already authoritative.
+    Public Function RenderContextPriceHtml(ByVal prezzo As Object,
+                                            ByVal prezzoIvato As Object,
+                                            ByVal prezzoPromo As Object,
+                                            ByVal prezzoPromoIvato As Object,
+                                            ByVal inOfferta As Object,
+                                            ByVal context As StorefrontPriceDisplayContext) As String
+        If context Is Nothing Then Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
+        Dim baseValue As Nullable(Of Decimal) = context.SelectPrice(ToDec(prezzo), ToDec(prezzoIvato))
+        Dim promoValue As Nullable(Of Decimal) = context.SelectPromoPrice(ToDec(prezzoPromo), ToDec(prezzoPromoIvato))
+        If Not baseValue.HasValue Then Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
+        If ContextHasPromo(baseValue, promoValue, inOfferta) Then
+            Return "<span class=""ks-price""><ins class=""ks-price-now"">" & FormatPrice(promoValue.Value) &
+                   "</ins><del class=""ks-price-old"">" & FormatPrice(baseValue.Value) & "</del></span>"
+        End If
+        Return "<span class=""ks-price""><span class=""ks-price-now"">" & FormatPrice(baseValue.Value) & "</span></span>"
+    End Function
+
+    Public Function RenderContextPriceText(ByVal prezzo As Object,
+                                            ByVal prezzoIvato As Object,
+                                            ByVal prezzoPromo As Object,
+                                            ByVal prezzoPromoIvato As Object,
+                                            ByVal inOfferta As Object,
+                                            ByVal context As StorefrontPriceDisplayContext) As String
+        If context Is Nothing Then Return "Prezzo su richiesta"
+        Dim baseValue As Nullable(Of Decimal) = context.SelectPrice(ToDec(prezzo), ToDec(prezzoIvato))
+        Dim promoValue As Nullable(Of Decimal) = context.SelectPromoPrice(ToDec(prezzoPromo), ToDec(prezzoPromoIvato))
+        If Not baseValue.HasValue Then Return "Prezzo su richiesta"
+        If ContextHasPromo(baseValue, promoValue, inOfferta) Then Return FormatPrice(promoValue.Value)
+        Return FormatPrice(baseValue.Value)
+    End Function
+
+    Private Function ContextHasPromo(ByVal baseValue As Nullable(Of Decimal),
+                                     ByVal promoValue As Nullable(Of Decimal),
+                                     ByVal inOfferta As Object) As Boolean
+        Return (inOfferta Is Nothing OrElse ToInt(inOfferta) <> 0) AndAlso
+               baseValue.HasValue AndAlso promoValue.HasValue AndAlso promoValue.Value < baseValue.Value
+    End Function
+
     ' Versione base (5 parametri) - compatibilità
     Public Function RenderPriceHtml(ByVal prezzo As Object,
                                               ByVal prezzoIvato As Object,

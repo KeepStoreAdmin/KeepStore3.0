@@ -44,6 +44,9 @@ Partial Class Login
         Session.Remove("UtentiID")
         Session.Remove("UtentiTipoId")
         Session.Remove("AuthenticatedAziendaID")
+        Dim masterPage As PageMaster = TryCast(Me.Master, PageMaster)
+        If masterPage Is Nothing Then Throw New InvalidOperationException("Storefront login master is unavailable.")
+        masterPage.RestoreAnonymousPriceDisplayState()
     End Sub
 
     '================================================================
@@ -234,25 +237,12 @@ Partial Class Login
                     'Indica se l'utente può o meno creare l'html per le promo mailing
                     Session("genera_html_mail") = dr.Item("genera_html_mail")
 
-                    'Iva applicata all'utente Utente - Esenzioni
-                    If dr.Item("idEsenzioneIva") <> -1 Then
-                        Session("Iva_Utente") = dr.Item("ValoreEsenzioneIva")
-                        Session("DescrizioneEsenzioneIva") = dr.Item("DescrizioneEsenzioneIva")
-                        Session("IdEsenzioneIva") = dr.Item("IdEsenzioneIva")
-                        'Iva da applicare al vettore (da settare nella tabella Aziende)
-                        Session("Iva_Vettori") = Session("Iva_Utente")
-                    Else
-                        Session("IdEsenzioneIva") = -1
-                        Session("DescrizioneEsenzioneIva") = ""
-                        Session("Iva_Utente") = -1
-                    End If
-
-                    'Reverse Charge Utente
-                    Session("AbilitatoIvaReverseCharge") = dr.Item("AbilitatoIvaReverseCharge")
-
                     Session("Listino") = authenticatedPriceListId
                     Session("listino") = authenticatedPriceListId
-                    Session("IvaTipo") = dr.Item("IvaTipo")
+                    Dim masterPage As PageMaster = TryCast(Me.Master, PageMaster)
+                    If masterPage Is Nothing Then Throw New InvalidOperationException("Storefront login master is unavailable.")
+                    masterPage.ApplyAuthenticatedPriceDisplayState(dr.Item("IvaTipo"), dr.Item("IdEsenzioneIva"),
+                        dr.Item("ValoreEsenzioneIva"), dr.Item("DescrizioneEsenzioneIva"), dr.Item("AbilitatoIvaReverseCharge"))
                     Session("DataPassword") = dr.Item("DataPassword")
                     Try
                         Session("CanOrder") = dr.Item("CanOrder")
