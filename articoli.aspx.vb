@@ -19,7 +19,8 @@ Partial Class Articoli
         End Get
     End Property
 
-    Dim IvaTipo As Integer
+    Private _priceDisplayContext As StorefrontPriceDisplayContext
+    Private catalogPriceDisplayContextFailed As Boolean = False
     Dim DispoTipo As Integer
     Dim DispoMinima As Integer
     Dim InOfferta As Integer
@@ -183,6 +184,7 @@ Partial Class Articoli
     End Function
 
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
+        If Not EnsureCatalogPriceDisplayContext() Then Return
         Dim newUrl As String = oldUrl
         Dim mrAreEquals As Boolean = True
         Dim tpAreEquals As Boolean = True
@@ -210,6 +212,7 @@ Partial Class Articoli
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        If Not EnsureCatalogPriceDisplayContext() Then Return
         ' Step 1: se presente ScriptManager, disabilita partial rendering (rimozione AJAX)
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
@@ -418,13 +421,8 @@ Partial Class Articoli
     End Function
 
     Protected Sub Page_LoadComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.LoadComplete
-        IvaTipo = Me.Session("IvaTipo")
-
-        If IvaTipo = 1 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Esclusa*"
-        ElseIf IvaTipo = 2 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Inclusa*"
-        End If
+        If Not EnsureCatalogPriceDisplayContext() Then Return
+        Me.lblPrezzi.Text = _priceDisplayContext.DisplayLabel
 
         ' Page.master puo aggiornare valori legacy durante Load: riallineo il mirror
         ' alla QueryString corrente prima del binding effettivo del catalogo.
@@ -535,13 +533,18 @@ End If
 sqlString = sqlString & " AND atc.ArticoliId IN (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati))"
 sqlString = sqlString & " ORDER BY tc_ref.id"
 
-If useOtherParam Then
-    Dim cmdDrop As New MySqlCommand(sqlString, conn)
-    cmdDrop.Parameters.AddWithValue("?OtherId", otherIdParam)
-    PopulateDropdownlist(conn, cmdDrop, list, "descrizione", "id")
-Else
-    PopulateDropdownlist(conn, sqlString, list, "descrizione", "id")
-End If
+        ' The nested listing SELECT uses the same named parameters, including
+        ' the decimal VAT override. Do not interpolate them into the TC facet.
+        Using cmdDrop As New MySqlCommand(sqlString, conn)
+            Dim values As System.Collections.Specialized.IOrderedDictionary =
+                sdsArticoli.SelectParameters.GetValues(HttpContext.Current, Me)
+            For Each parameter As Parameter In sdsArticoli.SelectParameters
+                Dim value As Object = values(parameter.Name)
+                cmdDrop.Parameters.AddWithValue("?" & parameter.Name, If(value, DBNull.Value))
+            Next
+            If useOtherParam Then cmdDrop.Parameters.AddWithValue("?OtherId", otherIdParam)
+            PopulateDropdownlist(conn, cmdDrop, list, "descrizione", "id")
+        End Using
 
 list.Items.Insert(0, New ListItem(allValueString, "0"))
         SelectDropDownValueSafe(list, dropdownlistValue)
@@ -597,12 +600,8 @@ End Sub
     'FILTRI TAGLIA COLORE - FINE
 
     Public Sub CaricaArticoli()
-        ' ============================
-        ' LISTINO: GESTIONE ROBUSTA
-        ' ============================
-        Dim NListino As Integer = StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(
-            Session("Listino"),
-            Session("listino"))
+        If Not EnsureCatalogPriceDisplayContext() Then Return
+        Dim NListino As Integer = _priceDisplayContext.PriceListId
 
         Dim SettoriId As Integer = 0
         Dim CategorieId As Integer = 0
@@ -653,6 +652,11 @@ End Sub
 
         Me.sdsArticoli.SelectParameters.Clear()
         Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("NListino", TypeCode.Int32, NListino.ToString()))
+        Me.sdsArticoli.SelectParameters.Add(New Parameter("ksRcEnabled", TypeCode.Int32, If(_priceDisplayContext.ReverseChargeEnabled, "1", "0")))
+        Me.sdsArticoli.SelectParameters.Add(New Parameter("ksHasVatOverride", TypeCode.Int32, If(_priceDisplayContext.VatOverride.HasValue, "1", "0")))
+        ' Parameter.GetValues parses Decimal defaults with the request culture.
+        ' The database still receives a typed Decimal, never a SQL literal.
+        Me.sdsArticoli.SelectParameters.Add(New Parameter("ksVatOverride", TypeCode.Decimal, _priceDisplayContext.VatOverride.GetValueOrDefault().ToString(CultureInfo.CurrentCulture)))
 
         Dim promotionMainJoin As String = String.Empty
         Dim promotionFacetJoin As String = String.Empty
@@ -814,44 +818,30 @@ End Sub
             searchWhereFilters = filtersWhereBuilder.ToString()
         End If
 
-        ' valori IVA da Session in forma numerica sicura
-        Dim abilRC As Integer = 0
-        Dim ivaUtente As Integer = 0
-        If Session("AbilitatoIvaReverseCharge") IsNot Nothing Then
-            Integer.TryParse(Session("AbilitatoIvaReverseCharge").ToString(), abilRC)
-        End If
-        If Session("Iva_Utente") IsNot Nothing Then
-            Integer.TryParse(Session("Iva_Utente").ToString(), ivaUtente)
-        End If
+        Dim effectiveBaseGrossSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+            "vsuperarticoli.Prezzo", "vsuperarticoli.PrezzoIvato", "vsuperarticoli.IdIvaRC", "vsuperarticoli.ValoreIvaRC",
+            "?ksRcEnabled", "?ksHasVatOverride", "?ksVatOverride")
+        Dim effectivePromoGrossSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+            "vsuperarticoli.PrezzoPromo", "vsuperarticoli.PrezzoPromoIvato", "vsuperarticoli.IdIvaRC", "vsuperarticoli.ValoreIvaRC",
+            "?ksRcEnabled", "?ksHasVatOverride", "?ksVatOverride")
 
         Dim strSelect As String =
             "SELECT vsuperarticoli.id, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo," &
-            " IF((" & abilRC & "=1) AND (ValoreIvaRC>-1)," &
-            "     (Prezzo*((ValoreIvaRC/100)+1))," &
-            "     IF(" & ivaUtente & ">0,(Prezzo*((" & ivaUtente & "/100)+1)),PrezzoIvato)" &
-            " ) AS PrezzoIvato," &
+            " " & effectiveBaseGrossSql & " AS PrezzoIvato, vsuperarticoli.IdIvaRC, vsuperarticoli.ValoreIvaRC," &
             " Img1, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta," &
             " " & promotionTcSelect &
             " SettoriDescrizione, CategorieDescrizione, TipologieDescrizione, GruppiDescrizione, SottogruppiDescrizione," &
             " Marche_img, PrezzoPromo," &
-            " IF((" & abilRC & "=1) AND (ValoreIvaRC>-1)," &
-            "     (PrezzoPromo*((ValoreIvaRC/100)+1))," &
-            "     IF(" & ivaUtente & ">0,(PrezzoPromo*((" & ivaUtente & "/100)+1)),PrezzoPromoIvato)" &
-            " ) AS PrezzoPromoIvato," &
+            " " & effectivePromoGrossSql & " AS PrezzoPromoIvato," &
             " MarcheId, CategorieId, TipologieId," &
             " IF(PrezzoPromo IS NULL,Prezzo,PrezzoPromo) AS Ord_PrezzoPromo," &
-            " IF(PrezzoPromoIvato IS NULL,PrezzoIvato," &
-            "     IF((" & abilRC & "=1) AND (ValoreIvaRC>-1)," &
-            "         (PrezzoPromo*((ValoreIvaRC/100)+1))," &
-            "         IF(" & ivaUtente & ">0,(PrezzoPromo*((" & ivaUtente & "/100)+1)),PrezzoPromoIvato)" &
-            "     )" &
-            " ) AS Ord_PrezzoPromoIvato," &
+            " IF(vsuperarticoli.PrezzoPromoIvato IS NULL," & effectiveBaseGrossSql & "," & effectivePromoGrossSql & ") AS Ord_PrezzoPromoIvato," &
             " COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid, -1) AS TCid, IF(Ricondizionato = 1, 'visible', 'hidden') as refurbished," &
             " IFNULL(taglie.descrizione,'') as taglia," &
             " CONVERT(CONCAT('<table style=""width:100%;"" border=""1""><tr style=""background-color:#00FF99;""><td>Data di arrivo</td><td>Quantit&agrave;</td></tr><tr style=""background-color:#00FFFF;""><td>'," &
             "       GROUP_CONCAT(arrivi SEPARATOR '</td></tr><tr style=""background-color:#00FFFF;""><td>'),'</td></tr></table>'),CHAR) as arrivi," &
             " IFNULL(colori.descrizione,'') as colore," &
-            " IF(PrezzoPromoIvato IS NULL, PrezzoIvato, PrezzoPromoIvato) AS PrezzoOldIvato," &
+            " IF(vsuperarticoli.PrezzoPromoIvato IS NULL," & effectiveBaseGrossSql & "," & effectivePromoGrossSql & ") AS PrezzoOldIvato," &
             " " & searchScoreSql &
             " FROM vsuperarticoli " &
             " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id" &
@@ -1003,7 +993,7 @@ If Session.Item("Controllo_Variabile_PrezzoMinMax") = 1 Then
 
     Dim colPrice As String
     Dim colPromo As String
-    If IvaTipo = 2 Then
+    If _priceDisplayContext.IsVatIncluded Then
         colPrice = "PrezzoIvato"
         colPromo = "PrezzoPromoIvato"
     Else
@@ -1199,6 +1189,7 @@ strWhere = strWhere & " GROUP BY id"
     End Function
     ' *** LISTVIEW PreRender (UI adjustments) ***
     Protected Sub lvProdotti_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
+        If Not EnsureCatalogPriceDisplayContext() Then Return
         ' Nascondo il bottone Wishlist se l'utente non è loggato
         Dim idUtente As Integer = 0
         If Session.Item("UtentiId") IsNot Nothing Then Integer.TryParse(Session.Item("UtentiId").ToString(), idUtente)
@@ -3300,6 +3291,7 @@ strWhere = strWhere & " GROUP BY id"
     ' SEO (Catalogo)
     ' ============================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        If Not EnsureCatalogPriceDisplayContext() Then Return
         BindCatalogRecentlyViewed()
         Try
             EnsureCatalogSeo()
@@ -3309,6 +3301,7 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Private Sub BindCatalogRecentlyViewed()
+        If Not EnsureCatalogPriceDisplayContext() Then Return
         Try
             Dim ids As List(Of Integer) = GetCatalogRecentlyViewedIds(8)
             If ids.Count = 0 Then
@@ -3317,13 +3310,13 @@ strWhere = strWhere & " GROUP BY id"
                 Return
             End If
 
-            Dim listino As Integer = CurrentListinoId()
-            If listino <= 0 Then listino = 1
-
-            Dim abilRc As Integer = 0
-            Dim ivaUtente As Integer = 0
-            Integer.TryParse(Convert.ToString(Session("AbilitatoIvaReverseCharge")), abilRc)
-            Integer.TryParse(Convert.ToString(Session("Iva_Utente")), ivaUtente)
+            Dim listino As Integer = _priceDisplayContext.PriceListId
+            Dim effectiveBaseGrossSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+                "v.Prezzo", "v.PrezzoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
+                "@recentRcEnabled", "@recentHasVatOverride", "@recentVatOverride")
+            Dim effectivePromoGrossSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+                "v.PrezzoPromo", "v.PrezzoPromoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
+                "@recentRcEnabled", "@recentHasVatOverride", "@recentVatOverride")
 
             Dim idParameters As New List(Of String)()
             Dim orderBy As New StringBuilder("CASE recent.id ")
@@ -3340,16 +3333,14 @@ strWhere = strWhere & " GROUP BY id"
                 " recent.Giacenza,recent.InOrdine,recent.Impegnata,recent.InOfferta,recent.SettoriDescrizione," &
                 " recent.CategorieDescrizione,recent.TipologieDescrizione,recent.GruppiDescrizione,recent.SottogruppiDescrizione," &
                 " recent.PrezzoPromo,recent.PrezzoPromoIvato,recent.MarcheId,recent.CategorieId,recent.TipologieId," &
-                " recent.TCid,recent.Ricondizionato " &
+                " recent.TCid,recent.Ricondizionato,recent.IdIvaRC,recent.ValoreIvaRC " &
                 "FROM (" &
                 " SELECT v.id,v.Codice,v.Descrizione1,v.Descrizione2,v.DescrizioneLunga,v.Prezzo," &
-                " IF((@recentAbilRc=1) AND (v.ValoreIvaRC>-1),(v.Prezzo*((v.ValoreIvaRC/100)+1))," &
-                "    IF(@recentIva>0,(v.Prezzo*((@recentIva/100)+1)),v.PrezzoIvato)) AS PrezzoIvato," &
+                " " & effectiveBaseGrossSql & " AS PrezzoIvato,v.IdIvaRC,v.ValoreIvaRC," &
                 " v.Img1,v.MarcheDescrizione,v.Disponibilita,v.Giacenza,v.InOrdine,v.Impegnata,v.InOfferta," &
                 " v.SettoriDescrizione,v.CategorieDescrizione,v.TipologieDescrizione,v.GruppiDescrizione,v.SottogruppiDescrizione," &
                 " v.PrezzoPromo," &
-                " IF((@recentAbilRc=1) AND (v.ValoreIvaRC>-1),(v.PrezzoPromo*((v.ValoreIvaRC/100)+1))," &
-                "    IF(@recentIva>0,(v.PrezzoPromo*((@recentIva/100)+1)),v.PrezzoPromoIvato)) AS PrezzoPromoIvato," &
+                " " & effectivePromoGrossSql & " AS PrezzoPromoIvato," &
                 " v.MarcheId,v.CategorieId,v.TipologieId," &
                 " COALESCE(NULLIF(v.TCid,0),atc_default.DefaultTCid,-1) AS TCId,COALESCE(v.Ricondizionato,0) AS Ricondizionato," &
                 " ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY" &
@@ -3366,8 +3357,9 @@ strWhere = strWhere & " GROUP BY id"
                 conn.Open()
                 Using cmd As New MySqlCommand(sql, conn)
                     cmd.Parameters.Add("@recentListino", MySqlDbType.Int32).Value = listino
-                    cmd.Parameters.Add("@recentAbilRc", MySqlDbType.Int32).Value = If(abilRc = 1, 1, 0)
-                    cmd.Parameters.Add("@recentIva", MySqlDbType.Int32).Value = Math.Max(0, ivaUtente)
+                    cmd.Parameters.Add("@recentRcEnabled", MySqlDbType.Int32).Value = If(_priceDisplayContext.ReverseChargeEnabled, 1, 0)
+                    cmd.Parameters.Add("@recentHasVatOverride", MySqlDbType.Int32).Value = If(_priceDisplayContext.VatOverride.HasValue, 1, 0)
+                    cmd.Parameters.Add("@recentVatOverride", MySqlDbType.Decimal).Value = _priceDisplayContext.VatOverride.GetValueOrDefault()
                     For i As Integer = 0 To ids.Count - 1
                         cmd.Parameters.Add(idParameters(i), MySqlDbType.Int32).Value = ids(i)
                     Next
@@ -3739,14 +3731,20 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function CatalogPriceTextFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
-        Dim price As Decimal = CatalogBasePrice(dataItem)
+        If Not EnsureCatalogPriceDisplayContext() Then Return "Prezzo su richiesta"
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
+        Dim promoPriceNet As Decimal = 0D
+        Dim promoPriceGross As Decimal = 0D
+        Dim inPromotion As Integer = 0
         If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
-            price = CatalogDefaultQuantityPromoPrice(promoModel)
+            promoPriceNet = promoModel.BestDefaultQuantityPriceNet
+            promoPriceGross = promoModel.BestDefaultQuantityPriceGross
+            inPromotion = 1
         End If
-
-        If price <= 0D Then Return "Prezzo su richiesta"
-        Return UiPriceFormatter.FormatStorefrontAmount(price)
+        Return UiPriceFormatter.RenderContextPriceText(UiData.Get(dataItem, "Prezzo"),
+                                                       UiData.Get(dataItem, "PrezzoIvato"),
+                                                       promoPriceNet, promoPriceGross, inPromotion,
+                                                       _priceDisplayContext)
     End Function
 
     Protected Function CatalogPriceHtml(ByVal dataItem As Object) As String
@@ -3758,6 +3756,7 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function CatalogPriceHtmlFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
+        If Not EnsureCatalogPriceDisplayContext() Then Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
         Dim basePriceNet As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D)
         Dim basePriceGross As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)
         Dim promoPriceNet As Decimal = 0D
@@ -3771,12 +3770,12 @@ strWhere = strWhere & " GROUP BY id"
             inPromotion = 1
         End If
 
-        Return UiPriceFormatter.RenderPriceHtml(basePriceNet,
+        Return UiPriceFormatter.RenderContextPriceHtml(basePriceNet,
                                                 basePriceGross,
                                                 promoPriceNet,
                                                 promoPriceGross,
                                                 inPromotion,
-                                                Session("IvaTipo"))
+                                                _priceDisplayContext)
     End Function
 
     Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
@@ -3793,7 +3792,7 @@ strWhere = strWhere & " GROUP BY id"
         Dim basePrice As Decimal = CatalogBasePrice(dataItem)
         Dim oldPriceText As String = ""
         Dim badgeText As String = ""
-        Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel)
+        Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel, _priceDisplayContext.IsVatExcluded)
 
         If hasDefaultQuantityPromo Then
             If basePrice > 0D Then
@@ -3879,16 +3878,18 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Protected Function CatalogPromoDetailsHtml(ByVal dataItem As Object) As String
-        Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem))
+        If Not EnsureCatalogPriceDisplayContext() Then Return String.Empty
+        Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem), _priceDisplayContext.IsVatExcluded)
     End Function
 
     Protected Function RecentCatalogPromoDetailsHtml(ByVal dataItem As Object) As String
-        Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem, False))
+        If Not EnsureCatalogPriceDisplayContext() Then Return String.Empty
+        Return ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(CatalogPromotionModel(dataItem, False), _priceDisplayContext.IsVatExcluded)
     End Function
 
     Private Function CatalogPromotionModel(ByVal dataItem As Object,
                                            Optional ByVal restrictToCatalogCampaign As Boolean = True) As ProductPromotionDisplayModel
-        If dataItem Is Nothing Then Return Nothing
+        If dataItem Is Nothing OrElse Not EnsureCatalogPriceDisplayContext() Then Return Nothing
 
         Try
             Dim articleId As Integer = UiData.Int(dataItem, "id")
@@ -3902,7 +3903,12 @@ strWhere = strWhere & " GROUP BY id"
                                                                   companyId,
                                                                   listino,
                                                                   If(restrictToCatalogCampaign AndAlso catalogPromotionActive, catalogPromotionCampaignId, 0))
-            Dim cacheKey As String = articleId.ToString() & ":" & tcId.ToString() & ":" & eligibilityContext.CacheKey
+            Dim baseNet As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D)
+            Dim effectiveGross As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)
+            Dim cacheKey As String = articleId.ToString(CultureInfo.InvariantCulture) & ":" &
+                tcId.ToString(CultureInfo.InvariantCulture) & ":" & eligibilityContext.CacheKey & ":" &
+                baseNet.ToString(CultureInfo.InvariantCulture) & ":" & effectiveGross.ToString(CultureInfo.InvariantCulture) & ":" &
+                _priceDisplayContext.IsVatExcluded.ToString()
             If catalogPromotionCache.ContainsKey(cacheKey) Then Return catalogPromotionCache(cacheKey)
 
             Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
@@ -3910,8 +3916,9 @@ strWhere = strWhere & " GROUP BY id"
                 articleId,
                 tcId,
                 eligibilityContext,
-                KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
-                KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D))
+                baseNet,
+                effectiveGross,
+                _priceDisplayContext.IsVatExcluded)
 
             If model IsNot Nothing AndAlso
                model.ResolutionState = ProductPromotionDisplayResolutionState.TechnicalError Then
@@ -3972,25 +3979,16 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function CatalogBasePrice(ByVal dataItem As Object) As Decimal
-        Dim ivaMode As Integer = 0
-        Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
-        Dim value As Decimal = If(ivaMode = 1,
-                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
-                                  KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D))
-        If value <= 0D Then
-            value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)
-            If value <= 0D Then value = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D)
-        End If
-        Return value
+        If Not EnsureCatalogPriceDisplayContext() Then Return 0D
+        Return _priceDisplayContext.SelectPrice(
+            KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D),
+            KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)).GetValueOrDefault()
     End Function
 
     Private Function CatalogDefaultQuantityPromoPrice(ByVal model As ProductPromotionDisplayModel) As Decimal
-        If model Is Nothing OrElse Not model.HasDefaultQuantityOffer Then Return 0D
-
-        Dim ivaMode As Integer = 0
-        Integer.TryParse(Convert.ToString(Session("IvaTipo")), ivaMode)
-        If ivaMode = 1 Then Return model.BestDefaultQuantityPriceNet
-        Return model.BestDefaultQuantityPriceGross
+        If model Is Nothing OrElse Not model.HasDefaultQuantityOffer OrElse Not EnsureCatalogPriceDisplayContext() Then Return 0D
+        Return _priceDisplayContext.SelectPromoPrice(model.BestDefaultQuantityPriceNet,
+                                                     model.BestDefaultQuantityPriceGross).GetValueOrDefault()
     End Function
 
     Private Function CurrentAziendaId() As Integer
@@ -4002,11 +4000,42 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function CurrentListinoId() As Integer
-        Dim value As Integer = 0
-        If Session("listino") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("listino")), value) AndAlso value > 0 Then Return value
-        If Session("Listino") IsNot Nothing AndAlso Integer.TryParse(Convert.ToString(Session("Listino")), value) AndAlso value > 0 Then Return value
-        Return 0
+        If Not EnsureCatalogPriceDisplayContext() Then Return 0
+        Return _priceDisplayContext.PriceListId
     End Function
+
+    Private Function EnsureCatalogPriceDisplayContext() As Boolean
+        If catalogPriceDisplayContextFailed Then Return False
+        If _priceDisplayContext Is Nothing Then
+            _priceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        End If
+        If _priceDisplayContext IsNot Nothing AndAlso
+           _priceDisplayContext.CompanyId = CurrentAziendaId() AndAlso
+           _priceDisplayContext.CompanyId > 0 AndAlso _priceDisplayContext.PriceListId > 0 Then Return True
+
+        ' CompleteRequest alone does not stop the WebForms lifecycle: suppress
+        ' automatic selection and all subsequent price binding as well.
+        catalogPriceDisplayContextFailed = True
+        Response.StatusCode = 421
+        Response.TrySkipIisCustomErrors = True
+        lvProdotti.Visible = False
+        lblPrezzi.Visible = False
+        rptCatalogRecentlyViewed.Visible = False
+        ksMultiFooter.Visible = False
+        DataList1.Visible = False
+        DataList2.Visible = False
+        DataList3.Visible = False
+        DataList4.Visible = False
+        FormView1.Visible = False
+        filtritagliaecolore.Visible = False
+        HttpContext.Current.ApplicationInstance.CompleteRequest()
+        Return False
+    End Function
+
+    Private Sub CatalogDataSource_Selecting(ByVal sender As Object, ByVal e As SqlDataSourceSelectingEventArgs) _
+        Handles sdsArticoli.Selecting, sdsMarche.Selecting, sdsTipologie.Selecting, sdsGruppo.Selecting, sdsSottogruppo.Selecting
+        If Not EnsureCatalogPriceDisplayContext() Then e.Cancel = True
+    End Sub
 
 
     Private Shared Sub CopyParams(ByVal src As ParameterCollection, ByVal dst As ParameterCollection)

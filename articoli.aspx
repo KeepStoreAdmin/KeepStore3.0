@@ -32,9 +32,6 @@
                         <asp:Label ID="lblTrovati" runat="server" />
                     </div>
                 </div>
-                <div class="text-muted small">
-                    <asp:Label ID="lblPrezzi" runat="server" />
-                </div>
             </div>
         </div>
     </asp:Panel>
@@ -164,6 +161,7 @@
                 </div>
 
                 <div class="content-area">
+                    <p class="body-text-3 text-main-2 mb-2"><asp:Label ID="lblPrezzi" runat="server" /></p>
                     <div class="tf-shop-control flex-wrap gap-10">
                         <div class="ks-shop-control-summary d-flex align-items-center gap-10">
                             <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none">

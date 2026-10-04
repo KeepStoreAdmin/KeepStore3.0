@@ -41,13 +41,13 @@ Public NotInheritable Class StorefrontEffectivePriceSqlBuilder
 
     Private Shared Sub ValidateOperand(ByVal value As String)
         If value Is Nothing OrElse Not Regex.IsMatch(value,
-            "\A(?:[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?|@[A-Za-z_][A-Za-z0-9_]*)\z") Then
+            "\A(?:[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?|[@?][A-Za-z_][A-Za-z0-9_]*)\z") Then
             Throw New ArgumentException("Expected a SQL identifier or named parameter.", "value")
         End If
     End Sub
 
     Private Shared Sub ValidateParameter(ByVal value As String)
-        If value Is Nothing OrElse Not Regex.IsMatch(value, "\A@[A-Za-z_][A-Za-z0-9_]*\z") Then
+        If value Is Nothing OrElse Not Regex.IsMatch(value, "\A[@?][A-Za-z_][A-Za-z0-9_]*\z") Then
             Throw New ArgumentException("Expected a named SQL parameter.", "value")
         End If
     End Sub
