@@ -32,6 +32,65 @@ Public Module StorefrontPromotionCatalogProvider
         Return "ks_promo_catalog.PreferredTCId AS PromotionTCId,"
     End Function
 
+    ' Dedicated qty=1 projection. Catalog membership/tier APIs above stay unchanged.
+    ' The caller supplies the same eligibility and fiscal parameters as the card.
+    Public Function BuildQuantityOnePriceJoin() As String
+        Dim baseNet As String = "CAST(catalog.Prezzo AS DECIMAL(38,16))"
+        Dim promoNet As String =
+            "(CASE WHEN COALESCE(offer_header.Prezzo,0)>0" &
+            " THEN CAST(offer_header.Prezzo AS DECIMAL(38,16))" &
+            " WHEN COALESCE(offer_header.Sconto,0)>0 AND offer_header.Sconto<100" &
+            " THEN " & baseNet & "*(1-CAST(offer_header.Sconto AS DECIMAL(38,16))*0.01)" &
+            " ELSE NULL END)"
+        Dim resolvedTc As String = "COALESCE(NULLIF(catalog.TCId,0),qty_default.DefaultTCid,-1)"
+        Dim effectiveGross As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+            "catalog.Prezzo", "catalog.PrezzoIvato", "catalog.IdIvaRC", "catalog.ValoreIvaRC",
+            "?ksRcEnabled", "?ksHasVatOverride", "?ksVatOverride")
+
+        Return " LEFT JOIN (SELECT ranked.ArticleId,ranked.ArticleListPriceId,ranked.ResolvedTCId," &
+               " ranked.OfferDetailId AS AppliedOfferDetailId,ranked.PromoNet AS AppliedPromoNet" &
+               " FROM (SELECT candidate.*,ROW_NUMBER() OVER (" &
+               " PARTITION BY candidate.ArticleListPriceId ORDER BY candidate.VariantPriority ASC," &
+               " candidate.PromoNet ASC,candidate.OfferDetailId ASC) AS PriceRank" &
+               " FROM (SELECT catalog.id AS ArticleId,catalog.ArticoliListiniId AS ArticleListPriceId," &
+               " " & resolvedTc & " AS ResolvedTCId,detail.id AS OfferDetailId," &
+               " CASE WHEN COALESCE(detail.TCId,-1)>0 THEN 0 ELSE 1 END AS VariantPriority," &
+               " " & promoNet & " AS PromoNet" &
+               " FROM varticolilistini catalog" &
+               " LEFT JOIN (SELECT ArticoliId,MIN(id) AS DefaultTCid FROM articoli_tagliecolori" &
+               " GROUP BY ArticoliId) qty_default ON qty_default.ArticoliId=catalog.id" &
+               " INNER JOIN voffertearticoli mapped ON mapped.id=catalog.id" &
+               " INNER JOIN offerte offer_header ON offer_header.id=mapped.OfferteID" &
+               " INNER JOIN offertedettaglio detail ON detail.id=mapped.OfferteDettagliId" &
+               " AND detail.OfferteId=offer_header.id" &
+               " INNER JOIN articoli article ON article.id=catalog.id" &
+               " LEFT JOIN (SELECT DISTINCT ArticoliId,TCId FROM articoli_listini" &
+               " WHERE NListino=?" & ListinoParameter & ") allowed_tc" &
+               " ON allowed_tc.ArticoliId=catalog.id AND allowed_tc.TCId=detail.TCId" &
+               " WHERE catalog.NListino=?" & ListinoParameter &
+               " AND offer_header.AziendeId=?" & CompanyParameter &
+               " AND COALESCE(offer_header.Abilitato,0)=1 AND COALESCE(article.Abilitato,0)=1" &
+               " AND COALESCE(article.NoPromo,0)=0" &
+               " AND (COALESCE(offer_header.DaListino,0)<=0 OR offer_header.DaListino<=?" & ListinoParameter & ")" &
+               " AND (COALESCE(offer_header.AListino,0)<=0 OR offer_header.AListino>=?" & ListinoParameter & ")" &
+               " AND (offer_header.DataInizio IS NULL OR offer_header.DataInizio<=?" & EvaluationDateParameter & ")" &
+               " AND (offer_header.DataFine IS NULL OR offer_header.DataFine>=?" & EvaluationDateParameter & ")" &
+               " AND (COALESCE(offer_header.UtentiId,0)<=0 OR (?" & AuthenticatedParameter &
+               "=1 AND ?" & CurrentUserParameter & ">0 AND offer_header.UtentiId=?" & CurrentUserParameter & "))" &
+               " AND (?" & CampaignParameter & "<=0 OR offer_header.id=?" & CampaignParameter & ")" &
+               " AND (COALESCE(detail.TCId,-1)<=0 OR (detail.TCId=" & resolvedTc &
+               " AND allowed_tc.ArticoliId IS NOT NULL))" &
+               " AND NOT (COALESCE(offer_header.QntMinima,0)>0 AND COALESCE(offer_header.Multipli,0)>0)" &
+               " AND ((offer_header.QntMinima>0 AND offer_header.QntMinima<=1)" &
+               " OR (COALESCE(offer_header.QntMinima,0)<=0 AND offer_header.Multipli>0" &
+               " AND MOD(CAST(1 AS DECIMAL(38,16)),CAST(offer_header.Multipli AS DECIMAL(38,16)))=0))" &
+               " AND " & baseNet & ">0 AND " & effectiveGross & ">0" &
+               " AND " & promoNet & ">0 AND " & promoNet & "<" & baseNet &
+               ") candidate) ranked WHERE ranked.PriceRank=1) ks_qty1_price" &
+               " ON ks_qty1_price.ArticleId=vsuperarticoli.id" &
+               " AND ks_qty1_price.ArticleListPriceId=vsuperarticoli.ArticoliListiniId "
+    End Function
+
     Public Sub AddParameters(ByVal parameters As ParameterCollection,
                              ByVal eligibilityContext As ProductPromotionEligibilityContext)
         If parameters Is Nothing Then Throw New ArgumentNullException("parameters")

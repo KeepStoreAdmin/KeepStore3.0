@@ -33,6 +33,11 @@ Partial Class Articoli
     Private catalogPromotionCampaignId As Integer = 0
     Private catalogPromotionRequestInvalid As Boolean = False
     Private catalogPromotionTechnicalError As Boolean = False
+    Private catalogQuantityOnePriceRequired As Boolean = False
+    Private catalogQuantityOnePriceFailed As Boolean = False
+    Private catalogEligibilityContext As ProductPromotionEligibilityContext
+    Private catalogEligibilityPreloaded As Boolean = False
+    Private catalogEligibilityStatus As ProductPromotionEligibilityLoadStatus
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
     Private Const CatalogNavMaxSectors As Integer = 12
@@ -213,6 +218,7 @@ Partial Class Articoli
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not EnsureCatalogPriceDisplayContext() Then Return
+        SyncCatalogPriceRangeNavigation()
         ' Step 1: se presente ScriptManager, disabilita partial rendering (rimozione AJAX)
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
@@ -663,20 +669,11 @@ End Sub
         Dim promotionTcSelect As String = "-1 AS PromotionTCId,"
         If promoActive AndAlso Not catalogPromotionRequestInvalid Then
             Try
-                Dim eligibilityContext As ProductPromotionEligibilityContext =
-                    ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current,
-                                                                      CurrentAziendaId(),
-                                                                      NListino,
-                                                                      catalogPromotionCampaignId)
-                Dim preloadStatus As ProductPromotionEligibilityLoadStatus =
-                    ProductPromotionEligibilityResolver.PreloadStatus(
-                        ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
-                        eligibilityContext)
-                If preloadStatus <> ProductPromotionEligibilityLoadStatus.Success Then
+                If Not EnsureCatalogPromotionEligibility(NListino) Then
                     catalogPromotionTechnicalError = True
                     ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
                 Else
-                    StorefrontPromotionCatalogProvider.AddParameters(Me.sdsArticoli.SelectParameters, eligibilityContext)
+                    StorefrontPromotionCatalogProvider.AddParameters(Me.sdsArticoli.SelectParameters, catalogEligibilityContext)
                     promotionMainJoin = StorefrontPromotionCatalogProvider.BuildMainCatalogJoin()
                     promotionFacetJoin = StorefrontPromotionCatalogProvider.BuildFacetCatalogJoin()
                     promotionTcSelect = StorefrontPromotionCatalogProvider.MainPreferredTCSelect()
@@ -941,84 +938,52 @@ End Sub
             strWhere2 = strWhere2 & " AND ((COALESCE(vsuperarticoli.Giacenza,0)-COALESCE(vsuperarticoli.Impegnata,0))>0)"
         End If
 
-        If Me.Page.IsPostBack = False Then
-            Session.Item("Controllo_Variabile_PrezzoMinMax") = 0
-            Session("Valore_Prezzo_MIN") = ""
-            Session("Valore_Prezzo_MAX") = ""
-        End If
-
-'Gestione filtri prezzo (100% parametrici - VB2012 safe)
-If Page.IsPostBack = False Then
-    Session("Valore_Prezzo_MIN") = ""
-    Session("Valore_Prezzo_MAX") = ""
-    Session("Controllo_Variabile_PrezzoMinMax") = 0
-End If
-
-' Se arrivano valori dai controlli/Query (Prezzo_MIN/Prezzo_MAX) li congeliamo in Valore_* una sola volta
-If (Session.Item("Controllo_Variabile_PrezzoMinMax") = 0) AndAlso
-   ((Session.Item("Prezzo_MIN") <> "") OrElse (Session.Item("Prezzo_MAX") <> "")) Then
-
-    If (Session.Item("Prezzo_MIN") <> "") Then
-        Session("Valore_Prezzo_MIN") = Session.Item("Prezzo_MIN")
-        Session.Item("Prezzo_MIN") = ""
-    End If
-
-    If (Session.Item("Prezzo_MAX") <> "") Then
-        Session("Valore_Prezzo_MAX") = Session.Item("Prezzo_MAX")
-        Session.Item("Prezzo_MAX") = ""
-    End If
-
-    Session.Item("Controllo_Variabile_PrezzoMinMax") = 1
-End If
-
 ' Applica filtro prezzo con parametri (Pmin/Pmax) se valorizzato
 Dim hasPmin As Boolean = False
 Dim hasPmax As Boolean = False
 Dim pminVal As Decimal = 0D
 Dim pmaxVal As Decimal = 0D
+Dim sMin As String = ReadCatalogPriceBound("pmin")
+Dim sMax As String = ReadCatalogPriceBound("pmax")
+hasPmin = Decimal.TryParse(sMin, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, pminVal) AndAlso pminVal > 0D
+hasPmax = Decimal.TryParse(sMax, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, pmaxVal) AndAlso pmaxVal > 0D
 
-If Session.Item("Controllo_Variabile_PrezzoMinMax") = 1 Then
-    Dim sMin As String = Convert.ToString(Session("Valore_Prezzo_MIN"))
-    Dim sMax As String = Convert.ToString(Session("Valore_Prezzo_MAX"))
-
-    If sMin <> "" Then
-        Decimal.TryParse(sMin.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, pminVal)
-        If pminVal > 0D Then hasPmin = True
+' Resolve only for price sort/range; ordinary listing/facets retain their SQL.
+Dim sortValue As String = Convert.ToString(Drop_Ordinamento.SelectedValue).ToLowerInvariant()
+If sortValue.StartsWith("p_popolar") Then sortValue = "p_popolarita"
+Dim hasPriceRange As Boolean = hasPmin OrElse hasPmax
+catalogQuantityOnePriceRequired = hasPriceRange OrElse sortValue = "p_basso" OrElse sortValue = "p_alto"
+Dim quantityOneFacetJoin As String = String.Empty
+Dim displayPriceSql As String = String.Empty
+If catalogQuantityOnePriceRequired Then
+    If catalogPromotionRequestInvalid OrElse Not EnsureCatalogPromotionEligibility(NListino) Then
+        FailCatalogQuantityOnePrices()
+        Return
     End If
-
-    If sMax <> "" Then
-        Decimal.TryParse(sMax.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, pmaxVal)
-        If pmaxVal > 0D Then hasPmax = True
+    If Not promoActive Then
+        StorefrontPromotionCatalogProvider.AddParameters(sdsArticoli.SelectParameters, catalogEligibilityContext)
     End If
-
-    Dim colPrice As String
-    Dim colPromo As String
-    If _priceDisplayContext.IsVatIncluded Then
-        colPrice = "PrezzoIvato"
-        colPromo = "PrezzoPromoIvato"
-    Else
-        colPrice = "Prezzo"
-        colPromo = "PrezzoPromo"
-    End If
-
-    Dim colPriceFilters As String = "vsuperarticoli." & colPrice
-    Dim colPromoFilters As String = "vsuperarticoli." & colPromo
-
-    If hasPmin AndAlso hasPmax Then
-        strWhere &= " AND ((" & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NOT NULL AND " & colPromo & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " BETWEEN ?Pmin AND ?Pmax))"
-        strWhere2 &= " AND ((" & colPromoFilters & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromoFilters & " IS NOT NULL AND " & colPromoFilters & " BETWEEN ?Pmin AND ?Pmax) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " BETWEEN ?Pmin AND ?Pmax))"
-    ElseIf hasPmin Then
-        strWhere &= " AND ((" & colPromo & " >= ?Pmin) OR (" & colPromo & " IS NULL AND " & colPrice & " >= ?Pmin))"
-        strWhere2 &= " AND ((" & colPromoFilters & " >= ?Pmin) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " >= ?Pmin))"
-    ElseIf hasPmax Then
-        strWhere &= " AND ((" & colPromo & " <= ?Pmax) OR (" & colPromo & " IS NULL AND " & colPrice & " <= ?Pmax))"
-        strWhere2 &= " AND ((" & colPromoFilters & " <= ?Pmax) OR (" & colPromoFilters & " IS NULL AND " & colPriceFilters & " <= ?Pmax))"
+    Dim quantityOneJoin As String = StorefrontPromotionCatalogProvider.BuildQuantityOnePriceJoin()
+    displayPriceSql = BuildCatalogQuantityOneDisplayPriceSql(effectiveBaseGrossSql)
+    strSelect = "SELECT " & displayPriceSql & " AS CatalogDisplayPrice," & strSelect.Substring(7) & quantityOneJoin
+    If hasPriceRange Then
+        quantityOneFacetJoin = quantityOneJoin
+        Dim pricePredicate As String = " AND (" & displayPriceSql & ")>0 AND (" & displayPriceSql & ")"
+        If hasPmin AndAlso hasPmax Then
+            pricePredicate &= " BETWEEN ?Pmin AND ?Pmax"
+        ElseIf hasPmin Then
+            pricePredicate &= " >= ?Pmin"
+        Else
+            pricePredicate &= " <= ?Pmax"
+        End If
+        strWhere &= pricePredicate
+        strWhere2 &= pricePredicate
     End If
 End If
 
 ' Parametri prezzo per SqlDataSource (aggiunti solo se necessari)
-If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(System.Globalization.CultureInfo.InvariantCulture)))
-If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+If hasPmin Then sdsArticoli.SelectParameters.Add(New Parameter("Pmin", TypeCode.Decimal, pminVal.ToString(CultureInfo.CurrentCulture)))
+If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.Decimal, pmaxVal.ToString(CultureInfo.CurrentCulture)))
 
         Dim TC As Integer = If(IsTcEnabled(), 1, 0)
         If TC = 1 Then
@@ -1048,15 +1013,13 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
 strWhere = strWhere & " GROUP BY id"
 
         ' Ordinamento (whitelist)
-        Dim sortValue As String = Convert.ToString(Drop_Ordinamento.SelectedValue).ToLowerInvariant()
-        If sortValue.StartsWith("p_popolar") Then sortValue = "p_popolarita"
         Select Case sortValue
             Case "p_offerta"
                 strWhere &= " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
             Case "p_basso"
-                strWhere &= " ORDER BY PrezzoIvato ASC, Prezzo ASC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC, (Giacenza-Impegnata) DESC"
+                strWhere &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice ASC, (Giacenza-Impegnata) DESC, id ASC"
             Case "p_alto"
-                strWhere &= " ORDER BY PrezzoIvato DESC, Prezzo DESC, Ord_PrezzoPromo ASC, Ord_PrezzoPromoIvato ASC, (Giacenza-Impegnata) DESC"
+                strWhere &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice DESC, (Giacenza-Impegnata) DESC, id ASC"
             Case "p_popolarita"
                 strWhere &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
             Case "p_recenti"
@@ -1083,7 +1046,7 @@ strWhere = strWhere & " GROUP BY id"
         Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
 
         strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " &
-                    promotionFacetJoin & strWhere2 & " AND Nlistino=?NListino"
+                    promotionFacetJoin & quantityOneFacetJoin & strWhere2 & " AND Nlistino=?NListino"
 
         Me.sdsMarche.SelectCommand =
             "select `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
@@ -1151,8 +1114,12 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub sdsArticoli_Selected(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsArticoli.Selected
-        If e IsNot Nothing AndAlso e.Exception IsNot Nothing AndAlso catalogPromotionActive Then
+        If e IsNot Nothing AndAlso e.Exception IsNot Nothing AndAlso (catalogPromotionActive OrElse catalogQuantityOnePriceRequired) Then
             e.ExceptionHandled = True
+            If catalogQuantityOnePriceRequired Then
+                FailCatalogQuantityOnePrices()
+                Exit Sub
+            End If
             catalogPromotionTechnicalError = True
             SetCatalogCountText(0)
             ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
@@ -1168,9 +1135,13 @@ strWhere = strWhere & " GROUP BY id"
                                                                                                                    sdsTipologie.Selected,
                                                                                                                    sdsGruppo.Selected,
                                                                                                                    sdsSottogruppo.Selected
-        If e Is Nothing OrElse e.Exception Is Nothing OrElse Not catalogPromotionActive Then Exit Sub
+        If e Is Nothing OrElse e.Exception Is Nothing OrElse Not (catalogPromotionActive OrElse catalogQuantityOnePriceRequired) Then Exit Sub
 
         e.ExceptionHandled = True
+        If catalogQuantityOnePriceRequired Then
+            FailCatalogQuantityOnePrices()
+            Exit Sub
+        End If
         catalogPromotionTechnicalError = True
         ShowPromotionCatalogMessage("Le offerte non sono temporaneamente disponibili. Riprova tra poco.")
     End Sub
@@ -2297,6 +2268,48 @@ strWhere = strWhere & " GROUP BY id"
         Return Request.Url.AbsoluteUri
     End Function
 
+    Private Shared Function NormalizeCatalogPriceBound(ByVal raw As String) As String
+        raw = If(raw, String.Empty).Trim()
+        If raw.Length > 64 OrElse Not Regex.IsMatch(raw, "^[0-9]+(?:[.,][0-9]+)?$", RegexOptions.CultureInvariant) Then Return String.Empty
+        Dim value As Decimal = 0D
+        If Not Decimal.TryParse(raw.Replace(",", "."), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, value) OrElse value <= 0D Then Return String.Empty
+        Return value.ToString("0.############################", CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function ReadCatalogPriceBound(ByVal key As String) As String
+        Dim values As String() = Request.QueryString.GetValues(key)
+        If values Is Nothing OrElse values.Length <> 1 Then Return String.Empty
+        Return NormalizeCatalogPriceBound(values(0))
+    End Function
+
+    Private Sub SyncCatalogPriceRangeNavigation()
+        ' search_complete resta il bridge one-shot; la listing legge solo la request.
+        Dim pendingMin As String = Convert.ToString(Session("Prezzo_MIN"))
+        Dim pendingMax As String = Convert.ToString(Session("Prezzo_MAX"))
+        Dim hasPendingRange As Boolean = pendingMin <> "" OrElse pendingMax <> ""
+        Session("Prezzo_MIN") = String.Empty
+        Session("Prezzo_MAX") = String.Empty
+        Session("Valore_Prezzo_MIN") = String.Empty
+        Session("Valore_Prezzo_MAX") = String.Empty
+        Session("Controllo_Variabile_PrezzoMinMax") = 0
+        Session("Sto_usando_search_complete") = 0
+
+        Dim minimum As String = If(hasPendingRange, NormalizeCatalogPriceBound(pendingMin), ReadCatalogPriceBound("pmin"))
+        Dim maximum As String = If(hasPendingRange, NormalizeCatalogPriceBound(pendingMax), ReadCatalogPriceBound("pmax"))
+        If Not hasPendingRange AndAlso
+           String.Equals(If(Request.QueryString("pmin"), String.Empty), minimum, StringComparison.Ordinal) AndAlso
+           String.Equals(If(Request.QueryString("pmax"), String.Empty), maximum, StringComparison.Ordinal) Then Return
+
+        Dim query = ParseUrlQuery(GetSafeReturnUrl())
+        query.Remove("pmin")
+        query.Remove("pmax")
+        If minimum <> "" Then query("pmin") = minimum
+        If maximum <> "" Then query("pmax") = maximum
+        If hasPendingRange Then query.Remove("pg")
+        ' Solo path locale: nessun host/ReturnUrl del client entra nel redirect.
+        RedirectIfChanged(BuildUrlWithQuery(Request.Url.AbsolutePath, query))
+    End Sub
+
     Private Function ResolvePromotionCatalogActive() As Boolean
         If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then Return True
         If InOfferta = 1 Then Return True
@@ -2608,7 +2621,7 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Function ClearCatalogFiltersFromUrl(ByVal url As String) As String
         Dim qs = ParseUrlQuery(url)
-        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "spedgratis", "ordinamento", "taglia", "colore", "rimuovi", "page", "pg", "p"}
+        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "spedgratis", "ordinamento", "taglia", "colore", "pmin", "pmax", "rimuovi", "page", "pg", "p"}
         For Each key As String In keysToRemove
             qs.Remove(key)
         Next
@@ -4034,7 +4047,48 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Sub CatalogDataSource_Selecting(ByVal sender As Object, ByVal e As SqlDataSourceSelectingEventArgs) _
         Handles sdsArticoli.Selecting, sdsMarche.Selecting, sdsTipologie.Selecting, sdsGruppo.Selecting, sdsSottogruppo.Selecting
-        If Not EnsureCatalogPriceDisplayContext() Then e.Cancel = True
+        If Not EnsureCatalogPriceDisplayContext() OrElse catalogQuantityOnePriceFailed Then e.Cancel = True
+    End Sub
+
+    Private Function EnsureCatalogPromotionEligibility(ByVal listino As Integer) As Boolean
+        If Not catalogEligibilityPreloaded Then
+            catalogEligibilityPreloaded = True
+            Try
+                catalogEligibilityContext = ProductPromotionEligibilityResolver.CreateContext(
+                    HttpContext.Current, CurrentAziendaId(), listino,
+                    If(catalogPromotionActive, catalogPromotionCampaignId, 0))
+                catalogEligibilityStatus = ProductPromotionEligibilityResolver.PreloadStatus(
+                    ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+                    catalogEligibilityContext)
+            Catch
+                catalogEligibilityStatus = ProductPromotionEligibilityLoadStatus.TechnicalError
+            End Try
+        End If
+        Return catalogEligibilityStatus = ProductPromotionEligibilityLoadStatus.Success
+    End Function
+
+    Private Function BuildCatalogQuantityOneDisplayPriceSql(ByVal effectiveBaseGrossSql As String) As String
+        Dim validPromo As String = "ks_qty1_price.AppliedPromoNet>0 AND vsuperarticoli.Prezzo>0" &
+                                   " AND ks_qty1_price.AppliedPromoNet<vsuperarticoli.Prezzo AND " & effectiveBaseGrossSql & ">0"
+        If _priceDisplayContext.IsVatExcluded Then
+            Return "(CASE WHEN " & validPromo & " THEN ks_qty1_price.AppliedPromoNet ELSE vsuperarticoli.Prezzo END)"
+        End If
+        Return "(CASE WHEN " & validPromo & " THEN ks_qty1_price.AppliedPromoNet*" &
+               "(CAST(" & effectiveBaseGrossSql & " AS DECIMAL(38,16))/CAST(vsuperarticoli.Prezzo AS DECIMAL(38,16)))" &
+               " ELSE " & effectiveBaseGrossSql & " END)"
+    End Function
+
+    Private Sub FailCatalogQuantityOnePrices()
+        catalogQuantityOnePriceFailed = True
+        SetCatalogCountText(0)
+        lvProdotti.Visible = False
+        ksMultiFooter.Visible = False
+        DataList1.Visible = False
+        DataList2.Visible = False
+        DataList3.Visible = False
+        DataList4.Visible = False
+        filtritagliaecolore.Visible = False
+        ShowPromotionCatalogMessage("I prezzi non sono temporaneamente disponibili. Riprova tra poco.")
     End Sub
 
 
