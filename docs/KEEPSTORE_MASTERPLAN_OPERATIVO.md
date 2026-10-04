@@ -1,23 +1,29 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-01
+Aggiornato: 2026-10-04
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-### Checkpoint prevalente 2026-10-01 — persistent anonymous cart
+### Checkpoint prevalente 2026-10-04 — VAT / commercial storefront pricing
 
-`frontend-rebuild` / `origin/frontend-rebuild` = `a4238abfc8eae7fefbb985672d4cd5bddabf4118`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Questo checkpoint prevale sulle roadmap precedenti: i riferimenti al persistent cart futuro/session-bound o `NON AVVIATO` sono storici e superati, non istruzioni per ripetere implementazioni o test chiusi.
+`frontend-rebuild` / `origin/frontend-rebuild` = `b4da5b56829225764e6057ce25c834613d50586a`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Le PR #300–#308 risultano MERGED su GitHub in sequenza lineare, ciascuna con il commit della PR come merge point: #300 `5bc050554c01e1a1405ee95899324c97b604a662`; #301 `4e26419f66bfdad0d780ccf8f123ad6f5b0eeac8`; #302 `ffa5beda613702ae0143dee4a3af49069c508b18`; #303 `3ce5ffd66023fef9d4a4b1b86005505c031fa3d5`; #304 `87c031c68352c3e1cd8c9c24a147ecdb7ba68477`; #305 `1addcf1e94d498b9f6b8cbeaf641eb5d45bec000`; #306 `5a3be27effe79d33ac6061d5e5f9ffd70e07221c`; #307 `de611eb755865d072a266c832c8adc31b925b6c3`; #308 `b4da5b56829225764e6057ce25c834613d50586a`. Le PR #300–#308 sono state integrate con fast-forward; non sono stati creati merge commit. Questo checkpoint prevale sulle roadmap precedenti: task qui indicati come futuri o `NON AVVIATO` sono storici se sostituiti dalle integrazioni elencate.
 
-| Blocco | Stato | PR / HEAD integrata |
+| PR | Blocco integrato | Commit / checkpoint |
 | --- | --- | --- |
-| `STOREFRONT-PERSISTENT-ANONYMOUS-CART` runtime | CHIUSO A / INTEGRATED | #297 / `6789fc1784bd695e3ec2bd0041d13b43154b08de` |
-| `PERSISTENT-CART-REGISTRY-CLEANUP-1A` | CHIUSO A / INTEGRATED | #298 / `44016ffc2f29cae1cf235e46e6b115d8035ab6d6` |
-| `PERSISTENT-CART-PRIVACY-DISCLOSURE-1A` | CHIUSO A / INTEGRATED | #299 / `a4238abfc8eae7fefbb985672d4cd5bddabf4118` |
+| #300 | `PERSISTENT-CART-DOCS-DEPLOYMENT-CLOSEOUT-1A` | `5bc050554c01e1a1405ee95899324c97b604a662` |
+| #301 | `STOREFRONT-CURRENCY-PRESENTATION-1A` | `4e26419f66bfdad0d780ccf8f123ad6f5b0eeac8` |
+| #302 | `STOREFRONT-CART-CHECKOUT-CTA-RESPONSIVE-1A` | `ffa5beda613702ae0143dee4a3af49069c508b18` |
+| #303 | `STOREFRONT-CART-CONVERSION-UX-1A` | `3ce5ffd66023fef9d4a4b1b86005505c031fa3d5` |
+| #304 | `STOREFRONT-VAT-PRICE-DISPLAY-CONTEXT-FOUNDATION-1A` | `87c031c68352c3e1cd8c9c24a147ecdb7ba68477` |
+| #305 | `STOREFRONT-VAT-PDP-CONTEXT-1A` | `1addcf1e94d498b9f6b8cbeaf641eb5d45bec000` |
+| #306 | `STOREFRONT-VAT-HOME-CONTEXT-1A` | `5a3be27effe79d33ac6061d5e5f9ffd70e07221c` |
+| #307 | `STOREFRONT-VAT-CATALOG-CONTEXT-1A` | `de611eb755865d072a266c832c8adc31b925b6c3` |
+| #308 | `STOREFRONT-VAT-CATALOG-PRICE-SORT-FILTER-1B` | `b4da5b56829225764e6057ce25c834613d50586a` |
 
-Tutte integrate FF-only, zero merge commit nelle tre integrazioni. La foundation DB #296 e il runtime #297 sono distinti: la foundation non attiva da sola il cookie. Il livello DB e stato allineato sui nove database autorizzati secondo i report approvati; non e una nuova autorizzazione a contattarli o modificarli.
+Le PR #308 completa il sottoblocco di presentazione commerciale/prezzi VAT qui descritto; i soli file runtime di #308 sono `App_Code/StorefrontPromotionCatalogProvider.vb` e `articoli.aspx.vb`. Il task documentale riconcilia il perimetro implementato, non certifica l'intero storefront, tutti i tenant o la produzione.
 
 Contratto definitivo:
 
@@ -35,11 +41,18 @@ Prove approvate dei blocchi integrati: smoke lifecycle e login merge, anti-repla
 
 `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta CHIUSO E / DIFFERITO: concerne la durabilita oltre Session/InProc del registro anti-replay delle mutazioni, non la persistenza delle righe anonime. Non e risolto da #297/#298/#299.
 
-Roadmap commerciale prevalente, tutti NON AVVIATI:
+`STOREFRONT-CART-CONVERSION-UX-1A` non e piu backlog: e CHIUSO / A / INTEGRATED con PR #303. Le integrazioni Merchant e abandoned-cart restano ambiti distinti soggetti alle rispettive decisioni, prerequisiti e autorizzazioni; questo checkpoint non seleziona ne avvia un task successivo.
 
-1. `STOREFRONT-CART-CONVERSION-UX-1A` — stato salvato, soglia spedizione e variazioni prezzo/stock; prossimo task solo dopo review/merge del closeout documentale.
-2. `GOOGLE-MERCHANT-CENTER-FEED-1A` — dopo stabilizzazione conversion UX e nuova autorizzazione, rispettando il rinvio delle integrazioni.
-3. `STOREFRONT-ABANDONED-CART-RECOVERY-1A` — solo utenti autenticati, dopo contratto privacy/consenso, senza profilazione del carrello anonimo o messaggi non richiesti.
+### Contratto stabile VAT / commercial price display
+
+- `StorefrontPriceDisplayContextProvider` crea un contesto server-side request-scoped, dopo la validazione tenant/azienda e listino. Per l'anonimo il modo di visualizzazione deriva dall'IVA default del tenant salvata nel database, quando la relativa opzione e abilitata (`IvaTipo` nel default tenant); per l'autenticato prevale la preferenza IVA coerente con l'account nella stessa azienda. Non si deduce il modo da host grezzi o da valori inviati dal browser.
+- Label canoniche: `Prezzi visualizzati IVA inclusa` e `Prezzi visualizzati IVA esclusa`. Il checkout mantiene la propria esposizione distinta `Imponibile / IVA / Totale`.
+- Nessuna aliquota IVA generale hardcoded: l'IVA prodotto puo variare; `Iva_Vettori` e separata dall'IVA dei prodotti. `Iva_Utente = -1` significa nessun override, mentre `0` e un override valido. Prezzo lordo effettivo: reverse charge prodotto se abilitato per l'account, poi override account (anche 0), altrimenti lordo autorevole DB. Se la modalita selezionata non ha un prezzo valido, non si sostituisce con la modalita opposta.
+- Il contesto e riusato tra PDP e relativi output pubblici di prezzo, HOME e catalogo. Il catalogo applica al prezzo visualizzato, sortato e filtrato una proiezione commerciale qty=1: offerte autorizzate, variante esatta prima del fallback articolo, prezzo netto promo migliore e tie-break `OfferDetailId`. `QntMinima > 0` deve essere soddisfatta da qty=1; in alternativa `Multipli > 0` deve ammettere qty=1. Entrambi positivi e una regola ambigua; entrambi non positivi non sono applicabili. E ammesso un prezzo assoluto positivo o uno sconto 1–99% solo se il promo netto risulta positivo e inferiore al netto base. Il promo lordo segue il rapporto tra lordo effettivo base e netto base. Calcoli fiscali e promo restano server-side, senza arrotondamento prematuro.
+- Ordinamenti prezzo crescente/decrescente e range inclusivo `pmin/pmax` usano lo stesso `CatalogDisplayPrice` della card; prezzi assenti/non validi non soddisfano il range. I facet seguono l'insieme commerciale del range quando attivo. La proiezione/join promo qty=1 e lazy: si attiva per ordinamento o range prezzo, non nel catalogo ordinario. Sort e tie sono deterministici.
+- Il range validato e stato URL della listing e sopravvive a sort, paging, facet e page-size; il bridge Session legacy e one-shot. Nuova ricerca, clear o URL senza range non ereditano stato obsoleto. I range prezzo seguono la policy SEO esistente delle listing filtrate (`noindex,follow`). SQL usa parametri Decimal tipizzati e ingressi ambigui/duplicati non sono trattati come range valido.
+
+Gate registrati per #301–#308: test focalizzati di contesto/resolver e parita SQL, EXPLAIN, lifecycle range, precompile .NET Framework 4.8, diff/secret scan e smoke automatici HTTP/responsive riportati PASS; review indipendente e smoke Product Owner PC/mobile del blocco finale sono A. Il percorso browser di IVA esclusa non aveva una fixture anonima/account disponibile ed e stato verificato tecnicamente, non dichiarato come smoke visivo. Nessun deploy multi-tenant o certificazione globale deriva da questi esiti.
 
 ### Checkpoint precedenti — storico preservato
 
@@ -2681,7 +2694,7 @@ La roadmap di questa REV2 descriveva lo stato precedente: login autofill e persi
 - Stato login/sessione verificato: timeout applicativo di 30 minuti di inattivita; autenticazione dipendente da `Session("LoginId")`; carrello autenticato persistito nel DB e recuperato dopo un nuovo login; cookie annuale con solo username, non credenziale e non autenticazione; timeout idle/recycle dell'Application Pool non ancora certificato. La REV2 non modifica alcun timeout.
 - Forensica REV4: il riferimento assistenza mostrato dal checkout reale non e presente nei log applicativi disponibili e il tentativo non ha creato claim idempotente, documento o e-mail. Poiche fase ed eccezione non sono state persistite, lo stop E vieta fix dedotti dal solo stato UI; PR #267 resta DRAFT fino a una diagnosi causale osservabile.
 - `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A` e registrato ma `NON AVVIATO`: dovra rendere il login desktop/mobile compatibile con i password manager tramite form e nomi input stabili, HTTPS, `autocomplete="username"` e `autocomplete="current-password"`, con verifica Edge, Chrome, Firefox e Safari e audit dei JavaScript che cancellano o alterano gli input. Il browser e l'utente restano gli unici a decidere salvataggio e riempimento; logout continua a invalidare l'autenticazione. Sono vietati password in cookie, Web Storage, Session, ViewState, hidden field, query string, HTML/server prefill e log, cosi come autenticazione persistente nascosta.
-- Roadmap storica, superata dal checkpoint 2026-10-01, dopo la chiusura della PR #267: (1) `LOGIN-PASSWORD-MANAGER-AUTOFILL-1A`; (2) `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A`, 30 giorni dall'ultima attivita, token casuale opaco, cookie host-only `Secure`/`HttpOnly`/`SameSite=Lax`, isolamento database + `AziendaId`, righe DB, merge login idempotente una sola volta, rotazione e invalidazione, revalidation prezzi/promo/stock, nessuna prenotazione inventario, cleanup e aggiornamento privacy/cookie policy; (3) `STOREFRONT-CART-CONVERSION-UX-1A`, inclusi stato `carrello salvato`, soglia spedizione e variazioni prezzo/stock; (4) `GOOGLE-MERCHANT-CENTER-FEED-1A`; (5) `STOREFRONT-ABANDONED-CART-RECOVERY-1A` soltanto per utenti autenticati e dopo contratto privacy/consenso, senza spam. Tutti sono `NON AVVIATO`.
+- Roadmap storica, superata dai checkpoint successivi: in quella fotografia post-PR #267 i task erano tutti `NON AVVIATO`; in seguito login autofill #295, persistent cart #297–#299 e `STOREFRONT-CART-CONVERSION-UX-1A` #303 sono stati chiusi e integrati. La sequenza storica includeva Merchant feed e abandoned-cart recovery, che restano ambiti distinti da rivalutare con prerequisiti e autorizzazione propri; non costituisce la roadmap prevalente corrente.
 - `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A` riguarda durata e recupero delle righe anonime; non coincide con `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, che riguarda i registri anti-replay delle mutazioni e resta E/differito.
 
 ## Checkpoint MULTIPROVIDER-TENANT-EMAIL-TRANSPORT-1A

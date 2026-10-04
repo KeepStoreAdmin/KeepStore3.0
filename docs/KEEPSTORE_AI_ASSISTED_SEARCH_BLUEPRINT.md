@@ -1,14 +1,21 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
-## Checkpoint prevalente 2026-10-01 — carrello persistente e guardrail AI
+## Checkpoint prevalente 2026-10-04 — commercial price context e guardrail AI
 
-`frontend-rebuild` / `origin/frontend-rebuild` = `a4238abfc8eae7fefbb985672d4cd5bddabf4118`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Persistent anonymous cart = CLOSED A / INTEGRATED: runtime #297 `6789fc1784bd695e3ec2bd0041d13b43154b08de`, cleanup #298 `44016ffc2f29cae1cf235e46e6b115d8035ab6d6`, privacy #299 `a4238abfc8eae7fefbb985672d4cd5bddabf4118`, tutti FF-only senza merge commit. Runtime commerciale integrato non significa runtime AI implementato o production rollout certificato: per il rilascio vale [il runbook](PERSISTENT_ANONYMOUS_CART_DEPLOYMENT_RUNBOOK.md).
+`frontend-rebuild` / `origin/frontend-rebuild` = `b4da5b56829225764e6057ce25c834613d50586a`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. PR #300–#308 sono MERGED in sequenza lineare e fast-forward; il programma cart-conversion e VAT/pricing si e evoluto fino a `STOREFRONT-VAT-CATALOG-PRICE-SORT-FILTER-1B` (#308). Il checkpoint operativo completo e nel Masterplan e il contratto tecnico VAT nel System Blueprint. Queste integrazioni non implementano runtime AI, feed Merchant o rollout globale in produzione.
 
 Cookie `__Host-KeepStoreCart`, raw secret, `ksc1`, `ksc2`, `OwnerToken`, registry `carrello_anonimo_persistenza`, righe carrello anonime, `LoginId` e dati carrello **NON sono fonti per RAG, embeddings, vector DB, ranking, feed, analytics AI, personalizzazione AI o logging AI**. Nessun crawler/feed/assistant deve esporli o indicizzarli. Il cookie tecnico usato per continuita del carrello non costituisce consenso a impieghi ulteriori; persistenza e merge non ampliano il confine dei dati autorizzati alle integrazioni.
 
 `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A` resta il separato debito CHIUSO E / DIFFERITO sulla durabilita dei registri anti-replay Session/InProc, non risolto dal registry anonimo. Nessuna logica search/AI viene implementata da questa chiusura.
 
-Prossimo task commerciale storefront: `STOREFRONT-CART-CONVERSION-UX-1A`, NON AVVIATO, dopo review/merge del closeout documentale; poi `GOOGLE-MERCHANT-CENTER-FEED-1A` e `STOREFRONT-ABANDONED-CART-RECOVERY-1A` solo utenti autenticati dopo contratto privacy/consenso. Le integrazioni restano subordinate alle priorita ecommerce e a nuova autorizzazione. Ogni roadmap sotto che descrive persistent cart come futuro o NON AVVIATO e **storica e superata**; non riapre i task integrati.
+`STOREFRONT-CART-CONVERSION-UX-1A` e CHIUSO / A / INTEGRATED dalla PR #303; non e un task futuro. Le roadmap successive restano da scegliere con decisione esplicita e non sono riavviate da questo checkpoint. I riferimenti sotto a stato persistent-cart precedente sono storici e non riaprono i task integrati.
+
+### Commercial price context: input autorevole per search, AI e feed futuri
+
+- Il catalogo dispone di un prezzo commerciale qty=1 condiviso con prezzo presentato, ordinamento e range prezzo, derivato da `StorefrontPriceDisplayContext` e dai resolver fiscali/promozionali server-side. Il contesto anonimo usa l'IVA default tenant memorizzata nel database quando abilitata; la modalita account vale soltanto nell'ambito autenticato e tenant-validato.
+- Future search, assistenti AI, structured output e feed devono riusare il contesto/resolver commerciale autorevole; non devono ricostruire IVA, prezzo o promozioni, né selezionare un'offerta con logica autonoma. Errori tecnici restano errori e non diventano “nessuna promo/offerta”.
+- Prezzi e condizioni account-specific non entrano in output pubblico, cache condivise, feed pubblici, crawler, embeddings o RAG. Solo valori pubblici realmente applicabili al tenant possono essere pubblicati, con scope e cache coerenti; i dati personali, account, owner e carrello restano esclusi.
+- Questo contratto e un guardrail per lavori futuri: **non dichiara implementata AI, semantic search, RAG, Merchant feed, Google readiness o completamento SEO**. Ogni integrazione richiede progetto, privacy, autorizzazione e verifica separati.
 
 ## Checkpoint precedenti — storico preservato
 
