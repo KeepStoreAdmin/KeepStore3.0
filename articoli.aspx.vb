@@ -219,6 +219,11 @@ Partial Class Articoli
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not EnsureCatalogPriceDisplayContext() Then Return
         SyncCatalogPriceRangeNavigation()
+        ksCatalogPriceError.Visible = False
+        txtCatalogPriceMin.Attributes.Remove("aria-invalid")
+        txtCatalogPriceMax.Attributes.Remove("aria-invalid")
+        txtCatalogPriceMin.Attributes("aria-describedby") = "ksCatalogPriceHint"
+        txtCatalogPriceMax.Attributes("aria-describedby") = "ksCatalogPriceHint"
         ' Step 1: se presente ScriptManager, disabilita partial rendering (rimozione AJAX)
         Dim sm = System.Web.UI.ScriptManager.GetCurrent(Me.Page)
         If sm IsNot Nothing Then sm.EnablePartialRendering = False
@@ -248,6 +253,8 @@ Partial Class Articoli
         SyncCatalogSessionFromQuery()
 
         If Me.IsPostBack = False Then
+            txtCatalogPriceMin.Text = ReadCatalogPriceBound("pmin")
+            txtCatalogPriceMax.Text = ReadCatalogPriceBound("pmax")
             InitializeCatalogControlsFromRequest()
         End If
 
@@ -964,7 +971,11 @@ If catalogQuantityOnePriceRequired Then
         StorefrontPromotionCatalogProvider.AddParameters(sdsArticoli.SelectParameters, catalogEligibilityContext)
     End If
     Dim quantityOneJoin As String = StorefrontPromotionCatalogProvider.BuildQuantityOnePriceJoin()
-    displayPriceSql = BuildCatalogQuantityOneDisplayPriceSql(effectiveBaseGrossSql)
+    Dim rawDisplayPriceSql As String = BuildCatalogQuantityOneDisplayPriceSql(effectiveBaseGrossSql)
+    ' Resolve commerce at full precision first; range, facets and price sorting
+    ' then share the same two-decimal amount presented by UiPriceFormatter.
+    ' The final DECIMAL cast keeps MySQL ROUND on its exact-value money path.
+    displayPriceSql = "ROUND(CAST(" & rawDisplayPriceSql & " AS DECIMAL(38,16)),2)"
     strSelect = "SELECT " & displayPriceSql & " AS CatalogDisplayPrice," & strSelect.Substring(7) & quantityOneJoin
     If hasPriceRange Then
         quantityOneFacetJoin = quantityOneJoin
@@ -2282,6 +2293,65 @@ strWhere = strWhere & " GROUP BY id"
         Return NormalizeCatalogPriceBound(values(0))
     End Function
 
+    Private Shared Function TryNormalizeCatalogPriceRange(ByVal rawMin As String, ByVal rawMax As String,
+                                                          ByRef minimum As String, ByRef maximum As String,
+                                                          ByRef errorText As String) As Boolean
+        minimum = NormalizeCatalogPriceBound(rawMin)
+        maximum = NormalizeCatalogPriceBound(rawMax)
+        errorText = String.Empty
+        If (Not String.IsNullOrWhiteSpace(rawMin) AndAlso minimum = "") OrElse
+           (Not String.IsNullOrWhiteSpace(rawMax) AndAlso maximum = "") Then
+            errorText = "Inserisci prezzi maggiori di zero, usando il punto o la virgola per i decimali."
+            Return False
+        End If
+        If minimum <> "" AndAlso maximum <> "" AndAlso
+           Decimal.Parse(minimum, CultureInfo.InvariantCulture) > Decimal.Parse(maximum, CultureInfo.InvariantCulture) Then
+            errorText = "Il prezzo minimo non puo superare il prezzo massimo."
+            Return False
+        End If
+        Return True
+    End Function
+
+    Protected Sub btnCatalogPriceApply_Click(ByVal sender As Object, ByVal e As EventArgs)
+        If Not EnsureCatalogPriceDisplayContext() Then Return
+        Dim minValues As String() = Request.Form.GetValues(txtCatalogPriceMin.UniqueID)
+        Dim maxValues As String() = Request.Form.GetValues(txtCatalogPriceMax.UniqueID)
+        Dim minimum As String = String.Empty
+        Dim maximum As String = String.Empty
+        Dim errorText As String = String.Empty
+        If minValues Is Nothing OrElse minValues.Length <> 1 OrElse maxValues Is Nothing OrElse maxValues.Length <> 1 Then
+            errorText = "Controlla i due limiti di prezzo e riprova."
+        ElseIf TryNormalizeCatalogPriceRange(minValues(0), maxValues(0), minimum, maximum, errorText) Then
+            txtCatalogPriceMin.Text = minimum
+            txtCatalogPriceMax.Text = maximum
+            RedirectIfChanged(BuildCatalogPriceRangeUrl(minimum, maximum))
+            Return
+        End If
+
+        ksCatalogPriceError.Visible = True
+        litCatalogPriceError.Text = errorText
+        txtCatalogPriceMin.Attributes("aria-invalid") = "true"
+        txtCatalogPriceMax.Attributes("aria-invalid") = "true"
+        txtCatalogPriceMin.Attributes("aria-describedby") = "ksCatalogPriceHint ksCatalogPriceError"
+        txtCatalogPriceMax.Attributes("aria-describedby") = "ksCatalogPriceHint ksCatalogPriceError"
+        ' Reuse the existing mobile drawer; keep the server validation visible.
+        ClientScript.RegisterStartupScript(Me.GetType(), "catalog-price-error",
+            "window.addEventListener('load',function(){if(window.matchMedia('(max-width:1199.98px)').matches){var trigger=document.getElementById('filterShop');if(trigger)trigger.click();}var error=document.getElementById('ksCatalogPriceError');if(error)error.focus();});", True)
+    End Sub
+
+    Private Function BuildCatalogPriceRangeUrl(ByVal minimum As String, ByVal maximum As String) As String
+        Dim query = ParseUrlQuery(GetSafeReturnUrl())
+        query.Remove("pmin")
+        query.Remove("pmax")
+        If minimum <> "" Then query("pmin") = minimum
+        If maximum <> "" Then query("pmax") = maximum
+        query.Remove("pg")
+        query.Remove("page")
+        query.Remove("p")
+        query.Remove("rimuovi")
+        Return BuildUrlWithQuery(Request.Url.AbsolutePath, query)
+    End Function
+
     Private Sub SyncCatalogPriceRangeNavigation()
         ' search_complete resta il bridge one-shot; la listing legge solo la request.
         Dim pendingMin As String = Convert.ToString(Session("Prezzo_MIN"))
@@ -2461,6 +2531,20 @@ strWhere = strWhere & " GROUP BY id"
             AddActiveFilter(active, "spedgratis=", "Spedizione gratis")
         End If
 
+        Dim minimum As String = ReadCatalogPriceBound("pmin")
+        Dim maximum As String = ReadCatalogPriceBound("pmax")
+        If minimum <> "" OrElse maximum <> "" Then
+            Dim priceLabel As String = "Prezzo: "
+            If minimum <> "" AndAlso maximum <> "" Then
+                priceLabel &= minimum & " - " & maximum
+            ElseIf minimum <> "" Then
+                priceLabel &= "da " & minimum
+            Else
+                priceLabel &= "fino a " & maximum
+            End If
+            AddActiveFilter(active, "price-range=", priceLabel)
+        End If
+
         AddFacetActiveFilters(active, "mr", "Marca", "Marche")
         AddFacetActiveFilters(active, "tp", "Tipologia", "tipologie")
         AddFacetActiveFilters(active, "gr", "Gruppo", "Gruppi")
@@ -2590,7 +2674,10 @@ strWhere = strWhere & " GROUP BY id"
         Dim qs = ParseUrlQuery(url)
         If String.IsNullOrEmpty(paramName) Then Return url
 
-        If String.IsNullOrEmpty(paramValue) Then
+        If String.Equals(paramName, "price-range", StringComparison.Ordinal) Then
+            qs.Remove("pmin")
+            qs.Remove("pmax")
+        ElseIf String.IsNullOrEmpty(paramValue) Then
             qs.Remove(paramName)
         Else
             Dim current As String = Convert.ToString(qs(paramName))

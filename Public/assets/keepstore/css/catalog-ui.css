@@ -306,6 +306,91 @@
   min-inline-size: 0;
 }
 
+#ksCatalogPage .facet-price {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gray-5, #ebebeb);
+}
+
+#ksCatalogPage .facet-price .form-filter-price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#ksCatalogPage .facet-price .cols {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+#ksCatalogPage .facet-price .box-price-item {
+  flex: 1 1 0;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#ksCatalogPage .facet-price label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+#ksCatalogPage .facet-price .price-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 16px;
+}
+
+#ksCatalogPage .facet-price .br-line {
+  flex: 0 0 6px;
+  margin-bottom: 21px;
+}
+
+#ksCatalogPage .facet-price .ks-catalog-price-apply {
+  width: 100%;
+  min-height: 44px;
+  background: var(--primary, #ff3b30);
+  border-color: var(--primary, #ff3b30);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#ksCatalogPage .facet-price .price-input:focus-visible,
+#ksCatalogPage .facet-price .ks-catalog-price-apply:focus-visible,
+#ksCatalogPage .ks-price-filter-error:focus-visible {
+  outline: 2px solid var(--text-main, #222);
+  outline-offset: 2px;
+}
+
+#ksCatalogPage .ks-price-filter-hint,
+#ksCatalogPage .ks-price-filter-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+#ksCatalogPage .ks-price-filter-hint {
+  color: var(--text-main-2, #666);
+}
+
+#ksCatalogPage .ks-price-filter-error {
+  color: #b42318;
+}
+
+#ksCatalogPage .facet-price .price-input[aria-invalid="true"] {
+  border-color: #b42318;
+}
+
 #ksCatalogPage .tf-shop-control {
   align-items: center;
   gap: 14px 20px;

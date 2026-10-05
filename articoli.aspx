@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20260916-offers-promo-ux1" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261005-price-filter1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
 </asp:Content>
@@ -55,6 +55,30 @@
                             <asp:Panel ID="pnlCatalogCategoryNav" runat="server" CssClass="facet-categories ks-catalog-category-nav" Visible="false">
                                 <h6 class="title fw-medium">Settori</h6>
                                 <asp:Literal ID="litCatalogCategoryNav" runat="server" />
+                            </asp:Panel>
+
+                            <asp:Panel ID="pnlCatalogPriceFilter" runat="server" CssClass="widget-facet facet-price" DefaultButton="btnCatalogPriceApply">
+                                <p class="facet-title title-sidebar fw-semibold">Prezzo</p>
+                                <div class="box-price-product">
+                                    <div class="form-filter-price">
+                                        <div class="cols w-100">
+                                            <fieldset class="box-price-item">
+                                                <asp:Label runat="server" AssociatedControlID="txtCatalogPriceMin" Text="Prezzo minimo" />
+                                                <asp:TextBox ID="txtCatalogPriceMin" runat="server" ClientIDMode="Static" CssClass="ks-catalog-price-min price-input" MaxLength="64" inputmode="decimal" aria-describedby="ksCatalogPriceHint" />
+                                            </fieldset>
+                                            <span class="br-line" aria-hidden="true"></span>
+                                            <fieldset class="box-price-item">
+                                                <asp:Label runat="server" AssociatedControlID="txtCatalogPriceMax" Text="Prezzo massimo" />
+                                                <asp:TextBox ID="txtCatalogPriceMax" runat="server" ClientIDMode="Static" CssClass="ks-catalog-price-max price-input" MaxLength="64" inputmode="decimal" aria-describedby="ksCatalogPriceHint" />
+                                            </fieldset>
+                                        </div>
+                                        <asp:Button ID="btnCatalogPriceApply" runat="server" Text="Applica" CssClass="ks-catalog-price-apply" CausesValidation="false" OnClick="btnCatalogPriceApply_Click" />
+                                    </div>
+                                </div>
+                                <p id="ksCatalogPriceHint" class="ks-price-filter-hint">Puoi lasciare vuoto uno dei due limiti.</p>
+                                <asp:Panel ID="ksCatalogPriceError" runat="server" ClientIDMode="Static" CssClass="ks-price-filter-error" Visible="false" role="alert" tabindex="-1">
+                                    <asp:Literal ID="litCatalogPriceError" runat="server" Mode="Encode" />
+                                </asp:Panel>
                             </asp:Panel>
 
                             <asp:Panel ID="ksFilters" runat="server">
