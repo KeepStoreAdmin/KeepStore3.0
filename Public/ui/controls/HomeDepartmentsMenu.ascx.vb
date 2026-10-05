@@ -10,7 +10,7 @@ Imports System.Web.UI.WebControls
 Partial Public Class UI_HomeDepartmentsMenu
     Inherits UserControl
 
-    Private Shared ReadOnly BlockedCreativeTokens As String() = {"welcome", "franchis", "onsus", "themesflat", "themeforest", "demo", "placeholder", "sample", "template", "default-banner", "spacer", "blank", "noimage", "no-image", "pixel", "tracking", "sprite"}
+    Private Shared ReadOnly BlockedCreativeTokens As String() = {"welcome", "franchis", "themesflat", "themeforest", "demo", "placeholder", "sample", "template", "default-banner", "spacer", "blank", "noimage", "no-image", "pixel", "tracking", "sprite"}
     Private Const MaxVisibleTipologies As Integer = 2147483647
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load

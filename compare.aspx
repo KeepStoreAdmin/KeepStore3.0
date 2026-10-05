@@ -49,5 +49,5 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260928-minicart-onsus-shell-ux-a11y-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261005-minicart-shell-ux-a11y-1a"></script>
 </asp:Content>

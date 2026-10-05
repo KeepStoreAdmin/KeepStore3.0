@@ -1,6 +1,6 @@
 /* Product detail runtime bridge
-   Scope: articolo.aspx only. ONSUS product-detail classes are the visual source
-   of truth; ks-* rules only protect real WebForms data and media. */
+   Scope: articolo.aspx only. Existing product-detail presentation classes define
+   the visual structure; ks-* rules protect real WebForms data and media. */
 
 .ks-product-page .tf-product-info-content,
 .ks-product-page .tf-product-info-choose-option,

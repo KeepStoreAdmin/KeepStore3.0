@@ -164,7 +164,7 @@ a.active.trigger {
 
 
 /* ===== Estratto da: wishlist.aspx ===== */
-/* Small alignment for legacy wishlist table inside ONSUS layout */
+/* Small alignment for legacy wishlist table inside KeepStore account layout */
         .ks-myaccount table { width: 100%; }
         .ks-myaccount .GridView, .ks-myaccount .grid { width: 100%; }
 /* Micro-adattamenti per la GridView in stile ONUS */

@@ -1910,7 +1910,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 }
 
-/* HOME product-card overlay action: keep the ONSUS icon-only control on mobile. */
+/* HOME product-card overlay action: keep the icon-only control on mobile. */
 @media (max-width: 767.98px) {
   body.ks-page-home .ks-home-main .ks-home-buy-cta:not(.ks-mobile-card-buy-cta),
   body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-buy-cta:not(.ks-mobile-card-buy-cta) {
@@ -2412,7 +2412,7 @@ body.ks-page-home .ks-home-main .ks-compact-buy-cta:focus-visible .ks-compact-bu
   }
 }
 
-/* KeepStore header catalog / ONSUS All Categories */
+/* KeepStore header catalog / all categories navigation */
 @media (min-width: 1200px) {
   .ks-header-ui .ks-header-nav-shell { display: flex; align-items: center; gap: 28px; min-width: 0; }
   .ks-header-ui .ks-header-all-categories { position: relative; flex: 0 0 270px; z-index: 120; }
@@ -2470,7 +2470,7 @@ body.ks-page-home .ks-home-main .ks-compact-buy-cta:focus-visible .ks-compact-bu
   .ks-header-ui .ks-header-sector-title:focus-visible { color: var(--primary-2, #D80027); padding-left: 0; outline: none; text-decoration: underline; text-underline-offset: 4px; }
 }
 
-/* GLOBAL-TYPOGRAPHY-ONSUS-1A: deterministic storefront foundation. */
+/* GLOBAL-TYPOGRAPHY-1A: deterministic storefront foundation. */
 :root {
   --ks-font-ui: Arial, sans-serif;
 }
@@ -2489,7 +2489,7 @@ h6 {
   font-family: var(--ks-font-ui);
 }
 
-/* GLOBAL-TYPOGRAPHY-ONSUS-1B: normalize explicit storefront families. */
+/* GLOBAL-TYPOGRAPHY-1B: normalize explicit storefront families. */
 .font-main,
 .font-2,
 .box-sale-wrap p,

@@ -2808,7 +2808,7 @@
     cursor: not-allowed;
 }
 
-/* PR303 R4: ONSUS checkout presentation; existing server controls/values stay authoritative. */
+/* PR303 R4: KeepStore checkout presentation; existing server controls/values stay authoritative. */
 .ks-cart-page.ks-cart-step-checkout .checkout-status,
 .ks-cart-page.ks-cart-step-confirm .checkout-status{
     padding-bottom: 28px;
@@ -3360,7 +3360,7 @@
         font-size: 24px;
     }
 }
-/* ONSUS presentation shared by cart, delivery/payment and final review.
+/* KeepStore presentation shared by cart, delivery/payment and final review.
    Server controls, quantities and monetary values remain authoritative. */
 .ks-cart-page.ks-cart-modern {
     --ks-checkout-ink: #333e48;

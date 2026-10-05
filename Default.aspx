@@ -443,7 +443,7 @@
 </asp:Content>
 
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20260928-minicart-onsus-shell-ux-a11y-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261005-minicart-shell-ux-a11y-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20260518-home6" %>"></script>
 </asp:Content>

@@ -91,7 +91,7 @@
     pointer-events: none;
 }
 
-/* ONSUS presentation only: preserve the server-rendered dynamic shell and native actions. */
+/* KeepStore presentation only: preserve the server-rendered dynamic shell and native actions. */
 #ksMiniCartCanvas {
     width: min(100vw, 460px);
     max-width: 100%;
@@ -339,7 +339,7 @@
 }
 
 @media (max-width: 575.98px) {
-    /* Override ONSUS' mobile .popup-shopping-cart width: 340px !important. */
+    /* Override the base mobile .popup-shopping-cart width: 340px !important. */
     #ksMiniCartCanvas {
         width: 100% !important;
     }

@@ -92,7 +92,6 @@
     var st = document.createElement('style');
     st.id = STYLE_ID;
     st.textContent = [
-      'body.ks-page-home.ks-home-step135-onsus-market{background:#f4f4f4!important;}',
       '.tf-header,.tf-header .inner-header,.tf-header .header-center,.ks-header-ui,.ks-header-ui .container{overflow:visible!important;}',
       '.ks-header-ui{position:relative;z-index:1500;}',
       '.ks-search-host{position:relative!important;}',

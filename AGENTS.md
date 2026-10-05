@@ -160,7 +160,7 @@ Ogni task verifica: diff/manifest; `git diff --check`; sintassi/logica; dipenden
 - Il mobile e l'esperienza primaria. Progettazione e QA iniziano da `360px` e `390px`, poi tablet e desktop.
 - Nessuna funzione essenziale hover-only. Verificare touch target, ordine, leggibilita, densita, offcanvas e scrolling.
 - Nessun A visuale senza browser mobile reale; coinvolgere Germano solo quando la conferma necessaria non e automatizzabile.
-- KeepStore e fonte di dati/logica/permessi; ONSUS e fonte UI/UX. Un refactor grafico non autorizza fix nascosti alla business logic.
+- KeepStore e fonte di dati/logica/permessi; ONSUS e fonte UI/UX. Un refactor grafico non autorizza fix nascosti alla business logic. **TEMPLATE-REFERENCE / RUNTIME-INDEPENDENCE:** il template originale e una fonte esterna di benchmark/reference UI/UX, non una dipendenza runtime. Il runtime custom KeepStore non usa il nome del template in identificatori, classi, funzioni, variabili, selettori, version string/cache-buster, commenti operativi, DOM marker, log o path/file custom e non importa dati, prodotti, categorie, prezzi, immagini o business logic demo. Ogni pattern adottato viene adattato alla semantica KeepStore; le menzioni restano ammesse in manuali, audit, storico e documentazione/reference.
 
 ### Storefront UX Design Gate — obbligatorio
 
