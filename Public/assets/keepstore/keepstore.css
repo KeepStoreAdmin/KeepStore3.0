@@ -145,7 +145,7 @@ a.active.trigger {
 
 
 /* ===== Estratto da: ordine.aspx ===== */
-/* KeepStore: ONUS alignment for ordine.aspx (solo layout, nessuna logica VB toccata) */
+/* KeepStore alignment for ordine.aspx (solo layout, nessuna logica VB toccata) */
         .ks-order-center{max-width:860px;margin:0 auto}
         .ks-alert{padding:14px 16px;border-radius:14px;border:1px solid rgba(0,0,0,0.10);background:#fff}
         .ks-alert-danger{border-color:#ffd0d0;background:#fff1f1;color:#b00020}
@@ -159,7 +159,7 @@ a.active.trigger {
 
 
 /* ===== Estratto da: ordine_coupon.aspx ===== */
-/* KeepStore: pagina tecnica di redirect coupon (layout ONUS minimale) */
+/* KeepStore: pagina tecnica di redirect coupon (layout minimale) */
         .ks-coupon-center{max-width:760px;margin:0 auto}
 
 
@@ -167,7 +167,7 @@ a.active.trigger {
 /* Small alignment for legacy wishlist table inside KeepStore account layout */
         .ks-myaccount table { width: 100%; }
         .ks-myaccount .GridView, .ks-myaccount .grid { width: 100%; }
-/* Micro-adattamenti per la GridView in stile ONUS */
+/* Micro-adattamenti per la GridView */
         .ks-table-clean { width: 100%; }
         .ks-table-clean th, .ks-table-clean td { vertical-align: middle; }
         .ks-wl-actions { gap: 10px; }
@@ -341,7 +341,7 @@ body
 
 
 /* ===== Estratto da: documenti.aspx ===== */
-/* KeepStore STEP22A (ONUS) - Tab tipo documento */
+/* KeepStore STEP22A - Tab tipo documento */
         .ks-doc-typebar { margin: 0 0 18px 0; }
         .ks-doc-typebar .selezionato,
         .ks-doc-typebar .nonSelezionato {
@@ -417,7 +417,7 @@ body
             max-width: 100%;
         }
 
-        /* KeepStore STEP22B (ONUS) - Tabella ordine/documenti */
+        /* KeepStore STEP22B - Tabella ordine/documenti */
         .tf-order_history-table { margin-top: 12px; }
         .ks-order-table { width: 100%; }
         .ks-order-table th, .ks-order-table td { padding: 14px 12px; vertical-align: top; }
@@ -457,7 +457,7 @@ body
 
 
 /* ===== Estratto da: documentidettaglio.aspx ===== */
-/* STEP24 (ONUS): tabella dettaglio ordine/documento */
+/* STEP24: tabella dettaglio ordine/documento */
         .ks-order-detail .tf-table-order-detail {
             width: 100%;
         }
@@ -495,7 +495,7 @@ body
 
 
 /* ===== Estratto da: myaccount.aspx ===== */
-/* KeepStore STEP20 (ONUS): spinner */
+/* KeepStore STEP20: spinner */
         #spinner_myaccount {
             display: none;
             position: fixed;
@@ -569,7 +569,7 @@ body
     
 
         /* ==========================================================
-           STEP16 (CATALOGO/UI): GridView -> ONus grid + card polish
+           STEP16 (CATALOGO/UI): GridView -> KeepStore grid + card polish
            - Trasforma la <table> del GridView in una griglia responsive
            - Uniforma immagini, hover, badge e barra quantità
            ========================================================== */
@@ -627,7 +627,7 @@ body
         }
         .ks-card-product:hover .img-hover { opacity: 1; }
 
-        /* Quantità: usa classi ONus (main.js) */
+        /* Quantità: usa le classi base del runtime (main.js) */
         .ks-card-product .wg-quantity {
             min-width: 120px;
         }
@@ -725,7 +725,7 @@ body
     
 
         /* ==========================================================
-           STEP16 (CATALOGO/UI): GridView -> ONus grid + card polish
+           STEP16 (CATALOGO/UI): GridView -> KeepStore grid + card polish
            - Trasforma la <table> del GridView in una griglia responsive
            - Uniforma immagini, hover, badge e barra quantità
            ========================================================== */
@@ -783,7 +783,7 @@ body
         }
         .ks-card-product:hover .img-hover { opacity: 1; }
 
-        /* Quantità: usa classi ONus (main.js) */
+        /* Quantità: usa le classi base del runtime (main.js) */
         .ks-card-product .wg-quantity {
             min-width: 120px;
         }
@@ -847,4 +847,3 @@ body
             flex-wrap:wrap;
             margin-top:6px;
         }
-
