@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261005-price-filter1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
 </asp:Content>
@@ -82,7 +82,7 @@
                             </asp:Panel>
 
                             <asp:Panel ID="ksFilters" runat="server">
-                                <div class="widget-facet facet-fieldset has-loadmore">
+                                <div class="widget-facet facet-fieldset has-loadmore ks-brand-facet">
                                     <p class="facet-title title-sidebar fw-semibold">Marche</p>
                                     <div class="box-fieldset-item">
                                         <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" CssClass="ks-filter-list">
@@ -96,6 +96,10 @@
                                             </ItemTemplate>
                                         </asp:DataList>
                                     </div>
+                                    <button id="btnBrandLoadMore" runat="server" type="button" class="btn-loadmore ks-brand-loadmore" aria-label="Mostra tutte le marche" Visible="false">
+                                        <span>Mostra altro</span>
+                                        <i class="icon-arrow-down" aria-hidden="true"></i>
+                                    </button>
                                 </div>
 
                                 <div class="widget-facet facet-fieldset">
@@ -575,7 +579,7 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261006-brand-loadmore1a"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261005-minicart-shell-ux-a11y-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>

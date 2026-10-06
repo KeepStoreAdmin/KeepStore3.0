@@ -1635,7 +1635,9 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Protected Sub DataList2_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList2.PreRender
-        Me.DataList2.Visible = (Me.DataList2.Items.Count > 0)
+        Dim brandCount As Integer = Me.DataList2.Items.Count
+        Me.DataList2.Visible = (brandCount > 0)
+        Me.btnBrandLoadMore.Visible = (brandCount > 7)
     End Sub
 
     Protected Sub DataList3_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList3.PreRender

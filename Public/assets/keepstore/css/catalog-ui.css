@@ -306,6 +306,31 @@
   min-inline-size: 0;
 }
 
+#ksCatalogPage .ks-brand-facet .ks-filter-list > span {
+  display: contents;
+}
+
+#ksCatalogPage .ks-brand-facet .ks-filter-list > br {
+  display: none;
+}
+
+#ksCatalogPage .ks-brand-facet .ks-brand-loadmore {
+  background: transparent;
+  border: 0;
+  padding: 6px 0;
+  font: inherit;
+  text-align: left;
+  min-height: 44px;
+  max-width: 100%;
+  margin-top: 6px;
+}
+
+#ksCatalogPage .ks-brand-facet .ks-brand-loadmore:focus-visible {
+  outline: 2px solid var(--primary, #ff3b30);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 #ksCatalogPage .facet-price {
   margin-bottom: 20px;
   padding-bottom: 20px;

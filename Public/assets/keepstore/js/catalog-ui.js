@@ -568,6 +568,27 @@
     }
   }
 
+  function expandSelectedBrandFacet() {
+    if (!isCatalogPage()) return;
+    var facets = document.querySelectorAll('#ksCatalogPage .ks-brand-facet');
+    for (var f = 0; f < facets.length; f++) {
+      var items = facets[f].querySelectorAll('.fieldset-item');
+      var selectedBeyondLimit = false;
+      for (var i = 7; i < items.length; i++) {
+        if (items[i].querySelector('.ks-filter-option.active')) {
+          selectedBeyondLimit = true;
+          break;
+        }
+      }
+      if (!selectedBeyondLimit) continue;
+      for (var j = 0; j < items.length; j++) {
+        items[j].style.removeProperty('display');
+      }
+      var button = facets[f].querySelector('.ks-brand-loadmore');
+      if (button) button.parentNode.removeChild(button);
+    }
+  }
+
   function initCatalogUi() {
     if (!isCatalogPage()) return;
 
@@ -591,6 +612,10 @@
     normalizePager();
     setupMobileOffcanvasFilters();
     renderActiveFilters();
+
+    // Run after the theme's ready handler has applied its initial seven-item limit.
+    if (window.jQuery) window.jQuery(expandSelectedBrandFacet);
+    else expandSelectedBrandFacet();
   }
 
   function initAll() {
