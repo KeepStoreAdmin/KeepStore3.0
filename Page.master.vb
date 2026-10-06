@@ -2046,6 +2046,10 @@ End Sub
     ' CERCA Cerca() harden + URL encode
     '==========================================================
     Public Sub Cerca()
+        Cerca(False)
+    End Sub
+
+    Private Sub Cerca(ByVal preferMobile As Boolean)
         Dim tbCercaCtrl As TextBox = FindCtrl(Of TextBox)("tbCerca")
         Dim tbCercaMobileCtrl As TextBox = FindCtrl(Of TextBox)("tbCercaMobile")
         Dim ddlDesktop As DropDownList = FindCtrl(Of DropDownList)("product_cat")
@@ -2053,37 +2057,35 @@ End Sub
         Dim q As String = ""
         Dim selectedUrl As String = String.Empty
 
-    If tbCercaCtrl IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tbCercaCtrl.Text) Then
-        q = tbCercaCtrl.Text.Trim()
-    End If
+        Dim primaryText As TextBox = If(preferMobile, tbCercaMobileCtrl, tbCercaCtrl)
+        Dim fallbackText As TextBox = If(preferMobile, tbCercaCtrl, tbCercaMobileCtrl)
+        Dim primaryScope As DropDownList = If(preferMobile, ddlMobile, ddlDesktop)
+        Dim fallbackScope As DropDownList = If(preferMobile, ddlDesktop, ddlMobile)
 
-    ' Mobile search fallback
-    If String.IsNullOrWhiteSpace(q) Then
-        If Not IsNothing(tbCercaMobileCtrl) AndAlso Not String.IsNullOrWhiteSpace(tbCercaMobileCtrl.Text) Then
-            q = tbCercaMobileCtrl.Text.Trim()
+        If primaryText IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(primaryText.Text) Then
+            q = primaryText.Text.Trim()
+        ElseIf fallbackText IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(fallbackText.Text) Then
+            q = fallbackText.Text.Trim()
         End If
-    End If
 
-    If ddlDesktop IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(ddlDesktop.SelectedValue) Then
-        selectedUrl = ddlDesktop.SelectedValue.Trim()
-    End If
+        If primaryScope IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(primaryScope.SelectedValue) Then
+            selectedUrl = primaryScope.SelectedValue.Trim()
+        ElseIf fallbackScope IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(fallbackScope.SelectedValue) Then
+            selectedUrl = fallbackScope.SelectedValue.Trim()
+        End If
 
-    If String.IsNullOrWhiteSpace(selectedUrl) AndAlso ddlMobile IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(ddlMobile.SelectedValue) Then
-        selectedUrl = ddlMobile.SelectedValue.Trim()
-    End If
+        Dim targetUrl As String = If(String.IsNullOrWhiteSpace(selectedUrl), "articoli.aspx", selectedUrl)
 
-    Dim targetUrl As String = If(String.IsNullOrWhiteSpace(selectedUrl), "articoli.aspx", selectedUrl)
+        If Not String.IsNullOrWhiteSpace(q) Then
+            Dim separator As String = If(targetUrl.Contains("?"), "&", "?")
+            targetUrl &= separator & "q=" & System.Web.HttpUtility.UrlEncode(q)
+        End If
 
-    If Not String.IsNullOrWhiteSpace(q) Then
-        Dim separator As String = If(targetUrl.Contains("?"), "&", "?")
-        targetUrl &= separator & "q=" & System.Web.HttpUtility.UrlEncode(q)
-    End If
-
-    Me.Response.Redirect(targetUrl)
+        Me.Response.Redirect(targetUrl)
     End Sub
 
     Protected Sub tbCercaMobile_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)
-    Cerca()
+        Cerca(True)
     End Sub
 
 
@@ -2192,7 +2194,8 @@ End Sub
     ' ============================================================
     Protected Sub btnSearch_ServerClick(ByVal sender As Object, ByVal e As System.EventArgs)
         Try
-            Cerca()
+            Dim button As HtmlButton = TryCast(sender, HtmlButton)
+            Cerca(button IsNot Nothing AndAlso button.ID = "btnSearchMobile")
         Catch ex As Exception
             ' fail-safe: non interrompe la pagina
         End Try

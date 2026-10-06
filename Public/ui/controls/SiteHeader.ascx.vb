@@ -98,7 +98,7 @@ Partial Class SiteHeader
                     Continue For
                 End If
 
-                Dim categoryText As String = " - " & If(String.IsNullOrWhiteSpace(category.Descrizione), "Categoria " & category.Id.ToString(), category.Descrizione.Trim())
+                Dim categoryText As String = text & " / " & If(String.IsNullOrWhiteSpace(category.Descrizione), "Categoria " & category.Id.ToString(), category.Descrizione.Trim())
                 Dim categoryDesktopItem As New ListItem(categoryText, category.DefaultUrl)
                 Dim categoryMobileItem As New ListItem(categoryText, category.DefaultUrl)
                 If selectedCategoryId > 0 AndAlso category.Id = selectedCategoryId Then

@@ -1,3 +1,81 @@
+/* Native search scope: retain the header shell and browser interaction. */
+.ks-header-ui .ks-search-shell .ks-search-category-select,
+#mobileMenu .ks-search-shell .ks-search-category-select {
+  display: block !important;
+  appearance: auto;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 6px;
+  background-color: transparent;
+  color: var(--main, #1f2933);
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ks-header-ui .ks-search-shell .ks-search-category-select:focus-visible,
+#mobileMenu .ks-search-shell .ks-search-category-select:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: 2px;
+}
+
+.ks-header-ui .ks-search-shell {
+  gap: 12px;
+  padding-right: 48px;
+}
+
+.ks-header-ui .ks-search-shell .select-category {
+  flex: 0 1 var(--ks-search-category-width, 148px);
+  min-width: 100px;
+  max-width: min(260px, 45%);
+}
+
+.ks-header-ui .ks-search-shell fieldset {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+#mobileMenu .ks-search-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+}
+
+#mobileMenu .ks-search-shell .select-category {
+  grid-column: 1 / -1;
+  min-width: 0;
+  width: 100%;
+}
+
+#mobileMenu .ks-search-shell .ks-search-category-select {
+  padding: 10px;
+  background-color: var(--gray-5, #f5f5f5);
+}
+
+#mobileMenu .ks-search-shell .br-line {
+  display: none !important;
+}
+
+#mobileMenu .ks-search-shell fieldset {
+  grid-column: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+#mobileMenu .ks-search-shell .btn-submit-form {
+  position: static;
+  grid-column: 2;
+  width: 44px;
+  height: 44px;
+}
+
 /* KeepStore home storefront */
 body.ks-page-home {
   background: #f5f5f5;

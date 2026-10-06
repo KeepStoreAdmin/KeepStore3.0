@@ -73,7 +73,8 @@
                     <div class="header-center">
                         <div class="form-search-product m-auto ks-search-shell" data-ks-search-form="desktop">
                             <div class="select-category">
-                                <asp:DropDownList ID="product_cat" runat="server" ClientIDMode="Static" CssClass="dropdown_product_cat" />
+                                <asp:Label runat="server" AssociatedControlID="product_cat" CssClass="visually-hidden" Text="Ambito di ricerca" />
+                                <asp:DropDownList ID="product_cat" runat="server" ClientIDMode="AutoID" CssClass="dropdown_product_cat ks-search-category-select" />
                             </div>
                             <span class="br-line type-vertical bg-line"></span>
                             <fieldset>
@@ -198,8 +199,9 @@
         <div class="mb-body">
             <div class="mb-content-top">
                 <div class="form-search-product style-3 ks-search-shell" data-ks-search-form="mobile">
-                    <div class="select-category d-none d-sm-block">
-                        <asp:DropDownList ID="product_cat_mobile" runat="server" ClientIDMode="Static" CssClass="dropdown_product_cat" />
+                    <div class="select-category">
+                        <asp:Label runat="server" AssociatedControlID="product_cat_mobile" CssClass="visually-hidden" Text="Ambito di ricerca" />
+                        <asp:DropDownList ID="product_cat_mobile" runat="server" ClientIDMode="Static" CssClass="dropdown_product_cat ks-search-category-select" />
                     </div>
                     <span class="br-line type-vertical bg-line d-none d-sm-block"></span>
                     <fieldset>
