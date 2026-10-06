@@ -235,7 +235,8 @@
 }
 
 #ksCatalogPage .ks-category-nav-list,
-#ksCatalogPage .ks-category-nav-sublist {
+#ksCatalogPage .ks-category-nav-sublist,
+#ksCatalogPage .ks-catalog-category-nav .ks-category-nav-more-list {
   display: grid;
   gap: 4px;
   margin: 0;
@@ -278,6 +279,56 @@
 #ksCatalogPage .ks-category-nav-sublink:hover {
   color: var(--primary, #ff3b30);
   font-weight: 600;
+}
+
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--gray-5, #e5e5e5);
+  border-radius: 8px;
+  color: var(--primary, #ff3b30);
+  background: var(--white, #fff);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  list-style: none;
+  cursor: pointer;
+}
+
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-summary:focus-visible {
+  outline: 2px solid var(--primary, #ff3b30);
+  outline-offset: 2px;
+}
+
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-summary .icon-arrow-down {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 12px;
+  transition: transform .15s ease;
+}
+
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-label-open,
+#ksCatalogPage .ks-catalog-category-nav details[open] > summary .ks-taxonomy-disclosure-label-closed {
+  display: none;
+}
+
+#ksCatalogPage .ks-catalog-category-nav details[open] > summary .ks-taxonomy-disclosure-label-open {
+  display: inline;
+}
+
+#ksCatalogPage .ks-catalog-category-nav details[open] > summary .icon-arrow-down {
+  transform: rotate(180deg);
+}
+
+#ksCatalogPage .ks-catalog-category-nav .ks-category-nav-more-list {
+  margin-top: 4px;
 }
 
 #ksCatalogPage .widget-facet.facet-fieldset:not(:last-child) {

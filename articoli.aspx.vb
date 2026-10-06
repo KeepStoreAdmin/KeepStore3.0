@@ -41,8 +41,8 @@ Partial Class Articoli
     Private catalogEligibilityStatus As ProductPromotionEligibilityLoadStatus
     Private Const UseNewCatalogProductCard As Boolean = True
     Private Const ProductCardReplaceMaxCount As Integer = 3
-    Private Const CatalogNavMaxSectors As Integer = 12
-    Private Const CatalogNavMaxCategories As Integer = 10
+    Private Const CatalogNavInitialSectors As Integer = 12
+    Private Const CatalogNavInitialCategories As Integer = 10
     Private Const DefaultCatalogPageSize As Integer = 12
     Private catalogSideFiltersDeferred As Boolean = False
     Private catalogSideFiltersBound As Boolean = False
@@ -343,19 +343,18 @@ Partial Class Articoli
         Dim activeSectorId As Integer = taxonomy.SectorId
         Dim activeCategoryId As Integer = taxonomy.CategoryId
 
-        Dim html As New StringBuilder()
-        Dim renderedSectors As Integer = 0
-
-        html.Append("<ul class=""ks-category-nav-list"">")
+        Dim sectorItems As New List(Of String)()
+        Dim activeSectorIndex As Integer = -1
 
         For Each sector As CatalogMenuSector In sectors
             If sector Is Nothing Then Continue For
             Dim isActiveSector As Boolean = (sector.Id > 0 AndAlso sector.Id = activeSectorId)
-            If renderedSectors >= CatalogNavMaxSectors AndAlso Not isActiveSector Then Continue For
 
             Dim sectorLabel As String = CatalogNavText(sector.Descrizione, 42)
             If sectorLabel = "" Then Continue For
 
+            If isActiveSector Then activeSectorIndex = sectorItems.Count
+            Dim html As New StringBuilder()
             html.Append("<li class=""ks-category-nav-item")
             If isActiveSector Then html.Append(" active")
             html.Append(""">")
@@ -368,43 +367,88 @@ Partial Class Articoli
             html.Append("</span><i class=""icon-arrow-right"" aria-hidden=""true""></i></a>")
 
             If isActiveSector AndAlso sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0 Then
-                html.Append("<ul class=""ks-category-nav-sublist"">")
-                Dim renderedCategories As Integer = 0
+                Dim categoryItems As New List(Of String)()
+                Dim activeCategoryIndex As Integer = -1
 
                 For Each category As CatalogMenuCategory In sector.Categories
                     If category Is Nothing Then Continue For
                     Dim isActiveCategory As Boolean = (category.Id > 0 AndAlso category.Id = activeCategoryId)
-                    If renderedCategories >= CatalogNavMaxCategories AndAlso Not isActiveCategory Then Continue For
 
                     Dim categoryLabel As String = CatalogNavText(category.Descrizione, 46)
                     If categoryLabel = "" Then Continue For
 
-                    html.Append("<li class=""ks-category-nav-subitem")
-                    If isActiveCategory Then html.Append(" active")
-                    html.Append(""">")
-                    html.Append("<a class=""ks-category-nav-sublink")
-                    If isActiveCategory Then html.Append(" active")
-                    html.Append(""" href=""")
-                    html.Append(HA(BuildCatalogCategoryUrl(sector.Id, category.Id)))
-                    html.Append("""><span>")
-                    html.Append(Server.HtmlEncode(categoryLabel))
-                    html.Append("</span><i class=""icon-arrow-right"" aria-hidden=""true""></i></a></li>")
-                    renderedCategories += 1
+                    If isActiveCategory Then activeCategoryIndex = categoryItems.Count
+                    Dim categoryHtml As New StringBuilder()
+                    categoryHtml.Append("<li class=""ks-category-nav-subitem")
+                    If isActiveCategory Then categoryHtml.Append(" active")
+                    categoryHtml.Append(""">")
+                    categoryHtml.Append("<a class=""ks-category-nav-sublink")
+                    If isActiveCategory Then categoryHtml.Append(" active")
+                    categoryHtml.Append(""" href=""")
+                    categoryHtml.Append(HA(BuildCatalogCategoryUrl(sector.Id, category.Id)))
+                    categoryHtml.Append("""><span>")
+                    categoryHtml.Append(Server.HtmlEncode(categoryLabel))
+                    categoryHtml.Append("</span><i class=""icon-arrow-right"" aria-hidden=""true""></i></a></li>")
+                    categoryItems.Add(categoryHtml.ToString())
                 Next
 
-                html.Append("</ul>")
+                If categoryItems.Count > 0 Then
+                    html.Append("<ul class=""ks-category-nav-sublist"">")
+                    AppendCatalogNavItems(html, categoryItems, CatalogNavInitialCategories, activeCategoryIndex, True)
+                    html.Append("</ul>")
+                End If
             End If
 
             html.Append("</li>")
-            renderedSectors += 1
+            sectorItems.Add(html.ToString())
         Next
 
-        html.Append("</ul>")
+        If sectorItems.Count = 0 Then Exit Sub
 
-        If renderedSectors <= 0 Then Exit Sub
+        Dim navigationHtml As New StringBuilder()
+        navigationHtml.Append("<ul class=""ks-category-nav-list"">")
+        AppendCatalogNavItems(navigationHtml, sectorItems, CatalogNavInitialSectors, activeSectorIndex, False)
+        navigationHtml.Append("</ul>")
 
-        litCatalogCategoryNav.Text = html.ToString()
+        litCatalogCategoryNav.Text = navigationHtml.ToString()
         pnlCatalogCategoryNav.Visible = True
+    End Sub
+
+    Private Sub AppendCatalogNavItems(ByVal html As StringBuilder, ByVal items As List(Of String),
+                                     ByVal initialCount As Integer, ByVal activeIndex As Integer,
+                                     ByVal categories As Boolean)
+        Dim visibleCount As Integer = Math.Min(initialCount, items.Count)
+        For index As Integer = 0 To visibleCount - 1
+            html.Append(items(index))
+        Next
+
+        Dim extraCount As Integer = items.Count - visibleCount
+        If extraCount <= 0 Then Return
+
+        Dim closedLabel As String
+        If categories Then
+            closedLabel = If(extraCount = 1, "Mostra 1 altra categoria",
+                             "Mostra altre " & extraCount.ToString(CultureInfo.InvariantCulture) & " categorie")
+        Else
+            closedLabel = If(extraCount = 1, "Mostra 1 altro settore",
+                             "Mostra altri " & extraCount.ToString(CultureInfo.InvariantCulture) & " settori")
+        End If
+
+        html.Append("<li class=""ks-category-nav-disclosure-item""><details class=""ks-taxonomy-disclosure ")
+        html.Append(If(categories, "ks-taxonomy-disclosure-categories", "ks-taxonomy-disclosure-sectors"))
+        html.Append("""")
+        If activeIndex >= visibleCount Then html.Append(" open")
+        html.Append("><summary class=""ks-taxonomy-disclosure-summary"">")
+        html.Append("<span class=""ks-taxonomy-disclosure-label-closed"">")
+        html.Append(Server.HtmlEncode(closedLabel))
+        html.Append("</span><span class=""ks-taxonomy-disclosure-label-open"">Mostra meno</span>")
+        html.Append("<i class=""icon-arrow-down"" aria-hidden=""true""></i></summary>")
+        html.Append("<ul class=""ks-category-nav-more-list"">")
+        For index As Integer = visibleCount To items.Count - 1
+            html.Append(items(index))
+        Next
+        html.Append("</ul>")
+        html.Append("</details></li>")
     End Sub
 
     Private Function CatalogNavText(ByVal value As Object, ByVal maxLength As Integer) As String
