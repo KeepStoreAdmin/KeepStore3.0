@@ -801,6 +801,64 @@ Chiusura progressiva catalog parity audit / `1A` / `1B`:
 - Design Gate Marche: pattern originale `shop-default.html` dalla storia Git, benchmark [Baymard: truncation design](https://baymard.com/research-articles/truncation-design), riuso dell'architettura reale `shop.js`/DataList e QA mobile-first. Fixture locale reale: catalogo generale 222 marche; `st=40` 2 marche; selezione multipla delle prime 8 con marca attiva in posizione 8, auto-expand e rimozione/chip verificati. QA Chrome locale GET-only 360x800, 390x844, 768x1024, 1365x900; Enter/Space, focus, apertura Filtri, espansione senza chiusura pannello, conteggi/URL/prezzi invariati, nessun overflow o errore console/asset. Edge DOM 0/3/7/8/40 e reinizializzazione idempotente; precompile 4.8 PASS. Nessuna certificazione server o chiusura complessiva catalogo implicita.
 - Gap P1/P2 aperti: Settori/Categorie limitati o troncati, active filters server + JS legacy, reset mobile contesto `st/ct`, Deals, Condition/Ricondizionato, Reviews solo con fonte reale, performance/N+1 promo, positioning Recently Viewed, Compare empty-state e ulteriori componenti commerciali/parity ONSUS. Price facet (PR #310) e Marche/load-more non sono piu finding implementativi aperti; per Marche restano i gate review/smoke server sopra indicati.
 
+### Contratto tassonomico storefront — navigazione, facet e scope commerciali
+
+Contratto permanente chiarito dal Product Owner nella REV1 documentale di `CATALOG-BRAND-LOADMORE-1A` / PR #312. E un approfondimento catalogo di `MULTITENANT-BY-DESIGN` e `ADAPTIVE-MULTI-MERCHANDISE-STOREFRONT`, non un contratto concorrente. Le regole TARGET seguenti non dichiarano nuove funzioni runtime implementate; questa REV modifica soltanto il Masterplan.
+
+#### Classificazione autorevole e ruoli
+
+L'anagrafica articolo assegna direttamente, quando applicabili, `MarcheId`, `SettoriId`, `CategorieId`, `TipologieId`, `GruppiId`, `SottogruppiId`, oppure gli equivalenti reali esposti dalle view runtime. Gruppo e Sottogruppo possono non essere valorizzati: un prodotto valido non li richiede. Nessuna classificazione viene dedotta da template o AI. Nomi, descrizioni e associazioni provengono dai dati della specifica installazione/cliente, senza tassonomia elettronica o tenant hardcoded.
+
+| Dimensione | Ruolo storefront | Semantica URL |
+| --- | --- | --- |
+| Settore | L1, reparto e primo scope strutturale | `st` |
+| Categoria | L2, famiglia appartenente a un Settore | `ct` |
+| Tipologia | L3, leaf appartenente a una Categoria; anche facet controllato nel listing | `tp` |
+| Marca | Facet ortogonale / brand dimension, non figlia di Categoria o Tipologia | `mr` |
+| Gruppo | Raffinamento/facet facoltativo | `gr` |
+| Sottogruppo | Raffinamento/facet facoltativo | `sg` |
+| Offerte | Commercial scope overlay, non livello tassonomico | `inpromo=1` |
+
+La PRIMARY NAVIGATION TAXONOMY e esclusivamente `Settore -> Categoria -> Tipologia`. I parent autorevoli derivano dal catalogo reale: `categorie.SettoriId / Id_settore` e `tipologie.CategorieId / Id_categoria`, con compatibilita fra schemi preservata. Marca non appartiene alla catena. Nonostante i nomi storici, Gruppo/Sottogruppo non diventano automaticamente L4/L5; servirebbero un futuro contratto dati autorevole con vera relazione parent/child e una modifica esplicita di questo contratto da parte del Product Owner.
+
+#### TARGET — navigazione, listing e breadcrumb
+
+Tipologia ha un doppio ruolo intenzionale: leaf strutturale L3 nel mega-menu `Settore -> Categoria -> Tipologia`, e facet `Tipologie` nella Product Listing Page per passare fra tipologie sorelle o selezionarne piu di una. Una sola `tp` coerente con `ct/st` puo rappresentare il leaf corrente; piu valori `tp` sono uno stato faceted, non un unico nodo gerarchico. Preservare gli URL storici e la multiselezione supportati.
+
+In `articoli.aspx`, Settore e Categoria definiscono lo scope principale; una Tipologia singola coerente puo definirne il leaf ed e selezionata quando raggiunta dal menu, restando modificabile nel facet. Marca, Gruppo e Sottogruppo restringono il result-set indipendentemente. Opzioni disponibili e conteggi derivano dai prodotti reali del contesto; Gruppo/Sottogruppo vuoti o non pertinenti non devono lasciare UI vuota. Titolo/H1 TARGET: nodo tassonomico valido piu specifico, `Tipologia -> Categoria -> Settore -> Catalogo`; mai Marca/Gruppo/Sottogruppo come heading strutturale.
+
+Il breadcrumb rappresenta esclusivamente la posizione gerarchica. Catalogo TARGET: `Home -> Settore -> Categoria -> Tipologia`; PDP TARGET: `Home -> Settore -> Categoria -> Tipologia -> Prodotto`. Omettere in sicurezza i livelli realmente mancanti/non validi, senza inventare parent. Non inserire Marca, Gruppo, Sottogruppo, prezzo, disponibilita, promo, condition o altri facet nella catena.
+
+Il RETURN / LIST CONTEXT resta separato dal breadcrumb: conserva filtri, ordinamento, paging e query di provenienza. Il breadcrumb non serve a ricordare lo stato della precedente lista. Nella PDP la Marca rimane dato prodotto separato e link facet contestuale tramite `mr`, preservando il taxonomy scope valido. Gruppo/Sottogruppo possono comparire come metadata, caratteristiche o raffinamenti utili, mai come livelli del breadcrumb. I percorsi legacy che mescolavano brand e raffinamenti sono storico, non il target del nuovo storefront.
+
+#### TARGET — offerte, normalizzazione e confine SEO
+
+`articoli.aspx?inpromo=1` sovrappone lo scope commerciale alla stessa tassonomia e agli stessi facet del catalogo normale: `Offerte + Settore -> Categoria -> Tipologia + facet`. Restringe il product set alle offerte/prodotti realmente applicabili; Marca, Gruppo, Sottogruppo, prezzo e disponibilita filtrano quel sottoinsieme. Non creare una seconda tassonomia offerte. `promozioni.aspx` resta route legacy ritirata secondo il contratto gia documentato.
+
+`st/ct` identificano scope tassonomici; `tp` identifica una Tipologia leaf oppure lo stato facet Tipologie; `mr/gr/sg` sono facet; `inpromo` e scope commerciale. `pmin/pmax`, disponibilita, condition e gli altri attributi restano facet/commercial filters, non livelli di navigazione.
+
+Validazione TARGET: `ct` deve appartenere a `st`; una `tp` singola deve appartenere a `ct` e quindi a `st`. Un child autorevole permette di ricostruire i parent mancanti: `tp -> Categoria -> Settore`, oppure `ct -> Settore`. Combinazioni incoerenti vanno normalizzate sulla catena reale o rifiutate/fail-closed secondo il contesto; mai costruire una falsa gerarchia. Con piu Tipologie il breadcrumb si ferma al parent strutturale comune piu specifico risolvibile, senza inventare un leaf unico.
+
+Confine SEO: route tassonomiche singole/coerenti possono rappresentare scope strutturali; stati faceted/combinati restano soggetti alla policy noindex/canonical gia documentata. Questa REV non ridefinisce la SEO: Marca/Gruppo/Sottogruppo non diventano tassonomia SEO per la sola presenza in querystring.
+
+#### CURRENT verificato e gap verso il TARGET
+
+- `CatalogMenuProvider` costruisce gia `Settore -> Categoria -> Tipologia` con parent reali e URL `st`, `st+ct`, `st+ct+tp`; HOME/header consumano questo tree per il menu. Questo non certifica la completezza visuale di ogni menu o pagina.
+- `CatalogCategoryLabel()` usa gia `Tipologia -> Categoria -> Settore`, senza Marca/Gruppo/Sottogruppo. Non equivale ancora al riallineamento di tutti gli H1 sul context condiviso TARGET.
+- PDP `BuildCategoryCatalogUrl()` costruisce gia `st+ct+tp`; `BuildBrandCatalogUrl()` aggiunge `mr` al contesto tassonomico. Gruppo/Sottogruppo sono filtri indipendenti del listing; il menu principale non usa una relazione strutturale Gruppo -> Sottogruppo.
+- `articoli.aspx` normalizza gia `ct -> st`; resta aperta la normalizzazione centralizzata completa `tp -> ct -> st` e la riconciliazione di navigation, heading e breadcrumb sul medesimo context.
+- Il breadcrumb PDP moderno e ancora `Home -> Catalogo -> Prodotto`, non taxonomy-aware. I vecchi breadcrumb che mescolavano Marca/Gruppo/Sottogruppo non sono il target.
+- Il catalogo promo dovra essere certificato sullo stesso resolver quando questo verra implementato; la condivisione TARGET non e dichiarata gia completata.
+- `CATALOG-BRAND-LOADMORE-1A` / PR #312 e compatibile: Marca resta facet ortogonale. `7 valori + Mostra altro`, conteggi, multiselezione e auto-expand della marca attiva non devono essere rifatti nel futuro task tassonomico. Runtime precedente tecnicamente PASS, smoke server ancora non eseguito, PR OPEN/DRAFT e non mergiata; questa REV non cambia alcuno dei quattro file runtime testati.
+
+#### TARGET condiviso e roadmap prioritaria
+
+`CatalogTaxonomyResolver` e il nome concettuale di un futuro resolver server-side sopra il tree/cache autorevole di `CatalogMenuProvider`, non una classe gia implementata. Input: `st/ct/tp` oppure classificazione articolo. Output concettuale `CatalogTaxonomyContext`: `SectorId`, `SectorName`, `SectorUrl`, `CategoryId`, `CategoryName`, `CategoryUrl`, `TipologyId`, `TipologyName`, `TipologyUrl`, validita e coerenza gerarchica. Riusare tree/cache esistenti, senza query N+1, ricostruzioni autonome pagina per pagina o secondo sistema tassonomico.
+
+Il context dovra poter essere riusato da `SiteHeader`, `HomeDepartmentsMenu`, `articoli.aspx`, `articolo.aspx`, catalogo promo, breadcrumb, SEO/catalog canonical e futura search/category guidance. Il contratto e universale per tenant, database e merceologie differenti; esempi e nomi cliente non diventano tassonomia hardcoded.
+
+Prossimo task raccomandato prioritario: `CATALOG-TAXONOMY-NAVIGATION-1A` — **NON AVVIATO**. Prerequisito: review, smoke server e chiusura/merge autorizzato della PR #312. Obiettivo futuro: implementare il resolver condiviso e riallineare progressivamente catalogo, PDP, breadcrumb e scope tassonomico promo, senza riaprire Brand load-more. Precede gli altri residui tassonomici/catalog navigation dipendenti dalla gerarchia corretta; non chiude i restanti gap catalogo e non autorizza implementazione, DB o deploy.
+
 ### Chiusura immagini prodotto catalogo e prossimo finding PDP
 
 - I tre P0 originari di `CATALOG-ONSUS-PARITY-AUDIT-1` sono chiusi: contaminazione stato request/Session e paging pagina 2 da `1A`; product-image 404 da `1C`. Questa chiusura non dichiara completa `articoli.aspx` e non equivale alla full parity ONSUS: i gap P1/P2 e il responsive complessivo finale restano aperti.
