@@ -19,6 +19,8 @@ Partial Class articolo
     Private _tcidPresent As Boolean
     Private _listino As Integer
     Private _priceDisplayContext As StorefrontPriceDisplayContext
+    Private _productTaxonomyContext As CatalogTaxonomyContext
+    Private _productBreadcrumbItems As IList(Of StorefrontBreadcrumbItem)
     Private _tcEnabled As Boolean
     Private _pdpMainCartRequestId As String
     Private _pdpBundleCartRequestId As String
@@ -1554,13 +1556,12 @@ Partial Class articolo
             nome = "Articolo"
         End If
 
-        litBreadcrumbCurrent.Text = Server.HtmlEncode(nome)
+        Dim taxonomy As CatalogTaxonomyContext = GetProductTaxonomyContext(row)
+        _productBreadcrumbItems = taxonomy.BreadcrumbItems(nome, BuildCanonicalUrl())
+        ProductBreadcrumb.Bind(_productBreadcrumbItems)
         litNome.Text = Server.HtmlEncode(nome)
 
-        Dim categoryName As String = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione"))
-        If String.IsNullOrEmpty(categoryName) Then
-            categoryName = "Catalogo"
-        End If
+        Dim categoryName As String = taxonomy.MostSpecificName
         lnkCategory.Text = Server.HtmlEncode(categoryName)
         lnkCategory.NavigateUrl = BuildCategoryCatalogUrl(row)
         phCategoryFeature.Visible = (Not String.IsNullOrEmpty(categoryName))
@@ -2146,7 +2147,10 @@ Partial Class articolo
                 .ProductDescription = metaDesc,
                 .CommercialSku = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU")),
                 .BrandName = FirstNonEmpty(GetRowString(row, "MarcheDescrizione"), GetRowString(row, "Marca")),
-                .CategoryName = FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione")),
+                .CategoryName = If(GetProductTaxonomyContext(row).HasSector,
+                                   GetProductTaxonomyContext(row).MostSpecificName,
+                                   FirstNonEmpty(GetRowString(row, "TipologieDescrizione"), GetRowString(row, "CategorieDescrizione"), GetRowString(row, "SettoriDescrizione"))),
+                .BreadcrumbItems = StorefrontBreadcrumbItem.ToAbsolute(_productBreadcrumbItems, tenant.CanonicalBaseUrl.TrimEnd("/"c) & "/"),
                 .Gtin = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN")),
                 .ProductImages = BuildStructuredDataProductImages(row, tenant),
                 .OfferPrice = publicGross,
@@ -2807,36 +2811,22 @@ Partial Class articolo
     End Function
 
     Private Function BuildCategoryCatalogUrl(row As DataRow) As String
-        Dim rel As String = "~/articoli.aspx"
-        Dim parts As New List(Of String)()
-
-        Dim stId As Integer = GetRowInt(row, "SettoriId", 0)
-        Dim ctId As Integer = GetRowInt(row, "CategorieId", 0)
-        Dim tpId As Integer = GetRowInt(row, "TipologieId", 0)
-
-        If stId > 0 Then parts.Add("st=" & stId.ToString())
-        If ctId > 0 Then parts.Add("ct=" & ctId.ToString())
-        If tpId > 0 Then parts.Add("tp=" & tpId.ToString())
-
-        If parts.Count > 0 Then rel &= "?" & String.Join("&", parts.ToArray())
-        Return ResolveUrl(rel)
+        Return ResolveUrl(GetProductTaxonomyContext(row).MostSpecificUrl)
     End Function
 
     Private Function BuildBrandCatalogUrl(row As DataRow, brandId As Integer) As String
-        Dim rel As String = "~/articoli.aspx"
-        Dim parts As New List(Of String)()
+        Dim url As String = BuildCategoryCatalogUrl(row)
+        If brandId > 0 Then url &= If(url.Contains("?"), "&", "?") & "mr=" & brandId.ToString(CultureInfo.InvariantCulture)
+        Return url
+    End Function
 
-        Dim stId As Integer = GetRowInt(row, "SettoriId", 0)
-        Dim ctId As Integer = GetRowInt(row, "CategorieId", 0)
-        Dim tpId As Integer = GetRowInt(row, "TipologieId", 0)
-
-        If stId > 0 Then parts.Add("st=" & stId.ToString())
-        If ctId > 0 Then parts.Add("ct=" & ctId.ToString())
-        If tpId > 0 Then parts.Add("tp=" & tpId.ToString())
-        If brandId > 0 Then parts.Add("mr=" & brandId.ToString())
-
-        If parts.Count > 0 Then rel &= "?" & String.Join("&", parts.ToArray())
-        Return ResolveUrl(rel)
+    Private Function GetProductTaxonomyContext(row As DataRow) As CatalogTaxonomyContext
+        If _productTaxonomyContext Is Nothing Then
+            Dim tipology As Integer = GetRowInt(row, "TipologieId", 0)
+            _productTaxonomyContext = CatalogTaxonomyResolver.Resolve(GetRowInt(row, "SettoriId", 0), GetRowInt(row, "CategorieId", 0),
+                If(tipology > 0, tipology.ToString(CultureInfo.InvariantCulture), String.Empty))
+        End If
+        Return _productTaxonomyContext
     End Function
 
     Private Function NormalizeImageUrl(raw As String) As String
@@ -3385,7 +3375,7 @@ Partial Class articolo
     Private Sub ShowNotFound()
         pnlProduct.Visible = False
         phNotFound.Visible = True
-        litBreadcrumbCurrent.Text = "Articolo"
+        ProductBreadcrumb.Bind(New CatalogTaxonomyContext().BreadcrumbItems("Articolo", "~/articolo.aspx"))
 
         Response.StatusCode = 404
         Response.TrySkipIisCustomErrors = True

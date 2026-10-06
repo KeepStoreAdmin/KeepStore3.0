@@ -8,6 +8,69 @@ Imports System.Text.RegularExpressions
 Imports System.Web
 Imports System.Web.Script.Serialization
 
+' Shared presentation model; standalone Product harness stays self-contained.
+Public NotInheritable Class StorefrontBreadcrumbItem
+    Public Property Name As String
+    Public Property Url As String
+    Public Sub New(name As String, url As String)
+        Me.Name = NormalizeName(name)
+        Me.Url = url
+    End Sub
+    Public Shared Function NormalizeName(raw As String) As String
+        Dim text As String = HttpUtility.HtmlDecode(If(raw, String.Empty))
+        text = Regex.Replace(text, "<[^>]*>", " ", RegexOptions.CultureInvariant)
+        text = Regex.Replace(text, "[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]", String.Empty, RegexOptions.CultureInvariant)
+        Return Regex.Replace(text, "\s+", " ", RegexOptions.CultureInvariant).Trim()
+    End Function
+    Public Shared Function ToAbsolute(items As IList(Of StorefrontBreadcrumbItem), homeUrl As String) As IList(Of StorefrontBreadcrumbItem)
+        Dim home As Uri = Nothing
+        Dim result As New List(Of StorefrontBreadcrumbItem)()
+        If items Is Nothing OrElse Not Uri.TryCreate(homeUrl, UriKind.Absolute, home) OrElse
+           home.Scheme <> Uri.UriSchemeHttps OrElse Not String.IsNullOrEmpty(home.UserInfo) Then Return result
+        For Each item As StorefrontBreadcrumbItem In items
+            If item Is Nothing Then Return New List(Of StorefrontBreadcrumbItem)()
+            Dim target As Uri = Nothing
+            Dim raw As String = If(item.Url, String.Empty)
+            If raw.StartsWith("~/", StringComparison.Ordinal) Then
+                raw = If(HttpContext.Current IsNot Nothing, VirtualPathUtility.ToAbsolute(raw), raw.Substring(1))
+            End If
+            If Not Uri.TryCreate(home, raw, target) OrElse
+               target.Scheme <> Uri.UriSchemeHttps OrElse Not String.IsNullOrEmpty(target.UserInfo) OrElse
+               Not String.Equals(target.Authority, home.Authority, StringComparison.OrdinalIgnoreCase) Then Return New List(Of StorefrontBreadcrumbItem)()
+            result.Add(New StorefrontBreadcrumbItem(item.Name, target.AbsoluteUri))
+        Next
+        Return result
+    End Function
+    Public Shared Function BuildListElements(items As IList(Of StorefrontBreadcrumbItem), canonicalUrl As String) As Object()
+        Dim canonical As Uri = Nothing
+        If items Is Nothing OrElse items.Count < 2 OrElse items.Count > 16 OrElse
+           Not Uri.TryCreate(canonicalUrl, UriKind.Absolute, canonical) OrElse canonical.Scheme <> Uri.UriSchemeHttps Then Return Nothing
+        Dim result As New List(Of Object)()
+        Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
+        For Each item As StorefrontBreadcrumbItem In items
+            Dim url As Uri = Nothing
+            If item Is Nothing OrElse String.IsNullOrWhiteSpace(NormalizeName(item.Name)) OrElse
+               Not Uri.TryCreate(item.Url, UriKind.Absolute, url) OrElse url.Scheme <> Uri.UriSchemeHttps OrElse
+               Not String.IsNullOrEmpty(url.UserInfo) OrElse Not String.IsNullOrEmpty(url.Fragment) OrElse
+               Not String.Equals(url.Authority, canonical.Authority, StringComparison.OrdinalIgnoreCase) OrElse
+               Not seen.Add(url.AbsoluteUri) Then Return Nothing
+            ' Structural links only: commercial/search facets are not breadcrumb nodes.
+            Dim query = HttpUtility.ParseQueryString(url.Query)
+            For Each key As String In query.AllKeys
+                If key Is Nothing OrElse Not (key = "st" OrElse key = "ct" OrElse key = "tp" OrElse key = "id" OrElse key = "TCid") Then Return Nothing
+                Dim id As Integer = 0
+                If Not Integer.TryParse(query(key), NumberStyles.Integer, CultureInfo.InvariantCulture, id) OrElse
+                   (id <= 0 AndAlso key <> "TCid") Then Return Nothing
+            Next
+            result.Add(New Dictionary(Of String, Object) From {
+                {"@type", "ListItem"}, {"position", result.Count + 1},
+                {"name", NormalizeName(item.Name)}, {"item", url.AbsoluteUri}
+            })
+        Next
+        Return result.ToArray()
+    End Function
+End Class
+
 Public NotInheritable Class ProductStructuredDataInput
     Public Property CanonicalUrl As String
     Public Property RequestHost As String
@@ -29,6 +92,7 @@ Public NotInheritable Class ProductStructuredDataInput
     Public Property IsAvailable As Nullable(Of Boolean)
     Public Property PriceValidUntil As Nullable(Of DateTime)
     Public Property CommercialResolutionSucceeded As Boolean
+    Public Property BreadcrumbItems As IList(Of StorefrontBreadcrumbItem)
 End Class
 
 Public NotInheritable Class ProductStructuredDataBuilder
@@ -153,6 +217,13 @@ Public NotInheritable Class ProductStructuredDataBuilder
             }
 
             Dim webPage As New Dictionary(Of String, Object)()
+            Dim customBreadcrumb As Object() = StorefrontBreadcrumbItem.BuildListElements(input.BreadcrumbItems, canonicalUrl)
+            If customBreadcrumb IsNot Nothing AndAlso
+               String.Equals(input.BreadcrumbItems(input.BreadcrumbItems.Count - 1).Url, canonicalUrl, StringComparison.Ordinal) AndAlso
+               String.Equals(StorefrontBreadcrumbItem.NormalizeName(input.BreadcrumbItems(input.BreadcrumbItems.Count - 1).Name), productName, StringComparison.Ordinal) Then
+                breadcrumb("itemListElement") = customBreadcrumb
+            End If
+
             webPage("@type") = "WebPage"
             webPage("@id") = webPageId
             webPage("url") = canonicalUrl

@@ -192,7 +192,8 @@ Public NotInheritable Class SeoBuilder
     ' -----------------------------
     ' JSON-LD
     ' -----------------------------
-    Public Shared Function BuildSimplePageJsonLd(ByVal pageTitle As String, ByVal descr As String, ByVal canonicalUrl As String, ByVal pageType As String) As String
+    Public Shared Function BuildSimplePageJsonLd(ByVal pageTitle As String, ByVal descr As String, ByVal canonicalUrl As String, ByVal pageType As String,
+                                                Optional ByVal breadcrumbItems As IList(Of StorefrontBreadcrumbItem) = Nothing) As String
         Dim js As New JavaScriptSerializer()
 
         Dim obj As New Dictionary(Of String, Object)()
@@ -204,7 +205,17 @@ Public NotInheritable Class SeoBuilder
             obj("description") = descr
         End If
 
-        Return js.Serialize(obj)
+        Dim entries As Object() = StorefrontBreadcrumbItem.BuildListElements(breadcrumbItems, canonicalUrl)
+        If entries Is Nothing Then Return js.Serialize(obj)
+        obj("@id") = canonicalUrl & "#webpage"
+        obj("breadcrumb") = New Dictionary(Of String, Object) From {{"@id", canonicalUrl & "#breadcrumb"}}
+        Dim breadcrumb As New Dictionary(Of String, Object) From {
+            {"@type", "BreadcrumbList"}, {"@id", canonicalUrl & "#breadcrumb"}, {"itemListElement", entries}
+        }
+        Dim root As New Dictionary(Of String, Object) From {
+            {"@context", "https://schema.org"}, {"@graph", New Object() {obj, breadcrumb}}
+        }
+        Return js.Serialize(root).Replace("&", "\u0026").Replace("<", "\u003c").Replace(">", "\u003e")
     End Function
 
     ' Nuova: HOME JSON-LD (richiesta da Default.aspx.vb)

@@ -239,7 +239,44 @@ Module GoogleProductStructuredDataHarness
         AssertTrue("PROVA identity not serialized", provaJson.IndexOf("PROVA", StringComparison.OrdinalIgnoreCase) < 0)
         AssertEqual("anonymous rebuild unaffected", "5.00", PropertyText(OfferNode(ProductNode(ProductStructuredDataBuilder.BuildJson(anonymous))), "price"))
 
-        AssertEqual("fixture coverage", 18, _fixtures)
+        Fixture("taxonomy-breadcrumb")
+        Dim taxonomy = BaseInput()
+        taxonomy.BreadcrumbItems = New List(Of StorefrontBreadcrumbItem) From {
+            New StorefrontBreadcrumbItem("Home", "https://shop-alpha.example/"),
+            New StorefrontBreadcrumbItem("Settore", "https://shop-alpha.example/articoli.aspx?st=1"),
+            New StorefrontBreadcrumbItem("Categoria", "https://shop-alpha.example/articoli.aspx?st=1&ct=10"),
+            New StorefrontBreadcrumbItem("Tipologia", "https://shop-alpha.example/articoli.aspx?st=1&ct=10&tp=100"),
+            New StorefrontBreadcrumbItem(taxonomy.ProductName, taxonomy.CanonicalUrl)
+        }
+        Dim taxonomyJson = ProductStructuredDataBuilder.BuildJson(taxonomy)
+        AssertSingleProductOffer("taxonomy", taxonomyJson)
+        Dim breadcrumbs = NodesOfType(ParseRoot(taxonomyJson), "BreadcrumbList")
+        AssertEqual("one breadcrumb", 1, breadcrumbs.Count)
+        Dim entries = DirectCast(breadcrumbs(0)("itemListElement"), Object())
+        AssertEqual("five nodes", 5, entries.Length)
+        Dim expectedNames As String() = {"Home", "Settore", "Categoria", "Tipologia", taxonomy.ProductName}
+        For index As Integer = 0 To entries.Length - 1
+            Dim entry = DirectCast(entries(index), IDictionary(Of String, Object))
+            AssertEqual("position " & index, index + 1, entry("position"))
+            AssertEqual("name " & index, expectedNames(index), entry("name"))
+            AssertTrue("same tenant HTTPS " & index, PropertyText(entry, "item").StartsWith("https://shop-alpha.example/", StringComparison.Ordinal))
+            AssertTrue("brand excluded " & index, PropertyText(entry, "name") <> taxonomy.BrandName)
+        Next
+        AssertEqual("commercial price unchanged", "12.20", PropertyText(OfferNode(ProductNode(taxonomyJson)), "price"))
+        AssertEqual("old input three nodes", 3, DirectCast(NodesOfType(ParseRoot(normalJson), "BreadcrumbList")(0)("itemListElement"), Object()).Length)
+        taxonomy.BreadcrumbItems(2).Url = "https://other.example/articoli.aspx?ct=10"
+        Dim crossJson = ProductStructuredDataBuilder.BuildJson(taxonomy)
+        AssertTrue("cross tenant never emitted", Not crossJson.Contains("other.example"))
+        AssertEqual("cross tenant safe fallback", 3, DirectCast(NodesOfType(ParseRoot(crossJson), "BreadcrumbList")(0)("itemListElement"), Object()).Length)
+        taxonomy.BreadcrumbItems(2).Url = "http://shop-alpha.example/articoli.aspx?ct=10"
+        AssertEqual("HTTP breadcrumb safe fallback", 3, DirectCast(NodesOfType(ParseRoot(ProductStructuredDataBuilder.BuildJson(taxonomy)), "BreadcrumbList")(0)("itemListElement"), Object()).Length)
+        taxonomy.BreadcrumbItems(2).Url = "https://shop-alpha.example/articoli.aspx?ct=10&mr=7"
+        AssertEqual("facet breadcrumb safe fallback", 3, DirectCast(NodesOfType(ParseRoot(ProductStructuredDataBuilder.BuildJson(taxonomy)), "BreadcrumbList")(0)("itemListElement"), Object()).Length)
+        taxonomy.BreadcrumbItems(2).Url = "https://shop-alpha.example/articoli.aspx?ct=10"
+        taxonomy.BreadcrumbItems(2).Name = " "
+        AssertEqual("empty name safe fallback", 3, DirectCast(NodesOfType(ParseRoot(ProductStructuredDataBuilder.BuildJson(taxonomy)), "BreadcrumbList")(0)("itemListElement"), Object()).Length)
+
+        AssertEqual("fixture coverage", 19, _fixtures)
         Console.WriteLine("PRODUCT_STRUCTURED_DATA_FIXTURES=" & _fixtures.ToString(CultureInfo.InvariantCulture))
         Console.WriteLine("PRODUCT_STRUCTURED_DATA_TESTS=" & _tests.ToString(CultureInfo.InvariantCulture))
         Console.WriteLine("PRODUCT_STRUCTURED_DATA_FAILURES=" & _failures.ToString(CultureInfo.InvariantCulture))

@@ -1,4 +1,5 @@
 <%@ Page Title="Prodotto" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="articolo.aspx.vb" Inherits="articolo" %>
+<%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
 <asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
     <%= If(litNome IsNot Nothing AndAlso Not String.IsNullOrEmpty(litNome.Text), Server.HtmlEncode(litNome.Text), "Prodotto") %>
@@ -15,17 +16,7 @@
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
-    <div class="tf-sp-1 ks-pdp-breadcrumb">
-        <div class="container">
-            <ul class="breakcrumbs">
-                <li><a href="/">Home</a></li>
-                <li><i class="icon icon-arrow-right"></i></li>
-                <li><a href="/articoli.aspx">Catalogo</a></li>
-                <li><i class="icon icon-arrow-right"></i></li>
-                <li><span><asp:Literal ID="litBreadcrumbCurrent" runat="server" /></span></li>
-            </ul>
-        </div>
-    </div>
+    <ks:Breadcrumb ID="ProductBreadcrumb" runat="server" AdditionalCssClass="ks-pdp-breadcrumb" />
 </asp:Content>
 
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">

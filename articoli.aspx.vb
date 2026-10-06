@@ -20,6 +20,7 @@ Partial Class Articoli
     End Property
 
     Private _priceDisplayContext As StorefrontPriceDisplayContext
+    Private _catalogTaxonomyContext As CatalogTaxonomyContext
     Private catalogPriceDisplayContextFailed As Boolean = False
     Dim DispoTipo As Integer
     Dim DispoMinima As Integer
@@ -251,6 +252,7 @@ Partial Class Articoli
         End If
 
         SyncCatalogSessionFromQuery()
+        Breadcrumb1.Bind(GetCatalogTaxonomyContext().BreadcrumbItems())
 
         If Me.IsPostBack = False Then
             txtCatalogPriceMin.Text = ReadCatalogPriceBound("pmin")
@@ -337,14 +339,9 @@ Partial Class Articoli
         Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If sectors Is Nothing OrElse sectors.Count = 0 Then Exit Sub
 
-        Dim activeSectorId As Integer = 0
-        Dim activeCategoryId As Integer = 0
-        Integer.TryParse(Convert.ToString(Request.QueryString("st")), activeSectorId)
-        Integer.TryParse(Convert.ToString(Request.QueryString("ct")), activeCategoryId)
-
-        If activeSectorId <= 0 AndAlso activeCategoryId > 0 Then
-            activeSectorId = LookupSettoreIdByCategoria(activeCategoryId)
-        End If
+        Dim taxonomy As CatalogTaxonomyContext = GetCatalogTaxonomyContext()
+        Dim activeSectorId As Integer = taxonomy.SectorId
+        Dim activeCategoryId As Integer = taxonomy.CategoryId
 
         Dim html As New StringBuilder()
         Dim renderedSectors As Integer = 0
@@ -376,12 +373,12 @@ Partial Class Articoli
 
                 For Each category As CatalogMenuCategory In sector.Categories
                     If category Is Nothing Then Continue For
-                    If renderedCategories >= CatalogNavMaxCategories Then Exit For
+                    Dim isActiveCategory As Boolean = (category.Id > 0 AndAlso category.Id = activeCategoryId)
+                    If renderedCategories >= CatalogNavMaxCategories AndAlso Not isActiveCategory Then Continue For
 
                     Dim categoryLabel As String = CatalogNavText(category.Descrizione, 46)
                     If categoryLabel = "" Then Continue For
 
-                    Dim isActiveCategory As Boolean = (category.Id > 0 AndAlso category.Id = activeCategoryId)
                     html.Append("<li class=""ks-category-nav-subitem")
                     If isActiveCategory Then html.Append(" active")
                     html.Append(""">")
@@ -638,7 +635,12 @@ End Sub
             Integer.TryParse(rawCt, CategorieId)
         End If
         If CategorieId < 0 Then CategorieId = 0
-        If SettoriId <= 0 AndAlso CategorieId > 0 Then SettoriId = LookupSettoreIdByCategoria(CategorieId)
+        If SettoriId <= 0 AndAlso CategorieId > 0 Then
+            Dim taxonomy As CatalogTaxonomyContext = GetCatalogTaxonomyContext()
+            ' Preserve the existing category ancestor constraint for search/legacy requests.
+            ' A multi-selection never gains an inferred filtering parent.
+            If Not taxonomy.IsMultiTipology AndAlso taxonomy.CategoryId = CategorieId Then SettoriId = taxonomy.SectorId
+        End If
 
         Dim promoActive As Boolean = ResolvePromotionCatalogActive()
         catalogPromotionActive = promoActive
@@ -3016,29 +3018,13 @@ strWhere = strWhere & " GROUP BY id"
             Integer.TryParse(Request.QueryString("pid"), pid)
 
             Dim q As String = QS("q", 80)
-            If pid > 0 OrElse Not String.IsNullOrEmpty(q) Then
-                ' Dettaglio prodotto o ricerca libera: non forziamo default di navigazione
+            If (pid > 0 AndAlso Request.QueryString("inpromo") <> "1") OrElse Not String.IsNullOrEmpty(q) Then
+                ' Keep search and legacy pid navigation; modern promotion scope still normalizes.
                 Exit Sub
             End If
-
-            Dim stId As Integer = 0
-            Dim ctId As Integer = 0
-            Integer.TryParse(Request.QueryString("st"), stId)
-            Integer.TryParse(Request.QueryString("ct"), ctId)
-
-            Dim needRedirect As Boolean = False
-
-            ' 1) Se ho ct ma st mancante o incoerente, ricavo st dalla categoria (tabelle reali)
-            If ctId > 0 Then
-                Dim stFromCat As Integer = LookupSettoreIdByCategoria(ctId)
-                If stFromCat > 0 AndAlso (stId <= 0 OrElse stId <> stFromCat) Then
-                    stId = stFromCat
-                    needRedirect = True
-                End If
-            End If
-
-            ' 2) Redirect solo se il settore richiesto e assente o incoerente con la categoria
-            If needRedirect Then
+            Dim taxonomy As CatalogTaxonomyContext = GetCatalogTaxonomyContext()
+            If taxonomy.CanNormalizeParents AndAlso
+               (taxonomy.RequestedSectorId <> taxonomy.SectorId OrElse taxonomy.RequestedCategoryId <> taxonomy.CategoryId) Then
                 Dim dict As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
                 For Each k As String In Request.QueryString.AllKeys
@@ -3046,17 +3032,8 @@ strWhere = strWhere & " GROUP BY id"
                     dict(k) = Request.QueryString(k)
                 Next
 
-                If stId > 0 Then
-                    dict("st") = stId.ToString()
-                ElseIf dict.ContainsKey("st") Then
-                    dict.Remove("st")
-                End If
-
-                If ctId > 0 Then
-                    dict("ct") = ctId.ToString()
-                ElseIf dict.ContainsKey("ct") Then
-                    dict.Remove("ct")
-                End If
+                dict("st") = taxonomy.SectorId.ToString(CultureInfo.InvariantCulture)
+                dict("ct") = taxonomy.CategoryId.ToString(CultureInfo.InvariantCulture)
 
                 Dim qs As String = BuildQueryString(dict)
                 Dim url As String = Request.Path
@@ -3074,15 +3051,10 @@ strWhere = strWhere & " GROUP BY id"
 
     Private Sub SyncCatalogSessionFromQuery()
         Try
-            Dim stId As Integer = 0
-            Dim ctId As Integer = 0
-            Integer.TryParse(Request.QueryString("st"), stId)
-            Integer.TryParse(Request.QueryString("ct"), ctId)
-
-            ' Se manca st ma ho ct, ricavo st per far funzionare i datasource (tipologie, ecc.)
-            If stId <= 0 AndAlso ctId > 0 Then
-                stId = LookupSettoreIdByCategoria(ctId)
-            End If
+            Dim taxonomy As CatalogTaxonomyContext = GetCatalogTaxonomyContext()
+            ' Session mirrors the actual request; display-only multi parents never become filters.
+            Dim stId As Integer = taxonomy.RequestedSectorId
+            Dim ctId As Integer = taxonomy.RequestedCategoryId
 
             Session("st") = If(stId > 0, CType(stId, Object), Nothing)
             Session("ct") = If(ctId > 0, CType(ctId, Object), Nothing)
@@ -3130,37 +3102,15 @@ strWhere = strWhere & " GROUP BY id"
         Return sb.ToString()
     End Function
 
-    Private Function LookupSettoreIdByCategoria(ByVal categoriaId As Integer) As Integer
-        If categoriaId <= 0 Then Return 0
-        Try
-            Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            Using conn As New MySqlConnection(connStr)
-                conn.Open()
-                Dim columnName As String = String.Empty
-                Using columnCmd As New MySqlCommand("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'categorie' AND COLUMN_NAME IN ('SettoriId', 'Id_settore') ORDER BY CASE WHEN COLUMN_NAME = 'SettoriId' THEN 0 ELSE 1 END LIMIT 1", conn)
-                    Dim resolved As Object = columnCmd.ExecuteScalar()
-                    If resolved Is Nothing OrElse resolved Is DBNull.Value Then Return 0
-                    If String.Equals(Convert.ToString(resolved), "SettoriId", StringComparison.OrdinalIgnoreCase) Then
-                        columnName = "SettoriId"
-                    ElseIf String.Equals(Convert.ToString(resolved), "Id_settore", StringComparison.OrdinalIgnoreCase) Then
-                        columnName = "Id_settore"
-                    Else
-                        Return 0
-                    End If
-                End Using
-
-                Using cmd As New MySqlCommand("SELECT `" & columnName & "` FROM categorie WHERE id=@id LIMIT 1", conn)
-                    cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = categoriaId
-                    Dim obj As Object = cmd.ExecuteScalar()
-                    If obj Is Nothing OrElse obj Is DBNull.Value Then Return 0
-                    Dim st As Integer = 0
-                    Integer.TryParse(Convert.ToString(obj), st)
-                    Return st
-                End Using
-            End Using
-        Catch
-            Return 0
-        End Try
+    Private Function GetCatalogTaxonomyContext() As CatalogTaxonomyContext
+        If _catalogTaxonomyContext Is Nothing Then
+            Dim st As Integer = 0
+            Dim ct As Integer = 0
+            Integer.TryParse(Request.QueryString("st"), st)
+            Integer.TryParse(Request.QueryString("ct"), ct)
+            _catalogTaxonomyContext = CatalogTaxonomyResolver.Resolve(st, ct, Request.QueryString("tp"))
+        End If
+        Return _catalogTaxonomyContext
     End Function
 
     Function getFilterIds(ByVal parName As String) As String()
@@ -3518,7 +3468,9 @@ strWhere = strWhere & " GROUP BY id"
             canonical = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/articoli.aspx")
         End If
 
-        Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(catalogPageTitle, "Catalogo prodotti", canonical, "CollectionPage")
+        Dim home As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
+        Dim crumbs As IList(Of StorefrontBreadcrumbItem) = StorefrontBreadcrumbItem.ToAbsolute(GetCatalogTaxonomyContext().BreadcrumbItems(), home)
+        Dim jsonLd As String = SeoBuilder.BuildSimplePageJsonLd(catalogPageTitle, "Catalogo prodotti", canonical, "CollectionPage", crumbs)
         If litSeoHead IsNot Nothing AndAlso
            litSeoHead.Text.IndexOf("application/ld+json", StringComparison.OrdinalIgnoreCase) < 0 Then
             litSeoHead.Text &= "<script type=""application/ld+json"">" & jsonLd & "</script>"
