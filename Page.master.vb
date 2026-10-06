@@ -2062,15 +2062,15 @@ End Sub
         Dim primaryScope As DropDownList = If(preferMobile, ddlMobile, ddlDesktop)
         Dim fallbackScope As DropDownList = If(preferMobile, ddlDesktop, ddlMobile)
 
-        If primaryText IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(primaryText.Text) Then
+        If primaryText IsNot Nothing Then
             q = primaryText.Text.Trim()
-        ElseIf fallbackText IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(fallbackText.Text) Then
+        ElseIf fallbackText IsNot Nothing Then
             q = fallbackText.Text.Trim()
         End If
 
-        If primaryScope IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(primaryScope.SelectedValue) Then
+        If primaryScope IsNot Nothing Then
             selectedUrl = primaryScope.SelectedValue.Trim()
-        ElseIf fallbackScope IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(fallbackScope.SelectedValue) Then
+        ElseIf fallbackScope IsNot Nothing Then
             selectedUrl = fallbackScope.SelectedValue.Trim()
         End If
 
