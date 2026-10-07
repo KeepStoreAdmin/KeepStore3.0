@@ -364,6 +364,37 @@ body.ks-page-home {
   line-height: 32px;
 }
 
+#mobileMenu .ks-mobile-nav-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+#mobileMenu .ks-mobile-nav-media {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  overflow: hidden;
+}
+
+#mobileMenu .ks-mobile-nav-media img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+#mobileMenu .ks-mobile-nav-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .mobile-button[data-bs-target="#mobileMenu"]:focus-visible,
 #mobileMenu .btn-close-mb:focus-visible,
 #mobileMenu .ks-mobile-primary-nav button:focus-visible,
