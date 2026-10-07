@@ -40,7 +40,9 @@ $templates = Read-Repo 'App_Code\KeepStoreEmailTemplate.vb'
 $runtimeHarness = Read-Repo 'Tools\EmailTransportRuntimeCoreHarness.vb'
 
 Assert-Check ($order -match 'New TenantEmailDeliveryService\(\)\.Deliver\(emailRequest\)') '01_ORDER_CUSTOMER_CENTRAL_FACADE'
-Assert-Check ($order -match 'emailRequest\.BccRecipients\.Add') '02_ORDER_ADMIN_BCC_PRESERVED'
+Assert-Check ($order -notmatch 'emailRequest\.BccRecipients\.Add|emailRequest\.ReplyToRecipients\.Add' -and
+              $order -match 'TenantEmailMessageClassifications\.OrderConfirmation' -and
+              $transport -match 'ApplyAdministrativeCopy\(message, profile\)') '02_ORDER_ADMIN_BCC_CENTRAL_PROFILE'
 Assert-Check (Has-OrderedText $order 'trns.Commit()' 'SendEmail(') '03_ORDER_EMAIL_AFTER_COMMIT'
 $orderSender = [regex]::Match($order, '(?s)Public Function SendEmail\(.*?\n\s*End Function').Value
 Assert-Check (([regex]::Matches($orderSender, 'TenantEmailDeliveryService\(\)\.Deliver')).Count -eq 1) '04_ORDER_SINGLE_SEND_NO_RETRY'
@@ -120,5 +122,28 @@ Assert-Check (-not $statusDirect) '43_NO_UNDISCLOSED_ORDER_STATUS_SENDER'
 Assert-Check ($master -notmatch '(?i)Session\s*\(\s*["''](?:smtp|User_smtp|Password_smtp)["'']' -and
               $master -notmatch '(?i)SELECT\s+\*\s+["'']?\s*&?\s*\r?\n?\s*["'']?FROM\s+aziende') '44_SMTP_CREDENTIALS_REMOVED_FROM_SESSION'
 
-if ($checks -ne 44) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
+$copyPolicy = [regex]::Match($facade, '(?s)Private Shared Function RequiresAdministrativeCopy\(.*?End Function').Value
+Assert-Check ($copyPolicy -match 'Case TenantEmailMessageClassifications\.AccountRegistration,' -and
+              $copyPolicy -match 'TenantEmailMessageClassifications\.AccountProfileUpdated,' -and
+              $copyPolicy -match 'TenantEmailMessageClassifications\.OrderConfirmation\s+Return True' -and
+              $copyPolicy -match 'Case Else\s+Return False' -and
+              ([regex]::Matches($copyPolicy, 'TenantEmailMessageClassifications\.')).Count -eq 3) '45_AUTO_BCC_EXACT_CLASSIFICATION_ALLOWLIST'
+Assert-Check ($facade -match '\.AdministrativeCopyFromProfileReplyTo = RequiresAdministrativeCopy\(classification\)' -and
+              $contracts -match 'Public Property AdministrativeCopyFromProfileReplyTo As Boolean' -and
+              $transport -match 'request\.AdministrativeCopyFromProfileReplyTo') '46_AUTO_BCC_INTERNAL_FLAG'
+Assert-Check ($transport -match 'Dim address As String = profile\.ReplyToAddress' -and
+              $transport -match 'If String\.IsNullOrWhiteSpace\(address\) Then Return' -and
+              $transport -match 'message\.Bcc\.Add\(New MailboxAddress\(String\.Empty, address\)\)') '47_AUTO_BCC_AUTHORITATIVE_OPTIONAL_PROFILE_REPLY_TO'
+Assert-Check ($transport -match 'ContainsMailbox\(message\.To, address\)' -and
+              $transport -match 'ContainsMailbox\(message\.Cc, address\)' -and
+              $transport -match 'ContainsMailbox\(message\.Bcc, address\)' -and
+              $transport -match 'String\.Equals\(mailbox\.Address, address, StringComparison\.OrdinalIgnoreCase\)') '48_AUTO_BCC_DEDUP_ALL_RECIPIENTS'
+Assert-Check ($registration -notmatch 'request\.BccRecipients\.Add|Dim administrativeRecipient' -and
+              $passwordReset -match 'TenantEmailMessageClassifications\.PasswordReset' -and
+              $passwordReset -notmatch 'BccRecipients\.Add|CcRecipients\.Add') '49_ACCOUNT_CALLER_CLEANUP_RESET_CUSTOMER_ONLY'
+Assert-Check ($runtimeHarness -match 'ADMIN_COPY_RESET_LINK_ONLY_IN_CUSTOMER_MESSAGE' -and
+              $runtimeHarness -match 'ADMIN_COPY_TENANT_ISOLATION_' -and
+              $runtimeHarness -match 'ADMIN_COPY_SINGLE_SEND_SINGLE_PROFILE_') '50_AUTO_BCC_RUNTIME_REGRESSIONS_PRESENT'
+
+if ($checks -ne 50) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
 Write-Output ('TENANT_EMAIL_ALL_CALLERS_MIGRATION_PASS checks=' + $checks)

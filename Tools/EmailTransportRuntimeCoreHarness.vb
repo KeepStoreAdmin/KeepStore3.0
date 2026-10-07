@@ -115,6 +115,14 @@ Public NotInheritable Class HarnessSmtpSession
     Public Property SendCount As Integer
     Public Property DisconnectCount As Integer
     Public Property SecretObserved As String
+    Public ReadOnly ToAddresses As New List(Of String)()
+    Public ReadOnly CcAddresses As New List(Of String)()
+    Public ReadOnly BccAddresses As New List(Of String)()
+    Public ReadOnly ReplyToAddresses As New List(Of String)()
+    Public Property FromAddress As String
+    Public Property EnvelopeAddress As String
+    Public Property HtmlBody As String
+    Public Property PlainTextBody As String
     Private _connected As Boolean
 
     Public Sub ConfigureTimeout(ByVal timeoutMillisecondsValue As Integer) Implements IEmailSmtpSession.ConfigureTimeout
@@ -140,6 +148,22 @@ Public NotInheritable Class HarnessSmtpSession
                     ByVal envelopeFromAddress As String) Implements IEmailSmtpSession.Send
         SendCount += 1
         ThrowIf("send")
+        CaptureAddresses(message.To, ToAddresses)
+        CaptureAddresses(message.Cc, CcAddresses)
+        CaptureAddresses(message.Bcc, BccAddresses)
+        CaptureAddresses(message.ReplyTo, ReplyToAddresses)
+        For Each mailbox As MailboxAddress In message.From.Mailboxes
+            FromAddress = mailbox.Address
+        Next
+        EnvelopeAddress = envelopeFromAddress
+        HtmlBody = message.HtmlBody
+        PlainTextBody = message.TextBody
+    End Sub
+
+    Private Shared Sub CaptureAddresses(ByVal source As InternetAddressList, ByVal target As List(Of String))
+        For Each mailbox As MailboxAddress In source.Mailboxes
+            target.Add(mailbox.Address)
+        Next
     End Sub
 
     Public ReadOnly Property IsConnected As Boolean Implements IEmailSmtpSession.IsConnected
@@ -243,6 +267,7 @@ Public Module EmailTransportRuntimeCoreHarness
         TestTransportMatrix()
         TestLegacyEmptyTableGate()
         TestDeliveryFacade()
+        TestAdministrativeCopyPolicy()
         Console.WriteLine("EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=" & _passed.ToString())
         Console.WriteLine("PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL")
     End Sub
@@ -469,6 +494,136 @@ Public Module EmailTransportRuntimeCoreHarness
         Dim missingTransport As New HarnessCaptureTransport() With {.Result = RejectedResult(TenantEmailTransportProfileState.CredentialMissing, "CREDENTIAL_MISSING")}
         Assert(New TenantEmailDeliveryService(missingTransport, "db-a").Deliver(FacadeRequest(1, "facade-correlation-0010")).ProfileState = TenantEmailTransportProfileState.CredentialMissing AndAlso missingTransport.DeliverCount = 1, "50_FACADE_CREDENTIAL_MISSING_NO_FALLBACK")
     End Sub
+
+    Private Sub TestAdministrativeCopyPolicy()
+        Dim included As String() = {TenantEmailMessageClassifications.AccountRegistration,
+                                    TenantEmailMessageClassifications.AccountProfileUpdated,
+                                    TenantEmailMessageClassifications.OrderConfirmation}
+        For Each classification As String In included
+            Dim request = AdministrativeRequest(1, classification)
+            Dim sent = DeliverAdministrativeFixture(request, "db-a", "admin-a@example.invalid", classification)
+            Assert(sent.ToAddresses.Count = 1 AndAlso sent.ToAddresses(0) = "customer-a@example.invalid" AndAlso
+                   sent.ReplyToAddresses.Count = 1 AndAlso sent.ReplyToAddresses(0) = "admin-a@example.invalid" AndAlso
+                   sent.BccAddresses.Count = 1 AndAlso sent.BccAddresses(0) = "admin-a@example.invalid", "ADMIN_COPY_INCLUDED_" & classification)
+        Next
+
+        Dim excluded As String() = {TenantEmailMessageClassifications.PasswordReset,
+                                    TenantEmailMessageClassifications.ContactRequest,
+                                    TenantEmailMessageClassifications.DocumentDelivery,
+                                    TenantEmailMessageClassifications.AdministrativeNotification,
+                                    "UNKNOWN_CLASSIFICATION"}
+        For Each classification As String In excluded
+            Dim request = AdministrativeRequest(1, classification)
+            If classification = TenantEmailMessageClassifications.ContactRequest Then
+                request.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "contact@example.invalid", .DisplayName = "Synthetic"})
+            End If
+            If classification = TenantEmailMessageClassifications.PasswordReset Then
+                request.PlainTextBody = "https://store.example.invalid/resetpassword.aspx?token=synthetic-reset-only"
+                request.HtmlBody = "<a href=""" & request.PlainTextBody & """>Reset</a>"
+            End If
+            Dim sent = DeliverAdministrativeFixture(request, "db-a", "admin-a@example.invalid", classification)
+            Assert(sent.BccAddresses.Count = 0 AndAlso sent.CcAddresses.Count = 0 AndAlso
+                   sent.ToAddresses.Count = 1 AndAlso sent.ToAddresses(0) = "customer-a@example.invalid", "ADMIN_COPY_EXCLUDED_" & classification)
+            Dim reply As String = If(classification = TenantEmailMessageClassifications.ContactRequest, "contact@example.invalid", "admin-a@example.invalid")
+            Assert(sent.ReplyToAddresses.Count = 1 AndAlso sent.ReplyToAddresses(0) = reply, "ADMIN_COPY_REPLY_TO_" & classification)
+            If classification = TenantEmailMessageClassifications.PasswordReset Then
+                Assert(sent.PlainTextBody = request.PlainTextBody AndAlso sent.HtmlBody = request.HtmlBody,
+                       "ADMIN_COPY_RESET_LINK_ONLY_IN_CUSTOMER_MESSAGE")
+            End If
+        Next
+
+        For Each recipientList As String In New String() {"TO", "CC", "BCC"}
+            Dim request = AdministrativeRequest(1, TenantEmailMessageClassifications.AccountRegistration)
+            Dim recipient As New TenantEmailRecipient() With {.Address = "ADMIN-A@example.invalid", .DisplayName = "Synthetic"}
+            Select Case recipientList
+                Case "TO" : request.ToRecipients.Add(recipient)
+                Case "CC" : request.CcRecipients.Add(recipient)
+                Case "BCC" : request.BccRecipients.Add(recipient)
+            End Select
+            Dim sent = DeliverAdministrativeFixture(request, "db-a", "admin-a@example.invalid", "DEDUP_" & recipientList)
+            Assert(sent.BccAddresses.Count = If(recipientList = "BCC", 1, 0), "ADMIN_COPY_DEDUP_" & recipientList)
+            Dim occurrences As Integer = 0
+            For Each address As String In sent.ToAddresses.ToArray()
+                If String.Equals(address, "admin-a@example.invalid", StringComparison.OrdinalIgnoreCase) Then occurrences += 1
+            Next
+            For Each address As String In sent.CcAddresses.ToArray()
+                If String.Equals(address, "admin-a@example.invalid", StringComparison.OrdinalIgnoreCase) Then occurrences += 1
+            Next
+            For Each address As String In sent.BccAddresses.ToArray()
+                If String.Equals(address, "admin-a@example.invalid", StringComparison.OrdinalIgnoreCase) Then occurrences += 1
+            Next
+            Assert(occurrences = 1, "ADMIN_COPY_DEDUP_CASE_INSENSITIVE_" & recipientList)
+        Next
+
+        For Each classification As String In New String() {TenantEmailMessageClassifications.AccountRegistration, TenantEmailMessageClassifications.OrderConfirmation}
+            Dim sent = DeliverAdministrativeFixture(AdministrativeRequest(1, classification), "db-a", String.Empty, "EMPTY_" & classification)
+            Assert(sent.BccAddresses.Count = 0 AndAlso sent.ReplyToAddresses.Count = 0 AndAlso sent.ToAddresses.Count = 1,
+                   "ADMIN_COPY_OPTIONAL_REPLY_TO_" & classification)
+        Next
+
+        Dim normalized = DeliverAdministrativeFixture(AdministrativeRequest(1, " account_registration "), "db-a", "admin-a@example.invalid", "NORMALIZED")
+        Assert(normalized.BccAddresses.Count = 1, "ADMIN_COPY_NORMALIZED_CLASSIFICATION")
+        Dim explicitOrder = AdministrativeRequest(1, TenantEmailMessageClassifications.OrderConfirmation)
+        explicitOrder.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "explicit@example.invalid", .DisplayName = "Synthetic"})
+        explicitOrder.BccRecipients.Add(New TenantEmailRecipient() With {.Address = "audit@example.invalid", .DisplayName = "Synthetic"})
+        Dim explicitSent = DeliverAdministrativeFixture(explicitOrder, "db-a", "admin-a@example.invalid", "EXPLICIT_ORDER")
+        Assert(explicitSent.ReplyToAddresses(0) = "explicit@example.invalid" AndAlso explicitSent.BccAddresses.Count = 2 AndAlso
+               explicitSent.BccAddresses.Contains("admin-a@example.invalid") AndAlso explicitSent.BccAddresses.Contains("audit@example.invalid"),
+               "ADMIN_COPY_PROFILE_SOURCE_NOT_EXPLICIT_REPLY_TO")
+        Dim explicitContact = AdministrativeRequest(1, TenantEmailMessageClassifications.ContactRequest)
+        explicitContact.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "contact@example.invalid", .DisplayName = "Synthetic"})
+        explicitContact.BccRecipients.Add(New TenantEmailRecipient() With {.Address = "audit@example.invalid", .DisplayName = "Synthetic"})
+        Dim contactSent = DeliverAdministrativeFixture(explicitContact, "db-a", "admin-a@example.invalid", "EXPLICIT_CONTACT")
+        Assert(contactSent.BccAddresses.Count = 1 AndAlso contactSent.BccAddresses(0) = "audit@example.invalid" AndAlso
+               contactSent.ReplyToAddresses(0) = "contact@example.invalid", "ADMIN_COPY_EXPLICIT_BCC_PRESERVED")
+
+        For Each connection As String In New String() {"db-a", "db-b"}
+            Dim a = DeliverAdministrativeFixture(AdministrativeRequest(1, TenantEmailMessageClassifications.OrderConfirmation), connection, "admin-a@example.invalid", "TENANT_A_" & connection)
+            Dim b = DeliverAdministrativeFixture(AdministrativeRequest(2, TenantEmailMessageClassifications.OrderConfirmation), connection, "admin-b@example.invalid", "TENANT_B_" & connection)
+            Assert(a.BccAddresses.Count = 1 AndAlso a.BccAddresses(0) = "admin-a@example.invalid" AndAlso
+                   a.ReplyToAddresses(0) = "admin-a@example.invalid" AndAlso Not a.BccAddresses.Contains("admin-b@example.invalid") AndAlso
+                   b.BccAddresses.Count = 1 AndAlso b.BccAddresses(0) = "admin-b@example.invalid" AndAlso
+                   b.ReplyToAddresses(0) = "admin-b@example.invalid" AndAlso Not b.BccAddresses.Contains("admin-a@example.invalid"),
+                   "ADMIN_COPY_TENANT_ISOLATION_" & connection)
+        Next
+        Console.WriteLine("ADMINISTRATIVE_COPY_POLICY_PASS")
+    End Sub
+
+    Private Function AdministrativeRequest(ByVal aziendaId As Integer, ByVal classification As String) As TenantEmailDeliveryRequest
+        Dim request = FacadeRequest(aziendaId, "admin-copy-synthetic")
+        request.Classification = classification
+        request.ToRecipients.Clear()
+        request.ToRecipients.Add(New TenantEmailRecipient() With {.Address = If(aziendaId = 1, "customer-a@example.invalid", "customer-b@example.invalid"), .DisplayName = "Synthetic"})
+        Return request
+    End Function
+
+    Private Function DeliverAdministrativeFixture(ByVal request As TenantEmailDeliveryRequest,
+                                                 ByVal connection As String,
+                                                 ByVal replyTo As String,
+                                                 ByVal code As String) As HarnessSmtpSession
+        Dim source As New HarnessProfileSource()
+        source.ResultFactory = Function(c As String, a As Integer, p As String) As EmailTransportProfileSourceResult
+                                   Dim record As TenantEmailTransportProfileRecord = ValidRecord(a, p, True, c)
+                                   record.ReplyToAddress = replyTo
+                                   Return SourceResult(True, False, record)
+                               End Function
+        Dim resolver As New TenantEmailTransportProfileResolver(source, New HarnessIdentityProvider())
+        Dim factory As New HarnessSmtpSessionFactory()
+        Dim telemetry As New HarnessTelemetry()
+        Dim transport As New MailKitEmailTransport(resolver, New HarnessCredentialStore(), factory, telemetry)
+        Dim result = New TenantEmailDeliveryService(transport, connection).Deliver(request)
+        Assert(result.Status = EmailTransportOperationStatus.Succeeded AndAlso factory.Sessions.Count = 1,
+               "ADMIN_COPY_DELIVERY_" & code & "_" & result.Code)
+        Dim sent = factory.Sessions(0)
+        Assert(sent.SendCount = 1 AndAlso sent.AuthenticateCount = 1 AndAlso sent.DisconnectCount = 1 AndAlso source.LoadCount = 1,
+               "ADMIN_COPY_SINGLE_SEND_SINGLE_PROFILE_" & code)
+        Assert(sent.FromAddress = "sender@example.invalid" AndAlso sent.EnvelopeAddress = "envelope@example.invalid" AndAlso
+               sent.HtmlBody = request.HtmlBody AndAlso sent.PlainTextBody = request.PlainTextBody, "ADMIN_COPY_MESSAGE_UNCHANGED_" & code)
+        Dim logs = String.Join("|", telemetry.Lines.ToArray())
+        Assert(Not logs.Contains("@example.invalid") AndAlso Not logs.Contains("synthetic-reset-only") AndAlso
+               Not logs.Contains("synthetic-secret"), "ADMIN_COPY_SANITIZED_TELEMETRY_" & code)
+        Return sent
+    End Function
 
     Private Function FacadeRequest(ByVal aziendaId As Integer, ByVal correlationId As String) As TenantEmailDeliveryRequest
         Dim request As New TenantEmailDeliveryRequest() With {

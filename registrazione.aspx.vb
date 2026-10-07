@@ -1005,11 +1005,6 @@ Partial Class registrazione
         }
         request.ToRecipients.Add(New TenantEmailRecipient() With {.Address = TextBoxText(Me.tbEmail), .DisplayName = TextBoxText(Me.tbNomeCognome)})
 
-        Dim administrativeRecipient As String = SessionText("AziendaEmail")
-        If administrativeRecipient <> "" Then
-            request.BccRecipients.Add(New TenantEmailRecipient() With {.Address = administrativeRecipient, .DisplayName = SessionText("AziendaNome")})
-        End If
-
         Dim result As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(request)
         If result Is Nothing OrElse result.Status <> EmailTransportOperationStatus.Succeeded Then
             KeepStoreLog.Info("registrazione-email",

@@ -129,6 +129,7 @@ Public NotInheritable Class TenantEmailDeliveryService
                     .AziendaId = request.AziendaId,
                     .Purpose = TransactionalPurpose,
                     .Classification = classification,
+                    .AdministrativeCopyFromProfileReplyTo = RequiresAdministrativeCopy(classification),
                     .CorrelationId = correlationId,
                     .Message = message
                 })
@@ -229,6 +230,17 @@ Public NotInheritable Class TenantEmailDeliveryService
         Dim candidate As String = Convert.ToString(value).Trim().ToUpperInvariant()
         If SafeClassificationPattern.IsMatch(candidate) Then Return candidate
         Return String.Empty
+    End Function
+
+    Private Shared Function RequiresAdministrativeCopy(ByVal classification As String) As Boolean
+        Select Case classification
+            Case TenantEmailMessageClassifications.AccountRegistration,
+                 TenantEmailMessageClassifications.AccountProfileUpdated,
+                 TenantEmailMessageClassifications.OrderConfirmation
+                Return True
+            Case Else
+                Return False
+        End Select
     End Function
 
     Private Shared Function SafeToken(ByVal value As String) As String

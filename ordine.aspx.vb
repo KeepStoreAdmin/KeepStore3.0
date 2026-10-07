@@ -1909,10 +1909,6 @@ CheckoutFailureRecoveryService.TracePhase(
                 .PlainTextBody = "Conferma " & documento & " n. " & numeroDocumento
             }
             emailRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = recipientEmail, .DisplayName = recipientName})
-            If Not String.IsNullOrWhiteSpace(emailBrand.AdministrativeRecipient) Then
-                emailRequest.BccRecipients.Add(New TenantEmailRecipient() With {.Address = emailBrand.AdministrativeRecipient, .DisplayName = emailBrand.CompanyName})
-            End If
-            emailRequest.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = emailBrand.SupportEmail, .DisplayName = emailBrand.CompanyName})
 
             If renderedEmail IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
                 emailRequest.Subject = BuildOrderConfirmationSubject(documento, numeroDocumento, dataDocumentoDisplay, pagamentoDescrizione, pagamentoInformazioni, emailBrand.CompanyName)

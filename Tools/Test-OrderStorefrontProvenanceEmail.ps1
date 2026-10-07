@@ -28,6 +28,8 @@ $durable = Read-RepoFile 'App_Code\OrderDurableIdempotencyService.vb'
 $confirmation = Read-RepoFile 'App_Code\OrderConfirmationTokenService.vb'
 $cart = Read-RepoFile 'carrello.aspx.vb'
 $order = Read-RepoFile 'ordine.aspx.vb'
+$facade = Read-RepoFile 'App_Code\TenantEmailDeliveryService.vb'
+$transport = Read-RepoFile 'App_Code\MailKitEmailTransport.vb'
 $documents = Read-RepoFile 'documenti.aspx.vb'
 $documentsMarkup = Read-RepoFile 'documenti.aspx'
 $documentDetail = Read-RepoFile 'documentidettaglio.aspx.vb'
@@ -55,8 +57,15 @@ Assert-Source ($order -notmatch 'Session\.Item\("AziendaId"\)\s*=\s*2') 'ORDER_E
 Assert-Source ($order -notmatch '(?i)taikun|webaffare') 'ORDER_SHARED_CODE_NO_CLIENT_NAME'
 Assert-Source ($order -match 'LoadOrderEmailBrandData\(conn, receiptAziendaId, False\)') 'ORDER_EMAIL_BRAND_FROM_PERSISTED_COMPANY'
 Assert-Source ($order -match '\.AziendaId\s*=\s*receiptAziendaId') 'ORDER_EMAIL_TRANSPORT_FROM_PERSISTED_COMPANY'
-Assert-Source ($order -match 'emailBrand\.AdministrativeRecipient') 'ORDER_EMAIL_ADMIN_FROM_PERSISTED_COMPANY'
-Assert-Source ($order -match 'emailRequest\.ReplyToRecipients\.Add') 'ORDER_EMAIL_REPLY_TO_TENANT'
+Assert-Source ($order -notmatch 'emailRequest\.BccRecipients\.Add' -and
+               $order -match '\.AziendaId\s*=\s*receiptAziendaId' -and
+               $facade -match '\.AdministrativeCopyFromProfileReplyTo = RequiresAdministrativeCopy\(classification\)' -and
+               $transport -match '_resolver\.Resolve\(connectionString, aziendaId, purpose\)' -and
+               $transport -match 'Dim address As String = profile\.ReplyToAddress' -and
+               $transport -match 'message\.Bcc\.Add\(New MailboxAddress\(String\.Empty, address\)\)') 'ORDER_EMAIL_ADMIN_FROM_PERSISTED_COMPANY_PROFILE'
+Assert-Source ($order -notmatch 'emailRequest\.ReplyToRecipients\.Add' -and
+               $transport -match 'message\.ReplyTo\.Count = 0' -and
+               $transport -match 'message\.ReplyTo\.Add\(New MailboxAddress\(String\.Empty, profile\.ReplyToAddress\)\)') 'ORDER_EMAIL_REPLY_TO_TENANT_PROFILE'
 Assert-Source ($order.IndexOf('trns.Commit()', [StringComparison]::Ordinal) -lt $order.IndexOf('SendEmail(', $order.IndexOf('trns.Commit()', [StringComparison]::Ordinal), [StringComparison]::Ordinal)) 'ORDER_EMAIL_AFTER_COMMIT'
 Assert-Source ($order -match 'OrderEmailDeliveryDiagnostics\.BuildResultLog\(receiptAziendaId, id, deliveryResult\)') 'ORDER_EMAIL_FAILURE_SANITIZED'
 Assert-Source ($order -match 'If\(orderEmailSent, "completed", "failed"\)') 'ORDER_EMAIL_FAILURE_NOT_RECORDED_COMPLETED'

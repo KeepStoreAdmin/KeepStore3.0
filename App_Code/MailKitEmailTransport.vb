@@ -219,7 +219,8 @@ Public NotInheritable Class MailKitEmailTransport
                                                                         request.AziendaId,
                                                                         request.Purpose,
                                                                         correlationId,
-                                                                        request.Message)
+                                                                        request.Message,
+                                                                        request.AdministrativeCopyFromProfileReplyTo)
         Record(outcome, "delivery")
         Return ToDeliveryResult(outcome)
     End Function
@@ -241,20 +242,22 @@ Public NotInheritable Class MailKitEmailTransport
                                      ByVal aziendaId As Integer,
                                      ByVal purpose As String,
                                      ByVal correlationId As String,
-                                     ByVal message As MimeMessage) As EmailTransportExecutionOutcome
-        Return ExecuteResolved(_resolver.Resolve(connectionString, aziendaId, purpose), correlationId, message)
+                                     ByVal message As MimeMessage,
+                                     ByVal administrativeCopyFromProfileReplyTo As Boolean) As EmailTransportExecutionOutcome
+        Return ExecuteResolved(_resolver.Resolve(connectionString, aziendaId, purpose), correlationId, message, administrativeCopyFromProfileReplyTo)
     End Function
 
     Private Function ExecuteVerification(ByVal connectionString As String,
                                          ByVal aziendaId As Integer,
                                          ByVal purpose As String,
                                          ByVal correlationId As String) As EmailTransportExecutionOutcome
-        Return ExecuteResolved(_resolver.ResolveForVerification(connectionString, aziendaId, purpose), correlationId, Nothing)
+        Return ExecuteResolved(_resolver.ResolveForVerification(connectionString, aziendaId, purpose), correlationId, Nothing, False)
     End Function
 
     Private Function ExecuteResolved(ByVal resolution As TenantEmailTransportProfileResolution,
                                      ByVal correlationId As String,
-                                     ByVal message As MimeMessage) As EmailTransportExecutionOutcome
+                                     ByVal message As MimeMessage,
+                                     ByVal administrativeCopyFromProfileReplyTo As Boolean) As EmailTransportExecutionOutcome
         If resolution Is Nothing OrElse resolution.State <> TenantEmailTransportProfileState.Ready OrElse resolution.Profile Is Nothing Then
             Dim stateValue As TenantEmailTransportProfileState = If(resolution Is Nothing, TenantEmailTransportProfileState.TechnicalError, resolution.State)
             Dim codeValue As String = If(resolution Is Nothing, "PROFILE_RESOLUTION_NULL", resolution.Code)
@@ -309,6 +312,7 @@ Public NotInheritable Class MailKitEmailTransport
                 If message IsNot Nothing Then
                     phase = "message-send"
                     ApplyAuthoritativeSender(message, profile)
+                    If administrativeCopyFromProfileReplyTo Then ApplyAdministrativeCopy(message, profile)
                     session.Send(message, profile.EnvelopeFromAddress)
                 End If
 
@@ -367,6 +371,24 @@ Public NotInheritable Class MailKitEmailTransport
             message.ReplyTo.Add(New MailboxAddress(String.Empty, profile.ReplyToAddress))
         End If
     End Sub
+
+    Private Shared Sub ApplyAdministrativeCopy(ByVal message As MimeMessage,
+                                               ByVal profile As TenantEmailTransportProfile)
+        Dim address As String = profile.ReplyToAddress
+        If String.IsNullOrWhiteSpace(address) Then Return
+        If ContainsMailbox(message.To, address) OrElse
+           ContainsMailbox(message.Cc, address) OrElse
+           ContainsMailbox(message.Bcc, address) Then Return
+        message.Bcc.Add(New MailboxAddress(String.Empty, address))
+    End Sub
+
+    Private Shared Function ContainsMailbox(ByVal recipients As InternetAddressList,
+                                            ByVal address As String) As Boolean
+        For Each mailbox As MailboxAddress In recipients.Mailboxes
+            If String.Equals(mailbox.Address, address, StringComparison.OrdinalIgnoreCase) Then Return True
+        Next
+        Return False
+    End Function
 
     Private Shared Function ToSocketOptions(ByVal securityMode As EmailSecurityMode) As SecureSocketOptions
         If securityMode = EmailSecurityMode.StartTls Then Return SecureSocketOptions.StartTls

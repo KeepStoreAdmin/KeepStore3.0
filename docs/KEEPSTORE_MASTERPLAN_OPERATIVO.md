@@ -1,11 +1,21 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-06
+Aggiornato: 2026-10-07
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### TENANT-EMAIL-ADMINISTRATIVE-COPY-1A - gate tecnico, non integrato
+
+Base autorizzata `frontend-rebuild` locale/origin: `a485dd9bc62772c89c5b48ac1541f758d54df98f`; branch `task/tenant-email-administrative-copy-1a`. Il task resta candidato a review indipendente/PR DRAFT, senza merge o deployment. `main` / `origin/main` restano protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Sono preservati `web.config`, quattro cancellazioni tracked preesistenti e 54 untracked; nessuno di questi entra nello staging del task.
+
+Root cause: registrazione/profilo aggiungevano BCC da `Session("AziendaEmail")`; ordine usava `emailBrand.AdministrativeRecipient` per BCC e forzava `SupportEmail` nel Reply-To. La policy ora e centrale: `TenantEmailDeliveryService` normalizza la classificazione e abilita `AdministrativeCopyFromProfileReplyTo` soltanto per `ACCOUNT_REGISTRATION`, `ACCOUNT_PROFILE_UPDATED`, `ORDER_CONFIRMATION`; `MailKitEmailTransport` applica BCC da `aziende_email_transport.ReplyToAddress` dello stesso profilo `TRANSACTIONAL` gia risolto per database/azienda. Deduplica su To/Cc/Bcc case-insensitive, Reply-To vuoto opzionale, BCC esplicite e Reply-To validato per messaggio preservati. Un solo messaggio/Send, zero nuove query e zero fallback legacy.
+
+`PASSWORD_RESET` non riceve auto-BCC e il suo chiamante resta cliente-only in TO: hash/monouso/scadenza 30 minuti/anti-enumeration/PRG e sorgenti reset non sono modificati. Anche contatti, documenti, notifiche amministrative e classificazioni non previste sono esclusi dall'auto-BCC. Il timing post-commit, template e flusso commerciale ordine sono invariati. Un campo distinto per copia amministrativa e separazione dal Reply-To richiedono un futuro task DB/config, non avviato.
+
+Manifest autorizzato: 5 runtime, harness e 4 script test, 4 documenti (14 file); l'estensione dei due script ordine e stata approvata dal Product Owner per i soli assert storici BCC/Reply-To. Gate fake: 164 controlli runtime/facade/policy, 50 chiamanti/guardrail, suite ordine e provenienza; precompile ASP.NET Framework 4.8, diff-check, secret scan e manifest richiesti prima di commit/PR. Nessuna query DB operativa, DML/DDL, SMTP/AUTH reale, e-mail, ordine, pagamento o deploy. Nessun task successivo autorizzato. Per questo contratto prevale il presente checkpoint sulle descrizioni storiche di destinatari manuali.
 
 ### Checkpoint prevalente 2026-10-04 — VAT / commercial storefront pricing
 

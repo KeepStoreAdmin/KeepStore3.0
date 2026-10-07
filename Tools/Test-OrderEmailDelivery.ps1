@@ -26,6 +26,8 @@ foreach ($required in @($compiler, $servicePath, $harnessPath)) {
 
 $order = Read-RepoFile 'ordine.aspx.vb'
 $service = Read-RepoFile 'App_Code\OrderEmailDeliveryService.vb'
+$facade = Read-RepoFile 'App_Code\TenantEmailDeliveryService.vb'
+$transport = Read-RepoFile 'App_Code\MailKitEmailTransport.vb'
 
 Assert-Source ($order -match 'Function SendEmail\([\s\S]*?\) As Boolean') 'ORDER_EMAIL_RETURNS_DELIVERY_RESULT'
 Assert-Source ($order -match 'If\(orderEmailSent, "completed", "failed"\)') 'ORDER_EMAIL_TRACE_REFLECTS_FAILURE'
@@ -33,8 +35,14 @@ Assert-Source ($order -match 'LoadOrderEmailBrandData\(conn, receiptAziendaId, F
 Assert-Source ($order -match 'New TenantEmailDeliveryService\(\)\.Deliver\(emailRequest\)') 'ORDER_EMAIL_CENTRAL_FACADE'
 Assert-Source ($order -match 'BuildResultLog\(receiptAziendaId, id, deliveryResult\)') 'ORDER_EMAIL_RESULT_DIAGNOSTICS_SANITIZED'
 Assert-Source ($order -notmatch '(?i)\bSmtpClient\b|Password_smtp|User_smtp|emailBrand\.SmtpHost') 'ORDER_EMAIL_NO_LEGACY_SMTP'
-Assert-Source ($order -match 'emailRequest\.BccRecipients\.Add') 'ORDER_EMAIL_ADMIN_BCC_PRESERVED'
-Assert-Source ($order -match 'emailRequest\.ReplyToRecipients\.Add') 'ORDER_EMAIL_REPLY_TO_PRESERVED'
+Assert-Source ($order -notmatch 'emailRequest\.BccRecipients\.Add' -and
+               $facade -match 'TenantEmailMessageClassifications\.OrderConfirmation\s+Return True' -and
+               $transport -match 'If administrativeCopyFromProfileReplyTo Then ApplyAdministrativeCopy\(message, profile\)' -and
+               $transport -match 'Dim address As String = profile\.ReplyToAddress' -and
+               $transport -match 'message\.Bcc\.Add\(New MailboxAddress\(String\.Empty, address\)\)') 'ORDER_EMAIL_ADMIN_BCC_CENTRAL_PROFILE'
+Assert-Source ($order -notmatch 'emailRequest\.ReplyToRecipients\.Add' -and
+               $transport -match 'message\.ReplyTo\.Count = 0' -and
+               $transport -match 'message\.ReplyTo\.Add\(New MailboxAddress\(String\.Empty, profile\.ReplyToAddress\)\)') 'ORDER_EMAIL_REPLY_TO_AUTHORITATIVE_PROFILE'
 Assert-Source ($service -notmatch '(?i)taikun|webaffare') 'EMAIL_SERVICE_HAS_NO_CLIENT_HARDCODE'
 Assert-Source ($service -notmatch '(?i)password\s*=\s*"[^\"]+"') 'EMAIL_SERVICE_HAS_NO_SECRET_LITERAL'
 Assert-Source ($service -notmatch '(?i)System\.Net\.Mail|\bSmtpClient\b|\bMailMessage\b') 'ORDER_DIAGNOSTICS_NO_DIRECT_SMTP'

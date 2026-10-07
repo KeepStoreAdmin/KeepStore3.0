@@ -2,7 +2,19 @@
 
 Documento interno per audit e standardizzazione delle email transazionali Taikun/KeepStore.
 
-Ultimo aggiornamento: 2026-06-09.
+Ultimo aggiornamento: 2026-10-07. La mappa legacy conserva la fotografia dell'audit iniziale; per destinatari e trasporto prevale il contratto seguente.
+
+## Contratto prevalente - copia amministrativa tenant-scoped
+
+`TENANT-EMAIL-ADMINISTRATIVE-COPY-1A` centralizza la policy in `TenantEmailDeliveryService`: dalla classificazione normalizzata deriva il flag interno `AdministrativeCopyFromProfileReplyTo`. `MailKitEmailTransport` usa il profilo `TRANSACTIONAL` gia risolto per identita database e azienda, senza nuove query nei chiamanti, fallback legacy o secondo invio.
+
+`aziende_email_transport.ReplyToAddress` resta il Reply-To opzionale del profilo. Per le sole classificazioni `ACCOUNT_REGISTRATION`, `ACCOUNT_PROFILE_UPDATED` e `ORDER_CONFIRMATION` e anche il destinatario BCC amministrativo automatico dello stesso messaggio cliente. Il trasporto non lo aggiunge nuovamente se compare gia in To/Cc/Bcc, con confronto case-insensitive. Se e vuoto, la mail cliente resta valida e non viene aggiunta una BCC automatica.
+
+`PASSWORD_RESET` non riceve copia amministrativa: il chiamante mantiene il solo cliente in TO, il Reply-To del profilo e consentito e link/token restano nel messaggio cliente. Motore token, hash, durata 30 minuti, monouso, anti-enumeration e PRG non sono modificati. Anche `CONTACT_REQUEST`, `DOCUMENT_DELIVERY`, `ADMINISTRATIVE_NOTIFICATION` e classificazioni non previste non attivano auto-BCC. Le BCC esplicite restano preservate; un Reply-To per messaggio validato, ad esempio del contatto, non viene sovrascritto e non cambia la fonte della copia amministrativa.
+
+Registrazione/profilo non costruiscono piu la BCC da `Session("AziendaEmail")`; ordine non forza piu BCC/Reply-To da `aziende.email` e usa il profilo dell'azienda persistita nel documento, mantenendo invio post-commit, template ed esiti. Si costruisce un solo messaggio e si effettua un solo SMTP Send, senza retry. Il gate tecnico usa esclusivamente SMTP/sessioni fake: non certifica una consegna reale, un rollout o un merge.
+
+Un'eventuale separazione futura tra indirizzo Reply-To e copia amministrativa richiede un task DB/config distinto e un campo dedicato; non e implementata da questo task.
 
 ## 1. Scope e guardrail
 

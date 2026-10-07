@@ -51,6 +51,16 @@ I valori controllati sono `varchar` con confronto case-sensitive, non `ENUM`. Qu
 | `CreatedAtUtc` | `datetime(6)` | data creazione UTC |
 | `UpdatedAtUtc` | `datetime(6)` | aggiornamento automatico UTC |
 
+## Reply-To e copia amministrativa - contratto prevalente
+
+`ReplyToAddress` del profilo `TRANSACTIONAL` mantiene il ruolo di Reply-To opzionale. L'indirizzo configurato riceve anche una copia invisibile BCC di registrazioni (`ACCOUNT_REGISTRATION`), aggiornamenti profilo (`ACCOUNT_PROFILE_UPDATED`) e conferme ordine (`ORDER_CONFIRMATION`), nello stesso messaggio inviato al cliente. Il pannello dovra spiegare esplicitamente questo doppio ruolo, senza presentarlo come secondo invio o destinatario globale.
+
+La policy centrale usa soltanto il profilo della stessa azienda e identita database gia risolto dal trasporto; non legge l'e-mail legacy di `aziende` o della Session. Il Reply-To ordine proviene dal profilo dell'azienda persistita nel documento. Se l'indirizzo compare gia in To/Cc/Bcc non viene duplicato (confronto case-insensitive); se e vuoto non viene aggiunta una copia e l'invio cliente non viene bloccato per questo motivo.
+
+`PASSWORD_RESET` non viene copiato per sicurezza: link/token devono raggiungere soltanto il cliente. `CONTACT_REQUEST`, `DOCUMENT_DELIVERY`, `ADMINISTRATIVE_NOTIFICATION` e altre classificazioni non attivano auto-BCC. Restano valide le BCC esplicite dei chiamanti; il Reply-To esplicito validato del contatto prevale sul Reply-To del profilo senza abilitare una copia amministrativa.
+
+Una futura separazione degli indirizzi Reply-To e copia amministrativa richiedera un task DB/config separato con campo dedicato. Nessuna nuova colonna, migration, configurazione operativa o attivazione e introdotta qui; bozza del pannello e gate di rollout restano invariati.
+
 ## Contratto del pannello
 
 | Etichetta italiana | Colonna/proprieta | Controllo | Obbligatorio | Validazione e valori | Creazione/modifica |
