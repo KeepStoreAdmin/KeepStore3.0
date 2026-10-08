@@ -2,6 +2,19 @@ Imports System
 Imports System.Collections.Generic
 Imports MimeKit
 
+Public NotInheritable Class TenantEmailMessageClassifications
+    Public Const OrderConfirmation As String = "ORDER_CONFIRMATION"
+    Public Const AccountRegistration As String = "ACCOUNT_REGISTRATION"
+    Public Const AccountProfileUpdated As String = "ACCOUNT_PROFILE_UPDATED"
+    Public Const PasswordReset As String = "PASSWORD_RESET"
+    Public Const ContactRequest As String = "CONTACT_REQUEST"
+    Public Const AdministrativeNotification As String = "ADMINISTRATIVE_NOTIFICATION"
+    Public Const DocumentDelivery As String = "DOCUMENT_DELIVERY"
+
+    Private Sub New()
+    End Sub
+End Class
+
 Public Enum TenantEmailTransportProfileState
     SchemaUnavailable = 0
     NotConfigured = 1

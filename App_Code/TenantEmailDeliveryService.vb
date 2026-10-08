@@ -8,19 +8,6 @@ Imports System.IO
 Imports System.Text.RegularExpressions
 Imports MimeKit
 
-Public NotInheritable Class TenantEmailMessageClassifications
-    Public Const OrderConfirmation As String = "ORDER_CONFIRMATION"
-    Public Const AccountRegistration As String = "ACCOUNT_REGISTRATION"
-    Public Const AccountProfileUpdated As String = "ACCOUNT_PROFILE_UPDATED"
-    Public Const PasswordReset As String = "PASSWORD_RESET"
-    Public Const ContactRequest As String = "CONTACT_REQUEST"
-    Public Const AdministrativeNotification As String = "ADMINISTRATIVE_NOTIFICATION"
-    Public Const DocumentDelivery As String = "DOCUMENT_DELIVERY"
-
-    Private Sub New()
-    End Sub
-End Class
-
 Public NotInheritable Class TenantEmailRecipient
     Public Property Address As String
     Public Property DisplayName As String
