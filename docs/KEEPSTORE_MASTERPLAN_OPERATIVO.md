@@ -2829,7 +2829,9 @@ La roadmap di questa REV2 descriveva lo stato precedente: login autofill e persi
 - Roadmap storica, superata dai checkpoint successivi: in quella fotografia post-PR #267 i task erano tutti `NON AVVIATO`; in seguito login autofill #295, persistent cart #297–#299 e `STOREFRONT-CART-CONVERSION-UX-1A` #303 sono stati chiusi e integrati. La sequenza storica includeva Merchant feed e abandoned-cart recovery, che restano ambiti distinti da rivalutare con prerequisiti e autorizzazione propri; non costituisce la roadmap prevalente corrente.
 - `STOREFRONT-PERSISTENT-ANONYMOUS-CART-1A` riguarda durata e recupero delle righe anonime; non coincide con `CART-IDEMPOTENCY-PERSISTENCE-AUDIT-1A`, che riguarda i registri anti-replay delle mutazioni e resta E/differito.
 
-## Checkpoint MULTIPROVIDER-TENANT-EMAIL-TRANSPORT-1A
+## Checkpoint storico MULTIPROVIDER-TENANT-EMAIL-TRANSPORT-1A — stato locale 2026-09-21
+
+Questo checkpoint descrive la foundation locale prima del provisioning Taikun production e dello smoke #319. I riferimenti alla sola macchina `KeepStoreSmoke` e alla mancata certificazione production che seguono sono storici; lo stato corrente e riportato nel checkpoint operativo in testa al documento.
 
 Audit, contratto e migrazione completa dei chiamanti REV1 sono eseguiti sulla PR #268, base stabile `a4bb16fe354dc27226ac0e98e89d6bd438decce4`. Il 20 settembre 2026 la migration autorizzata e stata applicata al database locale `taikun`: `aziende_email_transport` e presente e verificata. Il 21 settembre 2026 il Product Owner ha completato sulla sola macchina locale, sito/Application Pool `KeepStoreSmoke`, il provisioning DPAPI `LocalMachine` fuori da webroot/repository per i due profili `TRANSACTIONAL`; entrambi risultano `Enabled=1`, `VerificationStatus=VERIFIED`, con timestamp valorizzato e codice sanitizzato `EMAIL_CONNECTION_VERIFIED`. Il runner ha verificato esclusivamente TLS, autenticazione e `QUIT`, senza costruire o inviare messaggi. Questo checkpoint non certifica ne configura la produzione.
 
