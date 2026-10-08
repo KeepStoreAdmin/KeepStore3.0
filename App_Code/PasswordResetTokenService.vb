@@ -441,7 +441,7 @@ Public Module PasswordResetTokenService
         Dim aziendaEmail As String = FirstNonEmpty(If(companyInfo Is Nothing, "", companyInfo.Email), SessionString(ctx, "AziendaEmail"))
         Dim resetUrl As String = BuildResetUrl(page, clearToken)
 
-        If companyInfo Is Nothing OrElse companyInfo.AziendaId <= 0 OrElse aziendaEmail = "" Then
+        If companyInfo Is Nothing OrElse companyInfo.AziendaId <= 0 Then
             Throw New InvalidOperationException("PASSWORD_RESET_EMAIL_SCOPE_INVALID")
         End If
 

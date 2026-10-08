@@ -52,6 +52,17 @@ try {
     )
     $arguments = @('/nologo', '/target:exe', '/optionstrict-', ('/out:' + $exe), ('/reference:' + ($references -join ',')))
     $arguments += $runtimeFiles | ForEach-Object { Join-Path $repo $_ }
+    $arguments += Join-Path $repo 'App_Code\KeepStoreEmailTemplate.vb'
+    # Compile the actual pure order guards/footer, not a second implementation of their rules.
+    $orderSource = Get-Content -LiteralPath (Join-Path $repo 'ordine.aspx.vb') -Raw
+    $orderMethods = foreach ($name in @('ValidateOrderEmailContext', 'BuildOptionalOrderSupportLink')) {
+        $match = [regex]::Match($orderSource, ('(?s)    Private Shared Function ' + $name + '\(.*?\n    End Function'))
+        if (-not $match.Success) { throw ('ORDER_CONTRACT_METHOD_MISSING=' + $name) }
+        $match.Value.Replace('Private Shared Function', 'Public Shared Function')
+    }
+    $orderFixture = Join-Path $tempRoot 'OrderCallerContractFixture.vb'
+    [IO.File]::WriteAllText($orderFixture, ("Imports System`r`nImports System.Web`r`nPublic Class OrderCallerContractFixture`r`n" + ($orderMethods -join "`r`n") + "`r`nEnd Class"), [Text.Encoding]::UTF8)
+    $arguments += $orderFixture
     $arguments += Join-Path $repo 'Tools\EmailTransportRuntimeCoreHarness.vb'
     & $vbc @arguments
     if ($LASTEXITCODE -ne 0) { throw ('EMAIL_CORE_HARNESS_COMPILE_' + $LASTEXITCODE) }
@@ -61,9 +72,11 @@ try {
     }
 
     $output = & $exe
-    if ($LASTEXITCODE -ne 0) { throw ('EMAIL_CORE_HARNESS_RUN_' + $LASTEXITCODE) }
     $output | Write-Output
-    Assert-Check (($output -join "`n") -match 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=164') 'HARNESS_164_CHECKS'
+    if ($LASTEXITCODE -ne 0) { throw ('EMAIL_CORE_HARNESS_RUN_' + $LASTEXITCODE) }
+    $checkCount = [regex]::Match(($output -join "`n"), 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=(\d+)')
+    Assert-Check ($checkCount.Success -and [int]$checkCount.Groups[1].Value -eq 260) 'HARNESS_260_CHECKS'
+    Assert-Check (($output -join "`n") -match 'WEB_EMAIL_CUTOVER_MATRIX_PASS') 'WEB_CUTOVER_COMPILED_MATRIX'
     Assert-Check (($output -join "`n") -match 'ADMINISTRATIVE_COPY_POLICY_PASS') 'ADMINISTRATIVE_COPY_POLICY_COMPILED'
     Assert-Check (($output -join "`n") -match 'PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL') 'SIMPLIFIED_PROVISIONING_EXPLICIT'
 
@@ -72,6 +85,8 @@ try {
     Assert-Check ($runtimeText -match 'Class TenantEmailDeliveryService') 'CENTRAL_FACADE_COMPILED'
 } finally {
     if (Test-Path -LiteralPath $tempRoot) {
-        Remove-Item -LiteralPath $tempRoot -Recurse -Force
+        $resolvedTemp = (Resolve-Path -LiteralPath $tempRoot).Path
+        if (-not $resolvedTemp.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase)) { throw 'UNSAFE_EMAIL_CORE_TEMP_CLEANUP' }
+        Remove-Item -LiteralPath $resolvedTemp -Recurse -Force
     }
 }

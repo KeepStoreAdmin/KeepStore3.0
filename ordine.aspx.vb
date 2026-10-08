@@ -1643,13 +1643,17 @@ CheckoutFailureRecoveryService.TracePhase(
         Dim conn As New MySqlConnection
         Dim connDestAlt As New MySqlConnection
         Dim emailPhase As String = "tenant-validation"
+        Dim emailFailureCode As String = "ORDER_EMAIL_IDENTITY_INVALID"
         Try
-            If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException("Order email tenant is not valid.")
+            If identity Is Nothing OrElse Not identity.IsComplete Then Throw New InvalidOperationException(emailFailureCode)
+            emailFailureCode = "ORDER_EMAIL_BUILD_FAILURE"
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
-            If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Throw New InvalidOperationException("Order email tenant is not valid.")
+            emailFailureCode = "ORDER_EMAIL_ACCOUNT_SCOPE_INVALID"
+            If Not OrderStorefrontContext.VerifyAccount(conn, Nothing, identity) Then Throw New InvalidOperationException(emailFailureCode)
 
             emailPhase = "message-build"
+            emailFailureCode = "ORDER_EMAIL_BUILD_FAILURE"
             Dim StrCarrello As String = ""
             Dim StrIva As String = ""
             Dim IvaTipo As Integer = GetSessionInt("IvaTipo", 0)
@@ -1669,7 +1673,12 @@ CheckoutFailureRecoveryService.TracePhase(
             cmdTestata.Parameters.AddWithValue("?utentiId", identity.UtentiId)
 
             Dim drTestata As MySqlDataReader = cmdTestata.ExecuteReader()
-            drTestata.Read()
+            If Not drTestata.Read() Then
+                emailPhase = "persisted-validation"
+                emailFailureCode = "ORDER_EMAIL_DOCUMENT_SCOPE_MISSING"
+                drTestata.Close()
+                Throw New InvalidOperationException(emailFailureCode)
+            End If
 
             Dim Imponibile As String = ""
             Dim SpeseSped As String = ""
@@ -1792,12 +1801,12 @@ CheckoutFailureRecoveryService.TracePhase(
             cmdTestata.Dispose()
 
             emailBrand = LoadOrderEmailBrandData(conn, receiptAziendaId, False)
-            If emailBrand Is Nothing OrElse receiptAziendaId <> identity.CompanyId OrElse
-               String.IsNullOrWhiteSpace(recipientEmail) OrElse
-               String.IsNullOrWhiteSpace(emailBrand.CompanyName) OrElse
-               String.IsNullOrWhiteSpace(emailBrand.SupportEmail) Then
-                Throw New InvalidOperationException("Order email persisted identity is not valid.")
-            End If
+            emailPhase = "persisted-validation"
+            emailFailureCode = ValidateOrderEmailContext(identity.CompanyId, receiptAziendaId, recipientEmail,
+                                                        If(emailBrand Is Nothing, String.Empty, emailBrand.CompanyName))
+            If emailFailureCode <> String.Empty Then Throw New InvalidOperationException(emailFailureCode)
+            emailPhase = "message-build"
+            emailFailureCode = "ORDER_EMAIL_BUILD_FAILURE"
 
             If Descrizione_Coupon <> "" Then
                 StrCarrello &= "<tr><td colspan=6 bgcolor=whitesmoke><b>Coupon</b></td></tr>"
@@ -1869,9 +1878,10 @@ CheckoutFailureRecoveryService.TracePhase(
             End If
 
             legacyBody &= "<br/><br/><font face=arial size=2 color=black><b>NOTE: </b><br>" & Me.Session("NoteDocumento") & "</font>" &
-                          "<br/><font face=arial size=2 color=black><b>" & emailBrand.CompanyName & "</b><br>Sito Web: <a href=" & HttpUtility.HtmlAttributeEncode(emailBrand.SiteUrl) & ">" & HttpUtility.HtmlEncode(emailBrand.SiteUrl) & "</a> - Email: <a href=mailto:" & HttpUtility.HtmlAttributeEncode(emailBrand.SupportEmail) & ">" & HttpUtility.HtmlEncode(emailBrand.SupportEmail) & "</a></font>"
+                          "<br/><font face=arial size=2 color=black><b>" & emailBrand.CompanyName & "</b><br>Sito Web: <a href=" & HttpUtility.HtmlAttributeEncode(emailBrand.SiteUrl) & ">" & HttpUtility.HtmlEncode(emailBrand.SiteUrl) & "</a>" & BuildOptionalOrderSupportLink(emailBrand.SupportEmail) & "</font>"
 
             emailPhase = "template-render"
+            emailFailureCode = "ORDER_EMAIL_TEMPLATE_FAILURE"
             Dim renderedEmail As KeepStoreEmailRenderResult = TryRenderOrderConfirmationEmail(documento,
                                                                                               numeroDocumento,
                                                                                               dataDocumento,
@@ -1899,6 +1909,9 @@ CheckoutFailureRecoveryService.TracePhase(
                                                                                                recipientEmail,
                                                                                                id,
                                                                                                n)
+            If renderedEmail Is Nothing OrElse String.IsNullOrWhiteSpace(renderedEmail.HtmlBody) Then
+                KeepStoreLog.Info("ordine-email", "result=fallback phase=template-render code=ORDER_EMAIL_TEMPLATE_FAILURE", HttpContext.Current)
+            End If
 
             Dim emailRequest As New TenantEmailDeliveryRequest() With {
                 .AziendaId = receiptAziendaId,
@@ -1917,6 +1930,7 @@ CheckoutFailureRecoveryService.TracePhase(
             End If
 
             emailPhase = "transport-send"
+            emailFailureCode = "ORDER_EMAIL_TRANSPORT_FAILURE"
             Dim deliveryResult As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(emailRequest)
             KeepStoreLog.Info("ordine-email", OrderEmailDeliveryDiagnostics.BuildResultLog(receiptAziendaId, id, deliveryResult), HttpContext.Current)
             Return deliveryResult IsNot Nothing AndAlso deliveryResult.Status = EmailTransportOperationStatus.Succeeded
@@ -1924,7 +1938,7 @@ CheckoutFailureRecoveryService.TracePhase(
         Catch ex As Exception
             Try
                 KeepStoreLog.Error("ordine-email",
-                                   "result=failed phase=" & emailPhase & " code=ORDER_EMAIL_BUILD_FAILURE type=" & ex.GetType().Name,
+                                   "result=failed phase=" & emailPhase & " code=" & emailFailureCode & " type=" & ex.GetType().Name,
                                    Nothing,
                                    HttpContext.Current)
             Catch
@@ -1941,6 +1955,21 @@ CheckoutFailureRecoveryService.TracePhase(
                 connDestAlt.Dispose()
             End If
         End Try
+    End Function
+
+    Private Shared Function ValidateOrderEmailContext(ByVal tenantCompanyId As Integer,
+                                                      ByVal persistedCompanyId As Integer,
+                                                      ByVal recipientEmail As String,
+                                                      ByVal companyName As String) As String
+        If persistedCompanyId <= 0 OrElse persistedCompanyId <> tenantCompanyId Then Return "ORDER_EMAIL_PERSISTED_TENANT_MISMATCH"
+        If String.IsNullOrWhiteSpace(recipientEmail) Then Return "ORDER_EMAIL_RECIPIENT_MISSING"
+        If String.IsNullOrWhiteSpace(companyName) Then Return "ORDER_EMAIL_COMPANY_BRAND_MISSING"
+        Return String.Empty
+    End Function
+
+    Private Shared Function BuildOptionalOrderSupportLink(ByVal supportEmail As String) As String
+        If String.IsNullOrWhiteSpace(supportEmail) Then Return String.Empty
+        Return " - Email: <a href=""mailto:" & HttpUtility.HtmlAttributeEncode(supportEmail) & """>" & HttpUtility.HtmlEncode(supportEmail) & "</a>"
     End Function
 
     Private Function BuildOrderReceiptHtml(ByVal conn As MySqlConnection,

@@ -46,6 +46,13 @@ Assert-Source ($order -notmatch 'emailRequest\.ReplyToRecipients\.Add' -and
 Assert-Source ($service -notmatch '(?i)taikun|webaffare') 'EMAIL_SERVICE_HAS_NO_CLIENT_HARDCODE'
 Assert-Source ($service -notmatch '(?i)password\s*=\s*"[^\"]+"') 'EMAIL_SERVICE_HAS_NO_SECRET_LITERAL'
 Assert-Source ($service -notmatch '(?i)System\.Net\.Mail|\bSmtpClient\b|\bMailMessage\b') 'ORDER_DIAGNOSTICS_NO_DIRECT_SMTP'
+Assert-Source ($order -match 'ValidateOrderEmailContext\(identity\.CompanyId, receiptAziendaId, recipientEmail' -and
+               $order -notmatch 'String\.IsNullOrWhiteSpace\(emailBrand\.SupportEmail\)') 'ORDER_LEGACY_EMAIL_NOT_DELIVERY_GATE'
+Assert-Source ($order -match 'If String\.IsNullOrWhiteSpace\(supportEmail\) Then Return String\.Empty' -and
+               $order -match 'BuildOptionalOrderSupportLink\(emailBrand\.SupportEmail\)') 'ORDER_BLANK_SUPPORT_OMITS_FALLBACK_MAILTO'
+Assert-Source ($order -match 'ORDER_EMAIL_PERSISTED_TENANT_MISMATCH' -and
+               $order -match 'ORDER_EMAIL_RECIPIENT_MISSING' -and $order -match 'ORDER_EMAIL_COMPANY_BRAND_MISSING' -and
+               $order -match 'ORDER_EMAIL_TEMPLATE_FAILURE' -and $order -match 'ORDER_EMAIL_TRANSPORT_FAILURE') 'ORDER_DIAGNOSTICS_DISTINGUISH_SCOPE_BUILD_TRANSPORT'
 
 New-Item -ItemType Directory -Path $tempRoot | Out-Null
 try {

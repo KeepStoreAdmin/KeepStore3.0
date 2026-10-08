@@ -88,7 +88,7 @@ Assert-Check ($legacyViolations.Count -eq 0) '31_ZERO_DIRECT_SMTP_APPLICATION_CA
 $callerText = @($order, $registration, $passwordReset, $modernContact, $legacyContact, $documents, $coupons, $master) -join "`n"
 Assert-Check ($callerText -notmatch '(?i)Password_smtp|User_smtp|Session\s*\(\s*["'']smtp["'']') '32_ZERO_LEGACY_SMTP_READS'
 Assert-Check ($templates -match 'non contiene password' -and $templates -notmatch '(?i)AddInfoItem\([^\r\n]+Password') '33_NO_USER_PASSWORD_IN_EMAIL'
-Assert-Check ($facade -match 'SafeToken' -and $order -match 'ORDER_EMAIL_BUILD_FAILURE type=' -and $modernContact -match 'CONTACT_EMAIL_FAILURE type=') '34_SANITIZED_TELEMETRY_ONLY'
+Assert-Check ($facade -match 'SafeToken' -and $order -match 'code=" & emailFailureCode & " type=' -and $modernContact -match 'CONTACT_EMAIL_FAILURE type=') '34_SANITIZED_TELEMETRY_ONLY'
 Assert-Check (([regex]::Matches($facade, '_transport\.Deliver')).Count -eq 1 -and $facade -notmatch '(?i)retry|Thread\.Sleep') '35_NO_AUTOMATIC_SEND_RETRY'
 Assert-Check ($order -match 'receiptAziendaId' -and $order -notmatch '(?i)Session\.Item\("AziendaId"\)\s*=\s*2') '36_ORDER_MULTISTOREFRONT_PROVENANCE'
 Assert-Check ($order -match 'If\(orderEmailSent, "completed", "failed"\)' -and $order -match 'Return deliveryResult IsNot Nothing AndAlso deliveryResult\.Status = EmailTransportOperationStatus\.Succeeded') '37_CHECKOUT_EMAIL_OUTCOME_ACCURATE'
@@ -145,5 +145,40 @@ Assert-Check ($runtimeHarness -match 'ADMIN_COPY_RESET_LINK_ONLY_IN_CUSTOMER_MES
               $runtimeHarness -match 'ADMIN_COPY_TENANT_ISOLATION_' -and
               $runtimeHarness -match 'ADMIN_COPY_SINGLE_SEND_SINGLE_PROFILE_') '50_AUTO_BCC_RUNTIME_REGRESSIONS_PRESENT'
 
-if ($checks -ne 50) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
+Assert-Check ($orderSender -notmatch 'String\.IsNullOrWhiteSpace\(emailBrand\.SupportEmail\)' -and
+              $orderSender -match 'ValidateOrderEmailContext\(identity\.CompanyId, receiptAziendaId, recipientEmail' -and
+              $orderSender -match 'If Not drTestata\.Read\(\) Then') '51_ORDER_LEGACY_EMAIL_OPTIONAL_SCOPE_REQUIRED'
+Assert-Check ($orderSender -match 'BuildOptionalOrderSupportLink\(emailBrand\.SupportEmail\)' -and
+              $order -match 'If String\.IsNullOrWhiteSpace\(supportEmail\) Then Return String\.Empty') '52_ORDER_OPTIONAL_LEGACY_MAILTO'
+foreach ($code in @('IDENTITY_INVALID', 'ACCOUNT_SCOPE_INVALID', 'DOCUMENT_SCOPE_MISSING', 'PERSISTED_TENANT_MISMATCH', 'RECIPIENT_MISSING', 'COMPANY_BRAND_MISSING', 'BUILD_FAILURE', 'TEMPLATE_FAILURE', 'TRANSPORT_FAILURE')) {
+    Assert-Check ($order -match ('ORDER_EMAIL_' + $code)) ('53_ORDER_DIAGNOSTIC_' + $code)
+}
+foreach ($entry in @(@('MODERN', $modernContact), @('LEGACY', $legacyContact))) {
+    Assert-Check ($entry[1] -notmatch '\bToRecipients\.Add|If aziendaEmail = "" Then' -and
+                  $entry[1] -match 'TenantEmailMessageClassifications\.ContactRequest' -and
+                  $entry[1] -match 'ReplyToRecipients\.Add') ('54_CONTACT_PROFILE_PRIMARY_' + $entry[0])
+}
+Assert-Check ($facade -match 'classification = TenantEmailMessageClassifications\.ContactRequest AndAlso message\.To\.Count = 0' -and
+              $facade -match '\.PrimaryRecipientFromProfileReplyTo = primaryRecipientFromProfileReplyTo' -and
+              $contracts -match 'Public Property PrimaryRecipientFromProfileReplyTo As Boolean') '55_CONTACT_PRIMARY_FLAG_INTERNAL_ONLY'
+Assert-Check ((Has-OrderedText $transport '"PROFILE_REPLY_TO_REQUIRED"' '_credentialStore.Read') -and
+              $transport -match 'ApplyPrimaryRecipient\(message, profile\.ReplyToAddress\)') '56_CONTACT_MISSING_REPLY_ZERO_SMTP'
+Assert-Check ($registration -notmatch 'If[^\r\n]*(?:AziendaEmail|SupportEmail)' -and
+              $registration -match 'brand\.SupportEmail = SessionText\("AziendaEmail"\)' -and
+              $runtimeHarness -match 'CUTOVER_EMPTY_LEGACY_BRAND_RENDER_') '57_ACCOUNT_LEGACY_EMAIL_OPTIONAL_BRANDING'
+$baselineReset = (@(& git -C $repo show 'e71e1420aabafab45612180f160cb467f74b6bc1:App_Code/PasswordResetTokenService.vb') -join "`n").TrimEnd("`r", "`n")
+if ($LASTEXITCODE -ne 0) { throw 'RESET_CONTRACT_BASE_UNAVAILABLE' }
+$expectedReset = $baselineReset.Replace('companyInfo.AziendaId <= 0 OrElse aziendaEmail = "" Then', 'companyInfo.AziendaId <= 0 Then')
+Assert-Check ($passwordReset.Replace("`r`n", "`n").TrimEnd("`r", "`n") -ceq $expectedReset) '58_RESET_ONLY_LEGACY_EMAIL_GATE_CHANGED_ENTIRE_TOKEN_FLOW_IDENTICAL'
+Assert-Check ($runtimeHarness -match 'CUTOVER_CONTACT_FAIL_CLOSED_ZERO_SMTP_' -and
+              $runtimeHarness -match 'CUTOVER_RESET_TOKEN_ONLY_TO_CUSTOMER' -and
+              $runtimeHarness -match 'CUTOVER_CONTACT_PRIMARY_DEDUP_CASE_INSENSITIVE') '59_CUTOVER_FAKE_MATRIX_COVERAGE'
+$baselineOrder = (@(& git -C $repo show 'e71e1420aabafab45612180f160cb467f74b6bc1:ordine.aspx.vb') -join "`n")
+if ($LASTEXITCODE -ne 0) { throw 'ORDER_CONTRACT_BASE_UNAVAILABLE' }
+$currentOrder = $order.Replace("`r`n", "`n")
+$senderBoundary = '    Public Function SendEmail('
+Assert-Check ($currentOrder.Substring(0, $currentOrder.IndexOf($senderBoundary, [StringComparison]::Ordinal)) -ceq
+              $baselineOrder.Substring(0, $baselineOrder.IndexOf($senderBoundary, [StringComparison]::Ordinal))) '60_ORDER_CHECKOUT_POST_COMMIT_COUPON_CALLERS_ENTIRELY_UNCHANGED'
+
+if ($checks -ne 69) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
 Write-Output ('TENANT_EMAIL_ALL_CALLERS_MIGRATION_PASS checks=' + $checks)

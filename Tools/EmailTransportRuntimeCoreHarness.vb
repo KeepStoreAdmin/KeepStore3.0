@@ -68,11 +68,13 @@ Public NotInheritable Class HarnessCredentialStore
 
     Public Property State As EmailCredentialState = EmailCredentialState.Found
     Public Property Secret As String = "synthetic-secret"
+    Public Property ReadCount As Integer
 
     Public Function Read(ByVal credentialReference As String,
                          ByVal databaseIdentity As String,
                          ByVal aziendaId As Integer,
                          ByVal purpose As String) As EmailCredentialReadResult Implements IEmailCredentialStore.Read
+        ReadCount += 1
         Dim result As New EmailCredentialReadResult() With {.State = State, .Code = "HARNESS_CREDENTIAL"}
         If State = EmailCredentialState.Found Then result.SetSecret(Encoding.UTF8.GetBytes(Secret))
         Return result
@@ -262,14 +264,23 @@ Public Module EmailTransportRuntimeCoreHarness
     Private _passed As Integer
 
     Public Sub Main()
-        TestResolverMatrix()
-        TestCredentialMatrixAndDpapi()
-        TestTransportMatrix()
-        TestLegacyEmptyTableGate()
-        TestDeliveryFacade()
-        TestAdministrativeCopyPolicy()
-        Console.WriteLine("EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=" & _passed.ToString())
-        Console.WriteLine("PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL")
+        Try
+            TestResolverMatrix()
+            TestCredentialMatrixAndDpapi()
+            TestTransportMatrix()
+            TestLegacyEmptyTableGate()
+            TestDeliveryFacade()
+            TestAdministrativeCopyPolicy()
+            TestWebCutoverMatrix()
+            TestContactProfileRecipient()
+            TestContactFailClosed()
+            Console.WriteLine("EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=" & _passed.ToString())
+            Console.WriteLine("PROVISIONING_MODEL=SIMPLIFIED_ADMIN_TOOL")
+        Catch ex As Exception
+            Dim code = If(System.Text.RegularExpressions.Regex.IsMatch(ex.Message, "^[A-Z0-9_]{3,160}$"), ex.Message, "HARNESS_UNEXPECTED_EXCEPTION")
+            Console.WriteLine("HARNESS_FAILURE code=" & code & " type=" & ex.GetType().Name)
+            Environment.ExitCode = 1
+        End Try
     End Sub
 
     Private Sub TestResolverMatrix()
@@ -587,6 +598,141 @@ Public Module EmailTransportRuntimeCoreHarness
                    "ADMIN_COPY_TENANT_ISOLATION_" & connection)
         Next
         Console.WriteLine("ADMINISTRATIVE_COPY_POLICY_PASS")
+    End Sub
+
+    Private Sub TestWebCutoverMatrix()
+        Dim brand As New KeepStoreEmailBrandInfo() With {.CompanyName = "Synthetic company", .SupportEmail = String.Empty, .SiteUrl = "https://store.example.invalid"}
+        Dim account As New KeepStoreAccountEmailProfile() With {.DisplayName = "Synthetic customer", .Email = "customer-a@example.invalid"}
+        For Each classification As String In New String() {TenantEmailMessageClassifications.OrderConfirmation,
+                                                           TenantEmailMessageClassifications.AccountRegistration,
+                                                           TenantEmailMessageClassifications.AccountProfileUpdated,
+                                                           TenantEmailMessageClassifications.PasswordReset}
+            Dim rendered As KeepStoreEmailRenderResult
+            Select Case classification
+                Case TenantEmailMessageClassifications.AccountRegistration
+                    rendered = KeepStoreAccountEmailMessages.RenderRegistration(brand, account)
+                Case TenantEmailMessageClassifications.AccountProfileUpdated
+                    rendered = KeepStoreAccountEmailMessages.RenderProfileUpdated(brand, account)
+                Case TenantEmailMessageClassifications.PasswordReset
+                    rendered = KeepStorePasswordEmailMessages.RenderPasswordReset(brand, account.DisplayName,
+                                "https://store.example.invalid/resetpassword.aspx?token=synthetic-reset-only", 30)
+                Case Else
+                    Assert(OrderCallerContractFixture.ValidateOrderEmailContext(1, 1, account.Email, brand.CompanyName) = String.Empty,
+                           "CUTOVER_ORDER_CONTEXT_NO_LEGACY_EMAIL")
+                    Assert(OrderCallerContractFixture.BuildOptionalOrderSupportLink(brand.SupportEmail) = String.Empty,
+                           "CUTOVER_ORDER_LEGACY_FOOTER_NO_EMPTY_MAILTO")
+                    Dim model As New KeepStoreEmailMessageModel() With {.Brand = brand, .Title = "Synthetic order"}
+                    model.Recipient.Email = account.Email
+                    rendered = KeepStoreEmailRenderer.Render(model)
+            End Select
+            Assert(rendered IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(rendered.HtmlBody) AndAlso
+                   Not rendered.HtmlBody.Contains("mailto:"), "CUTOVER_EMPTY_LEGACY_BRAND_RENDER_" & classification)
+            Dim request = AdministrativeRequest(1, classification)
+            request.HtmlBody = rendered.HtmlBody
+            request.PlainTextBody = rendered.PlainTextBody
+            Dim sent = DeliverAdministrativeFixture(request, "db-a", "admin-a@example.invalid", "CUTOVER_" & classification)
+            Assert(sent.ToAddresses.Count = 1 AndAlso sent.ToAddresses(0) = account.Email AndAlso
+                   sent.ReplyToAddresses.Count = 1 AndAlso sent.ReplyToAddresses(0) = "admin-a@example.invalid" AndAlso
+                   sent.BccAddresses.Count = If(classification = TenantEmailMessageClassifications.PasswordReset, 0, 1),
+                   "CUTOVER_CUSTOMER_ROUTING_" & classification)
+            If classification = TenantEmailMessageClassifications.PasswordReset Then
+                Assert(sent.HtmlBody.Contains("resetpassword.aspx?token=synthetic-reset-only") AndAlso
+                       sent.PlainTextBody.Contains("synthetic-reset-only") AndAlso sent.CcAddresses.Count = 0,
+                       "CUTOVER_RESET_TOKEN_ONLY_TO_CUSTOMER")
+            End If
+        Next
+        Assert(OrderCallerContractFixture.ValidateOrderEmailContext(1, 2, account.Email, brand.CompanyName) = "ORDER_EMAIL_PERSISTED_TENANT_MISMATCH",
+               "CUTOVER_ORDER_TENANT_MISMATCH")
+        Assert(OrderCallerContractFixture.ValidateOrderEmailContext(1, 1, String.Empty, brand.CompanyName) = "ORDER_EMAIL_RECIPIENT_MISSING",
+               "CUTOVER_ORDER_MISSING_RECIPIENT")
+        Assert(OrderCallerContractFixture.ValidateOrderEmailContext(1, 1, account.Email, String.Empty) = "ORDER_EMAIL_COMPANY_BRAND_MISSING",
+               "CUTOVER_ORDER_MISSING_COMPANY")
+        Assert(OrderCallerContractFixture.BuildOptionalOrderSupportLink("support@example.invalid").Contains("mailto:support@example.invalid"),
+               "CUTOVER_ORDER_OPTIONAL_SUPPORT_PRESENT")
+    End Sub
+
+    Private Sub TestContactProfileRecipient()
+        Dim brand As New KeepStoreEmailBrandInfo() With {.CompanyName = "Synthetic company", .SupportEmail = String.Empty}
+        Dim rendered = KeepStoreContactEmailMessages.RenderContactRequest(brand, "Synthetic customer", "visitor@example.invalid", "Synthetic subject", "Synthetic message")
+        For Each caller As String In New String() {"MODERN", "LEGACY"}
+            For Each connection As String In New String() {"db-a", "db-b"}
+                For Each aziendaId As Integer In New Integer() {1, 2}
+                    Dim request = AdministrativeRequest(aziendaId, TenantEmailMessageClassifications.ContactRequest)
+                    request.ToRecipients.Clear()
+                    request.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "visitor@example.invalid", .DisplayName = "Synthetic customer"})
+                    request.HtmlBody = rendered.HtmlBody
+                    request.PlainTextBody = rendered.PlainTextBody
+                    Dim target = If(aziendaId = 1, "admin-a@example.invalid", "admin-b@example.invalid")
+                    Dim sent = DeliverAdministrativeFixture(request, connection, target, "CONTACT_" & caller & "_" & connection & "_" & aziendaId)
+                    Assert(sent.ToAddresses.Count = 1 AndAlso sent.ToAddresses(0) = target AndAlso sent.CcAddresses.Count = 0 AndAlso
+                           sent.BccAddresses.Count = 0 AndAlso sent.ReplyToAddresses.Count = 1 AndAlso sent.ReplyToAddresses(0) = "visitor@example.invalid",
+                           "CUTOVER_CONTACT_PROFILE_TO_CUSTOMER_REPLY_" & caller & "_" & connection & "_" & aziendaId)
+                Next
+            Next
+        Next
+        Dim dedup = AdministrativeRequest(1, TenantEmailMessageClassifications.ContactRequest)
+        dedup.ToRecipients.Clear()
+        dedup.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "visitor@example.invalid", .DisplayName = "Synthetic customer"})
+        dedup.CcRecipients.Add(New TenantEmailRecipient() With {.Address = "ADMIN-A@example.invalid", .DisplayName = "Synthetic"})
+        dedup.BccRecipients.Add(New TenantEmailRecipient() With {.Address = "Admin-A@example.invalid", .DisplayName = "Synthetic"})
+        Dim dedupSent = DeliverAdministrativeFixture(dedup, "db-a", "admin-a@example.invalid", "CONTACT_DEDUP")
+        Assert(dedupSent.ToAddresses.Count = 1 AndAlso dedupSent.CcAddresses.Count = 0 AndAlso dedupSent.BccAddresses.Count = 0,
+               "CUTOVER_CONTACT_PRIMARY_DEDUP_CASE_INSENSITIVE")
+
+        Dim explicitRequest = AdministrativeRequest(1, TenantEmailMessageClassifications.ContactRequest)
+        Dim explicitSent = DeliverAdministrativeFixture(explicitRequest, "db-a", "admin-a@example.invalid", "CONTACT_EXPLICIT_TO")
+        Assert(explicitSent.ToAddresses.Count = 1 AndAlso explicitSent.ToAddresses(0) = "customer-a@example.invalid",
+               "CUTOVER_CONTACT_EXPLICIT_TO_PRESERVED")
+        For Each classification As String In New String() {TenantEmailMessageClassifications.OrderConfirmation, TenantEmailMessageClassifications.PasswordReset}
+            Dim capture As New HarnessCaptureTransport()
+            Dim invalid = AdministrativeRequest(1, classification)
+            invalid.ToRecipients.Clear()
+            Assert(New TenantEmailDeliveryService(capture, "db-a").Deliver(invalid).Code = "EMAIL_TO_INVALID" AndAlso capture.DeliverCount = 0,
+                   "CUTOVER_NO_GENERIC_EMPTY_TO_" & classification)
+        Next
+        Dim invalidContact = AdministrativeRequest(1, TenantEmailMessageClassifications.ContactRequest)
+        invalidContact.ToRecipients(0).Address = "invalid@"
+        Dim invalidCapture As New HarnessCaptureTransport()
+        Assert(New TenantEmailDeliveryService(invalidCapture, "db-a").Deliver(invalidContact).Code = "EMAIL_TO_INVALID" AndAlso invalidCapture.DeliverCount = 0,
+               "CUTOVER_CONTACT_INVALID_EXPLICIT_TO_NOT_REPLACED")
+    End Sub
+
+    Private Sub TestContactFailClosed()
+        For Each failure As String In New String() {"REPLY_MISSING", "PROFILE_MISSING", "DISABLED", "NOT_VERIFIED", "CREDENTIAL_MISSING"}
+            Dim source As New HarnessProfileSource()
+            source.ResultFactory = Function(c As String, a As Integer, p As String) As EmailTransportProfileSourceResult
+                                       If failure = "PROFILE_MISSING" Then Return SourceResult(True, False)
+                                       Dim record = ValidRecord(a, p, failure <> "DISABLED", c, If(failure = "NOT_VERIFIED", "NOT_VERIFIED", "VERIFIED"))
+                                       record.ReplyToAddress = If(failure = "REPLY_MISSING", String.Empty, "admin-a@example.invalid")
+                                       Return SourceResult(True, False, record)
+                                   End Function
+            Dim credentials As New HarnessCredentialStore() With {.State = If(failure = "CREDENTIAL_MISSING", EmailCredentialState.Missing, EmailCredentialState.Found)}
+            Dim factory As New HarnessSmtpSessionFactory()
+            Dim telemetry As New HarnessTelemetry()
+            Dim transport As New MailKitEmailTransport(New TenantEmailTransportProfileResolver(source, New HarnessIdentityProvider()), credentials, factory, telemetry)
+            Dim request = AdministrativeRequest(1, TenantEmailMessageClassifications.ContactRequest)
+            request.ToRecipients.Clear()
+            request.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = "visitor@example.invalid", .DisplayName = "Synthetic customer"})
+            Dim result = New TenantEmailDeliveryService(transport, "db-a").Deliver(request)
+            Assert(result.Status <> EmailTransportOperationStatus.Succeeded AndAlso factory.Sessions.Count = 0 AndAlso source.LoadCount = 1,
+                   "CUTOVER_CONTACT_FAIL_CLOSED_ZERO_SMTP_" & failure)
+            If failure = "REPLY_MISSING" Then
+                Assert(result.Code = "PROFILE_REPLY_TO_REQUIRED" AndAlso result.Phase = "profile-validation" AndAlso credentials.ReadCount = 0,
+                       "CUTOVER_CONTACT_REPLY_REQUIRED_BEFORE_CREDENTIAL_OR_CONNECT")
+            End If
+            Assert(Not String.Join("|", telemetry.Lines.ToArray()).Contains("@example.invalid"), "CUTOVER_FAILURE_NO_ADDRESS_LOG_" & failure)
+        Next
+        Dim guardedResolver As New HarnessReadyResolver() With {.Profile = Profile(EmailSecurityMode.StartTls, EmailAuthenticationMode.Password)}
+        Dim guardedFactory As New HarnessSmtpSessionFactory()
+        Dim guardedTransport As New MailKitEmailTransport(guardedResolver, New HarnessCredentialStore(), guardedFactory, New HarnessTelemetry())
+        Using message As New MimeMessage()
+            Dim invalid = guardedTransport.Deliver(New EmailTransportRequest() With {
+                .ConnectionString = "db-a", .AziendaId = 1, .Purpose = "TRANSACTIONAL", .CorrelationId = "synthetic-internal-flag",
+                .Classification = TenantEmailMessageClassifications.OrderConfirmation, .PrimaryRecipientFromProfileReplyTo = True, .Message = message})
+            Assert(invalid.Code = "EMAIL_REQUEST_INVALID" AndAlso guardedResolver.NormalResolveCount = 0 AndAlso guardedFactory.Sessions.Count = 0,
+                   "CUTOVER_PRIMARY_INTERNAL_FLAG_CANNOT_ROUTE_OTHER_CLASSIFICATION")
+        End Using
+        Console.WriteLine("WEB_EMAIL_CUTOVER_MATRIX_PASS")
     End Sub
 
     Private Function AdministrativeRequest(ByVal aziendaId As Integer, ByVal classification As String) As TenantEmailDeliveryRequest

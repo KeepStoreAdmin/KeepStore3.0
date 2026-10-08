@@ -6,7 +6,7 @@
 
 Questo documento definisce il contratto che Enzo dovra usare per realizzare il pannello di configurazione e-mail di KeepStore. Non abilita ancora il runtime, non rende operativo OAuth2 e non autorizza alcun deployment. La tabella `aziende` resta invariata; i campi SMTP legacy restano temporaneamente disponibili durante la transizione.
 
-La configurazione appartiene all'azienda/storefront, non all'utente ecommerce che effettua un ordine. Ogni database KeepStore contiene una sola tabella `aziende_email_transport`, condivisa dalle aziende presenti in quel database. Ogni riga appartiene a una sola azienda e a un solo scopo. Gli invii applicativi correnti (ordine, registrazione/profilo, reset password e contatti) useranno in futuro esclusivamente `TRANSACTIONAL`; `MARKETING` e riservato a una capacita futura e distinta.
+La configurazione appartiene all'azienda/storefront, non all'utente ecommerce che effettua un ordine. Ogni database KeepStore contiene una sola tabella `aziende_email_transport`, condivisa dalle aziende presenti in quel database. Ogni riga appartiene a una sola azienda e a un solo scopo. Il runtime web corrente (ordine, registrazione/profilo, reset password e contatti) usa esclusivamente `TRANSACTIONAL`; `MARKETING` e riservato a una capacita futura e distinta. Il cutover web resta candidato a review/smoke server, non una certificazione di rollout o del consumer esterno `inviadocumenti`.
 
 ## Schema logico e relazione
 
@@ -41,7 +41,7 @@ I valori controllati sono `varchar` con confronto case-sensitive, non `ENUM`. Qu
 | `CredentialReference` | `varchar(512)` ASCII binario | Puntatore opaco restituito dal secret service; mai segreto |
 | `FromAddress` | `varchar(254)` UTF-8 binario | Mittente header valido e autorizzato |
 | `FromDisplayName` | `varchar(255)` UTF-8 Unicode | Nome visualizzato, senza markup/control character |
-| `ReplyToAddress` | `varchar(254)` UTF-8 binario, null | Reply-To opzionale |
+| `ReplyToAddress` | `varchar(254)` UTF-8 binario, null | Reply-To opzionale per email cliente; casella necessaria per consegnare i form contatto |
 | `EnvelopeFromAddress` | `varchar(254)` UTF-8 binario, null | Envelope sender opzionale e autorizzato |
 | `TimeoutSeconds` | `smallint unsigned` | 5-300, default 30 |
 | `Enabled` | `tinyint(1)` | default 0; attivabile solo dopo verifica riuscita |
@@ -51,15 +51,17 @@ I valori controllati sono `varchar` con confronto case-sensitive, non `ENUM`. Qu
 | `CreatedAtUtc` | `datetime(6)` | data creazione UTC |
 | `UpdatedAtUtc` | `datetime(6)` | aggiornamento automatico UTC |
 
-## Reply-To e copia amministrativa - contratto prevalente
+## Reply-To, copia amministrativa e casella contatti - contratto prevalente
 
-`ReplyToAddress` del profilo `TRANSACTIONAL` mantiene il ruolo di Reply-To opzionale. L'indirizzo configurato riceve anche una copia invisibile BCC di registrazioni (`ACCOUNT_REGISTRATION`), aggiornamenti profilo (`ACCOUNT_PROFILE_UPDATED`) e conferme ordine (`ORDER_CONFIRMATION`), nello stesso messaggio inviato al cliente. Il pannello dovra spiegare esplicitamente questo doppio ruolo, senza presentarlo come secondo invio o destinatario globale.
+`ReplyToAddress` del profilo `TRANSACTIONAL` ha attualmente tre ruoli: Reply-To delle email cliente; BCC amministrativa per registrazioni (`ACCOUNT_REGISTRATION`), aggiornamenti profilo (`ACCOUNT_PROFILE_UPDATED`) e conferme ordine/preventivo/coupon (`ORDER_CONFIRMATION`); TO operativo dei form Contattaci moderno e legacy. Il pannello dovra spiegare esplicitamente questi tre ruoli, senza presentarli come secondo invio o destinatario globale.
 
 La policy centrale usa soltanto il profilo della stessa azienda e identita database gia risolto dal trasporto; non legge l'e-mail legacy di `aziende` o della Session. Il Reply-To ordine proviene dal profilo dell'azienda persistita nel documento. Se l'indirizzo compare gia in To/Cc/Bcc non viene duplicato (confronto case-insensitive); se e vuoto non viene aggiunta una copia e l'invio cliente non viene bloccato per questo motivo.
 
 `PASSWORD_RESET` non viene copiato per sicurezza: link/token devono raggiungere soltanto il cliente. `CONTACT_REQUEST`, `DOCUMENT_DELIVERY`, `ADMINISTRATIVE_NOTIFICATION` e altre classificazioni non attivano auto-BCC. Restano valide le BCC esplicite dei chiamanti; il Reply-To esplicito validato del contatto prevale sul Reply-To del profilo senza abilitare una copia amministrativa.
 
-Una futura separazione degli indirizzi Reply-To e copia amministrativa richiedera un task DB/config separato con campo dedicato. Nessuna nuova colonna, migration, configurazione operativa o attivazione e introdotta qui; bozza del pannello e gate di rollout restano invariati.
+Per `CONTACT_REQUEST` i caller web non passano TO: il facade abilita solo per questa classificazione il flag interno `PrimaryRecipientFromProfileReplyTo` e il trasporto usa il profilo `TRANSACTIONAL` gia risolto. Reply-To resta quello validato del cliente del form; From ed Envelope-From restano quelli del profilo; nessuna auto-BCC. Destinatario derivato deduplicato case-insensitive rispetto a To/Cc/Bcc, un solo Send. Se il profilo non ha Reply-To, fallimento `PROFILE_REPLY_TO_REQUIRED` prima di credenziale/SMTP, mai fallback a `aziende.email`. Ordine e reset non richiedono piu la vecchia email azienda per costruire/inviare il messaggio; l'eventuale contenuto pubblico/branding resta facoltativo.
+
+Una futura separazione dei tre indirizzi Reply-To, copia amministrativa e casella contatti richiedera schema/config dedicati in un task separato. Nessuna nuova colonna, migration, configurazione operativa o attivazione e introdotta qui; bozza del pannello e gate di rollout restano invariati. Il sender esterno che consuma `inviadocumenti` e **NON CERTIFICATO DAL RUNTIME WEB**; `EXTERNAL-DOCUMENT-EMAIL-TRANSPORT-AUDIT-1A` e **NON AVVIATO**.
 
 ## Contratto del pannello
 
@@ -76,7 +78,7 @@ Una futura separazione degli indirizzi Reply-To e copia amministrativa richieder
 | Credenziale | stato derivato da `CredentialReference` | indicatore + pulsanti | si per verificare/attivare | mostra solo configurata/non configurata | sostituisci o revoca; non rileggere mai il valore |
 | Mittente | `FromAddress` | input e-mail | si | indirizzo valido massimo 254 | modificabile; invalida la verifica precedente |
 | Nome mittente | `FromDisplayName` | input Unicode | si | 1-255, niente markup/CR/LF/control character | modificabile; invalida la verifica precedente |
-| Reply-To | `ReplyToAddress` | input e-mail | no | null oppure indirizzo valido massimo 254 | stringa vuota normalizzata a null |
+| Reply-To / casella contatti | `ReplyToAddress` | input e-mail | si per ricevere i contatti; opzionale per email cliente | null oppure indirizzo valido massimo 254; spiegare anche BCC amministrativa | stringa vuota normalizzata a null; i contatti senza casella falliscono chiusi |
 | Envelope sender | `EnvelopeFromAddress` | input e-mail | no | null oppure indirizzo autorizzato massimo 254 | stringa vuota normalizzata a null |
 | Timeout | `TimeoutSeconds` | input numerico | si | intero 5-300 | default 30 |
 | Stato attivo | `Enabled` | switch | si | booleano; attivazione soggetta ai gate | default disattivato; non abilitabile prima della verifica |

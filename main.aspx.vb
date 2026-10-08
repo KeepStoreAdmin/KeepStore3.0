@@ -23,16 +23,10 @@ Partial Class main
         Try
             Me.Label_esito.Visible = True
 
-            Dim aziendaEmail As String = SessionText("AziendaEmail")
-            Dim aziendaNome As String = SessionText("AziendaNome")
             Dim userName As String = ControlText(Me.TextBox_nome, 120)
             Dim userEmail As String = ControlText(Me.TextBox_email, 180)
             Dim reason As String = HeaderText(Me.DropDownList_subject.SelectedValue, 150)
             Dim messageText As String = ControlText(Me.TextBox_testo, 4000)
-
-            If aziendaEmail = "" Then
-                Throw New InvalidOperationException("Email azienda non configurata.")
-            End If
 
             Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
             If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then
@@ -48,7 +42,6 @@ Partial Class main
                 .HtmlBody = rendered.HtmlBody,
                 .PlainTextBody = rendered.PlainTextBody
             }
-            deliveryRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = aziendaEmail, .DisplayName = FirstNonEmpty(aziendaNome, "KeepStore")})
             If userEmail <> "" Then
                 deliveryRequest.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = userEmail, .DisplayName = userName})
             End If

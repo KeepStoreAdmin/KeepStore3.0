@@ -205,7 +205,9 @@ Public NotInheritable Class MailKitEmailTransport
 
     Public Function Deliver(ByVal request As EmailTransportRequest) As EmailDeliveryResult Implements IEmailTransport.Deliver
         Dim correlationId As String = NormalizeCorrelationId(If(request Is Nothing, Nothing, request.CorrelationId))
-        If request Is Nothing OrElse request.Message Is Nothing Then
+        If request Is Nothing OrElse request.Message Is Nothing OrElse
+           (request.PrimaryRecipientFromProfileReplyTo AndAlso
+            Not String.Equals(request.Classification, TenantEmailMessageClassifications.ContactRequest, StringComparison.Ordinal)) Then
             Dim invalid As EmailTransportExecutionOutcome = FailureOutcome(TenantEmailTransportProfileState.TechnicalError,
                                                                            EmailTransportFailureKind.InvalidRequest,
                                                                            "request-validation",
@@ -220,7 +222,8 @@ Public NotInheritable Class MailKitEmailTransport
                                                                         request.Purpose,
                                                                         correlationId,
                                                                         request.Message,
-                                                                        request.AdministrativeCopyFromProfileReplyTo)
+                                                                        request.AdministrativeCopyFromProfileReplyTo,
+                                                                        request.PrimaryRecipientFromProfileReplyTo)
         Record(outcome, "delivery")
         Return ToDeliveryResult(outcome)
     End Function
@@ -243,21 +246,23 @@ Public NotInheritable Class MailKitEmailTransport
                                      ByVal purpose As String,
                                      ByVal correlationId As String,
                                      ByVal message As MimeMessage,
-                                     ByVal administrativeCopyFromProfileReplyTo As Boolean) As EmailTransportExecutionOutcome
-        Return ExecuteResolved(_resolver.Resolve(connectionString, aziendaId, purpose), correlationId, message, administrativeCopyFromProfileReplyTo)
+                                     ByVal administrativeCopyFromProfileReplyTo As Boolean,
+                                     ByVal primaryRecipientFromProfileReplyTo As Boolean) As EmailTransportExecutionOutcome
+        Return ExecuteResolved(_resolver.Resolve(connectionString, aziendaId, purpose), correlationId, message, administrativeCopyFromProfileReplyTo, primaryRecipientFromProfileReplyTo)
     End Function
 
     Private Function ExecuteVerification(ByVal connectionString As String,
                                          ByVal aziendaId As Integer,
                                          ByVal purpose As String,
                                          ByVal correlationId As String) As EmailTransportExecutionOutcome
-        Return ExecuteResolved(_resolver.ResolveForVerification(connectionString, aziendaId, purpose), correlationId, Nothing, False)
+        Return ExecuteResolved(_resolver.ResolveForVerification(connectionString, aziendaId, purpose), correlationId, Nothing, False, False)
     End Function
 
     Private Function ExecuteResolved(ByVal resolution As TenantEmailTransportProfileResolution,
                                      ByVal correlationId As String,
                                      ByVal message As MimeMessage,
-                                     ByVal administrativeCopyFromProfileReplyTo As Boolean) As EmailTransportExecutionOutcome
+                                     ByVal administrativeCopyFromProfileReplyTo As Boolean,
+                                     ByVal primaryRecipientFromProfileReplyTo As Boolean) As EmailTransportExecutionOutcome
         If resolution Is Nothing OrElse resolution.State <> TenantEmailTransportProfileState.Ready OrElse resolution.Profile Is Nothing Then
             Dim stateValue As TenantEmailTransportProfileState = If(resolution Is Nothing, TenantEmailTransportProfileState.TechnicalError, resolution.State)
             Dim codeValue As String = If(resolution Is Nothing, "PROFILE_RESOLUTION_NULL", resolution.Code)
@@ -268,6 +273,17 @@ Public NotInheritable Class MailKitEmailTransport
         End If
 
         Dim profile As TenantEmailTransportProfile = resolution.Profile
+        If primaryRecipientFromProfileReplyTo Then
+            If String.IsNullOrWhiteSpace(profile.ReplyToAddress) Then
+                Return FailureOutcome(TenantEmailTransportProfileState.NotOperational,
+                                      EmailTransportFailureKind.NotOperational,
+                                      "profile-validation",
+                                      "PROFILE_REPLY_TO_REQUIRED",
+                                      correlationId,
+                                      profile)
+            End If
+            ApplyPrimaryRecipient(message, profile.ReplyToAddress)
+        End If
         If profile.AuthenticationMode = EmailAuthenticationMode.OAuth2 Then
             Return FailureOutcome(TenantEmailTransportProfileState.NotOperational,
                                   EmailTransportFailureKind.NotOperational,
@@ -362,6 +378,23 @@ Public NotInheritable Class MailKitEmailTransport
             End Try
         End Using
     End Function
+
+    Private Shared Sub ApplyPrimaryRecipient(ByVal message As MimeMessage, ByVal address As String)
+        If Not ContainsMailbox(message.To, address) Then
+            message.To.Add(New MailboxAddress(String.Empty, address))
+        End If
+        RemoveMailbox(message.Cc, address)
+        RemoveMailbox(message.Bcc, address)
+    End Sub
+
+    Private Shared Sub RemoveMailbox(ByVal recipients As InternetAddressList, ByVal address As String)
+        For index As Integer = recipients.Count - 1 To 0 Step -1
+            Dim mailbox As MailboxAddress = TryCast(recipients(index), MailboxAddress)
+            If mailbox IsNot Nothing AndAlso String.Equals(mailbox.Address, address, StringComparison.OrdinalIgnoreCase) Then
+                recipients.RemoveAt(index)
+            End If
+        Next
+    End Sub
 
     Private Shared Sub ApplyAuthoritativeSender(ByVal message As MimeMessage,
                                                 ByVal profile As TenantEmailTransportProfile)

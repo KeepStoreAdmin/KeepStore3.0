@@ -278,6 +278,7 @@ Public NotInheritable Class EmailTransportRequest
     Public Property Purpose As String
     Public Property Classification As String
     Public Property AdministrativeCopyFromProfileReplyTo As Boolean
+    Public Property PrimaryRecipientFromProfileReplyTo As Boolean
     Public Property CorrelationId As String
     Public Property Message As MimeMessage
 End Class

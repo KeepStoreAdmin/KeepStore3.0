@@ -2,7 +2,26 @@
 
 Documento interno per audit e standardizzazione delle email transazionali Taikun/KeepStore.
 
-Ultimo aggiornamento: 2026-10-07. La mappa legacy conserva la fotografia dell'audit iniziale; per destinatari e trasporto prevale il contratto seguente.
+Ultimo aggiornamento: 2026-10-08. La mappa legacy conserva la fotografia dell'audit iniziale; per destinatari e trasporto prevale il contratto seguente.
+
+## Cutover web - TENANT-EMAIL-WEB-RUNTIME-CUTOVER-1A
+
+`aziende_email_transport` e la source of truth operativa del runtime web per provider/SMTP, credenziale, From, Envelope-From, Reply-To, copia amministrativa e casella destinataria dei contatti. `aziende.email` / `Session("AziendaEmail")` possono restare soltanto informazioni pubbliche o branding facoltativo: non determinano routing e non sono un gate di consegna. Il trasporto risolve un solo profilo `TRANSACTIONAL` della stessa identita database/azienda, senza fallback SMTP legacy.
+
+| Classificazione | TO | Reply-To | BCC automatica |
+| --- | --- | --- | --- |
+| `ORDER_CONFIRMATION` (ordine/preventivo/coupon) | Cliente del documento persistito | Profilo | `ReplyToAddress` del profilo, se valorizzato e non gia destinatario |
+| `ACCOUNT_REGISTRATION` / `ACCOUNT_PROFILE_UPDATED` | Cliente/account | Profilo | Stessa policy ordine |
+| `PASSWORD_RESET` | Solo account deterministico | Profilo | Nessuna; link/token solo al cliente |
+| `CONTACT_REQUEST` moderno/legacy senza TO esplicito | `ReplyToAddress` del profilo | Cliente del form | Nessuna |
+
+Solo `CONTACT_REQUEST` senza TO esplicito abilita nel facade il flag interno `PrimaryRecipientFromProfileReplyTo`; non e un parametro del browser. Il trasporto aggiunge il destinatario dallo stesso profilo gia risolto e lo deduplica case-insensitive rispetto a Cc/Bcc, preservando il Reply-To del cliente. Un TO esplicito invalido viene rifiutato, non sostituito; altre classificazioni senza TO sono invalide. Se il contatto richiede la casella del profilo e Reply-To manca, `PROFILE_REPLY_TO_REQUIRED` fallisce prima della lettura credenziale e di ogni sessione/connessione SMTP. Profilo mancante, disabled, non verificato o credenziale mancante restano fail-closed. Un solo messaggio/Send, nessun retry.
+
+Ordine mantiene identity/account verificati, documento scoped, tenant persistito coerente, destinatario cliente e CompanyName obbligatori, ma non SupportEmail. Branding vuoto omette l'informazione e il `mailto:` legacy; i codici sanitizzati distinguono identity/account, documento mancante, tenant mismatch, recipient, brand, build/template e trasporto. Il fallback di template resta esplicito; invio post-commit e assenza di invio su replay/rollback sono invariati. Reset rimuove soltanto il gate sulla vecchia email azienda: account deterministico, token/hash, scadenza 30 minuti, monouso, revoke, anti-enumeration e PRG restano invariati. Registrazione/profilo non richiedono cambi runtime: la vecchia email e solo branding facoltativo.
+
+Gate tecnico sintetico: renderer reale, guard/footer ordine estratti dal sorgente, resolver/facade/trasporto reali con sorgente profilo, credenziale e sessione SMTP fake; non crea documenti o token su DB reali. Review indipendente e smoke server ordine + contatto + reset restano pendenti: non dichiarare produzione o runtime web completamente migrato/certificato. PR #318 resta congelata OPEN/DRAFT, non integrata e non aggiornata da questo task; Masterplan invariato.
+
+`documenti.aspx.vb` e `coupon_utente.aspx.vb` restano queue-only su `inviadocumenti`. Il consumer gestionale/esterno e **NON CERTIFICATO DAL RUNTIME WEB**. `EXTERNAL-DOCUMENT-EMAIL-TRANSPORT-AUDIT-1A`: **NON AVVIATO**, nessuna modifica alla coda.
 
 ## Contratto prevalente - copia amministrativa tenant-scoped
 

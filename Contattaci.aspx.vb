@@ -147,10 +147,6 @@ Partial Class Contattaci
 
         Dim aziendaNome As String = S("AziendaNome")
         Dim aziendaEmail As String = S("AziendaEmail")
-        If aziendaEmail = "" Then
-            ShowAlert("In questo momento non è possibile inviare il messaggio. Contattaci via email/telefono indicati a destra.", True)
-            Return
-        End If
 
         Try
             Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
@@ -168,7 +164,6 @@ Partial Class Contattaci
                 .HtmlBody = rendered.HtmlBody,
                 .PlainTextBody = rendered.PlainTextBody
             }
-            deliveryRequest.ToRecipients.Add(New TenantEmailRecipient() With {.Address = aziendaEmail, .DisplayName = aziendaNome})
             deliveryRequest.ReplyToRecipients.Add(New TenantEmailRecipient() With {.Address = fromEmailUser, .DisplayName = nome})
 
             Dim deliveryResult As EmailDeliveryResult = New TenantEmailDeliveryService().Deliver(deliveryRequest)

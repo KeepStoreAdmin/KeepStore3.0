@@ -101,7 +101,12 @@ Public NotInheritable Class TenantEmailDeliveryService
 
         Try
             Using message As New MimeMessage()
-                If Not AddAddresses(message.To, request.ToRecipients) OrElse message.To.Count = 0 Then
+                If Not AddAddresses(message.To, request.ToRecipients) Then
+                    Return Reject("EMAIL_TO_INVALID", correlationId, classification)
+                End If
+                Dim primaryRecipientFromProfileReplyTo As Boolean =
+                    classification = TenantEmailMessageClassifications.ContactRequest AndAlso message.To.Count = 0
+                If message.To.Count = 0 AndAlso Not primaryRecipientFromProfileReplyTo Then
                     Return Reject("EMAIL_TO_INVALID", correlationId, classification)
                 End If
                 If Not AddAddresses(message.Cc, request.CcRecipients) Then
@@ -130,6 +135,7 @@ Public NotInheritable Class TenantEmailDeliveryService
                     .Purpose = TransactionalPurpose,
                     .Classification = classification,
                     .AdministrativeCopyFromProfileReplyTo = RequiresAdministrativeCopy(classification),
+                    .PrimaryRecipientFromProfileReplyTo = primaryRecipientFromProfileReplyTo,
                     .CorrelationId = correlationId,
                     .Message = message
                 })
