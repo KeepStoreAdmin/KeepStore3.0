@@ -6,7 +6,9 @@
 
 Questo documento definisce il contratto che Enzo dovra usare per realizzare il pannello di configurazione e-mail di KeepStore. Non abilita ancora il runtime, non rende operativo OAuth2 e non autorizza alcun deployment. La tabella `aziende` resta invariata; i campi SMTP legacy restano temporaneamente disponibili durante la transizione.
 
-La configurazione appartiene all'azienda/storefront, non all'utente ecommerce che effettua un ordine. Ogni database KeepStore contiene una sola tabella `aziende_email_transport`, condivisa dalle aziende presenti in quel database. Ogni riga appartiene a una sola azienda e a un solo scopo. Il runtime web corrente (ordine, registrazione/profilo, reset password e contatti) usa esclusivamente `TRANSACTIONAL`; `MARKETING` e riservato a una capacita futura e distinta. Il cutover web resta candidato a review/smoke server, non una certificazione di rollout o del consumer esterno `inviadocumenti`.
+La configurazione appartiene all'azienda/storefront, non all'utente ecommerce che effettua un ordine. Ogni database KeepStore contiene una sola tabella `aziende_email_transport`, condivisa dalle aziende presenti in quel database. Ogni riga appartiene a una sola azienda e a un solo scopo. Il runtime web corrente (ordine, registrazione/profilo, reset password e contatti) usa esclusivamente `TRANSACTIONAL`; `MARKETING` e riservato a una capacita futura e distinta. Per Taikun production, il provisioning DPAPI server-side e lo smoke A dei flussi web TRANSACTIONAL sono completati; questa evidenza non certifica il rollout di altri tenant ne il consumer esterno `inviadocumenti`.
+
+La procedura manuale server-side descritta in questo documento resta valida finche il pannello gestionale non sara implementato. Ogni altro tenant richiede provisioning e verifica separati sulla propria macchina/runtime e configurazione autorizzati. `INVIADOCUMENTI` resta queue-only nel runtime web e il consumer esterno e **NON CERTIFICATO DAL RUNTIME WEB**.
 
 ## Schema logico e relazione
 
