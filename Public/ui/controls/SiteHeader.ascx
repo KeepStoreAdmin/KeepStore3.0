@@ -220,52 +220,7 @@
                             <span data-ks-i18n="nav.catalog">Catalogo</span>
                             <span class="btn-open-sub" aria-hidden="true"></span>
                         </button>
-                        <div id="ks-mobile-catalog-root" class="collapse">
-                            <ul class="sub-nav-menu ks-mobile-catalog-list">
-                                <asp:Repeater ID="rptNavSettoriMobile" runat="server" OnItemDataBound="rptNavSettoriMobile_ItemDataBound">
-                                    <ItemTemplate>
-                                        <li class="nav-mb-item ks-mobile-sector-item">
-                                            <button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'>
-                                                <span class="ks-mobile-nav-entry">
-                                                    <span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span>
-                                                    <span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
-                                                </span>
-                                                <span class="btn-open-sub" aria-hidden="true"></span>
-                                            </button>
-                                            <div id='ks-mobile-sector-<%# Eval("Id") %>' class="collapse">
-                                                <ul class="sub-nav-menu">
-                                                    <li><a class="sub-nav-link active" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewSector">Vedi tutto il settore</a></li>
-                                                    <asp:Repeater ID="rptNavCategorieMobile" runat="server" OnItemDataBound="rptNavCategorieMobile_ItemDataBound">
-                                                        <ItemTemplate>
-                                                            <li class="nav-mb-item ks-mobile-category-item">
-                                                                <button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'>
-                                                                    <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
-                                                                    <span class="btn-open-sub" aria-hidden="true"></span>
-                                                                </button>
-                                                                <div id='ks-mobile-category-<%# Eval("Id") %>' class="collapse">
-                                                                    <ul class="sub-nav-menu sub-menu-level-2">
-                                                                        <li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewCategory">Vedi tutta la categoria</a></li>
-                                                                        <asp:Repeater ID="rptNavTipologieMobile" runat="server">
-                                                                            <ItemTemplate>
-                                                                                <li class="nav-mb-item ks-mobile-tipology-item">
-                                                                                    <a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'>
-                                                                                        <span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span>
-                                                                                    </a>
-                                                                                </li>
-                                                                            </ItemTemplate>
-                                                                        </asp:Repeater>
-                                                                    </ul>
-                                                                </div>
-                                                            </li>
-                                                        </ItemTemplate>
-                                                    </asp:Repeater>
-                                                </ul>
-                                            </div>
-                                        </li>
-                                    </ItemTemplate>
-                                </asp:Repeater>
-                            </ul>
-                        </div>
+                        <div id="ks-mobile-catalog-root" class="collapse"><ul class="sub-nav-menu ks-mobile-catalog-list"><asp:Repeater ID="rptNavSettoriMobile" runat="server" OnItemDataBound="rptNavSettoriMobile_ItemDataBound"><ItemTemplate><li class="nav-mb-item ks-mobile-sector-item"><button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'><span class="ks-mobile-nav-entry"><span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span><span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span></span><span class="btn-open-sub" aria-hidden="true"></span></button><div id='ks-mobile-sector-<%# Eval("Id") %>' class="collapse"><ul class="sub-nav-menu"><li><a class="sub-nav-link active" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewSector">Vedi tutto il settore</a></li><asp:Repeater ID="rptNavCategorieMobile" runat="server" OnItemDataBound="rptNavCategorieMobile_ItemDataBound"><ItemTemplate><li class="nav-mb-item ks-mobile-category-item"><button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'><span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span><span class="btn-open-sub" aria-hidden="true"></span></button><div id='ks-mobile-category-<%# Eval("Id") %>' class="collapse"><ul class="sub-nav-menu sub-menu-level-2"><li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>' data-ks-i18n="nav.viewCategory">Vedi tutta la categoria</a></li><asp:Repeater ID="rptNavTipologieMobile" runat="server"><ItemTemplate><li class="nav-mb-item ks-mobile-tipology-item"><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></a></li></ItemTemplate></asp:Repeater></ul></div></li></ItemTemplate></asp:Repeater></ul></div></li></ItemTemplate></asp:Repeater></ul></div>
                     </li>
                     <li class="nav-mb-item"><a href="articoli.aspx?inpromo=1" class="mb-menu-link"><span data-ks-i18n="nav.offers">Offerte</span></a></li>
                     <li class="nav-mb-item"><a href="Contattaci.aspx" class="mb-menu-link"><span data-ks-i18n="nav.contact">Contatti</span></a></li>

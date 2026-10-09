@@ -764,9 +764,9 @@ Partial Class SiteHeader
                             sb.Append("<li class='ks-header-catalog-tipology'>")
                             sb.Append("<a href='")
                             sb.Append(HttpUtility.HtmlAttributeEncode(tipologia.DefaultUrl))
-                            sb.Append("' class='body-md-2 link ks-header-catalog-tipology-link'><span>")
+                            sb.Append("' class='body-md-2 link ks-header-catalog-tipology-link'>")
                             sb.Append(HttpUtility.HtmlEncode(If(tipologia.Descrizione, String.Empty)))
-                            sb.Append("</span></a>")
+                            sb.Append("</a>")
                             sb.Append("</li>")
                         Next
                         sb.Append("</ul>")

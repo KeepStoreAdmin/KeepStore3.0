@@ -1,11 +1,36 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-08
+Aggiornato: 2026-10-09
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### HEADER-MENU-MARKUP-COMPACTION-1A — A tecnico / B complessivo, review e smoke pendenti
+
+Base autorizzata e stabile: `c4e1d25f9e4e47725461115fbc8d6ce17a20dd6a`, PR #322 MERGED; `HEADER-CURRENT-SCOPE-1A` e CHIUSO / A / INTEGRATED con smoke production Product Owner A. Branch di compattazione: `task/header-menu-markup-compaction-1a`, PR DRAFT verso `frontend-rebuild`; nessun merge o deploy. `main` / `origin/main` restano `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Questo checkpoint prevale sui precedenti stati storici dei task header/cache gia integrati, senza dichiarare conclusa l'intera navigazione.
+
+Scope esclusivamente presentazionale: compattato il whitespace inter-tag nei template del catalogo mobile di `Public/ui/controls/SiteHeader.ascx`; rimossi soltanto gli span senza attributi dei link tipologia, mobile e desktop (`SiteHeader.ascx.vb`). Nessun filtro o troncamento della tassonomia; provider/cache #321, resolver/current-scope #322, repeater, dati, URL, ordine, encoding, search, attributi ARIA, target Bootstrap, icone, CSS e JS restano invariati. Nessun nuovo endpoint, lazy loading, dipendenza o redesign. I template sono intenzionalmente compatti: non reintrodurre l'indentazione serializzata per ogni tipologia senza misurarne l'impatto.
+
+Design Gate proporzionato: riutilizzato l'audit precedente del riferimento ONSUS `shop-default.html` disponibile localmente e dei contratti KeepStore. Riferimenti gia registrati nel Masterplan: W3C APG/WAI e Baymard search scope; consultati anche [Baymard View All](https://baymard.com/research-articles/mobile-main-nav-view-all) e [categorie principali mobile](https://baymard.com/research-articles/main-navigation-product-categories). IKEA/Decathlon restano riferimenti proposti dal Product Owner per il futuro confronto UX, non benchmark visuali certificati da questa compattazione.
+
+| Aspetto | ONSUS originale | Benchmark pertinente | KeepStore corrente | Decisione |
+| --- | --- | --- | --- | --- |
+| Navigazione mobile | Offcanvas e collapse annidati | Disclosure e accesso al livello intero | Un solo offcanvas, button separati dai link Vedi tutto | Conservare interazioni e tutte le destinazioni |
+| Tassonomia | Esempi statici del template | Categorie riconoscibili e progressive | Tree reale condiviso dal provider cached | Nessun limite, omissione o nuova sorgente |
+| Markup tipologie | Link, talvolta con span decorativo | Semantica dei link e nomi accessibili | Span senza attributi, nessun selettore necessario trovato | Rimuovere solo questi wrapper, senza cambiare etichette |
+| Prestazioni | Struttura di riferimento, non budget dati | DOM strettamente necessario | Entrambe le versioni server-rendered | Eliminare sprechi; nessun caricamento differito in questa slice |
+
+Prova runtime locale GET-only su HOME, catalogo `st=2&ct=35` e PDP: stesso insieme ordinato di URL, testi, gerarchia e attributi, 18 settori / 132 categorie / 528 tipologie e 678 destinazioni mobile uniche. HtmlAgilityPack confronta i frammenti pubblici server-side, ignorando soltanto whitespace inter-tag e gli span autorizzati: non e un conteggio del DOM live dopo JavaScript. Catalogo mobile: **567.813 -> 165.453 byte UTF-8 non compressi (-70,9%)**, whitespace-only text node **4.347 -> 0**. Frammenti desktop + catalogo mobile + due select HOME: **737.495 -> 328.271 byte**, elementi **5.487 -> 4.431**. Audit precedente intero header/offcanvas: **752.671 byte / 5.644 elementi**; GET finale: **343.446 byte / 4.588 elementi**. HOME intera: **7.425 -> 6.369 elementi**. Nessuna promessa di INP o latenza: il tempo complessivo GET non isola il costo dell'header.
+
+Verifiche: whitelist statica delle sole trasformazioni autorizzate, harness con metodi desktop reali estratti dal codice e tree sintetici/encoding/fail-safe, confronti runtime e controlli negativi su URL/testo/ARIA/gerarchia **529 PASS**; current-scope #322 **341 controlli / 31 scenari PASS**; cache #321 **49 PASS**; statici **13 PASS**. Precompile ASP.NET Framework 4.8 safe PASS, senza copiare configurazioni operative. Primo GET post-edit: BC30560 su piu controlli; successivi GET HOME/catalogo/PDP HTTP 200, senza recycle IIS, modifica configurazioni o pulizia cache. Browser interattivo non disponibile: **360/390/768/1365, touch, focus, tastiera, apertura/chiusura/scroll e overflow NON ESEGUITI**, riservati allo smoke Product Owner prima del merge. HTTP 200 e harness non equivalgono ad A visuale.
+
+Postback locali di sola ricerca desktop e mobile: eventi ricavati dal markup, ViewState/event validation originali mantenuti soltanto in memoria, sessioni anonime temporanee; entrambi HTTP 302 verso catalogo con `st=2&ct=35&q=hp`, senza seguire il redirect. Nessuna mutazione carrello o altro flusso commerciale. Questa prova conferma il percorso WebForms, non il comportamento visuale del browser.
+
+Manifest massimo: i due runtime citati, `Tools/HeaderMenuMarkupHarness.vb`, `Tools/Test-HeaderMenuMarkup.ps1` e questo Masterplan. Lo script puo acquisire soltanto frammenti pubblici dei menu da un host risolto loopback in una directory nuova fuori repository; non salva cookie, hidden fields o account. Tools mai nel deploy ordinario. Preservati `web.config`, quattro cancellazioni tracked preesistenti e 54 untracked autorizzati; zero DB write, ordini, pagamenti, gateway, e-mail o nuove fixture DB. Nessuna certificazione di tutti i tenant o della produzione.
+
+FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER: soltanto `Public/ui/controls/SiteHeader.ascx` e `Public/ui/controls/SiteHeader.ascx.vb`. Review indipendente ChatGPT e smoke server obbligatori prima del merge. Prossimo task candidato: progettazione UX dedicata della navigazione commerciale, motivo discoverability/mobile-first, prerequisiti chiusura di questa slice e approvazione del nuovo perimetro; **NON AVVIATO**. ViewState e duplicazione integrale desktop/mobile restano finding separati: questa compattazione non risolve la crescita lineare del menu con la tassonomia.
 
 ### TENANT-EMAIL-WEB-RUNTIME-CUTOVER-1A - CHIUSO / A / INTEGRATED
 
