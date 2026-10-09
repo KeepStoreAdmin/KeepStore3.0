@@ -252,6 +252,7 @@ Partial Class Articoli
         End If
 
         SyncCatalogSessionFromQuery()
+        litCatalogHeading.Text = GetCatalogTaxonomyContext().MostSpecificName
         Breadcrumb1.Bind(GetCatalogTaxonomyContext().BreadcrumbItems())
 
         If Me.IsPostBack = False Then

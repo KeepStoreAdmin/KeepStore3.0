@@ -21,12 +21,12 @@
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
     <asp:HiddenField ID="hfCartMutationRequestId" runat="server" />
 
-    <asp:Panel ID="ksPageTitle" runat="server" CssClass="tf-page-title d-none">
+    <asp:Panel ID="ksPageTitle" runat="server" CssClass="py-3">
         <div class="container">
             <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-end justify-content-between gap-3">
                 <div class="d-flex flex-column gap-2">
-                    <h1 class="title">Catalogo</h1>
-                    <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
+                    <h1 class="title h4 mb-0 text-break"><asp:Literal ID="litCatalogHeading" runat="server" Mode="Encode" EnableViewState="false" /></h1>
+                    <div class="d-none">
                         <asp:Label ID="lblRicerca" runat="server" Visible="false" Text="Risultati ricerca:" />
                         <asp:Label ID="lblRisultati" runat="server" />
                         <asp:Label ID="lblTrovati" runat="server" />
