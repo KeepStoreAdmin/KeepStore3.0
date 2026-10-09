@@ -435,7 +435,7 @@
                                     </asp:PlaceHolder>
                                     <p class="text-main-2 mt-2 mb-0">Controlla le parole chiave, prova termini piu generici o rimuovi i filtri applicati.</p>
                                     <div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
-                                        <a class="tf-btn btn-fill" href="articoli.aspx">Reset filtri</a>
+                                        <a class="tf-btn btn-fill" href="<%= Server.HtmlEncode(ClearCatalogFiltersUrl) %>">Reset filtri</a>
                                         <a class="tf-btn btn-line" href="articoli.aspx">Vai al catalogo</a>
                                     </div>
                                     <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">

@@ -7,7 +7,19 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
-### CATALOG-MOBILE-RESET-CONTEXT-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+### CATALOG-ZERO-RESULTS-RESET-CONTEXT-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `0417b891b9244e4ad1bc2649359a0340c8924250`; PR #329 MERGED. Copia canonica gia allineata alla base, nuovo branch `task/catalog-zero-results-reset-context-1a`. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Nell'`EmptyDataTemplate` di `articoli.aspx`, il solo link `Reset filtri` riusa ora `ClearCatalogFiltersUrl`, con encoding HTML dell'attributo come i reset desktop/mobile esistenti. Il link distinto `Vai al catalogo` resta `articoli.aspx`, senza query. Nessuna nuova funzione o logica URL: il builder esistente rimuove ricerca, tipologia, facet, prezzi, disponibilita, ordinamento, varianti e paginazione; conserva `st`, `ct`, `inpromo`, `pid` e gli altri parametri non rimossi dal contratto corrente. Code-behind, query, filtri commerciali, prezzi, SEO, carrello, JS e CSS invariati.
+
+Manifest esclusivo: `articoli.aspx` e questo Masterplan. Harness isolato delle funzioni URL reali estratte: **262/262 PASS**, 10 casi su due host sintetici, generale, settore/categoria con filtri, ricerca senza risultati, offerte con/senza `pid`, combinazione completa e pagina. Verificati destinazione esatta, conservazione del contesto, rimozione dei filtri, reset idempotente, encoding dell'attributo e destinazione generale della seconda CTA. Contratto markup **3/3 PASS**; precompile ASP.NET Framework 4.8 safe **PASS**, zero copie di configurazione operativa. Nessun GET al runtime catalogo e nessun accesso DB: i casi zero-results sono fixture isolate, non una certificazione visuale o funzionale server del Product Owner. Review indipendente e smoke Product Owner ancora pendenti; nessun merge, deploy o task successivo.
+
+Diff-check, manifest e secret scan delle aggiunte **PASS**. `web.config`, quattro cancellazioni tracked preesistenti e 54 untracked preservati con hash/inventario invariati; nessuno appartiene al commit. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** soltanto `articoli.aspx`. Questo micro-task non dichiara completo il catalogo.
+
+### CATALOG-MOBILE-RESET-CONTEXT-1A — CHIUSO / A / INTEGRATED
+
+PR #329 verificata MERGED al commit `0417b891b9244e4ad1bc2649359a0340c8924250`, parent `5a1332a729a151c3275d48e70c94e9cdb2cbc8d3`. Un commit e due file; reset mobile contestuale integrato. Questa nota prevale sul report tecnico pre-merge riportato sotto.
 
 Base `frontend-rebuild` / `origin/frontend-rebuild` = `5a1332a729a151c3275d48e70c94e9cdb2cbc8d3`; PR #328 MERGED e `CATALOG-TAXONOMY-H1-CONTEXT-1A` **CHIUSO / A / INTEGRATED** con review e smoke Product Owner A. Nuovo branch `task/catalog-mobile-reset-context-1a` dalla stessa base. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 
