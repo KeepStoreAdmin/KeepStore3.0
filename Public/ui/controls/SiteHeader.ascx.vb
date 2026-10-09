@@ -23,6 +23,7 @@ Partial Class SiteHeader
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
     Private Const DefaultPhoneText As String = ""
     Private Const DefaultEmailText As String = ""
+    Private _headerCurrentScope As CatalogTaxonomyContext
 
     Private Class HeaderLogoInfo
         Public Property DesktopLogoFile As String = String.Empty
@@ -60,6 +61,7 @@ Partial Class SiteHeader
         End If
 
         Dim currentScope As CatalogTaxonomyContext = ResolveHeaderSearchScope(sectors, Request.QueryString)
+        _headerCurrentScope = currentScope
         Dim selectedSectorId As Integer = currentScope.SectorId
         Dim selectedCategoryId As Integer = currentScope.CategoryId
 
@@ -694,18 +696,24 @@ Partial Class SiteHeader
         End If
 
         Dim sb As New StringBuilder()
+        Dim scope As CatalogTaxonomyContext = If(_headerCurrentScope, New CatalogTaxonomyContext())
 
         For Each sector As CatalogMenuSector In sectors
             If sector Is Nothing Then
                 Continue For
             End If
 
-            sb.Append("<li class='menu-item ks-header-catalog-sector' data-sector-id='")
+            Dim sectorOnPath As Boolean = scope.HasSector AndAlso sector.Id = scope.SectorId
+            sb.Append("<li class='menu-item ks-header-catalog-sector")
+            If sectorOnPath Then sb.Append(" ks-header-catalog-current-sector")
+            sb.Append("' data-sector-id='")
             sb.Append(sector.Id.ToString())
             sb.Append("'>")
             sb.Append("<a href='")
             sb.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
-            sb.Append("' class='item-link body-text-3 ks-header-catalog-sector-link'>")
+            sb.Append("' class='item-link body-text-3 ks-header-catalog-sector-link'")
+            AppendDesktopCatalogPathAttributes(sb, sectorOnPath, sectorOnPath AndAlso Not scope.HasCategory)
+            sb.Append(">")
             sb.Append("<span class='ks-header-catalog-media")
             If String.IsNullOrWhiteSpace(sector.ImgUrl) Then
                 sb.Append(" is-empty")
@@ -750,7 +758,10 @@ Partial Class SiteHeader
                     sb.Append("<div class='ks-header-catalog-category-block'>")
                     sb.Append("<a href='")
                     sb.Append(HttpUtility.HtmlAttributeEncode(category.DefaultUrl))
-                    sb.Append("' class='menu-heading body-small link ks-header-catalog-category-link'><span>")
+                    Dim categoryOnPath As Boolean = sectorOnPath AndAlso scope.HasCategory AndAlso category.Id = scope.CategoryId AndAlso category.SettoriId = sector.Id
+                    sb.Append("' class='menu-heading body-small link ks-header-catalog-category-link'")
+                    AppendDesktopCatalogPathAttributes(sb, categoryOnPath, categoryOnPath AndAlso Not scope.HasTipology)
+                    sb.Append("><span>")
                     sb.Append(HttpUtility.HtmlEncode(If(category.Descrizione, String.Empty)))
                     sb.Append("</span></a>")
 
@@ -764,7 +775,10 @@ Partial Class SiteHeader
                             sb.Append("<li class='ks-header-catalog-tipology'>")
                             sb.Append("<a href='")
                             sb.Append(HttpUtility.HtmlAttributeEncode(tipologia.DefaultUrl))
-                            sb.Append("' class='body-md-2 link ks-header-catalog-tipology-link'>")
+                            sb.Append("' class='body-md-2 link ks-header-catalog-tipology-link'")
+                            Dim tipologyOnPath As Boolean = categoryOnPath AndAlso scope.HasTipology AndAlso tipologia.Id = scope.TipologyId
+                            AppendDesktopCatalogPathAttributes(sb, tipologyOnPath, tipologyOnPath)
+                            sb.Append(">")
                             sb.Append(HttpUtility.HtmlEncode(If(tipologia.Descrizione, String.Empty)))
                             sb.Append("</a>")
                             sb.Append("</li>")
@@ -790,6 +804,14 @@ Partial Class SiteHeader
 
         Return sb.ToString()
     End Function
+
+    Private Shared Sub AppendDesktopCatalogPathAttributes(ByVal sb As StringBuilder, ByVal onPath As Boolean, ByVal current As Boolean)
+        If Not onPath Then Return
+        sb.Append(" data-ks-current-path='")
+        sb.Append(If(current, "current", "ancestor"))
+        sb.Append("'")
+        If current Then sb.Append(" aria-current='location'")
+    End Sub
 
     Private Function SectorFallbackText(ByVal value As String) As String
         If String.IsNullOrWhiteSpace(value) Then
