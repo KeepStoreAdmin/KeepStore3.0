@@ -59,10 +59,9 @@ Partial Class SiteHeader
             Return
         End If
 
-        Dim selectedSectorId As Integer = 0
-        Dim selectedCategoryId As Integer = 0
-        Integer.TryParse(Convert.ToString(Request.QueryString("st")), selectedSectorId)
-        Integer.TryParse(Convert.ToString(Request.QueryString("ct")), selectedCategoryId)
+        Dim currentScope As CatalogTaxonomyContext = ResolveHeaderSearchScope(sectors, Request.QueryString)
+        Dim selectedSectorId As Integer = currentScope.SectorId
+        Dim selectedCategoryId As Integer = currentScope.CategoryId
 
         product_cat.Items.Clear()
         product_cat_mobile.Items.Clear()
@@ -101,7 +100,8 @@ Partial Class SiteHeader
                 Dim categoryText As String = text & " / " & If(String.IsNullOrWhiteSpace(category.Descrizione), "Categoria " & category.Id.ToString(), category.Descrizione.Trim())
                 Dim categoryDesktopItem As New ListItem(categoryText, category.DefaultUrl)
                 Dim categoryMobileItem As New ListItem(categoryText, category.DefaultUrl)
-                If selectedCategoryId > 0 AndAlso category.Id = selectedCategoryId Then
+                If selectedCategoryId > 0 AndAlso category.Id = selectedCategoryId AndAlso
+                   category.SettoriId = selectedSectorId AndAlso sector.Id = selectedSectorId Then
                     categoryDesktopItem.Selected = True
                     categoryMobileItem.Selected = True
                 End If
@@ -111,6 +111,31 @@ Partial Class SiteHeader
             Next
         Next
     End Sub
+
+    Private Shared Function ResolveHeaderSearchScope(ByVal sectors As List(Of CatalogMenuSector),
+                                                      ByVal query As System.Collections.Specialized.NameValueCollection) As CatalogTaxonomyContext
+        Dim neutral As New CatalogTaxonomyContext()
+        If query Is Nothing Then Return neutral
+
+        Dim ids(2) As Integer
+        Dim keys As String() = {"st", "ct", "tp"}
+        For index As Integer = 0 To keys.Length - 1
+            Dim values As String() = query.GetValues(keys(index))
+            If values Is Nothing Then Continue For
+            If values.Length <> 1 OrElse
+               Not Integer.TryParse(If(values(0), String.Empty).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, ids(index)) OrElse
+               ids(index) <= 0 Then Return neutral
+        Next
+
+        ' Reject unknown explicit parents before resolving a valid but discordant chain.
+        ' All resolutions use the already-loaded tree: no additional provider/SQL calls.
+        If ids(0) > 0 AndAlso Not CatalogTaxonomyResolver.Resolve(sectors, ids(0), 0, Nothing).HasSector Then Return neutral
+        If ids(1) > 0 AndAlso Not CatalogTaxonomyResolver.Resolve(sectors, 0, ids(1), Nothing).HasCategory Then Return neutral
+        Dim tipology As String = If(ids(2) > 0, ids(2).ToString(CultureInfo.InvariantCulture), Nothing)
+        Dim resolved As CatalogTaxonomyContext = CatalogTaxonomyResolver.Resolve(sectors, ids(0), ids(1), tipology)
+        If ids(2) > 0 AndAlso Not resolved.HasTipology Then Return neutral
+        Return resolved
+    End Function
 
     Private Sub BindMobileCatalog(ByVal sectors As List(Of CatalogMenuSector))
         If rptNavSettoriMobile Is Nothing Then
