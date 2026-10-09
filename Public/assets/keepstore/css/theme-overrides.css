@@ -3189,3 +3189,28 @@ body.ks-page-home .ks-ai130-img {
     min-height: 44px;
   }
 }
+/* Mobile catalog: reuse Bootstrap panels, with one commercial level visible. */
+@media (max-width: 1199px) {
+  #mobileMenu { width: min(100vw, 390px); max-width: 390px; }
+  #mobileMenu .mb-canvas-content { display: flex; flex-direction: column; min-height: 0; max-width: 100%; }
+  #mobileMenu .ks-mobile-search-area { flex-shrink: 0; padding: 0 16px 12px; }
+  #mobileMenu .ks-mobile-catalog-toolbar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; padding: 0 16px 12px; }
+  #mobileMenu .ks-mobile-catalog-toolbar[hidden],
+  #mobileMenu .ks-mobile-catalog-back[hidden],
+  #mobileMenu .ks-mobile-catalog-stage > [hidden] { display: none !important; }
+  #mobileMenu .ks-mobile-catalog-back { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line, #e5e5e5); border-radius: 8px; background: #fff; color: var(--primary-2, #D80027); flex-shrink: 0; }
+  #mobileMenu .ks-mobile-catalog-title { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 16px; line-height: 1.4; }
+  #mobileMenu .ks-mobile-catalog-back:focus-visible,
+  #mobileMenu .ks-mobile-catalog-title:focus-visible { outline: 2px solid var(--primary-2, #D80027); outline-offset: 2px; }
+  #mobileMenu .mb-body { flex: 1; min-height: 0; display: block; overflow-x: hidden; overflow-y: auto; padding: 0 16px 16px; }
+  #mobileMenu .mb-bottom { padding: 0; margin-top: 16px; }
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-root > button { display: none; }
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-stage .collapse,
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-stage .collapsing { height: auto !important; transition: none; }
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-stage .sub-nav-menu { padding-left: 0; margin-bottom: 0; }
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-stage .sub-nav-link { min-height: 48px; padding: 10px 0; gap: 12px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+}
+@media (max-width: 1199px) and (max-height: 450px) {
+  #mobileMenu .mb-canvas-content { overflow-y: auto; }
+  #mobileMenu .mb-body { flex: none; overflow-y: visible; }
+}

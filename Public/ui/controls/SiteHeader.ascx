@@ -196,8 +196,7 @@
         </a>
     </div>
     <div class="mb-canvas-content">
-        <div class="mb-body">
-            <div class="mb-content-top">
+        <div class="ks-mobile-search-area">
                 <div class="form-search-product style-3 ks-search-shell" data-ks-search-form="mobile">
                     <div class="select-category">
                         <asp:Label runat="server" AssociatedControlID="product_cat_mobile" CssClass="visually-hidden" Text="Ambito di ricerca" />
@@ -212,7 +211,13 @@
                     </button>
                     <div class="ks-search-suggest" id="ksSearchSuggestMobile" aria-live="polite"></div>
                 </div>
-
+        </div>
+        <div class="ks-mobile-catalog-toolbar" hidden>
+            <button type="button" class="ks-mobile-catalog-back" aria-label="Torna ai settori" hidden><span aria-hidden="true">&#8592;</span> Indietro</button>
+            <h6 class="ks-mobile-catalog-title" tabindex="-1" aria-live="polite">Catalogo</h6>
+        </div>
+        <div class="mb-body">
+            <div class="mb-content-top">
                 <ul class="nav-ul-mb content-append ks-mobile-primary-nav">
                     <li class="nav-mb-item ks-mobile-catalog-root">
                         <button type="button" class="mb-menu-link" data-bs-toggle="collapse" data-bs-target="#ks-mobile-catalog-root" aria-expanded="true" aria-controls="ks-mobile-catalog-root">
@@ -226,7 +231,6 @@
                     <li class="nav-mb-item"><a href="Contattaci.aspx" class="mb-menu-link"><span data-ks-i18n="nav.contact">Contatti</span></a></li>
                 </ul>
             </div>
-        </div>
         <div class="mb-bottom">
             <ul class="nav-ul-mb ks-mobile-utility-nav">
                 <li class="nav-mb-item"><a id="lnkAccountMobileButton" href="myaccount.aspx" runat="server" class="mb-menu-link"><span data-ks-i18n="header.accountArea">Area personale</span></a></li>
@@ -246,5 +250,7 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 </div>
+<noscript><style>@media(max-width:1199px){#mobileMenu{position:static;visibility:visible;transform:none;width:100%;height:auto}#mobileMenu .mb-canvas-content{height:auto}#mobileMenu .collapse{display:block}#mobileMenu .btn-close-mb{display:none}}</style></noscript>

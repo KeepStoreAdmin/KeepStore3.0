@@ -525,6 +525,125 @@
       });
     }
   }
+  function bindMobileCatalogPanels() {
+    var drawer = document.getElementById('mobileMenu');
+    if (!drawer || drawer.__ksPanelsBound || !window.bootstrap || !bootstrap.Collapse) return;
+    if (!window.matchMedia || !window.matchMedia('(max-width: 1199px)').matches) return;
+    var root = q(drawer, '#ks-mobile-catalog-root'), body = q(drawer, '.mb-body');
+    var toolbar = q(drawer, '.ks-mobile-catalog-toolbar');
+    var back = q(toolbar, '.ks-mobile-catalog-back'), title = q(toolbar, '.ks-mobile-catalog-title');
+    if (!root || !body || !toolbar || !back || !title) return;
+    var records = Object.create(null), nodes = [root].concat(all(root, '.collapse'));
+    var current, pending = null, busy = false, returning = false, reopenFocus = null;
+    var stage = document.createElement('div');
+    stage.className = 'ks-mobile-catalog-stage';
+    // Capture ancestry before moving the existing panels; never clone the tree.
+    for (var i = 0; i < nodes.length; i++) {
+      var panel = nodes[i], trigger = panel.parentNode.querySelector(':scope > button[data-bs-toggle="collapse"]');
+      var parent = trigger && trigger.closest('.collapse');
+      if (!panel.id || records[panel.id] || !trigger || (panel !== root && !parent)) return;
+      var label = q(trigger, '.ks-mobile-nav-label') || q(trigger, 'span');
+      records[panel.id] = { panel: panel, trigger: trigger, parentId: parent ? parent.id : null,
+        title: panel === root ? 'Catalogo' : txt(label), scroll: 0, focus: null,
+        origin: panel.parentNode, sibling: panel.nextSibling };
+    }
+    current = records[root.id];
+    function api(record) { return bootstrap.Collapse.getOrCreateInstance(record.panel, { toggle: false }); }
+    function focus(node) {
+      if (!node || !drawer.classList.contains('show')) return;
+      try { node.focus({ preventScroll: true }); } catch (err) { node.focus(); }
+    }
+    function paint() {
+      nodes.forEach(function (panel) {
+        panel.hidden = panel !== current.panel;
+        panel.setAttribute('aria-hidden', panel === current.panel ? 'false' : 'true');
+      });
+      var parent = records[current.parentId];
+      back.hidden = !parent;
+      back.disabled = busy;
+      back.setAttribute('aria-label', parent ? 'Torna a ' + parent.title : 'Torna ai settori');
+      title.textContent = parent && parent.parentId ? parent.title + ' / ' + current.title : current.title;
+    }
+    function restore() {
+      window.requestAnimationFrame(function () {
+        focus(current.focus || (current.parentId ? back : title));
+        body.scrollTop = current.scroll;
+      });
+    }
+    function fallback() {
+      drawer.classList.remove('ks-mobile-panels-ready');
+      toolbar.hidden = true;
+      nodes.slice().reverse().forEach(function (panel) {
+        var record = records[panel.id];
+        panel.hidden = false;
+        panel.removeAttribute('aria-hidden');
+        record.origin.insertBefore(panel, record.sibling && record.sibling.parentNode === record.origin ? record.sibling : null);
+      });
+      if (stage.parentNode) stage.parentNode.removeChild(stage);
+      drawer.__ksPanelsBound = 'fallback';
+      try { api(records[root.id]).show(); } catch (err) { /* Existing tree remains readable; Bootstrap may be unavailable. */ }
+    }
+    try {
+      root.parentNode.insertBefore(stage, root);
+      nodes.forEach(function (panel) { stage.appendChild(panel); });
+      api(current);
+      drawer.classList.add('ks-mobile-panels-ready');
+      toolbar.hidden = false;
+      paint();
+    } catch (err) { fallback(); return; }
+    drawer.__ksPanelsBound = true;
+    stage.addEventListener('show.bs.collapse', function (event) {
+      if (drawer.__ksPanelsBound !== true) return;
+      var next = records[event.target.id];
+      if (!next || event.target !== next.panel || next === current || event.defaultPrevented) return;
+      if (busy || (!returning && next.parentId !== current.panel.id)) { event.preventDefault(); return; }
+      current.scroll = body.scrollTop;
+      if (!returning) current.focus = next.trigger;
+      pending = { next: next, previous: current, restore: returning };
+      busy = true;
+      returning = false;
+      back.disabled = true;
+      // Leave the old level visible until Bootstrap confirms the new one.
+      Promise.resolve().then(function () {
+        if (event.defaultPrevented && pending && pending.next === next) {
+          pending = null; busy = false; back.disabled = false;
+        }
+      });
+    });
+    stage.addEventListener('shown.bs.collapse', function (event) {
+      if (!pending || event.target !== pending.next.panel) return;
+      var transition = pending;
+      current = transition.next;
+      if (!transition.restore) { current.scroll = 0; current.focus = null; }
+      api(transition.previous).hide();
+      if (transition.previous.panel.classList.contains('show')) { pending = null; fallback(); return; }
+      paint();
+      restore();
+    });
+    stage.addEventListener('hidden.bs.collapse', function (event) {
+      if (!pending || event.target !== pending.previous.panel) return;
+      pending = null; busy = false; back.disabled = false;
+    });
+    back.addEventListener('click', function () {
+      var parent = records[current.parentId];
+      if (!parent || busy || drawer.__ksPanelsBound !== true) return;
+      current.scroll = body.scrollTop;
+      returning = true;
+      api(parent).show();
+    });
+    drawer.addEventListener('hide.bs.offcanvas', function (event) {
+      if (event.target !== drawer || drawer.__ksPanelsBound !== true) return;
+      current.scroll = body.scrollTop;
+      reopenFocus = drawer.contains(document.activeElement) ? document.activeElement : null;
+    });
+    drawer.addEventListener('shown.bs.offcanvas', function (event) {
+      if (event.target !== drawer || drawer.__ksPanelsBound !== true) return;
+      window.requestAnimationFrame(function () {
+        focus(reopenFocus && !reopenFocus.closest('[hidden]') ? reopenFocus : (current.focus || (current.parentId ? back : title)));
+        body.scrollTop = current.scroll;
+      });
+    });
+  }
   function applyRankingOnCatalog() {
     if (!pathIsCatalog()) return;
     var params = new URLSearchParams(window.location.search || ''), key = params.get('ksrk') || '', cached = readRank(key);
@@ -648,6 +767,7 @@
     bindHeaderSearch();
     bindGlobalSubmitGuard();
     bindCatalogNavigation();
+    bindMobileCatalogPanels();
     applyRankingOnCatalog();
     initHomeMarketplace();
   }
@@ -655,5 +775,9 @@
   window.KSRecent = { read: readMergedRecent, push: updateRecent };
   window.KSMarketplaceSearch = { endpoint: SEARCH_ENDPOINT, refresh: function () { bindHeaderSearch(); initHomeMarketplace(); } };
   onReady(boot);
-  window.setTimeout(function () { try { bindHeaderSearch(); bindCatalogNavigation(); initHomeMarketplace(); } catch (err) {} }, 700);
+  window.setTimeout(function () { try { bindHeaderSearch(); bindCatalogNavigation(); bindMobileCatalogPanels(); initHomeMarketplace(); } catch (err) {} }, 700);
+  if (window.matchMedia) {
+    var mobileCatalogViewport = window.matchMedia('(max-width: 1199px)');
+    if (mobileCatalogViewport.addEventListener) mobileCatalogViewport.addEventListener('change', bindMobileCatalogPanels);
+  }
 })();
