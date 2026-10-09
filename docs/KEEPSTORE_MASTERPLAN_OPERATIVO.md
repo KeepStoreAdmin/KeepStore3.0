@@ -7,7 +7,17 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
-### CATALOG-TAXONOMY-H1-CONTEXT-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+### CATALOG-MOBILE-RESET-CONTEXT-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base `frontend-rebuild` / `origin/frontend-rebuild` = `5a1332a729a151c3275d48e70c94e9cdb2cbc8d3`; PR #328 MERGED e `CATALOG-TAXONOMY-H1-CONTEXT-1A` **CHIUSO / A / INTEGRATED** con review e smoke Product Owner A. Nuovo branch `task/catalog-mobile-reset-context-1a` dalla stessa base. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Nel drawer mobile di `articoli.aspx`, `Reset filtri` ora riusa `ClearCatalogFiltersUrl`, come desktop `Rimuovi tutto`. Non aggiunge logica: il builder esistente rimuove q, tp, facet/gruppo/sottogruppo, disponibilita, prezzi, ordinamento, varianti e pagina, mantenendo settore/categoria e gli altri parametri non elencati, incluso `inpromo`/scope offerte. Nessuna query DB aggiunta; `ClearCatalogFiltersFromUrl`, i singoli chip, route e filtri restano invariati. L'escaping HTML server-side e applicato all'attributo URL come per il link desktop.
+
+Manifest: `articoli.aspx` e questo Masterplan. Harness delle funzioni URL reali estratte: **95 PASS** su catalogo generale, settore, settore+categoria, offerte e combinazione completa con pagina `pg>1`; verifica rimozione di ricerca, tp, mr, gr, sg, prezzi, disponibilita, ordinamento, varianti e paginazione, con conservazione di `st`, `ct`, `inpromo`, `pid` e parametri estranei. GET locali read-only **4/4 HTTP 200**: generale, st, st+ct e filtri combinati; il link desktop compare solo quando esistono filtri attivi e in quel caso il suo URL e identico al reset mobile. Caso combinato: destinazione `st=2&ct=35&inpromo=1`. Precompile ASP.NET Framework 4.8 safe PASS; diff-check/manifest/secret scan PASS. Nessuna query o scrittura DB aggiunta, nessun deploy o merge.
+
+### CATALOG-TAXONOMY-H1-CONTEXT-1A — CHIUSO / A / INTEGRATED
+
+PR #328 MERGED fast-forward al commit `5a1332a729a151c3275d48e70c94e9cdb2cbc8d3`, parent `d41fa5a11b798011518cfafabd3435167bad5958`. Un commit e tre file: `articoli.aspx`, `articoli.aspx.vb`, Masterplan. H1 visibile, semantico e HTML encoded da `CatalogTaxonomyContext.MostSpecificName`, senza query aggiuntive; titolo piu specifico con fallback Catalogo. Precompile, harness resolver/encoding e GET locali PASS; review indipendente e smoke Product Owner A. Nessuna modifica a SEO, breadcrumb, filtri/prezzi o resolver. Nessuna certificazione ulteriore dell'intero catalogo.
 
 Base autorizzata e stable verificata `d41fa5a11b798011518cfafabd3435167bad5958`; PR #327 verificata MERGED. `HEADER-DESKTOP-CATALOG-CURRENT-PATH-1A` e **CHIUSO / A / INTEGRATED**, review e smoke Product Owner A acquisiti; questa nota prevale sul checkpoint storico pre-merge sotto. Copia canonica riallineata fast-forward prima del branch `task/catalog-taxonomy-h1-context-1a`. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 

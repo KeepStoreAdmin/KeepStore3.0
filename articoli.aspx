@@ -181,7 +181,7 @@
                         </div>
 
                         <div class="canvas-bottom d-flex d-xl-none">
-                            <a class="tf-btn btn-reset w-100" href="articoli.aspx">
+                            <a class="tf-btn btn-reset w-100" href="<%= Server.HtmlEncode(ClearCatalogFiltersUrl) %>">
                                 <span class="caption text-white">Reset filtri</span>
                             </a>
                         </div>
