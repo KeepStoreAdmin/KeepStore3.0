@@ -7,7 +7,21 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
-### STOREFRONT-NAVIGATION-UX-BENCHMARK-1A — proposta documentale pronta per review
+### HEADER-MOBILE-CATALOG-ENTRY-DISCOVERABILITY-1A — A tecnico / B complessivo, smoke Product Owner pendente
+
+Base autorizzata e stable corrente: `frontend-rebuild` / `origin/frontend-rebuild` = `7600422be83d7708253b33e5b7a11d6fb95fece9`; PR #324 verificata MERGED. Branch dedicato `task/header-mobile-catalog-entry-discoverability-1a`; manifest esclusivo `Public/ui/controls/SiteHeader.ascx` e questo Masterplan. Design e implementazione autorizzati dal Product Owner: nessun nuovo audit o benchmark, nessun merge/deploy implicito. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Modifica minima del solo markup mobile: Catalogo prima di Home; button root senza `collapsed`, `aria-expanded="true"`, contenitore `#ks-mobile-catalog-root` con `collapse show`. Bootstrap conserva target/controlli e gestione degli stati; nessun reset alla riapertura del drawer. Settori/categorie interni inizialmente chiusi; tutti i nodi, ordine, testi, URL `st/ct/tp`, Vedi tutto, ricerca, desktop e compattazione #323 preservati. Nessun nuovo CSS/JS, endpoint, query, filtro, pannello progressivo o valore hardcoded.
+
+Gate tecnici: confronto esatto con la base ammette soltanto spostamento Home e due stati root; parita di tutti i template/link e controlli WebForms PASS, root interno ancora compatto. Regressioni riusate senza modificare Tools: renderer #323 37 controlli, current-scope #322 341, cache #321 49, 11 controlli statici PASS. Le due asserzioni storiche di ordine/stato root sono sostituite solo in memoria dal gate esatto della modifica corrente; renderer e harness reali invariati. Fixture sintetiche di due tenant, rami senza figli/null e catalogo locale grande verificati, senza DB write. Precompile ASP.NET Framework 4.8 con configurazione sintetica PASS; diff-check, manifest e secret scan obbligatori prima del commit.
+
+Smoke GET tenant-aware locale `www.taikun.it:8443`, connessione esclusivamente loopback: HOME, catalogo `st=2&ct=35` e PDP HTTP 200, root `collapse show` e 678 destinazioni su ciascuna pagina. Primo tentativo sandbox TLS non eseguibile, primo GET fuori sandbox in timeout; successiva terna conclusa 200, nessun intervento IIS/cache/configurazione. Browser interattivo non disponibile: matrice 360x800 / 390x844 / 768x1024 / 1365x900, touch/tastiera/focus, overflow, scroll e chiusura/riapertura NON ESEGUITI, riservati allo smoke Product Owner. Nessun PASS visuale dedotto dall'HTML.
+
+Working copy canonica sul task branch con file runtime pronti: copiare per lo smoke server **esclusivamente `Public/ui/controls/SiteHeader.ascx`**, non docs o Tools. Preservati `web.config`, quattro cancellazioni tracked e tutti i 54 untracked con hash/inventario invariati e fuori staging. Un solo commit e PR DRAFT verso `frontend-rebuild`; review indipendente e smoke server restano gate pre-merge. Prossimo candidato `HEADER-MOBILE-CATALOG-PROGRESSIVE-PANELS-1A`: NON AVVIATO, richiede chiusura della slice corrente e manifest/autorizzazione propri.
+
+### STOREFRONT-NAVIGATION-UX-BENCHMARK-1A — CHIUSO / A / INTEGRATED
+
+Nota di prevalenza 2026-10-09: PR #324 MERGED al commit `7600422be83d7708253b33e5b7a11d6fb95fece9`, parent `ab471b6e95da1fcda101ef4f5dfbe27985a3e381`; design approvato. Il checkpoint sottostante descrive la consegna documentale originaria; la prima slice e ora autorizzata e implementata come indicato sopra. Le altre due slice restano NON AVVIATE. Il documento UX integrato non e stato modificato dal task runtime.
 
 Base verificata e stable corrente: `frontend-rebuild` / `origin/frontend-rebuild` = `ab471b6e95da1fcda101ef4f5dfbe27985a3e381`; PR #323 MERGED. Working copy canonica sincronizzata FF-only alla medesima base, preservando `web.config`, quattro cancellazioni tracked e 54 untracked. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Questo checkpoint prevale sugli stati storici sotto: cache #321, current-scope #322 e compattazione #323 non sono task da riavviare.
 
