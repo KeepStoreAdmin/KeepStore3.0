@@ -20,7 +20,7 @@ Partial Public Class UI_HomeDepartmentsMenu
     End Sub
 
     Private Sub BindCatalogMenu()
-        Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
+        Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If sectors Is Nothing Then
             sectors = New List(Of CatalogMenuSector)()
         End If

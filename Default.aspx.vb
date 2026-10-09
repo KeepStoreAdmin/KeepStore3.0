@@ -134,7 +134,7 @@ Partial Public Class _Default
         rptSideBanners.DataBind()
         ApplyHeroMode(ResolveHeroMode(rptHeroSlides.Items.Count > 0, If(sideBanners Is Nothing, 0, sideBanners.Rows.Count)), rptSideBanners.Items.Count)
 
-        Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
+        Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If realSectors Is Nothing Then realSectors = New List(Of CatalogMenuSector)()
         Dim editorialSectors As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(realSectors)
         Dim sectors As List(Of CatalogMenuSector) = realSectors

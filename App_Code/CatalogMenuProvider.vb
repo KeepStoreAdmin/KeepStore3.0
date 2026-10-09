@@ -1,8 +1,12 @@
 Imports System
+Imports System.Collections.Concurrent
 Imports System.Collections.Generic
 Imports System.Configuration
 Imports System.Data
+Imports System.Globalization
 Imports System.IO
+Imports System.Security.Cryptography
+Imports System.Text
 Imports System.Web
 Imports System.Web.Caching
 Imports MySql.Data.MySqlClient
@@ -46,32 +50,78 @@ End Class
 
 Public Module CatalogMenuProvider
 
-    Private ReadOnly ColumnCache As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
-    Private Const MenuCacheKey As String = "KeepStore:CatalogMenuProvider:Menu"
+    Private ReadOnly ColumnCache As New ConcurrentDictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly MenuCacheLock As New Object()
+    Private Const MenuCachePrefix As String = "KeepStore:CatalogMenuProvider:Menu:v2:"
 
     Public Function LoadCatalogMenuCached(Optional ByVal cacheSeconds As Integer = 600) As List(Of CatalogMenuSector)
+        Dim connectionString As String = CatalogConnectionString()
+        Return LoadMenuForScope(DatabaseCacheIdentity(connectionString), cacheSeconds,
+                                Function() LoadCatalogMenu(connectionString))
+    End Function
+
+    Private Function CatalogConnectionString() As String
         Try
-            Dim cached As List(Of CatalogMenuSector) = TryCast(HttpRuntime.Cache(MenuCacheKey), List(Of CatalogMenuSector))
-            If cached IsNot Nothing Then Return cached
+            Return ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
         Catch
+            Return String.Empty
         End Try
+    End Function
 
-        Dim sectors As List(Of CatalogMenuSector) = LoadCatalogMenu()
-
+    Private Function DatabaseCacheIdentity(ByVal connectionString As String) As String
         Try
-            If cacheSeconds < 60 Then cacheSeconds = 60
-            HttpRuntime.Cache.Insert(MenuCacheKey, sectors, Nothing, DateTime.Now.AddSeconds(cacheSeconds), Cache.NoSlidingExpiration)
-        Catch
-        End Try
+            Dim builder As New MySqlConnectionStringBuilder(connectionString)
+            Dim server As String = builder.Server.Trim().TrimEnd("."c).ToLowerInvariant()
+            Dim database As String = builder.Database.Trim().ToLowerInvariant()
+            If server.Length = 0 OrElse database.Length = 0 OrElse builder.Port = 0 Then Return String.Empty
 
-        Return sectors
+            ' Length-delimited database coordinates only; never credentials or request/tenant identity.
+            Dim identity As String = server.Length.ToString(CultureInfo.InvariantCulture) & ":" & server & "|" &
+                                     builder.Port.ToString(CultureInfo.InvariantCulture) & "|" &
+                                     database.Length.ToString(CultureInfo.InvariantCulture) & ":" & database
+            Using digest As SHA256 = SHA256.Create()
+                Return BitConverter.ToString(digest.ComputeHash(Encoding.UTF8.GetBytes(identity))).Replace("-", String.Empty)
+            End Using
+        Catch
+            Return String.Empty
+        End Try
+    End Function
+
+    Private Function LoadMenuForScope(ByVal databaseIdentity As String, ByVal cacheSeconds As Integer,
+                                      ByVal loader As Func(Of List(Of CatalogMenuSector))) As List(Of CatalogMenuSector)
+        If String.IsNullOrEmpty(databaseIdentity) Then Return loader()
+
+        Dim cacheKey As String = MenuCachePrefix & databaseIdentity
+        Dim cached As List(Of CatalogMenuSector) = TryCast(HttpRuntime.Cache(cacheKey), List(Of CatalogMenuSector))
+        If cached IsNot Nothing AndAlso cached.Count > 0 Then Return cached
+
+        ' Recheck after the lock so simultaneous cold consumers do not reload the same taxonomy.
+        SyncLock MenuCacheLock
+            cached = TryCast(HttpRuntime.Cache(cacheKey), List(Of CatalogMenuSector))
+            If cached IsNot Nothing AndAlso cached.Count > 0 Then Return cached
+
+            Dim sectors As List(Of CatalogMenuSector) = loader()
+            ' LoadCatalogMenu returns an empty tree on failure: never persist it as absence.
+            If sectors IsNot Nothing AndAlso sectors.Count > 0 Then
+                Try
+                    If cacheSeconds < 60 Then cacheSeconds = 60
+                    HttpRuntime.Cache.Insert(cacheKey, sectors, Nothing, DateTime.Now.AddSeconds(cacheSeconds), Cache.NoSlidingExpiration)
+                Catch
+                End Try
+            End If
+            Return sectors
+        End SyncLock
     End Function
 
     Public Function LoadCatalogMenu() As List(Of CatalogMenuSector)
+        Return LoadCatalogMenu(CatalogConnectionString())
+    End Function
+
+    Private Function LoadCatalogMenu(ByVal connectionString As String) As List(Of CatalogMenuSector)
         Dim sectors As New List(Of CatalogMenuSector)()
 
         Try
-            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using conn As New MySqlConnection(connectionString)
                 conn.Open()
 
                 Dim categorySectorColumn As String = ResolveColumnName(conn, "categorie", "SettoriId", "Id_settore")
@@ -189,11 +239,19 @@ Public Module CatalogMenuProvider
             Return String.Empty
         End If
 
-        Dim cacheKey As String = tableName & ":" & String.Join("|", candidates)
-        If ColumnCache.ContainsKey(cacheKey) Then
-            Return ColumnCache(cacheKey)
-        End If
+        Return LoadColumnForScope(DatabaseCacheIdentity(conn.ConnectionString), tableName, candidates,
+                                  Function() ResolveColumnNameUncached(conn, tableName, candidates))
+    End Function
 
+    Private Function LoadColumnForScope(ByVal databaseIdentity As String, ByVal tableName As String,
+                                        ByVal candidates() As String, ByVal loader As Func(Of String)) As String
+        If String.IsNullOrEmpty(databaseIdentity) Then Return loader()
+        Dim cacheKey As String = databaseIdentity & ":" & tableName & ":" & String.Join("|", candidates)
+        Return ColumnCache.GetOrAdd(cacheKey, Function(ignoredKey) loader())
+    End Function
+
+    Private Function ResolveColumnNameUncached(ByVal conn As MySqlConnection, ByVal tableName As String,
+                                              ByVal candidates() As String) As String
         Dim found As String = String.Empty
 
         Using cmd As New MySqlCommand("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = LOWER(@tableName)", conn)
@@ -213,7 +271,6 @@ Public Module CatalogMenuProvider
             End Using
         End Using
 
-        ColumnCache(cacheKey) = found
         Return found
     End Function
 

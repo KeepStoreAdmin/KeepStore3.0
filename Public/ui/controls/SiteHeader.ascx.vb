@@ -45,7 +45,7 @@ Partial Class SiteHeader
     End Sub
 
     Private Sub BindHeaderData()
-        Dim catalogMenu As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenu()
+        Dim catalogMenu As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
 
         BindSearchCategories(catalogMenu)
         BindDesktopCatalog(catalogMenu)
