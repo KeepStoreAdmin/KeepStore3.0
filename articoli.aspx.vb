@@ -876,7 +876,7 @@ End Sub
             " MarcheId, CategorieId, TipologieId," &
             " IF(PrezzoPromo IS NULL,Prezzo,PrezzoPromo) AS Ord_PrezzoPromo," &
             " IF(vsuperarticoli.PrezzoPromoIvato IS NULL," & effectiveBaseGrossSql & "," & effectivePromoGrossSql & ") AS Ord_PrezzoPromoIvato," &
-            " COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid, -1) AS TCid, IF(Ricondizionato = 1, 'visible', 'hidden') as refurbished," &
+            " COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid, -1) AS TCid, COALESCE(vsuperarticoli.Ricondizionato,0) AS Ricondizionato, IF(COALESCE(vsuperarticoli.Ricondizionato,0) = 1, 'visible', 'hidden') as refurbished," &
             " IFNULL(taglie.descrizione,'') as taglia," &
             " CONVERT(CONCAT('<table style=""width:100%;"" border=""1""><tr style=""background-color:#00FF99;""><td>Data di arrivo</td><td>Quantit&agrave;</td></tr><tr style=""background-color:#00FFFF;""><td>'," &
             "       GROUP_CONCAT(arrivi SEPARATOR '</td></tr><tr style=""background-color:#00FFFF;""><td>'),'</td></tr></table>'),CHAR) as arrivi," &
@@ -896,8 +896,8 @@ End Sub
         Dim strWhere2 As String = "WHERE 1=1 "
 
         If ResolveCatalogRefurbishedActive() Then
-            strWhere &= " AND COALESCE(vsuperarticoli.Ricondizionato,0) <> 0 "
-            strWhere2 &= " AND COALESCE(vsuperarticoli.Ricondizionato,0) <> 0 "
+            strWhere &= " AND COALESCE(vsuperarticoli.Ricondizionato,0) = 1 "
+            strWhere2 &= " AND COALESCE(vsuperarticoli.Ricondizionato,0) = 1 "
         End If
 
         
@@ -3957,13 +3957,7 @@ strWhere = strWhere & " GROUP BY id"
             badgeText = "Quantità"
         End If
 
-        Dim isRefurbished As Boolean = False
-        If UiData.HasColumn(dataItem, "Ricondizionato") Then
-            isRefurbished = UiData.Bool(dataItem, "Ricondizionato")
-        ElseIf UiData.HasColumn(dataItem, "refurbished") Then
-            Dim refurbishedValue As String = UiData.Str(dataItem, "refurbished").Trim()
-            isRefurbished = String.Equals(refurbishedValue, "visible", StringComparison.OrdinalIgnoreCase) OrElse UiData.Bool(dataItem, "refurbished")
-        End If
+        Dim isRefurbished As Boolean = UiData.Int(dataItem, "Ricondizionato") = 1
 
         Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(dataItem, HttpContext.Current)
 

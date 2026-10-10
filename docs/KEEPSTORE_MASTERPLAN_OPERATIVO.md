@@ -7,6 +7,28 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### CATALOG-REFURBISHED-BADGE-CONSISTENCY-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `8737dc7c2264ef241abdb0bb35e2ec23621a19bc`; branch `task/catalog-refurbished-badge-consistency-1a`. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+**Regola commerciale definitiva Product Owner, multi-tenant:** soltanto il valore numerico `Ricondizionato=1` determina il badge; `0`, `NULL` e altri valori non lo mostrano. Il settore, incluso il 34, non classifica mai automaticamente il prodotto. Il gestionale e l'unico punto di decisione commerciale. Questa regola prevale sui checkpoint storici che descrivono un filtro nonzero o un fallback di settore; non autorizza modifiche ai dati o ad altri moduli.
+
+Il precedente STOP B commerciale e risolto: il Product Owner ha corretto l'articolo `21813`. Verifica parametrizzata sul DB applicativo, in transazione read-only conclusa con rollback: flag attuale `1`, alias badge `visible`. Nessun dato modificato da Codex.
+
+SELECT catalogo: proietta il flag autorevole `COALESCE(vsuperarticoli.Ricondizionato,0) AS Ricondizionato`; alias storico `refurbished` mantenuto, coerente con `=1`. Card inline e modello ProductCard usano entrambi `UiData.Int(dataItem, "Ricondizionato") = 1`, senza fallback settore/alias. Solo i due predicati listing/facet sono allineati da nonzero a `=1`, come autorizzato. Nessuna nuova query, modifica URL/helper filtro, prezzi/IVA/promo/listini/cart o classificazione DB. ProductCard.ascx e relativo code-behind restano invariati.
+
+Design Gate proporzionato alla correzione meccanica: riferimento ONSUS esistente e contratti card/stack angolare gia approvati; nessuna nuova scelta visuale o benchmark generale. Markup badge, classe, testo, badge promo, CSS/JS e quattro viste restano identici, cambia soltanto la condizione server-side.
+
+Harness isolato con UiData reale e condizioni VB estratte: **384 PASS**, flag `0/1/2/-1/NULL`, settori 34 e diversi, DataRow/DataRowView, flag assente, alias legacy ingannevole e due tenant sintetici; rendering PlaceHolder WebForms e condizioni delle quattro viste. Parita listing/facet verificata sui predicati reali e DataTable sintetica; non e un'esecuzione del listing MySQL. Equivalenza completa dei sorgenti esclusi i soli blocchi autorizzati PASS: prezzi, badge promo, URL, viste e carrello non modificati. Precompile ASP.NET Framework 4.8 safe PASS, zero copie di configurazione operativa. Diff-check, manifest e scan segreti delle aggiunte obbligatori prima del commit.
+
+Finding separato MEDIUM, non blocker del catalogo: `search_suggest.aspx.vb` mantiene filtro e badge nonzero (`AppendFilterClauses` / assegnazione `item.IsRefurbished`); puo divergere dalla regola definitiva se vengono introdotti flag diversi da 0/1. File fuori manifest, invariato. Proposta `SEARCH-SUGGEST-REFURBISHED-BINARY-CONSISTENCY-1A`, NON AVVIATO, previa autorizzazione dopo review/smoke/chiusura di questo task. Nessuna dichiarazione di allineamento di tutte le superfici KeepStore.
+
+Browser mobile/desktop e smoke IIS NON ESEGUITI: nessuna certificazione visuale/overflow o suite ecommerce reale. Nessun DML/DDL, ordine, pagamento, e-mail, deploy o merge. Preservati `web.config`, quattro cancellazioni tracked e 54 untracked con hash/inventario invariati, fuori staging. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** solo `articoli.aspx` e `articoli.aspx.vb`, dopo review indipendente. Nessun task successivo avviato.
+
+### CATALOG-REFURBISHED-FACET-1A — CHIUSO / A / INTEGRATED
+
+PR #333 verificata MERGED al commit `8737dc7c2264ef241abdb0bb35e2ec23621a19bc`, unico parent `c85a2983fff065059b82ee012d7c6bbe6cf413df`. Chiusura A comunicata dal Product Owner e copia canonica riallineata FF-only. Questa nota prevale sul checkpoint storico pre-merge seguente; la successiva regola binaria definitiva sopra sostituisce la precedente semantica nonzero.
+
 ### CATALOG-REFURBISHED-FACET-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
 
 Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `c85a2983fff065059b82ee012d7c6bbe6cf413df`; branch `task/catalog-refurbished-facet-1a` dalla stessa base. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.

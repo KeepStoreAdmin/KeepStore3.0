@@ -381,7 +381,7 @@
                                         </ul>
 
                                         <asp:PlaceHolder ID="phRefurbBadge" runat="server"
-                                            Visible='<%# UiData.Bool(Container.DataItem, "Ricondizionato") OrElse UiData.Int(Container.DataItem, "st") = 34 OrElse UiData.Int(Container.DataItem, "SettoriId") = 34 %>'>
+                                            Visible='<%# UiData.Int(Container.DataItem, "Ricondizionato") = 1 %>'>
                                             <div class="box-sale-wrap pst-default">
                                                 <p class="small-text ks-badge-refurb">Ricondizionato</p>
                                             </div>
