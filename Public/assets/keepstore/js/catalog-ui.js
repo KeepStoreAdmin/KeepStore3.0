@@ -237,6 +237,7 @@
 
   function renderActiveFilters() {
     if (!isCatalogPage()) return;
+    if (document.getElementById('ksCatalogPage')) return;
     var host = ensureActiveFiltersHost();
     if (!host) return;
 

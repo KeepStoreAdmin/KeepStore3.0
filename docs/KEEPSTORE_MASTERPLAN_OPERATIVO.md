@@ -1,13 +1,29 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-09
+Aggiornato: 2026-10-10
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-### CATALOG-ZERO-RESULTS-RESET-CONTEXT-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+### CATALOG-LEGACY-SHOP-HANDLER-ISOLATION-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base esatta verificata `frontend-rebuild` / `origin/frontend-rebuild` = `b021a5453a6ae2f7143a333598557df7fe3e45a4`; PR #330 MERGED. Branch `task/catalog-legacy-shop-handler-isolation-1a` dalla stessa base. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Il Product Owner ha autorizzato per questo task il gate alternativo Node/DOM isolato al posto del Browser non disponibile e il manifest definitivo di cinque file, inclusi i soli cache-buster nei chiamanti.
+
+Due guard sull'esistente `#ksCatalogPage`: `shop.js` ritorna da `filterProducts()` prima di registrare i binding demo; `catalog-ui.js` ritorna da `renderActiveFilters()` prima di cercare/creare/svuotare l'host chip. Sono preservati chip e URL server-side anche quando l'ID WebForms dell'host e prefissato o l'host e assente nello zero-results. Nessun return globale, rimozione asset, nuova logica URL, query o filtro commerciale. `loadmoreFilter()` e auto-expand della marca attiva restano identici alla base. `filterSort()` e `filterPrice()` restano invariati: il markup reale del catalogo usa select WebForms e non presenta i rispettivi trigger `.select-item`, `.min-price`, `.max-price`, `.btn-filter-price`. Le pagine senza marker conservano gli handler preesistenti.
+
+Design Gate proporzionato al fix meccanico: reference del `shop.js` originale gia versionato, gerarchia e contratti del catalogo KeepStore conservati; nessun redesign o benchmark generale. `shop-default.html` non trovato nel package locale consultato; nessuna dichiarazione di nuovo audit visuale completo. I due URL script usano `v=20261010-catalog-legacy-isolation1a` per non riutilizzare asset stale.
+
+Manifest esclusivo: `Public/assets/keepstore/js/shop.js`, `Public/assets/keepstore/js/catalog-ui.js`, `Page.master` (solo cache-buster shop), `articoli.aspx` (solo cache-buster catalog-ui), questo Masterplan. Harness Node con adapter DOM/jQuery controllato, senza nuove dipendenze: **270/270 PASS**, 15 scenari su generale, settore/categoria, offerte con `pid`, filtri/pagina combinati e ricerca senza risultati; host esatto, ID prefissato e host assente. Eseguiti i file JS reali: riproduzione del reset legacy che svuota chip/riscrive conteggio sulla base; dopo fix assenza di binding concorrenti, nessun host client aggiunto, chip/URL/conteggi/card/prezzi preservati, load-more inizializzato con limite sette e successiva espansione, auto-expand della marca oltre posizione sette, comportamento senza marker. Prova di equivalenza del resto dei due JS e dei chiamanti, esclusi soltanto guard/cache-buster: viste, pager, ordinamento, page-size, prezzo, multiselect e carrello non modificati.
+
+Sintassi JS e precompile ASP.NET Framework 4.8 safe **PASS**, zero copie di configurazioni operative. Il harness non e un browser reale: nessuno smoke browser automatizzato, misura viewport, prova layout o GET al catalogo dichiarato PASS. Review indipendente e smoke manuale Product Owner rimangono gate separati; nessun merge, deploy, DB write, ordine, pagamento o invio esterno. Preservare `web.config`, quattro cancellazioni tracked e 54 untracked fuori staging.
+
+**FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** `Public/assets/keepstore/js/shop.js`, `Public/assets/keepstore/js/catalog-ui.js`, `Page.master`, `articoli.aspx`. Smoke manuale massimo tre verifiche: (1) desktop/mobile, filtri combinati/offerte, chip singolo e reset conservano contesto e conteggi coerenti; (2) Marche oltre sette, Mostra altro e marca attiva oltre posizione sette; (3) ordinamento/page-size, quattro viste e reset zero-results senza regressioni. Nessun trasferimento/deploy eseguito da Codex. Questo micro-task non dichiara completo il catalogo.
+
+### CATALOG-ZERO-RESULTS-RESET-CONTEXT-1A — CHIUSO / A / INTEGRATED
+
+PR #330 verificata MERGED al commit `b021a5453a6ae2f7143a333598557df7fe3e45a4`, unico parent `0417b891b9244e4ad1bc2649359a0340c8924250`. Integrazione FF-only e chiusura A comunicate dal Product Owner; stable locale/origin allo stesso commit. Questa nota prevale sul report tecnico pre-merge seguente.
 
 Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `0417b891b9244e4ad1bc2649359a0340c8924250`; PR #329 MERGED. Copia canonica gia allineata alla base, nuovo branch `task/catalog-zero-results-reset-context-1a`. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 

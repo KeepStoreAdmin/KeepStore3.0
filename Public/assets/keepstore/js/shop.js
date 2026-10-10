@@ -38,6 +38,8 @@
     /* Filter Product
     -------------------------------------------------------------------------*/
     var filterProducts = function () {
+        if (document.getElementById("ksCatalogPage")) return;
+
         const filters = {
             condition: null,
             brands: [],
