@@ -24,7 +24,6 @@ Partial Class Articoli
     Private catalogPriceDisplayContextFailed As Boolean = False
     Dim DispoTipo As Integer
     Dim DispoMinima As Integer
-    Dim InOfferta As Integer
     Dim filters As New Dictionary(Of String, String)
     Dim oldUrl As String
     Private productCardPreviewRendered As Boolean = False
@@ -219,6 +218,7 @@ Partial Class Articoli
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not EnsureCatalogPriceDisplayContext() Then Return
+        If NormalizeCatalogPromotionNavigation() Then Return
         SyncCatalogPriceRangeNavigation()
         ksCatalogPriceError.Visible = False
         txtCatalogPriceMin.Attributes.Remove("aria-invalid")
@@ -281,16 +281,6 @@ Partial Class Articoli
 
         DispoTipo = Me.Session("DispoTipo")
         DispoMinima = Me.Session("DispoMinima")
-        InOfferta = Me.Session("InOfferta")
-
-        'Assegnazione della variabile in offerta, per visualizzare solo i prodotti in offerta
-        Dim rawInPromo As String = Me.Request.QueryString("inpromo")
-        If Not String.IsNullOrEmpty(rawInPromo) Then
-            Dim tmpInOfferta As Integer
-            If Integer.TryParse(rawInPromo, tmpInOfferta) Then
-                InOfferta = tmpInOfferta
-            End If
-        End If
     End Sub
 
     
@@ -690,7 +680,6 @@ End Sub
         Dim promoActive As Boolean = ResolvePromotionCatalogActive()
         catalogPromotionActive = promoActive
         If promoActive Then
-            InOfferta = 1
             If Not TryReadPromotionCampaignId(catalogPromotionCampaignId) Then
                 catalogPromotionRequestInvalid = True
                 catalogPromotionCampaignId = 0
@@ -2430,15 +2419,28 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Private Function ResolvePromotionCatalogActive() As Boolean
-        If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then Return True
-        If InOfferta = 1 Then Return True
+        Return String.Equals(Request.QueryString("inpromo"), "1", StringComparison.Ordinal)
+    End Function
 
-        Dim promoInt As Integer = 0
-        Dim promoObj As Object = Session.Item("Promo")
-        Session.Item("Promo") = 0
-        Return promoObj IsNot Nothing AndAlso
-               Integer.TryParse(Convert.ToString(promoObj), promoInt) AndAlso
-               promoInt = 1
+    Private Function NormalizeCatalogPromotionNavigation() As Boolean
+        If Request.QueryString.GetValues("pid") Is Nothing Then Return False
+
+        Dim query = ParseUrlQuery(GetSafeReturnUrl())
+        If Request.QueryString.GetValues("inpromo") Is Nothing Then
+            ' Historical campaign links enter the existing validated promotion path.
+            query("inpromo") = "1"
+        ElseIf String.Equals(Request.QueryString("inpromo"), "0", StringComparison.Ordinal) Then
+            query.Remove("pid")
+            query.Remove("rimuovi")
+            query.Remove("page")
+            query.Remove("pg")
+            query.Remove("p")
+        Else
+            Return False
+        End If
+
+        RedirectIfChanged(BuildUrlWithQuery(Request.Url.AbsolutePath, query))
+        Return True
     End Function
 
     Private Function TryReadPromotionCampaignId(ByRef campaignId As Integer) As Boolean
@@ -2563,6 +2565,12 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Private Sub BindActiveFilters()
+        Dim dealsActive As Boolean = ResolvePromotionCatalogActive()
+        lnkCatalogDeals.HRef = HttpUtility.HtmlAttributeEncode(BuildCatalogDealsToggleUrl(GetSafeReturnUrl(), dealsActive))
+        lnkCatalogDeals.Attributes("class") = "ks-filter-option link py-3" & If(dealsActive, " active", String.Empty)
+        lnkCatalogDeals.Attributes("aria-label") = If(dealsActive, "Solo offerte: attivo. Rimuovi il filtro offerte", "Solo offerte: attiva il filtro offerte")
+        catalogDealsState.Visible = dealsActive
+
         Dim active As New List(Of ActiveFilterItem)()
 
         Dim q As String = QS("q", 80)
@@ -2753,6 +2761,18 @@ strWhere = strWhere & " GROUP BY id"
         qs.Remove("pg")
         qs.Remove("p")
         Return BuildUrlWithQuery(url, qs)
+    End Function
+
+    Private Function BuildCatalogDealsToggleUrl(ByVal url As String, ByVal active As Boolean) As String
+        If active Then Return RemoveActiveFilterFromUrl(url, "inpromo=")
+
+        Dim query = ParseUrlQuery(url)
+        query("inpromo") = "1"
+        query.Remove("rimuovi")
+        query.Remove("page")
+        query.Remove("pg")
+        query.Remove("p")
+        Return BuildUrlWithQuery(url, query)
     End Function
 
     Private Function ClearCatalogFiltersFromUrl(ByVal url As String) As String

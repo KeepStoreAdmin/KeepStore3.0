@@ -81,6 +81,18 @@
                                 </asp:Panel>
                             </asp:Panel>
 
+                            <div class="widget-facet facet-fieldset">
+                                <p class="facet-title title-sidebar fw-semibold">Offerte</p>
+                                <div class="box-fieldset-item">
+                                    <div class="fieldset-item">
+                                        <a ID="lnkCatalogDeals" runat="server" class="ks-filter-option link py-3">
+                                            <span>Solo offerte</span>
+                                            <small ID="catalogDealsState" runat="server" Visible="false">Attivo</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
                             <asp:Panel ID="ksFilters" runat="server">
                                 <div class="widget-facet facet-fieldset has-loadmore ks-brand-facet">
                                     <p class="facet-title title-sidebar fw-semibold">Marche</p>
