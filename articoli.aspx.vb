@@ -895,6 +895,11 @@ End Sub
         Dim strWhere As String = ""
         Dim strWhere2 As String = "WHERE 1=1 "
 
+        If ResolveCatalogRefurbishedActive() Then
+            strWhere &= " AND COALESCE(vsuperarticoli.Ricondizionato,0) <> 0 "
+            strWhere2 &= " AND COALESCE(vsuperarticoli.Ricondizionato,0) <> 0 "
+        End If
+
         
         ' placeholders IN-lists (VB2012-safe)
         Dim inMr As String = ""
@@ -2565,6 +2570,12 @@ strWhere = strWhere & " GROUP BY id"
     End Sub
 
     Private Sub BindActiveFilters()
+        Dim refurbishedActive As Boolean = ResolveCatalogRefurbishedActive()
+        lnkCatalogRefurbished.HRef = HttpUtility.HtmlAttributeEncode(BuildCatalogRefurbishedToggleUrl(GetSafeReturnUrl(), refurbishedActive))
+        lnkCatalogRefurbished.Attributes("class") = "ks-filter-option link py-3" & If(refurbishedActive, " active", String.Empty)
+        lnkCatalogRefurbished.Attributes("aria-label") = If(refurbishedActive, "Solo ricondizionati: attivo. Rimuovi il filtro", "Solo ricondizionati: attiva il filtro")
+        catalogRefurbishedState.Visible = refurbishedActive
+
         Dim dealsActive As Boolean = ResolvePromotionCatalogActive()
         lnkCatalogDeals.HRef = HttpUtility.HtmlAttributeEncode(BuildCatalogDealsToggleUrl(GetSafeReturnUrl(), dealsActive))
         lnkCatalogDeals.Attributes("class") = "ks-filter-option link py-3" & If(dealsActive, " active", String.Empty)
@@ -2572,6 +2583,7 @@ strWhere = strWhere & " GROUP BY id"
         catalogDealsState.Visible = dealsActive
 
         Dim active As New List(Of ActiveFilterItem)()
+        If refurbishedActive Then AddActiveFilter(active, "ricondizionato=", "Ricondizionati")
 
         Dim q As String = QS("q", 80)
         If q <> "" Then AddActiveFilter(active, "q=", "Ricerca: " & q)
@@ -2775,9 +2787,27 @@ strWhere = strWhere & " GROUP BY id"
         Return BuildUrlWithQuery(url, query)
     End Function
 
+    Private Function ResolveCatalogRefurbishedActive() As Boolean
+        Dim values As String() = Request.QueryString.GetValues("ricondizionato")
+        Return values IsNot Nothing AndAlso values.Length = 1 AndAlso
+               String.Equals(values(0), "1", StringComparison.Ordinal)
+    End Function
+
+    Private Function BuildCatalogRefurbishedToggleUrl(ByVal url As String, ByVal active As Boolean) As String
+        If active Then Return RemoveActiveFilterFromUrl(url, "ricondizionato=")
+
+        Dim query = ParseUrlQuery(url)
+        query("ricondizionato") = "1"
+        query.Remove("rimuovi")
+        query.Remove("page")
+        query.Remove("pg")
+        query.Remove("p")
+        Return BuildUrlWithQuery(url, query)
+    End Function
+
     Private Function ClearCatalogFiltersFromUrl(ByVal url As String) As String
         Dim qs = ParseUrlQuery(url)
-        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "spedgratis", "ordinamento", "taglia", "colore", "pmin", "pmax", "rimuovi", "page", "pg", "p"}
+        Dim keysToRemove As String() = New String() {"q", "tp", "gr", "sg", "mr", "disponibile", "spedgratis", "ordinamento", "taglia", "colore", "pmin", "pmax", "ricondizionato", "rimuovi", "page", "pg", "p"}
         For Each key As String In keysToRemove
             qs.Remove(key)
         Next

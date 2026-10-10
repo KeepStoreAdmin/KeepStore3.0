@@ -7,6 +7,26 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### CATALOG-REFURBISHED-FACET-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `c85a2983fff065059b82ee012d7c6bbe6cf413df`; branch `task/catalog-refurbished-facet-1a` dalla stessa base. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Sidebar ONSUS: sezione `Condizione`, link server-side `Solo ricondizionati`, stato attivo e nome accessibile; disponibile anche nello zero-results. Soltanto un parametro `ricondizionato=1` attiva il filtro; parametro assente, invalido o duplicato resta inattivo. Chip removibile `Ricondizionati`. Toggle/chip riusano gli helper URL esistenti, preservano contesto tassonomico, ricerca, offerte/campagna e filtri compatibili, azzerano la paginazione. I reset esistenti rimuovono anche `ricondizionato`, mantenendo lo scope strutturale/commerciale previsto dal loro contratto.
+
+Fonte esclusiva della condizione: `vsuperarticoli.Ricondizionato`. Predicato identico `COALESCE(vsuperarticoli.Ricondizionato,0) <> 0` aggiunto al listing e al WHERE condiviso dei conteggi facet, usando l'alias effettivamente presente nelle query. Nessuna query aggiuntiva, modifica di prezzi/IVA/promo/listini, classificazione tramite settore o nuovo filtro client-side. Renderer/card, quattro viste e carrello restano invariati a livello sorgente; non sono dichiarati collaudati su database reale.
+
+Finding separato, NON corretto: il badge storico `phRefurbBadge` nel template catalogo puo ancora mostrare `Ricondizionato` per `st=34` / `SettoriId=34` anche senza flag. Inoltre l'alias SQL storico `refurbished` usa `Ricondizionato=1`, mentre il contratto filtro/search-suggest accetta qualunque valore non zero. Sono differenze statiche concrete: nessun prodotto reale classificato erroneamente e stato dimostrato senza accesso DB. Queste regole visuali non entrano nel predicato del nuovo filtro; nessuna introduzione di etichette Nuovo/Usato.
+
+Design Gate proporzionato: riferimento originale ONSUS `shop-default.html`, struttura facet esistente e classi link gia presenti; controllo HTML nativo con stato/nome accessibile secondo [W3C WAI H91](https://www.w3.org/WAI/WCAG22/Techniques/html/H91). Nessun CSS/JS, redesign o benchmark generale.
+
+Verifiche isolate: metodi VB e binding WebForms reali estratti, URL attiva/disattiva/chip/reset, combinazioni tassonomia/ricerca/marca/prezzo/disponibilita/offerte/campagna/pagina, invalidi/duplicati, due host sintetici e parita predicato listing/facet: **400/400 PASS**. Il predicato reale viene valutato su DataTable sintetica con NULL/zero/nonzero e settore 34, inclusi conteggi marca e zero-results; non e un'esecuzione SQL MySQL. Equivalenza del metodo commerciale escluso il solo predicato autorizzato e metodi promo/card invariati PASS. Precompile ASP.NET Framework 4.8 safe PASS, zero copie di configurazione operativa. Diff-check, manifest e secret scan delle aggiunte obbligatori prima del commit.
+
+Browser reale/viewport, GET catalogo e risultati DB NON ESEGUITI. Nessun accesso DB, DML/DDL, ordine, pagamento, e-mail, deploy o merge. Review indipendente e smoke Product Owner restano gate separati. Preservati `web.config`, quattro cancellazioni tracked e 54 untracked con hash/inventario invariati, fuori staging. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** solo `articoli.aspx` e `articoli.aspx.vb`. Nessun task successivo avviato, nessuna dichiarazione di catalogo completo.
+
+### CATALOG-DEALS-FACET-1A / REV1 — CHIUSO / A / INTEGRATED
+
+PR #332 verificata MERGED al commit `c85a2983fff065059b82ee012d7c6bbe6cf413df`, parent `08969a24036644db70ac54698d9d6b584122b13e`. Chiusura A comunicata dal Product Owner; stable locale/origin riallineata solo FF-only. Questa nota prevale sul checkpoint tecnico pre-merge seguente.
+
 ### CATALOG-DEALS-FACET-1A / REV1 — A tecnico / B complessivo, review e smoke Product Owner pendenti
 
 Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `08969a24036644db70ac54698d9d6b584122b13e`; PR #331 MERGED. Branch `task/catalog-deals-facet-1a` dalla stessa base. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan.

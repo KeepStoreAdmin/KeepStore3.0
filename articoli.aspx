@@ -93,6 +93,18 @@
                                 </div>
                             </div>
 
+                            <div class="widget-facet facet-fieldset">
+                                <p class="facet-title title-sidebar fw-semibold">Condizione</p>
+                                <div class="box-fieldset-item">
+                                    <div class="fieldset-item">
+                                        <a ID="lnkCatalogRefurbished" runat="server" class="ks-filter-option link py-3">
+                                            <span>Solo ricondizionati</span>
+                                            <small ID="catalogRefurbishedState" runat="server" Visible="false">Attivo</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
                             <asp:Panel ID="ksFilters" runat="server">
                                 <div class="widget-facet facet-fieldset has-loadmore ks-brand-facet">
                                     <p class="facet-title title-sidebar fw-semibold">Marche</p>
