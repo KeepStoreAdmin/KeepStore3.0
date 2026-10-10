@@ -7,6 +7,24 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### COMPARE-DRAWER-EMPTY-STATE-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `6ba454b910049f6e5c240b198a7f5d21ec418f86`; branch `task/compare-drawer-empty-state-1a`. Manifest esclusivo: `Page.master`, `Public/assets/keepstore/js/keepstore-product.js`, `Default.aspx`, `articoli.aspx`, `articolo.aspx`, `compare.aspx` (questi quattro soltanto cache-buster), questo Masterplan. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+L'offcanvas globale `#compare` mantiene messaggio e struttura ONSUS; a lista vuota offre il link nativo `Vai al catalogo` verso `articoli.aspx` e nasconde il solo blocco azioni del drawer tramite `d-none`. `renderCompareDrawer()` ripristina le azioni esistenti quando e presente almeno un prodotto. Le chiamate gia presenti dopo add/remove/clear aggiornano anche questa visibilita, senza listener, stato o dipendenze nuovi. Chiave `ks_compare_products`, dati memorizzati, deduplica, limite 12, handling errori storage e renderer della pagina confronto restano invariati; `compare.aspx` cambia solo la versione dello script. Cache-buster coerente sui quattro chiamanti: `20261010-compare-drawer-empty-state-1a`.
+
+Design Gate proporzionato: offcanvas/azioni del riferimento originale ONSUS `shop-default.html`, classi `tf-btn btn-fill` e CTA gia presenti nell'empty-state della pagina confronto KeepStore. Link nativo con destinazione e nome espliciti coerente con [W3C WAI H91](https://www.w3.org/WAI/WCAG21/Techniques/html/H91). Nessun redesign, CSS o benchmark generale retailer.
+
+Harness esterno isolato Node con funzioni JavaScript reali e soli DOM/storage sintetici: **178 PASS**. Apertura vuota, add primo/multiplo, deduplica, remove intermedio/ultimo, clear e riapertura, limite 12, lettura/scrittura storage fallite, JSON non valido, pagina senza drawer; pagina confronto vuota/popolata e card drawer identiche alla base. Equivalenza completa sorgente esclusi CTA, classe iniziale, due righe renderer e quattro cache-buster PASS; sintassi JS, precompile ASP.NET Framework 4.8 safe PASS. Diff-check, manifest e secret scan richiesti prima del commit.
+
+Skill Browser letta, ma interfaccia di esecuzione richiesta non disponibile: browser desktop/360/390, navigazione reale, overflow e accessibilita visuale NON CERTIFICATI. I test sintetici non sostituiscono il browser o lo smoke IIS. Preservati `web.config`, quattro cancellazioni tracked e 54 untracked con hash/inventario invariati, fuori staging. Nessun accesso DB, deploy, ordine, pagamento, e-mail, merge o task successivo.
+
+**FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** soltanto `Page.master`, `Public/assets/keepstore/js/keepstore-product.js`, `Default.aspx`, `articoli.aspx`, `articolo.aspx`, `compare.aspx`, dopo review indipendente. Smoke: drawer vuoto e CTA, primo prodotto, ultimo remove/clear e riapertura, confronto popolato e pagina confronto esistente, desktop e mobile 360/390. Il catalogo complessivo resta aperto per i residui P1/P2.
+
+### CATALOG-EMPTY-FACET-VISIBILITY-1A — CHIUSO / A / INTEGRATED
+
+PR #336 verificata MERGED al commit `6ba454b910049f6e5c240b198a7f5d21ec418f86`, unico parent `edc6589bd67f23f02beca731006e308f5b1bb00b`. Review e smoke A comunicati dal Product Owner; copia canonica riallineata FF-only. Questa nota prevale sul checkpoint tecnico pre-merge seguente e non dichiara completo il catalogo.
+
 ### CATALOG-EMPTY-FACET-VISIBILITY-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
 
 Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `edc6589bd67f23f02beca731006e308f5b1bb00b`; branch `task/catalog-empty-facet-visibility-1a`. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.

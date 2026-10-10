@@ -824,6 +824,7 @@
 
     var list = compareList();
     var empty = document.querySelector('.mini-compare-empty');
+    var buttons = document.querySelector('#compare .tf-compare-buttons');
     wrap.innerHTML = list.map(function (item, idx) {
       return '<div class="tf-compare-item" data-idx="' + idx + '">' +
         '<a class="image" href="' + escapeHtml(item.url || '#') + '">' +
@@ -838,6 +839,7 @@
     }).join('');
 
     if (empty) empty.style.display = list.length ? 'none' : '';
+    if (buttons) buttons.classList.toggle('d-none', !list.length);
     wrap.style.display = list.length ? '' : 'none';
   }
 

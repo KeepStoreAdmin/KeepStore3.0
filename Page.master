@@ -226,9 +226,12 @@
                             </h5>
                             <div class="mini-compare-empty w-100 text-center">
                                 <h6>Il confronto prodotti e' vuoto</h6>
+                                <div class="mt-3">
+                                    <a href="articoli.aspx" class="tf-btn btn-fill">Vai al catalogo</a>
+                                </div>
                             </div>
                             <div class="tf-compare-wrap" id="ksCompareDrawerWrap"></div>
-                            <div class="tf-compare-buttons">
+                            <div class="tf-compare-buttons d-none">
                                 <div class="tf-compare-btn">
                                     <a href="compare.aspx" class="tf-btn btn-gray btn-large-3">
                                         <span class="text-white">Compara prodotti</span>
