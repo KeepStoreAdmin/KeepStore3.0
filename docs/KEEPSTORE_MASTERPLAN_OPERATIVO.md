@@ -7,6 +7,22 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### SEARCH-SUGGEST-REFURBISHED-BINARY-CONSISTENCY-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `9692bc2db9eca6bb7dd875716070744da0bdc88d`; branch `task/search-suggest-refurbished-binary-consistency-1a`. Manifest esclusivo: `search_suggest.aspx.vb`, questo Masterplan. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Due sole righe runtime autorizzate: `AppendFilterClauses` richiede `COALESCE(...Ricondizionato,0) = 1`; `MapSuggestions` assegna `item.IsRefurbished` solo per `ReadInt(...,0) = 1`. `0`, `NULL`, `2`, `-1` non classificano il prodotto come ricondizionato; nessuna inferenza dal settore. Ricerca testuale e recenti condividono questi metodi. `BuildBadges`, `BuildReason`, `SerializeItem`, `ReadFilters`, ranking, codice/EAN, prezzi/listini, URL e nomi JSON restano identici alla base. Nessun CSS/JS/markup o nuovo endpoint/query/configurazione. Catalogo #333/#334 invariato; il residuo MEDIUM search-suggest segnalato nel checkpoint precedente e risolto tecnicamente in questo perimetro, non ancora integrato.
+
+Harness isolato con intero code-behind reale compilato e sole boundary DB/media/formattazione di budget sintetiche: **562 PASS**. Valori `0/1/2/-1/NULL`, badge/reason/JSON, Promo/Disponibile, prezzo e score, codice/EAN, query normale, filtro ricondizionati ON/OFF e recenti; due dataset tenant sintetici separati. SQL prodotto catturato e dati filtrati nel fake boundary, nessuna query MySQL eseguita. Parametri ricerca e order recent preservati; equivalenza completa sorgente dopo normalizzazione delle sole due righe PASS. Non e una certificazione dell'isolamento tenant end-to-end o del database reale; il resolver/configurazione tenant e invariato.
+
+Precompile ASP.NET Framework 4.8 safe PASS con zero copie di configurazione operativa. Diff-check, manifest e secret scan delle aggiunte obbligatori prima del commit. Browser desktop/mobile, GET endpoint e smoke IIS NON ESEGUITI; nessuna certificazione visuale o suite generale ripetuta. Correzione meccanica della classificazione dati, nessuna nuova decisione UX/design o ampliamento funzionale.
+
+Preservati `web.config`, quattro cancellazioni tracked e 54 untracked con hash/inventario invariati, fuori staging. Nessun accesso DB, DML/DDL, ordine, pagamento, e-mail, deploy, merge o task successivo. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** solo `search_suggest.aspx.vb`, dopo review indipendente. Non dichiarata completa la ricerca o il catalogo.
+
+### CATALOG-REFURBISHED-BADGE-CONSISTENCY-1A — CHIUSO / A / INTEGRATED
+
+PR #334 verificata MERGED al commit `9692bc2db9eca6bb7dd875716070744da0bdc88d`, unico parent `8737dc7c2264ef241abdb0bb35e2ec23621a19bc`. Review e smoke A comunicati dal Product Owner; copia canonica riallineata FF-only. Questa nota prevale sul checkpoint tecnico pre-merge seguente e non dichiara risolti altri moduli fuori manifest.
+
 ### CATALOG-REFURBISHED-BADGE-CONSISTENCY-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
 
 Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `8737dc7c2264ef241abdb0bb35e2ec23621a19bc`; branch `task/catalog-refurbished-badge-consistency-1a`. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.

@@ -353,7 +353,7 @@ Partial Public Class search_suggest
 
         If filters.SoloPromo Then sql.Append(" AND COALESCE(" & a & "InOfferta,0) <> 0")
         If filters.SoloDisponibili Then sql.Append(" AND COALESCE(" & a & "Disponibilita,0) > 0")
-        If filters.SoloRicondizionati Then sql.Append(" AND COALESCE(" & a & "Ricondizionato,0) <> 0")
+        If filters.SoloRicondizionati Then sql.Append(" AND COALESCE(" & a & "Ricondizionato,0) = 1")
 
         If filters.MinPrice > 0D Then
             sql.Append(" AND COALESCE(NULLIF(" & a & "PrezzoPromoIvato,0), NULLIF(" & a & "PrezzoIvato,0), NULLIF(" & a & "PrezzoPromo,0), " & a & "Prezzo, 0) >= @minPrice")
@@ -403,7 +403,7 @@ Partial Public Class search_suggest
             item.MatchKind = DetectMatchKind(code, ean, title, brand, query)
             item.Availability = ReadDec(row("Disponibilita"), 0D)
             item.IsOffer = ReadInt(row("InOfferta"), 0) <> 0
-            item.IsRefurbished = ReadInt(row("Ricondizionato"), 0) <> 0
+            item.IsRefurbished = ReadInt(row("Ricondizionato"), 0) = 1
             item.FreeShipping = If(row.Table.Columns.Contains("SpeditoGratis"), ReadInt(row("SpeditoGratis"), 0) <> 0, False)
             item.TcId = If(row.Table.Columns.Contains("TCid"), SafeString(row("TCid")), String.Empty)
             Dim images As List(Of String) = CollectImages(row)
