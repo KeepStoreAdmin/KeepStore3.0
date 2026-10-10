@@ -7,6 +7,20 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### CATALOG-EMPTY-FACET-VISIBILITY-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
+
+Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `edc6589bd67f23f02beca731006e308f5b1bb00b`; branch `task/catalog-empty-facet-visibility-1a`. Manifest esclusivo: `articoli.aspx`, `articoli.aspx.vb`, questo Masterplan. `main` / `origin/main` invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+I quattro contenitori ONSUS Marche, Tipologie, Gruppi e Sottogruppi hanno soltanto nuovi riferimenti server. I rispettivi handler DataList PreRender nascondono anche titolo e contenitore quando `Items.Count = 0`; le sezioni con opzioni restano integralmente presenti. Page_Load riapre i soli contenitori prima del binding per non ereditare una visibilita obsoleta dal ViewState; la decisione finale resta basata sui conteggi correnti. `FormView1`, `TitoloCategoria`, binding differito ricerca, chip, Offerte/Ricondizionati, Mostra altro oltre sette marche e autoespansione marca attiva restano invariati. Nessuna query, CSS, JS, postback aggiuntivo o logica commerciale.
+
+Design Gate proporzionato: struttura originale ONSUS `shop-default.html` e contratti sidebar/adattivita multi-merceologia canonici, senza redesign o benchmark generale. Harness esterno isolato con handler VB reali, DataList/FormView/HtmlGenericControl e traversal PreRender WebForms reale: **231 PASS**, conteggi 0/1/7/8/50 e due dataset sintetici Tech/Food; wrapper e titolo assenti a zero, opzioni preservate, soglia Mostra altro, controllo categoria reperibile dopo hide/reset, chip e controlli commerciali indipendenti. Equivalenza completa sorgenti esclusi i soli riferimenti/assegnazioni di visibilita PASS: SQL, prezzi, promozioni, pager, URL e carrello invariati. Non e una verifica dei due tenant end-to-end o del listing MySQL.
+
+Precompile ASP.NET Framework 4.8 safe, diff-check, manifest e secret scan richiesti prima del commit. Browser desktop/mobile non disponibile (Node REPL `js` assente): nessuna certificazione visuale, overflow o autoespansione interattiva. Nessun GET catalogo con scritture legacy, accesso DB, DML/DDL, operazione ecommerce, deploy o merge. Preservati `web.config`, quattro cancellazioni tracked e 54 untracked con hash/inventario invariati e fuori staging. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER:** soltanto `articoli.aspx` e `articoli.aspx.vb`, dopo review indipendente. Verificare sidebar con facet vuoti/popolati, ricerca/zero-results e chip, Mostra altro/marca attiva oltre sette su desktop e mobile. Nessun task successivo avviato.
+
+### SEARCH-SUGGEST-REFURBISHED-BINARY-CONSISTENCY-1A — CHIUSO / A / INTEGRATED
+
+PR #335 verificata MERGED al commit `edc6589bd67f23f02beca731006e308f5b1bb00b`, unico parent `9692bc2db9eca6bb7dd875716070744da0bdc88d`. Review e smoke A comunicati dal Product Owner; copia canonica riallineata FF-only. Questa nota prevale sul checkpoint tecnico pre-merge seguente, senza dichiarare completa la ricerca o il catalogo.
+
 ### SEARCH-SUGGEST-REFURBISHED-BINARY-CONSISTENCY-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
 
 Base verificata `frontend-rebuild` / `origin/frontend-rebuild` = `9692bc2db9eca6bb7dd875716070744da0bdc88d`; branch `task/search-suggest-refurbished-binary-consistency-1a`. Manifest esclusivo: `search_suggest.aspx.vb`, questo Masterplan. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.

@@ -106,7 +106,7 @@
                             </div>
 
                             <asp:Panel ID="ksFilters" runat="server">
-                                <div class="widget-facet facet-fieldset has-loadmore ks-brand-facet">
+                                <div id="facetMarche" runat="server" class="widget-facet facet-fieldset has-loadmore ks-brand-facet">
                                     <p class="facet-title title-sidebar fw-semibold">Marche</p>
                                     <div class="box-fieldset-item">
                                         <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" CssClass="ks-filter-list">
@@ -126,7 +126,7 @@
                                     </button>
                                 </div>
 
-                                <div class="widget-facet facet-fieldset">
+                                <div id="facetTipologie" runat="server" class="widget-facet facet-fieldset">
                                     <p class="facet-title title-sidebar fw-semibold">Tipologie</p>
                                     <div class="box-fieldset-item">
                                         <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" CssClass="ks-filter-list">
@@ -142,7 +142,7 @@
                                     </div>
                                 </div>
 
-                                <div class="widget-facet facet-fieldset">
+                                <div id="facetGruppi" runat="server" class="widget-facet facet-fieldset">
                                     <p class="facet-title title-sidebar fw-semibold">Gruppi</p>
                                     <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsGruppo">
                                         <ItemTemplate>
@@ -163,7 +163,7 @@
                                     </div>
                                 </div>
 
-                                <div class="widget-facet facet-fieldset">
+                                <div id="facetSottogruppi" runat="server" class="widget-facet facet-fieldset">
                                     <p class="facet-title title-sidebar fw-semibold">Sottogruppi</p>
                                     <div class="box-fieldset-item">
                                         <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">

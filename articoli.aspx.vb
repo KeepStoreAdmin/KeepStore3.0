@@ -218,6 +218,11 @@ Partial Class Articoli
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If Not EnsureCatalogPriceDisplayContext() Then Return
+        ' Non ereditare dal ViewState la visibilita del contenitore: il facet corrente decide in PreRender.
+        facetMarche.Visible = True
+        facetTipologie.Visible = True
+        facetGruppi.Visible = True
+        facetSottogruppi.Visible = True
         If NormalizeCatalogPromotionNavigation() Then Return
         SyncCatalogPriceRangeNavigation()
         ksCatalogPriceError.Visible = False
@@ -1673,20 +1678,24 @@ strWhere = strWhere & " GROUP BY id"
 
     Protected Sub DataList1_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList1.PreRender
         Me.DataList1.Visible = (Me.DataList1.Items.Count > 0)
+        Me.facetGruppi.Visible = (Me.DataList1.Items.Count > 0)
     End Sub
 
     Protected Sub DataList2_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList2.PreRender
         Dim brandCount As Integer = Me.DataList2.Items.Count
         Me.DataList2.Visible = (brandCount > 0)
+        Me.facetMarche.Visible = (brandCount > 0)
         Me.btnBrandLoadMore.Visible = (brandCount > 7)
     End Sub
 
     Protected Sub DataList3_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList3.PreRender
         Me.DataList3.Visible = (Me.DataList3.Items.Count > 0)
+        Me.facetTipologie.Visible = (Me.DataList3.Items.Count > 0)
     End Sub
 
     Protected Sub DataList4_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles DataList4.PreRender
         Me.DataList4.Visible = (Me.DataList4.Items.Count > 0)
+        Me.facetSottogruppi.Visible = (Me.DataList4.Items.Count > 0)
     End Sub
 
     Protected Sub rPromo_ItemDataBound(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.RepeaterItemEventArgs)
