@@ -250,7 +250,7 @@ Public NotInheritable Class CompareCommercialSnapshotProvider
         ' The shared view supplies base commercial/stock facts. SELECT DISTINCT
         ' removes repetitions from offer joins; conflicting facts remain ambiguous.
         command.CommandText = "SELECT DISTINCT v.id AS ArticleId," & NormalizedTC & " AS TCId," &
-            " v.Prezzo,v.PrezzoIvato,v.IdIvaRC,v.ValoreIvaRC,v.Giacenza,v.Disponibilita,v.Impegnata,v.InOrdine" &
+            " v.Prezzo,v.PrezzoIvato,v.IdIvaRC,v.ValoreIvaRC,v.Giacenza,v.Disponibilita,v.Impegnata,v.InOrdine,v.ScortaMinima" &
             " FROM vsuperarticoli v INNER JOIN articoli a ON a.id=v.id" &
             " WHERE v.NListino=@listino AND COALESCE(a.Abilitato,0)=1 AND COALESCE(v.Export,0)<>0" &
             " AND (" & String.Join(" OR ", predicates.ToArray()) & ")" &
@@ -322,11 +322,18 @@ Public NotInheritable Class CompareCommercialSnapshotProvider
             End If
             Dim price As Nullable(Of Decimal) = priceContext.SelectPrice(promotion.EffectivePriceNet, promotion.EffectivePriceGross)
             If Not price.HasValue Then Return New CompareCommercialSnapshotItem(key, CompareCommercialFailure.InvalidCommercialData)
-            ' These columns must come from the batch read. NULL uses the canonical
-            ' helper's existing stock semantics; absent/malformed columns fail closed.
-            For Each column As String In New String() {"Giacenza", "Disponibilita", "Impegnata", "InOrdine"}
-                ReadDecimal(row, column)
+            ' The authoritative view already normalizes these three stock facts
+            ' to zero. A residual NULL cannot certify their availability semantics.
+            For Each column As String In New String() {"Giacenza", "Disponibilita", "Impegnata"}
+                If Not ReadDecimal(row, column).HasValue Then
+                    Return New CompareCommercialSnapshotItem(key, CompareCommercialFailure.InvalidCommercialData)
+                End If
             Next
+            ' Incoming NULL legitimately means zero in the legacy view/helper.
+            ' An unset product threshold legitimately uses the tenant threshold.
+            ' Both columns must exist and be convertible when populated.
+            ReadDecimal(row, "InOrdine")
+            ReadDecimal(row, "ScortaMinima")
             Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, context)
             Return New CompareCommercialSnapshotItem(key, CompareCommercialFailure.None, price,
                                                       availability.IsAvailable, availability.Text)

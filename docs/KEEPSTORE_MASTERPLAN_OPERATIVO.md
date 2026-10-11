@@ -7,6 +7,16 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### COMPARE-COMMERCIAL-SNAPSHOT-1A / REV1 — F01/F02 corretti, review indipendente pendente
+
+PR #338 e branch `task/compare-commercial-snapshot-1a` invariati; parent REV1 `d8d52dd924118b0f2f6febb565281d6467b26e3a`, base stabile `4e50cfd21b05d3bebd3099cc65c40ef76b333eef`. Manifest sempre soltanto provider e questo Masterplan. F01: la stessa SELECT batch proietta ora `vsuperarticoli.ScortaMinima`, fonte autorevole proveniente dalle giacenze; soglia prodotto e fallback tenant rimangono quelli di `AvailabilityDisplayHelper`, senza nuovi calcoli o query.
+
+F02: verificati read-only schema e definizione della view locale. `Giacenza`, `Disponibilita` e `Impegnata` sono gia normalizzate a zero dalla view tramite IF NULL; un NULL residuo in queste tre proiezioni non e certificabile e restituisce `NotVerified` senza prezzo/disponibilita. `InOrdine` puo legittimamente essere NULL nel percorso legacy e conserva lo zero dell'helper. `ScortaMinima` NULL/zero conserva il fallback tenant; valore presente malformato o colonna assente fallisce chiuso come gli altri dati stock. Nessun cambiamento ai resolver o alla presentazione sintetica/numerica dell'helper. Questa nota supera soltanto l'accettazione indiscriminata dei NULL stock del checkpoint Fase A.
+
+Harness esterno REV1: **58 PASS**, soglia articolo maggiore/minore di quella tenant, fallback NULL/zero, stock zero verificato, NULL incoming ammesso e arrivi positivi, NULL obbligatori rifiutati, cinque colonne assenti/malformate, double SQL, promo/variante e modalita display delegate. SELECT aggiornata verificata read-only sullo schema locale con `LIMIT 0`. Precompile 4.8 safe, diff-check, manifest e secret scan delle aggiunte **PASS**. I precedenti 84 test restano evidenza storica per il perimetro non modificato e non sono stati rieseguiti integralmente; il caso NULL stock modificato e coperto dalla REV1.
+
+Nessun nuovo endpoint, DB write, deploy, merge o Fase B. Configurazione, quattro cancellazioni tracked e 54 untracked protetti fuori staging. Prossimo gate: review indipendente della REV1; file runtime pronto soltanto `App_Code/CompareCommercialSnapshotProvider.vb`.
+
 ### COMPARE-COMMERCIAL-SNAPSHOT-1A / FASE A — provider server-side, review indipendente pendente
 
 Base autorizzata `4e50cfd21b05d3bebd3099cc65c40ef76b333eef`; branch `task/compare-commercial-snapshot-1a`. Manifest esclusivo: `App_Code/CompareCommercialSnapshotProvider.vb` e questo Masterplan. La working copy era gia allineata: nessuna risincronizzazione. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
