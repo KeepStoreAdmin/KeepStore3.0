@@ -1,11 +1,27 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-10
+Aggiornato: 2026-10-11
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### COMPARE-COMMERCIAL-SNAPSHOT-1A / FASE A — provider server-side, review indipendente pendente
+
+Base autorizzata `4e50cfd21b05d3bebd3099cc65c40ef76b333eef`; branch `task/compare-commercial-snapshot-1a`. Manifest esclusivo: `App_Code/CompareCommercialSnapshotProvider.vb` e questo Masterplan. La working copy era gia allineata: nessuna risincronizzazione. `main` / `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
+
+Foundation non montata: `LoadCurrent(HttpContext, IEnumerable(Of CompareCommercialProductKey))` riceve soltanto identificativi, massimo 12 elementi in input, deduplicati per `id + TCId`; `0` e `-1` rappresentano lo stesso articolo senza varianti. Contesto fiscale/listino dal `StorefrontPriceDisplayContextProvider` validato dal master; utente e scope promozionale da `ProductPromotionEligibilityResolver.CreateContext`. Nessun prezzo, disponibilita o parametro commerciale proveniente dal browser. Una SELECT parametrizzata sul database configurato/listino corrente carica tutti i prodotti abilitati/esportabili; verifica l'associazione esatta alla variante ed esclude il sentinel senza variante quando l'articolo ha varianti. Nessun fallback ad altre varianti. Ripetizioni identiche della view vengono deduplicate; fatti commerciali discordanti sono NON VERIFICATI.
+
+Un solo `ProductPromotionEligibilityResolver.CreateBatch` per l'intero insieme; prezzo fiscale da `StorefrontEffectivePriceResolver`, selezione netto/lordo dal Context, promozione autorevole applicabile a quantita 1 e disponibilita da `AvailabilityDisplayHelper`. Nessun nuovo calcolo commerciale, arrotondamento anticipato o query per singolo prodotto. Lo snapshot non prenota prezzi o stock: sono letture correnti, non una transazione commerciale atomica. Errori di contesto/query/batch, prodotti mancanti, varianti invalide o dati ambigui restituiscono `NotVerified`, motivo esplicito, prezzo e disponibilita nulli e testo vuoto. `Ready` significa lettura completata, NON che ogni elemento sia verificato: il futuro consumer deve controllare lo stato di ciascun elemento e non sostituire errori con valori commerciali da localStorage.
+
+Harness esterno isolato con provider e resolver fiscali/promozionali/disponibilita reali: **84 PASS**. Input invalidi/null, deduplica `0/-1`, limite 12/13, ordine del batch, due scope tenant/listino sintetici, mismatch tenant/listino/utente, context Session anonimo/autenticato e stale, netto/lordo, override 0/frazionario, RC 0/5 e precedenza, promo a quantita 1/tier non applicabile/variante esatta, indisponibilita verificata distinta da errore, prodotto mancante/variante errata, ambiguita e dati mancanti. Log e dipendenze estranee stubbed nel solo harness; nessuna fixture DB. SELECT reale verificata sullo schema locale con `LIMIT 0`, read-only; non e uno smoke commerciale end-to-end di tenant reali. Precompile ASP.NET Framework 4.8 safe **PASS**, con configurazione sintetica e zero copie operative; diff-check, manifest e secret scan delle aggiunte **PASS**.
+
+Nessun endpoint pubblico, modifica `compare.aspx`/JavaScript/carrello/checkout/resolver, deploy, merge, DML/DDL o operazione ecommerce. Preservati `web.config`, quattro cancellazioni tracked e 54 untracked, fuori staging. Fase B JavaScript **NON AUTORIZZATA / NON AVVIATA**; gate successivo: review indipendente del provider e delle regole commerciali. File runtime pronto per review: soltanto `App_Code/CompareCommercialSnapshotProvider.vb`.
+
+### COMPARE-DRAWER-EMPTY-STATE-1A — CHIUSO / A / INTEGRATED
+
+PR #337 integrata al commit `4e50cfd21b05d3bebd3099cc65c40ef76b333eef`, parent `6ba454b910049f6e5c240b198a7f5d21ec418f86`; review e smoke A comunicati dal Product Owner. Questa nota prevale sul checkpoint pre-merge seguente. Storage, limite 12, deduplica e pagina confronto restano invariati dalla foundation Fase A.
 
 ### COMPARE-DRAWER-EMPTY-STATE-1A — A tecnico / B complessivo, review e smoke Product Owner pendenti
 
