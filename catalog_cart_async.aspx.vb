@@ -115,8 +115,9 @@ Partial Class CatalogCartAsync
                     Return
                 End If
                 CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, _requestId)
-                If result IsNot Nothing AndAlso (result.FailureKind = CartMutationFailureKind.StockInsufficient OrElse
-                                                result.FailureKind = CartMutationFailureKind.Commercial) Then
+                If result IsNot Nothing AndAlso result.FailureKind = CartMutationFailureKind.StockInsufficient Then
+                    Reject(422, "Disponibilità insufficiente per la quantità richiesta. Controlla il carrello o prova con una quantità inferiore.")
+                ElseIf result IsNot Nothing AndAlso result.FailureKind = CartMutationFailureKind.Commercial Then
                     Reject(422, "Il prodotto non è stato aggiunto. Verifica disponibilità e prezzo.")
                 Else
                     Reject(503, "Non è stato possibile verificare o aggiornare il carrello. Riprova.")
