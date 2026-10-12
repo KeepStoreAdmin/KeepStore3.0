@@ -143,7 +143,7 @@
                             <nav class="category-menu sub-menu-container ks-header-catalog-menu" aria-label="Catalogo completo">
                                 <div id="ksDesktopCategoryMenu" class="menu-category-menu-container ks-header-catalog-wrapper">
                                     <ul class="megamenu ks-header-catalog-list">
-                                        <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" />
+                                        <asp:Literal ID="litDesktopCatalogMegaMenu" runat="server" EnableViewState="false" />
                                     </ul>
                                 </div>
                             </nav>
