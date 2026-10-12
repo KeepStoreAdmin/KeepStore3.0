@@ -176,7 +176,12 @@ Partial Public Class _Default
         Dim topRatedPool As DataTable = GetTopRatedPool(120)
         Dim bestSellerPool As DataTable = GetBestSellerPool(120)
         Dim currentYearSellingPool As DataTable = GetCurrentYearSellingPool(120)
-        Dim topSellingPool As DataTable = GetPureTopSellingPool(120)
+        Dim topSellingPool As DataTable
+        If Not IsTableEmpty(bestSellerPool) Then
+            topSellingPool = bestSellerPool.Copy()
+        Else
+            topSellingPool = GetPureTopSellingPool(120)
+        End If
         Dim fallbackCatalogPool As DataTable = GetCatalogFallbackPool(160)
 
         Dim dealRows As DataTable = TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)
