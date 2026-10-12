@@ -1,11 +1,23 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-11
+Aggiornato: 2026-10-12
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### COMPARE-COMMERCIAL-SNAPSHOT-1B — review A, smoke IIS e varianti simulate; gate finale varianti differito dal Product Owner
+
+PR #339 revisionata indipendentemente A dal Product Owner sul commit `ac49fa16d3d483b2c13f13cd38f886cfbdbc2c81`; non ancora integrata. Smoke IIS locale HTTPS con Session anonima e token CSRF realmente emesso dal master: POST articolo 21813 HTTP 200, prezzo IVA inclusa 3660 e disponibilita zero coerenti con lettura della view autorevole; prodotto/variante inesistenti NotVerified senza prezzo/disponibilita; CSRF assente/errato e Session assente 403, GET 405, JSON invalido e 13 prodotti 400, JSON/no-cache/no-store PASS. Nessun errore IIS nelle richieste eseguite. Contesto autenticato reale non disponibile e non certificato; contesto anonimo/autenticato sintetico resta coperto dai 320 controlli precedenti. Smoke reale sull'articolo 16483, prezzo 3600, riferito PASS dal Product Owner: evidenza umana, non una nuova verifica automatizzata Codex.
+
+Il DB locale non contiene righe in `articoli_tagliecolori`; supporto varianti attualmente disabilitato. Il Product Owner autorizza simulazioni senza attivazione e rinvia esplicitamente il collaudo reale con varianti abilitate al completamento del progetto. Harness esterno mirato sul provider e serializer JSON reali gia compilati: **39 PASS**, varianti 99/100/101 dello stesso articolo con prezzi e stock distinti, promo esatta senza contaminare altre varianti, stock zero verificato, variante/prodotto assenti senza fallback o facts commerciali, due scope tenant e batch cross-tenant rifiutato, contesto autenticato con override IVA, variante ambigua fail-closed, deduplica/alias 0 e -1, limite 12/13. Dati esclusivamente sintetici in memoria; nessun accesso DB o attivazione dal harness. Queste prove NON certificano il lifecycle completo delle varianti su IIS/DB reale. Nessun resolver/runtime modificato, DML/DDL, deploy, merge o fase 1C.
+
+### Gate obbligatorio di fine progetto — ecommerce completo con varianti abilitate e contesto autenticato
+
+Prima della certificazione finale dell'ecommerce, eseguire un collaudo dedicato con supporto `articoli_tagliecolori` abilitato a 1 tramite il contratto di configurazione autorevole, su ambiente e fixture esplicitamente autorizzati dal Product Owner, includendo obbligatoriamente il contesto autenticato reale, oggi non certificato. **NON AVVIATO / DIFFERITO**, non soddisfatto dai test sintetici e non attivabile automaticamente da questa nota. Per il momento lasciare il supporto disabilitato e non creare/modificare righe o flag nel DB.
+
+La matrice finale deve coprire almeno PDP e selezione variante, HOME/catalogo/ricerca e confronto con coppia id+TCId esatta, prezzo/listino/IVA/promo e stock specifici della variante, assenza di fallback su variante inesistente/invalida, carrello/MiniCart e quantita/remove/clear, persistenza e transizione anonimo/login, checkout e righe documento. Provare anonimo/autenticato, almeno due tenant/listini, varianti con stock/prezzi differenti e indisponibili, deduplica e limiti batch, errori/CSRF/no-cache, desktop e mobile. Ordini, mutazioni carrello, attivazione del supporto e qualsiasi fixture DB richiedono autorizzazione dedicata e piano di ripristino; nessun pagamento, gateway o e-mail reale implicitamente autorizzato. Registrare separatamente PASS/FAIL runtime reali e limiti sintetici, senza dichiarare l'ecommerce completo finche il gate non e superato.
 
 ### COMPARE-COMMERCIAL-SNAPSHOT-1B — endpoint read-only, review indipendente pendente
 
