@@ -30,7 +30,8 @@
                 </div>
             </div>
 
-            <div class="tf-compare-list ks-compare-page d-none" id="ksCompareShell">
+            <p id="ksCompareCommercialStatus" class="text-main-2 caption mb-3" role="status" aria-live="polite" aria-atomic="true"></p>
+            <div class="tf-compare-list ks-compare-page d-none" id="ksCompareShell" data-ks-commercial-endpoint="<%= ResolveUrl("~/compare-commercial-snapshot.ashx") %>">
                 <h5 class="title fw-semibold">Compara prodotti</h5>
                 <div class="tf-compare-wrap ks-compare-page-grid" id="ksCompareGrid"></div>
                 <div class="tf-compare-buttons">
@@ -49,5 +50,5 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261010-compare-drawer-empty-state-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
 </asp:Content>

@@ -916,7 +916,7 @@
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261010-compare-drawer-empty-state-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>

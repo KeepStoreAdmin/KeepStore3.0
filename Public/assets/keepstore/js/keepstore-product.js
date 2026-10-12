@@ -843,13 +843,60 @@
     wrap.style.display = list.length ? '' : 'none';
   }
 
-  function renderComparePage() {
+  var compareCommercialSignature = null;
+  var compareCommercialVersion = 0;
+  var compareCommercialCancel = null;
+
+  function comparePageEntries() {
+    var stored = compareList();
+    if (!Array.isArray(stored)) return [];
+    return stored.slice(0, 12).map(function (item, idx) {
+      if (!item || typeof item !== 'object') return null;
+      var id = String(item.id || '');
+      var tc = item.tcid == null || item.tcid === '' ? '-1' : String(item.tcid);
+      var valid = /^[1-9][0-9]*$/.test(id) && Number(id) <= 2147483647 &&
+        /^(?:-1|0|[1-9][0-9]*)$/.test(tc) && Number(tc) <= 2147483647;
+      return { id: valid ? Number(id) : null, TCId: valid ? (Number(tc) === 0 ? -1 : Number(tc)) : null,
+        idx: idx, title: item.title || item.name || 'Prodotto', brand: item.brand, code: item.code,
+        category: item.category, url: item.url, image: item.image };
+    }).filter(Boolean);
+  }
+
+  function compareCommercialKey(id, tc) { return String(id) + ':' + String(tc); }
+
+  function readCompareSnapshot(data, requested) {
+    if (!data || data.ok !== true || data.state !== 'Ready' || !Array.isArray(data.items) ||
+        !data.vat || (data.vat.mode !== 1 && data.vat.mode !== 2) ||
+        typeof data.vat.label !== 'string' || !data.vat.label.trim() || data.items.length !== requested.length) throw new Error('Invalid snapshot');
+    var expected = Object.create(null);
+    requested.forEach(function (item) { expected[compareCommercialKey(item.id, item.TCId)] = true; });
+    var result = Object.create(null);
+    data.items.forEach(function (item) {
+      if (!item || !Number.isInteger(item.id) || !Number.isInteger(item.TCId)) throw new Error('Invalid identity');
+      var key = compareCommercialKey(item.id, item.TCId);
+      if (!expected[key] || result[key] || typeof item.verified !== 'boolean') throw new Error('Unexpected identity');
+      if (item.verified && (typeof item.price !== 'number' || !isFinite(item.price) || item.price <= 0 ||
+          !item.availability || typeof item.availability.available !== 'boolean' ||
+          typeof item.availability.text !== 'string' || !item.availability.text.trim())) throw new Error('Invalid commercial data');
+      result[key] = item.verified ? { price: item.price, availability: item.availability, vat: data.vat.label } : null;
+      // Mark NotVerified identities as consumed without accepting their commercial fields.
+      delete expected[key];
+    });
+    if (Object.keys(expected).length) throw new Error('Missing identity');
+    return result;
+  }
+
+  function renderCompareCards(list, snapshot, loading) {
     var grid = document.getElementById('ksCompareGrid');
     if (!grid) return;
 
     var shell = document.getElementById('ksCompareShell');
     var empty = document.getElementById('ksCompareEmptyState');
-    var list = compareList().filter(function (item) { return item && item.id; }).slice(0, 12);
+    var status = document.getElementById('ksCompareCommercialStatus');
+    grid.setAttribute('aria-busy', loading ? 'true' : 'false');
+    if (status) status.textContent = !list.length ? '' : loading ? 'Verifica prezzi e disponibilità in corso…' :
+      list.every(function (item) { return snapshot && snapshot[compareCommercialKey(item.id, item.TCId)]; }) ?
+        'Prezzi e disponibilità verificati dal server.' : 'Dati non verificabili per alcuni prodotti. Apri la scheda prodotto per verificarli.';
 
     if (!list.length) {
       grid.innerHTML = '';
@@ -861,12 +908,13 @@
     if (empty) empty.classList.add('d-none');
     if (shell) shell.classList.remove('d-none');
 
-    grid.innerHTML = list.map(function (item, idx) {
+    grid.innerHTML = list.map(function (item) {
       var title = item.title || item.name || 'Prodotto';
       var meta = [item.brand, item.code ? 'Cod. ' + item.code : ''].filter(Boolean).join(' - ');
-      var availability = item.available || item.availability || '';
-      var cartUrl = item.cartUrl || ('cart_add.aspx?id=' + encodeURIComponent(item.id) + '&TCid=' + encodeURIComponent(item.tcid || '-1') + '&qty=1');
-      return '<div class="tf-compare-item ks-compare-page-card" data-idx="' + idx + '">' +
+      var current = snapshot && snapshot[compareCommercialKey(item.id, item.TCId)];
+      var availability = current ? current.availability.text : loading ? 'Verifica in corso…' : 'Dati non verificabili';
+      var cartUrl = 'cart_add.aspx?id=' + encodeURIComponent(item.id) + '&TCid=' + encodeURIComponent(item.TCId) + '&qty=1';
+      return '<div class="tf-compare-item ks-compare-page-card" data-idx="' + item.idx + '">' +
         '<a class="image" href="' + escapeHtml(item.url || '#') + '">' +
           (item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(title) + '">' : '') +
         '</a>' +
@@ -874,16 +922,71 @@
           '<p class="caption text-main-2 mb-1">' + escapeHtml(item.category || 'Prodotto') + '</p>' +
           '<a class="link text-secondary body-md-2 fw-semibold" href="' + escapeHtml(item.url || '#') + '">' + escapeHtml(title) + '</a>' +
           (meta ? '<p class="caption text-main-2 mt-1">' + escapeHtml(meta) + '</p>' : '') +
-          '<p class="price-wrap fw-medium mt-2">' + escapeHtml(item.price || 'Prezzo su richiesta') + '</p>' +
-          (availability ? '<p class="caption text-main-2">' + escapeHtml(availability) + '</p>' : '') +
+          (current ? '<p class="caption text-main-2 mt-2">' + escapeHtml(current.vat) + '</p>' +
+            '<p class="price-wrap fw-medium">' + escapeHtml(current.price.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })) + '</p>' : '') +
+          '<p class="caption text-main-2">' + escapeHtml(availability) + '</p>' +
           '<div class="d-flex gap-2 mt-3 flex-wrap">' +
             '<a class="tf-btn btn-line" href="' + escapeHtml(item.url || '#') + '"><span>Vedi prodotto</span></a>' +
-            '<button type="submit" form="ksNativeCartForm" name="ksCartAction" class="tf-btn btn-fill js-ks-cart-link" data-ks-cart-url="' + escapeHtml(cartUrl) + '" data-ks-id="' + escapeHtml(item.id) + '" data-ks-tcid="' + escapeHtml(item.tcid || '-1') + '"><span>Aggiungi</span></button>' +
+            (current && current.availability.available ? '<button type="submit" form="ksNativeCartForm" name="ksCartAction" class="tf-btn btn-fill js-ks-cart-link" data-ks-cart-url="' + escapeHtml(cartUrl) + '" data-ks-id="' + escapeHtml(item.id) + '" data-ks-tcid="' + escapeHtml(item.TCId) + '"><span>Aggiungi</span></button>' : '') +
           '</div>' +
         '</div>' +
-        '<button type="button" class="remove link" data-ks-remove-compare="' + idx + '" aria-label="Rimuovi"><i class="icon icon-close"></i></button>' +
+        '<button type="button" class="remove link" data-ks-remove-compare="' + item.idx + '" aria-label="Rimuovi"><i class="icon icon-close"></i></button>' +
       '</div>';
     }).join('');
+  }
+
+  function renderComparePage() {
+    var shell = document.getElementById('ksCompareShell');
+    if (!shell || !document.getElementById('ksCompareGrid')) return;
+    var list = comparePageEntries();
+    var signature = JSON.stringify(list);
+    if (signature === compareCommercialSignature) return;
+    compareCommercialSignature = signature;
+    var version = ++compareCommercialVersion;
+    if (compareCommercialCancel) compareCommercialCancel();
+    compareCommercialCancel = null;
+    renderCompareCards(list, null, !!list.length);
+    if (!list.length) return;
+    var requested = [];
+    var seen = Object.create(null);
+    list.forEach(function (item) {
+      if (item.id === null) return;
+      var key = compareCommercialKey(item.id, item.TCId);
+      if (!seen[key]) { seen[key] = true; requested.push({ id: item.id, TCId: item.TCId }); }
+    });
+    var token = document.body.getAttribute('data-ks-async-cart-token');
+    var endpoint = shell.getAttribute('data-ks-commercial-endpoint');
+    if (!requested.length || !token || !endpoint || typeof window.fetch !== 'function') {
+      renderCompareCards(list, null, false);
+      return;
+    }
+    var controller = typeof window.AbortController === 'function' ? new window.AbortController() : null;
+    var finished = false;
+    var timer;
+    function finish(snapshot) {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timer);
+      if (version !== compareCommercialVersion) return;
+      if (signature !== JSON.stringify(comparePageEntries())) { renderComparePage(); return; }
+      compareCommercialCancel = null;
+      renderCompareCards(list, snapshot, false);
+    }
+    compareCommercialCancel = function () {
+      finished = true;
+      window.clearTimeout(timer);
+      if (controller) controller.abort();
+    };
+    timer = window.setTimeout(function () { finish(null); if (controller) controller.abort(); }, 10000);
+    try {
+      window.fetch(endpoint, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-KeepStore-CSRF': token },
+        body: JSON.stringify({ products: requested }), signal: controller ? controller.signal : undefined
+      }).then(function (response) {
+        if (!response.ok || !(response.headers.get('Content-Type') || '').toLowerCase().includes('application/json')) throw new Error('Snapshot unavailable');
+        return response.json();
+      }).then(function (data) { if (!finished) finish(readCompareSnapshot(data, requested)); }).catch(function () { finish(null); });
+    } catch (err) { finish(null); }
   }
 
   function escapeHtml(value) {
@@ -921,6 +1024,12 @@
   function initCompareActions() {
     renderCompareDrawer();
     renderComparePage();
+    window.addEventListener('storage', function (ev) {
+      if (ev.key === 'ks_compare_products' || ev.key === null) { renderCompareDrawer(); renderComparePage(); }
+    });
+    window.addEventListener('pageshow', function (ev) {
+      if (ev.persisted) { compareCommercialSignature = null; renderComparePage(); }
+    });
 
     document.addEventListener('click', function (ev) {
       var compareLink = ev.target && ev.target.closest ? ev.target.closest('.js-ks-compare') : null;
