@@ -27,6 +27,78 @@ Public NotInheritable Class OrderInventoryAvailabilityService
         Return Math.Max(0D, giacenza - impegnata)
     End Function
 
+    ' Cart precheck only: no reservation and no change to the definitive order check.
+    Friend Shared Function CanApplyCartQuantityChanges(ByVal connection As MySqlConnection,
+                                                       ByVal transaction As MySqlTransaction,
+                                                       ByVal changes As IList(Of CartInventoryQuantityChange)) As Boolean
+        Dim increases As List(Of CartInventoryQuantityChange) = GetCartQuantityIncreases(changes)
+        If increases.Count = 0 Then Return True
+        If connection Is Nothing Then Throw New ArgumentNullException("connection")
+        If transaction Is Nothing Then Throw New ArgumentNullException("transaction")
+
+        Dim available As New Dictionary(Of String, Decimal)(StringComparer.Ordinal)
+        Using command As MySqlCommand = BuildCartStockCommand(connection, transaction, increases)
+            Using reader As MySqlDataReader = command.ExecuteReader()
+                While reader.Read()
+                    Dim key As String = BuildKey(Convert.ToInt32(reader("ArticoliId"), CultureInfo.InvariantCulture),
+                                                 Convert.ToInt32(reader("TCId"), CultureInfo.InvariantCulture))
+                    If available.ContainsKey(key) Then Throw New InvalidOperationException("Ambiguous inventory identity.")
+                    ' Same NULL contract as InspectCurrentCart, never Disponibilita as an override.
+                    Dim giacenza As Decimal = If(reader.IsDBNull(reader.GetOrdinal("Giacenza")), 0D, Convert.ToDecimal(reader("Giacenza"), CultureInfo.InvariantCulture))
+                    Dim impegnata As Decimal = If(reader.IsDBNull(reader.GetOrdinal("Impegnata")), 0D, Convert.ToDecimal(reader("Impegnata"), CultureInfo.InvariantCulture))
+                    available.Add(key, CalculateNetAvailableQuantity(giacenza, impegnata))
+                End While
+            End Using
+        End Using
+        Return AreCartIncreasesAvailable(increases, available)
+    End Function
+
+    Friend Shared Function GetCartQuantityIncreases(ByVal changes As IList(Of CartInventoryQuantityChange)) As List(Of CartInventoryQuantityChange)
+        If changes Is Nothing Then Throw New ArgumentNullException("changes")
+        Dim keys As New HashSet(Of String)(StringComparer.Ordinal)
+        Dim increases As New List(Of CartInventoryQuantityChange)()
+        For Each change As CartInventoryQuantityChange In changes
+            If change Is Nothing OrElse change.ArticleId <= 0 OrElse change.TCId < CanonicalVariantId OrElse
+               change.OriginalQuantity < 0D OrElse change.FinalQuantity <= 0D OrElse
+               Not keys.Add(BuildKey(change.ArticleId, change.TCId)) Then
+                Throw New ArgumentException("Invalid aggregate cart quantity change.")
+            End If
+            If change.FinalQuantity > change.OriginalQuantity Then increases.Add(change)
+        Next
+        increases.Sort(Function(left, right)
+                           Dim articleCompare As Integer = left.ArticleId.CompareTo(right.ArticleId)
+                           Return If(articleCompare <> 0, articleCompare, left.TCId.CompareTo(right.TCId))
+                       End Function)
+        Return increases
+    End Function
+
+    Friend Shared Function BuildCartStockCommand(ByVal connection As MySqlConnection,
+                                                ByVal transaction As MySqlTransaction,
+                                                ByVal increases As IList(Of CartInventoryQuantityChange)) As MySqlCommand
+        Dim command As New MySqlCommand() With {.Connection = connection, .Transaction = transaction}
+        Dim predicates As New List(Of String)()
+        command.Parameters.Add("?warehouseId", MySqlDbType.Int32).Value = WebWarehouseId
+        For index As Integer = 0 To increases.Count - 1
+            Dim suffix As String = index.ToString(CultureInfo.InvariantCulture)
+            predicates.Add("(ArticoliId=?article" & suffix & " AND TCId=?variant" & suffix & ")")
+            command.Parameters.Add("?article" & suffix, MySqlDbType.Int32).Value = increases(index).ArticleId
+            command.Parameters.Add("?variant" & suffix, MySqlDbType.Int32).Value = increases(index).TCId
+        Next
+        command.CommandText = "SELECT ArticoliId, TCId, Giacenza, Impegnata FROM articoli_giacenze " &
+                              "WHERE MagazziniId=?warehouseId AND (" & String.Join(" OR ", predicates) & ") ORDER BY ArticoliId, TCId"
+        Return command
+    End Function
+
+    Friend Shared Function AreCartIncreasesAvailable(ByVal increases As IList(Of CartInventoryQuantityChange),
+                                                    ByVal available As IDictionary(Of String, Decimal)) As Boolean
+        For Each change As CartInventoryQuantityChange In increases
+            Dim quantity As Decimal = 0D
+            If Not available.TryGetValue(BuildKey(change.ArticleId, change.TCId), quantity) OrElse
+               quantity < change.FinalQuantity Then Return False
+        Next
+        Return True
+    End Function
+
     Public Shared Function ReserveCurrentCart(ByVal connection As MySqlConnection,
                                                ByVal transaction As MySqlTransaction,
                                                ByVal loginId As Integer) As OrderInventoryReservationResult
@@ -140,6 +212,13 @@ Public NotInheritable Class OrderInventoryAvailabilityService
     Private Shared Function BuildKey(ByVal articleId As Integer, ByVal tcId As Integer) As String
         Return articleId.ToString(CultureInfo.InvariantCulture) & ":" & tcId.ToString(CultureInfo.InvariantCulture)
     End Function
+End Class
+
+Friend NotInheritable Class CartInventoryQuantityChange
+    Public Property ArticleId As Integer
+    Public Property TCId As Integer
+    Public Property OriginalQuantity As Decimal
+    Public Property FinalQuantity As Decimal
 End Class
 
 Public NotInheritable Class OrderInventoryReservationResult

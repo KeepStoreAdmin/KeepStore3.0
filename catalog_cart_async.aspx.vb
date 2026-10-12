@@ -110,8 +110,17 @@ Partial Class CatalogCartAsync
             Dim result As CartStandardMutationResult = CartMutationService.AddStandardProductForCurrentOwner(
                 HttpContext.Current, _articleId, _tcId, quantity)
             If result Is Nothing OrElse Not result.Succeeded Then
+                If result IsNot Nothing AndAlso result.FailureKind = CartMutationFailureKind.Indeterminate Then
+                    Reject(503, "Non è stato possibile confermare l'aggiornamento. Verifica il carrello prima di riprovare.", True)
+                    Return
+                End If
                 CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, _requestId)
-                Reject(422, "Il prodotto non è stato aggiunto. Verifica disponibilità e prezzo.")
+                If result IsNot Nothing AndAlso (result.FailureKind = CartMutationFailureKind.StockInsufficient OrElse
+                                                result.FailureKind = CartMutationFailureKind.Commercial) Then
+                    Reject(422, "Il prodotto non è stato aggiunto. Verifica disponibilità e prezzo.")
+                Else
+                    Reject(503, "Non è stato possibile verificare o aggiornare il carrello. Riprova.")
+                End If
                 Return
             End If
 

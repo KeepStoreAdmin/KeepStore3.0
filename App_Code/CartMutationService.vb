@@ -11,8 +11,21 @@ Public Class CartQuantityMutationRequest
     Public Property Quantity As Decimal
 End Class
 
+Public Enum CartMutationFailureKind
+    None = 0
+    Commercial = 1
+    StockInsufficient = 2
+    Technical = 3
+    Indeterminate = 4
+End Enum
+
 Public Class CartStandardMutationResult
+    Public Sub New()
+        FailureKind = CartMutationFailureKind.Technical
+    End Sub
+
     Public Property Succeeded As Boolean
+    Public Property FailureKind As CartMutationFailureKind
     Public Property CartRowId As Integer
     Public Property ArticleId As Integer
     Public Property TCId As Integer
@@ -34,9 +47,11 @@ End Class
 Public Class CartStandardBatchMutationResult
     Public Sub New()
         Items = New List(Of CartStandardMutationResult)()
+        FailureKind = CartMutationFailureKind.Technical
     End Sub
 
     Public Property Succeeded As Boolean
+    Public Property FailureKind As CartMutationFailureKind
     Public Property Items As List(Of CartStandardMutationResult)
     Public Property ErrorMessage As String
 End Class
@@ -225,6 +240,7 @@ Public Module CartMutationService
         Return New CartStandardMutationResult With {
             .ArticleId = articleId,
             .TCId = NormalizeTCId(requestedTCId),
+            .FailureKind = If(batchResult Is Nothing, CartMutationFailureKind.Technical, batchResult.FailureKind),
             .ErrorMessage = If(batchResult IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(batchResult.ErrorMessage),
                                batchResult.ErrorMessage,
                                GenericMutationError)
@@ -241,10 +257,10 @@ Public Module CartMutationService
         Dim result As New CartStandardBatchMutationResult With {.ErrorMessage = GenericMutationError}
         Dim normalizedItems As List(Of CartStandardBatchMutationRequest) = Nothing
         Dim canonicalPayload As String = String.Empty
-        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse
-           Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return result
+        If Not CartMutationIdempotencyService.TryNormalizeStandardBatchItems(
                items, CartMutationIdempotencyService.MaxStandardBatchItems, normalizedItems, canonicalPayload) Then
-            Return result
+            Return FailedBatch(CartMutationFailureKind.Commercial)
         End If
 
         Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
@@ -282,7 +298,10 @@ Public Module CartMutationService
                 Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
                     ctx, conn, transaction, eligibilityContext, item.ArticleId, item.RequestedTCId,
                     probeQuantity, attemptListino, True, True)
-                EnsureResolved(preliminary)
+                Dim preliminaryFailure As CartMutationFailureKind = ResolvedFailureKind(preliminary)
+                If preliminaryFailure <> CartMutationFailureKind.None Then
+                    Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(FailedBatch(preliminaryFailure))
+                End If
 
                 Dim effectiveKey As String = BatchKey(item.ArticleId, preliminary.EffectiveTCId)
                 Dim effective As CartStandardBatchMutationRequest = Nothing
@@ -303,7 +322,7 @@ Public Module CartMutationService
             Next
             effectiveItems.Sort(AddressOf CompareBatchRequests)
             If effectiveItems.Count = 0 OrElse effectiveItems.Count > CartMutationIdempotencyService.MaxStandardBatchItems Then
-                Throw New InvalidOperationException("The standard cart batch has no effective mutations.")
+                Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(FailedBatch(CartMutationFailureKind.Commercial))
             End If
 
             Dim plans As New List(Of CartStandardBatchPlan)()
@@ -312,19 +331,24 @@ Public Module CartMutationService
                     Function(row As CartMutationExistingRow) row.ArticleId = item.ArticleId AndAlso
                         NormalizeTCId(row.TCId) = NormalizeTCId(item.RequestedTCId))
                 If existing.Count = 0 AndAlso item.QuantityDelta < 0D Then
-                    Throw New InvalidOperationException("A negative cart delta requires an existing owned row.")
+                    Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(FailedBatch(CartMutationFailureKind.Commercial))
                 End If
 
                 Dim finalQuantity As Decimal = item.QuantityDelta
                 For Each row As CartMutationExistingRow In existing
                     finalQuantity = Decimal.Add(finalQuantity, row.Quantity)
                 Next
-                ValidateQuantity(finalQuantity)
+                If Not IsValidQuantity(finalQuantity) Then
+                    Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(FailedBatch(CartMutationFailureKind.Commercial))
+                End If
 
                 Dim resolved As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
                     ctx, conn, transaction, eligibilityContext, item.ArticleId, item.RequestedTCId,
                     finalQuantity, attemptListino, True, True)
-                EnsureResolved(resolved)
+                Dim priceFailure As CartMutationFailureKind = ResolvedFailureKind(resolved)
+                If priceFailure <> CartMutationFailureKind.None Then
+                    Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(FailedBatch(priceFailure))
+                End If
                 If NormalizeTCId(resolved.EffectiveTCId) <> NormalizeTCId(item.RequestedTCId) Then
                     Throw New InvalidOperationException("Effective product variant changed during batch planning.")
                 End If
@@ -340,6 +364,19 @@ Public Module CartMutationService
                     .FreeShipping = If(resolved.FreeShipping <> 0, 1, 0)
                 })
             Next
+
+            Dim stockChanges As New List(Of CartInventoryQuantityChange)()
+            For Each plan As CartStandardBatchPlan In plans
+                stockChanges.Add(New CartInventoryQuantityChange With {
+                    .ArticleId = plan.Request.ArticleId,
+                    .TCId = NormalizeTCId(plan.Resolved.EffectiveTCId),
+                    .OriginalQuantity = SumQuantities(plan.ExistingRows),
+                    .FinalQuantity = plan.FinalQuantity
+                })
+            Next
+            If Not OrderInventoryAvailabilityService.CanApplyCartQuantityChanges(conn, transaction, stockChanges) Then
+                Return CartTransactionWorkResult(Of CartStandardBatchMutationResult).Abort(FailedBatch(CartMutationFailureKind.StockInsufficient))
+            End If
 
             For planIndex As Integer = 0 To plans.Count - 1
                 Dim plan As CartStandardBatchPlan = plans(planIndex)
@@ -365,6 +402,7 @@ Public Module CartMutationService
                                             plan.Request.ArticleId, plan.Resolved.EffectiveTCId)
                 confirmedItems.Add(New CartStandardMutationResult With {
                     .Succeeded = True,
+                    .FailureKind = CartMutationFailureKind.None,
                     .CartRowId = plan.CartRowId,
                     .ArticleId = plan.Request.ArticleId,
                     .TCId = plan.Resolved.EffectiveTCId,
@@ -380,6 +418,7 @@ Public Module CartMutationService
 
             Dim attemptResult As New CartStandardBatchMutationResult With {
                 .Succeeded = True,
+                .FailureKind = CartMutationFailureKind.None,
                 .Items = confirmedItems,
                 .ErrorMessage = String.Empty
             }
@@ -394,6 +433,8 @@ Public Module CartMutationService
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
+        If IsConfirmedAbort(execution.Status, execution.RollbackStatus) AndAlso execution.Value IsNot Nothing Then Return execution.Value
+        If execution.IsIndeterminate Then result.FailureKind = CartMutationFailureKind.Indeterminate
         Return result
     End Function
 
@@ -410,8 +451,11 @@ Public Module CartMutationService
             .TCId = NormalizeTCId(requestedTCId),
             .ErrorMessage = GenericMutationError
         }
-        If ctx Is Nothing OrElse ctx.Session Is Nothing OrElse articleId <= 0 OrElse
-           (If(setAbsoluteQuantity, quantityValue <= 0D, quantityValue = 0D)) Then Return result
+        If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return result
+        If articleId <= 0 OrElse (If(setAbsoluteQuantity, quantityValue <= 0D, quantityValue = 0D)) Then
+            result.FailureKind = CartMutationFailureKind.Commercial
+            Return result
+        End If
 
         Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
         If settings Is Nothing OrElse String.IsNullOrWhiteSpace(settings.ConnectionString) Then Return result
@@ -450,18 +494,17 @@ Public Module CartMutationService
             Dim preliminary As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
                 ctx, conn, transaction, eligibilityContext, articleId, requestedTCId, probeQuantity,
                 attemptListino, True, True)
-            EnsureResolved(preliminary)
+            Dim preliminaryFailure As CartMutationFailureKind = ResolvedFailureKind(preliminary)
+            If preliminaryFailure <> CartMutationFailureKind.None Then
+                Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(FailedProduct(articleId, requestedTCId, preliminaryFailure))
+            End If
 
             Dim effectiveTCId As Integer = preliminary.EffectiveTCId
             Dim existing As List(Of CartMutationExistingRow) = ownedArticleRows.FindAll(
                 Function(row As CartMutationExistingRow) NormalizeTCId(row.TCId) = effectiveTCId)
             If Not setAbsoluteQuantity AndAlso existing.Count = 0 AndAlso quantityValue < 0D Then
                 Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(
-                    New CartStandardMutationResult With {
-                        .ArticleId = articleId,
-                        .TCId = NormalizeTCId(requestedTCId),
-                        .ErrorMessage = GenericMutationError
-                    })
+                    FailedProduct(articleId, requestedTCId, CartMutationFailureKind.Commercial))
             End If
 
             Dim finalQuantity As Decimal = quantityValue
@@ -471,13 +514,29 @@ Public Module CartMutationService
                 Next
             End If
 
-            ValidateQuantity(finalQuantity)
+            If Not IsValidQuantity(finalQuantity) Then
+                Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(FailedProduct(articleId, requestedTCId, CartMutationFailureKind.Commercial))
+            End If
 
             Dim resolved As CartResolvedPrice = CartPriceRevalidationHelper.ResolveStandardPrice(
                 ctx, conn, transaction, eligibilityContext, articleId, effectiveTCId, finalQuantity,
                 attemptListino, True, True)
-            EnsureResolved(resolved)
+            Dim priceFailure As CartMutationFailureKind = ResolvedFailureKind(resolved)
+            If priceFailure <> CartMutationFailureKind.None Then
+                Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(FailedProduct(articleId, requestedTCId, priceFailure))
+            End If
+            If NormalizeTCId(resolved.EffectiveTCId) <> NormalizeTCId(effectiveTCId) Then
+                Throw New InvalidOperationException("Effective product variant changed during quantity planning.")
+            End If
             Dim freeShipping As Integer = If(resolved.FreeShipping <> 0, 1, 0)
+
+            Dim stockChanges As New List(Of CartInventoryQuantityChange) From {
+                New CartInventoryQuantityChange With {.ArticleId = articleId, .TCId = NormalizeTCId(effectiveTCId),
+                    .OriginalQuantity = SumQuantities(existing), .FinalQuantity = finalQuantity}
+            }
+            If Not OrderInventoryAvailabilityService.CanApplyCartQuantityChanges(conn, transaction, stockChanges) Then
+                Return CartTransactionWorkResult(Of CartStandardMutationResult).Abort(FailedProduct(articleId, effectiveTCId, CartMutationFailureKind.StockInsufficient))
+            End If
 
             Dim cartRowId As Integer
             If existing.Count = 0 Then
@@ -494,6 +553,7 @@ Public Module CartMutationService
 
             Dim attemptResult As New CartStandardMutationResult With {
                 .Succeeded = True,
+                .FailureKind = CartMutationFailureKind.None,
                 .CartRowId = cartRowId,
                 .ArticleId = articleId,
                 .TCId = effectiveTCId,
@@ -515,6 +575,8 @@ Public Module CartMutationService
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
+        If IsConfirmedAbort(execution.Status, execution.RollbackStatus) AndAlso execution.Value IsNot Nothing Then Return execution.Value
+        If execution.IsIndeterminate Then result.FailureKind = CartMutationFailureKind.Indeterminate
         Return result
     End Function
 
@@ -581,6 +643,13 @@ Public Module CartMutationService
             activated = False
             Dim before As PersistentCartActivationSnapshot = PersistentAnonymousCartMutationActivation.Capture(conn, transaction, activation)
             Dim attemptOverrides As New Dictionary(Of Integer, Decimal)(quantityOverrides)
+            Dim stockChanges As List(Of CartInventoryQuantityChange) = Nothing
+            If Not TryBuildQuantityStockChanges(LoadOwnedRows(conn, transaction, owner.LoginId, owner.SessionId), attemptOverrides, stockChanges) Then
+                Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(BlockingResult("Una riga del carrello non è più disponibile. Ricarica il carrello e riprova."))
+            End If
+            If Not OrderInventoryAvailabilityService.CanApplyCartQuantityChanges(conn, transaction, stockChanges) Then
+                Return CartTransactionWorkResult(Of CartPriceRevalidationResult).Abort(BlockingResult(OrderInventoryAvailabilityService.InsufficientStockMessage))
+            End If
             Dim result As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(
                 ctx, conn, transaction, owner.LoginId, owner.SessionId, owner.Listino,
                 True, True, attemptOverrides, True)
@@ -599,6 +668,7 @@ Public Module CartMutationService
             CartAuthoritativeReadModel.Invalidate(ctx)
             Return execution.Value
         End If
+        If IsConfirmedAbort(execution.Status, execution.RollbackStatus) AndAlso execution.Value IsNot Nothing Then Return execution.Value
         Return TechnicalResult()
     End Function
 
@@ -853,15 +923,66 @@ Public Module CartMutationService
         End Using
     End Function
 
-    Private Sub EnsureResolved(ByVal resolved As CartResolvedPrice)
-        If resolved Is Nothing OrElse resolved.HasTechnicalError Then Throw New InvalidOperationException("Commercial price resolution failed.")
-        If resolved.HasCommercialRuleError Then Throw New InvalidOperationException("Ambiguous commercial quantity rule was rejected.")
-        If Not resolved.IsValid Then Throw New InvalidOperationException("Commercial price is not available.")
-    End Sub
+    Private Function ResolvedFailureKind(ByVal resolved As CartResolvedPrice) As CartMutationFailureKind
+        If resolved Is Nothing OrElse resolved.HasTechnicalError Then Return CartMutationFailureKind.Technical
+        If resolved.HasCommercialRuleError OrElse Not resolved.IsValid Then Return CartMutationFailureKind.Commercial
+        Return CartMutationFailureKind.None
+    End Function
 
-    Private Sub ValidateQuantity(ByVal quantity As Decimal)
-        If Not IsValidQuantity(quantity) Then Throw New ArgumentOutOfRangeException("quantity")
-    End Sub
+    Private Function FailedBatch(ByVal kind As CartMutationFailureKind) As CartStandardBatchMutationResult
+        Return New CartStandardBatchMutationResult With {.FailureKind = kind,
+            .ErrorMessage = If(kind = CartMutationFailureKind.StockInsufficient, OrderInventoryAvailabilityService.InsufficientStockMessage, GenericMutationError)}
+    End Function
+
+    Private Function FailedProduct(ByVal articleId As Integer, ByVal tcId As Integer,
+                                   ByVal kind As CartMutationFailureKind) As CartStandardMutationResult
+        Return New CartStandardMutationResult With {.ArticleId = articleId, .TCId = NormalizeTCId(tcId), .FailureKind = kind,
+            .ErrorMessage = If(kind = CartMutationFailureKind.StockInsufficient, OrderInventoryAvailabilityService.InsufficientStockMessage, GenericMutationError)}
+    End Function
+
+    Private Function IsConfirmedAbort(ByVal status As CartTransactionExecutionStatus,
+                                      ByVal rollback As CartTransactionRollbackStatus) As Boolean
+        Return status = CartTransactionExecutionStatus.Failed AndAlso rollback = CartTransactionRollbackStatus.Succeeded
+    End Function
+
+    Private Function SumQuantities(ByVal rows As IList(Of CartMutationExistingRow)) As Decimal
+        Dim total As Decimal = 0D
+        For Each row As CartMutationExistingRow In rows
+            total = Decimal.Add(total, row.Quantity)
+        Next
+        Return total
+    End Function
+
+    Private Function TryBuildQuantityStockChanges(ByVal rows As IList(Of CartMutationExistingRow),
+                                                 ByVal quantityOverrides As IDictionary(Of Integer, Decimal),
+                                                 ByRef changes As List(Of CartInventoryQuantityChange)) As Boolean
+        Dim affected As New HashSet(Of String)(StringComparer.Ordinal)
+        Dim matched As Integer = 0
+        For Each row As CartMutationExistingRow In rows
+            If quantityOverrides.ContainsKey(row.Id) Then
+                ' Keep the persisted inventory identity, exactly as the order does.
+                affected.Add(row.ArticleId.ToString(CultureInfo.InvariantCulture) & ":" & row.TCId.ToString(CultureInfo.InvariantCulture))
+                matched += 1
+            End If
+        Next
+        If matched <> quantityOverrides.Count Then Return False
+        Dim aggregates As New SortedDictionary(Of String, CartInventoryQuantityChange)(StringComparer.Ordinal)
+        For Each row As CartMutationExistingRow In rows
+            Dim key As String = row.ArticleId.ToString(CultureInfo.InvariantCulture) & ":" & row.TCId.ToString(CultureInfo.InvariantCulture)
+            If Not affected.Contains(key) Then Continue For
+            Dim aggregate As CartInventoryQuantityChange = Nothing
+            If Not aggregates.TryGetValue(key, aggregate) Then
+                aggregate = New CartInventoryQuantityChange With {.ArticleId = row.ArticleId, .TCId = row.TCId}
+                aggregates.Add(key, aggregate)
+            End If
+            aggregate.OriginalQuantity = Decimal.Add(aggregate.OriginalQuantity, row.Quantity)
+            Dim finalQuantity As Decimal = row.Quantity
+            If Not quantityOverrides.TryGetValue(row.Id, finalQuantity) Then finalQuantity = row.Quantity
+            aggregate.FinalQuantity = Decimal.Add(aggregate.FinalQuantity, finalQuantity)
+        Next
+        changes = New List(Of CartInventoryQuantityChange)(aggregates.Values)
+        Return True
+    End Function
 
     Private Function IsValidQuantity(ByVal quantity As Decimal) As Boolean
         Return quantity > 0D AndAlso quantity <= 9999999.99999999D
