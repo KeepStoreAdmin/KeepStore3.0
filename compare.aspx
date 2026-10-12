@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <section class="flat-spacing">
+    <section class="flat-spacing" id="ksComparePage">
         <div class="container">
             <div class="tf-section-title mb_30">
                 <h2 class="title">Confronta prodotti</h2>
@@ -33,7 +33,8 @@
             <p id="ksCompareCommercialStatus" class="text-main-2 caption mb-3" role="status" aria-live="polite" aria-atomic="true"></p>
             <div class="tf-compare-list ks-compare-page d-none" id="ksCompareShell" data-ks-commercial-endpoint="<%= ResolveUrl("~/compare-commercial-snapshot.ashx") %>">
                 <h5 class="title fw-semibold">Compara prodotti</h5>
-                <div class="tf-compare-wrap ks-compare-page-grid" id="ksCompareGrid"></div>
+                <p class="caption text-main-2 mb-2" id="ksCompareScrollHint">Scorri orizzontalmente per confrontare tutti i prodotti.</p>
+                <div class="tf-compare-wrap ks-compare-page-grid" id="ksCompareGrid" tabindex="0" role="region" aria-label="Prodotti a confronto" aria-describedby="ksCompareScrollHint"></div>
                 <div class="tf-compare-buttons">
                     <div class="tf-compare-btn">
                         <a href="articoli.aspx" class="tf-btn btn-gray btn-large-3">

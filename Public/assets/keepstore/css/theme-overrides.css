@@ -3218,3 +3218,130 @@ body.ks-page-home .ks-ai130-img {
   #mobileMenu .mb-canvas-content { overflow-y: auto; }
   #mobileMenu .mb-body { flex: none; overflow-y: visible; }
 }
+
+/* Comparison page owns its layout; drawer selectors remain independent. */
+#ksComparePage .container,
+#ksComparePage #ksCompareShell { min-width: 0; max-width: 100%; }
+#ksComparePage #ksCompareGrid {
+  box-sizing: border-box;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 260px;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding: 4px 2px 16px;
+  scrollbar-width: thin;
+}
+#ksComparePage #ksCompareGrid:focus-visible,
+#ksComparePage button:focus-visible,
+#ksComparePage a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+#ksComparePage .ks-compare-page-card {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--gray-4, #e0e0e0);
+  border-radius: 12px;
+  background: var(--white, #fff);
+  scroll-snap-align: start;
+  overflow-wrap: anywhere;
+}
+#ksComparePage #ksCompareGrid .ks-compare-page-card > .image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 168px;
+  width: 100%;
+  aspect-ratio: auto;
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f7f7f7;
+}
+#ksComparePage #ksCompareGrid .ks-compare-page-card > .image img {
+  width: 100%;
+  height: 100%;
+  max-height: 144px;
+  object-fit: contain;
+  object-position: center;
+}
+#ksComparePage .ks-compare-page-card > .content {
+  display: grid;
+  grid-template-rows: 1.5em 4.5em 2.5em 2.5em 2em minmax(4.5em, 1fr) 96px;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+#ksComparePage .ks-compare-page-card .content > p { margin: 0 !important; }
+#ksComparePage .ks-compare-page-card .content > p:first-child {
+  grid-row: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#ksComparePage .ks-compare-page-card .content > a {
+  grid-row: 2;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+#ksComparePage .ks-compare-page-card .content > p.mt-1 { grid-row: 3; font-size: 12px; overflow: hidden; }
+#ksComparePage .ks-compare-page-card .content > p.caption.mt-2 { grid-row: 4; font-size: 12px; }
+#ksComparePage .ks-compare-page-card .content > .price-wrap { grid-row: 5; font-size: 20px; font-weight: 600; }
+#ksComparePage .ks-compare-page-card .content > p.caption:not(:first-child):not(.mt-1):not(.mt-2) {
+  grid-row: 6;
+  font-size: 13px;
+}
+#ksComparePage .ks-compare-page-card .content > div:last-child {
+  grid-row: 7;
+  display: flex !important;
+  flex-direction: column;
+  flex-wrap: nowrap !important;
+  gap: 8px;
+  margin-top: 8px !important;
+}
+#ksComparePage .ks-compare-page-card .tf-btn {
+  min-height: 44px;
+  width: 100%;
+  justify-content: center;
+  padding: 10px 12px;
+  white-space: normal;
+  font-size: 14px;
+  line-height: 1.4;
+}
+#ksComparePage .ks-compare-page-card > .remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--white, #fff);
+  border: 1px solid var(--gray-4, #e0e0e0);
+}
+#ksComparePage .tf-compare-buttons { margin-top: 20px; }
+#ksComparePage .tf-compare-btn { display: flex; flex-wrap: wrap; gap: 12px; }
+#ksComparePage .tf-compare-btn .tf-btn { min-height: 44px; padding: 12px 20px; }
+@media (min-width: 768px) {
+  #ksComparePage #ksCompareGrid { grid-auto-columns: 280px; gap: 20px; }
+}
+@media (max-width: 575px) {
+  #ksComparePage .tf-compare-btn .tf-btn { flex: 1 1 100%; justify-content: center; }
+}
