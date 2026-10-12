@@ -22,6 +22,11 @@ Public NotInheritable Class OrderInventoryAvailabilityService
     Private Sub New()
     End Sub
 
+    Public Shared Function CalculateNetAvailableQuantity(ByVal giacenza As Decimal,
+                                                         ByVal impegnata As Decimal) As Decimal
+        Return Math.Max(0D, giacenza - impegnata)
+    End Function
+
     Public Shared Function ReserveCurrentCart(ByVal connection As MySqlConnection,
                                                ByVal transaction As MySqlTransaction,
                                                ByVal loginId As Integer) As OrderInventoryReservationResult
@@ -115,7 +120,7 @@ Public NotInheritable Class OrderInventoryAvailabilityService
                         Dim giacenza As Decimal = If(reader.IsDBNull(reader.GetOrdinal("Giacenza")), 0D, Convert.ToDecimal(reader("Giacenza"), CultureInfo.InvariantCulture))
                         Dim impegnata As Decimal = If(reader.IsDBNull(reader.GetOrdinal("Impegnata")), 0D, Convert.ToDecimal(reader("Impegnata"), CultureInfo.InvariantCulture))
                         requestedLine.InventoryId = Convert.ToInt64(reader("id"), CultureInfo.InvariantCulture)
-                        requestedLine.AvailableQuantity = Math.Max(0D, giacenza - impegnata)
+                        requestedLine.AvailableQuantity = CalculateNetAvailableQuantity(giacenza, impegnata)
                     End If
                 End Using
             End Using

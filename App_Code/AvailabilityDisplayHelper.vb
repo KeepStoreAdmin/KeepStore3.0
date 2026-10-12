@@ -258,9 +258,8 @@ Public Module AvailabilityDisplayHelper
     End Function
 
     Private Function EffectiveAvailableQty(ByVal rawAvailableQty As Decimal, ByVal stockQty As Decimal, ByVal committedQty As Decimal) As Decimal
-        If rawAvailableQty > 0D Then Return rawAvailableQty
-        If stockQty > 0D Then Return stockQty
-        Return stockQty - committedQty
+        ' Stored Disponibilita cannot override the net stock checked by orders.
+        Return OrderInventoryAvailabilityService.CalculateNetAvailableQuantity(stockQty, committedQty)
     End Function
 
     Private Function LowStockThreshold(ByVal dataItem As Object, ByVal ctx As HttpContext) As Decimal
