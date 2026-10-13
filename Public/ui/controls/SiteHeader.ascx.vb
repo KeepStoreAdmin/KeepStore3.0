@@ -43,6 +43,11 @@ Partial Class SiteHeader
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreRender
         BindAccountLinks()
+        If IsPostBack Then
+            Dim catalogMenu As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
+            _headerCurrentScope = ResolveHeaderSearchScope(catalogMenu, Request.QueryString)
+            BindDesktopCatalog(catalogMenu)
+        End If
     End Sub
 
     Private Sub BindHeaderData()

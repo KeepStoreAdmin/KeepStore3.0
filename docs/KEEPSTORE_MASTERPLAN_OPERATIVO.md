@@ -1,11 +1,23 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-12
+Aggiornato: 2026-10-13
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### HEADER-DESKTOP-MENU-VIEWSTATE-DEDUPLICATION-1A — A funzionale, PR sostitutiva pronta per gate Git
+
+Base stabile `058ff2fd25d96a41c002cc4f9a8fd313738b5f4a`, branch `task/header-desktop-menu-viewstate-deduplication-final-1a`; main/origin/main invariati a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Le PR documentali #347/#348 sono integrate e restano integralmente preservate. La [PR #346](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/346), HEAD originale `56ad564e5e5a99bb3b478fc2212d76bc4d3c5503` con parent `d2117e34dc2feb96997d1f8a6e29dc9dbd15ab2c`, conserva branch, commit e stato OPEN/DRAFT. La sostitutiva nasce dalla stable corrente: nessun rebase, force push, cherry-pick o merge della cronologia precedente.
+
+Manifest esclusivo: `Public/ui/controls/SiteHeader.ascx`, `Public/ui/controls/SiteHeader.ascx.vb` e questo Masterplan. Riapplicato esclusivamente il diff runtime gia approvato e collaudato: EnableViewState=false sul solo litDesktopCatalogMegaMenu; nei postback PreRender ricarica il tree mediante LoadCatalogMenuCached, risolve il current-scope dalla QueryString e ribinda soltanto il Literal desktop. Blob dei due file e diff runtime esattamente identici alla #346. GET iniziale, select/input, repeater mobile, cache/provider, resolver, URL, ricerca, contatti, promo e JS/CSS invariati; nessuna nuova scelta UI o ampliamento N04.
+
+Review indipendente del codice **A** acquisita e confermata dal Product Owner; **687 controlli sintetici WebForms PASS** della #346 riutilizzati, NON ripetuti. Il 2026-10-13, **38 controlli HTTP/WebForms reali distinti PASS**, 19 per tenant, su KeepStoreIntegration con runtime originale #346: HOME/catalogo HTTP 200, sessioni anonime separate e canonical coerenti per aziende 1/2, postback HOME neutro e con settore/categoria HTTP 200, menu identico prima/dopo, current/ancestor/aria-current preservati, ricerca desktop/mobile HTTP 302 con query e scope corretti. ViewState e event validation originali, MAC attivo e TLS verificato; nessuna disabilitazione dei controlli. Le GET di ricerca con q NON seguite per evitare l'INSERT legacy in query_string; nessuna mutazione ecommerce o DML/DDL dalle prove. Browser visuale **NON ESEGUITO**, distinto dal PASS HTTP/HTML; nessuna certificazione visuale 360/390 o miglioramento TTFB dedotto.
+
+HTTPS Integration :18443 predisposto dal Product Owner tramite script amministrativo con quattro binding SNI loopback IPv4/IPv6 e certificato esistente valido per i due hostname; trasporto locale verificato, sito distinto da KeepStoreSmoke :8443. Il DB remoto condiviso e operativo, NON un database isolato: consentiti soltanto i percorsi certificati non mutativi. Backup/rollback infrastrutturali restano locali, senza segreti nei documenti. In questo ciclo Git nessuna modifica di Integration, configurazioni IIS o DB e nessun nuovo smoke. **Precompile ASP.NET Framework 4.8 safe PASS** sulla working copy riallineata (352 input, configurazione sintetica, zero copie di configurazioni operative); equivalenza runtime verificata, senza ripetere i 687 test o i 38 smoke. Le misure sintetiche della #346 riguardano il solo stato del Literal, non ViewState totale, TTFB o DOM completo.
+
+Web.config, quattro cancellazioni tracked e 54 untracked preservati con inventario/hash, fuori staging. Consegna: un solo commit con parent diretto della stable e PR DRAFT sostitutiva, pronta per review Git finale; **nessun merge in questo ciclo**, deploy o task successivo. Nessun nuovo upload runtime richiesto per riutilizzare lo smoke: i due file restano identici a quelli gia collaudati. I debiti IIS #342/#343 e collaudo finale varianti reali/autenticato restano separati e non sanati. Prossimo passo: gate Git della sostitutiva ed eventuale FF-only soltanto secondo l'autorizzazione successiva.
 
 ### HOME-TTFB-PERFORMANCE-1A / Fase B — A tecnico, review indipendente pendente
 
