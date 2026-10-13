@@ -2,6 +2,17 @@
 
 Fonte canonica del metodo. I manuali in `docs/` conservano checkpoint, architettura, contratti e roadmap.
 
+## Metodo permanente ONE-SHOT e ripartenza informata
+
+Obbligatorio in ogni nuova chat e sessione Codex: **prima di fare domande o formulare diagnosi**, consultare questo AGENTS.md, il checkpoint corrente del Masterplan, le sezioni pertinenti del System Blueprint, `docs/KEEPSTORE_LOCAL_IIS_ENVIRONMENT.md` per IIS/test, e verificare lo stato reale GitHub (branch, SHA, PR). Evitare di richiedere nuovamente screenshot, test e informazioni gia' documentati. Distinguere sempre dati attuali, evidenze storiche e il singolo dato essenziale ancora sconosciuto. L'errore di autorizzazione su `applicationHost.config` non prova che browser o IIS siano inutilizzabili.
+
+- **Prompt completo al primo invio:** ChatGPT verifica anticipatamente implementazione, dipendenze, manifest, rischi, gate gia' superati e ostacoli prevedibili. Codex riceve un micro-task risolutivo con casi positivi/negativi, test mirati e stop condition, senza catene di audit esplorativi evitabili.
+- **Autonomia nel perimetro:** Codex risolve dettagli tecnici ordinari senza continue richieste, riusa harness e test gia' validi, e non ripete suite/benchmark per rituale. Zero ampliamenti impliciti di scope.
+- **Review unica e decisione:** ChatGPT controlla indipendentemente diff pubblicato, contratti e prove pertinenti; se A e le autorizzazioni/gate sono soddisfatti, completa subito i passaggi gia' autorizzati (compreso FF-only e sincronizzazione) senza ulteriori conferme ridondanti. Se B, comunica un blocker specifico e una sola azione minima risolutiva, non cicli identici.
+- **Sicurezza non negoziabile:** merge, deploy, scritture DB, pagamenti, e-mail, test su dati operativi e deroghe smoke seguono le autorizzazioni esplicite correnti. Le deroghe non si estendono ad altre PR e prove sintetiche non diventano certificazione IIS.
+- **Documentazione snella:** annotare fatti nuovi e decisioni nel documento canonico pertinente, senza nuove PR per ripetizioni. Separare PC sviluppo, IIS locale, tenant sul DB condiviso e server pubblicati.
+- **Handoff nuove chat:** recuperare stato stabile, PR aperte, collaudi pendenti, topologia IIS, tenant e debiti aperti dai documenti/version control. Memoria e conversazione sono solo supporto e non prevalgono sui dati correnti.
+
 ## Repository, branch e working copy
 
 - Repository: `KeepStoreAdmin/KeepStore3.0`.
