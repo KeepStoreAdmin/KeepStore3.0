@@ -482,14 +482,8 @@ Partial Class Articoli
 
         ApplyPagerSettings(False)
 
-        'Inserimento della stringa di ricerca nella tabella query_string, per l'indicizzazione
-        If Session("q") IsNot Nothing Then
-            Dim strCercaQS As String = Session("q")
-            Dim paramsQS As New Dictionary(Of String, Object)
-            paramsQS.Add("@QString", strCercaQS)
-            paramsQS.Add("@Data", DateTime.Now)
-            ExecuteInsert("QString, Data", "query_string", "@QString, @Data", paramsQS)
-        End If
+        ' Catalog binding must not record search events: GET, refresh and paging
+        ' are reads, not explicit analytics submissions.
     End Sub
 
     'FILTRI TAGLIA COLORE AGGIUNTI DA ANGELO IL 15/12/2017
