@@ -20,6 +20,66 @@ Partial Public Class _Default
     Private Shared ReadOnly Rng As New Random()
     Private _priceDisplayContext As StorefrontPriceDisplayContext
     Private ReadOnly _homePromotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
+    Private _homeTiming As HomeServerStageTiming
+
+    Protected Overrides Sub OnPreInit(ByVal e As EventArgs)
+        _homeTiming = HomeServerStageTiming.TryStart(HttpContext.Current)
+        HomeServerStageTiming.Mark(_homeTiming, "page.preinit.enter")
+        Using HomeServerStageTiming.Measure(_homeTiming, "page.preinit.callbacks")
+            MyBase.OnPreInit(e)
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnInit(ByVal e As EventArgs)
+        HomeServerStageTiming.Mark(_homeTiming, "page.init.enter")
+        Using HomeServerStageTiming.Measure(_homeTiming, "page.init.callbacks")
+            MyBase.OnInit(e)
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnLoad(ByVal e As EventArgs)
+        HomeServerStageTiming.Mark(_homeTiming, "page.load.enter")
+        Using HomeServerStageTiming.Measure(_homeTiming, "page.load.callbacks")
+            MyBase.OnLoad(e)
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnPreRender(ByVal e As EventArgs)
+        HomeServerStageTiming.Mark(_homeTiming, "page.prerender.enter")
+        Using HomeServerStageTiming.Measure(_homeTiming, "page.prerender.callbacks")
+            MyBase.OnPreRender(e)
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnPreRenderComplete(ByVal e As EventArgs)
+        HomeServerStageTiming.Mark(_homeTiming, "page.prerender.complete")
+        MyBase.OnPreRenderComplete(e)
+    End Sub
+
+    Protected Overrides Sub OnSaveStateComplete(ByVal e As EventArgs)
+        HomeServerStageTiming.Mark(_homeTiming, "page.state.complete")
+        MyBase.OnSaveStateComplete(e)
+    End Sub
+
+    Protected Overrides Sub Render(ByVal writer As HtmlTextWriter)
+        Using HomeServerStageTiming.Measure(_homeTiming, "page.render")
+            MyBase.Render(writer)
+        End Using
+    End Sub
+
+    Protected Overrides Sub OnUnload(ByVal e As EventArgs)
+        Try
+            Using HomeServerStageTiming.Measure(_homeTiming, "page.unload.callbacks")
+                MyBase.OnUnload(e)
+            End Using
+        Finally
+            Try
+                If _homeTiming IsNot Nothing Then _homeTiming.Complete(Response.StatusCode)
+            Catch
+                ' A diagnostic/logging failure must not alter the HTTP outcome.
+            End Try
+        End Try
+    End Sub
 
     Protected ReadOnly Property HomeAsyncCartToken As String
         Get
@@ -28,7 +88,9 @@ Partial Public Class _Default
     End Property
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
-        _priceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        Using HomeServerStageTiming.Measure(_homeTiming, "home.context")
+            _priceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        End Using
         If _priceDisplayContext Is Nothing OrElse
            _priceDisplayContext.CompanyId <> GetCurrentAziendaId() OrElse
            _priceDisplayContext.PriceListId <= 0 Then
@@ -37,6 +99,7 @@ Partial Public Class _Default
             HomePriceDisplayNote.Visible = False
             Return
         End If
+        If _homeTiming IsNot Nothing Then _homeTiming.SetCompany(_priceDisplayContext.CompanyId)
         litHomePriceDisplayLabel.Text = HttpUtility.HtmlEncode(_priceDisplayContext.DisplayLabel)
         MarkBodyAsHome()
         ApplyHomeSeo()
@@ -121,6 +184,7 @@ Partial Public Class _Default
     End Function
 
     Private Sub BindHome()
+        Using HomeServerStageTiming.Measure(_homeTiming, "home.bind.inclusive")
         Dim sideBanners As DataTable = GetSideBanners()
         Dim hero As DataTable = GetHeroSlides()
         If IsTableEmpty(hero) AndAlso Not IsTableEmpty(sideBanners) Then
@@ -128,10 +192,14 @@ Partial Public Class _Default
             sideBanners = SliceTable(sideBanners, 1, 1)
         End If
         rptHeroSlides.DataSource = hero
-        rptHeroSlides.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHeroSlides")
+            rptHeroSlides.DataBind()
+        End Using
 
         rptSideBanners.DataSource = sideBanners
-        rptSideBanners.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptSideBanners")
+            rptSideBanners.DataBind()
+        End Using
         ApplyHeroMode(ResolveHeroMode(rptHeroSlides.Items.Count > 0, If(sideBanners Is Nothing, 0, sideBanners.Rows.Count)), rptSideBanners.Items.Count)
 
         Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
@@ -141,12 +209,16 @@ Partial Public Class _Default
         Dim sectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 12, sectors.GetRange(0, 12), sectors)
         Dim heroSectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 9, sectors.GetRange(0, 9), sectors)
         rptHeroDepartments.DataSource = heroSectorRows
-        rptHeroDepartments.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHeroDepartments")
+            rptHeroDepartments.DataBind()
+        End Using
         If HomeHeroDepartmentsPanel IsNot Nothing Then
             HomeHeroDepartmentsPanel.Visible = (heroSectorRows.Count > 0)
         End If
         rptHomeMainCategories.DataSource = sectorRows
-        rptHomeMainCategories.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeMainCategories")
+            rptHomeMainCategories.DataBind()
+        End Using
         If HomeMainCategoriesSection IsNot Nothing Then
             HomeMainCategoriesSection.Visible = (sectorRows.Count > 0)
         End If
@@ -158,35 +230,68 @@ Partial Public Class _Default
         Dim bottomRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(collectionCount, bottomCount)
         Dim searchRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(0, Math.Min(5, editorialSectors.Count))
         rptHomeCollection.DataSource = collectionRows
-        rptHomeCollection.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeCollection")
+            rptHomeCollection.DataBind()
+        End Using
         rptHomeBottomPromo.DataSource = bottomRows
-        rptHomeBottomPromo.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeBottomPromo")
+            rptHomeBottomPromo.DataBind()
+        End Using
         rptHomeAiExamples.DataSource = searchRows
-        rptHomeAiExamples.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeAiExamples")
+            rptHomeAiExamples.DataBind()
+        End Using
         rptHomeAiQuickLinks.DataSource = searchRows
-        rptHomeAiQuickLinks.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeAiQuickLinks")
+            rptHomeAiQuickLinks.DataBind()
+        End Using
         HomeAiExamplesPanel.Visible = (searchRows.Count > 0)
         HomeAiQuickLinksPanel.Visible = (searchRows.Count > 0)
 
         Dim usedBusinessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim usedDisplayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        Dim dealPool As DataTable = GetDealOfferPool(96)
-        Dim featuredPool As DataTable = GetFeaturedPool(96)
-        Dim newArrivalsPool As DataTable = GetNewArrivalsPool(120)
-        Dim topRatedPool As DataTable = GetTopRatedPool(120)
-        Dim bestSellerPool As DataTable = GetBestSellerPool(120)
-        Dim currentYearSellingPool As DataTable = GetCurrentYearSellingPool(120)
+        Dim dealPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.deals")
+            dealPool = GetDealOfferPool(96)
+        End Using
+        Dim featuredPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.featured")
+            featuredPool = GetFeaturedPool(96)
+        End Using
+        Dim newArrivalsPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.new_arrivals")
+            newArrivalsPool = GetNewArrivalsPool(120)
+        End Using
+        Dim topRatedPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.top_rated")
+            topRatedPool = GetTopRatedPool(120)
+        End Using
+        Dim bestSellerPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.bestseller")
+            bestSellerPool = GetBestSellerPool(120)
+        End Using
+        Dim currentYearSellingPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.current_year")
+            currentYearSellingPool = GetCurrentYearSellingPool(120)
+        End Using
         Dim topSellingPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.top_selling_copy_or_fallback")
         If Not IsTableEmpty(bestSellerPool) Then
             topSellingPool = bestSellerPool.Copy()
         Else
             topSellingPool = GetPureTopSellingPool(120)
         End If
-        Dim fallbackCatalogPool As DataTable = GetCatalogFallbackPool(160)
+        End Using
+        Dim fallbackCatalogPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.fallback")
+            fallbackCatalogPool = GetCatalogFallbackPool(160)
+        End Using
 
         Dim dealRows As DataTable = TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)
         rptDealOfDay.DataSource = dealRows
-        rptDealOfDay.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptDealOfDay")
+            rptDealOfDay.DataBind()
+        End Using
         If HomeOffersSection IsNot Nothing Then
             HomeOffersSection.Visible = Not IsTableEmpty(dealRows)
         End If
@@ -197,7 +302,9 @@ Partial Public Class _Default
         Dim featuredRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
         PopulatePromotionDisplaySnapshot(featuredRows)
         rptHomeFeaturedProducts.DataSource = featuredRows
-        rptHomeFeaturedProducts.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeFeaturedProducts")
+            rptHomeFeaturedProducts.DataBind()
+        End Using
         If HomeFeaturedProductsSection IsNot Nothing Then
             HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
         End If
@@ -213,7 +320,9 @@ Partial Public Class _Default
         Dim bestRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
         PopulatePromotionDisplaySnapshot(bestRows)
         rptBestSeller.DataSource = bestRows
-        rptBestSeller.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptBestSeller")
+            rptBestSeller.DataBind()
+        End Using
         If HomeLegacyBestSection IsNot Nothing Then
             HomeLegacyBestSection.Visible = Not IsTableEmpty(bestRows)
         End If
@@ -221,7 +330,9 @@ Partial Public Class _Default
         Dim recentRows As DataTable = GetRecentlyViewedProducts(8, usedBusinessKeys, True, usedDisplayKeys, True)
         PopulatePromotionDisplaySnapshot(recentRows)
         rptRecentlyViewed.DataSource = recentRows
-        rptRecentlyViewed.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptRecentlyViewed")
+            rptRecentlyViewed.DataBind()
+        End Using
         If HomeRecentlyViewedSection IsNot Nothing Then
             HomeRecentlyViewedSection.Visible = True
         End If
@@ -234,12 +345,18 @@ Partial Public Class _Default
             HomeLowerColumnsSection.Visible = False
         End If
 
-        Dim brandRows As DataTable = FilterBrandRows(GetBrands(24), 12)
+        Dim brandRows As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "home.brands.resolve")
+            brandRows = FilterBrandRows(GetBrands(24), 12)
+        End Using
         rptBrands.DataSource = brandRows
-        rptBrands.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptBrands")
+            rptBrands.DataBind()
+        End Using
         If HomeBrandsSection IsNot Nothing Then
             HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
         End If
+        End Using
     End Sub
 
     Private Shared Function SelectHomeEditorialSectors(ByVal source As List(Of CatalogMenuSector)) As List(Of CatalogMenuSector)
@@ -372,11 +489,17 @@ Partial Public Class _Default
         End Select
 
         leftRepeater.DataSource = SliceTable(work, leftStart, leftCount)
-        leftRepeater.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.leftRepeater")
+            leftRepeater.DataBind()
+        End Using
         centerRepeater.DataSource = SliceTable(work, centerStart, centerCount)
-        centerRepeater.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.centerRepeater")
+            centerRepeater.DataBind()
+        End Using
         rightRepeater.DataSource = SliceTable(work, rightStart, rightCount)
-        rightRepeater.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rightRepeater")
+            rightRepeater.DataBind()
+        End Using
     End Sub
 
     Private Function BuildSlidesTable(ByVal source As DataTable, ByVal groupSize As Integer) As DataTable
@@ -1020,8 +1143,12 @@ Partial Public Class _Default
                     cmd.Parameters.AddWithValue("@closedState", GetClosedOrderState())
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
-                        conn.Open()
-                        da.Fill(dt)
+                        Using HomeServerStageTiming.Measure(_homeTiming, "db.products.open")
+                            conn.Open()
+                        End Using
+                        Using HomeServerStageTiming.Measure(_homeTiming, "db.products.fill")
+                            da.Fill(dt)
+                        End Using
                         EnsurePromotionDisplayColumns(dt)
                         If requireAuthorizedPromotion Then
                             PopulatePromotionDisplaySnapshot(dt)
@@ -1644,7 +1771,9 @@ Partial Public Class _Default
             repeater.DataSource = Nothing
         End If
 
-        repeater.DataBind()
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.repeater")
+            repeater.DataBind()
+        End Using
     End Sub
 
     Private Function GetBrands(ByVal limit As Integer) As DataTable
@@ -1756,8 +1885,12 @@ Partial Public Class _Default
                     End If
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
-                        conn.Open()
-                        da.Fill(dt)
+                        Using HomeServerStageTiming.Measure(_homeTiming, "db." & context & ".open")
+                            conn.Open()
+                        End Using
+                        Using HomeServerStageTiming.Measure(_homeTiming, "db." & context & ".fill")
+                            da.Fill(dt)
+                        End Using
                         If dt.Rows.Count > 0 Then
                             Return dt
                         End If
@@ -1991,8 +2124,10 @@ Partial Public Class _Default
             request.ReadWriteTimeout = 1500
             request.AllowAutoRedirect = True
 
-            Using response As HttpWebResponse = CType(request.GetResponse(), HttpWebResponse)
-                exists = (response.StatusCode = HttpStatusCode.OK)
+            Using HomeServerStageTiming.Measure(_homeTiming, "asset.head.response")
+                Using response As HttpWebResponse = CType(request.GetResponse(), HttpWebResponse)
+                    exists = (response.StatusCode = HttpStatusCode.OK)
+                End Using
             End Using
         Catch
             exists = False
