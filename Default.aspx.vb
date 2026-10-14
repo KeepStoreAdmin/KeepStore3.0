@@ -23,6 +23,61 @@ Partial Public Class _Default
     Private _homeTiming As HomeServerStageTiming
     ' 0 = status not observed; never infer HTTP 200 when capture is unavailable.
     Private _homeTimingHttpStatus As Integer = 0
+    ' Owned only by this page's synchronous BindHome call, never by another request.
+    Private _homeQueryScopeActive As Boolean
+    Private _homeQueryConnection As MySqlConnection
+
+    Private NotInheritable Class HomeQueryConnectionLease
+        Implements IDisposable
+
+        Public ReadOnly Connection As MySqlConnection
+        Private ReadOnly _ownsConnection As Boolean
+        Private _disposed As Boolean
+
+        Public Sub New(ByVal connection As MySqlConnection, ByVal ownsConnection As Boolean)
+            Me.Connection = connection
+            _ownsConnection = ownsConnection
+        End Sub
+
+        Public Sub Dispose() Implements IDisposable.Dispose
+            If _disposed Then Return
+            _disposed = True
+            If _ownsConnection Then Connection.Dispose()
+        End Sub
+    End Class
+
+    Private Function AcquireHomeQueryLease() As HomeQueryConnectionLease
+        If Not _homeQueryScopeActive Then
+            Return New HomeQueryConnectionLease(
+                New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString), True)
+        End If
+
+        If _homeQueryConnection IsNot Nothing AndAlso _homeQueryConnection.State <> ConnectionState.Open Then
+            InvalidateHomeQueryConnection()
+        End If
+        If _homeQueryConnection Is Nothing Then
+            _homeQueryConnection = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+        End If
+        Return New HomeQueryConnectionLease(_homeQueryConnection, False)
+    End Function
+
+    Private Sub InvalidateHomeQueryConnection()
+        Dim connection As MySqlConnection = _homeQueryConnection
+        _homeQueryConnection = Nothing
+        If connection Is Nothing Then Return
+
+        Try
+            connection.Close()
+        Catch
+            System.Diagnostics.Trace.TraceWarning("HOME query connection close failed.")
+        Finally
+            Try
+                connection.Dispose()
+            Catch
+                System.Diagnostics.Trace.TraceWarning("HOME query connection dispose failed.")
+            End Try
+        End Try
+    End Sub
 
     Protected Overrides Sub OnPreInit(ByVal e As EventArgs)
         _homeTiming = HomeServerStageTiming.TryStart(HttpContext.Current)
@@ -198,6 +253,9 @@ Partial Public Class _Default
     End Function
 
     Private Sub BindHome()
+        If _homeQueryScopeActive Then Throw New InvalidOperationException("Nested HOME query scopes are not supported.")
+        _homeQueryScopeActive = True
+        Try
         Using HomeServerStageTiming.Measure(_homeTiming, "home.bind.inclusive")
         Dim sideBanners As DataTable = GetSideBanners()
         Dim hero As DataTable = GetHeroSlides()
@@ -371,6 +429,10 @@ Partial Public Class _Default
             HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)
         End If
         End Using
+        Finally
+            _homeQueryScopeActive = False
+            InvalidateHomeQueryConnection()
+        End Try
     End Sub
 
     Private Shared Function SelectHomeEditorialSectors(ByVal source As List(Of CatalogMenuSector)) As List(Of CatalogMenuSector)
@@ -1148,7 +1210,8 @@ Partial Public Class _Default
         End If
 
         Try
-            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using lease As HomeQueryConnectionLease = AcquireHomeQueryLease()
+                Dim conn As MySqlConnection = lease.Connection
                 Using cmd As New MySqlCommand(sql.ToString(), conn)
                     cmd.Parameters.AddWithValue("@listino", GetCurrentListino())
                     cmd.Parameters.Add("@ksRcEnabled", MySqlDbType.Int32).Value = If(_priceDisplayContext.ReverseChargeEnabled, 1, 0)
@@ -1157,9 +1220,11 @@ Partial Public Class _Default
                     cmd.Parameters.AddWithValue("@closedState", GetClosedOrderState())
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
-                        Using HomeServerStageTiming.Measure(_homeTiming, "db.products.open")
-                            conn.Open()
-                        End Using
+                        If conn.State <> ConnectionState.Open Then
+                            Using HomeServerStageTiming.Measure(_homeTiming, "db.products.open")
+                                conn.Open()
+                            End Using
+                        End If
                         Using HomeServerStageTiming.Measure(_homeTiming, "db.products.fill")
                             da.Fill(dt)
                         End Using
@@ -1173,6 +1238,7 @@ Partial Public Class _Default
                 End Using
             End Using
         Catch ex As Exception
+            InvalidateHomeQueryConnection()
             ReportHomeError("TryLoadProducts", ex)
         End Try
 
@@ -1890,7 +1956,8 @@ Partial Public Class _Default
                                     Optional ByVal context As String = "SafeTableQuery",
                                     Optional ByVal parameters As IDictionary(Of String, Object) = Nothing) As DataTable
         Try
-            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using lease As HomeQueryConnectionLease = AcquireHomeQueryLease()
+                Dim conn As MySqlConnection = lease.Connection
                 Using cmd As New MySqlCommand(sql, conn)
                     If parameters IsNot Nothing Then
                         For Each item As KeyValuePair(Of String, Object) In parameters
@@ -1899,9 +1966,11 @@ Partial Public Class _Default
                     End If
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
-                        Using HomeServerStageTiming.Measure(_homeTiming, "db." & context & ".open")
-                            conn.Open()
-                        End Using
+                        If conn.State <> ConnectionState.Open Then
+                            Using HomeServerStageTiming.Measure(_homeTiming, "db." & context & ".open")
+                                conn.Open()
+                            End Using
+                        End If
                         Using HomeServerStageTiming.Measure(_homeTiming, "db." & context & ".fill")
                             da.Fill(dt)
                         End Using
@@ -1912,6 +1981,7 @@ Partial Public Class _Default
                 End Using
             End Using
         Catch ex As Exception
+            InvalidateHomeQueryConnection()
             ReportHomeError(context, ex)
         End Try
 
