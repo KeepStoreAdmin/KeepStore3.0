@@ -7,6 +7,48 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### HOME-TTFB-SERVER-STAGE-TIMING-1A — chiusura evidenze REV2 / A tecnico e documentale, PR DRAFT non integrata
+
+Smoke eseguito sul commit REV2 `d50fb5ab111ff0d0ab90158fac298e514c3953b4`, review indipendente runtime A acquisita. Chiusura DOCS-ONLY sullo stesso branch/PR #351, parent documentale REV2; stable `3adb97a461ff7407bed8839685a5f6f2e1d3fc64` e main/origin/main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Questa nota prevale sui gate pre-smoke sottostanti. PR OPEN/DRAFT, nessun merge autorizzato da questa chiusura.
+
+Fonte obbligatoria riletta in sola lettura: `C:\Temp\KeepStoreIntegration\backups\home-stage-timing-20261014-170606-07f951e8`. Esattamente sei metriche, sei trace JSON e 30 record recovery: tre richieste sequenziali Taikun/companyId 1 e tre Webaffare/companyId 2, sample 0/1/2 per tenant, GUID univoci, HTTP 200 sia client sia trace, zero entry scartate. Ogni GUID ha activation_entered -> activation_passed -> tenant_validated -> completion_entered -> trace_written; companyId 0 prima della validazione, poi tenant atteso, stesso fingerprint applicativo validato. Trace schema home-stage-timing-v1/recovery home-stage-status-v1. Canonical, TLS e loopback PASS nel transcript runner del medesimo smoke; non ricertificati con nuove richieste. La serializzazione sanitizzata delle metriche non conserva campi curl TLS/canonical: distinguere tale limite dalle correlazioni verificabili nei file.
+
+Misure confermate rispetto al rapporto precedente, in **ms**; campione 1 = sample 0/inizializzazione per tenant, campioni 2-3 successivi. 72 entry nei primi campioni, 56 nei successivi, nessuna entry persa. Prima richiesta dopo installazione/configurazione, cache fredda globale NON certificata.
+
+| Tenant/campione | TTFB ms | Totale ms | pageObservedMs | requestId diagnostico |
+| --- | ---: | ---: | ---: | --- |
+| Taikun 1 | 52346.158 | 52348.126 | 37197.225 | `c035408aaf4d48029d349a4ab57191f3` |
+| Taikun 2 | 9600.227 | 9603.705 | 9582.643 | `50f40e4cd2114a129c5797d739a7edb5` |
+| Taikun 3 | 9676.105 | 9677.554 | 9640.591 | `867326ea85b24171a65ef8d77b197fde` |
+| Webaffare 1 | 35562.537 | 35583.492 | 35550.495 | `8183b4a2c7294ce0a4de03bee6a75e1c` |
+| Webaffare 2 | 9502.302 | 9522.333 | 9479.453 | `acc5741350e246e1bc57047d92d6d71b` |
+| Webaffare 3 | 9526.302 | 9539.979 | 9504.541 | `b5b7db52cce14120b89964706bc3b717` |
+
+Conteggi e somme ricavati dai soli span corrispondenti: **10 Open, 10 Fill, 13 DataBind e 1 Render per campione**. HEAD 16 nei primi campioni, 0 nei successivi. Verificata non sovrapposizione degli intervalli all'interno di ciascuna categoria sommata; non aggiungere a queste somme i parent inclusivi home.bind/pool/page.load/home.brands.
+
+| Tenant/campione | Open ms (10) | Fill ms (10) | HEAD ms (n) | DataBind ms (13) | Render ms (1) | Fuori callback top-level ms |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Taikun 1 | 4135.546 | 1538.348 | 24352.109 (16) | 99.784 | 62.210 | 5760.524 |
+| Taikun 2 | 4295.026 | 1551.473 | 0.000 (0) | 16.559 | 8.270 | 3213.310 |
+| Taikun 3 | 4374.297 | 1522.619 | 0.000 (0) | 10.493 | 4.821 | 3241.157 |
+| Webaffare 1 | 4293.229 | 1527.872 | 24405.035 (16) | 6.765 | 11.922 | 4835.716 |
+| Webaffare 2 | 4162.369 | 1543.572 | 0.000 (0) | 10.810 | 13.186 | 3266.147 |
+| Webaffare 3 | 4229.920 | 1533.695 | 0.000 (0) | 7.238 | 4.380 | 3232.488 |
+
+Diagnosi limitata alle evidenze: nei quattro campioni successivi Open 4162.369-4374.297 ms e Fill 1522.619-1551.473 ms; media Open Taikun 4334.662 ms/Webaffare 4196.145 ms. Open e' la prima priorita persistente identificata, NON prova di pooling disabilitato, dieci connessioni TCP fisiche nuove o errore MySQL. Fill comprende attesa DB/rete e materializzazione client, NON solo esecuzione SQL. DataBind 7.238-16.559 ms e Render 4.380-13.186 ms nei successivi, quindi non prioritari. Prime HEAD 24352.109/24405.035 ms; home.brands.resolve inclusivo 24870.990/24881.529 ms, da NON sommare alle HEAD/DB. Nei successivi home.brands.resolve 434.770-451.608 ms e zero HEAD. Cold/startup e cache per tenant restano distinti dalla latenza persistente; nessun miglioramento prima/dopo o percentuale causale attribuito alla #345 o alla diagnostica.
+
+Residui: pageObservedMs meno copertura dei sei callback/span top-level non sovrapposti lascia 3213.310-3266.147 ms nei successivi, NON attribuiti a uno specifico componente. Principali intervalli tra callback successivi: circa 0.90-0.97 s tra PreInit e Init, 1.81-1.85 s tra termine Load e PreRender, 0.46-0.47 s tra PreRender e Render; non sono automaticamente costo del metodo precedente o seguente. Primo Taikun: TTFB - pageObservedMs = 15148.933 ms; differenza tra intervalli/client-clock e server-clock con estremi differenti, NON misura separata del pre-PreInit e NON prova di compilazione/IIS/rete. pageObserved termina a Unload prima della scrittura timing, non copre EndRequest o richiesta completa. Overhead diagnostico non misurato separatamente e confronto con baseline circa 9.2 s non controllato.
+
+Integrita evidenze (SHA-256):
+
+- `sanitized-http-metrics.jsonl`: `52299F30BEDC938F21A1B31AA85D1552009DDD97F58FCB4212A17504D0A33D97`.
+- `sanitized-recovery-status.jsonl`: `70BBFF02E2D64221BBFF8EAC6249ED3AE7C73E0A3A6D785922AA0CCC40A5CCA6`.
+- `sanitized-server-timing.log`: `17679FD07A55B6469DE463E4573FF38CDB6E3E9552A5CA410A002265B2133A7D`.
+
+Rollback obbligatorio PASS nel transcript Apply e confermato dai backup/file finali, senza nuovo Apply: Default.aspx.vb SHA-256 `6667E6E817A8A2933B04B0D0C8A478C67A23585F8969DDD2149C4C005DCA6F72`, web.config SHA-256 `70B58D9DA3C363E1AAE305DE73E886F4EB9C2B43230942B7CB40383CD8A661E3`, entrambi byte-per-byte corrispondenti ai backup. Helper Integration originariamente assente, finalmente assente; due flag rimossi/diagnostica OFF. Non esiste una ricevuta rollback separata nel backup: attestazione nel transcript, corroborata dagli hash e dal controllo finale. Solo i due log diagnostici privati sono stati creati/aggiornati dallo smoke e conservati intenzionalmente; nessuna modifica runtime/configurazione/IIS permanente.
+
+Chiusura: nessuna nuova GET/Apply/test, nessuna modifica runtime/runner/Integration/SQL/DB/produzione, nessuna nuova PR/merge. Un solo commit documentale di questo Masterplan e push normale nella PR #351 DRAFT; file runtime invariati rispetto alla REV2, web.config canonico/quattro cancellazioni/54 untracked preservati e staging finale vuoto. Gate successivo: review indipendente del checkpoint/evidenze e autorizzazione specifica a eventuale FF-only. Prossima priorita performance: diagnosi mirata del costo MySqlConnection.Open(), **NON AVVIATA**; HEAD e residui restano separati, nessuna ottimizzazione simultanea o nuovo caching implicitamente autorizzati.
+
 ### HOME-TTFB-SERVER-STAGE-TIMING-1A / REV2 — completion senza Page.Response in Unload, A tecnico / B complessivo
 
 Stesso branch e PR #351 OPEN/DRAFT, parent REV2 `5f1ced30506b3c71818a3f7ac04fc06b20c6f120`; stable `3adb97a461ff7407bed8839685a5f6f2e1d3fc64` e main/origin/main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Questa nota prevale sul gate storico REV1 sotto. Ultimo Apply autorizzato sulla REV1: **1/6 GET**, Taikun HTTP 200/TLS/canonical PASS, TTFB 51,761563 s e total 51,763173 s conservati; altre cinque GET NON ESEGUITE. Recovery `activation_entered -> activation_passed -> tenant_validated -> completion_not_reached`, nessun timing completo. Prima richiesta post-installazione, NON confronto con baseline calda 9,2 s, nessuna fase SQL/server dominante ancora attribuita. Evidenze private in `C:\Temp\KeepStoreIntegration\backups\home-stage-timing-20261014-162142-1dd51570`; rollback PASS: Default/config originali identici, helper assente, flag rimossi, solo recovery privata conservata.
