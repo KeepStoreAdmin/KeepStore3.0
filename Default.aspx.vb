@@ -21,6 +21,8 @@ Partial Public Class _Default
     Private _priceDisplayContext As StorefrontPriceDisplayContext
     Private ReadOnly _homePromotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private _homeTiming As HomeServerStageTiming
+    ' 0 = status not observed; never infer HTTP 200 when capture is unavailable.
+    Private _homeTimingHttpStatus As Integer = 0
 
     Protected Overrides Sub OnPreInit(ByVal e As EventArgs)
         _homeTiming = HomeServerStageTiming.TryStart(HttpContext.Current)
@@ -62,9 +64,21 @@ Partial Public Class _Default
     End Sub
 
     Protected Overrides Sub Render(ByVal writer As HtmlTextWriter)
+        _homeTimingHttpStatus = 0
         Using HomeServerStageTiming.Measure(_homeTiming, "page.render")
             MyBase.Render(writer)
         End Using
+        If _homeTiming IsNot Nothing Then
+            Try
+                Dim observedStatus As Integer = Response.StatusCode
+                If observedStatus >= 100 AndAlso observedStatus <= 599 Then
+                    _homeTimingHttpStatus = observedStatus
+                End If
+            Catch
+                ' Status capture is diagnostic only; completion still receives 0.
+                _homeTimingHttpStatus = 0
+            End Try
+        End If
     End Sub
 
     Protected Overrides Sub OnUnload(ByVal e As EventArgs)
@@ -74,7 +88,7 @@ Partial Public Class _Default
             End Using
         Finally
             Try
-                If _homeTiming IsNot Nothing Then _homeTiming.Complete(Response.StatusCode)
+                If _homeTiming IsNot Nothing Then _homeTiming.Complete(_homeTimingHttpStatus)
             Catch
                 ' A diagnostic/logging failure must not alter the HTTP outcome.
             End Try
