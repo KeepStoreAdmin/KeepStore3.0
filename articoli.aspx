@@ -10,8 +10,8 @@
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261015-mobile-excellence1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261015-mobile-excellence1a" />
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -44,11 +44,11 @@
         <div class="container">
             <div class="tf-product-view-content wrapper-control-shop">
 
-                <div class="canvas-filter-product sidebar-filter handle-canvas left" aria-label="Filtri catalogo">
+                <div id="ksCatalogFiltersPanel" class="canvas-filter-product sidebar-filter handle-canvas left" aria-label="Filtri catalogo" tabindex="-1">
                     <div class="canvas-wrapper">
                         <div class="canvas-header d-flex d-xl-none">
                             <h5 class="title">Filtri</h5>
-                            <span class="icon-close link icon-close-popup close-filter" aria-label="Chiudi"></span>
+                            <button type="button" class="icon-close link icon-close-popup close-filter" aria-label="Chiudi filtri"></button>
                         </div>
 
                         <div class="canvas-body">
@@ -216,7 +216,7 @@
                     <p class="body-text-3 text-main-2 mb-2"><asp:Label ID="lblPrezzi" runat="server" /></p>
                     <div class="tf-shop-control flex-wrap gap-10">
                         <div class="ks-shop-control-summary d-flex align-items-center gap-10">
-                            <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none">
+                            <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none" aria-controls="ksCatalogFiltersPanel" aria-expanded="false" aria-haspopup="dialog">
                                 <span class="icon icon-filter"></span>
                                 <span class="body-md-2 fw-medium">Filtri</span>
                             </button>
@@ -603,7 +603,7 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261010-catalog-legacy-isolation1a"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261015-mobile-excellence1a"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>

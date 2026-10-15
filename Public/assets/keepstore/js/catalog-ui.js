@@ -385,6 +385,155 @@
   // ==========================================================
   // Mobile offcanvas filters (no clone, no duplicate IDs)
   // ==========================================================
+  function setupCatalogFilterDialog() {
+    var panel = document.getElementById('ksCatalogFiltersPanel');
+    var trigger = document.getElementById('filterShop');
+    var overlay = document.getElementById('overlay-filter');
+    if (!panel || !trigger || !overlay) return;
+    var previous = window.__ksCatalogFilterDialog;
+    if (previous && previous.panel === panel && previous.trigger === trigger && previous.overlay === overlay) {
+      previous.sync();
+      return;
+    }
+    if (previous) previous.dispose();
+
+    var media = window.matchMedia('(max-width: 1199.98px)');
+    var opened = false;
+    var background = [];
+    var lastFocus = null;
+    panel.setAttribute('data-ks-filter-dialog', '1');
+    overlay.setAttribute('data-ks-filter-backdrop', '1');
+
+    function focusable() {
+      var nodes = panel.querySelectorAll('a[href], button, input, select, textarea, [tabindex]');
+      return Array.prototype.filter.call(nodes, function (node) {
+        return !node.disabled && node.tabIndex >= 0 && node.getClientRects().length &&
+          window.getComputedStyle(node).visibility !== 'hidden';
+      });
+    }
+
+    function isolateBackground() {
+      var child = panel;
+      while (child && child.parentElement) {
+        var siblings = child.parentElement.children;
+        for (var i = 0; i < siblings.length; i++) {
+          var node = siblings[i];
+          if (node === child || node === overlay || /^(SCRIPT|STYLE|LINK)$/.test(node.tagName)) continue;
+          background.push({ node: node, inert: node.inert, hidden: node.getAttribute('aria-hidden') });
+          node.inert = true;
+          node.setAttribute('aria-hidden', 'true');
+        }
+        child = child.parentElement;
+        if (child === document.body) break;
+      }
+    }
+
+    function close(restoreFocus) {
+      var wasOpen = opened;
+      opened = false;
+      panel.classList.remove('show');
+      overlay.classList.remove('show');
+      overlay.classList.remove('ks-catalog-filter-backdrop');
+      document.body.classList.remove('ks-catalog-filters-open');
+      for (var i = 0; i < background.length; i++) {
+        var item = background[i];
+        item.node.inert = item.inert;
+        if (item.hidden === null) item.node.removeAttribute('aria-hidden');
+        else item.node.setAttribute('aria-hidden', item.hidden);
+      }
+      background = [];
+      trigger.setAttribute('aria-expanded', 'false');
+      panel.removeAttribute('aria-modal');
+      panel.inert = media.matches;
+      if (media.matches) panel.setAttribute('aria-hidden', 'true');
+      else panel.removeAttribute('aria-hidden');
+      if (wasOpen && restoreFocus !== false) {
+        var target = lastFocus && document.documentElement.contains(lastFocus) ? lastFocus : trigger;
+        if (target.getClientRects().length) target.focus();
+        else if (!media.matches && focusable().length) focusable()[0].focus();
+      }
+    }
+
+    function sync() {
+      if (!opened || !media.matches) close();
+      if (media.matches) panel.setAttribute('role', 'dialog');
+      else panel.removeAttribute('role');
+    }
+
+    function open() {
+      if (!media.matches || opened) return;
+      if (document.querySelector('.offcanvas.show, .modal.show')) return;
+      lastFocus = document.activeElement;
+      panel.inert = false;
+      panel.removeAttribute('aria-hidden');
+      panel.setAttribute('aria-modal', 'true');
+      panel.classList.add('show');
+      overlay.classList.add('show');
+      overlay.classList.add('ks-catalog-filter-backdrop');
+      document.body.classList.add('ks-catalog-filters-open');
+      trigger.setAttribute('aria-expanded', 'true');
+      opened = true;
+      isolateBackground();
+      (focusable()[0] || panel).focus();
+      // Some pointer/assistive input sequences finalize focus after the click.
+      window.setTimeout(function () {
+        if (opened && !panel.contains(document.activeElement)) (focusable()[0] || panel).focus();
+      }, 0);
+    }
+
+    // Capture owns only presentation clicks; legacy theme toggles never run twice.
+    function click(ev) {
+      var isTrigger = trigger.contains(ev.target);
+      var isClose = panel.contains(ev.target) && ev.target.closest('.close-filter');
+      if (media.matches && (isTrigger || isClose || ev.target === overlay)) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        if (isTrigger) open();
+        else close();
+      }
+    }
+    function keydown(ev) {
+      if (!opened) return;
+      if (ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); close(); }
+      else if (ev.key === 'Tab') {
+        var items = focusable();
+        var first = items[0] || panel;
+        var last = items[items.length - 1] || panel;
+        if ((ev.shiftKey && document.activeElement === first) || (!ev.shiftKey && document.activeElement === last) || !panel.contains(document.activeElement)) {
+          ev.preventDefault();
+          (ev.shiftKey ? last : first).focus();
+        }
+      }
+    }
+    function focusin(ev) { if (opened && !panel.contains(ev.target)) (focusable()[0] || panel).focus(); }
+    function afterTransition(ev) {
+      if (ev.target === panel && ev.propertyName === 'transform' && opened && !panel.contains(document.activeElement)) {
+        (focusable()[0] || panel).focus();
+      }
+    }
+    function otherOverlay() { if (opened) close(false); }
+    panel.addEventListener('transitionend', afterTransition);
+    document.addEventListener('click', click, true);
+    document.addEventListener('keydown', keydown, true);
+    document.addEventListener('focusin', focusin);
+    document.addEventListener('show.bs.offcanvas', otherOverlay);
+    document.addEventListener('show.bs.modal', otherOverlay);
+    if (media.addEventListener) media.addEventListener('change', sync);
+    else media.addListener(sync);
+    window.__ksCatalogFilterDialog = { panel: panel, trigger: trigger, overlay: overlay, sync: sync, close: close, dispose: function () {
+      close(false);
+      panel.removeEventListener('transitionend', afterTransition);
+      document.removeEventListener('click', click, true);
+      document.removeEventListener('keydown', keydown, true);
+      document.removeEventListener('focusin', focusin);
+      document.removeEventListener('show.bs.offcanvas', otherOverlay);
+      document.removeEventListener('show.bs.modal', otherOverlay);
+      if (media.removeEventListener) media.removeEventListener('change', sync);
+      else media.removeListener(sync);
+    } };
+    sync();
+  }
+
   function bindFilterTriggers() {
     var openFn = window.__ksFilterPanelOpen;
     if (typeof openFn !== 'function') return;
@@ -412,6 +561,10 @@
 
   function setupMobileOffcanvasFilters() {
     if (!isCatalogPage()) return;
+    if (document.getElementById('ksCatalogPage')) {
+      setupCatalogFilterDialog();
+      return;
+    }
 
     var filterEls = [];
     // Include also the main "Disponibili" checkbox block (mobile)
@@ -632,6 +785,9 @@
         var prm = Sys.WebForms.PageRequestManager.getInstance();
         if (prm && !window.__ksCatalogUiPrmHooked) {
           window.__ksCatalogUiPrmHooked = true;
+          prm.add_beginRequest(function () {
+            if (window.__ksCatalogFilterDialog) window.__ksCatalogFilterDialog.close(false);
+          });
           prm.add_endRequest(function () { initAll(); });
         }
       }

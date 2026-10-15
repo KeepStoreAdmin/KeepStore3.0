@@ -12,6 +12,60 @@
 .ks-price-ask{ font-weight:700; opacity:.85; }
 
 /* Filter box */
+/* Current catalog reuses the server-rendered canvas at the theme breakpoint. */
+body.ks-catalog-filters-open { overflow: hidden; }
+#ksCatalogPage #filterShop,
+#ksCatalogFiltersPanel .close-filter {
+  min-width: 44px;
+  min-height: 44px;
+}
+#ksCatalogFiltersPanel .close-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  border: 0;
+  background: transparent;
+}
+#ksCatalogFiltersPanel :focus-visible,
+#ksCatalogPage #filterShop:focus-visible {
+  outline: 3px solid var(--primary-2, #d80027);
+  outline-offset: 2px;
+}
+@media (max-width: 1199.98px) {
+  #ksCatalogFiltersPanel[data-ks-filter-dialog="1"] {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    visibility: hidden;
+    pointer-events: none;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1055;
+    transition: transform .18s ease-out;
+  }
+  #ksCatalogFiltersPanel[data-ks-filter-dialog="1"].show {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+  #overlay-filter[data-ks-filter-backdrop="1"] { pointer-events: none; }
+  #overlay-filter.ks-catalog-filter-backdrop { z-index: 1054; pointer-events: auto; }
+  #ksCatalogPage #ksCatalogFiltersPanel .canvas-body {
+    padding-bottom: 20px;
+    scroll-padding-block: 16px;
+  }
+  #ksCatalogFiltersPanel .canvas-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ksCatalogFiltersPanel[data-ks-filter-dialog="1"] { transition: none; }
+}
+
 .ks-filter-box{
   border:1px solid rgba(0,0,0,.10);
   border-radius:12px;

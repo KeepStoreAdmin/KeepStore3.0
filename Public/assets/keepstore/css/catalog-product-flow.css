@@ -11,6 +11,12 @@
   max-width:100%;
 }
 
+/* Preserve the card geometry while making native purchase targets reliable. */
+#ksCatalogPage #gridLayout .js-ks-cart-link {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 .ks-qty-wrap .ks-qty{
   text-align:center;
   border-radius:0;

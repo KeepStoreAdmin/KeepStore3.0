@@ -51,6 +51,28 @@
   text-align: center;
 }
 
+/* One native buybox, with touch-sized quantity controls on phone/tablet. */
+@media (max-width: 1199.98px) {
+  .ks-product-page .ks-pdp-buybox-sticky .wg-quantity {
+    width: 156px;
+    min-height: 48px;
+  }
+  .ks-product-page .ks-pdp-buybox-sticky .wg-quantity button,
+  .ks-product-page .ks-pdp-buybox-sticky .wg-quantity input {
+    width: 52px;
+    min-width: 44px;
+    height: 48px;
+    flex: 1 0 44px;
+  }
+  .ks-product-page .ks-pdp-buybox-sticky .product-box-btn .tf-btn {
+    min-height: 48px;
+  }
+}
+.ks-product-page .ks-pdp-buybox-sticky .wg-quantity :focus-visible {
+  outline: 3px solid var(--primary-2, #d80027);
+  outline-offset: 2px;
+}
+
 .ks-product-page .product-detail .body-text-3 span {
   display: block;
 }
