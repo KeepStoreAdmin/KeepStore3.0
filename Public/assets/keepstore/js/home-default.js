@@ -266,6 +266,20 @@
     var count = qs('[data-ks-ai-count]', root);
     var timer = 0;
     var controller = null;
+    var searchVersion = 0;
+
+    function cancelPendingSearch() {
+      searchVersion += 1;
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = 0;
+      }
+      if (controller && controller.abort) {
+        try { controller.abort(); } catch (ignore) {}
+      }
+      controller = null;
+      return searchVersion;
+    }
 
     function catalogLink(query) {
       return '<a class="ks-ai130-catalog-link" href="articoli.aspx?q=' + encodeURIComponent(query || '') + '">Vedi risultati nel catalogo</a>';
@@ -278,17 +292,16 @@
     }
 
     function runSearch(raw) {
+      var version = cancelPendingSearch();
       var query = String(raw || '').replace(/\s+/g, ' ').trim();
       if (query.length < 2) {
+        if (count) count.textContent = '';
         if (answer) answer.textContent = 'Scrivi una richiesta: cerco nel catalogo reale per codice, EAN, marca, descrizione e categoria.';
         renderEmpty('Inserisci almeno 2 caratteri per cercare nel catalogo.', query);
         return;
       }
 
       rememberSearch(query);
-      if (controller && controller.abort) {
-        try { controller.abort(); } catch (ignore) {}
-      }
       controller = window.AbortController ? new AbortController() : null;
       if (answer) answer.textContent = 'Sto confrontando la richiesta con i dati reali del catalogo KeepStore.';
       if (count) count.textContent = 'Ricerca catalogo...';
@@ -302,6 +315,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       }).then(function (data) {
+        if (version !== searchVersion) return;
         var items = data && data.suggestions ? data.suggestions : [];
         if (answer) answer.textContent = data && data.intelligence && data.intelligence.summary ? data.intelligence.summary : 'Risultati ordinati per compatibilita con la richiesta.';
         if (count) count.textContent = items.length ? items.length + ' risultati dal catalogo' : 'Nessun articolo compatibile';
@@ -311,8 +325,10 @@
           renderEmpty('Nessun articolo supera la soglia di pertinenza per questa richiesta.', query);
         }
       }).catch(function (err) {
+        if (version !== searchVersion) return;
         if (err && err.name === 'AbortError') return;
         if (window.console && console.warn) console.warn('[KeepStore AI]', err);
+        if (answer) answer.textContent = 'Ricerca temporaneamente non disponibile. Puoi continuare nel catalogo.';
         if (count) count.textContent = 'Catalogo non disponibile';
         renderEmpty('Errore temporaneo durante la ricerca catalogo.', query);
       });
@@ -326,8 +342,15 @@
     }
     if (input) {
       input.addEventListener('input', function () {
-        if (timer) window.clearTimeout(timer);
-        timer = window.setTimeout(function () { runSearch(input.value); }, 360);
+        cancelPendingSearch();
+        if (String(input.value || '').replace(/\s+/g, ' ').trim().length < 2) {
+          runSearch(input.value);
+          return;
+        }
+        timer = window.setTimeout(function () {
+          timer = 0;
+          runSearch(input.value);
+        }, 360);
       });
       input.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter') {

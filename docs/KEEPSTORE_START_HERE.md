@@ -5,11 +5,11 @@ Checkpoint breve: 2026-10-15. Parola chiave: **KS-RIPRENDI**. Metodo e autorita:
 ## Stato verificato e lavoro corrente
 
 - Repository: `KeepStoreAdmin/KeepStore3.0`; copia canonica `C:\KeepStoreWeb\KeepStore3.0\`; stable `frontend-rebuild`.
-- Ultimo stable locale/GitHub verificato: `b14113767d115e6b5596f0eab3c048c62928c751`, PR #352 MERGED/CLOSED, parent `e6831baaaf10d0ac689974437bf64b1a647d6b85`. Due commit originali integrati FF-only dalla base #351 `9eaead27127ec39fdd6f54349ed6fd9243d8cfb9`.
+- Ultimo stable locale/GitHub verificato: `8fdeebe7e269ef40a7113bb0cb922d420b5f34dc`, PR #353 MERGED/CLOSED, parent `b14113767d115e6b5596f0eab3c048c62928c751` (#352 integrata). Sync locale post #353 A, senza merge commit; nessun deploy derivato dal riordino documentale.
 - `main` / `origin/main` protetti: `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Sincronizzazione locale post #352 A; staging vuoto, web.config/quattro cancellazioni/54 untracked protetti. Ricontrollare gli stati variabili alla ripartenza, non assumere eterni questi conteggi.
 - Ultimo task runtime chiuso: `HOME-DB-OPEN-LATENCY-1A`, A / INTEGRATED (#352). #351 diagnostica anch'essa integrata. Review A e smoke Integration 6/6 PASS, rollback PASS; dettaglio/limiti nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md).
-- Task corrente: `CANONICAL-DOCS-REORG-1A`, solo nove documenti, branch `task/keepstore-canonical-docs-reorg-1a`; consegna per review indipendente, non merge o produzione. Il commit/numero PR della consegna vanno letti da Git/GitHub, non inventati prima del commit.
-- Prossimo task runtime realmente autorizzato: **NESSUNO**. Candidato da sottoporre a PO: `CORE-SHOPPING-CONTINUITY-1A`, outcome e gate nella [roadmap](KEEPSTORE_PRODUCT_ROADMAP.md#ks-a01--percorso-shopping-continuo). Non avviarlo con KS-RIPRENDI.
+- Task corrente autorizzato: `CORE-SHOPPING-CONTINUITY-1A`, branch `task/core-shopping-continuity-1a`, base #353. Fix circoscritto della ricerca HOME (risposte obsolete, debounce duplicato, errore lasciato come caricamento); A tecnico / B complessivo per review e smoke applicativo pendenti. Commit/PR si leggono da Git/GitHub, senza ciclo documentale per auto-inserire il proprio SHA.
+- Prossimo task runtime autorizzato oltre al batch corrente: **NESSUNO**. Candidato successivo `SHOPPING-MOBILE-EXCELLENCE-1A`, soltanto NON AVVIATO e dopo chiusura/gate del batch corrente; non avviarlo con KS-RIPRENDI.
 - PR aperte preesistenti rilevate: #129, #170, #171, #191; non sono task attivi o nuove autorizzazioni. #170/#171 riguardano diagnosi post-ordine storica, #191 coupon differiti, #129 chiusura reset storica: riconciliare solo se diventano pertinenti, senza cleanup automatico.
 
 ## Source, Integration, produzione: tre stati distinti
@@ -25,6 +25,7 @@ Dipendenza release HOME: `App_Code/HomeServerStageTiming.vb` della #351, oltre a
 ## Gate e limiti da non perdere
 
 - Residuo HOME warm circa 3,2 s: diagnosi read-only A, attribuzione componente B, strumentazione proposta NON IMPLEMENTATA / DIFFERITA. HEAD/cold separato, NON AVVIATO. #352 non si riapre.
+- Batch continuity: 174 controlli isolati (40 ricerca, 32 URL/handler VB reali, 70 boundary client carrello, 32 quattro viste), precompile safe PASS; browser integrato su sola fixture statica a 360/390/430/768/1365, risposte sintetiche senza DB. NON certifica HOME completa, tenant reali, screen reader o percorso mutativo IIS. Nessun Apply/GET IIS o acquisto eseguito; smoke applicativo richiede target/operazioni autorizzati.
 - #342 stock precheck: review/test sintetici A, smoke IIS isolato NON CERTIFICATO, integrazione per deroga PO. #343 feedback e #345 pool HOME: smoke IIS non eseguito per deroga specifica. Non promuoverli a PASS e non estendere le deroghe.
 - #349 sostituisce #346: runtime identico, 687 controlli sintetici e 38 smoke HTTP/WebForms PASS; browser visuale NON ESEGUITO. #350: 153 sintetici e 86 HTTP/WebForms PASS; codice reale verificato, EAN separato non eseguito. Sono limiti storici distinti da una certificazione completa delle pagine.
 - Varianti `articoli_tagliecolori` restano disabilitate. Collaudo finale reale con abilitazione 1 e contesto autenticato obbligatorio ma NON AVVIATO; fixture/DB/ordini/gateway richiedono autorizzazioni dedicate. Le 39 simulazioni compare non lo sostituiscono.

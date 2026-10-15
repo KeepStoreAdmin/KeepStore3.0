@@ -20,11 +20,12 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-A01 — Percorso shopping continuo
 
-- Fonte/data: S1/S2/S3, 2026-10-15. Priorita P1; stato PARZIALE, prossima proposta NON AVVIATA.
+- Fonte/data: mandato PO `CORE-SHOPPING-CONTINUITY-1A` acquisito 2026-10-15, base #353 `8fdeebe7e269ef40a7113bb0cb922d420b5f34dc`, S2/S3. Priorita P1; stato PARZIALE, batch ATTIVO, A tecnico / B complessivo in attesa review e smoke applicativo autorizzato.
 - CURRENT: HOME, header/menu/search, listing quattro viste, facet, PDP, compare e CTA esistono; navigazione #315-#327, filtri #328-#336, confronto #337-#340 e ViewState #349 hanno chiusure circoscritte. Non full parity ONSUS, non collaudo completo di ogni pagina/dispositivo.
 - TARGET: cliente trova il prodotto, comprende informazioni/condizioni e raggiunge il carrello senza interruzioni, da smartphone e desktop, su cataloghi diversi.
 - FEATURE-BATCH proposto `CORE-SHOPPING-CONTINUITY-1A`: (1) HOME -> ricerca/menu -> catalogo con contesto preservato; (2) facet/zero-results -> PDP/compare con destinazioni reali; (3) CTA/quantita -> carrello con feedback comprensibile. AC: nessun dead-end, filtro perso, controllo irraggiungibile o prezzo non autorevole nei percorsi concordati; stessa semantica mobile/desktop.
 - Dipendenze/gate: scenario e manifest approvati, fixture pertinenti e browser disponibile; Design Gate se occorre UI. Prove: S3/S5, da riusare senza riaprire task chiusi; i soli gap riprodotti entrano nel futuro batch, niente audit generale o nuovo motore commerciale.
+- Evidenza del batch: race/debounce e messaggio di errore nella ricerca HOME riprodotti e corretti, senza cambiare endpoint/ranking o contratti commerciali. 174 controlli isolati e precompile safe PASS; fixture browser reale ai cinque viewport, non smoke IIS/E2E o certificazione visuale dell'intero storefront. Nessun gap aggiuntivo dimostrato nelle boundary URL/carrello esaminate; i percorsi live restano da collaudare con autorizzazione specifica, non dichiarati completi. Nessun nuovo task B/C o performance avviato.
 
 ### KS-A02 — Disponibilita, prezzi, promo e identita prodotto coerenti
 
@@ -134,7 +135,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-Solo `CANONICAL-DOCS-REORG-1A` e autorizzato ora. Prossimo candidato: `CORE-SHOPPING-CONTINUITY-1A`, per chiudere gap concreti del percorso cliente, con perimetro/manifest e prove mirate da approvare. P0 di sicurezza/pagamento/ordine emersi come bloccanti hanno precedenza, senza patch o prove reali automatiche. Non riaprire audit chiusi; riusare le evidenze ancora valide e accertare soltanto i gap del batch scelto.
+`CANONICAL-DOCS-REORG-1A` e integrato con #353. Solo `CORE-SHOPPING-CONTINUITY-1A` e autorizzato e attivo ora, limitatamente al mandato acquisito. Gate immediato: review del fix e smoke applicativo pertinente su target/operazioni autorizzati, senza promuovere le fixture a E2E. Candidato dopo chiusura: `SHOPPING-MOBILE-EXCELLENCE-1A`, NON AVVIATO, richiede decisione PO. P0 di sicurezza/pagamento/ordine emersi come bloccanti hanno precedenza, senza patch o prove reali automatiche. Non riaprire audit chiusi e non avviare un secondo task.
 
 ## Aggiornamento della roadmap
 
