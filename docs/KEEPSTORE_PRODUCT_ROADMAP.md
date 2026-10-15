@@ -38,8 +38,8 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-B01 — Esperienza premium accessibile, non sola leggerezza
 
-- REV1 #355: F01 focus corretto con priorita al trigger Filtri e fallback utilizzabile per sostituzione/desktop; nessun nuovo listener o cambiamento commerciale. Test focus mirati su fixture browser Tech/Food PASS, evidenze precedenti invariate riutilizzate; A tecnico / B complessivo, review REV1 e smoke applicativo ancora pendenti (dettaglio Masterplan).
-- Fonte/data: S1/S5 e mandato PO `SHOPPING-MOBILE-EXCELLENCE-1A`, 2026-10-15, base #354 `7ef9482e6795403cad7587313c1593aa16d7251f`. P1; PARZIALE, batch ATTIVO, A tecnico / B review e smoke applicativo pendenti; nessuna certificazione visuale universale.
+- REV1 #355: F01 focus corretto con priorita al trigger Filtri e fallback utilizzabile per sostituzione/desktop; nessun nuovo listener o cambiamento commerciale. Review REV1 A e test focus mirati su fixture browser Tech/Food PASS; #355 MERGED/CLOSED con deroga PO specifica allo smoke Integration NON ESEGUITO. Sync locale A; nessuna attestazione production deployed (dettaglio Masterplan).
+- Fonte/data: S1/S5 e mandato PO `SHOPPING-MOBILE-EXCELLENCE-1A`, 2026-10-15, base #354 `7ef9482e6795403cad7587313c1593aa16d7251f`. P1; macro-requisito PARZIALE, batch CHIUSO A / INTEGRATED #355 con deroga circoscritta; nessuna certificazione visuale universale.
 - CURRENT: componenti ONSUS adattati, card/menu/offcanvas e checkout migliorati da task chiusi; benchmark storico e limiti dei browser/test nel Masterplan. #349 ha prova funzionale HTTP ma non browser visuale.
 - TARGET: grafica moderna/premium coerente fra pagine, leggibilita, touch e feedback; nessuna funzione persa per assomigliare alla demo. Riferimenti PO: ONSUS/varianti HOME, bytecno.it, prezzoforte.it, e-stayon.com, Mollie trends; repertorio storico IKEA/Decathlon/MediaWorld/Baymard/W3C preservato, non osservazioni nuove.
 - FEATURE-BATCH proposto `SHOPPING-MOBILE-EXCELLENCE-1A`: (1) contenuti/CTA e stati leggibili; (2) focus/tastiera/touch/scroll senza blocchi; (3) continuita layout fra listing/PDP/cart. AC progressivi 360/390/430, tablet e desktop, browser/dispositivi dichiarati, immagini contain/assenza overflow pertinente, nessuna funzione essenziale hover-only. Pochi viewport non certificano tutti i telefoni.
@@ -50,6 +50,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C01 — Carrello, checkout e conferma senza esiti ambigui
 
+- Mandato PO 2026-10-15: `ORDER-JOURNEY-CONTINUITY-1A` ATTIVO, base #355 `5e31cbd6ef24c34a191117dad9d16971e85d43b3`. A tecnico / B complessivo per review e gate applicativo NON ESEGUITO. Delta: metodi effettivi verificabili nel riepilogo, errore lettura distinto da vuoto, conferma distinta da pagamento; nessun nuovo checkout o intervento transazionale. Autenticazione, invio ordine e incasso reali NON CERTIFICATI dalle fixture. Evidenze/limiti nel Masterplan; nessuna deroga automatica, merge o pubblicazione.
 - Fonte/data: S1/S3/S4, 2026-10-15. P0/P1; PARZIALE con gate di collaudo/release.
 - CURRENT: carrello owner-scoped, persistenza/merge login, spedizione/soglia e indirizzi, checkout/ordine idempotente e conferme hanno implementazioni; autorizzazioni mutative non si estendono a nuovi test. Un ordine/documento creato non equivale a pagamento incassato.
 - TARGET/AC del batch proposto `ORDER-JOURNEY-CONTINUITY-1A`: (1) anonimo -> login -> carrello senza perdita/duplicazione; (2) spedizione/pagamento/indirizzi/totali -> riepilogo modificabile; (3) invio -> un unico esito terminale osservabile -> conferma/account. Nessun fallback silenzioso verso documenti, duplicazione ordine o email su replay/rollback.
@@ -137,7 +138,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-`CANONICAL-DOCS-REORG-1A` e integrato con #353; `CORE-SHOPPING-CONTINUITY-1A` e chiuso con #354 e deroga smoke documentata. Solo `SHOPPING-MOBILE-EXCELLENCE-1A` e autorizzato e attivo ora, nel mandato KS-B01 acquisito. Gate immediato: review indipendente e smoke applicativo pertinente su target/operazioni autorizzati, senza promuovere le fixture a E2E. Candidato dopo chiusura: KS-C01 collaudo controllato carrello/checkout, NON AVVIATO e soggetto ad autorizzazioni ambiente/fixture/operazioni. P0 di sicurezza/pagamento/ordine bloccanti hanno precedenza, senza patch o prove reali automatiche. Non riaprire audit chiusi e non avviare un secondo task.
+`CANONICAL-DOCS-REORG-1A` e integrato con #353; #354 e #355 sono chiuse con le rispettive deroghe smoke documentate. Solo `ORDER-JOURNEY-CONTINUITY-1A` e autorizzato e attivo ora (KS-C01), con review e gate applicativo separati: fixture non equivalgono a E2E. Candidato dopo chiusura/decisione PO: KS-C02 `ACCOUNT-JOURNEY-READINESS-1A`, NON AVVIATO. P0 di sicurezza/pagamento/ordine bloccanti hanno precedenza, senza patch o prove reali automatiche. Non riaprire audit chiusi e non avviare un secondo task.
 
 ## Aggiornamento della roadmap
 

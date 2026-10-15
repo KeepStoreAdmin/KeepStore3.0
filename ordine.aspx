@@ -217,7 +217,7 @@
                     <div class="ks-order-hero">
                         <div>
                             <h3>Ordine inviato</h3>
-                            <p>Abbiamo ricevuto il tuo ordine. Riceverai una conferma via email.</p>
+                            <p>Abbiamo ricevuto il tuo ordine. La registrazione dell'ordine non conferma l'avvenuto pagamento: verifica lo stato e le istruzioni riportati qui sotto.</p>
                             <div class="ks-order-meta">
                                 <span><strong>Documento</strong> <asp:Label ID="Label2" runat="server" Text=""></asp:Label></span>
                                 <span><strong>N.</strong> <asp:Label ID="Label1" runat="server" Text=""></asp:Label></span>

@@ -2403,14 +2403,16 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Return label.Text.Trim()
     End Function
 
-    Private Function GetSelectedGridDescription(ByVal grid As GridView) As String
+    Private Function GetConfirmedMethodDescription(ByVal grid As GridView, ByVal methodId As Integer, ByVal radioId As String) As String
         If grid Is Nothing Then Return ""
         For Each row As GridViewRow In grid.Rows
             If row.RowType <> DataControlRowType.DataRow Then Continue For
-            For Each cell As TableCell In row.Cells
-                Dim text As String = cell.Text.Replace("&nbsp;", "").Trim()
-                If text <> "" AndAlso Not text.StartsWith("<", StringComparison.Ordinal) Then Return text
-            Next
+            If row.RowIndex >= grid.DataKeys.Count OrElse
+               SafeIntFromDb(grid.DataKeys(row.RowIndex).Value, 0) <> methodId Then Continue For
+            Dim radio As WebControl = TryCast(row.FindControl(radioId), WebControl)
+            If radio IsNot Nothing AndAlso RbGetChecked(radio) AndAlso RbGetEnabled(radio) Then
+                Return HttpUtility.HtmlDecode(If(radio.Attributes("aria-label"), "")).Trim()
+            End If
         Next
         Return ""
     End Function
@@ -2429,8 +2431,20 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         If lblConfirmBillingAddress IsNot Nothing Then lblConfirmBillingAddress.Text = (LabelText(lblTab_Indirizzo) & " - " & LabelText(lblTab_Cap) & " " & LabelText(lblTab_Citta) & " " & LabelText(lblTab_Provincia)).Trim()
         If lblConfirmShippingName IsNot Nothing Then lblConfirmShippingName.Text = LabelText(lblTab_RagioneSocialeSpedizione) & " " & LabelText(lblTab_NomeSpedizione)
         If lblConfirmShippingAddress IsNot Nothing Then lblConfirmShippingAddress.Text = (LabelText(lblTab_IndirizzoSpedizione) & " - " & LabelText(lblTab_CapSpedizione) & " " & LabelText(lblTab_CittaSpedizione) & " " & LabelText(lblTab_ProvinciaSpedizione)).Trim()
-        If lblConfirmShippingMethod IsNot Nothing Then lblConfirmShippingMethod.Text = If(tbVettoriId IsNot Nothing AndAlso CleanCartAddressInput(tbVettoriId.Text) <> "", "Metodo selezionato", "Da selezionare")
-        If lblConfirmPaymentMethod IsNot Nothing Then lblConfirmPaymentMethod.Text = If(tbPagamenti IsNot Nothing AndAlso CleanCartAddressInput(tbPagamenti.Text) <> "", "Pagamento selezionato", "Da selezionare")
+        Dim shippingDescription As String = ""
+        Dim paymentDescription As String = ""
+        If authoritativeDraft IsNot Nothing Then
+            shippingDescription = GetConfirmedMethodDescription(gvVettoriPromo, authoritativeDraft.DeliveryMethodId, "rbSpedizione")
+            If shippingDescription = "" Then shippingDescription = GetConfirmedMethodDescription(gvVettori, authoritativeDraft.DeliveryMethodId, "rbSpedizione")
+            Dim freeCarrierId As Integer
+            If shippingDescription = "" AndAlso rbSpedizioneGratis IsNot Nothing AndAlso
+               RbGetChecked(rbSpedizioneGratis) AndAlso RbGetEnabled(rbSpedizioneGratis) AndAlso
+               Integer.TryParse(rbSpedizioneGratis.Value, freeCarrierId) AndAlso
+               freeCarrierId = authoritativeDraft.DeliveryMethodId Then shippingDescription = "Spedizione gratuita"
+            paymentDescription = GetConfirmedMethodDescription(gvPagamento, authoritativeDraft.PaymentMethodId, "rbPagamento")
+        End If
+        If lblConfirmShippingMethod IsNot Nothing Then lblConfirmShippingMethod.Text = Server.HtmlEncode(If(shippingDescription <> "", shippingDescription, "Descrizione non disponibile: verifica in Modifica spedizione e pagamento."))
+        If lblConfirmPaymentMethod IsNot Nothing Then lblConfirmPaymentMethod.Text = Server.HtmlEncode(If(paymentDescription <> "", paymentDescription, "Descrizione non disponibile: verifica in Modifica spedizione e pagamento."))
         If lblConfirmNotes IsNot Nothing Then lblConfirmNotes.Text = If(txtNoteSpedizione IsNot Nothing AndAlso CleanCartAddressInput(txtNoteSpedizione.Text) <> "", Server.HtmlEncode(CleanCartAddressInput(txtNoteSpedizione.Text)), "Nessuna nota")
         If lblConfirmTotal IsNot Nothing Then lblConfirmTotal.Text = If(lblTotale IsNot Nothing, lblTotale.Text, "")
     End Sub
@@ -3181,12 +3195,15 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     Public Sub ArticoliCarrello(ByVal numero As Integer)
         Me.lblArticoli.Text = numero
         Dim hasItems As Boolean = (numero > 0)
+        Dim cartRead As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+        Dim readUnavailable As Boolean = cartRead Is Nothing OrElse Not cartRead.HasOwner OrElse Not cartRead.LoadSucceeded
         _cartHasItems = hasItems
         If lblArticoli IsNot Nothing Then lblArticoli.Visible = hasItems
         If lblPresenti IsNot Nothing Then lblPresenti.Visible = hasItems
         If lblPrezzi IsNot Nothing Then lblPrezzi.Visible = hasItems
         If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = hasItems
-        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems
+        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems AndAlso Not readUnavailable
+        If CartReadUnavailablePanel IsNot Nothing Then CartReadUnavailablePanel.Visible = Not hasItems AndAlso readUnavailable
         If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = hasItems
         If CartSummaryColumn IsNot Nothing AndAlso Not hasItems Then CartSummaryColumn.Visible = False
         If Not hasItems Then

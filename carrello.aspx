@@ -372,6 +372,12 @@
                 </div>
             </div>
 
+            <asp:Panel ID="CartReadUnavailablePanel" runat="server" CssClass="ks-alert ks-alert-warning" Visible="false" role="alert" aria-live="assertive">
+                <h4>Il carrello non è al momento consultabile</h4>
+                <p>Non possiamo verificare gli articoli in questo momento. Questo messaggio non indica che il carrello sia vuoto.</p>
+                <a href="carrello.aspx" class="tf-btn btn-gray">Ricarica il carrello</a>
+            </asp:Panel>
+
             <asp:Panel ID="CartEmptyPanel" runat="server" CssClass="ks-cart-empty ks-cart-empty-card" Visible="false">
                 <div class="ks-cart-message-icon">
                     <i class="icon-shop-cart-1"></i>
@@ -1272,7 +1278,7 @@
             <asp:CustomValidator ID="cvCheckoutTerms" runat="server" ValidationGroup="checkoutSubmit" Display="None" EnableClientScript="false" ErrorMessage="Accetta le Condizioni Generali di Vendita." OnServerValidate="cvCheckoutSubmit_ServerValidate" />
             <div class="ks-confirm-copy">
                 <h5 class="title fw-semibold"><i class="icon-shield" aria-hidden="true"></i> Controlla e conferma</h5>
-                <p class="body-text-3 text-main-2">Questi sono i dati che verranno utilizzati per l'ordine. Controllali prima dell'invio.</p>
+                <p class="body-text-3 text-main-2">L'ordine non è ancora stato inviato. Controlla dati, scelte e importi; puoi modificarli prima dell'invio.</p>
             </div>
             <div class="ks-final-confirm-grid">
                 <div class="ks-final-confirm-card ks-final-address-card">
