@@ -20,6 +20,7 @@ Private Shared ReadOnly CartCulture As CultureInfo = CultureInfo.GetCultureInfo(
 Private Const CartRecoveryCodeKey As String = "ks_cart_recovery_code"
 Private Const CartRecoveryCreatedUtcKey As String = "ks_cart_recovery_created_utc"
 Private _cartHasItems As Boolean = True
+Private _cartReadUnavailable As Boolean
 
 Private Class InventoryAvailabilityDisplayLine
     Public CommercialCode As String
@@ -2338,6 +2339,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Function
 
     Private Sub ApplyCheckoutStepUi()
+        If _cartReadUnavailable Then Return
         If IsCartEmptyState() Then
             SetCheckoutStep("cart")
             If tOrdine IsNot Nothing Then tOrdine.Visible = False
@@ -3195,15 +3197,12 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     Public Sub ArticoliCarrello(ByVal numero As Integer)
         Me.lblArticoli.Text = numero
         Dim hasItems As Boolean = (numero > 0)
-        Dim cartRead As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
-        Dim readUnavailable As Boolean = cartRead Is Nothing OrElse Not cartRead.HasOwner OrElse Not cartRead.LoadSucceeded
         _cartHasItems = hasItems
         If lblArticoli IsNot Nothing Then lblArticoli.Visible = hasItems
         If lblPresenti IsNot Nothing Then lblPresenti.Visible = hasItems
         If lblPrezzi IsNot Nothing Then lblPrezzi.Visible = hasItems
         If CartItemsWrap IsNot Nothing Then CartItemsWrap.Visible = hasItems
-        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems AndAlso Not readUnavailable
-        If CartReadUnavailablePanel IsNot Nothing Then CartReadUnavailablePanel.Visible = Not hasItems AndAlso readUnavailable
+        If CartEmptyPanel IsNot Nothing Then CartEmptyPanel.Visible = Not hasItems
         If CartActionsWrap IsNot Nothing Then CartActionsWrap.Visible = hasItems
         If CartSummaryColumn IsNot Nothing AndAlso Not hasItems Then CartSummaryColumn.Visible = False
         If Not hasItems Then
@@ -3242,6 +3241,28 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 		else
 			Me.canorder.Visible = False
 		End If
+        ApplyCartReadAvailabilityUi()
+    End Sub
+
+    Private Sub ApplyCartReadAvailabilityUi()
+        Dim cartRead As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+        Dim readUnavailable As Boolean = cartRead Is Nothing OrElse Not cartRead.HasOwner OrElse Not cartRead.LoadSucceeded
+        _cartReadUnavailable = readUnavailable
+        If CartReadUnavailablePanel IsNot Nothing Then CartReadUnavailablePanel.Visible = readUnavailable
+        If Not readUnavailable Then Return
+
+        ' Restored controls are not proof of a successful authoritative read.
+        ' Presentation only: preserve cart rows, quantities and checkout Session.
+        For Each control As Control In New Control() {
+            CartEmptyPanel, CartItemsWrap, CartActionsWrap, CartSummaryColumn,
+            Panel_Unico, tOrdine, pnlCheckoutConfirm, pnlLoginRequired,
+            lblArticoli, lblPresenti, lblPrezzi, canorder,
+            btCompleta, btnVaiConfermaOrdine, btInviaOrdine, btSalvaPreventivo}
+            If control IsNot Nothing Then control.Visible = False
+        Next
+        ConfigureCheckoutStepLink(lnkCheckoutStep1, 1, True, False)
+        ConfigureCheckoutStepLink(lnkCheckoutStep2, 2, False, False)
+        ConfigureCheckoutStepLink(lnkCheckoutStep3, 3, False, False)
     End Sub
 
     Private Sub SendOrder()
@@ -4684,6 +4705,8 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
         ApplyCartAddressEditorLock()
         BindCartRecentlyViewed()
         Session(OrderInventoryAvailabilityService.SessionLineKeysKey) = Nothing
+        ' Reassert after child PreRender and address-editor UI can change controls.
+        ApplyCartReadAvailabilityUi()
     End Sub
 
     'Restituisce 1, se il controllo Ã¨ andato a buon fine, altrimenti 0

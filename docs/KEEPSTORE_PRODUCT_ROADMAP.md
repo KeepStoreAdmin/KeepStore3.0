@@ -50,6 +50,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C01 — Carrello, checkout e conferma senza esiti ambigui
 
+- REV1 #356: F01 corretto nella sola presentazione anche con righe ViewState positive e lettura non verificabile; avviso e blocco visuale finale, senza alterare Session, ownership o regole ordine. 95 test isolati mirati e precompile safe PASS; review REV1 e gate applicativo pendenti, non certificazione IIS/E2E (Masterplan).
 - Mandato PO 2026-10-15: `ORDER-JOURNEY-CONTINUITY-1A` ATTIVO, base #355 `5e31cbd6ef24c34a191117dad9d16971e85d43b3`. A tecnico / B complessivo per review e gate applicativo NON ESEGUITO. Delta: metodi effettivi verificabili nel riepilogo, errore lettura distinto da vuoto, conferma distinta da pagamento; nessun nuovo checkout o intervento transazionale. Autenticazione, invio ordine e incasso reali NON CERTIFICATI dalle fixture. Evidenze/limiti nel Masterplan; nessuna deroga automatica, merge o pubblicazione.
 - Fonte/data: S1/S3/S4, 2026-10-15. P0/P1; PARZIALE con gate di collaudo/release.
 - CURRENT: carrello owner-scoped, persistenza/merge login, spedizione/soglia e indirizzi, checkout/ordine idempotente e conferme hanno implementazioni; autorizzazioni mutative non si estendono a nuovi test. Un ordine/documento creato non equivale a pagamento incassato.
