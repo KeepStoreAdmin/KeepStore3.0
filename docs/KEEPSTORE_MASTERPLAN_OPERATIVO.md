@@ -1,11 +1,30 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-14
+Aggiornato: 2026-10-15
 
 Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### HOME-DB-OPEN-LATENCY-1A — closeout Integration / A tecnico e prestazionale, PR #352 DRAFT non integrata
+
+Review indipendente ChatGPT A sulla REV1 `e6831baaaf10d0ac689974437bf64b1a647d6b85`; smoke autorizzato concluso con **un solo Apply e sei GET HTTPS non mutative**, tre per tenant, rollback PASS. Questo checkpoint aggiorna il gate live pendente della REV1 sottostante, conservandone lo storico. Chiusura corrente esclusivamente documentale sul medesimo branch/PR: runtime invariato, nessun nuovo test, Apply, GET o benchmark. Stable locale/origin `9eaead27127ec39fdd6f54349ed6fd9243d8cfb9` e main/origin/main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati; merge NON eseguito, in attesa di autorizzazione finale FF-only.
+
+Evidenze locali private rilette senza modificarle: `C:\Temp\KeepStoreIntegration\backups\home-db-open-pr352-20261015-093408-6090a743`, in particolare `sanitized-comparison-summary.json`, metriche HTTP, sei tracce server, collegamenti richiesta/traccia, recovery, controlli HTML e `rollback-receipt.json`. Sei HTTP 200, TLS verificato su loopback :18443 con hostname/SNI corretti, zero redirect, canonical PASS. Correlazioni tenant/campione/requestId distinte per aziende 1 (Taikun) e 2 (Webaffare); 30 recovery events, cinque per richiesta fino a trace_written, **zero entry scartate**. Ogni traccia contiene una Open e dieci Fill nei loader HOME strumentati: **10 -> 1 Open, nove aperture evitate**, non una sola connessione per l'intera richiesta/master/provider.
+
+Medie campioni 2-3 di ciascun tenant, millisecondi; prima = baseline storica #351, dopo = smoke #352:
+
+| Tenant | Open prima -> dopo | TTFB prima -> dopo | Riduzione TTFB osservata |
+| --- | --- | --- | --- |
+| Taikun | 4.334,662 -> 439,550 | 9.638,166 -> 5.470,462 | 43,24% |
+| Webaffare | 4.196,145 -> 427,759 | 9.514,302 -> 5.498,777 | 42,21% |
+
+Il confronto e storico, NON un esperimento simultaneo controllato: il calo e coerente con nove Open evitate, ma non attribuisce causalmente alla patch tutte le differenze di TTFB/Fill, dati, cache o carico. Le osservazioni commerciali ordinate dei tre nuovi campioni coincidono per ciascun tenant (88 record attributi Taikun, 64 Webaffare; non conteggi di prodotti unici); **parita commerciale completa con la baseline storica NON certificata**, mancando uno snapshot HTML storico equivalente. I campioni iniziali restano separati: 16 HEAD per tenant, circa 24,4 s, TTFB iniziale 46,104 s Taikun / 31,431 s Webaffare. Tempi HTTP e pageObserved hanno confini distinti; nessuna spiegazione inventata per il loro scarto iniziale. Residuo warm non attribuito circa 3,2 s (3.228,240 / 3.261,403 ms): finding distinto, NON AVVIATO, come l'attesa HEAD iniziale.
+
+Rollback documentato PASS: inventario del rapporto di esecuzione **1.117 file non diagnostici identici**, esclusi soltanto i due log diagnostici locali conservati. Ricevuta e hash correnti ricontrollati in sola lettura: Integration `web.config` SHA-256 `70B58D9DA3C363E1AAE305DE73E886F4EB9C2B43230942B7CB40383CD8A661E3`; `Default.aspx.vb` originale SHA-256 `6667E6E817A8A2933B04B0D0C8A478C67A23585F8969DDD2149C4C005DCA6F72`; helper temporaneo `App_Code/HomeServerStageTiming.vb` nuovamente assente, flag diagnostici rimossi secondo il rapporto/backup. L'inventario completo e attestato dal confronto del ciclo smoke, non ricostruito retroattivamente da una nuova baseline. Backup e prove rimangono privati fuori Git.
+
+`Pooling=false` conservato; nessuna attivazione Connection Reset, modifica provider, SQL, carrello o configurazioni permanenti. Nessun intervento su KeepStoreSmoke/:8443, produzione o IIS permanente. Nessuna scrittura DB invocata dal percorso autorizzato; non e una certificazione indipendente mediante audit del server DB. Working copy: web.config, quattro cancellazioni tracked e 54 untracked protetti; staging del solo Masterplan. Nessun deploy produzione, merge o task successivo. Il manifest cumulativo PR resta `Default.aspx.vb` e questo documento; i 211 test e la precompile gia PASS non vengono ripetuti.
 
 ### HOME-DB-OPEN-LATENCY-1A / REV1 — connessione HOME request-scoped, A tecnico / B complessivo
 
