@@ -267,6 +267,7 @@
     var timer = 0;
     var controller = null;
     var searchVersion = 0;
+    var searchPending = false;
 
     function cancelPendingSearch() {
       searchVersion += 1;
@@ -291,10 +292,19 @@
       }
     }
 
+    function renderPendingSearch() {
+      if (searchPending) return;
+      searchPending = true;
+      if (answer) answer.textContent = 'Sto confrontando la richiesta con i dati reali del catalogo KeepStore.';
+      if (count) count.textContent = 'Ricerca catalogo...';
+      if (results) results.innerHTML = '<div class="ks-ai130-empty">Analisi catalogo in corso...</div>';
+    }
+
     function runSearch(raw) {
       var version = cancelPendingSearch();
       var query = String(raw || '').replace(/\s+/g, ' ').trim();
       if (query.length < 2) {
+        searchPending = false;
         if (count) count.textContent = '';
         if (answer) answer.textContent = 'Scrivi una richiesta: cerco nel catalogo reale per codice, EAN, marca, descrizione e categoria.';
         renderEmpty('Inserisci almeno 2 caratteri per cercare nel catalogo.', query);
@@ -303,9 +313,7 @@
 
       rememberSearch(query);
       controller = window.AbortController ? new AbortController() : null;
-      if (answer) answer.textContent = 'Sto confrontando la richiesta con i dati reali del catalogo KeepStore.';
-      if (count) count.textContent = 'Ricerca catalogo...';
-      if (results) results.innerHTML = '<div class="ks-ai130-empty">Analisi catalogo in corso...</div>';
+      renderPendingSearch();
 
       fetch(searchEndpoint(query), {
         credentials: 'same-origin',
@@ -316,8 +324,12 @@
         return res.json();
       }).then(function (data) {
         if (version !== searchVersion) return;
-        var items = data && data.suggestions ? data.suggestions : [];
-        if (answer) answer.textContent = data && data.intelligence && data.intelligence.summary ? data.intelligence.summary : 'Risultati ordinati per compatibilita con la richiesta.';
+        if (!data || data.ok !== true || !Array.isArray(data.suggestions) || data.suggestions.some(function (item) {
+          return !item || typeof item.title !== 'string' || typeof item.url !== 'string' || !item.url;
+        })) throw new Error('Invalid catalog response');
+        searchPending = false;
+        var items = data.suggestions;
+        if (answer) answer.textContent = data.intelligence && typeof data.intelligence.summary === 'string' && data.intelligence.summary ? data.intelligence.summary : 'Risultati ordinati per compatibilita con la richiesta.';
         if (count) count.textContent = items.length ? items.length + ' risultati dal catalogo' : 'Nessun articolo compatibile';
         if (items.length) {
           results.innerHTML = items.map(renderAiCard).join('') + '<div class="ks-ai130-catalog-row">' + catalogLink(query) + '</div>';
@@ -327,6 +339,7 @@
       }).catch(function (err) {
         if (version !== searchVersion) return;
         if (err && err.name === 'AbortError') return;
+        searchPending = false;
         if (window.console && console.warn) console.warn('[KeepStore AI]', err);
         if (answer) answer.textContent = 'Ricerca temporaneamente non disponibile. Puoi continuare nel catalogo.';
         if (count) count.textContent = 'Catalogo non disponibile';
@@ -347,6 +360,7 @@
           runSearch(input.value);
           return;
         }
+        renderPendingSearch();
         timer = window.setTimeout(function () {
           timer = 0;
           runSearch(input.value);

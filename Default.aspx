@@ -445,5 +445,5 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
-    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261015-shopping-continuity1a" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261015-shopping-continuity1a-rev1" %>"></script>
 </asp:Content>
