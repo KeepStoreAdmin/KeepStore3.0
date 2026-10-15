@@ -2,10 +2,26 @@
 
 Aggiornato: 2026-10-15
 
-Questo documento e il punto di ripartenza operativo per nuove chat ChatGPT/Codex sul repository KeepStoreAdmin/KeepStore3.0.
+Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### CANONICAL-DOCS-REORG-1A — checkpoint prevalente 2026-10-15 / DOCS-ONLY
+
+Base Git verificata: `frontend-rebuild` locale/origin = `b14113767d115e6b5596f0eab3c048c62928c751`; parent `e6831baaaf10d0ac689974437bf64b1a647d6b85`; main/origin/main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. PR #351 e #352 integrate; #352 MERGED/CLOSED verificata su GitHub, sincronizzazione locale A acquisita e SHA confermati. `HOME-DB-OPEN-LATENCY-1A` CLOSED / A / INTEGRATED. Questo checkpoint supera lo stato DRAFT e i gate pendenti sotto, senza cancellare il rapporto del benchmark. La #352 contiene due commit originali, non merge commit; prestazioni misurate soltanto su Integration, non attestazione di deploy produzione.
+
+Mandato PO 2026-10-15: ecommerce affidabile, moderno/premium, mobile e completo fino all'ordine prima di polish/performance non bloccanti/SEO avanzata/integrazioni. Sicurezza, pagamento e integrita commerciale/ordine restano gate di rilascio. Task attivo esclusivamente questa riconciliazione; nessun nuovo runtime autorizzato. Regole ONE-SHOT, LOCAL-FIRST, FEATURE-BATCH, ruoli, Design Gate e release sono consolidate in AGENTS, non ridefinite qui. Requisiti HOME adattiva/assistente e priorita vivono nella nuova roadmap; i dettagli AI/search nel relativo Blueprint. START_HERE contiene l'indice classificato dei documenti root/docs e i limiti degli snapshot IIS/pagamenti.
+
+`HOME-TTFB-WARM-RESIDUAL-ATTRIBUTION-1A`: diagnosi read-only A, attribuzione al singolo componente B; campioni warm #352 con residui 3.228,240 / 3.261,403 ms (Taikun/Webaffare), ottenuti mediante unione degli span, non somma inclusiva. Finestre candidate: circa 0,94 s prima di Page.Init, 1,83 s fra callback Page.Load e PreRender, 0,47 s nei PreRender figli. Master/header/footer/carrello candidati, nessun costo singolo dimostrato. Strumentazione proposta NON IMPLEMENTATA e ora DIFFERITA; HEAD/cold separato e NON AVVIATO. Non riaprire #352 o ripetere benchmark. Helper `App_Code/HomeServerStageTiming.vb` integrato da #351, dipendenza runtime da includere nei pacchetti autorizzati se assente nel destinatario; diagnostica disattivata per default.
+
+Riconciliazione pagamenti: il checkpoint 2026-09-23 sottostante e System Blueprint 5.8.1 attestano PayPal Orders v2 LIVE CONFIGURED / ENABLED e OAuth LIVE HTTP 200, NON pagamento reale end-to-end LIVE VERIFIED. Le sezioni NVP/Express, READY FOR LIVE CONFIGURATION e summary payment precedente sono snapshot storici, non la configurazione corrente. BancaSella mantiene gate proprio, non eredita il collaudo PayPal. Documenti gestionali Enzo e runbook restano riferimenti specialistici, con stato pannello/DB/deploy distinto. I limiti su password/hash, rollout carrello persistente, #342/#343/#345 e varianti/autenticato finale restano nella roadmap, non sono test promossi a PASS.
+
+Manifest massimo nove documenti; nessun runtime/config cambiato. Un solo commit DOCS-ONLY e PR DRAFT sul branch `task/keepstore-canonical-docs-reorg-1a`, senza merge. Gate successivo: review documentale indipendente; nessun task runtime parte da questa consegna. Stato produzione per la #352 DA VERIFICARE, nessuna pubblicazione implicita.
+
+## Archivio dei checkpoint e delle decisioni precedenti
+
+**Nota di lettura prevalente:** tutto lo storico seguente e conservato integralmente. Stati task/PR/SHA e scalette si riferiscono alle rispettive date; non costituiscono task attivi o autorizzazioni. Per lo stato attuale usare START_HERE/Git, per priorita PRODUCT_ROADMAP e per metodo AGENTS. Contratti tecnici non sostituiti restano consultabili tramite System Blueprint/runbook; copie storiche di regole non sono seconde norme attive. In particolare le sezioni "Contratto operativo", "Roadmap sintetica" e "Prossimi step consigliati" non competono con le fonti canoniche nuove.
 
 ### HOME-DB-OPEN-LATENCY-1A — closeout Integration / A tecnico e prestazionale, PR #352 DRAFT non integrata
 

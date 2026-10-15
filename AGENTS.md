@@ -1,10 +1,20 @@
 # KeepStore 3.0 - regole operative permanenti
 
-Fonte canonica del metodo. I manuali in `docs/` conservano checkpoint, architettura, contratti e roadmap.
+Fonte unica delle regole permanenti. Ingresso operativo: [START_HERE](docs/KEEPSTORE_START_HERE.md). Requisiti e priorita: [PRODUCT_ROADMAP](docs/KEEPSTORE_PRODUCT_ROADMAP.md). Evidenze/storico: [Masterplan](docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md). I Blueprint conservano i contratti tecnici, non una seconda governance.
+
+## KS-RIPRENDI — contratto di bootstrap
+
+Quando Germano scrive `KS-RIPRENDI`, con accesso al repository:
+
+1. Verificare GitHub, HEAD/stable/main, PR pertinenti, staging e working state disponibili; rispettare lo scope di sola lettura della ripartenza. Dichiarare GitHub non accessibile quando manca, senza inventare stati remoti o risincronizzare automaticamente.
+2. Leggere questo AGENTS, START_HERE e PRODUCT_ROADMAP; poi soltanto Blueprint/runbook pertinenti, usando il Masterplan per evidenze o conflitti puntuali.
+3. Riconciliare checkpoint e Git reale; identificare ultimo task chiuso, task attivo, blocker, gate e stato deploy per tenant. Source integrated, Integration tested e production deployed sono stati distinti.
+4. Presentare stato sintetico e prossimo ONE-SHOT proponibile, con prerequisiti e stato NON AVVIATO; non chiedere informazioni gia disponibili.
+5. La parola chiave non autorizza implementazione, merge, deploy, scritture DB, gateway, e-mail o operazioni amministrative. Servono le rispettive autorizzazioni correnti.
 
 ## Metodo permanente ONE-SHOT e ripartenza informata
 
-Obbligatorio in ogni nuova chat e sessione Codex: **prima di fare domande o formulare diagnosi**, consultare questo AGENTS.md, il checkpoint corrente del Masterplan, le sezioni pertinenti del System Blueprint, `docs/KEEPSTORE_LOCAL_IIS_ENVIRONMENT.md` per IIS/test, e verificare lo stato reale GitHub (branch, SHA, PR). Evitare di richiedere nuovamente screenshot, test e informazioni gia' documentati. Distinguere sempre dati attuali, evidenze storiche e il singolo dato essenziale ancora sconosciuto. L'errore di autorizzazione su `applicationHost.config` non prova che browser o IIS siano inutilizzabili.
+Obbligatorio in ogni nuova chat e sessione Codex: **prima di fare domande o formulare diagnosi**, seguire KS-RIPRENDI, consultare il checkpoint breve e la roadmap, i contratti pertinenti e, per IIS/test, il manuale IIS letto insieme ai checkpoint successivi indicati in START_HERE. Evitare di richiedere nuovamente screenshot, test e informazioni gia' documentati. Distinguere sempre dati attuali, evidenze storiche e il singolo dato essenziale ancora sconosciuto. L'errore di autorizzazione su `applicationHost.config` non prova che browser o IIS siano inutilizzabili.
 
 - **Prompt completo al primo invio:** ChatGPT verifica anticipatamente implementazione, dipendenze, manifest, rischi, gate gia' superati e ostacoli prevedibili. Codex riceve un micro-task risolutivo con casi positivi/negativi, test mirati e stop condition, senza catene di audit esplorativi evitabili.
 - **Autonomia nel perimetro:** Codex risolve dettagli tecnici ordinari senza continue richieste, riusa harness e test gia' validi, e non ripete suite/benchmark per rituale. Zero ampliamenti impliciti di scope.
@@ -12,6 +22,12 @@ Obbligatorio in ogni nuova chat e sessione Codex: **prima di fare domande o form
 - **Sicurezza non negoziabile:** merge, deploy, scritture DB, pagamenti, e-mail, test su dati operativi e deroghe smoke seguono le autorizzazioni esplicite correnti. Le deroghe non si estendono ad altre PR e prove sintetiche non diventano certificazione IIS.
 - **Documentazione snella:** annotare fatti nuovi e decisioni nel documento canonico pertinente, senza nuove PR per ripetizioni. Separare PC sviluppo, IIS locale, tenant sul DB condiviso e server pubblicati.
 - **Handoff nuove chat:** recuperare stato stabile, PR aperte, collaudi pendenti, topologia IIS, tenant e debiti aperti dai documenti/version control. Memoria e conversazione sono solo supporto e non prevalgono sui dati correnti.
+
+### FEATURE-BATCH e Definition of Done
+
+Evoluzione del micro-task: un task realizza un risultato cliente coerente, includendo quando utile 2-4 sottorequisiti collegati, una PR, un perimetro reversibile e una Definition of Done unica. Non frammentare dettagli ordinari in catene di prompt/audit. Non accorpare rischi indipendenti: gateway, integrita ordine, autenticazione e DB mantengono gate separati. Il manifest massimo resta esplicito; i finding fuori scope non vengono implementati implicitamente.
+
+DoD runtime: risultato autorizzato implementato, causa affrontata, manifest/dipendenze verificati, casi positivi e failure pertinenti, regressioni influenzate, evidenze sintetiche/runtime distinte, branch pushato e PR DRAFT pronta per review indipendente. Gate critico indisponibile resta B; una deroga esplicita resta NON ESEGUITO, non PASS. Privilegiare qualita al primo ciclo e costo totale del risultato chiuso, senza sacrificare sicurezza/test per risparmiare token. Nessuna nuova review o suite rituale quando prove e runtime pertinenti sono immutati.
 
 ## Repository, branch e working copy
 
@@ -22,11 +38,11 @@ Obbligatorio in ogni nuova chat e sessione Codex: **prima di fare domande o form
 - Aggiornamenti/integrazioni solo fast-forward. Vietati merge commit, rebase, reset e force push non autorizzati.
 - Si lavora su branch dedicati `task/<nome-task>`, creati dal preciso SHA autorizzato di `frontend-rebuild`.
 - Un solo task attivo; il successivo attende chiusura, stop o sostituzione esplicita di Germano.
-- Ogni task inizia con `git fetch`, verifica ref/SHA, staging vuoto e tracked tree pulito. Censire e preservare gli untracked autorizzati.
+- Ogni task mutativo inizia con `git fetch`, verifica ref/SHA e staging vuoto. Il tracked tree e pulito salvo modifiche preesistenti esplicitamente autorizzate: censirle con hash/inventario e preservarle fuori staging insieme agli untracked. Un audit read-only verifica i ref senza mutazioni non autorizzate.
 
 ### Priorita ecommerce e moduli futuri
 
-Prima si stabilizzano HOME, catalogo/PDP, funzioni commerciali residue e MyAccount. Le nuove integrazioni Google, social, marketplace, licenze, IndexNow autonomo e AI sono progettate/documentate ma rinviate: una nuova chat non le riavvia automaticamente. KeepStore resta un'applicazione modulare sullo stack attuale; Core commerciale e SEO tecnica di base non dipendono da licenze. Ogni provider conserva configurazione, schermata e dati operativi nel proprio dominio, senza duplicare i resolver Product/Offer o usare un token come prova di diritto d'uso. Il blueprint modulare vigente e `docs/KEEPSTORE_MODULAR_PLATFORM_BLUEPRINT.md`; nessuno schema draft e installato da questa decisione.
+**Prima ecommerce funzionale, affidabile, moderno, bello e navigabile da smartphone, lungo tutto il percorso fino all'ordine/conferma/account; poi rifinimenti e performance non bloccanti, SEO avanzata, integrazioni e automazioni.** Sicurezza, pagamento, correttezza commerciale, SEO tecnica indispensabile e integrita ordine che impediscono un rilascio affidabile non sono polish differibile. La priorita dei requisiti vive soltanto nella PRODUCT_ROADMAP: non riavviare automaticamente task chiusi, differiti o semplicemente proposti. HOME adattiva e assistente acquisti restano requisiti approvati, non funzioni gia completate. Le nuove integrazioni restano progettazione non installata nel [Blueprint modulare](docs/KEEPSTORE_MODULAR_PLATFORM_BLUEPRINT.md), senza licenziare il Core o duplicare resolver Product/Offer.
 
 
 ### Modalita permanente LOCAL-FIRST + GITHUB SOURCE OF TRUTH
@@ -59,10 +75,10 @@ In caso di conflitto si applica questo ordine:
 1. richiesta corrente approvata da Germano;
 2. Git, codice, database e runtime reale per lo stato tecnico;
 3. questo `AGENTS.md` per le regole operative permanenti;
-4. checkpoint corrente di `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md`;
-5. `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` per architettura, flussi e contratti;
-6. `docs/KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md` soltanto per search, AI, RAG, SEO AI o assistenza acquisto;
-7. handoff, memoria, chat e allegati come supporto non autoritativo.
+4. `docs/KEEPSTORE_START_HERE.md` per bootstrap e checkpoint breve; `docs/KEEPSTORE_PRODUCT_ROADMAP.md` per requisiti, priorita e criteri di prodotto;
+5. `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md` per task/evidenze/storico, non come roadmap alternativa;
+6. `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md` per contratti architetturali; AI Assisted Search Blueprint per dettagli AI/search; runbook specialistici per i rispettivi domini;
+7. benchmark datati e sezioni dichiarate storiche come riferimenti, non istruzioni operative attive; memoria/chat come supporto. Una decisione PO corrente acquisita nel repository prevale sullo snapshot antecedente.
 
 SHA e Git reale prevalgono sui checkpoint. Nessuna richiesta autorizza implicitamente modifiche a `main`, segreti esposti o merge non approvati.
 
@@ -70,12 +86,12 @@ SHA e Git reale prevalgono sui checkpoint. Nessuna richiesta autorizza implicita
 
 Git e codice reale vanno verificati prima dei prompt importanti. Leggere quanto serve a non perdere contratti pertinenti, senza riletture indiscriminate:
 
-- nuova chat/audit generale: checkpoint Masterplan e fonti necessarie; lettura integrale solo se richiesta dall'ampiezza;
-- nuovo task: checkpoint, sezioni pertinenti, contratti collegati e file runtime coinvolti;
+- nuova chat/audit generale: START_HERE e PRODUCT_ROADMAP, poi fonti necessarie; lettura integrale solo se richiesta dall'ampiezza;
+- nuovo task: checkpoint breve, requisito della roadmap, sezioni pertinenti, contratti collegati e file runtime coinvolti;
 - task UI: anche contratti ONSUS, mobile e componenti stabilizzati;
 - carrello, login, prezzi, promo, checkout, ordine, DB o sicurezza: sezioni tecniche e di sicurezza pertinenti;
 - search, AI, RAG, SEO AI o assistenza acquisto: anche AI Assisted Search Blueprint;
-- task documentale trasversale o riconciliazione: lettura completa delle fonti coinvolte.
+- task documentale trasversale o riconciliazione: inventario file/headings/riferimenti, lettura mirata e approfondimento integrale dei punti in conflitto, salvo mandato piu ampio. Non ricostruire a ogni prompt tutta la storia.
 
 ## Manifest, scope e discovery proattiva
 
@@ -90,7 +106,7 @@ Regola centrale: **CODEX CERCA, ANALIZZA, TESTA E PROPONE; CHATGPT DECIDE; CODEX
 
 ## Profili, modello e investigazione
 
-Ogni prompt dichiara profilo, modello, reasoning e motivazione, scegliendo il profilo meno costoso compatibile con il rischio. Rivalutare la policy se cambiano i modelli; niente rate card. La disponibilita reale mostrata nel selettore Codex del Product Owner prevale sui modelli storici non piu necessari.
+Ogni prompt dichiara profilo, modello, reasoning e motivazione, scegliendo il profilo meno costoso compatibile con il rischio reale e un'elevata probabilita di esito A. I nomi sotto sono preferenze alla data del checkpoint, non garanzia di disponibilita: usare i modelli realmente disponibili e non riproporre selettori obsoleti. Rivalutare quando cambia l'offerta; niente rate card o cambio modello automatico.
 
 - `ECONOMY`: GPT-6 Luna, Medium; documentazione semplice, Git/merge, modifiche meccaniche, verifiche circoscritte e operazioni a rischio minimo.
 - `STANDARD`: GPT-6.1 Sol, Medium; sviluppo o bugfix circoscritto con causa nota, UI/UX non critica e implementazioni localizzate.
@@ -168,7 +184,7 @@ Ogni task verifica: diff/manifest; `git diff --check`; sintassi/logica; dipenden
 
 ## Mobile-first e ONSUS
 
-- Il mobile e l'esperienza primaria. Progettazione e QA iniziano da `360px` e `390px`, poi tablet e desktop.
+- Il mobile e l'esperienza primaria. Progettazione e QA progrediscono da `360px`, `390px`, `430px`, poi tablet e desktop; indicare dispositivi/browser effettivamente verificati. Pochi viewport non certificano ogni dispositivo.
 - Nessuna funzione essenziale hover-only. Verificare touch target, ordine, leggibilita, densita, offcanvas e scrolling.
 - Nessun A visuale senza browser mobile reale; coinvolgere Germano solo quando la conferma necessaria non e automatizzabile.
 - KeepStore e fonte di dati/logica/permessi; ONSUS e fonte UI/UX. Un refactor grafico non autorizza fix nascosti alla business logic. **TEMPLATE-REFERENCE / RUNTIME-INDEPENDENCE:** il template originale e una fonte esterna di benchmark/reference UI/UX, non una dipendenza runtime. Il runtime custom KeepStore non usa il nome del template in identificatori, classi, funzioni, variabili, selettori, version string/cache-buster, commenti operativi, DOM marker, log o path/file custom e non importa dati, prodotti, categorie, prezzi, immagini o business logic demo. Ogni pattern adottato viene adattato alla semantica KeepStore; le menzioni restano ammesse in manuali, audit, storico e documentazione/reference. Gli asset runtime di ogni tema rispettano una struttura tipizzata sotto ThemeManager.AssetsBaseUrl: CSS in css/, JavaScript in js/, immagini, font e icone nelle rispettive directory. Non sono ammessi duplicati runtime o fogli CSS/JS custom sciolti nella root del tema quando esiste la directory canonica. Temi alternativi mantengono la stessa struttura in /Public/assets/{ThemeName}/; configurazione e asset tenant restano separati dal codice condiviso.
@@ -180,13 +196,13 @@ Per ogni task UI/UX che tocchi HOME, header, menu, navigazione, catalogo, PDP, p
 1. **ONSUS originale.** Esaminare il package/template originale pertinente, quando accessibile, invece di basarsi su screenshot o memoria. Identificare markup, gerarchia visuale, comportamento e motivazione dell'interazione, responsive, offcanvas/collapse/modal, CTA, spacing e mobile behavior. Se il package non e accessibile, dichiararlo e usare gli asset/template originali gia versionati, se disponibili; non inventare il comportamento. ONSUS guida UI/UX, non dati commerciali, tassonomia, Product/Offer, prezzi, promozioni, claim, contenuti demo o business logic.
 2. **Benchmark ecommerce contemporaneo.** Effettuare ricerca web aggiornata al momento del task, scegliendo grandi ecommerce, retailer verticali, marketplace comparabili e fonti UX/accessibilita autorevoli in funzione del pattern, non del prestigio o di una lista fissa di brand. Valutare friction point, navigazione, discoverability, progressive disclosure, touch, feedback di stato, densita, accessibilita e conversione. Non copiare branding, grafica o testi proprietari, business logic, feature estranee o pattern incompatibili; negli anni successivi non congelare le scelte alle pratiche del 2026.
 3. **Architettura KeepStore reale.** Verificare il runtime WebForms/VB.NET, i componenti autorevoli gia consolidati, multi-tenant e multi-merceologia, CatalogMenuProvider/tassonomia reale, contratti Product/Offer e URL/SEO, resolver commerciali, sessione/carrello/account, progressive enhancement, performance, accessibilita e non regressione. Non duplicare un componente esistente ne adottare un pattern moderno che comprometta autorita server-side, business logic o compatibilita.
-4. **Implementazione mobile-first.** Progettare e verificare nell'ordine `360px`, `390px`, tablet, desktop. Secondo pertinenza controllare target touch, apertura/chiusura/riapertura, scroll e overflow, focus/tastiera/ARIA, feedback di stato, testi/immagini/CTA, densita, progressive disclosure e orientamento. Il desktop non compensa un mobile mediocre; restano vietate funzioni essenziali hover-only.
+4. **Implementazione mobile-first.** Seguire la progressione viewport del contratto Mobile-first sopra. Secondo pertinenza controllare target touch, apertura/chiusura/riapertura, scroll e overflow, focus/tastiera/ARIA, feedback di stato, testi/immagini/CTA, densita, progressive disclosure e orientamento. Il desktop non compensa un mobile mediocre; restano vietate funzioni essenziali hover-only.
 
 Nessuna delle tre fonti iniziali prevale automaticamente: scegliere la soluzione KeepStore piu semplice, chiara, veloce, accessibile, mobile-usable, coerente e manutenibile, utile alla conversione e compatibile con multi-tenant/multi-merceologia, senza regressioni. I futuri prompt UI/UX significativi devono citare questo gate o dichiararne l'applicazione; per scelte rilevanti riportare una matrice sintetica `Aspetto | ONSUS originale | Benchmark attuale | KeepStore corrente | Decisione KeepStore`. La profondita e proporzionata: piccoli fix puramente meccanici non richiedono una ricerca estesa, ma una decisione UX/design/navigation non puo saltare il gate. Se ONSUS pertinente e disponibile ma non esaminato, non dichiarare completo il design audit; se manca la ricerca corrente per una scelta UX contemporanea, non dichiararla best practice attuale e segnalare il limite.
 
 ### EXPERIENCE-FIRST + PERFORMANCE-FIRST
 
-Standard permanente per le evoluzioni ecommerce, complementare al Design Gate sopra, a MULTITENANT-BY-DESIGN e al metodo Token-Safe / One-Shot. Il contratto operativo dettagliato e nel [System Blueprint, sezione 2.1.3](docs/KEEPSTORE_SYSTEM_BLUEPRINT.md#213-governance-experience-first-e-performance-first).
+Standard permanente per le evoluzioni ecommerce, complementare al Design Gate, a MULTITENANT-BY-DESIGN e al metodo ONE-SHOT/FEATURE-BATCH. Questa e la fonte normativa unica; il Blueprint documenta applicazioni tecniche e metriche, non una seconda policy.
 
 - **Esperienza.** Nei task con impatto UX identificare bisogno del cliente, percorso attuale, passaggi/attriti e componenti gia riutilizzabili. Preferire meno ambiguita, attese ed errori, feedback chiari e interazioni mobili accessibili; ogni nuova funzione deve migliorare almeno un aspetto concreto di esperienza o efficienza senza peggiorare gli altri.
 - **Prestazioni.** Nei task che incidono ragionevolmente sul costo operativo scegliere almeno una metrica pertinente e un budget proporzionato: TTFB, LCP/INP/CLS, query MySQL/tempi SQL/N+1, richieste duplicate, payload/DOM, JS/CSS, immagini, serializzazione, caching o lavoro server-side. Raccogliere baseline e confronto prima/dopo omogenei quando misurabili; dichiarare misura reale, stima, non applicabilita o limite, mai inventare un miglioramento.
@@ -205,6 +221,12 @@ Standard permanente per le evoluzioni ecommerce, complementare al Design Gate so
 - Lasciare fuori staging gli untracked in `Public/assets/images/articoli/`, `marche/`, `settori/`, `vettori/`. Non pulire/spostare directory; asset solo se nominativamente autorizzato.
 
 ## Commit, push, review, smoke e merge
+
+### Consegna release e handoff gestionale
+
+Per ogni task runtime fornire il manifest esatto `added/modified/deleted/renamed` (origine/destinazione per rename), dipendenze `App_Code`/Bin e asset/cache-buster pertinenti, commit sorgente, destinazioni esplicitamente autorizzate, prerequisiti configurazione, backup, rollback e test con relativi limiti. I file aggiunti sono obbligatori quanto i modificati: evitare pacchetti parziali. Nessuna destinazione di produzione si deduce da un tenant compatibile. PR integrata non significa file pubblicati: registrare separatamente source integrated, Integration tested e production deployed/verified per tenant. Docs-only: nessun file da pubblicare sul server.
+
+Se il risultato richiede contratti/dati/interventi del gestionale, consegnare schermata funzionale proposta e manuale operativo per Enzo/Vincenzo secondo responsabilita effettive (interfaccia gestionale, schema/provisioning e gestione dati da confermare nel singolo handoff). Specifica pronta non significa pannello implementato o DB aggiornato; nessuna modifica DB automatica e nessuna sostituzione dei rispettivi manuali specialistici.
 
 - Se emerge un blocker fuori scope, chiudere con B senza committare modifiche incomplete.
 - A ogni chiusura con esito A, il rapporto conclusivo deve indicare automaticamente il prossimo task consigliato, ricavato dal manuale e dai finding aperti. Deve riportare nome, motivo, prerequisiti e stato NON AVVIATO. Nessun task successivo deve essere avviato o implementato senza autorizzazione del Product Owner.

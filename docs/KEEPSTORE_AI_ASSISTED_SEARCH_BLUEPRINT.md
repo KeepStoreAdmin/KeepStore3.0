@@ -1,5 +1,17 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
+## Contratto prevalente 2026-10-15 — assistente acquisti CURRENT / TARGET
+
+Dettagli tecnici AI/search; requisiti e ordine di prodotto nella [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md), ripartenza in [START_HERE](KEEPSTORE_START_HERE.md), metodo esclusivamente in [AGENTS](../AGENTS.md). Checkpoint e roadmap sottostanti sono storici o disegni tecnici, non una seconda scaletta di esecuzione. Nessun task AI parte da questo documento.
+
+**CURRENT verificato sullo stable #352:** `Default.aspx` contiene `KsLocalAiSearch130`, inizializzato da `home-default.js`; `/search_suggest.aspx?mode=ai` usa ricerca/ranking deterministici sui dati catalogo. Non e una chat LLM e non dimostra conversazione multi-turn, voce, immagini, embeddings o RAG implementati. Header/search/catalogo esistenti restano il fallback primario.
+
+**TARGET approvato dal PO:** assistente acquisti visibile e riconoscibile, progressivamente conversazionale, ispirato alla categoria di esperienza storicamente chiamata Amazon Rufus, non copia di marchio/UI o prova di equivalenza. Nome/identita KeepStore DA APPROVARE. Primo batch proponibile: entry point chiaro, richiesta naturale, chiarimento guidato locale e prodotti reali coerenti con il contesto. Nessuna nuova API LLM, tabella o funzione attivata da questa specifica.
+
+La conversazione futura mantiene intenti/filtri espliciti e reversibili; in ambiguita domanda un dettaglio, in assenza di attributi dichiara il limite e non inventa compatibilita, consigli, consegne o stock. Output grounded in identificativi reali id+TCId, tassonomia e resolver autorevoli: prezzo/listino/IVA/promo/disponibilita verificati nel contesto server, mai calcolati dal modello. Errore commerciale/tecnico distinto da zero risultati; dato non verificabile non e presentato come attuale. Fallback: ricerca/catalogo con link reali e messaggio utile, senza perdere il percorso cliente.
+
+Privacy: minimizzazione e durata dell'eventuale stato conversazionale da progettare; nessuna nuova persistenza/telemetria o consenso presunto. Cookie carrello, owner/token, credenziali, account, carrelli e dati personali non entrano in prompt, RAG, embeddings, ranking pubblico o logging AI; nessun invio esterno non autorizzato. Prompt injection/output encoding, limiti input e separazione tenant richiedono test nel task pertinente. Voce, immagini, hybrid search, embeddings, RAG e LLM sono decisioni/task successivi, non prerequisiti del primo orientamento guidato. Assistente acquisti distinto dalla SEO AI crawler/feed/LLMS.
+
 ## Checkpoint prevalente 2026-10-04 — commercial price context e guardrail AI
 
 `frontend-rebuild` / `origin/frontend-rebuild` = `b4da5b56829225764e6057ce25c834613d50586a`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. PR #300–#308 sono MERGED in sequenza lineare e fast-forward; il programma cart-conversion e VAT/pricing si e evoluto fino a `STOREFRONT-VAT-CATALOG-PRICE-SORT-FILTER-1B` (#308). Il checkpoint operativo completo e nel Masterplan e il contratto tecnico VAT nel System Blueprint. Queste integrazioni non implementano runtime AI, feed Merchant o rollout globale in produzione.

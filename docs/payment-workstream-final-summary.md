@@ -1,5 +1,7 @@
 # Payment workstream final summary
 
+> **HISTORICAL / SUPERSEDED per gli stati PayPal (riconciliazione 2026-10-15).** Il contenuto originale sotto conserva lo snapshot del precedente workstream, non lo stato operativo corrente. PayPal Orders v2 e DB-driven credentials sono integrati: il checkpoint 2026-09-23 attesta LIVE CONFIGURED / ENABLED e OAuth LIVE verificato, ma nessun pagamento reale end-to-end LIVE VERIFIED. Contratto/stato di riferimento: [System Blueprint 5.8.1](KEEPSTORE_SYSTEM_BLUEPRINT.md#581-paypal-checkout-orders-api-v2---stato-operativo-2026-09-23), [stato PayPal documenti](paypal-document-payment-status.md), [manuale Enzo](PAYPAL_CHECKOUT_ORDERS_V2_GESTIONALE_ENZO.md). Gate prodotto correnti nella [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md). BancaSella resta un flusso distinto; questa nota non certifica nuovi pagamenti o deployment.
+
 ## Executive summary
 
 The online payment workstream is closed at application level for document and

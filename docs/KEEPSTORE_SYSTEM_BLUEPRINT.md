@@ -2,6 +2,10 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Lettura prevalente 2026-10-15 — autorita e stato corrente
+
+[AGENTS](../AGENTS.md) e l'unica fonte del metodo; [START_HERE](KEEPSTORE_START_HERE.md) contiene bootstrap/stato/indice, [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md) requisiti e priorita, [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md) task ed evidenze. Gli SHA/task "correnti" dei checkpoint datati sotto sono snapshot, non prevalgono su Git reale. Base della riconciliazione: #352 MERGED, stable b14113767d115e6b5596f0eab3c048c62928c751. Nessuna certificazione globale o deploy e implicito.
+
 Checkpoint governance 2026-10-12: base stabile `frontend-rebuild` / `origin/frontend-rebuild` = `cfdb2caaf3ba8aee4dc3eee7a6ef749081c27bb0`; `main` / `origin/main` = `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. PR #342 e #343 MERGED/CLOSED FF-only; la #342 mantiene lo smoke IIS isolato NON CERTIFICATO, la #343 e integrata con deroga esplicita al solo smoke IIS, non eseguito. Il task corrente `ECOMMERCE-UX-PERFORMANCE-GOVERNANCE-1A` e docs-only, contratto in 2.1.3; checkpoint operativo e gate nel Masterplan, Git prevalente. Le chiusure precedenti restano storiche e non sono riaperte; i dettagli VAT/commercial pricing sono nel contratto 2.0.3. Nessuna certificazione globale dell'ecommerce o del rollout carrello persistente: valgono i relativi gate del [runbook](PERSISTENT_ANONYMOUS_CART_DEPLOYMENT_RUNBOOK.md).
 
 ## 1. Frontespizio tecnico
@@ -19,7 +23,7 @@ Checkpoint governance 2026-10-12: base stabile `frontend-rebuild` / `origin/fron
 
 Scopo del documento: raccogliere la conoscenza tecnica stabile su architettura, pagine, componenti, flussi, dati, funzionalita ecommerce, debito tecnico e storico evolutivo di KeepStore 3.0.
 
-Relazione con le fonti operative: il root `AGENTS.md` governa il metodo permanente; il masterplan mantiene checkpoint, task, priorita e stato avanzamento. Questo blueprint e il riferimento architetturale/funzionale, pensato per programmatori, manutentori, IA e responsabili tecnici/gestionali.
+Relazione con le fonti operative: autorita distinte come nell'avviso prevalente. Questo blueprint e il riferimento architetturale/funzionale, pensato per programmatori, manutentori, IA e responsabili tecnici/gestionali; non mantiene una roadmap di prodotto concorrente.
 
 ## 2. Regole di manutenzione del blueprint
 
@@ -206,109 +210,32 @@ Esito documentato dei gate #304–#308: controlli focalizzati, parity SQL/resolv
 
 ### 2.1 Metodo operativo Codex Token-Safe / One-Shot
 
-- Il lavoro Codex deve partire da prompt unici e consolidati: branch, HEAD atteso, file ammessi, divieti, verifiche, output sintetico e criterio A/B/E devono essere gia definiti da ChatGPT.
-- Prima dei prompt importanti ChatGPT applica la lettura documentale proporzionata del root `AGENTS.md`, confronta Git/runtime/codice con la documentazione pertinente e, dopo la pubblicazione del branch, controlla direttamente commit/diff per la review A/B/E.
-- Evitare cicli esplorativi e task generici quando il problema e chiaro. Codex non e un esecutore cieco: investiga, testa e propone finding pertinenti, ma non amplia autonomamente obiettivi o manifest.
-- Non creare loop documentali: un documento registra commit funzionale principale, PR, branch, stato, smoke e decisioni; il commit documentale che chiude una REV non deve essere richiesto come prerequisito di una nuova REV automatica.
-- Prima di aprire PR diagnostiche su problemi sospetti, fare test manuale mirato. Se il problema non e riproducibile, resta backlog non attivo.
-- Cleanup branch e housekeeping si fanno solo se richiesti o se sbloccano il lavoro; prima di cancellare branch verificare che non esistano commit assenti da `frontend-rebuild`.
-- Priorita operativa: regressioni o blocker, smoke, merge controllato, documentazione minima, poi task successivo. Cleanup solo se richiesto o necessario a sbloccare il flusso.
-- Regola permanente: Codex pusha il task branch e apre/aggiorna la PR prima della review ChatGPT. PR e merge sono separati; Codex esegue il merge fast-forward solo dopo A di ChatGPT e autorizzazione esplicita di Germano.
-- Esempio corrente: checkout note ordine + consenso condizioni chiuso e validato live; PR #171 sessione/logout post-ordine resta backlog non attivo perche il test manuale ha dato esito A e il problema non e riproducibile ora.
-
+Fonte normativa unica: [AGENTS](../AGENTS.md). Bootstrap/stato in [START_HERE](KEEPSTORE_START_HERE.md), requisiti e priorita in [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md), task/evidenze nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le precedenti copie di ruoli, profili modello e checklist di governance sono consolidate in AGENTS; lo storico versionato resta consultabile nel commit base b1411376. I contratti tecnici delle altre sezioni non cambiano.
 
 #### 2.1.0 LOCAL-FIRST + GITHUB SOURCE OF TRUTH
 
-Il workflow runtime standard usa la stessa cartella locale del Product Owner come working copy reale:
-
-`C:\KeepStoreWeb\KeepStore3.0\`
-
-Responsabilita e separazione delle fonti:
-- **working copy locale** = superficie operativa in cui Codex legge, modifica, compila e testa;
-- **GitHub** = source of truth versionata per branch, commit, diff, PR e merge;
-- **server online di smoke** = superficie temporanea di verifica Product Owner, mai source of truth;
-- **ChatGPT** = review e decision gate indipendente tramite GitHub e fonti tecniche disponibili.
-
-Sequenza obbligatoria:
-1. sync FF-only dello stable autorizzato nella working copy canonica;
-2. branch task dalla base esatta;
-3. implementazione/test direttamente nella working copy;
-4. commit/push/PR DRAFT;
-5. working copy lasciata sul task branch con file manifest identici al commit;
-6. dichiarazione `FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER` + lista file esatta;
-7. eventuale smoke manuale server pre-merge;
-8. review ChatGPT A/B/E;
-9. autorizzazione Germano;
-10. merge FF-only;
-11. sync working copy al nuovo stable con preservazione dello stato locale autorizzato.
-
-Questo contratto evita due classi di errore storiche: file Git corretti ma cartella operativa locale non aggiornata, oppure file testati/coperti sul server non corrispondenti al commit realmente revisionato. Per un task runtime la corrispondenza `working copy task branch <-> commit pubblicato` e un gate tecnico esplicito.
-
-Se Codex non puo verificare o modificare la working copy canonica sul PC, non simula il risultato: STOP B con evidenza. Se ChatGPT non ha accesso diretto al filesystem Windows, non sostituisce la verifica locale con una supposizione; verifica GitHub e richiede al report Codex la certificazione dello stato locale.
-
+Applicare il contratto omonimo di AGENTS. Questa sezione non prescrive copie alternative o runtime non approvato nella cartella stabile: durante il task la copia canonica rappresenta il task branch pubblicato, dopo il merge autorizzato lo stable riallineato. Configurazioni/asset autorizzati restano locali e fuori staging.
 
 #### 2.1.1 Policy permanente qualita, efficienza e decision gate
 
-Questa policy estende il metodo Token-Safe / One-Shot senza sostituirlo.
-
-1. **Quality first / total cost.** Il principio centrale e ottenere il miglior risultato tecnicamente corretto, completo, sicuro, stabile e classificabile A al primo passaggio, quando realisticamente possibile, con il minor costo totale ragionevole. La metrica economica e il **costo totale per task chiuso correttamente**: rework, REV evitabili, diagnosi ripetute, regressioni e prompt correttivi sono inefficienza. Qualita e test necessari non si sacrificano per ridurre token o crediti della singola esecuzione.
-2. **Responsabilita di ChatGPT.** Prima di ogni prompt Codex, ChatGPT verifica Git/repository e requisito funzionale/commerciale, applica la lettura proporzionata definita in `AGENTS.md`, identifica superficie e dipendenze plausibili, valuta regressioni, sicurezza e impatto commerciale, stabilisce test, manifest, stop rule e profilo di esecuzione. ChatGPT e il coordinatore tecnico e decisionale; Codex investiga, implementa l'autorizzato e testa, ma non decide ampliamenti o migliorie extra.
-3. **Profili di esecuzione.** ChatGPT assegna un solo profilo, scegliendo il meno costoso compatibile con una elevata probabilita di A al primo passaggio, senza preferire automaticamente il livello piu economico:
-   - `ECONOMY`: GPT-5.6 Luna, Medium; documentazione semplice, modifica meccanica, ricerca mirata o cambio localizzato a rischio molto basso.
-   - `STANDARD`: GPT-5.6 Terra, Medium; sviluppo o bugfix circoscritto, UI/backend con dipendenze identificabili, normale WebForms/VB.NET.
-   - `DEEP`: GPT-5.6 Sol, High; root cause incerta, piu componenti, query/DB, sessione, frontend/backend, sicurezza o rischio regressione significativo.
-   - `CRITICAL`: GPT-5.6 Sol, Extra High; prezzi, listini, promo con impatto economico, carrello, autenticazione, dati utente, checkout, ordine, pagamento, redirect sensibile o modifica trasversale ad alto impatto.
-4. **Modello e reasoning.** Ogni prompt Codex dichiara modello, reasoning e motivazione. GPT-6 Astra e riservato a casi eccezionali e trasversali scelti esplicitamente da ChatGPT; Max e Ultra non sono default e Ultra non si usa ordinariamente. La policy va rivalutata se cambiano i modelli realmente disponibili; non inserire prezzi o rate card. Codex non abbassa autonomamente il profilo; se lo ritiene insufficiente segnala `ESCALATION REQUIRED` e si ferma prima di ampliare sostanzialmente il lavoro.
-5. **Minimum Verification Baseline.** Ogni task runtime comprende almeno controllo del diff, `git diff --check`, rispetto del manifest, controllo di errori evidenti di sintassi/logica, riferimenti/chiamanti/dipendenze dirette, test tecnici appropriati, percorso positivo principale, almeno un caso limite/failure pertinente quando applicabile e regression check mirati. La profondita cresce da `ECONOMY` a `CRITICAL`: non imporre build generali inutili, ma non omettere verifiche necessarie per risparmiare token. Un task docs-only non esegue build runtime se il runtime non cambia.
-6. **Proactive engineering review mirata.** Durante investigazione, implementazione e test Codex controlla la superficie autorizzata e le dipendenze dirette realmente pertinenti per trovare e segnalare bug collegati, regressioni potenziali, casi limite, duplicazioni pericolose, codice morto interferente, problemi di sicurezza/validazione, incoerenze frontend-backend o commerciali, errori di stato/sessione, problemi mobile/accessibilita, query inefficienti direttamente coinvolte e comportamento legacy interferente. Propone anche aspetti che ChatGPT non poteva conoscere prima dell'ispezione locale. Questa ricerca obbligatoria non diventa un audit generale del repository.
-7. **Discovery non autorizza modifiche.** Un problema e `NECESSARIO PER IL TASK` solo se il requisito non puo essere completato correttamente, in sicurezza o senza regressione; Codex lo corregge soltanto quando prompt e manifest lo autorizzano chiaramente. Ogni altro bug, debito, ottimizzazione o miglioria e un `FINDING COLLEGATO / MIGLIORIA`: non va modificato, non amplia il manifest e non autorizza refactor o interventi "gia che ci siamo".
-8. **Decision gate ChatGPT.** Per ogni finding significativo Codex riporta descrizione, file/superficie, severita (`BLOCKER`, `HIGH`, `MEDIUM`, `LOW`), impatto (funzionale, regressione, sicurezza, commerciale, performance o UX), evidenza tecnica, capacita di bloccare il task e proposta `SAME-TASK CANDIDATE` oppure `SEPARATE MICRO-TASK`. Codex non implementa il finding. ChatGPT decide tra `IGNORE / NON RILEVANTE`, `BACKLOG`, `MICRO-TASK SUCCESSIVO`, `REV DEL TASK CORRENTE` o `ESTENSIONE AUTORIZZATA DEL TASK`.
-9. **No scope creep.** Essere proattivi significa vedere e segnalare, non modificare autonomamente tutto cio che emerge. Regola vincolante: **CODEX CERCA, ANALIZZA, TESTA E PROPONE; CHATGPT DECIDE; CODEX IMPLEMENTA SOLTANTO DOPO AUTORIZZAZIONE.**
-10. **Root cause first.** Per bug e regressioni Codex identifica ragionevolmente sintomo, causa, fix necessario, rischio regressione e test richiesti prima di applicare workaround, incluso quello cosmetico. Se la causa richiede scope non autorizzato, si ferma e relaziona a ChatGPT.
-11. **Prevenzione regressioni.** Prima di modificare una superficie stabilizzata, Codex verifica nei manuali i contratti chiusi pertinenti e non reintroduce comportamenti superati. Dopo il fix controlla le funzionalita confinanti realisticamente influenzate. Gli smoke precedenti pertinenti sono guardrail e non vanno contraddetti senza autorizzazione esplicita; il controllo resta mirato, non indiscriminato.
-12. **Germano non e l'esecutore tecnico.** Codex esegue Git/GitHub e tutti i controlli tecnici/browser automatizzabili. Germano interviene solo per conferme umane visive, commerciali o funzionali non automatizzabili o dipendenti da sue fixture/dispositivi, con pochi passaggi definiti da ChatGPT.
-13. **Test ownership.** Codex cura build/precompile pertinenti, analisi statica, query read-only autorizzate, test e smoke tecnici/browser automatizzabili, diff, dipendenze, regression check, sanity e discovery. ChatGPT definisce i test, verifica commit/diff, valuta finding ed estensioni e assegna A/B/E. Germano valuta solo gli aspetti umani necessari; non esegue Git/GitHub.
-14. **Governance delle migliorie.** Le migliorie scoperte sono classificate e riportate, non implementate automaticamente. ChatGPT valuta beneficio, rischio, costo token, dipendenze, roadmap, probabilita di regressione e opportunita di inclusione. Ordine decisionale: correttezza, sicurezza, regressioni, requisito funzionale, robustezza, qualita tecnica, performance pertinente, polish.
-15. **One-shot professionale.** One-shot non significa fare poco o comprimere artificialmente analisi e test: significa analizzare, implementare l'autorizzato, testare e segnalare abbastanza da consentire a ChatGPT una decisione rapida senza riaprire l'intera analisi. L'indagine si ferma quando esistono evidenze sufficienti.
-16. **Definition of Done runtime.** Un task runtime e proponibile A solo con requisito autorizzato implementato, causa affrontata, manifest e test rispettati, regression check superati, nessun blocker noto, finding extra non implementati, diff proporzionato, branch pushato, PR aperta/aggiornata ed evidenze sufficienti alla review ChatGPT. "Funziona nel caso mostrato" non equivale da solo ad A; un micro-task A non completa automaticamente l'area.
-17. **Stop conditions.** Codex si ferma con B, motivo ed evidenza, invece di improvvisare quando servono schema DB non autorizzato, nuove librerie, cambio architetturale, chiarimento commerciale, mitigazione di sicurezza fuori scope, file indispensabili fuori manifest, violazione di un contratto chiuso, finding `BLOCKER` non autorizzato o una verifica critica non eseguibile. Un blocker scoperto correttamente prima di una modifica pericolosa e normalmente B, non E.
-18. **Investigazione e implementazione.** `ECONOMY`/`STANDARD` con causa dimostrata possono procedere con prompt implementativo diretto; `DEEP` con root cause incerta richiede investigazione read-only; `CRITICAL` richiede preflight/investigazione prima delle modifiche, salvo correzione gia completamente dimostrata e autorizzata. Il preflight copre secondo pertinenza Git, manifest, chiamanti, schema/indici DB, dipendenze runtime, build, fixture e test. Non separare artificialmente investigazione e implementazione se cio duplica il lavoro senza ridurre il rischio.
-19. **Classificazione A/B/E.** `A`: requisito autorizzato completato, verificato e chiudibile, senza blocker noti nel perimetro. `B`: direzione valida ma task incompleto, bloccato o in attesa di fix, autorizzazione, verifica tecnica o smoke. `E`: premessa, strategia o modifica errata/pericolosa, regressione grave introdotta o approccio da abbandonare e riprogettare.
-20. **Esecuzione tecnica completa.** ChatGPT controlla e autorizza l'avanzamento; Germano approva le decisioni finali; Codex esegue tutte le operazioni tecniche autorizzate. Dopo A ChatGPT e autorizzazione Germano, Codex esegue merge FF-only, sincronizza locale/remoto e verifica parent, assenza merge commit, `main`, staging, tracked tree e asset. Se strumenti, autenticazione o permessi lo impediscono, si ferma con B e prova precisa senza aggiramenti o delega automatica a Germano.
-21. **Compatibilita e continuita.** Restano vincolanti micro-task, un solo task attivo, manifest, branch separato, base SHA verificata, `main` protetto, stack WebForms/VB.NET/.NET Framework/MySQL, mobile-first, sicurezza, push/PR, review ChatGPT, A/B/E, merge FF-only, no false closure e Git come source of truth.
+Applicare ONE-SHOT, FEATURE-BATCH, DoD, profili, autorita, test e stop condition di AGENTS. Nessun profilo storico nel Blueprint sostituisce i modelli realmente disponibili o la decisione corrente del PO. Una PR integrata non certifica una pagina intera o il deployment dei tenant.
 
 #### 2.1.2 Contratto WORKING-COPY-CANONICA
 
-`C:\KeepStoreWeb\KeepStore3.0\` e la copia operativa da cui il Product Owner preleva i file approvati per il server: deve rappresentare il commit stabile approvato di `frontend-rebuild`. Branch e worktree di task non ancora mergeati possono restare isolati, ma file runtime non approvati non rimangono permanentemente nella copia canonica. Uno smoke temporaneo su quella copia richiede backup fuori repository, ripristino byte-per-byte e verifica di hash/stato Git.
-
-Dopo ogni merge runtime autorizzato, la chiusura tecnica richiede il fast-forward della copia canonica al nuovo SHA: `frontend-rebuild` locale, `origin/frontend-rebuild` e working copy devono coincidere. Codex verifica staging vuoto, preservazione di `web.config` e di ogni modifica/configurazione locale autorizzata, untracked e asset; i file runtime approvati devono essere presenti nella cartella canonica, non solo sul remoto. Se il riallineamento e bloccato, il task resta B e il motivo viene riportato senza reset, stash, clean o sovrascritture. Per un task docs-only i manuali si allineano al normale merge stabile senza introdurre build o smoke runtime.
+Riferimento al contratto LOCAL-FIRST di AGENTS; conformita tecnica verificabile con SHA/blob manifest, staging e hash/inventario dei file protetti. Il mapping IIS resta un fatto separato dalla cartella Git; consultare il manuale IIS insieme agli aggiornamenti elencati in START_HERE. Non assumere che localhost o loopback significhi DB isolato.
 
 #### 2.1.3 Governance EXPERIENCE-FIRST e PERFORMANCE-FIRST
 
-Contratto permanente formalizzato dal task `ECOMMERCE-UX-PERFORMANCE-GOVERNANCE-1A`. Il metodo canonico resta [AGENTS.md](../AGENTS.md); questo dettaglio estende Token-Safe / One-Shot e policy anti-regressione 2.1.1, senza sostituire Design Gate, stack, ruoli, manifest o autorizzazioni. La qualita include rapidita, comodita d'acquisto, accessibilita, semplicita e manutenibilita, non soltanto assenza di bug. Ogni nuova funzione deve apportare un beneficio concreto all'esperienza o all'efficienza senza peggiorare gli altri aspetti; non basta un effetto decorativo.
+Regole permanenti e Design Gate esclusivamente in AGENTS. Matrice tecnica per scegliere una misura pertinente, non un obbligo di benchmark generale:
 
-**Experience gate, quando il task modifica la UX.** Prima della soluzione descrivere cliente/bisogno, superficie e percorso corrente, attrito dimostrato e componenti stabilizzati riutilizzabili. Valutare passaggi, ambiguita, attese, errori e recupero; distinguere problema osservato, rischio dedotto dal codice e ipotesi ancora da verificare. La proposta privilegia controlli semplici, feedback comprensibili e interazioni mobili accessibili secondo pertinenza di ricerca/navigazione/scoperta, confronto, filtri, quantita, disponibilita, carrello o checkout. Non aggiunge funzioni irrilevanti, un secondo motore commerciale o animazioni/widget che aumentino costo e attrito. Qualita di acquisto e conversione attesa non sono conversione misurata senza evidenza.
-
-**Performance gate, quando esiste impatto ragionevole.** Nel prompt/preflight selezionare almeno una metrica o costo operativo pertinente, una baseline disponibile e il budget prestazionale proporzionato al problema. Nessun target universale, suite generale o benchmark concorrenti obbligatorio per un bugfix meccanico. La scelta usa le seguenti superfici, non richiede tutte le metriche per ogni task:
-
-| Superficie coinvolta | Metriche/costi da scegliere | Evidenza pertinente |
+| Superficie | Misura pertinente | Limite interpretativo |
 | --- | --- | --- |
-| Risposta server e dati | TTFB, query MySQL/count/tempi SQL, N+1, serializzazione, lavoro server-side | Richieste e letture autorizzate, diagnostica sanitizzata o harness circoscritto; distinguere tempo SQL da tempo pagina |
-| Caricamento e stabilita visuale | LCP, CLS, immagini, JS/CSS, richieste HTTP, payload | Browser/strumentazione pertinente e condizioni dichiarate; byte HTML non equivalgono a latenza o Core Web Vitals |
-| Interazioni e densita | INP, DOM, richieste duplicate, rendering e attese/numero di passaggi | Interazioni reali quando necessarie; simulazione DOM/proxy sintetico non certifica INP o successo utente |
-| Cache e riuso | Hit/miss pertinenti, cold/warm, letture evitabili, dimensione/invalidazione | Stesso contesto e stato cache dichiarato, nessuna cache che attraversi tenant/listino/account o conservi un errore tecnico come fatto commerciale |
+| Risposta server/dati | TTFB, query/Open/Fill, N+1, binding | Tempo SQL, Page e HTTP non hanno gli stessi confini |
+| Caricamento | LCP/CLS, immagini, JS/CSS, payload | Byte HTML non equivalgono a latenza o Core Web Vitals |
+| Interazione | INP, DOM, passaggi/attese | Fixture DOM non certifica INP o successo utente |
+| Cache/riuso | Hit/miss, cold/warm, letture evitate | Dichiarare scope e invalidazione; nessun errore tecnico promosso a dato commerciale |
 
-Baseline e dopo devono confrontare condizioni omogenee: commit, ambiente, percorso, tenant/listino/stato autenticato, dataset/numero prodotti, device/viewport/rete e stato cache, secondo pertinenza. Registrare metodo, campione/ripetizioni quando necessari, variabilita e limite; non attribuire alla patch differenze dovute ad ambiente/dati/cache. Separare misure reali da stime, analisi statica e fixture sintetiche; distinguere rilevazioni di laboratorio dai dati reali di utilizzo. Prima prevenire N+1, fetch duplicati, immagini/dati inutili e logica client/server ridondante nella superficie autorizzata, senza ampliare il task per una riscrittura.
-
-Se una metrica non e applicabile, motivarlo con il perimetro/diff; se non e disponibile, dichiarare cosa manca e quale parte non e certificata. Una verifica critica richiesta e indisponibile produce B secondo le stop rule, non un PASS sintetico o una deroga implicita. Nessun miglioramento prestazionale dichiarato senza evidenza prima/dopo; un beneficio atteso puo essere indicato solo come atteso. I test non autorizzano mutazioni DB, target nuovi, fault injection o deployment: valgono allowlist e autorizzazioni correnti. Questo contratto documentale non esegue o impone retroattivamente benchmark sui task gia chiusi.
-
-**Design Gate e benchmark.** Resta la sequenza canonica ONSUS originale -> fonti ecommerce/UX pertinenti e attuali -> componenti reali KeepStore -> implementazione mobile-first. Il [KeepStore Navigation UX Benchmark](KEEPSTORE_NAVIGATION_UX_BENCHMARK.md), consultazione 2026-10-09, registra il riferimento locale ONSUS, IKEA, Decathlon, MediaWorld, Baymard e W3C con link, matrice, osservazioni e limiti. E una fonte riutilizzabile, non una nuova verifica di quei siti o lo stato attuale delle slice elencate: per roadmap e chiusure prevalgono Masterplan/Git. Riusare studi ancora sufficienti alla decisione; aggiornare solo fonti/scelte pertinenti quando non piu attuali o quando cambia il pattern. Piccoli fix senza decisione UX non riaprono audit generali. Un settore diverso richiede benchmark pertinenti alla sua funzione/merceologia, non una lista di retailer obbligatoria o la copia di branding, dati e logiche dei concorrenti. Non attribuire accessibilita, tap o prestazioni non osservati alle fonti.
-
-**Architettura adattiva e test.** Applicare 2.0.2 MULTITENANT-BY-DESIGN e 2.0.2.1 ADAPTIVE-MULTI-MERCHANDISE-STOREFRONT: dati/capacita del tenant determinano attributi, filtri e funzioni, senza ID/categorie/testi hardcoded per elettronica, pittura, food, moda, abiti da sposa o altri settori. Omettere capacita irrilevanti/non sostenute da dati, senza inventare facts o configurazioni. Nuove funzioni condivise trasversali: almeno due tenant/cataloghi sintetici di settori differenti, stesso codice, casi dati mancanti/funzione non applicabile e verifica negativa cross-tenant. Preservare tassonomia, listino, id+TCId, IVA, prezzi/promo, stock e owner autorevoli. Fixture sintetiche non equivalgono all'abilitazione/collaudo di varianti reali e non autorizzano scritture nei database dei clienti.
-
-**Innovazione e non-regressione.** Una proposta pertinente riporta beneficio per il cliente e conversione/semplicita/velocita attese, fattibilita WebForms/VB.NET/MySQL, costo/complessita, dipendenze, rischi commerciali/tecnici e priorita. Codex segnala e propone; ChatGPT decide inclusione nel task o roadmap, Germano concede le autorizzazioni finali richieste. Nessun scope extra, modulo o progetto nuovo avviato per effetto della proposta. Le ottimizzazioni non compromettono sicurezza, accessibilita, SEO, regole commerciali, isolamento tenant, caching autorevole o funzioni stabilizzate; i guardrail prevalgono su un risultato di velocita migliore. Non accelerare mostrando dati commerciali obsoleti come attuali.
-
-**Definition of Done proporzionata.** Per task UX/performance significativi la consegna include problema/attrito iniziale, reference ONSUS e benchmark con data/limiti, soluzione e motivo, beneficio funzionale/prestazionale atteso, metriche/costi prima-dopo oppure non applicabilita/limiti espliciti, verifiche mobile/desktop pertinenti, rischi e controlli anti-regressione, compatibilita multi-tenant/multi-merceologia. Ogni voce deve avere evidenza o un limite dichiarato; un beneficio non dimostrato non e un gate PASS. Ordine viewport, classificazione A/B/E, review indipendente, smoke richiesti e merge autorizzato restano quelli di AGENTS.md. La sola modifica documentale non certifica runtime, produzione, tutti i tenant o l'intero ecommerce.
+Confronti tecnici annotano commit/ambiente/tenant/listino/stato account, dati e cache, campioni e condizioni device/rete pertinenti. Risultati storici con condizioni diverse restano tali, non esperimenti causali controllati. Il residuo HOME #352 non e una priorita runtime corrente: stato e differimento nella roadmap.
 
 ### 2.2 Contratto permanente stack, linguaggio e sicurezza
 
@@ -681,6 +608,12 @@ La sicurezza password e stata consolidata nel flow account e LOGIN-REGISTER-SECU
 - Nota storica STOREAVAIL: il flusso precedente `.js-ks-cart-link` usava `preventDefault()` + `window.location.assign()` verso `cart_add.aspx`, con render WebForms completo. Questa diagnosi e superata da `CATALOG-ASYNC-CART-1A`, ora CHIUSO / A a `b80f8d4683bbb9bb6ec8a7a486a79048bfae094f`; il contratto async corrente e definito in `2.7`.
 - `PDP-BRAND-LOGO-1A` resta futuro: `/Public/assets/images/marche/` e locale/non tracciata e non appartiene al commit corrente. Prima dell'implementazione servono audit della relazione articolo-marca e dei path reali, risoluzione server-side senza filename dedotti, testo marca SEO/accessibile, fallback non rotto, contenitore stabile, desktop/mobile ONSUS e manifest asset esplicito.
 - `STOREFRONT-OFFERS-PROMO-VERIFY-1A` e condizionato all'attivazione dei dati da Germano. Dovra inventariare campi e regole reali senza nomi inventati, confrontare vecchio sito e ONSUS, verificare prezzo normale/precedente/promo, sconto, badge, date, label e precedenze dove realmente presenti, quindi coprire HOME, quattro viste catalogo, PDP, relazioni/bundle/recenti e carrello su desktop/mobile, senza overlap/clipping/salti e con smoke utente obbligatorio.
+
+### HOME adattiva e assistente — confine CURRENT / TARGET
+
+CURRENT: HOME WebForms con composizione di sezioni, dati tassonomici/banner/prodotti e contesto commerciale server-side; #345 riusa il pool bestseller nella request, #352 riusa una connessione nel BindHome sincrono. Non e una capability engine generale. TARGET: composizione capability-driven per merceologie differenti, dati/branding/attributi realmente disponibili, sezioni assenti quando non pertinenti e nessun contenuto demo. `StorefrontCapabilityProfile` e un eventuale concetto progettuale, NON un componente dichiarato implementato. Nessuna cache globale o query nuova e introdotta dalla documentazione.
+
+Contratti da riusare: identita host/azienda autorevole, tassonomia/provider menu, StorefrontPriceDisplayContext e resolver prezzo/promo/disponibilita, identita id+TCId e cart-state server. Una futura scelta di sezioni non decide prezzi, vendibilita o scope account. Mobile e desktop consumano le stesse fonti; la composizione non nasconde funzioni indispensabili al percorso cliente. Assistant visibile e conversazione progressiva sono TARGET nel Blueprint AI, distinti dal widget deterministico corrente e dalla SEO crawler. Accettazione/fasi nei requisiti KS-E01/KS-F01 della roadmap, non nuove autorizzazioni runtime.
 
 ### 5.3 Master page
 

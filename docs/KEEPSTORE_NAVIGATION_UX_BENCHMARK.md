@@ -1,5 +1,21 @@
 # KeepStore Navigation UX Benchmark
 
+## Nota prevalente 2026-10-15 — benchmark, non roadmap attiva
+
+Classificazione BENCHMARK. Le osservazioni del 2026-10-09 e le proposte sotto restano datate: stati "NON AVVIATO" e ordine delle tre slice non descrivono la release corrente. Le slice risultano integrate dalle PR #325/#326/#327 nella storia del repository; per task/gate consultare Masterplan/Git, per nuovi requisiti e priorita [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md). Il [Design Gate canonico](../AGENTS.md#storefront-ux-design-gate--obbligatorio) resta l'unica regola di metodo. Non riaprire i task a partire da questo benchmark.
+
+Riferimenti aggiuntivi indicati dal Product Owner nel mandato 2026-10-15:
+
+| Riferimento | Uso previsto | Stato della fonte |
+| --- | --- | --- |
+| ONSUS e varianti HOME del package originale disponibile | Composizione/adattivita, premium, mobile e continuita fra pagine | Il riferimento menu storico sotto e stato esaminato; confronto completo delle varianti HOME DA VERIFICARE nel futuro Design Gate |
+| [bytecno.it](https://www.bytecno.it/) | Riferimento PO per shopping/catalogo e percorso cliente | Fonte proposta; nessuna nuova visita o osservazione browser in questa riconciliazione |
+| [prezzoforte.it](https://www.prezzoforte.it/) | Riferimento PO per catalogo, informazioni commerciali e checkout | Fonte proposta, comportamento attuale DA VERIFICARE |
+| [e-stayon.com](https://www.e-stayon.com/) | Riferimento PO per esperienza shopping e mobile | Fonte proposta, comportamento attuale DA VERIFICARE |
+| [Mollie](https://www.mollie.com/) — trends | Spunti su esperienza/checkout e trend, non regole commerciali KeepStore | URL preciso del contenuto trends/data DA VERIFICARE; non attribuire risultati all'homepage |
+
+IKEA, Decathlon, MediaWorld, Baymard e W3C restano nel repertorio storico seguente con le proprie date e limitazioni. Nessuna nuova ricerca web/GET o prova visuale e stata eseguita; non si dichiarano best practice 2026 verificate da questa sola lista. Nel task UX autorizzato scegliere fonti pertinenti aggiornate, distinguere osservazione da deduzione, adattare al catalogo reale senza copiare branding, demo o business logic.
+
 Task: `STOREFRONT-NAVIGATION-UX-BENCHMARK-1A`.
 Data di consultazione e progetto: **2026-10-09**, Europe/Rome.
 Base verificata: `ab471b6e95da1fcda101ef4f5dfbe27985a3e381`, PR #323 MERGED, parent `c4e1d25f9e4e47725461115fbc8d6ce17a20dd6a`.
