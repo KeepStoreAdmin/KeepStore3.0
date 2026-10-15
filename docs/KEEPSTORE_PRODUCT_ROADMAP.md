@@ -38,6 +38,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-B01 — Esperienza premium accessibile, non sola leggerezza
 
+- REV1 #355: F01 focus corretto con priorita al trigger Filtri e fallback utilizzabile per sostituzione/desktop; nessun nuovo listener o cambiamento commerciale. Test focus mirati su fixture browser Tech/Food PASS, evidenze precedenti invariate riutilizzate; A tecnico / B complessivo, review REV1 e smoke applicativo ancora pendenti (dettaglio Masterplan).
 - Fonte/data: S1/S5 e mandato PO `SHOPPING-MOBILE-EXCELLENCE-1A`, 2026-10-15, base #354 `7ef9482e6795403cad7587313c1593aa16d7251f`. P1; PARZIALE, batch ATTIVO, A tecnico / B review e smoke applicativo pendenti; nessuna certificazione visuale universale.
 - CURRENT: componenti ONSUS adattati, card/menu/offcanvas e checkout migliorati da task chiusi; benchmark storico e limiti dei browser/test nel Masterplan. #349 ha prova funzionale HTTP ma non browser visuale.
 - TARGET: grafica moderna/premium coerente fra pagine, leggibilita, touch e feedback; nessuna funzione persa per assomigliare alla demo. Riferimenti PO: ONSUS/varianti HOME, bytecno.it, prezzoforte.it, e-stayon.com, Mollie trends; repertorio storico IKEA/Decathlon/MediaWorld/Baymard/W3C preservato, non osservazioni nuove.

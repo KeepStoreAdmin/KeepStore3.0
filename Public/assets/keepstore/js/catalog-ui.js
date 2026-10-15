@@ -400,7 +400,6 @@
     var media = window.matchMedia('(max-width: 1199.98px)');
     var opened = false;
     var background = [];
-    var lastFocus = null;
     panel.setAttribute('data-ks-filter-dialog', '1');
     overlay.setAttribute('data-ks-filter-backdrop', '1');
 
@@ -448,9 +447,20 @@
       if (media.matches) panel.setAttribute('aria-hidden', 'true');
       else panel.removeAttribute('aria-hidden');
       if (wasOpen && restoreFocus !== false) {
-        var target = lastFocus && document.documentElement.contains(lastFocus) ? lastFocus : trigger;
-        if (target.getClientRects().length) target.focus();
-        else if (!media.matches && focusable().length) focusable()[0].focus();
+        var target = document.documentElement.contains(trigger) ? trigger : document.getElementById('filterShop');
+        function usable(node) {
+          return node && document.documentElement.contains(node) && !node.disabled &&
+            node.getClientRects().length && window.getComputedStyle(node).visibility !== 'hidden' &&
+            !node.closest('[inert], [aria-hidden="true"]');
+        }
+        if (!usable(target)) target = !media.matches ? focusable()[0] : null;
+        if (!usable(target)) {
+          target = document.getElementById('ksCatalogPage');
+          if (usable(target)) {
+            if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+            target.focus();
+          }
+        } else target.focus();
       }
     }
 
@@ -463,7 +473,6 @@
     function open() {
       if (!media.matches || opened) return;
       if (document.querySelector('.offcanvas.show, .modal.show')) return;
-      lastFocus = document.activeElement;
       panel.inert = false;
       panel.removeAttribute('aria-hidden');
       panel.setAttribute('aria-modal', 'true');
