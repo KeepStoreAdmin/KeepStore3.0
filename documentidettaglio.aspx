@@ -28,10 +28,11 @@
 
     <section class="tf-sp-2 ks-order-detail">
         <div class="container">
-            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT vd.*, utenti.*, vettori.*, COALESCE(dpay.Pagato,0) AS DettaglioPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS DettaglioStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS DettaglioDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS DettaglioUltimoEsitoPagamentoWeb FROM ((vdocumenti vd LEFT JOIN utenti ON vd.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vd.`VettoriId` = vettori.`id`) LEFT JOIN documenti dpay ON dpay.`id` = vd.`Id` WHERE ((vd.Id = ?Id) AND (vd.UtentiId = ?UtentiId))">
+            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" OnSelecting="DocumentDataSource_Selecting" SelectCommand="SELECT vd.*, utenti.*, vettori.*, COALESCE(dpay.Pagato,0) AS DettaglioPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS DettaglioStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS DettaglioDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS DettaglioUltimoEsitoPagamentoWeb FROM ((vdocumenti vd LEFT JOIN utenti ON vd.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vd.`VettoriId` = vettori.`id`) LEFT JOIN documenti dpay ON dpay.`id` = vd.`Id` WHERE vd.Id = @DocumentId AND vd.UtentiId = @UtentiId AND vd.AziendeId = @AziendaId">
                 <SelectParameters>
-                    <asp:QueryStringParameter Name="Id" Type="Int64" QueryStringField="id"/>
-                    <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="int32" />
+                    <asp:Parameter Name="DocumentId" Type="Int32" DefaultValue="0" />
+                    <asp:Parameter Name="UtentiId" Type="Int64" DefaultValue="0" />
+                    <asp:Parameter Name="AziendaId" Type="Int32" DefaultValue="0" />
                 </SelectParameters>
             </asp:SqlDataSource>
 
@@ -294,15 +295,19 @@
                         <AlternatingRowStyle BackColor="WhiteSmoke" />
                     </asp:GridView>
 
-                    <asp:SqlDataSource ID="sdsRighe" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT vdocumentirighe.id, DocumentiId, vdocumentirighe.ArticoliId, TCid, Ean, Codice, Descrizione1, Descrizione2, um, peso, prezzobase, Qnt, sc1, sc2, sc3, importo, iva, Valoreiva, SpGratis, ImportoIvato, PrezzoIvato, prezzo, omaggio, movimento, movimentato, Img1, MarcheId, MarcheDescrizione, taglie.descrizione as taglia, colori.descrizione as colore FROM vdocumentirighe left outer join articoli_tagliecolori on articoli_tagliecolori.id = vdocumentirighe.TCId left outer join taglie on taglie.id = articoli_tagliecolori.tagliaid left outer join colori on colori.id = articoli_tagliecolori.coloreid WHERE (DocumentiId = @idDocumento) AND (SpGratis = 0) OR (DocumentiId = @idDocumento) AND (SpGratis IS NULL)">
+                    <asp:SqlDataSource ID="sdsRighe" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" OnSelecting="DocumentDataSource_Selecting" SelectCommand="SELECT vdocumentirighe.id, DocumentiId, vdocumentirighe.ArticoliId, TCid, Ean, Codice, Descrizione1, Descrizione2, um, peso, prezzobase, Qnt, sc1, sc2, sc3, importo, iva, Valoreiva, SpGratis, ImportoIvato, PrezzoIvato, prezzo, omaggio, movimento, movimentato, Img1, MarcheId, MarcheDescrizione, taglie.descrizione as taglia, colori.descrizione as colore FROM vdocumentirighe left outer join articoli_tagliecolori on articoli_tagliecolori.id = vdocumentirighe.TCId left outer join taglie on taglie.id = articoli_tagliecolori.tagliaid left outer join colori on colori.id = articoli_tagliecolori.coloreid WHERE vdocumentirighe.DocumentiId = @DocumentId AND (SpGratis = 0 OR SpGratis IS NULL) AND EXISTS (SELECT 1 FROM documenti d WHERE d.Id = vdocumentirighe.DocumentiId AND d.Id = @DocumentId AND d.UtentiId = @UtentiId AND d.AziendeId = @AziendaId)">
                         <SelectParameters>
-                            <asp:QueryStringParameter Name="idDocumento" Type="Int64" QueryStringField="id"/>
+                            <asp:Parameter Name="DocumentId" Type="Int32" DefaultValue="0" />
+                            <asp:Parameter Name="UtentiId" Type="Int64" DefaultValue="0" />
+                            <asp:Parameter Name="AziendaId" Type="Int32" DefaultValue="0" />
                         </SelectParameters>
                     </asp:SqlDataSource>
 
-                    <asp:SqlDataSource ID="sdsRigheSpedizioneGratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" SelectCommand="SELECT vdocumentirighe.*, taglie.descrizione as taglia, colori.descrizione as colore FROM vdocumentirighe left outer join articoli_tagliecolori on articoli_tagliecolori.id = vdocumentirighe.TCId left outer join taglie on taglie.id = articoli_tagliecolori.tagliaid left outer join colori on colori.id = articoli_tagliecolori.coloreid WHERE (DocumentiId = ?DocumentiId) AND (SpGratis=1)">
+                    <asp:SqlDataSource ID="sdsRigheSpedizioneGratis" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" OnSelecting="DocumentDataSource_Selecting" SelectCommand="SELECT vdocumentirighe.*, taglie.descrizione as taglia, colori.descrizione as colore FROM vdocumentirighe left outer join articoli_tagliecolori on articoli_tagliecolori.id = vdocumentirighe.TCId left outer join taglie on taglie.id = articoli_tagliecolori.tagliaid left outer join colori on colori.id = articoli_tagliecolori.coloreid WHERE vdocumentirighe.DocumentiId = @DocumentId AND SpGratis = 1 AND EXISTS (SELECT 1 FROM documenti d WHERE d.Id = vdocumentirighe.DocumentiId AND d.Id = @DocumentId AND d.UtentiId = @UtentiId AND d.AziendeId = @AziendaId)">
                         <SelectParameters>
-                            <asp:QueryStringParameter Name="DocumentiId" Type="Int64" QueryStringField="id"/>
+                            <asp:Parameter Name="DocumentId" Type="Int32" DefaultValue="0" />
+                            <asp:Parameter Name="UtentiId" Type="Int64" DefaultValue="0" />
+                            <asp:Parameter Name="AziendaId" Type="Int32" DefaultValue="0" />
                         </SelectParameters>
                     </asp:SqlDataSource>
 

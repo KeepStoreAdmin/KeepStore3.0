@@ -11,6 +11,12 @@ Partial Class documentidettaglio
 
     Private _fallbackTipoDocumentoId As Integer = -1
     Private _orderIdentity As OrderStorefrontIdentity
+    Private _authorizedIdentity As OrderStorefrontIdentity
+    Private _authorizedDocumentId As Integer
+    Private _authorizedDocumentTypeId As Integer
+    Private _documentAuthorized As Boolean
+    Private _documentBindingsComplete As Boolean
+    Private _documentDenied As Boolean
 
     Private ReadOnly Property CurrentOrderIdentity As OrderStorefrontIdentity
         Get
@@ -35,42 +41,123 @@ Partial Class documentidettaglio
         Public ValidOrderType As Boolean
     End Class
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        ' Richiede login
-        If Session("LoginId") Is Nothing OrElse Convert.ToString(Session("LoginId")) = "" Then
-            Response.Redirect("accessonegato.aspx")
-            Return
-        End If
-        If CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then
-            Response.Redirect("accessonegato.aspx")
-            Return
-        End If
+    Protected Overrides Sub OnInit(ByVal e As EventArgs)
+        MyBase.OnInit(e)
+        ' The master has normalized the storefront. Authorize before restored
+        ' control state, Load or postback events can use a requested document.
+        If Not AuthorizeDocumentRequest() Then DenyDocumentAccess()
+    End Sub
 
-        Dim idDocumento As Integer = GetRequestedDocumentId()
-        If idDocumento <= 0 Then
-            Response.Redirect("documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString(), True)
-            Return
-        End If
+    Private Function AuthorizeDocumentRequest() As Boolean
+        Try
+            Dim requestedId As Integer = GetRequestedDocumentId()
+            If requestedId <= 0 OrElse CurrentOrderIdentity Is Nothing OrElse
+               Not CurrentOrderIdentity.IsComplete Then Return False
 
-        If Not IsPostBack Then
             Dim tipoDocId As Integer = -1
-            If Not DocumentoAppartieneAUtente(idDocumento, tipoDocId) Then
-                Response.Redirect("documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString(), True)
-                Return
-            End If
+            If Not DocumentoAppartieneAUtente(requestedId, tipoDocId) Then Return False
+            _authorizedDocumentId = requestedId
+            _authorizedDocumentTypeId = tipoDocId
+            _documentAuthorized = True
+            Return IsAuthorizedDocumentScopeCurrent()
+        Catch
+            Return False
+        End Try
+    End Function
 
-            ' Breadcrumb: torna alla tipologia corretta
-            If tipoDocId > 0 Then
-                hlDocumenti.NavigateUrl = "documenti.aspx?t=" & tipoDocId.ToString()
-            Else
-                hlDocumenti.NavigateUrl = "documenti.aspx?t=" & GetFallbackTipoDocumentoId().ToString()
-            End If
+    Private Function IsAuthorizedDocumentScopeCurrent() As Boolean
+        If _documentDenied OrElse Not _documentAuthorized OrElse _authorizedIdentity Is Nothing OrElse
+           Not _authorizedIdentity.IsComplete OrElse _authorizedDocumentId <= 0 Then Return False
+        Try
+            If GetRequestedDocumentId() <> _authorizedDocumentId Then Return False
+            Dim current As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            Return current IsNot Nothing AndAlso current.IsComplete AndAlso
+                   current.CompanyId = _authorizedIdentity.CompanyId AndAlso
+                   current.LoginId = _authorizedIdentity.LoginId AndAlso
+                   current.UtentiId = _authorizedIdentity.UtentiId AndAlso
+                   current.PriceListId = _authorizedIdentity.PriceListId AndAlso
+                   String.Equals(current.DatabaseScopeKey, _authorizedIdentity.DatabaseScopeKey, StringComparison.Ordinal)
+        Catch
+            Return False
+        End Try
+    End Function
 
-            ConfigurePayReturnMessage()
+    Protected Overrides Sub OnPreLoad(ByVal e As EventArgs)
+        If Not IsAuthorizedDocumentScopeCurrent() Then DenyDocumentAccess()
+        MyBase.OnPreLoad(e)
+        ' ViewState may contain another document from this same page/session.
+        ' Rebind only the five document consumers, after state restoration and
+        ' before postback events. Leave page ViewState and financial events intact.
+        litGoogleSurveyOptIn.Text = String.Empty
+        img_bs_label.Text = String.Empty
+        Try
+            FormView1.DataBind()
+            FormView2.DataBind()
+            GridView1.DataBind()
+            GridView2.DataBind()
+            Lista_Articoli.DataBind()
+            _documentBindingsComplete = True
+        Catch ex As System.Threading.ThreadAbortException
+            Throw
+        Catch
+            DenyDocumentAccess()
+        End Try
+    End Sub
 
-            ' Google Customer Reviews - Survey Opt-in (mostra solo al rientro dal checkout)
-            TryRenderGoogleCustomerReviewsOptIn(idDocumento)
+    Protected Overrides Sub Render(ByVal writer As System.Web.UI.HtmlTextWriter)
+        If _documentDenied Then Return
+        If Not _documentBindingsComplete OrElse Not IsAuthorizedDocumentScopeCurrent() Then
+            DenyDocumentAccess()
+            Return
+        End If
+        MyBase.Render(writer)
+    End Sub
 
+    Private Sub DenyDocumentAccess()
+        _documentDenied = True
+        _documentAuthorized = False
+        FormView1.Visible = False
+        FormView2.Visible = False
+        GridView1.Visible = False
+        GridView2.Visible = False
+        Lista_Articoli.Visible = False
+        litGoogleSurveyOptIn.Text = String.Empty
+        img_bs_label.Text = String.Empty
+        Response.Clear()
+        Response.SuppressContent = True
+        ' One terminal outcome for missing, invalid, foreign and unverifiable IDs.
+        Response.Redirect(ResolveUrl("~/documenti.aspx?t=4"), True)
+    End Sub
+
+    Protected Sub DocumentDataSource_Selecting(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceSelectingEventArgs)
+        e.Cancel = True
+        If Not IsAuthorizedDocumentScopeCurrent() OrElse e.Command Is Nothing OrElse
+           Not e.Command.Parameters.Contains("DocumentId") OrElse
+           Not e.Command.Parameters.Contains("UtentiId") OrElse
+           Not e.Command.Parameters.Contains("AziendaId") Then
+            DenyDocumentAccess()
+            Return
+        End If
+
+        e.Command.Parameters("DocumentId").DbType = DbType.Int32
+        e.Command.Parameters("DocumentId").Value = _authorizedDocumentId
+        e.Command.Parameters("UtentiId").DbType = DbType.Int64
+        e.Command.Parameters("UtentiId").Value = _authorizedIdentity.UtentiId
+        e.Command.Parameters("AziendaId").DbType = DbType.Int32
+        e.Command.Parameters("AziendaId").Value = _authorizedIdentity.CompanyId
+        e.Cancel = False
+    End Sub
+
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        If Not _documentBindingsComplete OrElse Not IsAuthorizedDocumentScopeCurrent() Then
+            DenyDocumentAccess()
+            Return
+        End If
+        hlDocumenti.NavigateUrl = "documenti.aspx?t=" & If(_authorizedDocumentTypeId > 0,
+            _authorizedDocumentTypeId, GetFallbackTipoDocumentoId()).ToString(CultureInfo.InvariantCulture)
+        ConfigurePayReturnMessage()
+        If Not IsPostBack Then
+            TryRenderGoogleCustomerReviewsOptIn(_authorizedDocumentId)
         End If
     End Sub
 
@@ -98,16 +185,26 @@ Partial Class documentidettaglio
     Private Function DocumentoAppartieneAUtente(ByVal idDocumento As Integer, ByRef tipoDocId As Integer) As Boolean
         tipoDocId = -1
         Try
+            Dim identity As OrderStorefrontIdentity = CurrentOrderIdentity
+            If identity Is Nothing OrElse Not identity.IsComplete Then Return False
+            ' VerifyAccount may update its argument; never mutate the resolved
+            ' identity or Session while validating this request-only snapshot.
+            Dim verified As New OrderStorefrontIdentity() With {
+                .DatabaseScopeKey = identity.DatabaseScopeKey, .CompanyId = identity.CompanyId,
+                .LoginId = identity.LoginId, .UtentiId = identity.UtentiId, .PriceListId = identity.PriceListId
+            }
             Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using c As New MySqlConnection(cs)
+                c.Open()
+                If Not OrderStorefrontContext.VerifyAccount(c, Nothing, verified) Then Return False
                 Using cmd As New MySqlCommand("SELECT TipoDocumentiId FROM vdocumenti WHERE Id=@id AND UtentiId=@uid AND AziendeId=@aziendaId LIMIT 1", c)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = idDocumento
-                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = CurrentOrderIdentity.UtentiId
-                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
-                    c.Open()
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = verified.UtentiId
+                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = verified.CompanyId
                     Dim o As Object = cmd.ExecuteScalar()
                     If o Is Nothing OrElse Convert.IsDBNull(o) Then Return False
                     Integer.TryParse(Convert.ToString(o), tipoDocId)
+                    _authorizedIdentity = verified
                     Return True
                 End Using
             End Using
@@ -435,6 +532,10 @@ Partial Class documentidettaglio
     End Function
 
     Protected Sub FormView1_DataBound(sender As Object, e As EventArgs) Handles FormView1.DataBound
+        If Not IsAuthorizedDocumentScopeCurrent() Then
+            DenyDocumentAccess()
+            Return
+        End If
         ' Mostra i pulsanti di pagamento online solo quando la policy "Paga ora" lo consente.
         ' Logica volutamente conservativa per evitare regressioni: in dubbio, lascia nascosto.
         Try
@@ -455,7 +556,7 @@ Partial Class documentidettaglio
             SetVisible(btIw, False)
             SetVisible(btPP, False)
 
-            Dim documentId As Integer = GetRequestedDocumentId()
+            Dim documentId As Integer = _authorizedDocumentId
             If documentId <= 0 Then
                 Return
             End If
@@ -518,31 +619,17 @@ Partial Class documentidettaglio
     End Function
 
     Private Function GetRequestedDocumentId() As Integer
+        Dim values() As String = Request.QueryString.GetValues("id")
+        If values Is Nothing OrElse values.Length <> 1 OrElse String.IsNullOrEmpty(values(0)) Then Return -1
+        Dim raw As String = values(0)
+        If raw.Length > 10 Then Return -1
+        For Each digit As Char In raw
+            If digit < "0"c OrElse digit > "9"c Then Return -1
+        Next
         Dim idDocumento As Integer = 0
-        If Integer.TryParse(Convert.ToString(Request.QueryString("id")), idDocumento) AndAlso idDocumento > 0 Then
+        If Integer.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, idDocumento) AndAlso idDocumento > 0 Then
             Return idDocumento
         End If
-
-        If IsPostBack Then
-            Return GetPostedDocumentId()
-        End If
-
-        Return -1
-    End Function
-
-    Private Function GetPostedDocumentId() As Integer
-        Try
-            For Each key As String In Request.Form.AllKeys
-                If key IsNot Nothing AndAlso key.EndsWith("$hfPayNowDocumentId", StringComparison.OrdinalIgnoreCase) Then
-                    Dim postedId As Integer = 0
-                    If Integer.TryParse(Convert.ToString(Request.Form(key)), postedId) AndAlso postedId > 0 Then
-                        Return postedId
-                    End If
-                End If
-            Next
-        Catch
-        End Try
-
         Return -1
     End Function
 
@@ -556,10 +643,10 @@ Partial Class documentidettaglio
     End Sub
 
     Private Function LoadPayNowDocumentInfo(ByVal documentId As Integer) As PayNowDocumentInfo
-        If documentId <= 0 Then Return Nothing
+        If documentId <> _authorizedDocumentId OrElse Not IsAuthorizedDocumentScopeCurrent() Then Return Nothing
 
         Try
-            Dim utentiId As Long = CurrentOrderIdentity.UtentiId
+            Dim utentiId As Long = _authorizedIdentity.UtentiId
             If utentiId <= 0 Then Return Nothing
 
             Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -588,7 +675,7 @@ Partial Class documentidettaglio
                 Using cmd As New MySqlCommand(sql, c)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
                     cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = utentiId
-                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
+                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = _authorizedIdentity.CompanyId
                     c.Open()
 
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
@@ -718,6 +805,7 @@ Partial Class documentidettaglio
 
 
     Private Sub TryRenderGoogleCustomerReviewsOptIn(ByVal idDocumento As Integer)
+        If idDocumento <> _authorizedDocumentId OrElse Not IsAuthorizedDocumentScopeCurrent() Then Return
         ' Google Customer Reviews (Survey Opt-in)
         ' Mostra il popup SOLO subito dopo il checkout (gating tramite Session("GCR_ShowOptIn_DocId"))
         Try
@@ -755,8 +843,8 @@ Partial Class documentidettaglio
 
                 Using cmd As New MySqlCommand(sql, c)
                     cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = idDocumento
-                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = CurrentOrderIdentity.UtentiId
-                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
+                    cmd.Parameters.Add("@uid", MySqlDbType.Int64).Value = _authorizedIdentity.UtentiId
+                    cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = _authorizedIdentity.CompanyId
 
                     Using dr As MySqlDataReader = cmd.ExecuteReader()
                         If dr.Read() Then
