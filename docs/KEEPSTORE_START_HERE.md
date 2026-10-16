@@ -1,17 +1,17 @@
 # KeepStore — START_HERE
 
-Checkpoint breve: 2026-10-15. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
+Checkpoint breve: 2026-10-16. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
 
 ## Stato verificato e lavoro corrente
 
 - Repository: `KeepStoreAdmin/KeepStore3.0`; copia canonica `C:\KeepStoreWeb\KeepStore3.0\`; stable `frontend-rebuild`.
-- Ultimo stable locale/GitHub verificato: `5e31cbd6ef24c34a191117dad9d16971e85d43b3`, PR #355 MERGED/CLOSED, due commit lineari da #354 `7ef9482e6795403cad7587313c1593aa16d7251f`; sync locale post #355 A. Smoke Integration #355 NON ESEGUITO per deroga PO specifica registrata nella PR; nessuna pubblicazione #355 attestata. #354 conserva la propria deroga e la dichiarazione PO di pubblicazione/funzionalita, non verifica indipendente.
+- Ultimo stable locale/GitHub verificato: `401d57a0dc8fd004d00f4ba2952f2f613d12b2b0`, PR #357 MERGED/CLOSED, parent diretto #356 `f287b7371b334aaa24f83cff6775ac5c42803db8`; sync locale A. F02 owner/azienda e F03 binding chiusi: smoke Integration 19/19 PASS nel perimetro acquisito, con coperture residue accettate dal PO; nessuna pubblicazione produzione attestata. #354/#355/#356 conservano le rispettive deroghe allo smoke Integration NON ESEGUITO, senza estensioni a KS-C02.
 - `main` / `origin/main` protetti: `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Sincronizzazione locale post #352 A; staging vuoto, web.config/quattro cancellazioni/54 untracked protetti. Ricontrollare gli stati variabili alla ripartenza, non assumere eterni questi conteggi.
 - Ultimo task performance chiuso: `HOME-DB-OPEN-LATENCY-1A`, A / INTEGRATED (#352). #351 diagnostica anch'essa integrata. Review A e smoke Integration 6/6 PASS, rollback PASS; dettaglio/limiti nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md).
 - Ultimo batch shopping chiuso: `SHOPPING-MOBILE-EXCELLENCE-1A`, #355 A / INTEGRATED con deroga smoke Integration; review REV1 A, F01 focus risolto e prove fixture preservate. #354 e le sue prove rimangono chiuse nello storico.
-- Task corrente autorizzato: `ORDER-JOURNEY-CONTINUITY-1A`, KS-C01, branch `task/order-journey-continuity-1a`, base #355. Solo presentazione: descrizioni consegna/pagamento dal draft e dai controlli server corrispondenti, errore lettura distinto dal carrello vuoto, conferma ordine distinta dall'incasso. Tre runtime; core ordine/auth/prezzi/stock/SQL e JS/CSS invariati. Test isolati/precompile/browser fixture acquisiti nel Masterplan; A tecnico / B complessivo per review e gate applicativo NON ESEGUITO. Commit/PR da Git, non SHA auto-inseriti.
-- Prossimo task runtime autorizzato oltre al batch corrente: **NESSUNO**. Candidato KS-C02 `ACCOUNT-JOURNEY-READINESS-1A`, NON AVVIATO dopo chiusura/decisione PO; nessuna autorizzazione a ordini, gateway, DB o server.
-- REV1 #356: F01 righe stale/read fallita riprodotto su controlli System.Web isolati e corretto nel solo VB presentazionale; 95 test mirati e precompile safe PASS, Session/contratti invariati. A tecnico REV1 / B complessivo per review REV1 e gate applicativo NON ESEGUITO; nessun merge autorizzato.
+- Task corrente: ripresa autorizzata `ACCOUNT-JOURNEY-READINESS-1A`, KS-C02 / solo F01, branch `task/account-journey-readiness-1a`, base #357. Conferma registrazione: destinazione unica validata dalla policy post-login, coupon verso login con ReturnUrl canonico, standard verso shop, encoding attributi e copy e-mail non assertivo. Due runtime; autenticazione/Session/carrello/registrazione/coupon e policy invariati. A tecnico locale; review indipendente della PR e smoke IIS autentico pendenti. KS-C02 complessivo NON COMPLETATO.
+- Prossimo task runtime autorizzato oltre al perimetro corrente: **NESSUNO**. Dopo review/smoke F01, valutazione dei criteri account/sicurezza KS-C02 residui NON AVVIATA; nessuna autorizzazione a ordini, gateway, DB o server.
+- #356 `ORDER-JOURNEY-CONTINUITY-1A`: MERGED/CLOSED, due commit lineari da #355 e deroga PO specifica allo smoke Integration NON ESEGUITO. Le prove REV1 (95 test mirati, precompile safe, Session/contratti invariati) restano acquisite, non attestano E2E ordine.
 - PR aperte preesistenti rilevate: #129, #170, #171, #191; non sono task attivi o nuove autorizzazioni. #170/#171 riguardano diagnosi post-ordine storica, #191 coupon differiti, #129 chiusura reset storica: riconciliare solo se diventano pertinenti, senza cleanup automatico.
 
 ## Source, Integration, produzione: tre stati distinti

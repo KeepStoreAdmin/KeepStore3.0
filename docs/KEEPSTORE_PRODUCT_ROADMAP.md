@@ -50,6 +50,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C01 — Carrello, checkout e conferma senza esiti ambigui
 
+- Chiusura prevalente 2026-10-16: #356 MERGED/CLOSED a `f287b7371b334aaa24f83cff6775ac5c42803db8`, FF-only, review REV1 A e deroga PO specifica allo smoke Integration NON ESEGUITO. Il seguente mandato/test rimane storico; il batch non e piu attivo e non certifica il macro-percorso completo.
 - REV1 #356: F01 corretto nella sola presentazione anche con righe ViewState positive e lettura non verificabile; avviso e blocco visuale finale, senza alterare Session, ownership o regole ordine. 95 test isolati mirati e precompile safe PASS; review REV1 e gate applicativo pendenti, non certificazione IIS/E2E (Masterplan).
 - Mandato PO 2026-10-15: `ORDER-JOURNEY-CONTINUITY-1A` ATTIVO, base #355 `5e31cbd6ef24c34a191117dad9d16971e85d43b3`. A tecnico / B complessivo per review e gate applicativo NON ESEGUITO. Delta: metodi effettivi verificabili nel riepilogo, errore lettura distinto da vuoto, conferma distinta da pagamento; nessun nuovo checkout o intervento transazionale. Autenticazione, invio ordine e incasso reali NON CERTIFICATI dalle fixture. Evidenze/limiti nel Masterplan; nessuna deroga automatica, merge o pubblicazione.
 - Fonte/data: S1/S3/S4, 2026-10-15. P0/P1; PARZIALE con gate di collaudo/release.
@@ -59,6 +60,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C02 — Account, autenticazione e handoff gestionale affidabili
 
+- Ripresa PO 2026-10-16 dalla base #357 `401d57a0dc8fd004d00f4ba2952f2f613d12b2b0`: F02 owner/azienda e F03 binding documenti chiusi (#357, smoke acquisito 19/19 con limiti accettati). Solo F01 conferma registrazione implementato nel branch task: policy post-login esistente, ReturnUrl canonico coupon, encoding refresh/CTA, fallback e copy coerenti; 86 scenari System.Web isolati su due host sintetici e precompile safe PASS. A tecnico, review PR/smoke IIS NON ESEGUITI; nessuna chiusura complessiva KS-C02, modifica del nucleo auth o pubblicazione produzione.
 - Fonte/data: S3/S4, 2026-10-15. P0 sicurezza, P1 percorso account; PARZIALE / rischi DA VERIFICARE prima del rilascio.
 - CURRENT: login contestuale, reset tokenizzato, profilo/indirizzi/documenti/email con task integrati. Debito storico password legacy in chiaro/hash migration e copertura anti-CSRF auth non dichiarati risolti dal reset tokenizzato; verificare stato corrente e impatto, non rinviarli come dettaglio estetico. Account sintetici non certificano autenticato reale.
 - TARGET/AC del batch proposto `ACCOUNT-JOURNEY-READINESS-1A`: (1) accesso/ritorno allo shopping e logout coerenti; (2) profilo/indirizzi/documenti solo owner+azienda; (3) reset e conferme comprensibili senza segreti esposti. Sicurezza auth che impedisce rilascio richiede task/gate dedicato, non un fix implicito nello styling.
@@ -139,7 +141,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-`CANONICAL-DOCS-REORG-1A` e integrato con #353; #354 e #355 sono chiuse con le rispettive deroghe smoke documentate. Solo `ORDER-JOURNEY-CONTINUITY-1A` e autorizzato e attivo ora (KS-C01), con review e gate applicativo separati: fixture non equivalgono a E2E. Candidato dopo chiusura/decisione PO: KS-C02 `ACCOUNT-JOURNEY-READINESS-1A`, NON AVVIATO. P0 di sicurezza/pagamento/ordine bloccanti hanno precedenza, senza patch o prove reali automatiche. Non riaprire audit chiusi e non avviare un secondo task.
+Checkpoint 2026-10-16: #353-#356 integrate, deroghe smoke #354/#355/#356 circoscritte; #357 hotfix documenti chiuso con i propri limiti acquisiti. Unico perimetro attivo autorizzato: KS-C02 `ACCOUNT-JOURNEY-READINESS-1A` / F01 conferma registrazione, dalla base #357. Review PR e smoke autentico restano distinti dalle prove isolate; gli altri criteri account/sicurezza NON sono dichiarati completi. Nessun secondo task, merge, pubblicazione o prova mutativa impliciti.
 
 ## Aggiornamento della roadmap
 

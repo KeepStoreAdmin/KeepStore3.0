@@ -1,16 +1,8 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="registrazioneok.aspx.vb" Inherits="registrazioneok" %>
 
-<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Registrazione completata
-</asp:Content>
-
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
-    <%If Request.QueryString("state") = "coupon" Then%>
-        <meta http-equiv="refresh" content="2; url='<%= "login.aspx?redirect=" & Request.QueryString("redirect") %>'" />
-    <%Else%>
-        <meta http-equiv="refresh" content="2; url=default.aspx" />
-    <%End If%>
+    <meta http-equiv="refresh" content="<%= System.Web.HttpUtility.HtmlAttributeEncode("2; url=" & ConfirmationTargetUrl) %>" />
 
     <div class="tf-sp-1 pb-0">
         <div class="container">
@@ -32,15 +24,15 @@
                 <div class="col-xl-6 col-lg-7">
                     <div class="ks-auth-card text-center">
                         <h3 class="fw-semibold mb-10">Registrazione conclusa con successo!</h3>
-                        <p class="mb-20">Ti abbiamo inviato una <b>mail di conferma registrazione</b>.</p>
+                        <p class="mb-20">La registrazione &egrave; completata. L'invio dell'e-mail di conferma non &egrave; verificato in questa pagina.</p>
 
                         <div class="d-flex align-items-center justify-content-center gap-2 mb-20">
                             <span class="icon icon-loader"></span>
-                            <span class="body-text-3">Tra pochi secondi verrai reindirizzato allo shop…</span>
+                            <span class="body-text-3"><%= System.Web.HttpUtility.HtmlEncode(ConfirmationRedirectMessage) %></span>
                         </div>
 
                         <div class="mt-3">
-                            <a href="default.aspx" class="tf-btn btn-fill">Vai allo shop</a>
+                            <a href="<%= System.Web.HttpUtility.HtmlAttributeEncode(ConfirmationTargetUrl) %>" class="tf-btn btn-fill"><%= System.Web.HttpUtility.HtmlEncode(ConfirmationActionText) %></a>
                         </div>
                     </div>
                 </div>

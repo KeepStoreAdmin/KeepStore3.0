@@ -1,11 +1,27 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-15
+Aggiornato: 2026-10-16
 
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### ACCOUNT-JOURNEY-READINESS-1A — KS-C02 / F01, A tecnico locale
+
+Ripresa PO 2026-10-16, branch `task/account-journey-readiness-1a`, base stabile locale/origin `401d57a0dc8fd004d00f4ba2952f2f613d12b2b0`; main/origin invariati `976e99f17cabc8a5c6a8715463444edfeaadcd91`. #356 e #357 verificate MERGED/CLOSED: #356 mantiene la deroga PO allo smoke Integration NON ESEGUITO; F02 owner/azienda e F03 binding #357 chiusi, 19/19 smoke Integration acquisiti con coperture residue accettate dal PO. I checkpoint antecedenti sotto restano storici, non riaprono tali PR. KS-C02 complessivo rimane PARZIALE.
+
+F01 riprodotto prima della patch con input innocuo: interpolazione diretta di `redirect` nel meta-refresh coupon permette uscita dall'attributo HTML; nessuna disclosure/exploit live attestata. Correzione esclusivamente nella conferma: `state` singolo risolto in PreInit per master e copy coerenti, `redirect` singolo senza ReturnUrl concorrente, normalizzazione e `BuildLoginUrl` dalla policy esistente READ-ONLY. Unica destinazione request-scoped per refresh e link, entrambi con encoding dell'intero attributo. Policy/allowlist non duplicate: esterni, schemi pericolosi, encoding ambiguo, traversal, token e redirect annidati rifiutati; checkout degrada a carrello. Coupon senza destinazione valida va al login locale, standard sempre allo shop; niente recuperi da Session/referrer. Rimosso TitleContent incompatibile con Coupon.master; titolo impostato in Load dopo aver svuotato il solo HtmlTitle dei placeholder, senza modificare i master.
+
+Copy: registrazione completata distinta dall'invio e-mail non verificato, come richiesto dal backend che puo proseguire dopo errore del sender. Messaggio e CTA coupon indicano login; standard indicano shop. Design Gate proporzionato al fix: esaminato modal account originale in `_aspnet_precompile_checkout4_20260520184528/Public/assets/keepstore/my-account.html` e struttura KeepStore; classi/layout responsive conservati, nessun redesign/CSS/JS o nuovo meccanismo client. Fonte primaria consultata 2026-10-16: [W3C, link purpose](https://www.w3.org/WAI/WCAG22/Understanding/link-purpose-in-context.html), soltanto per etichette/destinazioni coerenti; non benchmark esteso ne certificazione visuale/accessibilita.
+
+QA: **86 scenari / 1.352 assert PASS** con HttpRuntime.ProcessRequest .NET Framework 4.8, ASPX/VB reali e due policy byte-identiche, due host tenant sintetici; GET e quattro POST con ViewState realmente emesso e IsPostBack verificato. Master sintetici senza DB, con i placeholder effettivi dei due master: rendering/title e binding del contenuto reali, non esecuzione dei master commerciali. Coperti positivi/default, coupon, assenza/duplicati/case alias/ReturnUrl concorrente, URL esterni/cross-host/porta/schema, JavaScript/data, quote innocue, caratteri speciali, doppia codifica, NULL/CRLF, traversal, pagine tecniche, loop, downgrade checkout, query catalogo con virgola e promo legacy. Il breakout originale non si riproduce; link manuale e refresh concordano. Precompile safe dell'app completa PASS (353 input, Framework64 4.8, zero configurazioni operative copiate, cleanup PASS). Review read-only separata del candidato senza bypass/regressioni concreti; verifica mirata aggiuntiva di duplicati con chiave percent-encoded e titolo System.Web PASS, non review ChatGPT della PR pubblicata. Harness/evidenze supplementari fuori repository; diff-check e scan delle aggiunte PASS. Nessuna nuova query, asset, richiesta funzionale o misura TTFB; timer originale conservato.
+
+Limiti: host/tenant simulati non certificano risoluzione commerciale o autenticazione; IIS/HTTP autenticato, browser visuale, creazione account, consegna e-mail e percorso coupon completo NON ESEGUITI. Il backend storico perde gia il redirect nel ramo coupon e coupon_opzioni.aspx e fuori allowlist: nessun ampliamento policy o riparazione dei processi coupon, solo fallback sicuro quando la conferma non riceve una destinazione ammessa. Il ramo registrazione dal carrello continua direttamente a carrello.aspx, byte-invariato. Auth, Session, merge, persistenza account, reset, prezzi, documenti e processi coupon restano fuori manifest.
+
+Manifest: MODIFIED `registrazioneok.aspx`, `registrazioneok.aspx.vb`; tre documenti di ingresso/evidenze aggiornati, nessun ADDED/DELETED/RENAMED runtime. Dipendenze esistenti READ-ONLY `PostLoginReturnUrlPolicy` e `LegacyPromotionRoutePolicy`, master e login invariati; nessun Bin/asset/cache-buster nuovo. FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER: soltanto i due runtime insieme, su release compatibile con la base e dopo review/autorizzazione target/operazioni; backup byte/hash e rollback di entrambi, senza copiare configurazioni. Nessun Apply, deploy, IIS, DB, gateway, ordine o e-mail; nessun merge. Review indipendente PR e smoke autentico restano gate separati; valutazione dei criteri KS-C02 residui NON AVVIATA.
+
+### Checkpoint precedente — KS-C01 (stati antecedenti alla chiusura #356)
 
 ### ORDER-JOURNEY-CONTINUITY-1A — KS-C01 / A tecnico, B complessivo
 
