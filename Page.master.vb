@@ -19,6 +19,8 @@ Partial Class PageMaster
     Private Const TenantPriceDisplayCompanyKey As String = "KeepStore.PriceDisplay.TenantCompanyId"
     Private Const TenantPriceDisplayListKey As String = "KeepStore.PriceDisplay.TenantPriceListId"
     Private Const TenantPriceDisplayModeKey As String = "KeepStore.PriceDisplay.TenantMode"
+    Private Const AuthenticatedScopeRequestKey As String = "KeepStore.Authentication.ValidatedScope"
+    Private _storefrontAuthenticationRevoked As Boolean
     Private _priceDisplayCompanyId As Integer
     Private _priceDisplayDefaultListId As Integer
     Private _priceDisplayTenantMode As StorefrontVatDisplayMode
@@ -73,6 +75,9 @@ Partial Class PageMaster
         For Each key As String In authenticationKeys
             Me.Session.Remove(key)
         Next
+        If HttpContext.Current IsNot Nothing Then
+            HttpContext.Current.Items.Remove(AuthenticatedScopeRequestKey)
+        End If
         StorefrontPriceDisplayContextProvider.Invalidate(HttpContext.Current)
     End Sub
 
@@ -135,10 +140,43 @@ Partial Class PageMaster
         StorefrontPriceDisplayContextProvider.Invalidate(HttpContext.Current)
     End Sub
 
+    Private Function CurrentAuthenticatedScopeKey(ByVal companyId As Integer) As String
+        Dim databaseScope As String = StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey()
+        If String.IsNullOrEmpty(databaseScope) Then Return String.Empty
+        Return databaseScope & ":" & companyId.ToString() & ":" & CurrentLoginIdSafe().ToString() & ":" &
+            StorefrontCommercialIsolationPolicy.PositiveInteger(Session("UtentiId")).ToString() & ":" &
+            StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")).ToString() & ":" &
+            StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Session("Listino"), Session("listino")).ToString()
+    End Function
+
+    Private Sub RejectStorefrontAuthentication()
+        _storefrontAuthenticationRevoked = True
+        ClearStorefrontAuthenticationState()
+        Try
+            RestoreAnonymousPriceDisplayState()
+        Finally
+            ' CompleteRequest alone does not stop WebForms Load/postback events.
+            Throw New HttpException(403, "Sessione non valida. Accedi nuovamente.")
+        End Try
+    End Sub
+
+    Private Sub RejectAuthenticatedRequestWithoutTenant()
+        If _storefrontAuthenticationRevoked OrElse CurrentLoginIdSafe() > 0 OrElse
+           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")) > 0 Then
+            _storefrontAuthenticationRevoked = True
+            ClearStorefrontAuthenticationState()
+            Throw New HttpException(421, "Sito non configurato per l'host richiesto.")
+        End If
+    End Sub
+
     Private Sub EnsureAuthenticatedStorefrontScope(ByVal companyId As Integer,
                                                    ByVal defaultPriceListId As Integer)
+        If _storefrontAuthenticationRevoked Then RejectStorefrontAuthentication()
         Dim loginId As Integer = CurrentLoginIdSafe()
         If loginId <= 0 Then
+            If StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")) > 0 Then
+                RejectStorefrontAuthentication()
+            End If
             ClearStorefrontAuthenticationState()
             RestoreAnonymousPriceDisplayState()
             Return
@@ -149,17 +187,20 @@ Partial Class PageMaster
         If authenticatedCompanyId > 0 Then
             If authenticatedCompanyId <> companyId OrElse
                StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Me.Session("Listino"), Me.Session("listino")) <= 0 Then
-                ClearStorefrontAuthenticationState()
-                RestoreAnonymousPriceDisplayState()
-            Else
-                ApplyAuthenticatedPriceDisplayState(Session("IvaTipo"), Session("IdEsenzioneIva"),
-                    Session("Iva_Utente"), Session("DescrizioneEsenzioneIva"), Session("AbilitatoIvaReverseCharge"))
+                RejectStorefrontAuthentication()
             End If
+        End If
+
+        Dim requestScope As String = CurrentAuthenticatedScopeKey(companyId)
+        If requestScope <> String.Empty AndAlso HttpContext.Current IsNot Nothing AndAlso
+           String.Equals(TryCast(HttpContext.Current.Items(AuthenticatedScopeRequestKey), String), requestScope, StringComparison.Ordinal) Then
+            ApplyAuthenticatedPriceDisplayState(Session("IvaTipo"), Session("IdEsenzioneIva"),
+                Session("Iva_Utente"), Session("DescrizioneEsenzioneIva"), Session("AbilitatoIvaReverseCharge"))
             Return
         End If
 
-        ' Compatibilita' con sessioni create prima dell'introduzione del marker:
-        ' convalida una sola volta login, azienda e listino persistito, sempre owner-scoped.
+        ' Every authenticated request revalidates the account, including marked
+        ' sessions. Only an identical scope may reuse this request's result.
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using authenticationConnection As New MySqlConnection(connectionString)
@@ -172,19 +213,33 @@ Partial Class PageMaster
                     authenticationCommand.Parameters.AddWithValue("@companyId", companyId)
                     Using reader As MySqlDataReader = authenticationCommand.ExecuteReader()
                         If reader.Read() Then
+                            Dim persistedLoginId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(reader("id"))
+                            Dim persistedUserId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(reader("utentiid"))
+                            Dim cachedUserId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(Session("UtentiId"))
                             Dim persistedPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAuthenticatedPriceList(
                                 companyId,
                                 Convert.ToInt32(reader("AziendeID")),
                                 Convert.ToInt32(reader("listino")))
-                            If persistedPriceListId > 0 Then
-                                Me.Session("AuthenticatedAziendaID") = companyId
-                                Me.Session("UtentiId") = reader("utentiid")
-                                Me.Session("UtentiID") = reader("utentiid")
-                                Me.Session("UtentiTipoId") = reader("utentitipoid")
-                                Me.Session("Listino") = persistedPriceListId
-                                Me.Session("listino") = persistedPriceListId
-                                ApplyAuthenticatedPriceDisplayState(reader("IvaTipo"), reader("IdEsenzioneIva"),
-                                    reader("ValoreEsenzioneIva"), reader("DescrizioneEsenzioneIva"), reader("AbilitatoIvaReverseCharge"))
+                            If persistedLoginId = loginId AndAlso persistedUserId > 0 AndAlso persistedPriceListId > 0 AndAlso
+                               (cachedUserId = persistedUserId OrElse (authenticatedCompanyId <= 0 AndAlso cachedUserId <= 0)) Then
+                                If authenticatedCompanyId <= 0 Then
+                                    ' Legacy sessions hydrate only from the verified owner.
+                                    Me.Session("AuthenticatedAziendaID") = companyId
+                                    Me.Session("UtentiId") = persistedUserId
+                                    Me.Session("UtentiID") = persistedUserId
+                                    Me.Session("UtentiTipoId") = reader("utentitipoid")
+                                    Me.Session("Listino") = persistedPriceListId
+                                    Me.Session("listino") = persistedPriceListId
+                                    ApplyAuthenticatedPriceDisplayState(reader("IvaTipo"), reader("IdEsenzioneIva"),
+                                        reader("ValoreEsenzioneIva"), reader("DescrizioneEsenzioneIva"), reader("AbilitatoIvaReverseCharge"))
+                                Else
+                                    ApplyAuthenticatedPriceDisplayState(Session("IvaTipo"), Session("IdEsenzioneIva"),
+                                        Session("Iva_Utente"), Session("DescrizioneEsenzioneIva"), Session("AbilitatoIvaReverseCharge"))
+                                End If
+                                requestScope = CurrentAuthenticatedScopeKey(companyId)
+                                If requestScope <> String.Empty AndAlso HttpContext.Current IsNot Nothing Then
+                                    HttpContext.Current.Items(AuthenticatedScopeRequestKey) = requestScope
+                                End If
                                 Return
                             End If
                         End If
@@ -192,11 +247,10 @@ Partial Class PageMaster
                 End Using
             End Using
         Catch ex As Exception
-            KeepStoreLog.Error("storefront-auth-scope", "Authenticated storefront scope validation failed closed.", ex, HttpContext.Current)
+            KeepStoreLog.Error("storefront-auth-scope", "Authenticated storefront scope validation failed closed.", Nothing, HttpContext.Current)
         End Try
 
-        ClearStorefrontAuthenticationState()
-        RestoreAnonymousPriceDisplayState()
+        RejectStorefrontAuthentication()
     End Sub
 
     '==========================================================
@@ -1191,6 +1245,7 @@ End Function
             Response.TrySkipIisCustomErrors = True
             Response.SuppressContent = True
             Response.Write("Sito non configurato per l'host richiesto.")
+            RejectAuthenticatedRequestWithoutTenant()
             Context.ApplicationInstance.CompleteRequest()
             Return
         End If
@@ -1204,6 +1259,8 @@ End Function
                resolvedTenant.CompanyId,
                CurrentLoginIdSafe(),
                authenticatedCompanyId) Then
+            _storefrontAuthenticationRevoked = _storefrontAuthenticationRevoked OrElse
+                CurrentLoginIdSafe() > 0 OrElse authenticatedCompanyId > 0
             ClearStorefrontAuthenticationState()
         End If
         ' Retain only scalar, host-validated tenant defaults in Session. Old
@@ -1246,9 +1303,16 @@ End Function
                 Response.TrySkipIisCustomErrors = True
                 Response.SuppressContent = True
                 Response.Write("Sito non configurato per l'host richiesto.")
+                Try
+                    dr.Close()
+                Finally
+                    Try
+                        localConn.Close()
+                    Finally
+                        RejectAuthenticatedRequestWithoutTenant()
+                    End Try
+                End Try
                 Context.ApplicationInstance.CompleteRequest()
-                dr.Close()
-                localConn.Close()
                 Return
             Else
                 Dim configuredTenant As StorefrontSeoTenantIdentity = StorefrontCanonicalHostPolicy.CreateTenant(
@@ -1272,9 +1336,16 @@ End Function
                     Response.TrySkipIisCustomErrors = True
                     Response.SuppressContent = True
                     Response.Write("Sito non configurato per l'host richiesto.")
+                    Try
+                        dr.Close()
+                    Finally
+                        Try
+                            localConn.Close()
+                        Finally
+                            RejectAuthenticatedRequestWithoutTenant()
+                        End Try
+                    End Try
                     Context.ApplicationInstance.CompleteRequest()
-                    dr.Close()
-                    localConn.Close()
                     Return
                 End If
                 Session(TenantPriceDisplayCompanyKey) = configuredTenant.CompanyId

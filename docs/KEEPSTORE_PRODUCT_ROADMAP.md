@@ -60,7 +60,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C02 — Account, autenticazione e handoff gestionale affidabili
 
-- Ripresa PO 2026-10-16 dalla base #357 `401d57a0dc8fd004d00f4ba2952f2f613d12b2b0`: F02 owner/azienda e F03 binding documenti chiusi (#357, smoke acquisito 19/19 con limiti accettati). Solo F01 conferma registrazione implementato nel branch task: policy post-login esistente, ReturnUrl canonico coupon, encoding refresh/CTA, fallback e copy coerenti; 86 scenari System.Web isolati su due host sintetici e precompile safe PASS. A tecnico, review PR/smoke IIS NON ESEGUITI; nessuna chiusura complessiva KS-C02, modifica del nucleo auth o pubblicazione produzione.
+- Checkpoint PO 2026-10-16: #358 F01 conferma registrazione MERGED/CLOSED, stable `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, review A e smoke IIS 28/28 acquisito; precedenti 86 scenari / 1.352 assert isolati conservati. #357 F02 owner/azienda e F03 binding documenti chiusi (19/19 con limiti accettati). Unico microfix attivo `ACCOUNT-SESSION-REVOCATION-1A` / APAT-F01 MEDIUM: A tecnico locale, rivalidazione centrale in Init anche per sessioni marcate, revoca prima degli eventi POST e nessuna cache positiva cross-request. Solo runtime `Page.master.vb`; preflight Defender e scansioni negative, 6 assert baseline + 207 candidata System.Web isolati e precompile safe PASS. Consegna PR DRAFT per review indipendente; IIS NON ESEGUITO, nessun merge. Nessuna compromissione di altri owner dimostrata; KS-C02 resta PARZIALE, nessuna pubblicazione produzione.
 - Fonte/data: S3/S4, 2026-10-15. P0 sicurezza, P1 percorso account; PARZIALE / rischi DA VERIFICARE prima del rilascio.
 - CURRENT: login contestuale, reset tokenizzato, profilo/indirizzi/documenti/email con task integrati. Debito storico password legacy in chiaro/hash migration e copertura anti-CSRF auth non dichiarati risolti dal reset tokenizzato; verificare stato corrente e impatto, non rinviarli come dettaglio estetico. Account sintetici non certificano autenticato reale.
 - TARGET/AC del batch proposto `ACCOUNT-JOURNEY-READINESS-1A`: (1) accesso/ritorno allo shopping e logout coerenti; (2) profilo/indirizzi/documenti solo owner+azienda; (3) reset e conferme comprensibili senza segreti esposti. Sicurezza auth che impedisce rilascio richiede task/gate dedicato, non un fix implicito nello styling.
@@ -141,7 +141,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-Checkpoint 2026-10-16: #353-#356 integrate, deroghe smoke #354/#355/#356 circoscritte; #357 hotfix documenti chiuso con i propri limiti acquisiti. Unico perimetro attivo autorizzato: KS-C02 `ACCOUNT-JOURNEY-READINESS-1A` / F01 conferma registrazione, dalla base #357. Review PR e smoke autentico restano distinti dalle prove isolate; gli altri criteri account/sicurezza NON sono dichiarati completi. Nessun secondo task, merge, pubblicazione o prova mutativa impliciti.
+Checkpoint 2026-10-16: #353-#358 integrate, deroghe smoke #354/#355/#356 circoscritte; #357/#358 chiuse con i propri limiti acquisiti. Unico perimetro attivo autorizzato: KS-C02 `ACCOUNT-SESSION-REVOCATION-1A` / APAT-F01 MEDIUM, dalla base #358. Review PR e smoke autentico restano distinti dalle prove isolate; gli altri criteri account/sicurezza NON sono dichiarati completi. Nessun secondo task, merge, pubblicazione, accesso HTTP/IIS o DB reale impliciti.
 
 ## Aggiornamento della roadmap
 
