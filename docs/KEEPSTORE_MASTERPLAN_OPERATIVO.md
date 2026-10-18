@@ -7,9 +7,13 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
-### HEADER-SEARCH-CONTINUITY-1A — KS-A01 / KS-B01, A tecnico funzionale locale / PR DRAFT
+### HEADER-SEARCH-CONTINUITY-1A — KS-A01 / KS-B01, PR #360, CHIUSO A / SOURCE INTEGRATION ONLY
 
-Mandato PO 2026-10-18: unico batch per (A) concorrenza e intento corrente, (B) stati/risposte suggest, (C) invio e destinazioni, (D) lifecycle desktop/mobile. Base esatta `ffab4224a3c8c1ccf0d8072cc3cf1f47fa25c5c5`; branch `task/header-search-continuity-1a`, un solo commit e PR DRAFT verso `frontend-rebuild`, identita e URL dal Git/rapporto finale. Nessun merge, deploy, accesso IIS/DB, account o operazione commerciale autorizzati o eseguiti.
+**WAIVER-PR360 — SOURCE INTEGRATION ONLY**, autorizzazione esplicita PO 2026-10-18: review indipendente ChatGPT A, review GitHub #5564548438 sul runtime immutato `0916a1ddcb0c6e0cc2c479c83381e1c4af942e18`. Autorizzati un solo commit docs-only figlio diretto e integrazione FF-only su `frontend-rebuild`, dalla base sotto indicata; identita finale dal Git, senza commit ricorsivi. Evidenze gia acquisite 418/418, 108 scenari Tech/Food, Chrome fixture 10/10 e controlli tecnici PASS riutilizzati senza nuovi test.
+
+**Precompile ASP.NET 4.8 NON ESEGUITA** (ExecutionPolicy prima dell'avvio del compilatore); **smoke IIS NON ESEGUITO**, nessuna verifica dell'applicazione reale o endpoint effettivo. La deroga vale soltanto per integrazione sorgente, non produzione. Prima del deploy sono obbligatori compilazione compatibile .NET Framework 4.8, smoke applicativo della ricerca header, verifica reale desktop/mobile sui due tenant e regressioni pertinenti. Nessun controllo mancante diventa PASS; nessuna deroga precedente, inclusa #359, viene estesa.
+
+Mandato PO 2026-10-18: unico batch per (A) concorrenza e intento corrente, (B) stati/risposte suggest, (C) invio e destinazioni, (D) lifecycle desktop/mobile. Base esatta `ffab4224a3c8c1ccf0d8072cc3cf1f47fa25c5c5`; branch `task/header-search-continuity-1a`, un commit runtime e solo closeout documentale. Il mandato finale autorizza esclusivamente il merge FF-only; nessun deploy, accesso IIS/DB, account o operazione commerciale.
 
 Manifest esclusivo: `Public/assets/keepstore/js/ks-page-flags.js`, il solo cache-buster relativo in `Page.master`, questo Masterplan, START_HERE e PRODUCT_ROADMAP. Versione asset `20261018-header-search-continuity1a`. Nessuna modifica ad ASCX/VB, endpoint, CSS, provider, query, prezzi/IVA/promo/stock, sessioni backend, credenziali o privilegi MySQL.
 
@@ -28,7 +32,7 @@ Regressioni protette: confronto esatto con la base di cinque regioni non interes
 
 **Precompile ASP.NET 4.8 NON ESEGUITA**: unico tentativo di avvio del runner safe versionato rifiutato dalla ExecutionPolicy Windows; compilatore non avviato. Nessun cambio policy, bypass, installazione o riconfigurazione strumenti; log sanitizzato nel solo QA. Sintassi JS verificata; controlli finali diff/manifest/segreti e preservazione nel rapporto/PR. Preflight pubblicazione GitHub: 0 workflow, 0 webhook, 0 deployment; Pages 404, nessun hook locale attivo rilevato. Nessun automatismo di deploy rilevato nel perimetro verificato.
 
-Gate residui: review indipendente della nuova PR, valutazione del limite precompile e smoke applicativo/PO autorizzato separatamente; nessuna falsa certificazione IIS o autorizzazione merge. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER**, soltanto dopo nuova autorizzazione: `Public/assets/keepstore/js/ks-page-flags.js` e `Page.master`. File non installati. Stable/main e configurazioni/quattro cancellazioni/54 untracked preservati; `SECURITY-DB-CREDENTIALS-HARDENING-1A` resta PIANIFICATO / NON AVVIATO, rotazione delle credenziali gia esposte con priorita anticipata e autorizzazione separata. Nessun task successivo avviato.
+Review indipendente A acquisita; integrazione source autorizzata dalla sola WAIVER-PR360 sopra, con gate pre-deploy ancora obbligatori e nessuna certificazione IIS. **FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER**, soltanto dopo nuova autorizzazione: `Public/assets/keepstore/js/ks-page-flags.js` e `Page.master`. File non installati. Main e configurazioni/quattro cancellazioni/54 untracked preservati; `SECURITY-DB-CREDENTIALS-HARDENING-1A` resta PIANIFICATO / NON AVVIATO, rotazione delle credenziali gia esposte con priorita anticipata e autorizzazione separata. Nessun task successivo avviato.
 
 ### ACCOUNT-SESSION-REVOCATION-1A — PR #359, CHIUSO A / SOURCE INTEGRATION ONLY
 
