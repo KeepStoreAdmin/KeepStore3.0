@@ -3345,3 +3345,64 @@ body.ks-page-home .ks-ai130-img {
 @media (max-width: 575px) {
   #ksComparePage .tf-compare-btn .tf-btn { flex: 1 1 100%; justify-content: center; }
 }
+
+/* HOME introduction only when no real banner is available. */
+body.ks-page-home .ks-home-adaptive-intro .ks-home-intro-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 28px 22px;
+  border: 1px solid var(--gray-4, #e0e0e0);
+  border-radius: 8px;
+  background: var(--surface, #f7f8fa);
+  color: var(--main, #333e48);
+}
+body.ks-page-home .ks-home-adaptive-intro .box-title {
+  min-width: 0;
+  max-width: 64ch;
+  overflow-wrap: anywhere;
+}
+body.ks-page-home .ks-home-adaptive-intro h1 {
+  margin-bottom: 16px;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.15;
+}
+body.ks-page-home .ks-home-adaptive-intro .caption {
+  color: var(--primary-2, #D80027);
+}
+body.ks-page-home .ks-home-adaptive-intro .body-text {
+  color: var(--main, #333e48);
+}
+body.ks-page-home .ks-home-adaptive-intro .tf-btn {
+  min-height: 44px;
+  white-space: normal;
+  text-align: center;
+  background-color: var(--primary-2, #D80027);
+  color: var(--white, #fff);
+}
+body.ks-page-home .ks-home-adaptive-intro a:focus-visible,
+body.ks-page-home .ks-home-adaptive-discovery a:focus-visible {
+  outline: 3px solid var(--main, #333e48);
+  outline-offset: 4px;
+}
+body.ks-page-home .ks-home-adaptive-discovery .ks-home-category-title {
+  overflow-wrap: anywhere;
+}
+body.ks-page-home .ks-home-adaptive-discovery[data-ks-sector-count="1"] .ks-home-category-grid {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 360px;
+}
+@media (min-width: 768px) {
+  body.ks-page-home .ks-home-adaptive-intro .ks-home-intro-panel {
+    padding: 40px;
+  }
+  body.ks-page-home .ks-home-adaptive-discovery[data-ks-sector-count="2"] .ks-home-category-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 720px;
+  }
+  body.ks-page-home .ks-home-adaptive-discovery[data-ks-sector-count="3"] .ks-home-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 960px;
+  }
+}

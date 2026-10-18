@@ -94,6 +94,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-E01 — HOME adattiva a cataloghi realmente diversi
 
+- Fase 1 `HOME-ADAPTIVE-SHOPPING-1A`, mandato PO 2026-10-18: implementata / A tecnico locale, PR DRAFT dalla base `3b1581d45fa7e782dd189060fa3b2d32050943d6`. Hero testuale tenant solo in assenza di banner, scoperta con 0/1/pochi/molti reparti reali, composizione neutra senza CTA duplicate; nessuna nuova query o capability engine. **244 asserzioni WebForms compilate, 70 configurazioni Chrome offline Tech/Food e precompile ASP.NET 4.8 PASS**, limiti nel Masterplan. Review indipendente e futuro smoke applicativo/desktop-mobile reali ancora separati; nessun merge/deploy/DB/IIS. KS-E01 resta PARZIALE, non completa adattivita multi-merceologia.
 - Fonte/data: S1/S2/S4, 2026-10-15. P1 prodotto; CURRENT PARZIALE / TARGET non completato.
 - CURRENT: sezioni/dati HOME, tassonomia e contesto commerciale dinamici; non esiste una capability engine generale certificata. `StorefrontCapabilityProfile` non e dichiarato implementato. Ottimizzazioni #345/#352 non completano l'adattivita.
 - TARGET/AC del batch proposto `HOME-ADAPTIVE-SHOPPING-1A`: (1) composizione capability-driven da dati reali; (2) banner/branding/prodotti/attributi pertinenti e omissione delle sezioni prive di dati; (3) accesso mobile chiaro a ricerca/catalogo/assistente. Una release per elettronica, food, pitture, moda e altri cataloghi, senza demo o inferenze arbitrarie dalla merceologia.
@@ -148,7 +149,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-Checkpoint 2026-10-18: #353-#359 integrate; #359 chiusa A / SOURCE INTEGRATION ONLY con deroga PO specifica allo smoke IIS 0/8 NON ESEGUITO. Runtime revisionato invariato; nessuna certificazione account/sicurezza complessiva o pubblicazione. Nessun task runtime successivo autorizzato; hardening DB pianificato NON AVVIATO, rotazione credenziali esposte anticipabile solo con autorizzazione separata. Nessun accesso HTTP/IIS o DB reale implicito.
+Checkpoint 2026-10-18: #360 integrata source-only, base verificata `3b1581d45fa7e782dd189060fa3b2d32050943d6`; deroghe precedenti restano circoscritte. Unico task corrente autorizzato: `HOME-ADAPTIVE-SHOPPING-1A`, KS-E01 fase 1, implementazione locale e PR DRAFT per review, non merge/deploy o certificazione complessiva. Hardening DB PIANIFICATO / NON AVVIATO, rotazione credenziali esposte anticipabile solo con autorizzazione separata. Nessun accesso HTTP/IIS o DB reale implicito e nessun task successivo avviato.
 
 ## Aggiornamento della roadmap
 

@@ -105,14 +105,29 @@
         </div>
     </section>
 
-    <section id="HomeMainCategoriesSection" runat="server" class="ks-home-section ks-home-categories">
+    <section id="HomeIntroSection" runat="server" visible="false" class="ks-home-section ks-home-adaptive-intro" aria-labelledby="ksHomeIntroTitle">
+        <div class="container">
+            <div class="ks-home-intro-panel">
+                <div class="box-title">
+                    <p class="caption fw-semibold mb-2">Il nostro negozio online</p>
+                    <h1 id="ksHomeIntroTitle" class="fw-semibold"><asp:Literal ID="litHomeIntroName" runat="server" Mode="Encode" /></h1>
+                    <p class="body-text mb-0"><asp:Literal ID="litHomeIntroDescription" runat="server" Mode="Encode" /></p>
+                </div>
+                <div class="box-btn">
+                    <a href="articoli.aspx" class="tf-btn btn-large"><span>Esplora il catalogo</span><i class="icon-arrow-right-lg" aria-hidden="true"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="HomeMainCategoriesSection" runat="server" class="ks-home-section ks-home-categories ks-home-adaptive-discovery">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
                     <h5 class="fw-semibold">Categorie principali</h5>
                     <p class="body-text-3 text-main-2 mb-0">Esplora i settori del catalogo e trova rapidamente ciò che cerchi.</p>
                 </div>
-                <a href="articoli.aspx" class="tf-btn btn-line">
+                <a id="HomeCategoriesCatalogLink" runat="server" href="articoli.aspx" class="tf-btn btn-line">
                     <span>Vai al catalogo</span>
                 </a>
             </div>
@@ -227,8 +242,8 @@
                 <div class="ks-home-wide-promo-copy">
                     <p class="caption text-primary fw-semibold mb-2">Esplora il catalogo</p>
                     <div class="mb-0">
-                        <h5 class="fw-semibold mb-2">Scopri gli articoli disponibili nel catalogo</h5>
-                        <p class="body-text-3 text-main-2 mb-0">Esplora i prodotti oppure contattaci per maggiori informazioni.</p>
+                        <h5 class="fw-semibold mb-2">Continua a esplorare il catalogo</h5>
+                        <p class="body-text-3 text-main-2 mb-0">Consulta il catalogo completo o contattaci per informazioni.</p>
                     </div>
                 </div>
                 <div class="ks-home-wide-promo-actions d-flex align-items-center gap-2">

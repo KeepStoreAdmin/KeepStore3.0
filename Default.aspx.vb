@@ -213,7 +213,10 @@ Partial Public Class _Default
         litHomePageTitle.Text = pageTitle
         litHomeCompanyName.Text = brandName
         litHomeCompanyDescription.Text = businessDescription
-        HomeTrustSection.Visible = Not String.IsNullOrWhiteSpace(businessDescription)
+        litHomeIntroName.Text = brandName
+        litHomeIntroDescription.Text = If(String.IsNullOrWhiteSpace(businessDescription),
+                                          "Esplora il catalogo e trova quello che cerchi.", businessDescription)
+        HomeTrustSection.Visible = Not String.IsNullOrWhiteSpace(businessDescription) AndAlso Not HomeIntroSection.Visible
 
         Dim logoFileName As String = Convert.ToString(tenant.LogoFileName).Trim()
         If logoFileName <> "" AndAlso
@@ -277,9 +280,8 @@ Partial Public Class _Default
         Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If realSectors Is Nothing Then realSectors = New List(Of CatalogMenuSector)()
         Dim editorialSectors As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(realSectors)
-        Dim sectors As List(Of CatalogMenuSector) = realSectors
-        Dim sectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 12, sectors.GetRange(0, 12), sectors)
-        Dim heroSectorRows As List(Of CatalogMenuSector) = If(sectors.Count > 9, sectors.GetRange(0, 9), sectors)
+        Dim sectorRows As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(realSectors, 12)
+        Dim heroSectorRows As List(Of CatalogMenuSector) = editorialSectors
         rptHeroDepartments.DataSource = heroSectorRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHeroDepartments")
             rptHeroDepartments.DataBind()
@@ -293,7 +295,9 @@ Partial Public Class _Default
         End Using
         If HomeMainCategoriesSection IsNot Nothing Then
             HomeMainCategoriesSection.Visible = (sectorRows.Count > 0)
+            HomeMainCategoriesSection.Attributes("data-ks-sector-count") = sectorRows.Count.ToString(CultureInfo.InvariantCulture)
         End If
+        HomeCategoriesCatalogLink.Visible = Not HomeIntroSection.Visible
 
         ' Editorial navigation and search examples use only the real enabled catalog taxonomy.
         Dim collectionCount As Integer = Math.Min(4, editorialSectors.Count)
@@ -381,7 +385,6 @@ Partial Public Class _Default
             HomeFeaturedProductsSection.Visible = Not IsTableEmpty(featuredRows)
         End If
 
-        If HomeWidePromoSection IsNot Nothing Then HomeWidePromoSection.Visible = True
         If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = (collectionRows.Count > 0)
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = (bottomRows.Count > 0)
 
@@ -413,6 +416,8 @@ Partial Public Class _Default
                                        Not IsTableEmpty(dealRows) OrElse
                                        Not IsTableEmpty(bestRows) OrElse Not IsTableEmpty(recentRows)
 
+        ApplyHomeComposition(HomePriceDisplayNote.Visible)
+
         If HomeLowerColumnsSection IsNot Nothing Then
             HomeLowerColumnsSection.Visible = False
         End If
@@ -435,7 +440,7 @@ Partial Public Class _Default
         End Try
     End Sub
 
-    Private Shared Function SelectHomeEditorialSectors(ByVal source As List(Of CatalogMenuSector)) As List(Of CatalogMenuSector)
+    Private Shared Function SelectHomeEditorialSectors(ByVal source As List(Of CatalogMenuSector), Optional ByVal limit As Integer = 9) As List(Of CatalogMenuSector)
         Dim result As New List(Of CatalogMenuSector)()
         If source Is Nothing Then Return result
 
@@ -445,7 +450,7 @@ Partial Public Class _Default
             Dim expectedUrl As String = "articoli.aspx?st=" & sector.Id.ToString(CultureInfo.InvariantCulture)
             If Not String.Equals(sector.DefaultUrl, expectedUrl, StringComparison.OrdinalIgnoreCase) Then Continue For
             If seenIds.Add(sector.Id) Then result.Add(sector)
-            If result.Count >= 9 Then Exit For
+            If result.Count >= limit Then Exit For
         Next
         Return result
     End Function
@@ -507,6 +512,7 @@ Partial Public Class _Default
         HeroSideWrap.Visible = (normalizedMode = "full")
         rptSideBanners.Visible = (normalizedMode = "full")
         HomeHeroSection.Visible = (normalizedMode <> "none")
+        HomeIntroSection.Visible = (normalizedMode = "none")
 
         If HomeHeroShell IsNot Nothing Then
             Dim sideClass As String = If(normalizedMode = "full", " ks-home-has-promos", " ks-home-no-promos")
@@ -525,6 +531,13 @@ Partial Public Class _Default
             HomeHeroSection.Attributes("class") = "ks-home-hero-area ks-home-hero-mode-" & normalizedMode
             HomeHeroSection.Attributes("data-ks-hero-mode") = normalizedMode
         End If
+    End Sub
+
+    Private Sub ApplyHomeComposition(ByVal hasProductSelections As Boolean)
+        ' An absent selection can also be a technical failure: do not claim an empty catalog.
+        HomeWidePromoSection.Visible = Not HomeIntroSection.Visible AndAlso Not hasProductSelections
+        If HomeIntroSection.Visible Then HomeTrustSection.Visible = False
+        ' Recently viewed also has a client lifecycle; leave its visibility unchanged.
     End Sub
 
     Private Sub BindThreeColumnZone(ByVal source As DataTable, ByVal leftRepeater As Repeater, ByVal centerRepeater As Repeater, ByVal rightRepeater As Repeater)
