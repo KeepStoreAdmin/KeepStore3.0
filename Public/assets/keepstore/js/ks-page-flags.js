@@ -13,6 +13,9 @@
   var COMPARE_KEY = 'ks_compare_products';
   var STYLE_ID = 'ks-page-flags-step135-style';
   var BOUND_ATTR = 'data-ks-suggest-bound';
+  var HEADER_SEARCH_ROOT = '[data-ks-search-form="desktop"],[data-ks-search-form="mobile"]';
+  var searchNavigationGeneration = 0;
+  var searchPopupSequence = 0;
 
   function onReady(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
@@ -205,14 +208,7 @@
     return /cerca|search|prodot|codic|ean|catalog/.test(raw);
   }
   function searchRoots() {
-    var out = [];
-    all(document, '.ks-search-shell,.form-search-product,form').forEach(function (node) {
-      var input = all(node, 'input[type="text"],input[type="search"],input:not([type])').filter(isSearchInput)[0];
-      if (!input) return;
-      var root = input.closest('.ks-search-shell,.form-search-product') || node;
-      if (root && out.indexOf(root) < 0) out.push(root);
-    });
-    return out;
+    return all(document, HEADER_SEARCH_ROOT).filter(function (root) { return !!inputFromRoot(root); });
   }
   function inputFromRoot(root) { return all(root, 'input[type="text"],input[type="search"],input:not([type])').filter(isSearchInput)[0] || null; }
   function selectFromRoot(root) { return q(root, 'select.dropdown_product_cat,select'); }
@@ -227,20 +223,21 @@
     var val = String(sel.value || '').trim();
     if (!val) return params;
     try {
-      var u = new URL(val, window.location.href);
+      var u = selectedCatalogBase(root);
       u.searchParams.forEach(function (v, k) { if (v) params[k] = v; });
     } catch (err) {}
     return params;
   }
   function selectedCatalogBase(root) {
     var sel = selectFromRoot(root);
-    if (!sel || !String(sel.value || '').trim()) return new URL('/articoli.aspx', window.location.href);
-    try { return new URL(sel.value, window.location.href); } catch (err) { return new URL('/articoli.aspx', window.location.href); }
+    var safe = sel && safeSearchUrl(sel.value, '/articoli.aspx');
+    return new URL(safe || '/articoli.aspx', window.location.href);
   }
   function buildSuggestUrl(root, query, limit, recent) {
     var u = new URL(SEARCH_ENDPOINT, window.location.href);
     var params = selectedUrlParams(root);
     Object.keys(params).forEach(function (k) { u.searchParams.set(k, params[k]); });
+    u.searchParams.delete('q');
     if (query) u.searchParams.set('q', query);
     if (recent) {
       var ids = readMergedRecent();
@@ -255,6 +252,7 @@
     var params = selectedUrlParams(root);
     Object.keys(params).forEach(function (k) { u.searchParams.set(k, params[k]); });
     var val = searchValue(root);
+    u.searchParams.delete('q');
     if (val) u.searchParams.set('q', val);
     return u;
   }
@@ -276,8 +274,90 @@
     return /^[a-z0-9][a-z0-9._\-\/]{2,47}$/i.test(value);
   }
   function state(root) {
-    if (!root.__ksSearch135) root.__ksSearch135 = { box: null, items: [], active: -1, hideTimer: 0, token: '', ctrl: null };
+    if (!root.__ksSearch135) root.__ksSearch135 = {
+      box: null, items: [], active: -1, generation: 0, intent: '', phase: 'closed',
+      renderedGeneration: -1, timer: 0, ctrl: null, lookupCtrl: null,
+      suggestPromise: null, submit: null, boundInput: null, boundSelect: null, composing: false
+    };
     return root.__ksSearch135;
+  }
+  function searchIntent(root) {
+    var select = selectFromRoot(root);
+    return searchValue(root) + '\n' + String(select && select.value || '').trim();
+  }
+  function currentSearch(root, generation, intent) {
+    var s = state(root), input = inputFromRoot(root);
+    return s.generation === generation && searchIntent(root) === intent &&
+      !!input && !input.disabled && (!s.boundInput || s.boundInput === input) &&
+      document.documentElement.contains(root);
+  }
+  function safeSearchUrl(value, path) {
+    if (typeof value !== 'string' || !value || /[\\\s\u0000-\u001f\u007f]/.test(value) ||
+        value.indexOf('//') === 0 || /(?:^|\/)(?:\.|%2e){1,2}(?:\/|$)/i.test(value.split(/[?#]/)[0])) return '';
+    try {
+      var url = new URL(value, window.location.href);
+      if (!/^https?:$/.test(url.protocol) || url.origin !== window.location.origin ||
+          url.username || url.password || url.hash || url.pathname.toLowerCase() !== path) return '';
+      if (path === '/articolo.aspx') {
+        var ids = [], variants = [];
+        url.searchParams.forEach(function (v, k) {
+          if (k.toLowerCase() === 'id') ids.push(v);
+          if (k.toLowerCase() === 'tcid') variants.push(v);
+        });
+        if (ids.length !== 1 || !/^[1-9]\d*$/.test(ids[0]) || Number(ids[0]) > 2147483647) return '';
+        if (variants.length > 1 || (variants.length &&
+            (!/^-?\d+$/.test(variants[0]) || Number(variants[0]) < -1 || Number(variants[0]) > 2147483647))) return '';
+      }
+      return url.toString();
+    } catch (err) { return ''; }
+  }
+  function searchItems(data) {
+    if (!data || data.ok !== true || !Array.isArray(data.suggestions)) return null;
+    var items = data.suggestions.slice(0, 10);
+    var valid = items.every(function (item) {
+      if (!item || typeof item.id !== 'number' || !Number.isInteger(item.id) || item.id <= 0 ||
+          typeof item.title !== 'string' || !item.title.trim()) return false;
+      var url = safeSearchUrl(item.url, '/articolo.aspx');
+      return !!url && Number(new URL(url).searchParams.get('id')) === item.id;
+    });
+    return valid ? items : null;
+  }
+  function abortSearch(ctrl) { try { if (ctrl && ctrl.abort) ctrl.abort(); } catch (err) {} }
+  function newSearchController() { return window.AbortController ? new window.AbortController() : null; }
+  function clearSearchSelection(root) {
+    var s = state(root), input = inputFromRoot(root);
+    s.items = [];
+    s.active = -1;
+    s.renderedGeneration = -1;
+    if (input) input.removeAttribute('aria-activedescendant');
+  }
+  function invalidateSearch(root, keepNavigation) {
+    var s = state(root), input = inputFromRoot(root);
+    s.generation += 1;
+    if (!keepNavigation) searchNavigationGeneration += 1;
+    window.clearTimeout(s.timer);
+    s.timer = 0;
+    abortSearch(s.ctrl);
+    abortSearch(s.lookupCtrl);
+    s.ctrl = s.lookupCtrl = null;
+    s.suggestPromise = s.submit = null;
+    s.intent = searchIntent(root);
+    s.phase = 'closed';
+    clearSearchSelection(root);
+    if (input) {
+      input.setAttribute('aria-expanded', 'false');
+      input.setAttribute('aria-busy', 'false');
+    }
+    if (s.box) {
+      s.box.innerHTML = emptySearchList(s.box);
+      s.box.classList.remove('is-open');
+      s.box.setAttribute('aria-hidden', 'true');
+      s.box.setAttribute('aria-busy', 'false');
+    }
+    return s.generation;
+  }
+  function emptySearchList(box) {
+    return '<ul class="ks-suggest-list" role="listbox" id="' + esc(box.id + '-list') + '" aria-label="Prodotti suggeriti" hidden></ul>';
   }
   function ensureSuggest(root) {
     var s = state(root);
@@ -286,10 +366,15 @@
     var old = q(root, '.ks-search-suggest');
     var box = old || document.createElement('div');
     box.className = 'ks-suggest ks-search-suggest';
+    if (!box.id) box.id = 'ks-header-search-popup-' + (++searchPopupSequence);
     box.setAttribute('aria-hidden', 'true');
-    box.setAttribute('role', 'listbox');
+    box.setAttribute('aria-live', 'polite');
+    box.innerHTML = emptySearchList(box);
     if (!old) root.appendChild(box);
     box.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    box.addEventListener('pointerdown', function (e) {
+      if (e.target.closest && e.target.closest('a')) e.preventDefault();
+    });
     s.box = box;
     return box;
   }
@@ -297,47 +382,81 @@
     var b = ensureSuggest(root);
     b.classList.add('is-open');
     b.setAttribute('aria-hidden', 'false');
+    var input = inputFromRoot(root);
+    if (input) input.setAttribute('aria-expanded', state(root).items.length ? 'true' : 'false');
   }
-  function hideSuggest(root) {
+  function hideSuggest(root, keepNavigation) {
     var s = state(root);
-    if (s.box) {
-      s.box.classList.remove('is-open');
-      s.box.setAttribute('aria-hidden', 'true');
-    }
-    s.active = -1;
+    if (s.phase !== 'closed' || s.timer || s.ctrl || s.lookupCtrl || s.submit) invalidateSearch(root, keepNavigation);
   }
   function setActive(root, idx) {
     var s = state(root), nodes = all(s.box, '.ks-suggest-item');
-    if (!nodes.length) { s.active = -1; return; }
+    if (s.phase !== 'results' || s.renderedGeneration !== s.generation ||
+        !currentSearch(root, s.generation, s.intent) || !nodes.length) { clearSearchSelection(root); return; }
     if (idx < 0) idx = nodes.length - 1;
     if (idx >= nodes.length) idx = 0;
     s.active = idx;
-    nodes.forEach(function (n, i) { n.classList.toggle('is-active', i === idx); });
+    nodes.forEach(function (n, i) {
+      n.classList.toggle('is-active', i === idx);
+      n.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+    });
+    var input = inputFromRoot(root);
+    if (input) input.setAttribute('aria-activedescendant', nodes[idx].id);
     try { nodes[idx].scrollIntoView({ block: 'nearest' }); } catch (err) {}
   }
-  function openActive(root, idx) {
+  function openActive(root, idx, generation) {
     var s = state(root), item = s.items[idx >= 0 ? idx : s.active];
-    if (!item || !item.url) return false;
-    window.location.href = item.url;
+    if (s.phase !== 'results' || s.renderedGeneration !== s.generation ||
+        (generation !== undefined && generation !== s.generation) ||
+        !currentSearch(root, s.generation, s.intent) || !item) return false;
+    var url = safeSearchUrl(item.url, '/articolo.aspx');
+    if (!url) return false;
+    invalidateSearch(root);
+    s.submit = { intent: s.intent, generation: s.generation, navigation: searchNavigationGeneration, finished: true };
+    window.location.href = url;
     return true;
   }
   function priceText(value) { return value ? esc(value) : ''; }
-  function renderSuggestMessage(root, message) {
-    var box = ensureSuggest(root);
-    box.innerHTML = '<div class="ks-suggest-empty">' + esc(message) + '</div>';
+  function renderSuggestMessage(root, message, phase) {
+    var s = state(root), box = ensureSuggest(root), input = inputFromRoot(root);
+    clearSearchSelection(root);
+    s.phase = phase || 'error';
+    var pending = s.phase === 'pending';
+    box.setAttribute('aria-busy', pending ? 'true' : 'false');
+    if (input) input.setAttribute('aria-busy', pending ? 'true' : 'false');
+    box.innerHTML = '<div class="ks-suggest-empty" role="status">' + esc(message) +
+      ' <a class="ks-suggest-catalog" href="' + esc(buildCatalogUrl(root).toString()) + '">Vai al catalogo</a></div>' +
+      emptySearchList(box);
+    var generation = s.generation, intent = s.intent;
+    q(box, '.ks-suggest-catalog').addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!currentSearch(root, generation, intent)) return;
+      var url = buildCatalogUrl(root).toString();
+      invalidateSearch(root);
+      window.location.href = url;
+    });
     showSuggest(root);
   }
   function renderSuggest(root, data) {
-    var s = state(root), box = ensureSuggest(root), items = data && data.suggestions ? data.suggestions.slice(0, 10) : [];
+    var s = state(root), box = ensureSuggest(root), items = searchItems(data);
+    if (items === null) {
+      renderSuggestMessage(root, 'Suggerimenti non disponibili. Premi Invio per cercare nel catalogo.', 'invalid');
+      return false;
+    }
     s.items = items;
     s.active = -1;
     if (!items.length) {
-      box.innerHTML = '<div class="ks-suggest-empty">Nessun suggerimento disponibile. Premi Invio per cercare nel catalogo.</div>';
-      showSuggest(root);
-      return;
+      renderSuggestMessage(root, 'Nessun suggerimento disponibile. Premi Invio per cercare nel catalogo.', 'empty');
+      return true;
     }
+    s.phase = 'results';
+    s.renderedGeneration = s.generation;
+    box.setAttribute('aria-busy', 'false');
+    var input = inputFromRoot(root);
+    if (input) input.setAttribute('aria-busy', 'false');
     var head = data && data.recent ? 'Articoli recenti' : 'Suggerimenti catalogo';
-    var html = ['<div class="ks-suggest-head"><span>' + esc(head) + '</span><span>Invio: catalogo</span></div><ul class="ks-suggest-list">'];
+    var html = ['<div class="ks-suggest-head"><span>' + esc(head) + '</span><span>Invio: catalogo</span></div><ul class="ks-suggest-list" role="listbox" aria-label="Prodotti suggeriti" id="' + esc(box.id + '-list') + '">'];
     items.forEach(function (item, i) {
       var img = item.image || item.image_fallback || item.imageUrl || '';
       var meta = [];
@@ -346,37 +465,50 @@
       if (item.code) meta.push('<span>Cod. ' + esc(item.code) + '</span>');
       if (item.ean) meta.push('<span>EAN ' + esc(item.ean) + '</span>');
       if (item.matchKind) meta.push('<span>' + esc(item.matchKind) + '</span>');
-      html.push('<li><a class="ks-suggest-item" href="' + esc(item.url || '#') + '" data-idx="' + i + '">' +
+      html.push('<li role="presentation"><a class="ks-suggest-item" role="option" aria-selected="false" tabindex="-1" id="' + esc(box.id + '-option-' + i) + '" href="' + esc(safeSearchUrl(item.url, '/articolo.aspx')) + '" data-idx="' + i + '">' +
         '<span class="ks-suggest-thumb">' + (img ? '<img src="' + esc(img) + '" alt="' + esc(item.title || '') + '">' : '') + '</span>' +
         '<span class="ks-suggest-meta"><span class="ks-suggest-title">' + esc(item.title || '') + '</span><span class="ks-suggest-sub">' + meta.join('') + '</span></span>' +
         '<span class="ks-suggest-price">' + priceText(item.price) + '</span></a></li>');
     });
     html.push('</ul><div class="ks-suggest-foot"><span>Ricerca per codice, EAN, marca, categoria e compatibilita.</span><span>' + esc(items.length) + ' risultati</span></div>');
     box.innerHTML = html.join('');
+    var generation = s.generation;
     all(box, '.ks-suggest-item').forEach(function (a) {
-      a.addEventListener('mouseenter', function () { setActive(root, parseInt(a.getAttribute('data-idx') || '-1', 10)); });
-      a.addEventListener('click', function (e) { e.preventDefault(); window.location.href = a.getAttribute('href') || '#'; });
+      a.addEventListener('mouseenter', function () {
+        if (generation === s.generation) setActive(root, parseInt(a.getAttribute('data-idx') || '-1', 10));
+      });
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openActive(root, parseInt(a.getAttribute('data-idx'), 10), generation);
+      });
     });
     showSuggest(root);
+    return true;
   }
-  function requestSuggest(root, forceRecent) {
-    var query = searchValue(root), recent = forceRecent || query.length < 2, url = buildSuggestUrl(root, query, recent ? 8 : 10, recent), s = state(root);
-    s.token = url;
-    if (s.ctrl && s.ctrl.abort) { try { s.ctrl.abort(); } catch (err) {} }
-    if (window.AbortController) s.ctrl = new AbortController();
-    return fetchJsonTimed(url, SUGGEST_TIMEOUT_MS, s.ctrl).then(function (data) {
-      if (s.token !== url) return;
-      if (!data || data.ok === false) {
-        if (window.console && data && data.error) console.warn('[KeepStore search]', data.error);
-        renderSuggestMessage(root, 'Suggerimenti non disponibili. Premi Invio per cercare nel catalogo.');
-        return;
-      }
-      renderSuggest(root, data);
+  function requestSuggest(root, forceRecent, generation) {
+    var s = state(root);
+    if (generation === undefined) generation = invalidateSearch(root);
+    var intent = s.intent;
+    if (!currentSearch(root, generation, intent)) return Promise.resolve(false);
+    window.clearTimeout(s.timer);
+    s.timer = 0;
+    var query = searchValue(root), recent = forceRecent || query.length < 2;
+    renderSuggestMessage(root, 'Ricerca in corso. Puoi premere Invio per cercare nel catalogo.', 'pending');
+    s.ctrl = newSearchController();
+    s.suggestPromise = fetchJsonTimed(buildSuggestUrl(root, query, recent ? 8 : 10, recent), SUGGEST_TIMEOUT_MS, s.ctrl).then(function (data) {
+      if (!currentSearch(root, generation, intent)) return false;
+      s.ctrl = null;
+      return renderSuggest(root, data);
     }).catch(function (err) {
-      if (err && err.name === 'AbortError') return;
-      if (window.console) console.warn('[KeepStore search]', err && err.message ? err.message : err);
-      renderSuggestMessage(root, 'Errore temporaneo nella suggest. Premi Invio per cercare nel catalogo.');
+      if (!currentSearch(root, generation, intent)) return false;
+      s.ctrl = null;
+      var timeout = err && err.message === 'timeout';
+      renderSuggestMessage(root, timeout ? 'Ricerca non completata in tempo. Premi Invio per cercare nel catalogo.' :
+        'Errore temporaneo nella suggest. Premi Invio per cercare nel catalogo.', timeout ? 'timeout' : 'error');
+      return false;
     });
+    return s.suggestPromise;
   }
   function rankKey(seed) {
     var h = 0, i, chr;
@@ -391,60 +523,105 @@
     try { return JSON.parse(sessionStorage.getItem(RANK_PREFIX + key) || 'null'); } catch (err) { return null; }
   }
   function resolveSearch(root) {
-    var fallback = buildCatalogUrl(root), query = searchValue(root), url = '';
-    hideSuggest(root);
+    var s = state(root), intent = searchIntent(root), previous = s.submit;
+    if (previous && previous.intent === intent && previous.generation === s.generation &&
+        previous.navigation === searchNavigationGeneration) return previous.promise;
+    var generation = invalidateSearch(root), navigation = searchNavigationGeneration;
+    var fallback = buildCatalogUrl(root).toString(), query = searchValue(root);
+    var submission = { intent: s.intent, generation: generation, navigation: navigation, finished: false, promise: null };
+    s.submit = submission;
+    function navigate(url) {
+      if (s.submit !== submission || submission.finished || navigation !== searchNavigationGeneration ||
+          !currentSearch(root, generation, intent)) return;
+      submission.finished = true;
+      s.lookupCtrl = null;
+      window.location.href = url;
+    }
     if (!query || !looksLikeDirectCode(query)) {
-      window.location.href = fallback.toString();
+      navigate(fallback);
       return;
     }
-    url = buildSuggestUrl(root, query, 3, false);
-    fetchJsonTimed(url, SUBMIT_LOOKUP_TIMEOUT_MS).then(function (data) {
-      if (data && data.strong && data.strong.canRedirect && data.strong.redirectUrl) {
-        window.location.href = data.strong.redirectUrl;
-        return;
+    s.lookupCtrl = newSearchController();
+    submission.promise = fetchJsonTimed(buildSuggestUrl(root, query, 3, false), SUBMIT_LOOKUP_TIMEOUT_MS, s.lookupCtrl).then(function (data) {
+      var items = searchItems(data), target = fallback;
+      if (items !== null) {
+        var strong = data.strong, direct = strong && strong.canRedirect === true && safeSearchUrl(strong.redirectUrl, '/articolo.aspx');
+        if (direct && items.some(function (item) { return safeSearchUrl(item.url, '/articolo.aspx') === direct; })) target = direct;
+        else target = safeSearchUrl(data.catalogUrl, '/articoli.aspx') || fallback;
       }
-      if (data && data.catalogUrl) {
-        try { fallback = new URL(data.catalogUrl, window.location.href); } catch (err) {}
+      navigate(target);
+    }).catch(function () { navigate(fallback); });
+    return submission.promise;
+  }
+  function queueSearch(root, recent) {
+    var generation = invalidateSearch(root), s = state(root);
+    renderSuggestMessage(root, 'Ricerca in corso. Puoi premere Invio per cercare nel catalogo.', 'pending');
+    s.timer = window.setTimeout(function () { requestSuggest(root, recent, generation); }, 220);
+  }
+  function moveSearchSelection(root, step) {
+    var s = state(root);
+    if (s.phase === 'results') { setActive(root, s.active < 0 ? (step > 0 ? 0 : -1) : s.active + step); return; }
+    if (s.phase !== 'closed' && s.phase !== 'pending') return;
+    var promise = s.suggestPromise || requestSuggest(root, searchValue(root).length < 2, s.timer ? s.generation : undefined);
+    var generation = s.generation, intent = s.intent;
+    promise.then(function (valid) {
+      if (valid && currentSearch(root, generation, intent) && s.phase === 'results') {
+        setActive(root, s.active < 0 ? (step > 0 ? 0 : -1) : s.active + step);
       }
-      window.location.href = fallback.toString();
-    }).catch(function () { window.location.href = fallback.toString(); });
+    });
   }
   function bindHeaderSearch() {
     ensureStepStyle();
     searchRoots().forEach(function (root) {
-      if (root.getAttribute(BOUND_ATTR) === '135') return;
       root.setAttribute(BOUND_ATTR, '135');
       ensureSuggest(root);
-      var input = inputFromRoot(root), timer = 0;
+      var s = state(root), input = inputFromRoot(root);
+      if (input) input.setAttribute('aria-controls', s.box.id + '-list');
       resizeSearchCategory(root);
       var select = selectFromRoot(root);
-      if (select) select.addEventListener('change', function () { resizeSearchCategory(root); });
-      function queue(recent) {
-        clearTimeout(timer);
-        timer = setTimeout(function () { requestSuggest(root, recent); }, 220);
+      if (s.boundSelect !== select) {
+        if (s.boundSelect) invalidateSearch(root);
+        s.boundSelect = select;
+        if (select) select.addEventListener('change', function () {
+          if (selectFromRoot(root) !== select) return;
+          resizeSearchCategory(root);
+          if (searchValue(root) || document.activeElement === inputFromRoot(root)) queueSearch(root, false);
+          else invalidateSearch(root);
+        });
       }
-      if (input) {
+      if (input && s.boundInput !== input) {
+        if (s.boundInput) invalidateSearch(root);
+        s.boundInput = input;
         input.setAttribute('autocomplete', 'off');
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-haspopup', 'listbox');
         input.setAttribute('aria-autocomplete', 'list');
-        input.addEventListener('focus', function () { queue(true); });
-        input.addEventListener('input', function () { queue(false); });
-        input.addEventListener('blur', function () {
-          var s = state(root);
-          clearTimeout(s.hideTimer);
-          s.hideTimer = setTimeout(function () { hideSuggest(root); }, 190);
+        input.setAttribute('aria-controls', s.box.id + '-list');
+        input.setAttribute('aria-expanded', 'false');
+        input.addEventListener('focus', function () { if (inputFromRoot(root) === input) queueSearch(root, true); });
+        input.addEventListener('input', function (e) {
+          if (inputFromRoot(root) !== input) return;
+          if (s.composing || e.isComposing) invalidateSearch(root);
+          else queueSearch(root, false);
+        });
+        input.addEventListener('compositionstart', function () { s.composing = true; invalidateSearch(root); });
+        input.addEventListener('compositionend', function () { s.composing = false; queueSearch(root, false); });
+        input.addEventListener('blur', function (e) {
+          // Moving to the same search button must not turn Enter + click into two lookups.
+          if (s.submit && e.relatedTarget && buttonsFromRoot(root).indexOf(e.relatedTarget) >= 0) return;
+          hideSuggest(root);
         });
         input.addEventListener('keydown', function (e) {
-          var s = state(root), open = s.box && s.box.classList.contains('is-open');
+          if (inputFromRoot(root) !== input || e.isComposing || s.composing || e.keyCode === 229) return;
+          var open = s.box && s.box.classList.contains('is-open');
           if (e.key === 'ArrowDown') {
             e.preventDefault();
-            if (!open) requestSuggest(root, searchValue(root).length < 2).then(function () { setActive(root, 0); });
-            else setActive(root, s.active + 1);
+            moveSearchSelection(root, 1);
             return;
           }
           if (e.key === 'ArrowUp') {
             e.preventDefault();
-            if (!open) requestSuggest(root, searchValue(root).length < 2).then(function () { setActive(root, -1); });
-            else setActive(root, s.active - 1);
+            moveSearchSelection(root, -1);
             return;
           }
           if (e.key === 'Escape') { e.preventDefault(); hideSuggest(root); return; }
@@ -456,6 +633,8 @@
         }, true);
       }
       buttonsFromRoot(root).forEach(function (button) {
+        if (button.__ksHeaderSearchRoot === root) return;
+        button.__ksHeaderSearchRoot = root;
         button.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
@@ -471,19 +650,26 @@
       var target = e.target;
       var active = document.activeElement;
       var submitter = e.submitter || null;
-      var root = submitter && submitter.closest ? submitter.closest('.ks-search-shell,.form-search-product') : null;
-      if (!root && active && active.closest) root = active.closest('.ks-search-shell,.form-search-product');
-      if (!root && target && target.matches && target.matches('.ks-search-shell,.form-search-product')) root = target;
+      var root = submitter && submitter.closest ? submitter.closest(HEADER_SEARCH_ROOT) : null;
+      if (submitter && !root) return;
+      if (!root && active && active.closest) root = active.closest(HEADER_SEARCH_ROOT);
+      if (!root && target && target.matches && target.matches(HEADER_SEARCH_ROOT)) root = target;
       if (!root || !inputFromRoot(root)) return;
+      var form = inputFromRoot(root).form || root.closest('form');
+      if (target !== form && target !== root) return;
       e.preventDefault();
       e.stopPropagation();
       resolveSearch(root);
     }, true);
-    document.addEventListener('click', function (e) {
+    function closeOutside(e) {
       searchRoots().forEach(function (root) {
-        if (!root.contains(e.target)) hideSuggest(root);
+        if (!root.contains(e.target)) hideSuggest(root, true);
       });
-    });
+    }
+    document.addEventListener('pointerdown', closeOutside, true);
+    document.addEventListener('mousedown', closeOutside, true);
+    document.addEventListener('click', closeOutside);
+    document.addEventListener('focusin', closeOutside);
   }
 
   function bindCatalogNavigation() {
