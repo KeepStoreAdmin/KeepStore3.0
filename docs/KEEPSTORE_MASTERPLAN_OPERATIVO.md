@@ -1,13 +1,27 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-16
+Aggiornato: 2026-10-18
 
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-### ACCOUNT-SESSION-REVOCATION-1A — KS-C02 / APAT-F01 MEDIUM, A tecnico locale
+### ACCOUNT-SESSION-REVOCATION-1A — PR #359, CHIUSO A / SOURCE INTEGRATION ONLY
+
+Decisione PO 2026-10-18: integrare #359 in `frontend-rebuild` esclusivamente FF-only, senza chiuderla come PR non integrata. Review indipendente A acquisita; base stabile verificata `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, runtime originario revisionato `be1033112bd5ad3acce4d21480800da612fe59e2`, un commit figlio diretto della base. Aggiunto esclusivamente un commit docs-only sui tre manuali canonici; `Page.master.vb` resta identico alla candidata. Identita del commit documentale/finale e stato MERGED/CLOSED si leggono dal Git/PR reali, evitando un commit ricorsivo per auto-inserire lo SHA.
+
+**Waiver PO: SOURCE INTEGRATION ONLY. Smoke IIS 0/8 NON ESEGUITO**, per il blocco permessi `web.config`; mai PASS. L'analisi read-only successiva non ha eseguito HTTP e non ha installato la candidata su Integration: runtime installato e prerequisiti IIS/DB non certificavano #359. La deroga consente soltanto l'integrazione sorgente, non un deploy, una prova operativa o una certificazione account. Login/password reali, pagine account complete, driver/host reali, browser, IIS autenticato e produzione restano NON CERTIFICATI; KS-C02 resta PARZIALE.
+
+Evidenze gia acquisite, riusate senza ripetizione: baseline immutabile 6/6 PASS; suite candidata System.Web 207/207 PASS su 42 richieste in-process; precompile safe ASP.NET Framework64 4.8 PASS; review A. Provider MySql/host e osservatori di scrittura erano sintetici; nessuna prova live aggiunta. Nuove verifiche limitate a SHA/parent/manifest, diff documentale, segreti nelle aggiunte, FF e preservazione dello stato locale.
+
+Preflight auto-deploy: GitHub verificato con 0 workflow, 0 webhook e 0 deployment registrati, Pages assente, nessuno status/check sul commit; nessun hook locale attivo rilevato. Nessun automatismo di deploy rilevato nel perimetro verificato. Integrazione tramite push normale; nessun merge commit, rebase, reset, clean, force push o mutazione di altre PR. `main` e `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`; `web.config` locale, quattro tracked deletions, 54 untracked e staging preservati con inventario/hash. Nessuna operazione su DB/IIS, runtime Integration, connessioni, credenziali, produzione, ordini, pagamenti o e-mail.
+
+### SECURITY-DB-CREDENTIALS-HARDENING-1A — PIANIFICATO / NON AVVIATO
+
+Decisione PO: progettare nella fase conclusiva sicurezza/SEO account dedicati per sito, privilegi minimi verificati, protezione dei segreti e migrazione graduale con backup, rollback e test. Taikun e Webaffare mantengono database condiviso e isolamento applicativo delle aziende. La selezione del database nella connection string non riduce da sola i privilegi dell'account. Nessun intervento strutturale durante i micro-task funzionali; nessuna modifica alle connessioni, a `EntropicConnectionString`, utenze/privilegi o configurazioni da questo closeout. Credenziali gia esposte da ruotare con priorita anticipata e autorizzazione separata. Pianificazione distinta dalla deroga #359, senza autorizzazione operativa implicita; nessun task successivo avviato.
+
+### Checkpoint precedente — ACCOUNT-SESSION-REVOCATION-1A, A tecnico locale prima di review/deroga
 
 Mandato PO 2026-10-16, base esatta #358 `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, branch `task/account-session-revocation-1a`. #358 MERGED/CLOSED verificata, review A e smoke IIS 28/28 acquisito; #357 resta chiusa con 19/19 e coperture residue accettate. I checkpoint sottostanti conservano lo stato storico precedente al merge; non riaprono i task.
 

@@ -1,6 +1,6 @@
 # KeepStore — PRODUCT_ROADMAP
 
-Unica roadmap di prodotto vigente, 2026-10-15. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
+Unica roadmap di prodotto vigente, 2026-10-18. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
 
 ## Priorita e lettura degli stati
 
@@ -60,7 +60,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C02 — Account, autenticazione e handoff gestionale affidabili
 
-- Checkpoint PO 2026-10-16: #358 F01 conferma registrazione MERGED/CLOSED, stable `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, review A e smoke IIS 28/28 acquisito; precedenti 86 scenari / 1.352 assert isolati conservati. #357 F02 owner/azienda e F03 binding documenti chiusi (19/19 con limiti accettati). Unico microfix attivo `ACCOUNT-SESSION-REVOCATION-1A` / APAT-F01 MEDIUM: A tecnico locale, rivalidazione centrale in Init anche per sessioni marcate, revoca prima degli eventi POST e nessuna cache positiva cross-request. Solo runtime `Page.master.vb`; preflight Defender e scansioni negative, 6 assert baseline + 207 candidata System.Web isolati e precompile safe PASS. Consegna PR DRAFT per review indipendente; IIS NON ESEGUITO, nessun merge. Nessuna compromissione di altri owner dimostrata; KS-C02 resta PARZIALE, nessuna pubblicazione produzione.
+- Checkpoint PO 2026-10-18: #359 `ACCOUNT-SESSION-REVOCATION-1A` / APAT-F01 MEDIUM **CHIUSO A / SOURCE INTEGRATION ONLY**, FF-only da #358 `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, runtime revisionato `be1033112bd5ad3acce4d21480800da612fe59e2` invariato e solo chiusura documentale aggiunta; SHA finale dal Git reale. Review indipendente A, baseline 6/6, candidata System.Web 207/207 e precompile safe PASS gia acquisiti, senza ripetizione. **Smoke IIS 0/8 NON ESEGUITO** per permessi `web.config`; deroga esplicita PO alla sola integrazione source, nessun PASS IIS o deploy. #358 mantiene F01 chiuso con 28/28, #357 F02/F03 con 19/19 e limiti accettati. Nessuna compromissione di altri owner dimostrata; KS-C02 resta PARZIALE e autenticato reale non certificato.
 - Fonte/data: S3/S4, 2026-10-15. P0 sicurezza, P1 percorso account; PARZIALE / rischi DA VERIFICARE prima del rilascio.
 - CURRENT: login contestuale, reset tokenizzato, profilo/indirizzi/documenti/email con task integrati. Debito storico password legacy in chiaro/hash migration e copertura anti-CSRF auth non dichiarati risolti dal reset tokenizzato; verificare stato corrente e impatto, non rinviarli come dettaglio estetico. Account sintetici non certificano autenticato reale.
 - TARGET/AC del batch proposto `ACCOUNT-JOURNEY-READINESS-1A`: (1) accesso/ritorno allo shopping e logout coerenti; (2) profilo/indirizzi/documenti solo owner+azienda; (3) reset e conferme comprensibili senza segreti esposti. Sicurezza auth che impedisce rilascio richiede task/gate dedicato, non un fix implicito nello styling.
@@ -139,9 +139,15 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 - TARGET/AC del batch futuro `POST-CORE-MODULE-READINESS-1A`: (1) scegliere un solo modulo/outcome e dati autorevoli; (2) configurazione/pannello e dati operativi del dominio separati; (3) consensi/sicurezza/limiti/test tenant e rollback approvati. Integrazioni con rischi indipendenti diventano task separati, non un mega-batch.
 - Dipendenze/prove: Blueprint modulare e AI/search, audit specifico quando autorizzato; SEO tecnica indispensabile, HTTPS e correttezza commerciale restano P0, non rinviate insieme al marketing. Recesso digitale B2C, coupon/Groupon, abandoned-cart/privacy e altri requisiti storici restano tracciati nel Masterplan: non attivati o cancellati; rilevanza normativa/commerciale da riesaminare prima della release pertinente.
 
+### KS-H03 — Sicurezza credenziali database, pianificazione conclusiva
+
+- Decisione PO riconfermata 2026-10-18: `SECURITY-DB-CREDENTIALS-HARDENING-1A` **PIANIFICATO / NON AVVIATO**, per la fase conclusiva dedicata a sicurezza e SEO; nessun intervento strutturale alle connessioni durante i micro-task funzionali.
+- Perimetro futuro: account dedicati per sito, privilegi minimi verificati sul database necessario, protezione dei segreti e migrazione graduale con backup, rollback e test. Taikun e Webaffare mantengono il database condiviso e l'isolamento applicativo delle aziende; il solo database nella connection string non limita i privilegi dell'account.
+- Credenziali gia esposte: rotazione prioritaria anticipata, con autorizzazione separata; non rinviata automaticamente alla fase conclusiva. Nessuna connessione, credenziale, configurazione, utenza/privilegio DB o infrastruttura modificata da #359. Rischi bloccanti per il rilascio restano soggetti ai rispettivi gate.
+
 ## Decisione operativa corrente
 
-Checkpoint 2026-10-16: #353-#358 integrate, deroghe smoke #354/#355/#356 circoscritte; #357/#358 chiuse con i propri limiti acquisiti. Unico perimetro attivo autorizzato: KS-C02 `ACCOUNT-SESSION-REVOCATION-1A` / APAT-F01 MEDIUM, dalla base #358. Review PR e smoke autentico restano distinti dalle prove isolate; gli altri criteri account/sicurezza NON sono dichiarati completi. Nessun secondo task, merge, pubblicazione, accesso HTTP/IIS o DB reale impliciti.
+Checkpoint 2026-10-18: #353-#359 integrate; #359 chiusa A / SOURCE INTEGRATION ONLY con deroga PO specifica allo smoke IIS 0/8 NON ESEGUITO. Runtime revisionato invariato; nessuna certificazione account/sicurezza complessiva o pubblicazione. Nessun task runtime successivo autorizzato; hardening DB pianificato NON AVVIATO, rotazione credenziali esposte anticipabile solo con autorizzazione separata. Nessun accesso HTTP/IIS o DB reale implicito.
 
 ## Aggiornamento della roadmap
 

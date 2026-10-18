@@ -1,16 +1,16 @@
 # KeepStore — START_HERE
 
-Checkpoint breve: 2026-10-16. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
+Checkpoint breve: 2026-10-18. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
 
 ## Stato verificato e lavoro corrente
 
 - Repository: `KeepStoreAdmin/KeepStore3.0`; copia canonica `C:\KeepStoreWeb\KeepStore3.0\`; stable `frontend-rebuild`.
-- Ultimo stable locale/GitHub verificato: `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, PR #358 MERGED/CLOSED, parent diretto #357 `401d57a0dc8fd004d00f4ba2952f2f613d12b2b0`. F01 conferma registrazione chiuso con review A e smoke IIS 28/28 acquisito; F02 owner/azienda e F03 binding documenti chiusi (#357, 19/19 nel perimetro acquisito, coperture residue accettate dal PO). Nessuna pubblicazione produzione attestata. #354/#355/#356 conservano le rispettive deroghe allo smoke Integration NON ESEGUITO, senza estensioni a KS-C02.
-- `main` / `origin/main` protetti: `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Sincronizzazione locale post #352 A; staging vuoto, web.config/quattro cancellazioni/54 untracked protetti. Ricontrollare gli stati variabili alla ripartenza, non assumere eterni questi conteggi.
+- Ultima integrazione source: PR #359 su `frontend-rebuild`, FF-only dalla base #358 `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`; runtime originario `be1033112bd5ad3acce4d21480800da612fe59e2`, seguito dal solo commit documentale di chiusura. SHA finale e stato MERGED/CLOSED da Git, senza commit ricorsivi per inserire il proprio SHA. Review indipendente A e deroga PO 2026-10-18: **SOURCE INTEGRATION ONLY**. #358 conserva review A/smoke IIS 28/28; #357 conserva 19/19 e limiti accettati. Nessuna pubblicazione produzione attestata; le deroghe #354/#355/#356 non si estendono a KS-C02.
+- `main` / `origin/main` protetti: `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Sincronizzazione locale post #359 A; staging vuoto, web.config/quattro cancellazioni/54 untracked protetti. Ricontrollare gli stati variabili alla ripartenza, non assumere eterni questi conteggi.
 - Ultimo task performance chiuso: `HOME-DB-OPEN-LATENCY-1A`, A / INTEGRATED (#352). #351 diagnostica anch'essa integrata. Review A e smoke Integration 6/6 PASS, rollback PASS; dettaglio/limiti nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md).
 - Ultimo batch shopping chiuso: `SHOPPING-MOBILE-EXCELLENCE-1A`, #355 A / INTEGRATED con deroga smoke Integration; review REV1 A, F01 focus risolto e prove fixture preservate. #354 e le sue prove rimangono chiuse nello storico.
-- Task corrente: `ACCOUNT-SESSION-REVOCATION-1A`, KS-C02 / APAT-F01 MEDIUM, A tecnico locale sul branch `task/account-session-revocation-1a`, base esatta #358; consegna PR DRAFT, non integrata. Solo `Page.master.vb`: rivalidazione account/azienda/owner e flag attivi in Init anche con marker presente, revoca terminale prima dei POST, riuso nella sola request, zero nuove query auth agli anonimi. Defender attivo/aggiornato e scansione ufficiale negativa; runner originale invariato, sola fixture temporanea corretta per API System.Web e cleanup. 6 controlli baseline e 207 candidata PASS con lifecycle System.Web isolato; precompile safe PASS. Review PR e smoke IIS restano pendenti/NON ESEGUITO; evidenze e limiti nel Masterplan. KS-C02 complessivo NON COMPLETATO, nessun accesso a proprietari estranei dimostrato.
-- Prossimo task runtime autorizzato oltre al perimetro corrente: **NESSUNO**. Review indipendente e autorizzazione separata restano necessarie; nessuna autorizzazione a HTTP/IIS, DB reale, ordini, gateway o server per questo microfix.
+- Ultimo micro-task account: `ACCOUNT-SESSION-REVOCATION-1A`, KS-C02 / APAT-F01 MEDIUM, **CHIUSO A / SOURCE INTEGRATION ONLY** (#359). Runtime invariato rispetto allo SHA revisionato: solo `Page.master.vb`, rivalidazione in Init e revoca terminale prima dei POST. Review indipendente A; baseline 6/6, suite System.Web 207/207 e precompile safe PASS gia acquisiti, non ripetuti. **Smoke IIS 0/8 NON ESEGUITO**, blocco permessi `web.config`, deroga esplicita PO per la sola integrazione source. Nessun PASS IIS, browser, login reale, deploy o certificazione KS-C02 complessiva; evidenze/limiti nel Masterplan.
+- Prossimo task runtime autorizzato: **NESSUNO**. Deroga #359 circoscritta alla source integration; eventuali prove HTTP/IIS con fixture e target verificati richiedono autorizzazione separata. Nessun DB reale, ordine, gateway, server o altro task avviato.
 - #356 `ORDER-JOURNEY-CONTINUITY-1A`: MERGED/CLOSED, due commit lineari da #355 e deroga PO specifica allo smoke Integration NON ESEGUITO. Le prove REV1 (95 test mirati, precompile safe, Session/contratti invariati) restano acquisite, non attestano E2E ordine.
 - PR aperte preesistenti rilevate: #129, #170, #171, #191; non sono task attivi o nuove autorizzazioni. #170/#171 riguardano diagnosi post-ordine storica, #191 coupon differiti, #129 chiusura reset storica: riconciliare solo se diventano pertinenti, senza cleanup automatico.
 
@@ -18,9 +18,9 @@ Checkpoint breve: 2026-10-16. Parola chiave: **KS-RIPRENDI**. Metodo e autorita:
 
 | Ambito | Evidenza acquisita | Cosa NON certifica |
 | --- | --- | --- |
-| Source integrated #351/#352 | SHA stabile verificato, locale allineato | File pubblicati su tutte le istanze IIS |
-| Integration tested #352 | Sei GET, due tenant, una Open e dieci Fill nei loader strumentati; TTFB warm medio 5.470,462 / 5.498,777 ms | Benchmark simultaneo A/B, parita commerciale completa con baseline storica, browser visuale o ogni tenant |
-| Production deployed/verified | Per #352 DA VERIFICARE; nessun deploy da questa riconciliazione | Non dedurre da Git, smoke locale o cartella canonica |
+| Source integrated #359 | SHA stabile verificato, locale allineato | File pubblicati su tutte le istanze IIS |
+| Integration tested #352 (storico; #359: 0/8 NON ESEGUITO, deroga PO) | Sei GET, due tenant, una Open e dieci Fill nei loader strumentati; TTFB warm medio 5.470,462 / 5.498,777 ms | Benchmark simultaneo A/B, parita commerciale completa con baseline storica, browser visuale o ogni tenant |
+| Production deployed/verified | #359 NON DEPLOYATA da questo closeout; #352 DA VERIFICARE | Non dedurre da Git, smoke locale o cartella canonica |
 
 Dipendenza release HOME: `App_Code/HomeServerStageTiming.vb` della #351, oltre a `Default.aspx.vb`; diagnostica disattivata per default. Copiare il solo file modificato quando manca l'helper puo rompere la compilazione. Pacchetto reale sempre dal delta fra commit installato e release autorizzata, non da questa lista esemplificativa.
 
@@ -34,6 +34,8 @@ Dipendenza release HOME: `App_Code/HomeServerStageTiming.vb` della #351, oltre a
 - PayPal Orders v2: checkpoint 2026-09-23 LIVE CONFIGURED / ENABLED e OAuth verificato; pagamento reale end-to-end NON ATTESTATO, non LIVE VERIFIED. BancaSella ha gate proprio. Stato documento/ordine non significa incasso.
 - Rollout carrello persistente per tenant non certificato globalmente: foundation DB, configurazioni, file aggiunti App_Code, privacy/cleanup e rollback nel runbook. Nessun DDL implicito.
 - Sicurezza auth/hash legacy, replay Session/InProc, verifica stock residua, consumer e-mail esterno e provisioning degli altri tenant sono rischi/gate da valutare prima del rilascio secondo roadmap, non tutti rinviabili come polish. Non dichiarare HOME/catalogo/PDP/checkout/account/ecommerce completi.
+
+- `SECURITY-DB-CREDENTIALS-HARDENING-1A`: **PIANIFICATO / NON AVVIATO**, fase conclusiva sicurezza/SEO. Account dedicati per sito, privilegi minimi verificati, protezione segreti e migrazione graduale con backup/rollback/test; Taikun e Webaffare mantengono database condiviso e isolamento applicativo aziende. Credenziali gia esposte: rotazione prioritaria anticipata con autorizzazione separata. Nessun intervento strutturale alle connessioni nei micro-task funzionali.
 
 ## Ambienti: usare lo storico senza rifare discovery generica
 
