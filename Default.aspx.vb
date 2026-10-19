@@ -4,7 +4,6 @@ Imports System.Configuration
 Imports System.Data
 Imports System.Globalization
 Imports System.IO
-Imports System.Net
 Imports System.Text
 Imports System.Web
 Imports System.Web.Hosting
@@ -1885,10 +1884,6 @@ Partial Public Class _Default
                 Continue For
             End If
 
-            If Not IsApprovedBrandAsset(row("img")) Then
-                Continue For
-            End If
-
             Dim imageUrl As String = ResolveBrandImage(row("img"))
             If String.IsNullOrWhiteSpace(imageUrl) Then
                 Continue For
@@ -2202,38 +2197,6 @@ Partial Public Class _Default
         Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, candidate)
     End Function
 
-    Private Function RuntimeUrlExistsCached(ByVal absoluteUrl As String) As Boolean
-        If String.IsNullOrWhiteSpace(absoluteUrl) Then
-            Return False
-        End If
-
-        Dim cacheKey As String = "ks-runtime-asset:" & absoluteUrl.ToLowerInvariant()
-        Dim cached As Object = HttpRuntime.Cache(cacheKey)
-        If cached IsNot Nothing Then
-            Return Convert.ToBoolean(cached)
-        End If
-
-        Dim exists As Boolean = False
-        Try
-            Dim request As HttpWebRequest = CType(WebRequest.Create(absoluteUrl), HttpWebRequest)
-            request.Method = "HEAD"
-            request.Timeout = 1500
-            request.ReadWriteTimeout = 1500
-            request.AllowAutoRedirect = True
-
-            Using HomeServerStageTiming.Measure(_homeTiming, "asset.head.response")
-                Using response As HttpWebResponse = CType(request.GetResponse(), HttpWebResponse)
-                    exists = (response.StatusCode = HttpStatusCode.OK)
-                End Using
-            End Using
-        Catch
-            exists = False
-        End Try
-
-        HttpRuntime.Cache.Insert(cacheKey, exists, Nothing, DateTime.UtcNow.AddMinutes(60), System.Web.Caching.Cache.NoSlidingExpiration)
-        Return exists
-    End Function
-
     Protected Function ProductImageThumb(ByVal value As Object) As String
         Return ThemeManager.ProductThumbnailImageUrl(value)
     End Function
@@ -2247,28 +2210,44 @@ Partial Public Class _Default
     End Function
 
     Private Function ResolveBrandImage(ByVal value As Object) As String
-        Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return String.Empty
-        fileName = fileName.Replace("\", "/")
-        Dim candidate As String = String.Empty
-        If fileName.StartsWith("/") OrElse fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
-            candidate = fileName
-        Else
-            candidate = "/Public/assets/images/marche/" & Path.GetFileName(fileName)
-        End If
+        Const publicRoot As String = "/Public/assets/images/marche/"
+        Try
+            Dim reference As String = Convert.ToString(value)
+            For Each character As Char In reference
+                If Char.IsControl(character) Then Return String.Empty
+            Next
+            reference = Uri.UnescapeDataString(reference.Trim()).Replace("\", "/")
+            For Each character As Char In reference
+                If Char.IsControl(character) Then Return String.Empty
+            Next
+            If reference.StartsWith("~/", StringComparison.Ordinal) Then reference = reference.Substring(1)
+            If reference.StartsWith(publicRoot.TrimStart("/"c), StringComparison.OrdinalIgnoreCase) Then reference = "/" & reference
 
-        If VirtualPathExists(candidate) Then
-            Return candidate
-        End If
+            Dim fileName As String = reference
+            If reference.StartsWith(publicRoot, StringComparison.OrdinalIgnoreCase) Then fileName = reference.Substring(publicRoot.Length)
+            If String.IsNullOrWhiteSpace(fileName) OrElse fileName.Length > 255 OrElse
+               fileName.Contains("..") OrElse fileName.Contains("/") OrElse fileName.Contains("%") OrElse
+               fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 OrElse
+               Not IsApprovedBrandAsset(fileName) Then Return String.Empty
 
-        If IsApprovedBrandAsset(fileName) Then
-            Dim runtimeUrl As String = BuildRuntimeAssetUrl(candidate)
-            If RuntimeUrlExistsCached(runtimeUrl) Then
-                Return runtimeUrl
-            End If
-        End If
+            Dim applicationRoot As String = Path.GetFullPath(HostingEnvironment.MapPath("~/")).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            Dim authorizedRoot As String = Path.GetFullPath(Path.Combine(applicationRoot, "Public", "assets", "images", "marche")) & Path.DirectorySeparatorChar
+            Dim physicalPath As String = Path.GetFullPath(Path.Combine(authorizedRoot, fileName))
+            If Not physicalPath.StartsWith(authorizedRoot, StringComparison.OrdinalIgnoreCase) OrElse
+               Not File.Exists(physicalPath) Then Return String.Empty
 
-        Return String.Empty
+            ' Reject filesystem redirects as well as URL/path escaping.
+            Dim currentPath As String = physicalPath
+            Do
+                If (File.GetAttributes(currentPath) And FileAttributes.ReparsePoint) <> 0 Then Return String.Empty
+                If String.Equals(currentPath, applicationRoot, StringComparison.OrdinalIgnoreCase) Then Exit Do
+                currentPath = Path.GetDirectoryName(currentPath)
+            Loop While Not String.IsNullOrEmpty(currentPath)
+
+            Return publicRoot & Uri.EscapeDataString(fileName)
+        Catch
+            Return String.Empty
+        End Try
     End Function
 
     Protected Function BrandImage(ByVal value As Object) As String
