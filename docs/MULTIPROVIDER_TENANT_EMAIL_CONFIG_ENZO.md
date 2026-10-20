@@ -2,6 +2,16 @@
 
 > **Stato: BOZZA TECNICA.** Non e il manuale definitivo del pannello e non autorizza implementazione o rollout. Sara finalizzato soltanto dopo creazione autorizzata della tabella, runtime centrale, secret store, configurazione dei due tenant, test SMTP sicuro, prova e-mail reale controllata e migrazione di tutti i chiamanti.
 
+## Contratto comune segreti — aggiornamento prevalente 2026-10-20
+
+Per le sole superfici pertinenti applicare lo [standard canonico](KEEPSTORE_SECRET_PROTECTION_STANDARD.md), con classificazione e mappa progressiva. CURRENT e-mail: EmailCredentialStore.vb, DPAPI LocalMachine, formato KSEMAIL1 e CredentialReference dpapi-v1, scope database/azienda/scopo e deposito esterno. EMAIL_CONNECTION_VERIFIED e esito TLS/AUTH/QUIT, non cifratura. Il provisioning Taikun gia attestato resta nel proprio perimetro; INVIADOCUMENTI e altri tenant non sono certificati da questa decisione.
+
+TARGET APPROVATO / DA IMPLEMENTARE: nucleo comune KSAES2 autenticato e interoperabile; dettagli binari/KDF/contesto da formalizzare, nessuna conversione automatica DPAPI. DPAPI puo custodire localmente chiavi, senza diventare il formato interoperabile. RSA Tools #362 CHIUSA A / SOURCE INTEGRATED non significa configurazioni operative cifrate; il futuro provider comune richiedera anche adeguamento del lettore oggi RSA. Nessuna nuova infrastruttura o servizio IIS e autorizzato.
+
+Specifica UI per Enzo, non pannello implementato: stato configurata/non configurata, input nuova credenziale mascherato e mai precaricato; vuoto = nessuna sostituzione; sostituzione esplicita con conferma quando pertinente; revoca distinta dal salvataggio. Non restituire valore salvato in HTML/JSON/campi nascosti o chiave master al client. Mascheratura non significa cifratura del DB. Verifica server-side e codici sanitizzati, autorizzazione del soggetto e isolamento tenant obbligatori.
+
+Il gestionale riusa il contratto comune; identita del processo, origine configurazione e distribuzione/custodia delle chiavi devono essere esplicite nel futuro handoff, non presunte. Password di login utente: hashing dedicato, non KSAES2. Il pannello resta BOZZA TECNICA; runtime DPAPI corrente invariato. Consegna server sospesa per decisione PO; nessuna esecuzione del rilevatore o pubblicazione ora.
+
 ## Scopo e confini
 
 Questo documento definisce il contratto che Enzo dovra usare per realizzare il pannello di configurazione e-mail di KeepStore. Non abilita ancora il runtime, non rende operativo OAuth2 e non autorizza alcun deployment. La tabella `aziende` resta invariata; i campi SMTP legacy restano temporaneamente disponibili durante la transizione.

@@ -1,8 +1,20 @@
 # KeepStore — configurazione DB privata e Protected Configuration
 
-Checkpoint REV1 2026-10-20: **PR #362 DRAFT**, finding `DBCFG-GUARD-F01` della review 5585799761 sul candidato `bae99d30` corretto nel guard; prove mirate PASS e nuova review differenziale indipendente pendente. Delta 5 percorsi entro manifest cumulativo 25, nessun merge/deploy. Rapporto REV1 `C:\Temp\KeepStoreDbConfigHardening1A\20261020-rev1-c516f63b\final-report.md`/`final-report.json`; le prove Batch A sotto sono riusate senza ripetere RSA/e-mail/parity/precompile o #361.
+## Checkpoint prevalente e destinazione progettuale — 2026-10-20
 
-Data: 2026-10-20. Task `SECURITY-DB-CREDENTIALS-HARDENING-1A`, **solo Batch A software implementato e testato tecnico-localmente PASS; PR DRAFT da revisionare**. Base source #361 REV2 `32bc8714b081f2ecea5b2ad2d13653c21c764512`; branch `task/security-db-credentials-hardening-1a`. Commit e URL PR dal rapporto finale sanitizzato e Git reale; nessun merge/deploy. Fonte del metodo: [AGENTS](../AGENTS.md); manifest e decisioni: [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#security-db-credentials-hardening-1a--batch-a-software).
+[#362](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/362) **CHIUSA A / SOURCE INTEGRATED**, stable `76d97a2c004f7661b61e66d6f744f1fb7e8d1231`; review A, autorizzazione e closeout nel Masterplan. Prove sintetiche Batch A/REV1 riusate, CI NON CONFIGURATA con deroga esclusiva #362, nessun deploy o cifratura operativa. Le procedure RSA seguenti documentano il software esistente e le autorizzazioni storiche, non un permesso attuale di eseguirle.
+
+Lo [standard canonico](KEEPSTORE_SECRET_PROTECTION_STANDARD.md) stabilisce KSAES2 come TARGET APPROVATO / DA IMPLEMENTARE per i segreti reversibili. Il futuro ProtectedConfigurationProvider deve riusare il nucleo comune, preservando ConfigurationManager.ConnectionStrings("EntropicConnectionString"). Chiave/scope disponibili prima della connessione, provider caricabile al bootstrap, nessuna query al DB per recuperare la chiave necessaria ad aprirlo. Specifica binaria/KDF/contesto da formalizzare prima di implementare.
+
+Il lettore Tools corrente accetta il solo provider protetto RSA; introduzione dell'adattatore, caricamento e consumer/prove richiedono adeguamento coordinato. RSA resta CURRENT software, non configurazione operativa approvata oggi; nessun cambio server/porta/database o identita e-mail/carrello implicito. DPAPI puo custodire chiavi localmente ma non e il formato interoperabile. Nessun key material nel template o sovrascrittura della copia privata.
+
+TENANT-RELEASE-PACKAGE-1A **SOSPESO PER DECISIONE PO**: conservare manifest/rilevatore/guida, senza eseguirli o rigenerarli. Decisione sulle esposizioni pregresse invariata: niente scansioni/bonifiche/avvisi ripetuti e nessun blocco delle funzionalita indipendenti. Account/grant/TLS, revoca e recupero operativo mantengono autorizzazioni separate.
+
+## Storico delle consegne software
+
+Storico REV1 precedente al closeout (non stato corrente): **PR #362 DRAFT**, finding `DBCFG-GUARD-F01` della review 5585799761 sul candidato `bae99d30` corretto nel guard; prove mirate PASS e nuova review differenziale indipendente pendente. Delta 5 percorsi entro manifest cumulativo 25, nessun merge/deploy. Rapporto REV1 `C:\Temp\KeepStoreDbConfigHardening1A\20261020-rev1-c516f63b\final-report.md`/`final-report.json`; le prove Batch A sotto sono riusate senza ripetere RSA/e-mail/parity/precompile o #361.
+
+Consegna storica Batch A precedente al closeout. Data: 2026-10-20. Task `SECURITY-DB-CREDENTIALS-HARDENING-1A`, **solo Batch A software implementato e testato tecnico-localmente PASS; PR DRAFT da revisionare**. Base source #361 REV2 `32bc8714b081f2ecea5b2ad2d13653c21c764512`; branch `task/security-db-credentials-hardening-1a`. Commit e URL PR dal rapporto finale sanitizzato e Git reale; nessun merge/deploy. Fonte del metodo: [AGENTS](../AGENTS.md); manifest e decisioni: [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#security-db-credentials-hardening-1a--batch-a-software).
 
 ## 1. Perimetro autorizzato e stati separati
 
@@ -17,7 +29,7 @@ La [decisione PO 2026-10-20](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-2026
 - Il runtime mantiene `ConfigurationManager.ConnectionStrings("EntropicConnectionString")`. SearchSuggest usa soltanto tale nome: nessun alias `taikun` o `ConnectionStrings(0)`, query/ranking e risposta invariati.
 - `web.config` e configurazione operativa privata. La rimozione riguarda soltanto il tracking Git; il file locale deve rimanere identico per bytes, ACL, attributi, creazione e ultima scrittura. Non viene cancellato sul server o inserito in liste di cancellazione della release.
 - `web.config.example` e un modello strutturale versionato senza segreti o dati d'installazione: nessuna password reale, machineKey, destinazione o credenziale SMTP/gateway. Non e una configurazione operativa pronta all'avvio.
-- RSA e la proposta di riferimento per ogni applicazione/installazione, con contenitore dedicato e identita non amministrativa; la prova sintetica non certifica chiavi/ACL application pool o portabilita sul server destinatario.
+- Nel Batch A RSA era la proposta di riferimento con contenitore dedicato per applicazione/installazione e identita non amministrativa. Il target comune successivo e nello standard canonico; la prova sintetica non certifica chiavi/ACL application pool o portabilita sul server destinatario.
 - Server, porta e database restano invariati. Un cambiamento puo alterare le identita derivate per scope e-mail/carrello e richiede decisione distinta. Account per consumer effettivo e isolamento applicativo azienda/listino sono controlli complementari, anche con DB condiviso.
 
 ## 3. Nuova installazione da template — procedura futura
@@ -112,7 +124,7 @@ Nessuna modifica persistente a CurrentUser/LocalMachine/MachinePolicy/UserPolicy
 
 Root delle evidenze della ripresa: `C:\Temp\KeepStoreDbConfigHardening1A\20261020-resume-967934c1`. Risorse ammesse: soli file sintetici, eseguibili di prova, rapporti sanitizzati e chiavi CurrentUser univoche `KS-DBCFG-TEST-<GUID>` registrate prima della creazione. Cleanup in finally delle sole risorse create; nessun riuso di chiavi preesistenti, certificato installato nel trust store, identita Windows aggiuntiva, listener, servizio o DB. I rapporti possono conservare metadati/esiti di cleanup, senza segreti o chiavi private.
 
-## 9. Criteri di accettazione e consegna Batch A
+## 9. Criteri di accettazione e consegna Batch A — storico pre-closeout
 
 Prove mirate REV1 del codice candidato effettivo: **28 selftest guard, 20 casi Git sull'entrypoint reale, 22 casi ArtifactRoot e 24 file candidati PASS**. L'aggiunta privata staged passava con exit 0 prima del fix ed e rifiutata con exit 1 `PRIVATE_PUBLICATION_PATH` dopo il fix. Rimozione dal tracking e copia locale ignorata con file bloccato PASS, senza lettura privata; template esplicito ammesso. RSA/e-mail/parity/precompile/#361 immutati, prove precedenti riusate e non ripetute. Nessuna chiave nuova o operazione operativa in REV1; un commit figlio del candidato revisionato sulla stessa PR DRAFT e review differenziale ChatGPT ancora pendente. Le evidenze seguenti sono il Batch A precedente.
 

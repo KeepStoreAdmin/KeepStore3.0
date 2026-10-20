@@ -7,7 +7,23 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### KEEPSTORE-SECRET-STANDARD-CONTRACT-1A — decisione PO e checkpoint prevalente
+
+Mandato DOCS-ONLY 2026-10-20: direttiva permanente in AGENTS e [contratto tecnico unico](KEEPSTORE_SECRET_PROTECTION_STANDARD.md), con mappa progressiva senza valori. KSAES2 e TARGET APPROVATO / DA IMPLEMENTARE, non componente gia installato: AES-256-CBC + HMAC-SHA256, chiavi separate, salt/IV casuali, key version e contesto autenticato; dettagli binari/KDF/serializzazione da formalizzare prima dell'implementazione. Password login con hashing dedicato. Nessun nuovo script/provider/libreria, configurazione o migrazione.
+
+CURRENT confermato nel sorgente: EmailCredentialStore usa DPAPI LocalMachine, KSEMAIL1 e riferimenti dpapi-v1, scope database/azienda/scopo; EMAIL_CONNECTION_VERIFIED e esito TLS/AUTH/QUIT SMTP. Tools/KeepStoreConfigurationReader accetta il provider protetto RSA: il futuro adattatore comune dovra includere lettore, wrapper e consumer. Il target web.config preserva EntropicConnectionString tramite ProtectedConfigurationProvider, chiave disponibile prima dell'apertura DB. UI Enzo: stato senza rilettura della password, sostituzione esplicita, vuoto senza modifica, revoca distinta e verifica server-side sanitizzata; specifica, non pannello implementato.
+
+**Closeout acquisito #362: CHIUSA A / SOURCE INTEGRATED**, review differenziale [5586703835](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/362#pullrequestreview-5586703835), autorizzazione [6293980035](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/362#issuecomment-6293980035), closeout [6294285103](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/362#issuecomment-6294285103). FF-only su frontend-rebuild: `32bc8714b081f2ecea5b2ad2d13653c21c764512 -> bae99d300740c377b74a17f42c31a97416de92e5 -> 76d97a2c004f7661b61e66d6f744f1fb7e8d1231`. Stable locale/remoto verificato; main invariato `976e99f17cabc8a5c6a8715463444edfeaadcd91`. CI NON CONFIGURATA, deroga specifica registrata per la sola #362, non estesa. Rapporti closeout in `C:\Temp\KeepStoreDbConfigHardening1A\20261020-rev1-c516f63b\closeout-6e93cbcd`. Prove precedenti riusate nei propri limiti, nessun deploy o cifratura operativa da #362.
+
+**TENANT-RELEASE-PACKAGE-1A SOSPESO PER DECISIONE PO**: manifest, rilevatore e guida conservati in `C:\Temp\KeepStoreReleaseDelivery\20261020-76d97a2c-cb2febd7`. Nessun confronto server richiesto ora, nessuna esecuzione o rigenerazione. Decisione esposizioni pregresse sottostante invariata: niente scansioni/bonifiche/avvisi ripetuti e nessun blocco delle funzionalita indipendenti.
+
+Manifest corrente: AGENTS, START_HERE, PRODUCT_ROADMAP, MASTERPLAN, SYSTEM_BLUEPRINT, runbook DB, manuale e-mail Enzo (7 MODIFIED) e standard segreti (1 ADDED). Un commit e PR DRAFT sul branch `task/keepstore-secret-standard-contract-1a`; review indipendente di questa consegna documentale ancora da svolgere, nessun merge. Verifiche solo documentali: manifest, link/Markdown, distinzione CURRENT/TARGET/DEPLOYED, aggiunte senza valori operativi e diff-check; nessuna build/precompile/RSA/browser/DB.
+
+Prossimo feature-batch: KS-F01 `SHOPPING-ASSISTANT-GUIDED-ENTRY-1A`, NON AVVIATO; nome/privacy e due merceologie restano requisiti del mandato. Nessun nuovo audit o task operativo avviato.
+
 ### SECURITY-DB-CREDENTIALS-HARDENING-1A — Batch A software
+
+Storico di consegna: gli stati DRAFT/review pendente delle righe seguenti sono superati dal closeout prevalente sopra.
 
 #### REV1 — DBCFG-GUARD-F01, controllo delle aggiunte private nell'indice Git
 

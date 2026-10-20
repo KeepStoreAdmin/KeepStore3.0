@@ -213,6 +213,11 @@ Standard permanente per le evoluzioni ecommerce, complementare al Design Gate, a
 - **Non regressione.** Una ottimizzazione non sacrifica sicurezza, regole commerciali, accessibilita, SEO, isolamento tenant o funzioni stabilizzate. Cache e dati restano coerenti con tenant, listino, account e autorita server-side; non si rende veloce un dato commerciale obsoleto o non verificato.
 - **Consegna.** Per task UX/performance significativi riportare problema, fonti pertinenti, soluzione/motivo, beneficio atteso, metriche prima/dopo o limiti, verifiche mobile/desktop, rischi/regressioni e compatibilita multi-tenant/multi-merceologia. Beneficio atteso non equivale a risultato misurato, conversione certificata o ecommerce completo.
 
+## Standard permanente dei segreti
+
+Prima di modificare un campo password/token, un form credenziali, una connessione o un consumer esterno, **classificare la finalita del dato e consultare obbligatoriamente lo [standard canonico](docs/KEEPSTORE_SECRET_PROTECTION_STANDARD.md) e la sua mappa progressiva**. La regola si applica automaticamente, senza promemoria del PO. Segreti riutilizzabili: destinazione comune KSAES2 autenticata; password di login: hashing dedicato, non cifratura reversibile. DPAPI e-mail e RSA Tools restano CURRENT, non KSAES2 gia implementato o distribuito.
+Nessuna nuova persistenza in chiaro, funzione crittografica isolata o fallback da formato autenticato invalido. Aggiornare solo le superfici del manifest; riusare finding/mappa esistenti senza scansioni generali, conversioni massive, bonifiche/avvisi ripetuti sulle esposizioni pregresse o blocchi delle funzionalita indipendenti. Dettagli KSAES2 non attestati vanno formalizzati prima dell'implementazione. Nessuna modifica automatica a configurazioni, chiavi, credenziali o aree fuori scope; i gate operativi esistenti restano validi.
+
 ## Protezione dati, segreti e asset
 
 - Non esporre password, token, secret, connection string, session id, dati personali, carte o transazioni. Sanitizzare output/log.
