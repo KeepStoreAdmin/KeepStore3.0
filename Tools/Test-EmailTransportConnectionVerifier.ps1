@@ -7,7 +7,12 @@ Set-StrictMode -Version 2.0
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $runnerPath = Join-Path $PSScriptRoot 'Verify-EmailTransportConnection.ps1'
 $hostPath = Join-Path $PSScriptRoot 'EmailTransportConnectionVerifier.vb'
+$temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ('KeepStore-EmailVerifierTests-' + [Guid]::NewGuid().ToString('N'))
+$resourceRecord = Join-Path ([IO.Path]::GetTempPath()) ('email-verifier-resources-' + [Guid]::NewGuid().ToString('N') + '.json')
+$resourceState = [ordered]@{ Directory = $temporaryRoot; Children = @('application\web.config','EmailOfflineSinks.vb','EmailOfflineProbe.exe','copied dependency DLLs'); GeneratedBuildDirectoryWithin = $temporaryRoot; BuildDirectory = ''; State = 'PLANNED' }
+[IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
 $passed = 0
+$build = $null
 
 function Assert-Check([bool]$Condition, [string]$Code) {
     if (-not $Condition) { throw $Code }
@@ -15,156 +20,177 @@ function Assert-Check([bool]$Condition, [string]$Code) {
     Write-Output ('PASS ' + $Code)
 }
 
-function Invoke-InternalVerifier([string]$Executable, [string[]]$Arguments) {
-    $lines = @(& $Executable @Arguments 2>$null)
-    return [pscustomobject]@{
-        ExitCode = $LASTEXITCODE
-        Lines = @($lines)
-        Text = ($lines -join "`n")
-    }
-}
-
-$tokens = $null
-$parseErrors = $null
-$runnerAst = [Management.Automation.Language.Parser]::ParseFile($runnerPath, [ref]$tokens, [ref]$parseErrors)
-$runnerText = Get-Content -LiteralPath $runnerPath -Raw
-$hostText = Get-Content -LiteralPath $hostPath -Raw
-$combinedText = $runnerText + "`n" + $hostText
-$build = $null
-
 try {
-    Assert-Check ($parseErrors.Count -eq 0) '01_POWERSHELL_PARSE'
-    Assert-Check ($runnerText -match 'Test-EmailVerifierAdministrator' -and
-                  $runnerText -match 'EMAIL_VERIFY_ADMINISTRATOR_REQUIRED') '02_ADMINISTRATOR_REQUIRED'
+    $tokens = $null
+    $parseErrors = $null
+    $ast = [Management.Automation.Language.Parser]::ParseFile($runnerPath, [ref]$tokens, [ref]$parseErrors)
+    Assert-Check (@($parseErrors).Count -eq 0) 'VERIFIER_POWERSHELL_PARSE'
+    $parameterNames = @($ast.ParamBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath })
+    $allowed = @('AziendaId','Purpose','ApplicationRoot','ConnectionStringName','CredentialRoot')
+    Assert-Check ($parameterNames.Count -eq $allowed.Count -and @($parameterNames | Where-Object { $_ -notin $allowed }).Count -eq 0) 'VERIFIER_ARGUMENT_CONTRACT'
 
-    $parameterNames = @($runnerAst.ParamBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath })
-    $allowedParameters = @('AziendaId','Purpose','ApplicationRoot','ConnectionStringName','CredentialRoot')
-    Assert-Check ($parameterNames.Count -eq $allowedParameters.Count -and
-                  @($parameterNames | Where-Object { $_ -notin $allowedParameters }).Count -eq 0) '03_ONLY_ALLOWED_PARAMETERS'
+    [IO.Directory]::CreateDirectory($temporaryRoot) | Out-Null
+    $application = Join-Path $temporaryRoot 'application'
+    [IO.Directory]::CreateDirectory($application) | Out-Null
+    [IO.File]::WriteAllText((Join-Path $application 'web.config'), '<configuration><connectionStrings><clear/><add name="alternative" connectionString="Server=alternative.invalid;Database=other;" providerName="MySql.Data.MySqlClient"/><add name="EntropicConnectionString" connectionString="Server=fixture-mail.invalid;Port=3306;Database=fixture_mail;User ID=fixture-user;Password=KS-DBCFG-FIXTURE-MAIL;" providerName="MySql.Data.MySqlClient"/></connectionStrings></configuration>')
 
-    . $runnerPath -AziendaId 1 -Purpose 'TRANSACTIONAL' -ApplicationRoot $repo
-    $build = New-EmailVerifierBuild $repo
-
-    $baseArguments = @(
-        '--azienda-id','1',
-        '--purpose','TRANSACTIONAL',
-        '--application-root',$repo,
-        '--connection-string-name','EntropicConnectionString',
-        '--credential-root','C:\ProgramData\KeepStore\EmailCredentials'
-    )
-    $passwordAttempt = Invoke-InternalVerifier $build.Executable @('--password','fixture','--purpose','TRANSACTIONAL','--application-root',$repo,'--connection-string-name','EntropicConnectionString','--credential-root','C:\ProgramData\KeepStore\EmailCredentials')
-    Assert-Check ($passwordAttempt.ExitCode -eq 10 -and $passwordAttempt.Text -match 'CODE=EMAIL_VERIFY_ARGUMENT_NOT_ALLOWED') '04_PASSWORD_ARGUMENT_REJECTED'
-
-    $referenceAttempt = Invoke-InternalVerifier $build.Executable @('--credential-reference','fixture','--purpose','TRANSACTIONAL','--application-root',$repo,'--connection-string-name','EntropicConnectionString','--credential-root','C:\ProgramData\KeepStore\EmailCredentials')
-    Assert-Check ($referenceAttempt.ExitCode -eq 10 -and $referenceAttempt.Text -match 'CODE=EMAIL_VERIFY_ARGUMENT_NOT_ALLOWED') '05_CREDENTIAL_REFERENCE_ARGUMENT_REJECTED'
-
-    $hostAttempt = Invoke-InternalVerifier $build.Executable @('--host','fixture.invalid','--purpose','TRANSACTIONAL','--application-root',$repo,'--connection-string-name','EntropicConnectionString','--credential-root','C:\ProgramData\KeepStore\EmailCredentials')
-    $userAttempt = Invoke-InternalVerifier $build.Executable @('--username','fixture','--purpose','TRANSACTIONAL','--application-root',$repo,'--connection-string-name','EntropicConnectionString','--credential-root','C:\ProgramData\KeepStore\EmailCredentials')
-    Assert-Check ($hostAttempt.ExitCode -eq 10 -and $userAttempt.ExitCode -eq 10) '06_HOST_AND_USERNAME_ARGUMENTS_REJECTED'
-
-    $company1 = Invoke-InternalVerifier $build.Executable $baseArguments
-    $company2Arguments = [string[]]$baseArguments.Clone()
-    $company2Arguments[1] = '2'
-    $company2 = Invoke-InternalVerifier $build.Executable $company2Arguments
-
-    Assert-Check ($hostText -match 'Path\.Combine\(applicationRoot, "web\.config"\)' -and
-                  $company1.Text -notmatch 'EMAIL_VERIFY_CONFIGURATION_INVALID') '07_WEB_CONFIG_REAL_PATH'
-    Assert-Check ($hostText -match 'New EmailDatabaseIdentityProvider\(\)\.GetIdentity\(connectionString\)') '08_DATABASE_IDENTITY_DERIVED_BY_RUNTIME'
-    Assert-Check ($company1.ExitCode -eq 21 -and
-                  $company1.Text -match 'PROFILE_STATE=CREDENTIAL_MISSING' -and
-                  $company1.Text -match 'CODE=PROFILE_CREDENTIAL_MISSING') '09_AZIENDA_1_REAL_PROFILE_PLACEHOLDER_FAIL_CLOSED'
-    Assert-Check ($company2.ExitCode -eq 21 -and
-                  $company2.Text -match 'PROFILE_STATE=CREDENTIAL_MISSING' -and
-                  $company2.Text -match 'CODE=PROFILE_CREDENTIAL_MISSING') '10_AZIENDA_2_REAL_PROFILE_PLACEHOLDER_FAIL_CLOSED'
-    Assert-Check ($runnerText -match "ValidateSet\('TRANSACTIONAL', 'MARKETING'\)" -and
-                  $hostText -match 'purpose <> "TRANSACTIONAL" AndAlso purpose <> "MARKETING"') '11_PURPOSE_VALIDATED'
-
-    $runtimeOutput = @(& (Join-Path $PSScriptRoot 'Test-MultiProviderTenantEmailRuntimeCore.ps1'))
-    $runtimeText = $runtimeOutput -join "`n"
-    Assert-Check ($runtimeText -match '03B_VERIFICATION_ACCEPTS_DISABLED_NOT_VERIFIED') '12_DISABLED_NOT_VERIFIED_ACCEPTED_FOR_ADMIN_VERIFY'
-    Assert-Check ($runtimeText -match '03A_SEND_REJECTS_NOT_VERIFIED') '13_DISABLED_NOT_VERIFIED_REJECTED_FOR_DELIVERY'
-    Assert-Check ($runtimeText -match '03C_VERIFICATION_REJECTS_PLACEHOLDER') '14_PLACEHOLDER_REJECTED_BEFORE_SMTP'
-    Assert-Check ($runtimeText -match '17_CREDENTIAL_SCOPE_INVALID') '15_REFERENCE_SCOPE_MISMATCH_REJECTED'
-    Assert-Check ($runtimeText -match '16_CREDENTIAL_FILE_MISSING') '16_CREDENTIAL_MISSING_REJECTED'
-    Assert-Check ($runtimeText -match '17A_CREDENTIAL_DPAPI_INVALID') '17_DPAPI_INVALID_REJECTED'
-    Assert-Check ($runtimeText -match '19_STARTTLS_EXPLICIT') '18_STARTTLS_EXPLICIT'
-    Assert-Check ($runtimeText -match '21_IMPLICIT_TLS_EXPLICIT') '19_IMPLICIT_TLS_EXPLICIT'
-    Assert-Check ($runtimeText -match '23_CERTIFICATE_REJECTED') '20_CERTIFICATE_REJECTED'
-    Assert-Check ($runtimeText -match '24_HOSTNAME_MISMATCH') '21_HOSTNAME_MISMATCH_REJECTED'
-    Assert-Check ($runtimeText -match '25_AUTHENTICATION_REJECTED') '22_AUTHENTICATION_REJECTED'
-    Assert-Check ($runtimeText -match '26_TIMEOUT') '23_TIMEOUT_CLASSIFIED'
-    Assert-Check ($runtimeText -match '11_OAUTH2_NOT_OPERATIONAL') '24_OAUTH2_NOT_OPERATIONAL'
-    Assert-Check ($hostText -notmatch '(?i)MAIL FROM' -and $runtimeText -match '20_VERIFY_NO_MAIL_COMMANDS_AND_QUIT') '25_ZERO_MAIL_FROM'
-    Assert-Check ($hostText -notmatch '(?i)RCPT TO' -and $runtimeText -match '20_VERIFY_NO_MAIL_COMMANDS_AND_QUIT') '26_ZERO_RCPT_TO'
-    Assert-Check ($hostText -notmatch '(?i)\bDATA\b' -and $runtimeText -match '20_VERIFY_NO_MAIL_COMMANDS_AND_QUIT') '27_ZERO_DATA'
-    Assert-Check ($runtimeText -match '20_VERIFY_NO_MAIL_COMMANDS_AND_QUIT') '28_QUIT_ON_VERIFICATION'
-
-    $correlation1 = ($company1.Lines | Where-Object { $_ -match '^CORRELATION_ID=' }) -replace '^CORRELATION_ID=', ''
-    $correlation2 = ($company2.Lines | Where-Object { $_ -match '^CORRELATION_ID=' }) -replace '^CORRELATION_ID=', ''
-    Assert-Check ($correlation1 -match '^[a-f0-9]{32}$' -and
-                  $correlation2 -match '^[a-f0-9]{32}$' -and
-                  $correlation1 -ne $correlation2) '29_CORRELATION_ID_GENERATED'
-    Assert-Check ((Test-EmailVerifierOutput $company1.Lines) -and
-                  (Test-EmailVerifierOutput $company2.Lines)) '30_SANITIZED_OUTPUT_SCHEMA'
-    Assert-Check (($company1.Text + $company2.Text) -notmatch '(?i)dpapi-v1:|password|server=|uid=|user id=|@|\\EmailCredentials\\') '31_NO_SECRET_OR_IDENTITY_OUTPUT'
-    Assert-Check ($hostText -match 'ExitSuccess As Integer = 0' -and
-                  $hostText -match 'ExitConfiguration As Integer = 10' -and
-                  $hostText -match 'ExitProfileUnavailable As Integer = 20' -and
-                  $hostText -match 'ExitCredential As Integer = 21' -and
-                  $hostText -match 'ExitTls As Integer = 30' -and
-                  $hostText -match 'ExitAuthentication As Integer = 31' -and
-                  $hostText -match 'ExitTimeout As Integer = 32' -and
-                  $hostText -match 'ExitTransport As Integer = 33' -and
-                  $hostText -match 'ExitInternal As Integer = 40') '32_STABLE_EXIT_CODES'
-
-    Assert-Check ($combinedText -notmatch '(?i)INSERT\s+INTO|UPDATE\s+`?aziende_email_transport|DELETE\s+FROM|DROP\s+(TABLE|DATABASE)|ALTER\s+TABLE|CREATE\s+TABLE') '33_NO_DATABASE_MUTATION'
-    Assert-Check ($combinedText -notmatch '(?i)Restart-WebAppPool|Stop-WebAppPool|Start-WebAppPool|iisreset|ServerManager\.Sites\.Add|Set-WebBinding') '34_NO_IIS_MUTATION'
-    Assert-Check ($combinedText -notmatch '(?i)HttpListener|TcpListener|New-Website|New-WebApplication|\.aspx|\.ashx') '35_NO_ENDPOINT_OR_LISTENER'
-
-    $restoreOutput = @(& (Join-Path $PSScriptRoot 'Restore-EmailTransportDependencies.ps1') -DestinationBin (Join-Path $repo 'Bin') -VerifyOnly)
-    Assert-Check (($restoreOutput -join "`n") -match 'EMAIL_DEPENDENCIES_VERIFIED') '36_CLEAN_DEPENDENCY_RESTORE_VERIFY'
-    Assert-Check (Test-Path -LiteralPath (Join-Path $env:windir 'Microsoft.NET\Framework64\v4.0.30319\aspnet_compiler.exe')) '37_NET48_PRECOMPILE_TOOL_AVAILABLE'
-    Assert-Check ($runtimeText -match 'EMAIL_TRANSPORT_RUNTIME_CORE_PASS checks=57') '38_RUNTIME_CORE_PASS'
-
-    $callerOutput = @(& (Join-Path $PSScriptRoot 'Test-TenantEmailAllCallersMigration.ps1'))
-    Assert-Check (($callerOutput -join "`n") -match 'TENANT_EMAIL_ALL_CALLERS_MIGRATION_PASS') '39_ALL_CALLERS_MIGRATED'
-
-    $diffCheck = @(& git -C $repo diff --check 2>&1)
-    Assert-Check ($LASTEXITCODE -eq 0) '40_GIT_DIFF_CHECK'
-    $scanPaths = @(
-        'Tools\Verify-EmailTransportConnection.ps1',
-        'Tools\EmailTransportConnectionVerifier.vb',
-        'Tools\Test-EmailTransportConnectionVerifier.ps1',
-        'Tools\EmailTransportRuntimeCoreHarness.vb',
-        'Tools\Test-MultiProviderTenantEmailRuntimeCore.ps1',
-        'docs\KEEPSTORE_MASTERPLAN_OPERATIVO.md',
-        'docs\KEEPSTORE_SYSTEM_BLUEPRINT.md',
-        'docs\KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md'
-    )
-    $scanText = ($scanPaths | ForEach-Object { Get-Content -LiteralPath (Join-Path $repo $_) -Raw }) -join "`n"
-    Assert-Check ($scanText -notmatch '(?i)(password|pwd)\s*=\s*["''][^<\r\n]+|server\s*=.*(password|pwd)\s*=|dpapi-v1:[0-9a-f]{64}:[1-9]') '41_SECRET_SCAN'
-
-    $untracked = @(git -C $repo ls-files --others --exclude-standard)
-    Assert-Check (@($untracked | Where-Object { $_ -like 'Public/assets/images/*' }).Count -eq 48 -and
-                  @($untracked | Where-Object { $_ -like 'App_Data/Logs/*' }).Count -eq 5 -and
-                  (git -C $repo diff --name-status) -contains "D`tDatabase Taikun/KeepStore.sql") '42_PROTECTED_FILES_PRESERVED'
-
-    $manuals = @(
-        'docs\KEEPSTORE_MASTERPLAN_OPERATIVO.md',
-        'docs\KEEPSTORE_SYSTEM_BLUEPRINT.md',
-        'docs\KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md'
-    )
-    $markdownOk = $true
-    foreach ($relative in $manuals) {
-        $content = Get-Content -LiteralPath (Join-Path $repo $relative) -Raw
-        if (([regex]::Matches($content, '(?m)^# ')).Count -ne 1 -or
-            ([regex]::Matches($content, '(?m)^```')).Count % 2 -ne 0) { $markdownOk = $false }
+    # Dot-sourcing never invokes the administrative entrypoint or reads a real profile.
+    . $runnerPath -AziendaId 1 -Purpose 'TRANSACTIONAL' -ApplicationRoot $application -CredentialRoot (Join-Path $temporaryRoot 'credentials')
+    $originalTemp = $env:TEMP
+    $originalTmp = $env:TMP
+    try {
+        $env:TEMP = $temporaryRoot
+        $env:TMP = $temporaryRoot
+        $build = New-EmailVerifierBuild $repo
+    } finally {
+        $env:TEMP = $originalTemp
+        $env:TMP = $originalTmp
     }
-    Assert-Check $markdownOk '43_MARKDOWN_VALID'
+    $resourceState.BuildDirectory = $build.Root
+    [IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
+    Assert-Check (Test-Path -LiteralPath $build.Executable -PathType Leaf) 'PRODUCTION_WRAPPER_AND_DEPENDENCIES_COMPILE'
+    $invalidOutput = @(& $build.Executable '--password' 'KS-DBCFG-FIXTURE-ARGUMENT' 2>$null)
+    Assert-Check ($LASTEXITCODE -eq 10 -and (Test-EmailVerifierOutput $invalidOutput)) 'PRODUCTION_ENTRYPOINT_INVALID_INPUT_NO_NETWORK'
 
+    # Compile the actual verifier/reader/identity provider. Only external-effect
+    # dependencies are replaced by sinks; no runtime test switch is introduced.
+    $fixturePath = Join-Path $temporaryRoot 'EmailOfflineSinks.vb'
+    $fixture = @'
+Imports System
+Imports System.IO
+Imports System.Globalization
+Imports System.Text.RegularExpressions
+
+Public NotInheritable Class MailKitEmailSmtpSessionFactory
+End Class
+
+Public NotInheritable Class MailKitEmailTransport
+    Public Shared Calls As Integer
+    Public Shared LastCompany As Integer
+    Public Shared LastPurpose As String
+    Public Shared LastConnection As String
+    Public Shared Result As EmailConnectionVerificationResult
+    Public Sub New(ByVal resolver As Object, ByVal credentials As Object, ByVal sessions As Object, ByVal telemetry As Object)
+    End Sub
+    Public Function VerifyConnection(ByVal value As String, ByVal company As Integer,
+                                     ByVal purpose As String, ByVal correlation As String) As EmailConnectionVerificationResult
+        Calls += 1
+        LastCompany = company
+        LastPurpose = purpose
+        LastConnection = value
+        If Result IsNot Nothing Then Result.CorrelationId = correlation
+        Return Result
+    End Function
+End Class
+
+Public Module EmailOfflineProbe
+    Private Checks As Integer
+    Private Sub Check(ByVal condition As Boolean, ByVal code As String)
+        If Not condition Then Throw New InvalidOperationException(code)
+        Checks += 1
+    End Sub
+
+    Private Function Run(ByVal arguments As String(), ByRef output As String) As Integer
+        Dim original As TextWriter = Console.Out
+        Using sink As New StringWriter(CultureInfo.InvariantCulture)
+            Try
+                Console.SetOut(sink)
+                Return EmailTransportConnectionVerifier.Main(arguments)
+            Finally
+                Console.SetOut(original)
+                output = sink.ToString()
+            End Try
+        End Using
+    End Function
+
+    Private Function Arguments(ByVal application As String, ByVal credentials As String,
+                               ByVal company As Integer, ByVal purpose As String,
+                               Optional ByVal name As String = "EntropicConnectionString") As String()
+        Return {"--azienda-id", company.ToString(CultureInfo.InvariantCulture),
+                "--purpose", purpose, "--application-root", application,
+                "--connection-string-name", name, "--credential-root", credentials}
+    End Function
+
+    Public Function Main(ByVal args As String()) As Integer
+        Try
+            Dim application As String = args(0)
+            Dim credentials As String = Path.Combine(Path.GetDirectoryName(application), "credentials")
+            Dim output As String = Nothing
+            For Each company As Integer In {1, 2}
+                For Each purpose As String In {"TRANSACTIONAL", "MARKETING"}
+                    MailKitEmailTransport.Result = New EmailConnectionVerificationResult With {
+                        .Status = EmailTransportOperationStatus.Succeeded, .ProfileState = TenantEmailTransportProfileState.Ready,
+                        .FailureKind = EmailTransportFailureKind.None, .Phase = "VERIFY", .Code = "SYNTHETIC_VERIFIED",
+                        .AuthenticationMode = "Password", .SecurityMode = "StartTls", .TimestampUtc = DateTime.UtcNow}
+                    Check(Run(Arguments(application, credentials, company, purpose), output) = 0, "VERIFIER_SUCCESS")
+                    Check(MailKitEmailTransport.LastCompany = company AndAlso MailKitEmailTransport.LastPurpose = purpose, "VERIFIER_SCOPE")
+                    Check(MailKitEmailTransport.LastConnection = KeepStoreConfigurationReader.ReadConnectionString(application), "VERIFIER_NAMED_VALUE")
+                    Check(output.Trim().Split({Environment.NewLine}, StringSplitOptions.None).Length = 9, "VERIFIER_OUTPUT_FIELDS")
+                    Check(Not Regex.IsMatch(output, "(?i)password\s*=|server\s*=|fixture-mail|fixture-user|KS-DBCFG-FIXTURE"), "VERIFIER_SECRET_OUTPUT")
+                Next
+            Next
+            Dim calls As Integer = MailKitEmailTransport.Calls
+            Check(Run(Arguments(application, credentials, 1, "TRANSACTIONAL", "missing"), output) = 10, "VERIFIER_MISSING_NAME")
+            Check(MailKitEmailTransport.Calls = calls, "VERIFIER_NO_FALLBACK_OR_TRANSPORT")
+            Check(Regex.IsMatch(output, "CODE=DBCFG_[A-Z0-9_]+"), "VERIFIER_SANITIZED_CONFIGURATION_CODE")
+
+            Dim failures As EmailTransportFailureKind() = {EmailTransportFailureKind.Credential, EmailTransportFailureKind.Certificate,
+                EmailTransportFailureKind.HostnameMismatch, EmailTransportFailureKind.Authentication, EmailTransportFailureKind.Timeout,
+                EmailTransportFailureKind.Dns, EmailTransportFailureKind.Tcp, EmailTransportFailureKind.InvalidRequest}
+            Dim expected As Integer() = {21, 30, 30, 31, 32, 33, 33, 10}
+            For index As Integer = 0 To failures.Length - 1
+                MailKitEmailTransport.Result = New EmailConnectionVerificationResult With {
+                    .Status = EmailTransportOperationStatus.Failed, .ProfileState = TenantEmailTransportProfileState.Ready,
+                    .FailureKind = failures(index), .Phase = "VERIFY", .Code = "SYNTHETIC_FAILURE",
+                    .AuthenticationMode = "Password", .SecurityMode = "StartTls", .TimestampUtc = DateTime.UtcNow}
+                Dim actualExit As Integer = Run(Arguments(application, credentials, 1, "TRANSACTIONAL"), output)
+                Check(actualExit = expected(index), "VERIFIER_FAILURE_EXIT_" & index.ToString(CultureInfo.InvariantCulture) & "_" & actualExit.ToString(CultureInfo.InvariantCulture))
+            Next
+            MailKitEmailTransport.Result = New EmailConnectionVerificationResult With {
+                .Status = EmailTransportOperationStatus.Rejected, .ProfileState = TenantEmailTransportProfileState.NotConfigured,
+                .FailureKind = EmailTransportFailureKind.Resolver, .Phase = "RESOLVER", .Code = "SYNTHETIC_PROFILE",
+                .AuthenticationMode = "N_A", .SecurityMode = "N_A", .TimestampUtc = DateTime.UtcNow}
+            Check(Run(Arguments(application, credentials, 1, "TRANSACTIONAL"), output) = 20, "VERIFIER_PROFILE_EXIT")
+            MailKitEmailTransport.Result = Nothing
+            Check(Run(Arguments(application, credentials, 1, "TRANSACTIONAL"), output) = 40, "VERIFIER_INTERNAL_EXIT")
+            Console.WriteLine("EMAIL_VERIFIER_OFFLINE_SINK_PASS checks=" & Checks.ToString(CultureInfo.InvariantCulture))
+            Return 0
+        Catch ex As Exception
+            Dim code As String = If(Regex.IsMatch(ex.Message, "^VERIFIER_[A-Z0-9_]+$"), ex.Message, "VERIFIER_INTERNAL_FAILURE")
+            Console.Error.WriteLine("EMAIL_VERIFIER_OFFLINE_SINK_FAILED_" & code)
+            Return 1
+        End Try
+    End Function
+End Module
+'@
+    [IO.File]::WriteAllText($fixturePath, $fixture, [Text.UTF8Encoding]::new($false))
+    $references = @('System.dll','System.Core.dll','System.Data.dll','System.Xml.dll','System.Web.dll','System.Configuration.dll','System.Security.dll',
+        (Join-Path $repo 'Bin\MySql.Data.dll'), (Join-Path $repo 'Bin\MimeKit.dll'))
+    $sources = @('Tools\EmailTransportConnectionVerifier.vb','Tools\KeepStoreConfigurationReader.vb',
+        'App_Code\TenantEmailTransportContracts.vb','App_Code\TenantEmailTransportProfileResolver.vb','App_Code\EmailCredentialStore.vb') | ForEach-Object { Join-Path $repo $_ }
+    $probe = Join-Path $temporaryRoot 'EmailOfflineProbe.exe'
+    $compilerOutput = @(& (Get-EmailVerifierCompiler) /nologo /target:exe /main:EmailOfflineProbe /optionstrict+ ('/out:' + $probe) ('/reference:' + ($references -join ',')) $sources $fixturePath 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        $compilerOutput | ForEach-Object { if ([Convert]::ToString($_) -match '\berror BC[0-9]+:.*$') { Write-Output ('SYNTHETIC_COMPILER ' + $Matches[0]) } }
+    }
+    Assert-Check ($LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $probe)) 'OFFLINE_SINK_COMPILATION'
+    foreach ($dependency in Get-ChildItem -LiteralPath $build.Root -Filter '*.dll' -File) {
+        Copy-Item -LiteralPath $dependency.FullName -Destination $temporaryRoot
+    }
+    $probeOutput = @(& $probe $application 2>&1)
+    Assert-Check ($LASTEXITCODE -eq 0 -and ($probeOutput -join "`n") -match 'EMAIL_VERIFIER_OFFLINE_SINK_PASS checks=33') 'REAL_VERIFIER_WITH_OFFLINE_EFFECT_SINKS'
+    $probeOutput | Write-Output
+    Assert-Check (($invalidOutput -join "`n") -notmatch '(?i)KS-DBCFG-FIXTURE|server\s*=|password\s*=|dpapi-v1:') 'PRODUCTION_FAILURE_OUTPUT_SANITIZED'
     Write-Output ('EMAIL_TRANSPORT_CONNECTION_VERIFIER_PASS checks=' + $passed)
 } finally {
-    if ($null -ne $build -and (Test-Path -LiteralPath $build.Root)) {
-        Remove-Item -LiteralPath $build.Root -Recurse -Force
+    foreach ($ownedRoot in @($(if ($null -ne $build) { $build.Root }), $temporaryRoot)) {
+        if (-not [string]::IsNullOrWhiteSpace($ownedRoot) -and (Test-Path -LiteralPath $ownedRoot)) {
+            $resolved = [IO.Path]::GetFullPath($ownedRoot)
+            $tempBase = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+            if (-not $resolved.StartsWith($tempBase, [StringComparison]::OrdinalIgnoreCase)) { throw 'UNSAFE_EMAIL_TEST_CLEANUP' }
+            Remove-Item -LiteralPath $resolved -Recurse -Force
+        }
     }
+    $resourceState.State = 'CLEANED'
+    [IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
 }

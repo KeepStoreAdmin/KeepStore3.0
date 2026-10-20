@@ -1,8 +1,14 @@
 # KeepStore — START_HERE
 
-Checkpoint breve: 2026-10-19. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
+Checkpoint breve: 2026-10-20. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
 
 ## Stato verificato e lavoro corrente
+
+- Checkpoint prevalente 2026-10-20: PR #361 REV2 **SOURCE INTEGRATED**; stable/base del batch corrente `32bc8714b081f2ecea5b2ad2d13653c21c764512`, main invariato `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Le righe datate #360/#361 sotto conservano lo storico antecedente: i loro stati PR DRAFT, review/smoke pendenti e pacchetti temporanei non sono il task attivo. Rapporti gia acquisiti riusati entro il relativo perimetro, senza ripetere #361 o certificare nuovi account/protezione.
+- Task corrente: `SECURITY-DB-CREDENTIALS-HARDENING-1A`, **Batch A implementato / test tecnico-locali PASS; PR DRAFT da revisionare**, branch `task/security-db-credentials-hardening-1a`. Manifest 25 percorsi: 16 modificati, 8 aggiunti, `web.config` rimosso soltanto dal tracking e preservato sul disco. RSA **43 asserzioni** e **13 check dei consumatori reali**, 45 risorse/3 chiavi di prova/0 residui; provisioning **21/21**, verifier **7/7 + 33/33**, parity **141/141 + 20/20**, guard **28 selftest PASS** e controllo dei **24 file candidati PASS**; integrazione sintetica **12 check PASS**, precompile ASP.NET 4.8 **353 input PASS**, anche da export senza configurazione operativa. Commit/URL PR dal rapporto finale `C:\Temp\KeepStoreDbConfigHardening1A\20261020-resume-967934c1\final-report.md` e Git reale. [Runbook](KEEPSTORE_DB_CREDENTIALS_HARDENING_RUNBOOK.md). CI **NON CONFIGURATA**; push autorizzato direttamente dal PO, senza estendere deroghe precedenti. Nessuna destinazione server o upload autorizzato.
+- Decisione PO 2026-10-20 sulle esposizioni storiche e autorizzazione Windows PowerShell 5.1 **Process/RemoteSigned** nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#security-db-credentials-hardening-1a--batch-a-software). Nessuna policy persistente modificata. Le esposizioni gia censite non richiedono nuovi audit/bonifiche per questo batch o attivita indipendenti; controlli sulle nuove modifiche e sulla non regressione attivi. Laboratorio DB, account/grant/TLS, rollout e revoca **NON AVVIATI / fuori perimetro**, senza bloccare il Batch A.
+
+### Storico precedente al batch A (non task o autorizzazione attuale)
 
 - Repository: `KeepStoreAdmin/KeepStore3.0`; copia canonica `C:\KeepStoreWeb\KeepStore3.0\`; stable `frontend-rebuild`.
 - Ultima integrazione source: PR #360 MERGED/CLOSED su `frontend-rebuild`, FF-only `ffab4224 -> 0916a1dd -> 3b1581d45fa7e782dd189060fa3b2d32050943d6`, verificato come base locale/remota del nuovo task. **WAIVER-PR360 SOURCE INTEGRATION ONLY**: compilazione 4.8 e smoke applicativo della #360 NON ESEGUITI nel suo closeout, restano gate pre-deploy; nessuna produzione attestata. Le evidenze e le deroghe delle PR precedenti conservano il proprio perimetro, senza estensioni automatiche.
@@ -38,7 +44,7 @@ Dipendenza release HOME: `App_Code/HomeServerStageTiming.vb` della #351, oltre a
 - Rollout carrello persistente per tenant non certificato globalmente: foundation DB, configurazioni, file aggiunti App_Code, privacy/cleanup e rollback nel runbook. Nessun DDL implicito.
 - Sicurezza auth/hash legacy, replay Session/InProc, verifica stock residua, consumer e-mail esterno e provisioning degli altri tenant sono rischi/gate da valutare prima del rilascio secondo roadmap, non tutti rinviabili come polish. Non dichiarare HOME/catalogo/PDP/checkout/account/ecommerce completi.
 
-- `SECURITY-DB-CREDENTIALS-HARDENING-1A`: **PIANIFICATO / NON AVVIATO**, fase conclusiva sicurezza/SEO. Account dedicati per sito, privilegi minimi verificati, protezione segreti e migrazione graduale con backup/rollback/test; Taikun e Webaffare mantengono database condiviso e isolamento applicativo aziende. Credenziali gia esposte: rotazione prioritaria anticipata con autorizzazione separata. Nessun intervento strutturale alle connessioni nei micro-task funzionali.
+- `SECURITY-DB-CREDENTIALS-HARDENING-1A`: stato corrente prevalente in testa; il vecchio stato PIANIFICATO/NON AVVIATO e superato per il solo Batch A software. Protezione operativa, account/grant/TLS, migrazione e revoca restano separati e NON AVVIATI; database condiviso e contratti aziende/listini invariati. Nessuna operazione operativa o nuova richiesta di bonifica delle esposizioni storiche da questo checkpoint.
 
 ## Ambienti: usare lo storico senza rifare discovery generica
 

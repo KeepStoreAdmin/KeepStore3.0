@@ -61,22 +61,17 @@ function Get-DatabaseIdentityFromConnectionString([string]$Value, [string]$MySql
 }
 
 function Get-ApplicationDatabaseIdentity([string]$Root, [string]$Name) {
-    $webConfigPath = Join-Path ([IO.Path]::GetFullPath($Root)) 'web.config'
-    if (-not (Test-Path -LiteralPath $webConfigPath -PathType Leaf)) { throw 'EMAIL_WEB_CONFIG_NOT_FOUND' }
     $configuredValue = $null
-    $configuration = $null
     try {
-        [xml]$configuration = Get-Content -LiteralPath $webConfigPath -Raw
-        $matches = @($configuration.configuration.connectionStrings.add | Where-Object { $_.name -ceq $Name })
-        if ($matches.Count -ne 1) { throw 'EMAIL_CONNECTION_STRING_NOT_UNIQUE' }
-        $configuredValue = [Convert]::ToString($matches[0].connectionString)
+        . (Join-Path $PSScriptRoot 'Import-KeepStoreConfigurationReader.ps1')
+        Import-KeepStoreConfigurationReader -ReaderSource (Join-Path $PSScriptRoot 'KeepStoreConfigurationReader.vb')
+        $configuredValue = [KeepStoreConfigurationReader]::ReadConnectionString($Root, $Name)
         return Get-DatabaseIdentityFromConnectionString $configuredValue (Join-Path $Root 'Bin\MySql.Data.dll')
     } catch {
         if ($_.Exception.Message -match '^EMAIL_[A-Z0-9_]+$') { throw }
         throw 'EMAIL_WEB_CONFIG_INVALID'
     } finally {
         $configuredValue = $null
-        $configuration = $null
     }
 }
 
@@ -291,6 +286,7 @@ function Write-CredentialEnvelopeAtomic([string]$Path,
     }
 }
 
+function Invoke-EmailTransportCredentialProvisioning {
 $firstValue = $null
 $secondValue = $null
 $envelope = $null
@@ -320,15 +316,22 @@ try {
     $envelope = Protect-CredentialValue $firstValue $CredentialReference
     Write-CredentialEnvelopeAtomic $credentialPath $envelope $requiredSids $null
 
-    Write-Output ('CREDENTIAL_REFERENCE=' + $CredentialReference)
-    Write-Output 'CREDENTIAL_STORE_RESULT=CONFIGURED'
+    [Console]::Out.WriteLine('CREDENTIAL_REFERENCE=' + $CredentialReference)
+    [Console]::Out.WriteLine('CREDENTIAL_STORE_RESULT=CONFIGURED')
 } catch {
     $safeCode = [Convert]::ToString($_.Exception.Message)
     if ($safeCode -notmatch '^EMAIL_[A-Z0-9_]+$') { $safeCode = 'EMAIL_CREDENTIAL_PROVISIONING_FAILED' }
-    Write-Error $safeCode
-    exit 1
+    [Console]::Error.WriteLine($safeCode)
+    return 1
 } finally {
     if ($envelope) { [Array]::Clear($envelope, 0, $envelope.Length) }
     if ($firstValue) { $firstValue.Dispose() }
     if ($secondValue) { $secondValue.Dispose() }
+}
+return 0
+}
+
+# Dot-sourcing exposes pure validation helpers without performing provisioning.
+if ($MyInvocation.InvocationName -ne '.') {
+    exit (Invoke-EmailTransportCredentialProvisioning)
 }

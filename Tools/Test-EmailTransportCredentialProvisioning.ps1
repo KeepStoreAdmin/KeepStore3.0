@@ -8,6 +8,9 @@ Add-Type -AssemblyName System.Security
 $toolPath = Join-Path $PSScriptRoot 'Set-EmailTransportCredential.ps1'
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ('KeepStore-EmailProvisioning-' + [Guid]::NewGuid().ToString('N'))
+$resourceRecord = Join-Path ([IO.Path]::GetTempPath()) ('email-provisioning-resources-' + [Guid]::NewGuid().ToString('N') + '.json')
+$resourceState = [ordered]@{ Directory = $temporaryRoot; Children = @('application\web.config','credential.bin','atomic temporary envelope files'); State = 'PLANNED' }
+[IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
 $passed = 0
 
 function Assert-Check([bool]$Condition, [string]$Code) {
@@ -38,10 +41,8 @@ try {
     Assert-Check ($toolText -notmatch '(?i)MySqlConnection\s*\(|\.Open\s*\(') 'NO_DATABASE_CONNECTION'
     Assert-Check ($toolText -match 'DataProtectionScope\]::LocalMachine') 'DPAPI_LOCAL_MACHINE'
 
-    $functionDefinitions = @($ast.FindAll({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] }, $true))
-    foreach ($definition in $functionDefinitions) {
-        Invoke-Expression $definition.Extent.Text
-    }
+    # The real entrypoint is guarded: loading helpers never prompts, changes ACLs or reads IIS.
+    . $toolPath -AziendaId 1 -Purpose 'TRANSACTIONAL' -ApplicationRoot $temporaryRoot
 
     $assemblyPath = Join-Path $repo 'Bin\MySql.Data.dll'
     $identityA = Get-DatabaseIdentityFromConnectionString 'Server=fixture-a.invalid;Port=3306;Database=store_a;' $assemblyPath
@@ -81,6 +82,14 @@ try {
     Assert-Check (Test-ProtectedAcl $directoryAcl $requiredSids) 'EXPECTED_PROTECTED_ACL_MODEL'
 
     [IO.Directory]::CreateDirectory($temporaryRoot) | Out-Null
+    $application = Join-Path $temporaryRoot 'application'
+    [IO.Directory]::CreateDirectory($application) | Out-Null
+    $configuration = '<configuration><connectionStrings><clear/><add name="unrelated" connectionString="Server=other.invalid;Database=other;" providerName="MySql.Data.MySqlClient"/><add name="EntropicConnectionString" connectionString="Server=fixture-a.invalid;Port=3306;Database=store_a;" providerName="MySql.Data.MySqlClient"/></connectionStrings></configuration>'
+    [IO.File]::WriteAllText((Join-Path $application 'web.config'), $configuration)
+    Assert-Check ((Get-ApplicationDatabaseIdentity $application 'EntropicConnectionString') -ceq $identityA) 'CONFIGURATION_READER_PRESERVES_DATABASE_IDENTITY'
+    $missingRejected = $false
+    try { Get-ApplicationDatabaseIdentity $application 'missing' | Out-Null } catch { $missingRejected = $_.Exception.Message -match '^EMAIL_[A-Z0-9_]+$' }
+    Assert-Check $missingRejected 'MISSING_NAMED_CONFIGURATION_FAILS_CLOSED'
     $credentialPath = Join-Path $temporaryRoot 'credential.bin'
     $script:aclApplications = 0
     $mockAcl = { param($TargetPath, $TargetAcl) $script:aclApplications += 1 }
@@ -93,5 +102,10 @@ try {
     Assert-Check (([IO.Path]::GetFullPath('C:\ProgramData\KeepStore\EmailCredentials') + '\').StartsWith(([IO.Path]::GetFullPath($repo) + '\'), [StringComparison]::OrdinalIgnoreCase) -eq $false) 'DEFAULT_ROOT_OUTSIDE_REPOSITORY'
     Write-Output ('EMAIL_CREDENTIAL_PROVISIONING_PASS checks=' + $passed)
 } finally {
-    if (Test-Path -LiteralPath $temporaryRoot) { Remove-Item -LiteralPath $temporaryRoot -Recurse -Force }
+    $resolved = [IO.Path]::GetFullPath($temporaryRoot)
+    $tempBase = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if (-not $resolved.StartsWith($tempBase, [StringComparison]::OrdinalIgnoreCase)) { throw 'UNSAFE_PROVISIONING_TEST_CLEANUP' }
+    if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+    $resourceState.State = 'CLEANED'
+    [IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
 }

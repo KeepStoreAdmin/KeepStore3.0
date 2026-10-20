@@ -1,6 +1,6 @@
 # KeepStore — PRODUCT_ROADMAP
 
-Unica roadmap di prodotto vigente, 2026-10-18. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
+Unica roadmap di prodotto vigente, 2026-10-20. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
 
 ## Priorita e lettura degli stati
 
@@ -94,6 +94,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-E01 — HOME adattiva a cataloghi realmente diversi
 
+- Checkpoint prevalente 2026-10-20: #361 REV2 **SOURCE INTEGRATED** nello stable `32bc8714b081f2ecea5b2ad2d13653c21c764512`. Le due righe seguenti conservano gli stati al momento della consegna locale; review e verifiche successive dai rapporti acquisiti, senza ripetizioni per il batch sicurezza. Non certificano account/grant/protezione RSA nuovi e non completano KS-E01.
 - Fase 1 `HOME-ADAPTIVE-SHOPPING-1A`, mandato PO 2026-10-18: implementata / A tecnico locale, PR DRAFT dalla base `3b1581d45fa7e782dd189060fa3b2d32050943d6`. Hero testuale tenant solo in assenza di banner, scoperta con 0/1/pochi/molti reparti reali, composizione neutra senza CTA duplicate; nessuna nuova query o capability engine. **244 asserzioni WebForms compilate, 70 configurazioni Chrome offline Tech/Food e precompile ASP.NET 4.8 PASS**, limiti nel Masterplan. Review indipendente e futuro smoke applicativo/desktop-mobile reali ancora separati; nessun merge/deploy/DB/IIS. KS-E01 resta PARZIALE, non completa adattivita multi-merceologia.
 - REV2 #361 autorizzata 2026-10-19: marchi con asset locali verificati, senza HEAD server-side o fallback remoto; file assenti/non validi e sezione priva di marchi omessi, identita/link commerciali preservati. 127 controlli differenziali su codice compilato e nuova precompile safe 4.8 PASS; zero tentativi HTTP nelle fixture Tech/Food. Nuova review REV2 e smoke reale ancora pendenti. Futuro pacchetto Integration di sei file (quattro #361 + script #360 + helper timing stable), senza installazione implicita. Diagnostica OFF da attestazione PO della chiave assente; esclusivita pool ancora UNKNOWN. Nessuna modifica allo scope prodotto o dichiarazione di release completata.
 - Fonte/data: S1/S2/S4, 2026-10-15. P1 prodotto; CURRENT PARZIALE / TARGET non completato.
@@ -142,15 +143,16 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 - TARGET/AC del batch futuro `POST-CORE-MODULE-READINESS-1A`: (1) scegliere un solo modulo/outcome e dati autorevoli; (2) configurazione/pannello e dati operativi del dominio separati; (3) consensi/sicurezza/limiti/test tenant e rollback approvati. Integrazioni con rischi indipendenti diventano task separati, non un mega-batch.
 - Dipendenze/prove: Blueprint modulare e AI/search, audit specifico quando autorizzato; SEO tecnica indispensabile, HTTPS e correttezza commerciale restano P0, non rinviate insieme al marketing. Recesso digitale B2C, coupon/Groupon, abandoned-cart/privacy e altri requisiti storici restano tracciati nel Masterplan: non attivati o cancellati; rilevanza normativa/commerciale da riesaminare prima della release pertinente.
 
-### KS-H03 — Sicurezza credenziali database, pianificazione conclusiva
+### KS-H03 — Sicurezza credenziali database, Batch A software
 
-- Decisione PO riconfermata 2026-10-18: `SECURITY-DB-CREDENTIALS-HARDENING-1A` **PIANIFICATO / NON AVVIATO**, per la fase conclusiva dedicata a sicurezza e SEO; nessun intervento strutturale alle connessioni durante i micro-task funzionali.
-- Perimetro futuro: account dedicati per sito, privilegi minimi verificati sul database necessario, protezione dei segreti e migrazione graduale con backup, rollback e test. Taikun e Webaffare mantengono il database condiviso e l'isolamento applicativo delle aziende; il solo database nella connection string non limita i privilegi dell'account.
-- Credenziali gia esposte: rotazione prioritaria anticipata, con autorizzazione separata; non rinviata automaticamente alla fase conclusiva. Nessuna connessione, credenziale, configurazione, utenza/privilegio DB o infrastruttura modificata da #359. Rischi bloccanti per il rilascio restano soggetti ai rispettivi gate.
+- Decisioni PO 2026-10-20: **Batch A implementato e testato tecnico-localmente PASS; PR DRAFT da revisionare**, manifest esclusivo 25 percorsi; sola compatibilita software e prove sintetiche locali. RSA/recupero e consumatori reali, e-mail/parity offline, guard incrementale, installazione/aggiornamento/untracking sintetici e precompile 4.8 dal template anche da export senza configurazione operativa PASS; conteggi nel Masterplan. Commit/URL PR dal rapporto finale e Git reale; review indipendente pendente. Nessuna configurazione operativa modificata.
+- Contratto: `EntropicConnectionString` invariato; lettore nativo .NET degli strumenti con origine esplicita, SearchSuggest senza fallback, configurazione privata esclusa dal tracking, template senza segreti, precompile sintetica, protezione RSA esplicita e guard sulle nuove introduzioni. Installazione/aggiornamento/recupero nel [runbook](KEEPSTORE_DB_CREDENTIALS_HARDENING_RUNBOOK.md).
+- Decisione sulle esposizioni storiche nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-2026-10-20--esposizioni-pregresse): non sono prerequisito di bonifica del batch o di attivita indipendenti, senza ripetere audit/avvisi o dichiarare bonifiche eseguite. Controlli sulle nuove modifiche e sulla non regressione attivi.
+- Laboratorio DB, account dedicati per consumer effettivo, grant/TLS, migrazione e revoca **NON AVVIATI / fuori autorizzazione**, senza bloccare l'A tecnico-locale del Batch A. Taikun/Webaffare mantengono DB condiviso e isolamento applicativo; protezione RSA non sostituisce privilegi minimi o invalidazione delle credenziali. Nessuna operazione parte automaticamente.
 
 ## Decisione operativa corrente
 
-Checkpoint 2026-10-18: #360 integrata source-only, base verificata `3b1581d45fa7e782dd189060fa3b2d32050943d6`; deroghe precedenti restano circoscritte. Unico task corrente autorizzato: `HOME-ADAPTIVE-SHOPPING-1A`, KS-E01 fase 1, implementazione locale e PR DRAFT per review, non merge/deploy o certificazione complessiva. Hardening DB PIANIFICATO / NON AVVIATO, rotazione credenziali esposte anticipabile solo con autorizzazione separata. Nessun accesso HTTP/IIS o DB reale implicito e nessun task successivo avviato.
+Checkpoint 2026-10-20: #361 REV2 integrata source, base `32bc8714b081f2ecea5b2ad2d13653c21c764512`; main invariato. Unico task corrente: `SECURITY-DB-CREDENTIALS-HARDENING-1A`, solo Batch A software, test sintetici e consegna PR DRAFT verso `frontend-rebuild`. Push esplicitamente autorizzato; CI **NON CONFIGURATA**, nessuna deroga #361 estesa. Windows PowerShell 5.1 con `RemoteSigned` soltanto nei processi dedicati; nessun merge/deploy, DB, IIS, target server o operazione amministrativa reale. Prossimo passo: review indipendente della PR; nessuna fase operativa avviata.
 
 ## Aggiornamento della roadmap
 

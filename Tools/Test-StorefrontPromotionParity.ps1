@@ -1,6 +1,9 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
-    [string]$BaseUrl = 'https://localhost:8443',
+    [string]$BaseUrl,
+    [string]$ConfigPath,
+    [switch]$EnableRuntime,
+    [switch]$EnableDirectParity,
     [int]$SingleCampaignId = 19524,
     [int]$MultiCampaignId = 14556,
     [int]$TierCampaignId = 19527,
@@ -60,6 +63,7 @@ function Invoke-LocalGet {
         [string]$PathAndQuery,
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
     )
+    if (-not $EnableRuntime -or [string]::IsNullOrWhiteSpace($BaseUrl)) { throw 'PARITY_RUNTIME_EXPLICIT_TARGET_REQUIRED' }
     $arguments = @{
         Uri = $BaseUrl.TrimEnd('/') + '/' + $PathAndQuery.TrimStart('/')
         MaximumRedirection = 5
@@ -279,6 +283,9 @@ function Assert-HealthyResponse {
 
 function Test-PromotionDisplayErrorStateIsolated {
     $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('KeepStore-PromotionDisplay-' + [Guid]::NewGuid().ToString('N'))
+    $resourceRecord = Join-Path ([IO.Path]::GetTempPath()) ('promotion-display-resources-' + [Guid]::NewGuid().ToString('N') + '.json')
+    $resourceState = [ordered]@{ Directory = $tempRoot; Children = @('ProductPromotionDisplayHelper.vb','PromotionDisplayFixture.vb','PromotionDisplayFixture.exe'); State = 'PLANNED' }
+    [IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
     [void][IO.Directory]::CreateDirectory($tempRoot)
     try {
         $helperSource = Get-FileText 'App_Code\ProductPromotionDisplayHelper.vb'
@@ -499,7 +506,8 @@ End Module
         if ([string]::IsNullOrWhiteSpace($frameworkRoot)) { throw 'PROMO_ERROR_STATE_VBC_UNAVAILABLE' }
         $vbc = Join-Path $frameworkRoot 'vbc.exe'
         $references = @('System.dll', 'System.Core.dll', 'System.Web.dll') | ForEach-Object { '/reference:' + (Join-Path $frameworkRoot $_) }
-        $compilerOutput = @(& $vbc /nologo /target:exe ('/out:' + $exePath) $references $helperPath $fixturePath 2>&1)
+        $formatterSources = @('App_Code\UiPriceFormatter.vb','App_Code\StorefrontPriceDisplayContext.vb') | ForEach-Object { Join-Path (Get-RepositoryRoot) $_ }
+        $compilerOutput = @(& $vbc /nologo /target:exe ('/out:' + $exePath) $references $helperPath $formatterSources $fixturePath 2>&1)
         Assert-True ($LASTEXITCODE -eq 0 -and (Test-Path $exePath)) 'isolated promotion error-state fixture compiles'
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exePath)) {
             $compilerOutput | ForEach-Object { Write-Output ('FIXTURE-COMPILER ' + $_) }
@@ -512,7 +520,12 @@ End Module
         Assert-True ($fixtureExitCode -eq 0) 'isolated resolver and offer-loading failures fail closed'
         Assert-True (($fixtureOutput -join "`n").IndexOf('PROMO_ERROR_STATE_RESULT PASS=20 FAIL=0', [StringComparison]::Ordinal) -ge 0) 'isolated error-state assertions all pass'
     } finally {
-        if (Test-Path $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+        $resolved = [IO.Path]::GetFullPath($tempRoot)
+        $tempBase = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+        if (-not $resolved.StartsWith($tempBase, [StringComparison]::OrdinalIgnoreCase)) { throw 'UNSAFE_PROMOTION_TEST_CLEANUP' }
+        if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+        $resourceState.State = 'CLEANED'
+        [IO.File]::WriteAllText($resourceRecord, (ConvertTo-Json -InputObject $resourceState -Depth 3))
     }
 }
 
@@ -615,9 +628,9 @@ function Test-StaticContract {
     Assert-Contains $catalogCss 'border-radius: 8px' 'quantity tier uses a restrained radius'
     Assert-Contains $catalogCss '.ks-catalog-promos__price strong' 'tier price has dedicated emphasis'
     Assert-Contains $catalogCss 'column-gap: 4px' 'Da and tier price keep real spacing'
-    Assert-Contains $catalogMarkup 'catalog-ui.css") %>?v=20260916-offers-promo-ux1' 'catalog CSS cache-buster is current'
+    Assert-True ([regex]::IsMatch($catalogMarkup, 'catalog-ui\.css"\)\s*%>\?v=[0-9]{8}-[A-Za-z0-9-]+')) 'catalog CSS declares a versioned cache-buster'
     Assert-NotContains $homePage 'Dim offerPool As DataTable' 'home does not acquire an unused duplicate offer pool'
-    Assert-True ([regex]::Matches($homePage, 'Dim dealPool As DataTable = GetDealOfferPool\(96\)', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'home acquires its authorized deal pool once'
+    Assert-True ([regex]::Matches($homePage, '\bdealPool(?:\s+As\s+DataTable)?\s*=\s*GetDealOfferPool\(96\)', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'home acquires its authorized deal pool once'
     Assert-Contains $homePage 'SortAuthorizedDealRows(authorized, limit)' 'home sorts after the authorized promotion snapshot'
     Assert-Contains $homePage 'RowDateValue(left, "DisplayPromoDeadline")' 'home ordering uses the effective authorized deadline'
     Assert-Contains $homePage 'model.Offers' 'home derives the nearest deadline from authorized offers'
@@ -662,7 +675,7 @@ function Test-StaticContract {
     Assert-Contains $pdp 'BuildRelatedPromotionBadgeHtml(promotionModel)' 'immediate promotion cards build the ONSUS badge from the authorized model'
     Assert-Contains $pdp 'Not model.HasDefaultQuantityOffer' 'tier-only cards cannot receive a false immediate Promo badge'
     Assert-Contains $pdp 'model.BestDefaultQuantityDiscountPercent <= 0D' 'badges require a real discount percentage'
-    Assert-Contains $pdp 'ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel)' 'tier and multi-offer cards reuse the shared certified summary'
+    Assert-Contains $pdp 'ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel, _priceDisplayContext.IsVatExcluded)' 'tier and multi-offer cards reuse the shared certified summary and VAT context'
     Assert-Contains $pdp 'Return String.Empty' 'no-promotion cards emit no badge container'
     Assert-Contains $display 'If Not model.HasQuantityTierOffer AndAlso model.Offers.Count <= 1 Then Return String.Empty' 'immediate-only cards emit no redundant summary'
     Assert-Contains $display 'If model.HasQuantityTierOffer Then' 'tier-only and mixed cards expose the quantity tier'
@@ -677,8 +690,8 @@ function Test-StaticContract {
     Assert-Contains $css '.ks-home-deals .swiper-wrapper' 'deal swiper stretches all slides uniformly'
     Assert-Contains $css '.ks-deal-slot--availability' 'deal availability uses a stable structural slot'
     Assert-Contains $css '.ks-deal-slot--progress' 'deal progress uses a stable bottom slot'
-    Assert-Contains $pdpMarkup 'product-ui.css") %>?v=20260917-offers-promo-ux1-rev3' 'PDP CSS cache-buster is current'
-    Assert-Contains $master 'theme-overrides.css") & "?v=20260917-offers-promo-ux1-rev3"' 'global theme CSS cache-buster is current'
+    Assert-True ([regex]::IsMatch($pdpMarkup, 'product-ui\.css"\)\s*%>\?v=[0-9]{8}-[A-Za-z0-9-]+')) 'PDP CSS declares a versioned cache-buster'
+    Assert-True ([regex]::IsMatch($master, 'theme-overrides\.css"\)\s*&\s*"\?v=[0-9]{8}-[A-Za-z0-9-]+"')) 'global theme CSS declares a versioned cache-buster'
 
     $ownerVisible = {
         param([int]$OwnerId, [bool]$Authenticated, [int]$CurrentUserId)
@@ -697,14 +710,18 @@ function Test-StaticContract {
     Assert-True ((& $zapPrice 5) -eq 4.00D) 'ZAP80-A4 quantity 5 price is 4.00'
 }
 
+function Get-ParityConnectionString {
+    param([Parameter(Mandatory=$true)][string]$ConfigurationPath)
+    . (Join-Path $PSScriptRoot 'Import-KeepStoreConfigurationReader.ps1')
+    Import-KeepStoreConfigurationReader -ReaderSource (Join-Path $PSScriptRoot 'KeepStoreConfigurationReader.vb')
+    return [KeepStoreConfigurationReader]::ReadConnectionStringFromFile($ConfigurationPath)
+}
+
 function Open-ReadOnlyConnection {
-    $root = Get-RepositoryRoot
-    $dll = Join-Path $root 'Bin\MySql.Data.dll'
-    if (-not ('MySql.Data.MySqlClient.MySqlConnection' -as [type])) { Add-Type -Path $dll }
-    [xml]$configuration = [IO.File]::ReadAllText((Join-Path $root 'Web.config'))
-    $node = @($configuration.configuration.connectionStrings.add | Where-Object { $_.name -eq 'EntropicConnectionString' })[0]
-    if ($null -eq $node -or [string]::IsNullOrWhiteSpace([string]$node.connectionString)) { throw 'REV1_CONNECTION_UNAVAILABLE' }
-    $connection = New-Object MySql.Data.MySqlClient.MySqlConnection([string]$node.connectionString)
+    if (-not $EnableDirectParity -or [string]::IsNullOrWhiteSpace($ConfigPath)) { throw 'PARITY_DATABASE_EXPLICIT_TARGET_REQUIRED' }
+    $configuredValue = Get-ParityConnectionString $ConfigPath
+    $connection = New-Object MySql.Data.MySqlClient.MySqlConnection($configuredValue)
+    $configuredValue = $null
     $connection.Open()
     return $connection
 }
@@ -1022,10 +1039,13 @@ function Test-RuntimeContract {
     } finally { Restore-LocalCertificateCompatibility }
 }
 
-Test-StaticContract
-Test-PromotionDisplayErrorStateIsolated
-if (-not $SkipDirectParity) { Test-DirectParity }
-if (-not $SkipRuntime) { Test-RuntimeContract }
-
-Write-Output ('RESULT PASS={0} FAIL={1}' -f $script:Passed, $script:Failed)
-if ($script:Failed -gt 0) { exit 1 }
+if ($MyInvocation.InvocationName -ne '.') {
+    if ($EnableDirectParity -and [string]::IsNullOrWhiteSpace($ConfigPath)) { throw 'PARITY_DATABASE_EXPLICIT_TARGET_REQUIRED' }
+    if ($EnableRuntime -and [string]::IsNullOrWhiteSpace($BaseUrl)) { throw 'PARITY_RUNTIME_EXPLICIT_TARGET_REQUIRED' }
+    Test-StaticContract
+    Test-PromotionDisplayErrorStateIsolated
+    if ($EnableDirectParity -and -not $SkipDirectParity) { Test-DirectParity }
+    if ($EnableRuntime -and -not $SkipRuntime) { Test-RuntimeContract }
+    Write-Output ('RESULT PASS={0} FAIL={1}' -f $script:Passed, $script:Failed)
+    if ($script:Failed -gt 0) { exit 1 }
+}

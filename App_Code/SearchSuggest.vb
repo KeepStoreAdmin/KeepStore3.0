@@ -95,9 +95,10 @@ Public Class SearchSuggest
     End Sub
 
     Private Shared Function GetConnString() As String
-        Dim cs = ConfigurationManager.ConnectionStrings("taikun")
-        If cs Is Nothing OrElse String.IsNullOrEmpty(cs.ConnectionString) Then
-            Return ConfigurationManager.ConnectionStrings(0).ConnectionString
+        Dim cs = ConfigurationManager.ConnectionStrings("EntropicConnectionString")
+        If cs Is Nothing OrElse String.IsNullOrWhiteSpace(cs.ConnectionString) OrElse
+           Not String.Equals(cs.ProviderName, "MySql.Data.MySqlClient", StringComparison.Ordinal) Then
+            Throw New ConfigurationErrorsException("SEARCH_CONNECTION_CONFIGURATION_INVALID")
         End If
         Return cs.ConnectionString
     End Function

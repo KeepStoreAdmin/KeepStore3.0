@@ -1,13 +1,57 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-19
+Aggiornato: 2026-10-20
 
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
 
-### HOME-ADAPTIVE-SHOPPING-1A — KS-E01 fase 1, A tecnico locale / PR DRAFT
+### SECURITY-DB-CREDENTIALS-HARDENING-1A — Batch A software
+
+Mandati PO 2026-10-20: implementazione completa, prove locali sintetiche, un commit, push del solo branch e PR DRAFT verso `frontend-rebuild`; ripresa autorizzata con Windows PowerShell 5.1 Desktop e `RemoteSigned` limitato allo scope Process. Copia canonica `C:\KeepStoreWeb\KeepStore3.0`, branch esistente `task/security-db-credentials-hardening-1a` dalla base esatta `32bc8714b081f2ecea5b2ad2d13653c21c764512`; `main` protetto `976e99f17cabc8a5c6a8715463444edfeaadcd91`. #361 REV2 gia integrata source: i checkpoint HOME sottostanti sono storico antecedente alla chiusura; rapporti e verifiche acquisiti riusati nei propri limiti, senza ripetere collaudi o estenderli al nuovo codice.
+
+**Batch A implementato e testato tecnico-localmente PASS; PR DRAFT da revisionare, nessun merge/deploy.** RSA nativa: **43 asserzioni (42 core + una probe aggregata), 13 check dei consumatori reali**; **45 risorse registrate, 3 chiavi di prova, 0 residui**. Provisioning e-mail offline **21/21 PASS**; verifier offline **7/7 + 33/33 PASS**; parity offline **141/141 + 20/20 fixture PASS**; guard **28 selftest PASS** e controllo incrementale dei **24 file candidati PASS**. Integrazione sintetica **12 check PASS**: installazione da template fail-closed, update con configurazione preservata, untracking senza cancellazione locale, guard positivo/negativo degli artefatti e precompile da export senza `web.config` operativo. Precompile completa ASP.NET Framework 4.8 dal template **353 input PASS**, anche nel percorso export. Commit e URL PR dal Git reale e dal rapporto finale sanitizzato `C:\Temp\KeepStoreDbConfigHardening1A\20261020-resume-967934c1\final-report.md`/`final-report.json`, senza inventare riferimenti prima della consegna. Il precedente arresto per Restricted ha lasciato modifiche annullate e branch preservato; la ripresa non crea un nuovo task.
+
+Manifest esclusivo **25 percorsi: 16 MODIFIED, 8 ADDED, 1 REMOVED-FROM-TRACKING**:
+
+| Operazione | Percorsi |
+| --- | --- |
+| REMOVED-FROM-TRACKING | `web.config`, mantenuto identico nel filesystem; mai voce di cancellazione sul server |
+| MODIFIED | `App_Code/SearchSuggest.vb`; `Tools/Set-EmailTransportCredential.ps1`; `Tools/EmailTransportConnectionVerifier.vb`; `Tools/Invoke-PersistentCartRegistryCleanup.ps1`; `Tools/PersistentCartCleanupRunner.vb`; `Tools/Verify-EmailTransportConnection.ps1`; `Tools/StorefrontCommercialBulkResolutionHarness.vb`; `Tools/Test-StorefrontPromotionParity.ps1`; `Tools/Test-KeepStorePrecompileSafe.ps1`; `Tools/Test-EmailTransportConnectionVerifier.ps1`; `Tools/Test-EmailTransportCredentialProvisioning.ps1`; `docs/KEEPSTORE_START_HERE.md`; `docs/KEEPSTORE_PRODUCT_ROADMAP.md`; `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md`; `docs/KEEPSTORE_SYSTEM_BLUEPRINT.md`; `docs/PERSISTENT_ANONYMOUS_CART_DEPLOYMENT_RUNBOOK.md` |
+| ADDED | `.gitignore`; `web.config.example`; `Tools/KeepStoreConfigurationReader.vb`; `Tools/Import-KeepStoreConfigurationReader.ps1`; `Tools/Set-DatabaseProtectedConfiguration.ps1`; `Tools/Test-DatabaseProtectedConfiguration.ps1`; `Tools/Test-DatabaseSecretsGuard.ps1`; `docs/KEEPSTORE_DB_CREDENTIALS_HARDENING_RUNBOOK.md` |
+
+Contratti: `EntropicConnectionString` resta canonico. SearchSuggest elimina gli alias/posizioni alternativi; gli strumenti condividono `WebConfigurationManager.OpenMappedWebConfiguration` con target e origine verificati, senza resolver runtime globale. Cleanup: il processo riceve percorso configurazione, azienda e batch, legge internamente il file e non riceve segreti da stdin. RSA esplicita su configurazione predisposta; default di sola verifica, Apply soltanto su fixture sintetiche nel batch. Precompile dal template senza configurazione/chiavi operative; guard incrementale sulle nuove aggiunte e sugli artefatti pubblicabili.
+
+Prove PASS sui candidati effettivi nei limiti sopra: selezione per nome e origine; errori fail-closed; round-trip RSA nativo, chiavi/ciphertext errati, recupero e cleanup; Apply esplicito, idempotenza e failure rollback di bytes/ACL/attributi/date; wrapper/runner compilati e consumatori reali; e-mail/parity offline senza DB/SMTP; precompile ASP.NET Framework 4.8 dal template senza configurazione operativa; guard positivo/negativo, installazione/aggiornamento/untracking sintetici. Preservazione finale dello stato locale, manifest e diff check nel rapporto conclusivo. Nessuna suite grafica/#361 ripetuta. Performance: eventuali costi misurati riguardano soltanto caricamento configurazione locale, nessun miglioramento del sito o del DB dichiarato.
+
+Preflight GitHub acquisito per questo batch: autenticazione disponibile, nessun workflow/webhook/check-run/status/ruleset/deployment rilevato. **CI NON CONFIGURATA**, non PASS. Push autorizzato direttamente dal mandato corrente; nessuna deroga #359/#360/#361 riutilizzata. Dopo PASS tecnico: un commit, push esclusivo task branch, PR DRAFT e review indipendente ChatGPT. Stable e main non vengono modificati dal batch; niente merge o deploy.
+
+Manifest Git e futura pubblicazione sono distinti. Il solo runtime applicativo modificato e `App_Code/SearchSuggest.vb`; template e Tools non costituiscono un pacchetto upload. Nessuna destinazione server o lista di file dichiarata pronta per smoke e autorizzata da questo mandato. Installazione, aggiornamento manuale dei soli file approvati da Germano, altre working copy e recupero nel [runbook DB](KEEPSTORE_DB_CREDENTIALS_HARDENING_RUNBOOK.md). Non riaprire un audit dei processi di pubblicazione gia attestati.
+
+Laboratorio DB, account/grant/TLS, identita application pool e ACL operative, migrazione consumer, revoca credenziali e machineKey **NON AVVIATI / esclusi**. Non sono blocker dell'A tecnico-locale del Batch A. Configurazione operativa e relativo hash/ACL/attributi/date, stato preesistente e asset devono risultare preservati dal rapporto finale; nessuna bonifica o invalidazione segreti dichiarata.
+
+#### Decisione PO 2026-10-20 — esposizioni pregresse
+
+"Le esposizioni pregresse di credenziali e dati già censite non costituiscono
+un prerequisito di bonifica per completare il batch software autorizzato
+o proseguire attività indipendenti. Non ripetere scansioni dello storico,
+richieste di cancellazione/rotazione o avvisi sul medesimo finding.
+Nessuna cancellazione o modifica retroattiva è richiesta.
+Restano attivi i controlli sulle nuove modifiche, sulla non regressione
+e sul rispetto del perimetro operativo. Un problema nuovo con impatto
+concreto sul lavoro corrente viene valutato nel suo specifico perimetro.
+Le operazioni escluse restano separate e non vengono avviate automaticamente."
+
+#### Ripresa PO 2026-10-20 — esecutore Windows PowerShell 5.1
+
+Autorizzata esclusivamente **RemoteSigned nello scope Process dei processi di lavoro dedicati**, prima del caricamento degli script. Metodo ammesso: `powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File <script-autorizzato>` oppure `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned` nella medesima sessione dedicata. Versione, scope iniziali e policy effettiva del processo esecutore vanno registrati; prima della reimplementazione, caricamento di uno script locale sintetico innocuo poi rimosso.
+
+Nessuna modifica permanente a CurrentUser/LocalMachine/MachinePolicy/UserPolicy, profili o registro; Group Policy prevale. Vietati Bypass, Unrestricted, Invoke-Expression, conversione in inline per eludere blocchi e modifiche ad AMSI/AppLocker/WDAC/antivirus. Il test esecutore non e PASS applicativo. In finally: cleanup delle sole risorse sintetiche registrate, attesa/chiusura dei soli figli creati, terminazione processi dedicati o ripristino del precedente valore Process se la sessione resta aperta; verifica degli scope persistenti invariati, senza impostare Restricted permanentemente come presunto rollback.
+
+Prossimo passo unico del Batch A: **review indipendente ChatGPT della PR DRAFT**, dopo la consegna tecnica. Nessun laboratorio/rollout/revoca o altro task parte automaticamente.
+
+### Checkpoint storico HOME-ADAPTIVE-SHOPPING-1A — KS-E01 fase 1, consegna locale prima della chiusura #361
 
 Mandato PO 2026-10-18: implementazione, test mirati, un commit e PR DRAFT; nessun merge, deploy, IIS o DB. Base locale/remota verificata `3b1581d45fa7e782dd189060fa3b2d32050943d6`, branch `task/home-adaptive-shopping-1a`; main protetto `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Identita commit/PR dal Git reale, senza commit ricorsivi. Manifest esclusivo: `Default.aspx`, `Default.aspx.vb`, `Public/assets/keepstore/css/theme-overrides.css`, `Page.master` (solo cache-buster CSS `20261018-home-adaptive-shopping1a`) e i tre manuali START_HERE/PRODUCT_ROADMAP/Masterplan.
 
@@ -80,9 +124,9 @@ Evidenze gia acquisite, riusate senza ripetizione: baseline immutabile 6/6 PASS;
 
 Preflight auto-deploy: GitHub verificato con 0 workflow, 0 webhook e 0 deployment registrati, Pages assente, nessuno status/check sul commit; nessun hook locale attivo rilevato. Nessun automatismo di deploy rilevato nel perimetro verificato. Integrazione tramite push normale; nessun merge commit, rebase, reset, clean, force push o mutazione di altre PR. `main` e `origin/main` protetti a `976e99f17cabc8a5c6a8715463444edfeaadcd91`; `web.config` locale, quattro tracked deletions, 54 untracked e staging preservati con inventario/hash. Nessuna operazione su DB/IIS, runtime Integration, connessioni, credenziali, produzione, ordini, pagamenti o e-mail.
 
-### SECURITY-DB-CREDENTIALS-HARDENING-1A — PIANIFICATO / NON AVVIATO
+### Checkpoint storico SECURITY-DB-CREDENTIALS-HARDENING-1A — pianificazione prima del Batch A
 
-Decisione PO: progettare nella fase conclusiva sicurezza/SEO account dedicati per sito, privilegi minimi verificati, protezione dei segreti e migrazione graduale con backup, rollback e test. Taikun e Webaffare mantengono database condiviso e isolamento applicativo delle aziende. La selezione del database nella connection string non riduce da sola i privilegi dell'account. Nessun intervento strutturale durante i micro-task funzionali; nessuna modifica alle connessioni, a `EntropicConnectionString`, utenze/privilegi o configurazioni da questo closeout. Credenziali gia esposte da ruotare con priorita anticipata e autorizzazione separata. Pianificazione distinta dalla deroga #359, senza autorizzazione operativa implicita; nessun task successivo avviato.
+Decisione storica: account dedicati per applicazione/consumer, privilegi minimi, protezione segreti e migrazione graduale, mantenendo DB condiviso e isolamento aziende. La selezione del database nella connection string non limita i privilegi. Il successivo mandato 2026-10-20 autorizza il solo Batch A software nel checkpoint corrente, che prevale su PIANIFICATO/NON AVVIATO; nessuna operazione operativa implicita e nessuna ripetizione della bonifica dei finding storici.
 
 ### Checkpoint precedente — ACCOUNT-SESSION-REVOCATION-1A, A tecnico locale prima di review/deroga
 

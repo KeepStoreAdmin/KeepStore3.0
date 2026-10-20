@@ -7,7 +7,6 @@ Imports System.Data
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Web
-Imports System.Xml
 Imports MySql.Data.MySqlClient
 
 ' Compile this fixture with the three production helpers and the canonical
@@ -207,13 +206,13 @@ Module StorefrontCommercialBulkResolutionHarness
         Return ProductPromotionDisplayHelper.BuildForProduct(batchValue, 2, -1, 10D, 12D).ResolutionState
     End Function
 
+    Private Function LoadConnectionString(ByVal configPath As String) As String
+        Return KeepStoreConfigurationReader.ReadConnectionStringFromFile(configPath)
+    End Function
+
     Private Sub RunLiveReadOnly(ByVal configPath As String, ByVal requestedHost As String)
         If String.IsNullOrWhiteSpace(requestedHost) Then Throw New InvalidOperationException("Host missing")
-        Dim config As New XmlDocument()
-        config.Load(configPath)
-        Dim node As XmlNode = config.SelectSingleNode("/configuration/connectionStrings/add[@name='EntropicConnectionString']")
-        If node Is Nothing Then Throw New InvalidOperationException("Connection configuration missing")
-        Dim connectionString As String = node.Attributes("connectionString").Value
+        Dim connectionString As String = LoadConnectionString(configPath)
         Dim scope As String = StorefrontSeoTenantContext.BuildDatabaseScopeKey(connectionString)
         If String.IsNullOrWhiteSpace(scope) Then Throw New InvalidOperationException("Database scope missing")
         Dim identities As New List(Of StorefrontSeoTenantIdentity)()

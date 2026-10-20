@@ -6,13 +6,14 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) { $RepositoryRoot = Split-Pat
 $RepositoryRoot = [IO.Path]::GetFullPath($RepositoryRoot).TrimEnd('\')
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\aspnet_compiler.exe'
 if (-not (Test-Path -LiteralPath $compiler -PathType Leaf)) { throw 'SAFE_PRECOMPILE_COMPILER_MISSING' }
-$operationalConfig = Join-Path $RepositoryRoot 'web.config'
-if (-not (Test-Path -LiteralPath $operationalConfig -PathType Leaf)) { throw 'SAFE_PRECOMPILE_SOURCE_CONFIG_MISSING' }
+$templateConfig = Join-Path $RepositoryRoot 'web.config.example'
+if (-not (Test-Path -LiteralPath $templateConfig -PathType Leaf)) { throw 'SAFE_PRECOMPILE_TEMPLATE_MISSING' }
 
 $tempBase = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
 $workRoot = Join-Path $tempBase ('ks-safe-precompile-' + [Guid]::NewGuid().ToString('N'))
 $stage = Join-Path $workRoot 'source'
 $output = Join-Path $workRoot 'compiled'
+$compilerCache = Join-Path $workRoot 'aspnet-cache'
 $cleanupError = $null
 
 function Assert-PlainSourcePath([string]$path, [string]$root) {
@@ -134,8 +135,10 @@ if ($DiagnosticTestOnly) {
     return
 }
 
+$resourceJournal = Join-Path $tempBase ('precompile-resources-' + [Guid]::NewGuid().ToString('N') + '.json')
+@{ Status='PLANNED'; Directory=$workRoot } | ConvertTo-Json | Set-Content -LiteralPath $resourceJournal -Encoding UTF8
 try {
-    New-Item -ItemType Directory -Path $stage, $output -Force | Out-Null
+    New-Item -ItemType Directory -Path $stage, $output, $compilerCache -Force | Out-Null
 
     # Only tracked compilation inputs are copied. Every original .config,
     # App_Data file, document, tool, log and untracked asset is excluded first.
@@ -175,10 +178,10 @@ try {
         throw 'SAFE_PRECOMPILE_INCOMPLETE_SOURCE_STAGE'
     }
 
-    # Read the operational XML only in memory. Import exclusively compilation
-    # settings; never serialize its connection, key, SMTP or service sections.
+    # The versioned, secret-free template is the only configuration input.
+    # Never open installation web.config or depend on its RSA key.
     $sourceXml = New-Object Xml.XmlDocument
-    $sourceXml.Load($operationalConfig)
+    $sourceXml.Load($templateConfig)
     $forbiddenValues = New-Object 'System.Collections.Generic.List[string]'
     foreach ($connection in @($sourceXml.SelectNodes('/configuration/connectionStrings/add'))) {
         $raw = [string]$connection.GetAttribute('connectionString')
@@ -234,6 +237,7 @@ try {
         if ($name -eq 'compilation' -and $imported.Attributes.GetNamedItem('targetFramework') -eq $null) {
             $imported.SetAttribute('targetFramework', '4.8')
         }
+        if ($name -eq 'compilation') { $imported.SetAttribute('tempDirectory', $compilerCache) }
         [void]$safeWeb.AppendChild($imported)
     }
     [void]$safeXml.DocumentElement.AppendChild($safeWeb)
@@ -246,10 +250,9 @@ try {
         $imported = $safeXml.ImportNode($node, $true)
         Remove-XmlComments $imported
         if ($name -eq 'system.codedom') {
-            # The operational site has CompilerVersion=v3.5 and no explicit
-            # targetFramework. The isolated .NET 4.8 compile must use v4.0.
+            # The isolated .NET 4.8 compiler always uses the Framework v4 provider.
             $versionOptions = @($imported.SelectNodes('compilers/compiler/providerOption[@name="CompilerVersion"]'))
-            if ($versionOptions.Count -ne 1 -or $versionOptions[0].GetAttribute('value') -ne 'v3.5') {
+            if ($versionOptions.Count -ne 1 -or $versionOptions[0].GetAttribute('value') -notin @('v3.5','v4.0')) {
                 throw 'SAFE_PRECOMPILE_UNEXPECTED_COMPILER_VERSION'
             }
             $versionOptions[0].SetAttribute('value', 'v4.0')
@@ -259,7 +262,7 @@ try {
     $safeConfigPath = Join-Path $stage 'web.config'
     $safeXml.Save($safeConfigPath)
 
-    $sourceHash = (Get-FileHash -LiteralPath $operationalConfig -Algorithm SHA256).Hash
+    $sourceHash = (Get-FileHash -LiteralPath $templateConfig -Algorithm SHA256).Hash
     $stagedConfigs = @(Get-ChildItem -LiteralPath $stage -Recurse -File -Filter '*.config')
     if ($stagedConfigs.Count -ne 1 -or $stagedConfigs[0].FullName -ne $safeConfigPath) {
         throw 'SAFE_PRECOMPILE_UNEXPECTED_CONFIG'
@@ -368,4 +371,5 @@ try {
         }
     }
     if ($cleanupError) { throw $cleanupError }
+    @{ Status='CLEANED'; Directory=$workRoot } | ConvertTo-Json | Set-Content -LiteralPath $resourceJournal -Encoding UTF8
 }

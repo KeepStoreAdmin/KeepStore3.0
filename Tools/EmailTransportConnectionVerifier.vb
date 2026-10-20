@@ -4,7 +4,6 @@ Imports System.Globalization
 Imports System.IO
 Imports System.Security.Principal
 Imports System.Text.RegularExpressions
-Imports System.Xml
 
 Public Module EmailTransportConnectionVerifier
     Private Const ExitSuccess As Integer = 0
@@ -130,28 +129,7 @@ Public Module EmailTransportConnectionVerifier
 
     Private Function LoadConnectionString(ByVal applicationRoot As String,
                                           ByVal connectionStringName As String) As String
-        Dim document As New XmlDocument()
-        document.XmlResolver = Nothing
-        document.Load(Path.Combine(applicationRoot, "web.config"))
-
-        Dim matches As New List(Of XmlElement)()
-        Dim nodes As XmlNodeList = document.SelectNodes("/configuration/connectionStrings/add")
-        If nodes IsNot Nothing Then
-            For Each node As XmlNode In nodes
-                Dim element As XmlElement = TryCast(node, XmlElement)
-                If element IsNot Nothing AndAlso
-                   String.Equals(element.GetAttribute("name"), connectionStringName, StringComparison.Ordinal) Then
-                    matches.Add(element)
-                End If
-            Next
-        End If
-        If matches.Count <> 1 Then Throw New ArgumentException("EMAIL_VERIFY_CONNECTION_STRING_NOT_UNIQUE")
-
-        Dim value As String = matches(0).GetAttribute("connectionString")
-        If String.IsNullOrWhiteSpace(value) OrElse HasControlCharacters(value) Then
-            Throw New ArgumentException("EMAIL_VERIFY_CONNECTION_STRING_INVALID")
-        End If
-        Return value
+        Return KeepStoreConfigurationReader.ReadConnectionString(applicationRoot, connectionStringName)
     End Function
 
     Private Function WriteResult(ByVal result As EmailConnectionVerificationResult,

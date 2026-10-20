@@ -1,6 +1,6 @@
 # Persistent Anonymous Cart — deployment e rollout
 
-Data: 2026-10-01. Release runtime di riferimento: `frontend-rebuild` al checkpoint `a4238abfc8eae7fefbb985672d4cd5bddabf4118` (#297 runtime, #298 cleanup, #299 privacy; tutti CHIUSI A e integrati FF-only). Questo runbook e una procedura futura, non evidenza di deployment gia eseguito. Stato iniziale: **INTEGRATED / NOT YET PRODUCTION-CERTIFIED**.
+Data: 2026-10-01; compatibilita strumenti aggiornata 2026-10-20 per il Batch A `SECURITY-DB-CREDENTIALS-HARDENING-1A`. Release runtime storica di riferimento: `frontend-rebuild` al checkpoint `a4238abfc8eae7fefbb985672d4cd5bddabf4118` (#297 runtime, #298 cleanup, #299 privacy; tutti CHIUSI A e integrati FF-only). Questo runbook e una procedura futura, non evidenza di deployment gia eseguito. Stato iniziale: **INTEGRATED / NOT YET PRODUCTION-CERTIFIED**.
 
 ## 1. Scopo
 
@@ -65,7 +65,7 @@ Public/ui/controls/SiteFooter.ascx
 
 1. Verificare anche le dipendenze preesistenti, in particolare `App_Code/CartTransactionRetryPolicy.vb`, i resolver/commercial services e `Bin/MySql.Data.dll`: questo delta non e un sito installabile da zero.
 2. Copiare i soli file release autorizzati in finestra controllata, senza lasciare un App_Code parzialmente aggiornato. Preservare `web.config`, asset, uploads, App_Data/log e tutte le configurazioni locali. Nessun dump o credenziale nel pacchetto.
-3. Per manutenzione amministrativa predisporre anche `Tools/Invoke-PersistentCartRegistryCleanup.ps1` e `Tools/PersistentCartCleanupRunner.vb` della stessa release, in area protetta non pubblicamente accessibile, con struttura `Tools`/`App_Code`/`Bin` compatibile col runner. Non copiare gli harness come endpoint production; negare accesso HTTP a Tools/configurazioni o usare un bundle di manutenzione fuori webroot.
+3. Per manutenzione amministrativa predisporre `Tools/Invoke-PersistentCartRegistryCleanup.ps1`, `Tools/PersistentCartCleanupRunner.vb` e `Tools/KeepStoreConfigurationReader.vb` della stessa release, in area protetta non pubblicamente accessibile, con struttura `Tools`/`App_Code`/`Bin` compatibile col runner. Non copiare gli harness come endpoint production; negare accesso HTTP a Tools/configurazioni o usare un bundle di manutenzione fuori webroot. La rimozione di `web.config` dal tracking Git non ne richiede la cancellazione sul server; preservarlo anche dalle liste di cancellazione release, secondo il [runbook configurazione](KEEPSTORE_DB_CREDENTIALS_HARDENING_RUNBOOK.md).
 4. Attendere la compilazione ASP.NET. Recycle IIS soltanto se necessario e autorizzato, mai come azione automatica per nascondere un errore. STOP su errore di compilazione, dipendenza mancante o host incoerente; registrare solo diagnostica sanitizzata.
 5. Verificare commit/manifest realmente installati e HTTPS prima dello smoke. Non dichiarare la copia riuscita come RELEASE READY.
 
@@ -88,9 +88,11 @@ Le letture DB di supporto sono circoscritte all'istanza/azienda autorizzata. Non
 
 ## 8. Cleanup registry
 
-Unico runner: [Tools/Invoke-PersistentCartRegistryCleanup.ps1](../Tools/Invoke-PersistentCartRegistryCleanup.ps1). Richiede `-Apply`, `ConfigPath` del `web.config` protetto dell'istanza corretta, `CompanyId` esplicito/autorizzato. Protezione del file tramite ACL e compatibilita col lettore XML del runner devono essere verificate prima; non esportare configurazioni/secret o disabilitarne la protezione per aggirare un errore.
+Unico runner: [Tools/Invoke-PersistentCartRegistryCleanup.ps1](../Tools/Invoke-PersistentCartRegistryCleanup.ps1). Richiede `-Apply`, `ConfigPath` del `web.config` dell'istanza corretta, `CompanyId` esplicito/autorizzato. Il processo interno usa il lettore condiviso .NET Framework con origine verificata e `EntropicConnectionString` per nome, compatibile con sezione RSA protetta o configurazione esplicita non cifrata. Identita di esecuzione e ACL devono consentire la lettura della configurazione e della chiave prevista; errore di configurazione/decifratura ferma l'operazione, senza fallback. Non esportare secret o disabilitare la protezione per aggirare un errore.
 
-Prima attivazione: un batch manuale controllato da 100, con nuova autorizzazione operativa. Output aggregato atteso: `ActiveExpiredProcessed`, `ActiveCartRowsDeleted`, `ConsumedDeleted`, `RevokedDeleted`, `Anomalies`, `Errors`, `CandidatesExamined`. Nessuna stringa di connessione in command line; il runner legge la configurazione in memoria e usa stdin internamente.
+Prima attivazione: un batch manuale controllato da 100, con nuova autorizzazione operativa. Output aggregato atteso: `ActiveExpiredProcessed`, `ActiveCartRowsDeleted`, `ConsumedDeleted`, `RevokedDeleted`, `Anomalies`, `Errors`, `CandidatesExamined`. Il wrapper passa soltanto percorso configurazione, azienda e batch al runner compilato; la configurazione viene letta internamente, senza stringhe di connessione in command line, stdin, pipeline o log. Il Batch A ha verificato lettura RSA e compilazione del runner con fixture offline, comprese nei 13 check dei consumatori reali PASS; nessun cleanup DB operativo eseguito o autorizzato.
+
+La decisione PO 2026-10-20 sulle esposizioni pregresse e registrata nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-2026-10-20--esposizioni-pregresse): nessun nuovo audit/bonifica delle esposizioni gia censite come prerequisito del Batch A o di attivita indipendenti. Restano i controlli sulle nuove modifiche e sul funzionamento; questa nota non attiva job, rotazioni o rollout.
 
 `ACTIVE` expired -> sole righe anonime + registry, atomicamente; `CONSUMED/REVOKED` expired -> registry soltanto se nessuna riga anonima residua. Account rows mai eliminate. Exit code non zero, Anomalies > 0 o Errors > 0: STOP e verifica manuale; non eliminare automaticamente anomalie terminali. Un batch riuscito non prova che tutto il backlog sia stato smaltito.
 

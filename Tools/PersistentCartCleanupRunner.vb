@@ -24,6 +24,10 @@ Public NotInheritable Class KeepStoreLog
 End Class
 
 Public Module PersistentCartCleanupRunner
+    Private Function LoadConnectionString(ByVal configurationPath As String) As String
+        Return KeepStoreConfigurationReader.ReadConnectionStringFromFile(configurationPath)
+    End Function
+
     Public Function Main(ByVal args As String()) As Integer
         AddHandler AppDomain.CurrentDomain.AssemblyResolve, Function(sender, request)
             Dim name = New AssemblyName(request.Name).Name
@@ -34,12 +38,14 @@ Public Module PersistentCartCleanupRunner
         Dim connectionString As String = Nothing
         Try
             Dim company As Integer, batch As Integer
-            If args.Length <> 2 OrElse Not Integer.TryParse(args(0), NumberStyles.None, CultureInfo.InvariantCulture, company) OrElse
-               Not Integer.TryParse(args(1), NumberStyles.None, CultureInfo.InvariantCulture, batch) Then
+            If args Is Nothing OrElse args.Length <> 3 OrElse
+               Not Integer.TryParse(args(1), NumberStyles.None, CultureInfo.InvariantCulture, company) OrElse
+               Not Integer.TryParse(args(2), NumberStyles.None, CultureInfo.InvariantCulture, batch) OrElse
+               company < 1 OrElse batch < 1 OrElse batch > 1000 Then
                 Throw New ArgumentException("CLEANUP_INPUT_INVALID")
             End If
-            ' Secret-bearing configuration is supplied only through stdin, never argv or a copied file.
-            connectionString = Console.ReadLine()
+            ' Only the explicit configuration path crosses the process boundary.
+            connectionString = LoadConnectionString(args(0))
             Dim builder As New MySqlConnectionStringBuilder(connectionString)
             If String.IsNullOrWhiteSpace(builder.Database) Then Throw New ArgumentException("CLEANUP_DATABASE_REQUIRED")
             Dim result = PersistentAnonymousCartCleanupService.RunBatch(builder.ConnectionString, company, batch)
