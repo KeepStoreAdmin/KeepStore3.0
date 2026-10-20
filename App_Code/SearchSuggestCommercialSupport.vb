@@ -144,9 +144,15 @@ Public NotInheritable Class SearchSuggestCommercialSupport
                 Convert.ToInt32(row("listino"))) <> result.PriceListId Then Fail("account_context_invalid", 403)
         ' A changed fiscal/account scope must be rehydrated by the normal page,
         ' never silently updated or downgraded by this read-only endpoint.
+        ' Compare the effective pair produced by PageMaster.ApplyAuthenticatedPriceDisplayState:
+        ' an invalid/absent exemption suppresses the rate, and an absent rate suppresses the ID.
+        Dim exemptionId As Integer = StorefrontPriceDisplayContextProvider.NormalizeExemptionId(row("IdEsenzioneIva"))
+        Dim vatOverride As Nullable(Of Decimal) = Nothing
+        If exemptionId >= 0 Then vatOverride = StorefrontPriceDisplayContextProvider.NormalizeVatOverride(row("ValoreEsenzioneIva"))
+        If Not vatOverride.HasValue Then exemptionId = -1
         If StorefrontPriceDisplayContextProvider.ResolveDisplayMode(row("IvaTipo"), CType(mode, StorefrontVatDisplayMode)) <> result.DisplayMode OrElse
-           Not Nullable.Equals(StorefrontPriceDisplayContextProvider.NormalizeVatOverride(row("ValoreEsenzioneIva")), result.VatOverride) OrElse
-           StorefrontPriceDisplayContextProvider.NormalizeExemptionId(row("IdEsenzioneIva")) <> result.ExemptionId OrElse
+           Not Nullable.Equals(vatOverride, result.VatOverride) OrElse
+           exemptionId <> result.ExemptionId OrElse
            (StorefrontCommercialIsolationPolicy.PositiveInteger(row("AbilitatoIvaReverseCharge")) = 1) <> result.ReverseChargeEnabled Then
             Fail("account_context_stale", 403)
         End If
@@ -174,22 +180,39 @@ Public NotInheritable Class SearchSuggestCommercialSupport
         Dim price As String = StorefrontEffectivePriceSqlBuilder.BuildQuantityOneDisplayPriceExpression(
             gross, PriceContext.IsVatExcluded)
         Dim normalizedTC As String = "CASE WHEN ?suggestVariants=1 THEN COALESCE(NULLIF(vsuperarticoli.TCId,0),-1) ELSE -1 END"
-        ' The outer query filters/sorts this projection, then applies LIMIT.
-        ' Window multiplicity makes conflicting commercial rows fail closed.
-        Return " FROM (SELECT vsuperarticoli.*," & price & " AS SuggestPrice," &
+        ' Normalize the required projection after ALL joins, before window counts,
+        ' filtering, ranking and LIMIT. Legacy promo columns are deliberately absent:
+        ' repetitions differing only in those columns are not commercial conflicts.
+        ' Different required facts remain ambiguous; never pick an arbitrary row.
+        Dim fields As String() = {"id", "NListino", "Codice", "Ean", "Descrizione1", "Descrizione2",
+            "DescrizioneLunga", "DescrizioneHTML", "MarcheDescrizione", "SettoriDescrizione", "CategorieDescrizione",
+            "TipologieDescrizione", "GruppiDescrizione", "SottogruppiDescrizione", "Img1", "Img2", "Img3", "Img4",
+            "Prezzo", "PrezzoIvato", "IdIvaRC", "ValoreIvaRC", "Giacenza", "Disponibilita", "Impegnata", "InOrdine",
+            "ScortaMinima", "Vetrina", "visite", "Ricondizionato", "NoteRicondizionato", "DataCreazione",
+            "SettoriId", "CategorieId", "TipologieId", "GruppiId", "SottoGruppiId", "MarcheId"}
+        Dim projection As New List(Of String)()
+        For Each field As String In fields
+            projection.Add("vsuperarticoli." & field)
+        Next
+        For image As Integer = 1 To 6
+            projection.Add("i.Immagine" & image.ToString(CultureInfo.InvariantCulture))
+        Next
+        Return " FROM (SELECT normalized.*, COUNT(*) OVER(PARTITION BY normalized.id,normalized.SuggestTC,normalized.NListino) AS SuggestMultiplicity" &
+            " FROM (SELECT DISTINCT " & String.Join(",", projection.ToArray()) & "," & price & " AS SuggestPrice," &
             " CASE WHEN ks_qty1_price.AppliedPromoNet>0 THEN 1 ELSE 0 END AS SuggestOffer," &
             " CASE WHEN ks_promo_catalog.ArticleId IS NOT NULL THEN 1 ELSE 0 END AS SuggestHasPromotion," &
             " GREATEST(CAST(0 AS DECIMAL(38,16)),vsuperarticoli.Giacenza-vsuperarticoli.Impegnata) AS SuggestAvailable," &
-            " (" & normalizedTC & ") AS SuggestTC," &
-            " COUNT(*) OVER(PARTITION BY vsuperarticoli.id,(" & normalizedTC & ")) AS SuggestMultiplicity" &
+            " (" & normalizedTC & ") AS SuggestTC" &
             " FROM vsuperarticoli INNER JOIN articoli enabled ON enabled.id=vsuperarticoli.id AND enabled.Abilitato=1" &
             StorefrontPromotionCatalogProvider.BuildQuantityOnePriceJoin(False) &
             StorefrontPromotionCatalogProvider.BuildSuggestPromotionJoin() &
+            " LEFT JOIN immagini i ON i.id=vsuperarticoli.id" &
             " WHERE vsuperarticoli.NListino=?promoListino" &
+            " AND COALESCE(vsuperarticoli.Export,0)<>0" &
             " AND (?suggestVariants=1 OR COALESCE(vsuperarticoli.TCId,-1)<=0)" &
             " AND (COALESCE(vsuperarticoli.TCId,-1)<=0 OR EXISTS(SELECT 1 FROM articoli_tagliecolori valid_tc" &
             " WHERE valid_tc.id=vsuperarticoli.TCId AND valid_tc.ArticoliId=vsuperarticoli.id))" &
-            ") v LEFT JOIN immagini i ON i.id=v.id WHERE 1=1 "
+            ") normalized) v WHERE 1=1 "
     End Function
 
     Public Function Execute(ByVal sql As String, ByVal parameters As List(Of SearchSuggestParameter)) As DataTable

@@ -7,6 +7,7 @@ Imports System.Data
 Imports System.Globalization
 Imports System.IO
 Imports System.Reflection
+Imports System.Text.RegularExpressions
 Imports System.Web
 Imports System.Web.SessionState
 
@@ -20,12 +21,23 @@ Public Module SearchSuggestCommercialContextHarness
     Private batchStatus As ProductPromotionEligibilityLoadStatus
     Private batchLoads As Integer
     Private offers As New List(Of ProductPromotionEligibilityRawOffer)()
+    Private relationalRows As DataTable
+    Private callerCases As Object()
     Private ReadOnly settings As New ConnectionStringSettings("EntropicConnectionString",
         "Server=synthetic.invalid;Database=synthetic;User Id=synthetic;", "MySql.Data.MySqlClient")
 
-    Public Sub Main()
+    Public Sub Main(ByVal args As String())
         Try
-            Run()
+            If args.Length = 0 Then Throw New Exception("HEADER_CALLER_URLS_REQUIRED")
+            callerCases = New System.Web.Script.Serialization.JavaScriptSerializer().Deserialize(Of Object())(File.ReadAllText(args(0)))
+            Dim candidate As Boolean = args.Length > 1 AndAlso args(1) = "--review-candidate"
+            If candidate Then
+                RunRev1(True)
+                Console.WriteLine("REVIEW_CANDIDATE=c624db0343b4f38b42ba49651c2c503d46a8e837; EXPECTED_DEFECTS=4")
+            Else
+                Run()
+                RunRev1(False)
+            End If
             Console.WriteLine("SEARCH_SUGGEST_ASSERTIONS=" & passed)
             Console.WriteLine("SQL_EXECUTED_ON_MYSQL=NO; REAL_ACCOUNT_LOGIN=NO; DATABASE_CONNECTIONS=0")
         Catch ex As Exception
@@ -93,6 +105,7 @@ Public Module SearchSuggestCommercialContextHarness
         commands.Add(sql)
         captures.Add(parameters)
         If sql.Contains("FROM vlogin") Then Return account
+        If relationalRows IsNot Nothing Then Return RelationalQuery(sql, parameters)
         If sql.Contains("COUNT(*) AS InvalidCount") Then
             Dim table As New DataTable()
             table.Columns.Add("InvalidCount", GetType(Integer))
@@ -101,6 +114,288 @@ Public Module SearchSuggestCommercialContextHarness
         End If
         Return products.Copy()
     End Function
+
+    ' This is a deliberately bounded relational counterexample model, not a SQL
+    ' engine. Required transformations are linked to the real generated SQL;
+    ' model-derived rows/counts then cross the real endpoint/resolver boundary.
+    Private Function RelationalQuery(ByVal sql As String, ByVal parameters As IList(Of SearchSuggestParameter)) As DataTable
+        Dim targetList As Integer = Convert.ToInt32(parameters.First(Function(x) x.Name = "?promoListino").Value)
+        Dim listPredicate As Boolean = sql.Contains("vsuperarticoli.NListino=?promoListino")
+        Dim enabledPredicate As Boolean = sql.Contains("enabled.Abilitato=1")
+        Dim exportPredicate As Boolean = sql.Contains("COALESCE(vsuperarticoli.Export,0)<>0")
+        Dim deduplicate As Boolean = sql.Contains("FROM (SELECT DISTINCT ") AndAlso Not sql.Contains("SELECT DISTINCT vsuperarticoli.*")
+        Dim selected As New List(Of DataRow)()
+        For Each row As DataRow In relationalRows.Rows
+            If listPredicate AndAlso Convert.ToInt32(row("SuggestPriceList")) <> targetList Then Continue For
+            If enabledPredicate AndAlso Convert.ToInt32(row("Enabled")) <> 1 Then Continue For
+            If exportPredicate AndAlso (row.IsNull("Export") OrElse Convert.ToInt32(row("Export")) = 0) Then Continue For
+            selected.Add(row)
+        Next
+        If deduplicate Then
+            Dim facts As New HashSet(Of String)(StringComparer.Ordinal)
+            selected = selected.Where(Function(row) facts.Add(AuthoritativeFacts(row))).ToList()
+        End If
+        Dim multiplicities = selected.GroupBy(Function(row) Identity(row)).ToDictionary(Function(g) g.Key, Function(g) g.Count())
+        If sql.Contains("COUNT(*) AS InvalidCount") Then
+            Dim invalid As New DataTable()
+            invalid.Columns.Add("InvalidCount", GetType(Integer))
+            invalid.Rows.Add(selected.Where(Function(row) multiplicities(Identity(row)) <> 1 OrElse row.IsNull("Giacenza") OrElse row.IsNull("Disponibilita")).Count())
+            Return invalid
+        End If
+        If sql.Contains(" AND v.SuggestAvailable > 0") Then selected = selected.Where(Function(row) Convert.ToDecimal(row("Disponibilita")) > 0D).ToList()
+        For Each spec In parameters
+            If spec.Name = "@minPrice" Then selected = selected.Where(Function(row) Convert.ToDecimal(row("PrezzoFinale")) >= Convert.ToDecimal(spec.Value)).ToList()
+            If spec.Name = "@maxPrice" Then selected = selected.Where(Function(row) Convert.ToDecimal(row("PrezzoFinale")) <= Convert.ToDecimal(spec.Value)).ToList()
+        Next
+        Dim exact As Integer = selected.Where(Function(row) Convert.ToString(row("Codice")) = "SKU120").Count()
+        If sql.Contains("PrezzoFinale ASC") Then selected = selected.OrderBy(Function(row) Convert.ToDecimal(row("PrezzoFinale"))).ToList()
+        If sql.Contains("PrezzoFinale DESC") Then selected = selected.OrderByDescending(Function(row) Convert.ToDecimal(row("PrezzoFinale"))).ToList()
+        Dim limit = Regex.Match(sql, " LIMIT ([0-9]+)$")
+        If limit.Success Then selected = selected.Take(Integer.Parse(limit.Groups(1).Value)).ToList()
+        Dim result As DataTable = relationalRows.Clone()
+        For Each row As DataRow In selected
+            result.ImportRow(row)
+            result.Rows(result.Rows.Count - 1)("SuggestMultiplicity") = multiplicities(Identity(row))
+            result.Rows(result.Rows.Count - 1)("ExactMatches") = exact
+        Next
+        Return result
+    End Function
+
+    Private Function Identity(ByVal row As DataRow) As String
+        Return CStr(row("id")) & ":" & CStr(row("TCid")) & ":" & CStr(row("SuggestPriceList"))
+    End Function
+
+    Private Function AuthoritativeFacts(ByVal row As DataRow) As String
+        Dim fields As New List(Of String)()
+        For Each column As DataColumn In row.Table.Columns
+            If {"LegacyPromo", "LegacyPriceRow", "SuggestMultiplicity", "ExactMatches", "RankScore", "Enabled", "Export"}.Contains(column.ColumnName) Then Continue For
+            Dim value = row(column)
+            fields.Add(column.ColumnName & "=" & If(Convert.IsDBNull(value), "<NULL>", Convert.ToString(value, CultureInfo.InvariantCulture)))
+        Next
+        Return String.Join("|", fields)
+    End Function
+
+    Private Function RawRows(ByVal support As SearchSuggestCommercialSupport, Optional ByVal tc As Integer = -1) As DataTable
+        Dim table As DataTable = ProductRows(support, tc)
+        For Each name As String In {"Enabled", "Export", "LegacyPromo", "LegacyPriceRow"}
+            table.Columns.Add(name, GetType(Object))
+        Next
+        table.Rows(0)("Enabled") = 1 : table.Rows(0)("Export") = 1
+        table.Rows(0)("LegacyPromo") = 0 : table.Rows(0)("LegacyPriceRow") = 1
+        Return table
+    End Function
+
+    Private Sub FiscalFixture(ByVal ctx As HttpContext, ByVal row As DataRow)
+        HttpContext.Current = ctx
+        Dim master As New SearchSuggestMasterFiscalFixture(Convert.ToInt32(row("AziendeID")))
+        master.ApplyAuthenticatedPriceDisplayState(
+            row("IvaTipo"), row("IdEsenzioneIva"), row("ValoreEsenzioneIva"), row("DescrizioneEsenzioneIva"), row("AbilitatoIvaReverseCharge"))
+    End Sub
+
+    Private Function Failed(ByVal action As Action) As Boolean
+        Try
+            action()
+            Return False
+        Catch ex As SearchSuggestCommercialException
+            Return True
+        End Try
+    End Function
+
+    Private Function Result(ByVal support As SearchSuggestCommercialSupport, Optional ByVal recent As Boolean = False, Optional ByVal limit As Integer = 8) As Dictionary(Of String, Object)
+        Dim page = Endpoint(support)
+        Dim filters = Invoke(page, "ReadFilters")
+        If recent Then Return DirectCast(Invoke(page, "BuildRecentResult", New List(Of Integer) From {120}, filters, limit), Dictionary(Of String, Object))
+        Return DirectCast(Invoke(page, "BuildSearchResult", "SKU120", filters, limit), Dictionary(Of String, Object))
+    End Function
+
+    Private Sub RunRev1(ByVal candidate As Boolean)
+        relationalRows = Nothing
+        Dim ctx = Context(2, 10, True)
+        account = AccountRow(2, 13)
+        account.Rows(0)("ValoreEsenzioneIva") = 0D
+        FiscalFixture(ctx, account.Rows(0))
+        Assert(CInt(ctx.Session("IdEsenzioneIva")) = -1 AndAlso CDec(ctx.Session("Iva_Utente")) = -1D, "F01 exact master body discards rate with absent exemption")
+        Dim rejected As Boolean = Failed(Sub() MakeSupport(ctx))
+        Assert(rejected = candidate, "F01 same ID=-1/rate=0 fixture " & If(candidate, "reproduces stale rejection", "accepted"))
+        If Not candidate Then
+            For Each id As Integer In {-1, 0, 5}
+                For Each rate As Object In New Object() {DBNull.Value, "invalid", -1D, 0D, 7.125D}
+                    ctx = Context(2, 10, True) : account = AccountRow(2, 13)
+                    account.Rows(0)("IdEsenzioneIva") = id : account.Rows(0)("ValoreEsenzioneIva") = rate
+                    FiscalFixture(ctx, account.Rows(0))
+                    Dim support = MakeSupport(ctx)
+                    Assert(support.PriceContext.ExemptionId = CInt(ctx.Session("IdEsenzioneIva")), "F01 master exemption parity " & id & "/" & Convert.ToString(rate))
+                    Dim expected = StorefrontPriceDisplayContextProvider.NormalizeVatOverride(ctx.Session("Iva_Utente"))
+                    Assert(Nullable.Equals(support.PriceContext.VatOverride, expected), "F01 master override parity " & id & "/" & Convert.ToString(rate))
+                Next
+            Next
+            For Each changed As String In {"ValoreEsenzioneIva", "IdEsenzioneIva", "utentiid", "listino"}
+                ctx = Context(2, 10, True) : account = AccountRow(2, 13)
+                account.Rows(0)("IdEsenzioneIva") = 5 : account.Rows(0)("ValoreEsenzioneIva") = 7.125D
+                FiscalFixture(ctx, account.Rows(0))
+                account.Rows(0)(changed) = If(changed = "ValoreEsenzioneIva", CType(8.125D, Object), 99)
+                Reject(Sub() MakeSupport(ctx), "F01 effective scope change rejected " & changed)
+            Next
+        End If
+
+        ctx = Context(2, 10) : Dim commercial = MakeSupport(ctx)
+        relationalRows = RawRows(commercial)
+        relationalRows.Rows(0)("Export") = 0
+        Dim output = Result(commercial)
+        Assert(CInt(output("total")) = If(candidate, 1, 0), "F02 same enabled Export=0 row " & If(candidate, "reproduces admission", "excluded"))
+
+        relationalRows = Nothing
+        Dim caller = DirectCast(callerCases(0), Dictionary(Of String, Object))
+        ctx = Context(2, 10, False, New Uri(CStr(caller("url"))).Query.TrimStart("?"c))
+        commercial = MakeSupport(ctx) : products = ProductRows(commercial)
+        output = Result(commercial)
+        Dim filterPreserved As Boolean = commands.Last().Contains(" AND v.SuggestAvailable > 0") AndAlso CStr(output("catalogUrl")).Contains("disponibile=1")
+        Assert(filterPreserved <> candidate, "F03 actual header canonical URL " & If(candidate, "reproduces lost availability", "preserves availability"))
+
+        ctx = Context(2, 10) : commercial = MakeSupport(ctx)
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0))
+        relationalRows.Rows(1)("LegacyPromo") = 77 : relationalRows.Rows(1)("LegacyPriceRow") = 99
+        rejected = Failed(Sub() Result(commercial))
+        Assert(rejected = candidate, "F04 same equivalent facts with legacy/join repetition " & If(candidate, "reproduces global rejection", "accepted"))
+        If candidate Then
+            relationalRows = Nothing
+            Return
+        End If
+        VerifyRev1RelationalCases()
+        VerifyCallerCases()
+        relationalRows = Nothing
+        Console.WriteLine("REV1_RELATIONAL_MODEL=PASS; SQL_PLAN_STRUCTURE_CHECKED=YES; SQL_EXECUTED_ON_MYSQL=NO")
+    End Sub
+
+    Private Sub VerifyRev1RelationalCases()
+        Dim ctx = Context(2, 10) : ctx.Session("TC") = 1
+        Dim commercial = MakeSupport(ctx)
+        Dim sql As String = commercial.CatalogFrom()
+        Assert(sql.Contains("enabled.Abilitato=1") AndAlso sql.Contains("vsuperarticoli.NListino=?promoListino"), "F02 model enabled and list predicates present in real SQL")
+        Dim distinctAt As Integer = sql.IndexOf("FROM (SELECT DISTINCT ", StringComparison.Ordinal)
+        Dim sourceAt As Integer = sql.IndexOf(" FROM vsuperarticoli", StringComparison.Ordinal)
+        Dim normalizedAt As Integer = sql.IndexOf(") normalized", StringComparison.Ordinal)
+        Dim windowAt As Integer = sql.IndexOf("COUNT(*) OVER(PARTITION BY normalized.id,normalized.SuggestTC,normalized.NListino)", StringComparison.Ordinal)
+        Assert(distinctAt >= 0 AndAlso windowAt >= 0 AndAlso sourceAt > distinctAt AndAlso normalizedAt > sourceAt, "F04 distinct authority source feeds identity window")
+        Assert(Not sql.Contains("vsuperarticoli.*") AndAlso Not sql.Contains("SELECT DISTINCT normalized.*"), "F04 projection explicit instead of legacy view wildcard")
+        Dim sourceFields As String = sql.Substring(distinctAt, sourceAt - distinctAt)
+        For Each forbidden As String In {"InOfferta", "PrezzoPromo", "PrezzoOfferta", "ArticoliListiniId"}
+            Assert(Not sourceFields.Contains("vsuperarticoli." & forbidden), "F04 legacy/surrogate field absent " & forbidden)
+        Next
+        Dim imageJoinAt As Integer = sql.IndexOf("LEFT JOIN immagini", StringComparison.Ordinal)
+        Assert(imageJoinAt > sourceAt AndAlso imageJoinAt < normalizedAt, "F04 image join inside distinct source before window and outer exact count")
+        For Each fact As String In {"Prezzo", "PrezzoIvato", "IdIvaRC", "ValoreIvaRC", "Giacenza", "Impegnata", "Disponibilita", "InOrdine", "ScortaMinima"}
+            Assert(sourceFields.Contains("vsuperarticoli." & fact), "F04 authoritative field retained " & fact)
+        Next
+        For Each publish As Object In New Object() {0, DBNull.Value, 1, -1}
+            For Each enabled As Integer In {0, 1}
+                For Each list As Integer In {1, 10}
+                    relationalRows = RawRows(commercial)
+                    relationalRows.Rows(0)("Export") = publish : relationalRows.Rows(0)("Enabled") = enabled : relationalRows.Rows(0)("SuggestPriceList") = list
+                    Dim expected As Integer = If(Not Convert.IsDBNull(publish) AndAlso Convert.ToInt32(If(Convert.IsDBNull(publish), 0, publish)) <> 0 AndAlso enabled = 1 AndAlso list = 10, 1, 0)
+                    For Each recent As Boolean In {False, True}
+                        Dim output = Result(commercial, recent, 1)
+                        Assert(CInt(output("total")) = expected, "F02 relational publication matrix " & Convert.ToString(publish) & "/" & enabled & "/" & list & "/recent=" & recent)
+                        Assert(commands.Last().Contains("COALESCE(vsuperarticoli.Export,0)<>0") AndAlso commands(commands.Count - 2).Contains("COALESCE(vsuperarticoli.Export,0)<>0"), "F02 both candidate count and result source scoped")
+                    Next
+                Next
+            Next
+        Next
+        For Each mode As String In {"", "ai", "marketplace"}
+            ctx = Context(2, 10, False, "mode=" & mode) : commercial = MakeSupport(ctx)
+            relationalRows = RawRows(commercial) : relationalRows.Rows(0)("Export") = 0
+            Dim output = Result(commercial, False, 1)
+            Assert(CInt(output("total")) = 0 AndAlso Not CBool(DirectCast(output("strong"), Dictionary(Of String, Object))("canRedirect")), "F02 mode and exact redirect excludes hidden row " & mode)
+        Next
+        ctx = Context(2, 10) : ctx.Session("TC") = 1 : commercial = MakeSupport(ctx)
+        For Each fact As String In {"Prezzo", "PrezzoIvato", "IdIvaRC", "ValoreIvaRC", "Giacenza", "Impegnata", "Disponibilita", "InOrdine", "ScortaMinima"}
+            relationalRows = RawRows(commercial)
+            relationalRows.ImportRow(relationalRows.Rows(0))
+            relationalRows.Rows(1)(fact) = Convert.ToDecimal(relationalRows.Rows(1)(fact)) + 1D
+            Reject(Sub() Result(commercial), "F04 conflicting fact rejected before LIMIT " & fact)
+        Next
+        commercial = MakeSupport(ctx)
+        relationalRows = RawRows(commercial)
+        Dim batchBeforeRequest As Integer = batchLoads
+        For i As Integer = 1 To 101
+            relationalRows.ImportRow(relationalRows.Rows(0))
+            relationalRows.Rows(i)("LegacyPromo") = i
+            relationalRows.Rows(i)("LegacyPriceRow") = i + 1
+        Next
+        Dim clean = Result(commercial, False, 1)
+        Assert(CInt(clean("total")) = 1 AndAlso CBool(DirectCast(clean("strong"), Dictionary(Of String, Object))("canRedirect")), "F04 102 equivalent join rows deduplicate before exact uniqueness and LIMIT")
+        Assert(batchLoads - batchBeforeRequest = 1, "F04 exactly one promotion batch for endpoint request")
+        clean = Result(commercial, True, 1)
+        Assert(CInt(clean("total")) = 1 AndAlso batchLoads - batchBeforeRequest = 1, "F04 repeated join rows recent remains coherent without another promotion batch")
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("TCid") = 42
+        Dim variants = Result(commercial, False, 8)
+        Assert(CInt(variants("total")) = 2 AndAlso Not CBool(DirectCast(variants("strong"), Dictionary(Of String, Object))("canRedirect")), "F04 distinct variants not merged and prevent false strong redirect")
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("SuggestPriceList") = 1
+        clean = Result(commercial, False, 1)
+        Assert(CInt(clean("total")) = 1, "F04 foreign list excluded rather than merged into active identity")
+        For Each company As Integer In {1, 2}
+            Dim list As Integer = If(company = 1, 1, 10)
+            ctx = Context(company, list) : commercial = MakeSupport(ctx)
+            relationalRows = RawRows(commercial)
+            relationalRows.ImportRow(relationalRows.Rows(0))
+            relationalRows.Rows(1)("id") = 121 : relationalRows.Rows(1)("Codice") = "SKU121"
+            Dim page = Endpoint(commercial)
+            Dim recent = DirectCast(Invoke(page, "BuildRecentResult", New List(Of Integer) From {120, 121}, Invoke(page, "ReadFilters"), 8), Dictionary(Of String, Object))
+            Assert(CInt(recent("total")) = 2, "F04 distinct products remain separate in tenant " & company & "/list " & list)
+        Next
+    End Sub
+
+    Private Sub VerifyCallerCases()
+        relationalRows = Nothing
+        For Each raw As Object In callerCases
+            Dim caller = DirectCast(raw, Dictionary(Of String, Object))
+            For Each recent As Boolean In {False, True}
+                Dim uri As New Uri(CStr(caller(If(recent, "recentUrl", "url"))))
+                Assert(uri.AbsolutePath = "/search_suggest.aspx" AndAlso uri.Host = "tenant2.invalid", "F03 actual header same-origin URL " & CStr(caller("name")))
+                Dim ctx = Context(2, 10, False, uri.Query.TrimStart("?"c))
+                Dim commercial = MakeSupport(ctx) : products = ProductRows(commercial)
+                If CStr(caller("sort")) = "reject" Then
+                    RejectFilters(Sub() Result(commercial, recent), "F03 conflicting caller aliases fail closed " & CStr(caller("name")))
+                    Continue For
+                End If
+                Dim output = Result(commercial, recent, 1)
+                Dim sql = commands.Last()
+                Dim query = HttpUtility.ParseQueryString(New Uri("https://tenant2.invalid/" & CStr(output("catalogUrl"))).Query)
+                Assert(sql.Contains(" AND v.SuggestAvailable > 0") AndAlso query("disponibile") = "1", "F03 caller availability reaches SQL and catalog " & CStr(caller("name")))
+                Assert(query("ordinamento") = CStr(caller("sort")), "F03 caller sort reaches catalog " & CStr(caller("name")))
+                If CStr(caller("name")) = "canonical" OrElse CStr(caller("name")) = "legacy" OrElse CStr(caller("name")) = "plural" Then
+                    Assert(sql.Contains("SuggestPrice >= @minPrice") AndAlso sql.Contains("SuggestPrice <= @maxPrice"), "F03 caller price bounds in final SQL " & CStr(caller("name")))
+                    Assert(captures.Last().Any(Function(p) p.Name = "@minPrice" AndAlso p.Kind = DbType.Decimal AndAlso CDec(p.Value) = 121.995D) AndAlso captures.Last().Any(Function(p) p.Name = "@maxPrice" AndAlso p.Kind = DbType.Decimal AndAlso CDec(p.Value) = 122.005D), "F03 caller typed bound values")
+                    Assert(query("pmin") = "121.995" AndAlso query("pmax") = "122.005", "F03 caller bounds preserved in catalog URL")
+                End If
+                If Not recent AndAlso CStr(caller("sort")) = "p_basso" Then Assert(sql.Contains("PrezzoFinale ASC"), "F03 caller ascending SQL")
+                If Not recent AndAlso CStr(caller("sort")) = "p_alto" Then Assert(sql.Contains("PrezzoFinale DESC"), "F03 caller descending SQL")
+                If Not recent AndAlso CStr(caller("sort")) = "p_recenti" Then Assert(sql.Contains(" ORDER BY v.DataCreazione DESC"), "F03 caller recent sort SQL")
+                If Not recent AndAlso CStr(caller("sort")) = "p_disponibilita" Then Assert(sql.Contains(" ORDER BY v.SuggestAvailable DESC"), "F03 caller stock sort SQL")
+                If Not recent AndAlso CStr(caller("sort")) = "p_offerta" Then Assert(sql.Contains(" ORDER BY v.SuggestOffer DESC"), "F03 caller promotion sort SQL")
+                If Not recent AndAlso CStr(caller("sort")) = "p_popolarita" Then Assert(sql.Contains(" ORDER BY RankScore DESC"), "F03 caller popularity sort SQL")
+            Next
+        Next
+        For Each queryString As String In {"disponibile=0&disponibile=1", "pmin=100&pmin=90", "pmax=100&pmax=110", "ordinamento=p_basso&ordinamento=p_alto", "disponibile=-1", "disponibile=2", "pmin=121.995&min=122.000"}
+            Dim ctx = Context(2, 10, False, queryString)
+            Dim commercial = MakeSupport(ctx)
+            RejectFilters(Sub() Invoke(Endpoint(commercial), "ReadFilters"), "F03 direct duplicate/conflicting filter rejected " & queryString)
+            Assert(commands.Count = 0, "F03 invalid caller values rejected before product I/O")
+        Next
+    End Sub
+
+    Private Sub RejectFilters(ByVal action As Action, ByVal name As String)
+        Try
+            action()
+        Catch ex As SearchSuggestCommercialException
+            Assert(ex.Status = 400 AndAlso ex.Code = "invalid_filters", name)
+            Return
+        End Try
+        Throw New Exception("EXPECTED_INVALID_FILTERS:" & name)
+    End Sub
 
     Private Function LoadBatch(ByVal ignored As String, ByVal scope As ProductPromotionEligibilityContext) As ProductPromotionEligibilityBatch
         batchLoads += 1
@@ -231,9 +526,10 @@ Public Module SearchSuggestCommercialContextHarness
             For Each rate As Decimal In {-1D, 0D, 7.125D}
                 For Each reverse As Integer In {0, 1}
                     Dim ctx = Context(1, 1, True)
-                    ctx.Session("IvaTipo") = mode : ctx.Session("Iva_Utente") = rate : ctx.Session("AbilitatoIvaReverseCharge") = reverse
                     account = AccountRow(1, 4)
                     account.Rows(0)("IvaTipo") = mode : account.Rows(0)("ValoreEsenzioneIva") = rate : account.Rows(0)("AbilitatoIvaReverseCharge") = reverse
+                    account.Rows(0)("IdEsenzioneIva") = If(rate >= 0D, 5, -1)
+                    FiscalFixture(ctx, account.Rows(0))
                     Dim support = MakeSupport(ctx)
                     products = ProductRows(support) : support.VerifyRows(products)
                     If mode = 2 AndAlso rate = 7.125D AndAlso reverse = 0 Then Assert(Convert.ToDecimal(products.Rows(0)("PrezzoFinale")) = 107.13D, "fractional VAT cent boundary")
@@ -319,7 +615,10 @@ Public Module SearchSuggestCommercialContextHarness
             Dim authContext = Context(2, 10, True)
             account = AccountRow(2, 13)
             If state = "foreign-company" Then account.Rows(0)("AziendeID") = 1
-            If state = "stale-vat" Then account.Rows(0)("ValoreEsenzioneIva") = 0D
+            If state = "stale-vat" Then
+                account.Rows(0)("IdEsenzioneIva") = 5
+                account.Rows(0)("ValoreEsenzioneIva") = 0D
+            End If
             If state = "partial-marker" Then authContext.Session("AuthenticatedAziendaID") = Nothing
             Reject(Sub() MakeSupport(authContext), state)
         Next

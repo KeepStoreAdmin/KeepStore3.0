@@ -283,7 +283,7 @@ Partial Public Class search_suggest
     Private Sub AppendSelect(ByVal sql As StringBuilder, ByVal includeRank As Boolean, Optional ByVal rankExpr As String = "")
         sql.Append("SELECT DISTINCT v.id, v.NListino AS SuggestPriceList, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.DescrizioneLunga, v.DescrizioneHTML, ")
         sql.Append("v.MarcheDescrizione, v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.GruppiDEscrizione, v.SottogruppiDescrIZione, ")
-        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
+        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, v.Immagine1, v.Immagine2, v.Immagine3, v.Immagine4, v.Immagine5, v.Immagine6, ")
         sql.Append("v.SuggestPrice AS PrezzoFinale, v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.Giacenza, v.Impegnata, v.InOrdine, v.ScortaMinima, v.SuggestMultiplicity, ")
         sql.Append("v.SuggestAvailable AS Disponibilita, v.SuggestOffer AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
         sql.Append("COALESCE(v.Ricondizionato,0) AS Ricondizionato, COALESCE(v.NoteRicondizionato,'') AS NoteRicondizionato, 0 AS SpeditoGratis, v.SuggestTC AS TCid, v.DataCreazione ")
@@ -667,7 +667,9 @@ Partial Public Class search_suggest
     End Function
 
     Private Function ReadFilters() As SearchFilters
-        Return New SearchFilters() With {
+        Dim minimum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmin", "min")
+        Dim maximum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmax", "max")
+        Dim filters As New SearchFilters() With {
             .SettoreId = ReadInt(SafeRequestValue("st"), 0),
             .CategoriaId = ReadInt(SafeRequestValue("ct"), 0),
             .TipologiaId = ReadInt(SafeRequestValue("tp"), 0),
@@ -676,13 +678,61 @@ Partial Public Class search_suggest
             .MarcaId = ReadInt(SafeRequestValue("mr"), 0),
             .CampaignId = ReadInt(SafeRequestValue("pid"), 0),
             .SoloPromo = (ReadInt(SafeRequestValue("inpromo"), 0) <> 0 OrElse ReadInt(SafeRequestValue("promo"), 0) <> 0 OrElse ReadInt(SafeRequestValue("pid"), 0) > 0),
-            .SoloDisponibili = (ReadInt(SafeRequestValue("available"), 0) <> 0 OrElse ReadInt(SafeRequestValue("disponibili"), 0) <> 0),
+            .SoloDisponibili = (ReadAliasedFilter(AddressOf NormalizeAvailabilityFilter, "disponibile", "available", "disponibili") = "1"),
             .SoloRicondizionati = (ReadInt(SafeRequestValue("refurbished"), 0) <> 0 OrElse ReadInt(SafeRequestValue("ricondizionato"), 0) <> 0),
-            .MinPrice = ReadDecParam(SafeRequestValue("min"), 0D),
-            .MaxPrice = ReadDecParam(SafeRequestValue("max"), 0D),
-            .Sort = SafeRequestValue("sort"),
+            .MinPrice = If(minimum.Length = 0, 0D, Decimal.Parse(minimum, CultureInfo.InvariantCulture)),
+            .MaxPrice = If(maximum.Length = 0, 0D, Decimal.Parse(maximum, CultureInfo.InvariantCulture)),
+            .Sort = ReadAliasedFilter(AddressOf NormalizeSortFilter, "ordinamento", "sort"),
             .Mode = SafeRequestValue("mode")
         }
+        If filters.MinPrice > 0D AndAlso filters.MaxPrice > 0D AndAlso filters.MinPrice > filters.MaxPrice Then
+            Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        End If
+        Return filters
+    End Function
+
+    Private Function ReadAliasedFilter(ByVal normalize As Func(Of String, String), ParamArray keys As String()) As String
+        Dim selected As String = Nothing
+        For Each key As String In keys
+            Dim values As String() = Request.QueryString.GetValues(key)
+            If values Is Nothing Then Continue For
+            For Each value As String In values
+                If String.IsNullOrWhiteSpace(value) Then Continue For
+                Dim effective As String = normalize(value.Trim())
+                If selected IsNot Nothing AndAlso Not String.Equals(selected, effective, StringComparison.Ordinal) Then
+                    Throw New SearchSuggestCommercialException("invalid_filters", 400)
+                End If
+                selected = effective
+            Next
+        Next
+        Return If(selected, String.Empty)
+    End Function
+
+    Private Function NormalizeAvailabilityFilter(ByVal raw As String) As String
+        If raw <> "0" AndAlso raw <> "1" Then
+            Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        End If
+        Return raw
+    End Function
+
+    Private Function NormalizePriceFilter(ByVal raw As String) As String
+        Dim value As Decimal
+        If raw.Length > 64 OrElse Not Regex.IsMatch(raw, "^[0-9]+(?:[.,][0-9]+)?$", RegexOptions.CultureInvariant) OrElse
+           Not Decimal.TryParse(raw.Replace(",", "."), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, value) Then
+            Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        End If
+        Return value.ToString("0.############################", CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function NormalizeSortFilter(ByVal raw As String) As String
+        Select Case raw.ToLowerInvariant()
+            Case "price-asc", "prezzo-asc", "p_basso", "price-desc", "prezzo-desc", "p_alto",
+                 "promo", "offerte", "p_offerta", "new", "novita", "p_recenti",
+                 "available", "disponibili", "p_disponibilita", "popularity", "p_popolarita"
+                Return CatalogSort(raw)
+            Case Else
+                Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        End Select
     End Function
 
     Private Function SafeRequestValue(ByVal key As String) As String
