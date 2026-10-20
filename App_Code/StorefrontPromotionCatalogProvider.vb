@@ -35,6 +35,10 @@ Public Module StorefrontPromotionCatalogProvider
     ' Dedicated qty=1 projection. Catalog membership/tier APIs above stay unchanged.
     ' The caller supplies the same eligibility and fiscal parameters as the card.
     Public Function BuildQuantityOnePriceJoin() As String
+        Return BuildQuantityOnePriceJoin(True)
+    End Function
+
+    Public Function BuildQuantityOnePriceJoin(ByVal useDefaultVariant As Boolean) As String
         Dim baseNet As String = "CAST(catalog.Prezzo AS DECIMAL(38,16))"
         Dim promoNet As String =
             "(CASE WHEN COALESCE(offer_header.Prezzo,0)>0" &
@@ -42,7 +46,7 @@ Public Module StorefrontPromotionCatalogProvider
             " WHEN COALESCE(offer_header.Sconto,0)>0 AND offer_header.Sconto<100" &
             " THEN " & baseNet & "*(1-CAST(offer_header.Sconto AS DECIMAL(38,16))*0.01)" &
             " ELSE NULL END)"
-        Dim resolvedTc As String = "COALESCE(NULLIF(catalog.TCId,0),qty_default.DefaultTCid,-1)"
+        Dim resolvedTc As String = If(useDefaultVariant, "COALESCE(NULLIF(catalog.TCId,0),qty_default.DefaultTCid,-1)", "COALESCE(NULLIF(catalog.TCId,0),-1)")
         Dim effectiveGross As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
             "catalog.Prezzo", "catalog.PrezzoIvato", "catalog.IdIvaRC", "catalog.ValoreIvaRC",
             "?ksRcEnabled", "?ksHasVatOverride", "?ksVatOverride")
@@ -111,8 +115,17 @@ Public Module StorefrontPromotionCatalogProvider
         parameters.Add(New Parameter(CampaignParameter, TypeCode.Int32, eligibilityContext.CampaignId.ToString()))
     End Sub
 
-    Private Function BuildAuthorizedProductsSql() As String
-        Return "SELECT ranked.ArticleId,ranked.ArticleListPriceId,ranked.PreferredTCId," &
+    ' Membership (including future quantity tiers) stays distinct from qty=1 price.
+    Public Function BuildSuggestPromotionJoin() As String
+        Return " LEFT JOIN (" & BuildAuthorizedProductsSql(True) & ") ks_promo_catalog" &
+               " ON ks_promo_catalog.ArticleId=vsuperarticoli.id" &
+               " AND ks_promo_catalog.ArticleListPriceId=vsuperarticoli.ArticoliListiniId" &
+               " AND (ks_promo_catalog.PreferredTCId<=0 OR ks_promo_catalog.PreferredTCId=COALESCE(NULLIF(vsuperarticoli.TCId,0),-1))"
+    End Function
+
+    Private Function BuildAuthorizedProductsSql(Optional ByVal priceRowScope As Boolean = False) As String
+        Dim partition As String = If(priceRowScope, "catalog.ArticoliListiniId", "catalog.id")
+        Dim sql As String = "SELECT ranked.ArticleId,ranked.ArticleListPriceId,ranked.PreferredTCId," &
                " ranked.OfferId,ranked.OfferDetailId,ranked.OfferDescription,ranked.OfferImage," &
                " ranked.OfferStartsOn,ranked.OfferEndsOn,ranked.OfferMinimumQuantity," &
                " ranked.OfferMultipleQuantity,ranked.OfferPrice,ranked.OfferDiscount" &
@@ -125,7 +138,7 @@ Public Module StorefrontPromotionCatalogProvider
                "       offer_header.DataInizio AS OfferStartsOn,offer_header.DataFine AS OfferEndsOn," &
                "       offer_header.QntMinima AS OfferMinimumQuantity,offer_header.Multipli AS OfferMultipleQuantity," &
                "       offer_header.Prezzo AS OfferPrice,offer_header.Sconto AS OfferDiscount," &
-               "       ROW_NUMBER() OVER (PARTITION BY catalog.id ORDER BY" &
+               "       ROW_NUMBER() OVER (PARTITION BY " & partition & " ORDER BY" &
                "           CASE WHEN COALESCE(detail.TCId,-1)>0 THEN 0 ELSE 1 END ASC," &
                "           CASE" &
                "             WHEN COALESCE(offer_header.Prezzo,0)>0 THEN offer_header.Prezzo" &
@@ -180,5 +193,8 @@ Public Module StorefrontPromotionCatalogProvider
                "        ELSE 0" &
                "      END)<catalog.Prezzo" &
                ") ranked WHERE ranked.PromotionRank=1"
+        If priceRowScope Then sql = sql.Replace("catalog.Prezzo*(1-(offer_header.Sconto/100))",
+            "CAST(catalog.Prezzo AS DECIMAL(38,16))*(1-CAST(offer_header.Sconto AS DECIMAL(38,16))*0.01)")
+        Return sql
     End Function
 End Module

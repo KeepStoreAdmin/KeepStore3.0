@@ -16,6 +16,7 @@ Imports System.Web.UI
 Partial Public Class search_suggest
     Inherits Page
 
+    Private _commercial As SearchSuggestCommercialSupport
     Private Const DefaultLimit As Integer = 8
     Private Const MaxLimit As Integer = 96
     Private Const AiScoreThreshold As Integer = 1800
@@ -28,7 +29,7 @@ Partial Public Class search_suggest
         Public Property GruppoId As Integer
         Public Property SottoGruppoId As Integer
         Public Property MarcaId As Integer
-        Public Property ProdottoId As Integer
+        Public Property CampaignId As Integer
         Public Property SoloPromo As Boolean
         Public Property SoloDisponibili As Boolean
         Public Property SoloRicondizionati As Boolean
@@ -74,6 +75,7 @@ Partial Public Class search_suggest
         Public Property TcId As String
         Public Property Reason As String
         Public Property Badges As List(Of String)
+        Public Property ExactMatches As Integer
     End Class
 
     Private Class FacetItem
@@ -91,7 +93,14 @@ Partial Public Class search_suggest
 
         Dim payload As New Dictionary(Of String, Object)()
 
+        Response.TrySkipIisCustomErrors = True
+        Response.SuppressFormsAuthenticationRedirect = True
         Try
+            If Request.HttpMethod <> "GET" Then Throw New SearchSuggestCommercialException("method_not_allowed", 405)
+            If String.Equals(Request.Headers("Sec-Fetch-Site"), "cross-site", StringComparison.OrdinalIgnoreCase) Then
+                Throw New SearchSuggestCommercialException("forbidden", 403)
+            End If
+            _commercial = New SearchSuggestCommercialSupport(Context)
             Dim query As String = NormalizeQuery(SafeRequestValue("q"))
             Dim filters As SearchFilters = ReadFilters()
             Dim limit As Integer = Math.Max(1, Math.Min(MaxLimit, ReadInt(SafeRequestValue("limit"), DefaultLimit)))
@@ -109,7 +118,16 @@ Partial Public Class search_suggest
             For Each kvp As KeyValuePair(Of String, Object) In result
                 payload(kvp.Key) = kvp.Value
             Next
+        Catch ex As SearchSuggestCommercialException
+            Response.StatusCode = ex.Status
+            payload("ok") = False
+            payload("code") = ex.Code
+            payload("catalogUrl") = "articoli.aspx"
+            payload("error") = "Contesto commerciale non disponibile. Continua nel catalogo."
         Catch ex As Exception
+            Response.StatusCode = 503
+            payload("code") = "commercial_unavailable"
+            payload("catalogUrl") = "articoli.aspx"
             payload("ok") = False
             payload("error") = "Servizio suggerimenti temporaneamente non disponibile."
         End Try
@@ -117,7 +135,7 @@ Partial Public Class search_suggest
         Dim serializer As New JavaScriptSerializer()
         serializer.MaxJsonLength = Integer.MaxValue
         Response.Write(serializer.Serialize(payload))
-        Response.End()
+        If Context.ApplicationInstance IsNot Nothing Then Context.ApplicationInstance.CompleteRequest()
     End Sub
 
     Private Function BuildRecentResult(ByVal recentIds As List(Of Integer), ByVal filters As SearchFilters, ByVal limit As Integer) As Dictionary(Of String, Object)
@@ -129,15 +147,16 @@ Partial Public Class search_suggest
         output("facets") = EmptyFacets()
         output("strong") = New Dictionary(Of String, Object) From {{"canRedirect", False}, {"redirectUrl", String.Empty}}
         output("intelligence") = New Dictionary(Of String, Object) From {{"summary", "Mostro gli ultimi articoli visitati o il fallback catalogo."}}
+        output("catalogUrl") = BuildCatalogUrl(String.Empty, filters)
         output("total") = 0
         output("quickLinks") = BuildQuickLinks(String.Empty, New List(Of SuggestItem)(), Nothing)
 
         If recentIds Is Nothing OrElse recentIds.Count = 0 Then Return output
 
-        Dim parameters As New List(Of DbParameterSpec)()
+        Dim parameters As New List(Of SearchSuggestParameter)()
         Dim sql As New StringBuilder()
         AppendSelect(sql, False)
-        sql.Append(" FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id AND COALESCE(a.Abilitato,0)=1 LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 AND v.id IN (")
+        sql.Append(_commercial.CatalogFrom() & " AND v.id IN (")
         sql.Append(String.Join(",", recentIds.Select(Function(n) n.ToString(CultureInfo.InvariantCulture))))
         sql.Append(")")
         AppendFilterClauses(sql, parameters, filters, "v")
@@ -172,28 +191,28 @@ Partial Public Class search_suggest
         Dim scoringTokens As List(Of String) = ExpandSearchTokens(tokens, query)
         If scoringTokens.Count = 0 Then scoringTokens = tokens
 
-        Dim parameters As New List(Of DbParameterSpec)()
+        Dim parameters As New List(Of SearchSuggestParameter)()
         Dim normalizedQuery As String = NormalizeQuery(intent.SearchText).ToLowerInvariant()
         If String.IsNullOrWhiteSpace(normalizedQuery) Then normalizedQuery = NormalizeQuery(query).ToLowerInvariant()
 
         Dim likeQuery As String = EscapeLikeValue(normalizedQuery)
-        parameters.Add(New DbParameterSpec("@qExact", normalizedQuery))
-        parameters.Add(New DbParameterSpec("@qPrefix", likeQuery & "%"))
-        parameters.Add(New DbParameterSpec("@qContains", "%" & likeQuery & "%"))
-        parameters.Add(New DbParameterSpec("@qWord", "% " & likeQuery & "%"))
+        parameters.Add(New SearchSuggestParameter("@qExact", normalizedQuery))
+        parameters.Add(New SearchSuggestParameter("@qPrefix", likeQuery & "%"))
+        parameters.Add(New SearchSuggestParameter("@qContains", "%" & likeQuery & "%"))
+        parameters.Add(New SearchSuggestParameter("@qWord", "% " & likeQuery & "%"))
 
         For i As Integer = 0 To scoringTokens.Count - 1
             Dim tokenValue As String = scoringTokens(i)
             Dim likeToken As String = EscapeLikeValue(tokenValue)
-            parameters.Add(New DbParameterSpec("@t" & i.ToString(CultureInfo.InvariantCulture), tokenValue))
-            parameters.Add(New DbParameterSpec("@tc" & i.ToString(CultureInfo.InvariantCulture), "%" & likeToken & "%"))
-            parameters.Add(New DbParameterSpec("@tp" & i.ToString(CultureInfo.InvariantCulture), likeToken & "%"))
-            parameters.Add(New DbParameterSpec("@tw" & i.ToString(CultureInfo.InvariantCulture), "% " & likeToken & "%"))
+            parameters.Add(New SearchSuggestParameter("@t" & i.ToString(CultureInfo.InvariantCulture), tokenValue))
+            parameters.Add(New SearchSuggestParameter("@tc" & i.ToString(CultureInfo.InvariantCulture), "%" & likeToken & "%"))
+            parameters.Add(New SearchSuggestParameter("@tp" & i.ToString(CultureInfo.InvariantCulture), likeToken & "%"))
+            parameters.Add(New SearchSuggestParameter("@tw" & i.ToString(CultureInfo.InvariantCulture), "% " & likeToken & "%"))
         Next
 
         Dim sql As New StringBuilder()
         AppendSelect(sql, True, BuildScoreExpression(scoringTokens, intent))
-        sql.Append(" FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id AND COALESCE(a.Abilitato,0)=1 LEFT JOIN immagini i ON i.id = v.id WHERE COALESCE(v.NListino,1)=1 ")
+        sql.Append(_commercial.CatalogFrom())
         sql.Append(" AND (")
         sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
         sql.Append("LOWER(COALESCE(v.Codice,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Ean,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @qPrefix OR ")
@@ -212,9 +231,10 @@ Partial Public Class search_suggest
         Next
         sql.Append(")")
         AppendFilterClauses(sql, parameters, filters, "v")
+        If aiMode Then sql.Append(" AND (" & BuildScoreExpression(scoringTokens, intent) & ") >= " & AiScoreThreshold.ToString(CultureInfo.InvariantCulture))
         sql.Append(BuildOrderBy(filters))
         sql.Append(" LIMIT ")
-        sql.Append(Math.Max(limit, If(aiMode, 80, If(String.Equals(filters.Mode, "marketplace", StringComparison.OrdinalIgnoreCase), 36, 60))).ToString(CultureInfo.InvariantCulture))
+        sql.Append(limit.ToString(CultureInfo.InvariantCulture))
 
         Dim table As DataTable = ExecuteQuery(sql.ToString(), parameters)
         Dim mapped As List(Of SuggestItem) = MapSuggestions(table, query, intent)
@@ -226,14 +246,14 @@ Partial Public Class search_suggest
         mapped = mapped.Take(limit).ToList()
 
         Dim strong As New Dictionary(Of String, Object) From {{"canRedirect", False}, {"redirectUrl", String.Empty}, {"articleId", 0}, {"matchKind", String.Empty}}
-        If mapped.Count = 1 Then
+        If mapped.Count = 1 AndAlso mapped(0).ExactMatches = 1 Then
             If mapped(0).MatchKind = "exact-code" OrElse mapped(0).MatchKind = "exact-ean" Then
                 strong("canRedirect") = True
                 strong("redirectUrl") = mapped(0).Url
                 strong("articleId") = mapped(0).Id
                 strong("matchKind") = mapped(0).MatchKind
             End If
-        ElseIf mapped.Count > 1 Then
+        ElseIf mapped.Count > 1 AndAlso mapped(0).ExactMatches = 1 Then
             If (mapped(0).MatchKind = "exact-code" OrElse mapped(0).MatchKind = "exact-ean") AndAlso mapped(0).Score >= mapped(1).Score + 2000 Then
                 strong("canRedirect") = True
                 strong("redirectUrl") = mapped(0).Url
@@ -255,22 +275,23 @@ Partial Public Class search_suggest
             {"expanded_tokens", scoringTokens},
             {"minimumScore", If(aiMode, AiScoreThreshold, 0)},
             {"total", mapped.Count},
-            {"catalogUrl", BuildCatalogUrl(query, filters)},
+            {"catalogUrl", BuildCatalogUrl(If(String.IsNullOrWhiteSpace(intent.SearchText), query, intent.SearchText), filters)},
             {"quickLinks", BuildQuickLinks(query, mapped, intent)}
         }
     End Function
 
     Private Sub AppendSelect(ByVal sql As StringBuilder, ByVal includeRank As Boolean, Optional ByVal rankExpr As String = "")
-        sql.Append("SELECT DISTINCT v.id, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.DescrizioneLunga, v.DescrizioneHTML, ")
+        sql.Append("SELECT DISTINCT v.id, v.NListino AS SuggestPriceList, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.DescrizioneLunga, v.DescrizioneHTML, ")
         sql.Append("v.MarcheDescrizione, v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.GruppiDEscrizione, v.SottogruppiDescrIZione, ")
         sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, i.Immagine1, i.Immagine2, i.Immagine3, i.Immagine4, i.Immagine5, i.Immagine6, ")
-        sql.Append("COALESCE(NULLIF(v.PrezzoPromoIvato,0), NULLIF(v.PrezzoIvato,0), NULLIF(v.PrezzoPromo,0), v.Prezzo, 0) AS PrezzoFinale, ")
-        sql.Append("COALESCE(v.Disponibilita,0) AS Disponibilita, COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
-        sql.Append("COALESCE(v.Ricondizionato,0) AS Ricondizionato, COALESCE(v.NoteRicondizionato,'') AS NoteRicondizionato, COALESCE(v.SpeditoGratis,0) AS SpeditoGratis, COALESCE(v.TCid,'') AS TCid, v.DataCreazione ")
+        sql.Append("v.SuggestPrice AS PrezzoFinale, v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.Giacenza, v.Impegnata, v.InOrdine, v.ScortaMinima, v.SuggestMultiplicity, ")
+        sql.Append("v.SuggestAvailable AS Disponibilita, v.SuggestOffer AS InOfferta, COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.visite,0) AS Visite, ")
+        sql.Append("COALESCE(v.Ricondizionato,0) AS Ricondizionato, COALESCE(v.NoteRicondizionato,'') AS NoteRicondizionato, 0 AS SpeditoGratis, v.SuggestTC AS TCid, v.DataCreazione ")
         If includeRank Then
             sql.Append(", ")
             sql.Append(If(String.IsNullOrWhiteSpace(rankExpr), "0", rankExpr))
-            sql.Append(" AS RankScore ")
+            sql.Append(" AS RankScore, SUM(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,'')))=@qExact OR LOWER(TRIM(COALESCE(v.Ean,'')))=@qExact THEN 1 ELSE 0 END) OVER() AS ExactMatches ")
+            Return
         End If
     End Sub
 
@@ -313,8 +334,8 @@ Partial Public Class search_suggest
             sb.Append("ELSE 0 END)")
         Next
         ' Tie-breaker only: never let commercial boosts outrank textual relevance bands.
-        sb.Append(" + (CASE WHEN COALESCE(v.Disponibilita,0) > 0 THEN 600 ELSE 0 END)")
-        sb.Append(" + (CASE WHEN COALESCE(v.InOfferta,0) <> 0 THEN 450 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN v.SuggestAvailable > 0 THEN 600 ELSE 0 END)")
+        sb.Append(" + (CASE WHEN v.SuggestOffer <> 0 THEN 450 ELSE 0 END)")
         sb.Append(" + (CASE WHEN COALESCE(v.Vetrina,0) <> 0 THEN 250 ELSE 0 END)")
         sb.Append(" + LEAST(COALESCE(v.visite,0),999)")
         sb.Append(")")
@@ -324,22 +345,22 @@ Partial Public Class search_suggest
     Private Function BuildOrderBy(ByVal filters As SearchFilters) As String
         Dim sort As String = Convert.ToString(If(filters Is Nothing, String.Empty, filters.Sort)).ToLowerInvariant()
         Select Case sort
-            Case "price-asc", "prezzo-asc"
-                Return " ORDER BY PrezzoFinale ASC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
-            Case "price-desc", "prezzo-desc"
-                Return " ORDER BY PrezzoFinale DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
-            Case "promo", "offerte"
-                Return " ORDER BY COALESCE(v.InOfferta,0) DESC, RankScore DESC, PrezzoFinale ASC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
-            Case "available", "disponibili"
-                Return " ORDER BY COALESCE(v.Disponibilita,0) DESC, RankScore DESC, PrezzoFinale ASC, COALESCE(v.InOfferta,0) DESC, v.id DESC"
-            Case "new", "novita"
-                Return " ORDER BY v.DataCreazione DESC, RankScore DESC, COALESCE(v.Disponibilita,0) DESC, v.id DESC"
+            Case "price-asc", "prezzo-asc", "p_basso"
+                Return " ORDER BY (PrezzoFinale IS NULL OR PrezzoFinale<=0) ASC, PrezzoFinale ASC, RankScore DESC, v.SuggestAvailable DESC, v.id DESC"
+            Case "price-desc", "prezzo-desc", "p_alto"
+                Return " ORDER BY (PrezzoFinale IS NULL OR PrezzoFinale<=0) ASC, PrezzoFinale DESC, RankScore DESC, v.SuggestAvailable DESC, v.id DESC"
+            Case "promo", "offerte", "p_offerta"
+                Return " ORDER BY v.SuggestOffer DESC, RankScore DESC, PrezzoFinale ASC, v.SuggestAvailable DESC, v.id DESC"
+            Case "available", "disponibili", "p_disponibilita"
+                Return " ORDER BY v.SuggestAvailable DESC, RankScore DESC, PrezzoFinale ASC, v.SuggestOffer DESC, v.id DESC"
+            Case "new", "novita", "p_recenti"
+                Return " ORDER BY v.DataCreazione DESC, RankScore DESC, v.SuggestAvailable DESC, v.id DESC"
             Case Else
-                Return " ORDER BY RankScore DESC, COALESCE(v.Disponibilita,0) DESC, COALESCE(v.InOfferta,0) DESC, COALESCE(v.Vetrina,0) DESC, COALESCE(v.visite,0) DESC, PrezzoFinale ASC, v.id DESC"
+                Return " ORDER BY RankScore DESC, v.SuggestAvailable DESC, v.SuggestOffer DESC, COALESCE(v.Vetrina,0) DESC, COALESCE(v.visite,0) DESC, PrezzoFinale ASC, v.id DESC"
         End Select
     End Function
 
-    Private Sub AppendFilterClauses(ByVal sql As StringBuilder, ByVal parameters As List(Of DbParameterSpec), ByVal filters As SearchFilters, ByVal aliasName As String)
+    Private Sub AppendFilterClauses(ByVal sql As StringBuilder, ByVal parameters As List(Of SearchSuggestParameter), ByVal filters As SearchFilters, ByVal aliasName As String)
         If filters Is Nothing Then Return
         Dim a As String = If(String.IsNullOrWhiteSpace(aliasName), String.Empty, aliasName.Trim() & ".")
 
@@ -349,35 +370,36 @@ Partial Public Class search_suggest
         AppendIntFilter(sql, parameters, filters.GruppoId, a & "GruppiId", "@gr")
         AppendIntFilter(sql, parameters, filters.SottoGruppoId, a & "SottoGrupPIId", "@sg")
         AppendIntFilter(sql, parameters, filters.MarcaId, a & "MarcheId", "@mr")
-        AppendIntFilter(sql, parameters, filters.ProdottoId, a & "id", "@pid")
 
-        If filters.SoloPromo Then sql.Append(" AND COALESCE(" & a & "InOfferta,0) <> 0")
-        If filters.SoloDisponibili Then sql.Append(" AND COALESCE(" & a & "Disponibilita,0) > 0")
+        _commercial.VerifyCandidateProjection(sql.ToString(), parameters)
+        If filters.SoloPromo Then sql.Append(" AND " & a & "SuggestHasPromotion <> 0")
+        If filters.SoloDisponibili Then sql.Append(" AND " & a & "SuggestAvailable > 0")
         If filters.SoloRicondizionati Then sql.Append(" AND COALESCE(" & a & "Ricondizionato,0) = 1")
 
         If filters.MinPrice > 0D Then
-            sql.Append(" AND COALESCE(NULLIF(" & a & "PrezzoPromoIvato,0), NULLIF(" & a & "PrezzoIvato,0), NULLIF(" & a & "PrezzoPromo,0), " & a & "Prezzo, 0) >= @minPrice")
-            If parameters IsNot Nothing Then parameters.Add(New DbParameterSpec("@minPrice", filters.MinPrice))
+            sql.Append(" AND " & a & "SuggestPrice >= @minPrice")
+            If parameters IsNot Nothing Then parameters.Add(New SearchSuggestParameter("@minPrice", filters.MinPrice))
         End If
         If filters.MaxPrice > 0D Then
-            sql.Append(" AND COALESCE(NULLIF(" & a & "PrezzoPromoIvato,0), NULLIF(" & a & "PrezzoIvato,0), NULLIF(" & a & "PrezzoPromo,0), " & a & "Prezzo, 0) <= @maxPrice")
-            If parameters IsNot Nothing Then parameters.Add(New DbParameterSpec("@maxPrice", filters.MaxPrice))
+            sql.Append(" AND " & a & "SuggestPrice <= @maxPrice")
+            If parameters IsNot Nothing Then parameters.Add(New SearchSuggestParameter("@maxPrice", filters.MaxPrice))
         End If
     End Sub
 
-    Private Sub AppendIntFilter(ByVal sql As StringBuilder, ByVal parameters As List(Of DbParameterSpec), ByVal value As Integer, ByVal fieldName As String, ByVal paramName As String)
+    Private Sub AppendIntFilter(ByVal sql As StringBuilder, ByVal parameters As List(Of SearchSuggestParameter), ByVal value As Integer, ByVal fieldName As String, ByVal paramName As String)
         If value <= 0 Then Return
         sql.Append(" AND ")
         sql.Append(fieldName)
         sql.Append(" = ")
         sql.Append(paramName)
-        If parameters IsNot Nothing Then parameters.Add(New DbParameterSpec(paramName, value))
+        If parameters IsNot Nothing Then parameters.Add(New SearchSuggestParameter(paramName, value))
     End Sub
 
     Private Function MapSuggestions(ByVal table As DataTable, ByVal query As String, ByVal intent As QueryIntent) As List(Of SuggestItem)
         Dim results As New List(Of SuggestItem)()
         If table Is Nothing Then Return results
 
+        _commercial.VerifyRows(table)
         For Each row As DataRow In table.Rows
             Dim code As String = SafeString(row("Codice"))
             Dim ean As String = SafeString(row("Ean"))
@@ -389,6 +411,7 @@ Partial Public Class search_suggest
 
             Dim item As New SuggestItem()
             item.Id = ReadInt(row("id"), 0)
+            item.ExactMatches = If(table.Columns.Contains("ExactMatches"), ReadInt(row("ExactMatches"), 0), 0)
             item.Url = "articolo.aspx?id=" & item.Id.ToString(CultureInfo.InvariantCulture)
             item.Title = title
             item.Description = MakeShortDescription(SafeString(row("Descrizione2")), SafeString(row("DescrizioneLunga")), SafeString(row("DescrizioneHTML")))
@@ -406,6 +429,7 @@ Partial Public Class search_suggest
             item.IsRefurbished = ReadInt(row("Ricondizionato"), 0) = 1
             item.FreeShipping = If(row.Table.Columns.Contains("SpeditoGratis"), ReadInt(row("SpeditoGratis"), 0) <> 0, False)
             item.TcId = If(row.Table.Columns.Contains("TCid"), SafeString(row("TCid")), String.Empty)
+            If ReadInt(item.TcId, -1) > 0 Then item.Url &= "&TCId=" & ReadInt(item.TcId, -1).ToString(CultureInfo.InvariantCulture)
             Dim images As List(Of String) = CollectImages(row)
             item.ImageFallback = If(images.Count > 0, images(0), String.Empty)
             item.Image = BuildPreviewVariant(item.ImageFallback)
@@ -420,7 +444,7 @@ Partial Public Class search_suggest
 
     Private Function SerializeItem(ByVal item As SuggestItem) As Dictionary(Of String, Object)
         Return New Dictionary(Of String, Object) From {
-            {"id", item.Id}, {"url", item.Url}, {"title", item.Title}, {"description", item.Description},
+            {"id", item.Id}, {"TCId", ReadInt(item.TcId, -1)}, {"url", item.Url}, {"title", item.Title}, {"description", item.Description},
             {"code", item.Code}, {"ean", item.Ean}, {"brand", item.Brand}, {"category", item.Category}, {"department", item.Department},
             {"price", item.Price}, {"priceValue", item.PriceValue}, {"image", item.Image}, {"image_fallback", item.ImageFallback},
             {"matchKind", item.MatchKind}, {"score", item.Score}, {"availability", item.Availability},
@@ -472,11 +496,12 @@ Partial Public Class search_suggest
             If filters.SottoGruppoId > 0 Then args.Add("sg=" & filters.SottoGruppoId.ToString(CultureInfo.InvariantCulture))
             If filters.MarcaId > 0 Then args.Add("mr=" & filters.MarcaId.ToString(CultureInfo.InvariantCulture))
             If filters.SoloPromo Then args.Add("inpromo=1")
+            If filters.CampaignId > 0 Then args.Add("pid=" & filters.CampaignId.ToString(CultureInfo.InvariantCulture))
             If filters.SoloDisponibili Then args.Add("disponibile=1")
             If filters.SoloRicondizionati Then args.Add("ricondizionato=1")
-            If filters.MinPrice > 0D Then args.Add("min=" & filters.MinPrice.ToString(CultureInfo.InvariantCulture))
-            If filters.MaxPrice > 0D Then args.Add("max=" & filters.MaxPrice.ToString(CultureInfo.InvariantCulture))
-            If Not String.IsNullOrWhiteSpace(filters.Sort) Then args.Add("ordinamento=" & HttpUtility.UrlEncode(filters.Sort))
+            If filters.MinPrice > 0D Then args.Add("pmin=" & filters.MinPrice.ToString(CultureInfo.InvariantCulture))
+            If filters.MaxPrice > 0D Then args.Add("pmax=" & filters.MaxPrice.ToString(CultureInfo.InvariantCulture))
+            If Not String.IsNullOrWhiteSpace(filters.Sort) Then args.Add("ordinamento=" & HttpUtility.UrlEncode(CatalogSort(filters.Sort)))
         End If
         If args.Count > 0 Then url.Append("?").Append(String.Join("&", args))
         Return url.ToString()
@@ -649,8 +674,8 @@ Partial Public Class search_suggest
             .GruppoId = ReadInt(SafeRequestValue("gr"), 0),
             .SottoGruppoId = ReadInt(SafeRequestValue("sg"), 0),
             .MarcaId = ReadInt(SafeRequestValue("mr"), 0),
-            .ProdottoId = ReadInt(SafeRequestValue("pid"), 0),
-            .SoloPromo = (ReadInt(SafeRequestValue("inpromo"), 0) <> 0 OrElse ReadInt(SafeRequestValue("promo"), 0) <> 0),
+            .CampaignId = ReadInt(SafeRequestValue("pid"), 0),
+            .SoloPromo = (ReadInt(SafeRequestValue("inpromo"), 0) <> 0 OrElse ReadInt(SafeRequestValue("promo"), 0) <> 0 OrElse ReadInt(SafeRequestValue("pid"), 0) > 0),
             .SoloDisponibili = (ReadInt(SafeRequestValue("available"), 0) <> 0 OrElse ReadInt(SafeRequestValue("disponibili"), 0) <> 0),
             .SoloRicondizionati = (ReadInt(SafeRequestValue("refurbished"), 0) <> 0 OrElse ReadInt(SafeRequestValue("ricondizionato"), 0) <> 0),
             .MinPrice = ReadDecParam(SafeRequestValue("min"), 0D),
@@ -696,7 +721,7 @@ Partial Public Class search_suggest
         Dim decoded As String = HttpUtility.HtmlDecode(value)
         Dim text As String = If(decoded, String.Empty).Trim()
         text = Regex.Replace(text, "\s+", " ").Trim()
-        Return text
+        Return If(text.Length > 80, text.Substring(0, 80).Trim(), text)
     End Function
 
     Private Function NormalizeSearchText(ByVal value As String) As String
@@ -788,40 +813,25 @@ Partial Public Class search_suggest
     End Sub
 
     Private Function LoadPopularQuickLinks(ByVal limit As Integer) As List(Of Dictionary(Of String, String))
-        Dim result As New List(Of Dictionary(Of String, String))()
-        If limit <= 0 Then Return result
+        ' Empty/recent requests may always reach the real catalog; no invented
+        ' sector examples and no second unverified commercial query.
+        Return New List(Of Dictionary(Of String, String))()
+    End Function
 
-        Try
-            Dim sql As String = "SELECT DISTINCT v.Descrizione1, v.MarcheDescrizione, v.CategorieDescrizione, v.SettoriDescrizione " &
-                                "FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id AND COALESCE(a.Abilitato,0)=1 WHERE COALESCE(v.NListino,1)=1 AND COALESCE(v.Visite,0)>0 " &
-                                "ORDER BY COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,'1900-01-01') DESC LIMIT " & Math.Max(1, Math.Min(limit * 2, 20)).ToString(CultureInfo.InvariantCulture)
-            Dim table As DataTable = ExecuteQuery(sql, New List(Of DbParameterSpec)())
-            For Each row As DataRow In table.Rows
-                Dim label As String = SafeString(row("MarcheDescrizione")) & " " & SafeString(row("CategorieDescrizione"))
-                If String.IsNullOrWhiteSpace(label.Trim()) Then label = SafeString(row("SettoriDescrizione"))
-                If String.IsNullOrWhiteSpace(label.Trim()) Then label = SafeString(row("Descrizione1"))
-                label = NormalizeQuery(label)
-                If String.IsNullOrWhiteSpace(label) Then Continue For
-                result.Add(New Dictionary(Of String, String) From {
-                    {"label", label},
-                    {"url", "articoli.aspx?q=" & HttpUtility.UrlEncode(label)}
-                })
-                If result.Count >= limit Then Exit For
-            Next
-        Catch
-        End Try
-
-        If result.Count = 0 Then
-            result.Add(New Dictionary(Of String, String) From {{"label", "smartphone samsung"}, {"url", "articoli.aspx?q=smartphone+samsung"}})
-            result.Add(New Dictionary(Of String, String) From {{"label", "toner stampante"}, {"url", "articoli.aspx?q=toner+stampante"}})
-            result.Add(New Dictionary(Of String, String) From {{"label", "cavo hdmi"}, {"url", "articoli.aspx?q=cavo+hdmi"}})
-        End If
-        Return result
+    Private Function CatalogSort(ByVal sort As String) As String
+        Select Case Convert.ToString(sort).ToLowerInvariant()
+            Case "price-asc", "prezzo-asc", "p_basso" : Return "p_basso"
+            Case "price-desc", "prezzo-desc", "p_alto" : Return "p_alto"
+            Case "promo", "offerte", "p_offerta" : Return "p_offerta"
+            Case "new", "novita", "p_recenti" : Return "p_recenti"
+            Case "available", "disponibili", "p_disponibilita" : Return "p_disponibilita"
+            Case Else : Return "p_popolarita"
+        End Select
     End Function
 
     Private Function FormatPrice(ByVal value As Decimal) As String
         If value <= 0D Then Return String.Empty
-        Return value.ToString("N2", ItCulture)
+        Return UiPriceFormatter.FormatStorefrontAmount(value)
     End Function
 
     Private Function ReadInt(ByVal raw As Object, ByVal fallback As Integer) As Integer
@@ -856,86 +866,7 @@ Partial Public Class search_suggest
         Return If(value, String.Empty).Trim()
     End Function
 
-    Private Function ExecuteQuery(ByVal sql As String, ByVal parameters As List(Of DbParameterSpec)) As DataTable
-        Dim table As New DataTable()
-        Dim factory As DbProviderFactory = Nothing
-        Using conn As DbConnection = OpenConnection(factory)
-            Using cmd As DbCommand = conn.CreateCommand()
-                cmd.CommandText = sql
-                cmd.CommandType = CommandType.Text
-                AddParameters(cmd, parameters)
-                Using reader As DbDataReader = cmd.ExecuteReader()
-                    table.Load(reader)
-                End Using
-            End Using
-        End Using
-        Return table
+    Private Function ExecuteQuery(ByVal sql As String, ByVal parameters As List(Of SearchSuggestParameter)) As DataTable
+        Return _commercial.Execute(sql, parameters)
     End Function
-
-    Private Sub AddParameters(ByVal cmd As DbCommand, ByVal parameters As List(Of DbParameterSpec))
-        If parameters Is Nothing Then Return
-        For Each spec As DbParameterSpec In parameters
-            Dim p As DbParameter = cmd.CreateParameter()
-            p.ParameterName = spec.Name
-            p.Value = If(spec.Value, DBNull.Value)
-            cmd.Parameters.Add(p)
-        Next
-    End Sub
-
-    Private Function OpenConnection(ByRef factory As DbProviderFactory) As DbConnection
-        Dim cs As ConnectionStringSettings = PickConnectionString()
-        If cs Is Nothing OrElse String.IsNullOrWhiteSpace(cs.ConnectionString) Then Throw New InvalidOperationException("Connection string non trovata.")
-        factory = ResolveFactory(cs)
-        If factory Is Nothing Then Throw New InvalidOperationException("Provider database non disponibile.")
-        Dim conn As DbConnection = factory.CreateConnection()
-        conn.ConnectionString = cs.ConnectionString
-        conn.Open()
-        Return conn
-    End Function
-
-    Private Function PickConnectionString() As ConnectionStringSettings
-        Dim preferred As ConnectionStringSettings = Nothing
-        For Each cs As ConnectionStringSettings In ConfigurationManager.ConnectionStrings
-            If cs Is Nothing Then Continue For
-            Dim name As String = Convert.ToString(cs.Name)
-            Dim conn As String = Convert.ToString(cs.ConnectionString)
-            If String.IsNullOrWhiteSpace(conn) Then Continue For
-            If String.Equals(name, "LocalSqlServer", StringComparison.OrdinalIgnoreCase) Then Continue For
-            Dim probe As String = conn.ToLowerInvariant()
-            If probe.Contains("server=") AndAlso probe.Contains("database=") Then
-                If probe.Contains("uid=") OrElse probe.Contains("user id=") OrElse probe.Contains("port=") OrElse Convert.ToString(cs.ProviderName).ToLowerInvariant().Contains("mysql") Then Return cs
-                If preferred Is Nothing Then preferred = cs
-            End If
-        Next
-        Return preferred
-    End Function
-
-    Private Function ResolveFactory(ByVal cs As ConnectionStringSettings) As DbProviderFactory
-        Dim provider As String = Convert.ToString(cs.ProviderName)
-        If String.IsNullOrWhiteSpace(provider) Then
-            Dim probe As String = Convert.ToString(cs.ConnectionString).ToLowerInvariant()
-            provider = If(probe.Contains("uid=") OrElse probe.Contains("user id=") OrElse probe.Contains("port="), "MySql.Data.MySqlClient", "System.Data.SqlClient")
-        End If
-        Try
-            Return DbProviderFactories.GetFactory(provider)
-        Catch
-        End Try
-        If String.Equals(provider, "MySql.Data.MySqlClient", StringComparison.OrdinalIgnoreCase) Then
-            Dim t As Type = Type.GetType("MySql.Data.MySqlClient.MySqlClientFactory, MySql.Data")
-            If t IsNot Nothing Then
-                Dim fld = t.GetField("Instance")
-                If fld IsNot Nothing Then Return TryCast(fld.GetValue(Nothing), DbProviderFactory)
-            End If
-        End If
-        Return Nothing
-    End Function
-
-    Private Class DbParameterSpec
-        Public Sub New(ByVal name As String, ByVal value As Object)
-            Me.Name = name
-            Me.Value = value
-        End Sub
-        Public Property Name As String
-        Public Property Value As Object
-    End Class
 End Class

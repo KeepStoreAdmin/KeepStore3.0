@@ -318,7 +318,13 @@
       if (!item || typeof item.id !== 'number' || !Number.isInteger(item.id) || item.id <= 0 ||
           typeof item.title !== 'string' || !item.title.trim()) return false;
       var url = safeSearchUrl(item.url, '/articolo.aspx');
-      return !!url && Number(new URL(url).searchParams.get('id')) === item.id;
+      if (!url || Number(new URL(url).searchParams.get('id')) !== item.id) return false;
+      if (Object.prototype.hasOwnProperty.call(item, 'TCId')) {
+        var tc = new URL(url).searchParams.get('TCId');
+        if (!Number.isInteger(item.TCId) || item.TCId === 0 || item.TCId < -1 ||
+            item.TCId !== (tc === null ? -1 : Number(tc))) return false;
+      }
+      return true;
     });
     return valid ? items : null;
   }

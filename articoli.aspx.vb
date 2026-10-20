@@ -4201,14 +4201,8 @@ strWhere = strWhere & " GROUP BY id"
     End Function
 
     Private Function BuildCatalogQuantityOneDisplayPriceSql(ByVal effectiveBaseGrossSql As String) As String
-        Dim validPromo As String = "ks_qty1_price.AppliedPromoNet>0 AND vsuperarticoli.Prezzo>0" &
-                                   " AND ks_qty1_price.AppliedPromoNet<vsuperarticoli.Prezzo AND " & effectiveBaseGrossSql & ">0"
-        If _priceDisplayContext.IsVatExcluded Then
-            Return "(CASE WHEN " & validPromo & " THEN ks_qty1_price.AppliedPromoNet ELSE vsuperarticoli.Prezzo END)"
-        End If
-        Return "(CASE WHEN " & validPromo & " THEN ks_qty1_price.AppliedPromoNet*" &
-               "(CAST(" & effectiveBaseGrossSql & " AS DECIMAL(38,16))/CAST(vsuperarticoli.Prezzo AS DECIMAL(38,16)))" &
-               " ELSE " & effectiveBaseGrossSql & " END)"
+        Return StorefrontEffectivePriceSqlBuilder.BuildQuantityOneDisplayPriceExpression(
+            effectiveBaseGrossSql, _priceDisplayContext.IsVatExcluded, False)
     End Function
 
     Private Sub FailCatalogQuantityOnePrices()

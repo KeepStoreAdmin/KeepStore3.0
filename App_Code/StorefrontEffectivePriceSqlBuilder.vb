@@ -4,7 +4,7 @@ Option Explicit On
 Imports System
 Imports System.Text.RegularExpressions
 
-' SQL adapter for StorefrontEffectivePriceResolver; no session, values or rounding.
+' SQL adapters for the canonical fiscal and quantity-one price projections; no Session or client SQL.
 Public NotInheritable Class StorefrontEffectivePriceSqlBuilder
     Private Sub New()
     End Sub
@@ -37,6 +37,24 @@ Public NotInheritable Class StorefrontEffectivePriceSqlBuilder
                "WHEN " & hasVatOverrideParameter & "=1 THEN CASE WHEN " & netExpression &
                ">0 THEN " & netExpression & "*(1+" & vatOverrideParameter & "*0.01) ELSE NULL END " &
                "WHEN " & standardGrossExpression & ">0 THEN " & standardGrossExpression & " ELSE NULL END)"
+    End Function
+
+    ' Shared catalog/suggest quantity-one projection; callers retain fiscal context.
+    Public Shared Function BuildQuantityOneDisplayPriceExpression(ByVal effectiveBaseGrossSql As String,
+                                                                  ByVal vatExcluded As Boolean,
+                                                                  Optional ByVal rounded As Boolean = True) As String
+        If String.IsNullOrWhiteSpace(effectiveBaseGrossSql) Then Throw New ArgumentException("Missing gross expression.")
+        Dim validPromo As String = "ks_qty1_price.AppliedPromoNet>0 AND vsuperarticoli.Prezzo>0" &
+                                   " AND ks_qty1_price.AppliedPromoNet<vsuperarticoli.Prezzo AND " & effectiveBaseGrossSql & ">0"
+        Dim raw As String
+        If vatExcluded Then
+            raw = "(CASE WHEN " & validPromo & " THEN ks_qty1_price.AppliedPromoNet ELSE vsuperarticoli.Prezzo END)"
+        Else
+            raw = "(CASE WHEN " & validPromo & " THEN ks_qty1_price.AppliedPromoNet*" &
+                  "(CAST(" & effectiveBaseGrossSql & " AS DECIMAL(38,16))/CAST(vsuperarticoli.Prezzo AS DECIMAL(38,16)))" &
+                  " ELSE " & effectiveBaseGrossSql & " END)"
+        End If
+        Return If(rounded, "ROUND(CAST(" & raw & " AS DECIMAL(38,16)),2)", raw)
     End Function
 
     Private Shared Sub ValidateOperand(ByVal value As String)

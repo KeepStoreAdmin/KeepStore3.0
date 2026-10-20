@@ -2,6 +2,16 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Suggest — contesto commerciale per-request, candidato 2026-10-21
+
+`SEARCH-SUGGEST-COMMERCIAL-CONTEXT-1A`, base #364 `0363e53e`, SOURCE candidato da revisionare. #364 e CHIUSA A / SOURCE INTEGRATED; guida e KS-F01 PARZIALE immutati, consegna server sospesa. Il suggest autonomo legge Session ReadOnly, senza eseguire la master, e richiede nome EntropicConnectionString/provider MySQL/server/database espliciti. Nessuna migrazione KSAES2/configurazione o fallback per posizione.
+
+`SearchSuggestCommercialSupport` riusa resolver host-scoped, validazione scalari tenant, PriceDisplayContext e policy commerciali. Account autenticato riscontrato read-only in vlogin per abilitazioni, azienda, owner, listino e fiscalita; incoerenza rifiutata, nessuna mutazione/idratazione/revoca Session. Owner/listino/IVA client non sono fonte di autorita.
+
+Prezzo qty=1, range e sort condividono il builder del catalogo con Decimal e ROUND(CAST(... AS DECIMAL),2), prima del LIMIT. Membership promo separata dal prezzo applicabile qty=1; date e contesto unici per richiesta. Join catalogo preesistenti invariati, estrazione privata meccanica. Varianti id+TCId validate, duplicati/ambiguita/stock non verificabile e guasti fail-closed. Righe finali ricontrollate mediante resolver fiscale, un solo batch promo e AvailabilityDisplayHelper. Nessun N+1, cache commerciale nuova o dati commerciali persistiti dal client.
+
+Campagna pid, pmin/pmax e ordinamenti sono coerenti col catalogo. Quick links soltanto da risultati correnti, nessun esempio merceologico fallback. Errore JSON sanitizzato/no-store distinto da vuoto valido, senza vecchi prezzi o redirect auth/PDP su guasto. Dettagli, 156 asserzioni sintetiche, 30 controlli browser mirati, precompile e limiti nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#search-suggest-commercial-context-1a--candidato-source-2026-10-21): SQL intercettato/ispezionato non eseguito su MySQL, nessun login reale/IIS/produzione certificati.
+
 ## Contratto configurazione database — Batch A, 2026-10-20
 
 Checkpoint prevalente 2026-10-20: #362 **CHIUSA A / SOURCE INTEGRATED** su stable `76d97a2c004f7661b61e66d6f744f1fb7e8d1231`; review/closeout nel Masterplan. Le prove software Batch A/REV1 restano acquisite; nessuna configurazione operativa cifrata o pubblicazione server implicita. Il contratto software RSA descritto sotto e CURRENT IMPLEMENTED; laboratorio/account/grant/TLS/rollout/revoca restano NON AVVIATI.
