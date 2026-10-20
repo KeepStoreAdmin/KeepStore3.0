@@ -147,34 +147,61 @@
         </div>
     </section>
 
-    <section id="KsLocalAiSearch130" class="ks-ai130-section ks-home-section ks-home-ai-search" data-ks-ai="local-reasoning">
+    <section id="KsLocalAiSearch130" class="ks-ai130-section ks-home-section ks-home-ai-search" aria-labelledby="ksGuideTitle" tabindex="-1">
         <div class="container">
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
-                    <span class="ks-ai130-kicker">Ricerca nel catalogo</span>
-                    <h5>Chiedimi cosa stai cercando</h5>
-                    <p>Interpreta la richiesta e cerca tra i prodotti usando descrizioni, codice, EAN/GTIN, marca, reparto e categoria.</p>
-                    <div class="ks-ai130-form" role="search">
-                        <input type="search" autocomplete="off" placeholder="Descrivi ciò che cerchi nel catalogo" aria-label="Cerca nel catalogo" />
-                        <button type="button">Ragiona</button>
-                    </div>
-                    <asp:Panel ID="HomeAiExamplesPanel" runat="server" CssClass="ks-ai130-examples" Visible="false">
-                        <asp:Repeater ID="rptHomeAiExamples" runat="server">
-                            <ItemTemplate><button type="button"><%# SafeText(Eval("Descrizione")) %></button></ItemTemplate>
-                        </asp:Repeater>
-                    </asp:Panel>
-                    <div class="ks-ai130-answer"><i></i><p>Scrivi cosa stai cercando: usero il catalogo articoli reale per proporti prodotti pertinenti.</p></div>
-                    <asp:Panel ID="HomeAiQuickLinksPanel" runat="server" CssClass="ks-ai130-tools" Visible="false">
-                        <asp:Repeater ID="rptHomeAiQuickLinks" runat="server">
-                            <ItemTemplate><a href='<%# SafeText(Eval("DefaultUrl")) %>'><%# SafeText(Eval("Descrizione")) %></a></ItemTemplate>
-                        </asp:Repeater>
+                    <span class="ks-ai130-kicker">Un aiuto per iniziare</span>
+                    <h2 id="ksGuideTitle">Guida agli acquisti</h2>
+                    <p id="ksGuideIntro">Cosa cerchi? Prepara la tua ricerca e continua nel catalogo del negozio.</p>
+                    <fieldset class="ks-guide-fields" data-ks-guide-fields hidden disabled>
+                        <legend class="visually-hidden">Prepara la ricerca</legend>
+                        <label for="ksGuideQuery">Che prodotto cerchi?</label>
+                        <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Scrivi il prodotto, la marca o il codice" aria-describedby="ksGuideLimit" />
+                        <label for="ksGuideDetail">Vuoi aggiungere un dettaglio? <span>(facoltativo)</span></label>
+                        <input id="ksGuideDetail" type="text" maxlength="80" autocomplete="off" placeholder="Ad esempio un utilizzo o una caratteristica" aria-describedby="ksGuideLimit" />
+                        <p id="ksGuideLimit" class="ks-guide-hint">Massimo 80 caratteri in tutto. Non inserire dati personali.</p>
+                        <asp:Panel ID="HomeAiExamplesPanel" runat="server" CssClass="ks-guide-departments" Visible="false">
+                            <p id="ksGuideDepartmentsLabel">Limita a un reparto <span>(facoltativo)</span></p>
+                            <div class="ks-guide-choices" role="group" aria-labelledby="ksGuideDepartmentsLabel">
+                                <button type="button" data-ks-guide-department="" aria-pressed="true">Tutti i reparti</button>
+                                <asp:Repeater ID="rptHomeAiExamples" runat="server">
+                                    <ItemTemplate><button type="button" data-ks-guide-department='<%# SafeText(Eval("DefaultUrl")) %>' aria-pressed="false"><%# SafeText(Eval("Descrizione")) %></button></ItemTemplate>
+                                </asp:Repeater>
+                            </div>
+                        </asp:Panel>
+                        <p class="ks-guide-status" data-ks-guide-status role="status" aria-live="polite" aria-atomic="true"></p>
+                        <div class="ks-guide-actions">
+                            <button type="button" class="ks-guide-primary" data-ks-guide-prepare>Prepara la ricerca</button>
+                            <button type="button" class="ks-guide-reset" data-ks-guide-reset>Ricomincia</button>
+                        </div>
+                    </fieldset>
+                    <asp:Panel ID="HomeAiQuickLinksPanel" runat="server" CssClass="ks-guide-fallback-departments" Visible="false">
+                        <p>Oppure esplora un reparto:</p>
+                        <div class="ks-ai130-tools">
+                            <asp:Repeater ID="rptHomeAiQuickLinks" runat="server">
+                                <ItemTemplate><a href='<%# SafeText(Eval("DefaultUrl")) %>'><%# SafeText(Eval("Descrizione")) %></a></ItemTemplate>
+                            </asp:Repeater>
+                        </div>
                     </asp:Panel>
                 </div>
-                <div class="ks-ai130-results-wrap">
-                    <div class="ks-ai130-head"><span>Risposta e prodotti consigliati</span><small data-ks-ai-count>Catalogo articoli</small></div>
-                    <div class="ks-ai130-results">
-                        <div class="ks-ai130-empty">Scrivi una richiesta o scegli un esempio: cerchero nel catalogo reale.</div>
+                <div class="ks-guide-next">
+                    <div data-ks-guide-summary hidden>
+                        <h3 tabindex="-1" data-ks-guide-summary-title>La tua ricerca</h3>
+                        <p class="ks-guide-request" data-ks-guide-request></p>
+                        <p class="ks-guide-hint" data-ks-guide-scope></p>
+                        <p data-ks-guide-question></p>
+                        <div class="ks-guide-actions">
+                            <a href="articoli.aspx" class="ks-guide-primary" data-ks-guide-catalog>Cerca nel catalogo</a>
+                            <button type="button" class="ks-guide-edit" data-ks-guide-edit>Modifica la richiesta</button>
+                        </div>
                     </div>
+                    <div data-ks-guide-idle>
+                        <h3>Continua nel catalogo</h3>
+                        <p>Qui prepari le parole da cercare. Prodotti, prezzi e disponibilità saranno mostrati nel catalogo.</p>
+                    </div>
+                    <a href="articoli.aspx" class="ks-guide-catalog-fallback">Esplora tutto il catalogo</a>
+                    <noscript><p>La ricerca guidata richiede JavaScript. Puoi usare il catalogo e i link ai reparti.</p></noscript>
                 </div>
             </div>
         </div>
@@ -460,5 +487,5 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
-    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261015-shopping-continuity1a-rev1" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261020-guided-entry1a" %>"></script>
 </asp:Content>

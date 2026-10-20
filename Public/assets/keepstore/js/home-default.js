@@ -204,183 +204,123 @@
     });
   }
 
-  function storageJson(key) {
-    try {
-      var raw = window.localStorage ? window.localStorage.getItem(key) : '';
-      return raw ? JSON.parse(raw) : null;
-    } catch (err) {
-      return null;
-    }
-  }
-
-  function rememberSearch(value) {
-    var query = String(value || '').replace(/\s+/g, ' ').trim();
-    if (query.length < 2) return;
-    try {
-      var list = storageJson('ks_ai_recent_searches') || [];
-      if (!Array.isArray(list)) list = [];
-      list = list.filter(function (item) { return String(item || '').toLowerCase() !== query.toLowerCase(); });
-      list.unshift(query);
-      window.localStorage.setItem('ks_ai_recent_searches', JSON.stringify(list.slice(0, 12)));
-    } catch (ignore) {}
-  }
-
-  function escapeHtml(value) {
-    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
-    });
-  }
-
-  function searchEndpoint(query) {
-    var url = new URL('/search_suggest.aspx', window.location.href);
-    url.searchParams.set('mode', 'ai');
-    url.searchParams.set('limit', '8');
-    url.searchParams.set('q', query || '');
-    return url.toString();
-  }
-
-  function renderAiCard(item, index) {
-    var image = item.image || item.image_fallback || '';
-    var meta = [item.brand, item.category, item.code ? 'Cod. ' + item.code : ''].filter(Boolean).join(' - ');
-    return '<a class="ks-ai130-card" href="' + escapeHtml(item.url || '#') + '">' +
-      '<span class="ks-ai130-rank">' + (index + 1) + '</span>' +
-      '<span class="ks-ai130-img">' + (image ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(item.title || '') + '" loading="lazy" decoding="async">' : '') + '</span>' +
-      '<span class="ks-ai130-copy">' +
-        '<em>' + escapeHtml(meta || 'Catalogo KeepStore') + '</em>' +
-        '<strong>' + escapeHtml(item.title || 'Prodotto KeepStore') + '</strong>' +
-        '<small>' + escapeHtml(item.reason || 'Risultato ordinato per pertinenza.') + '</small>' +
-        (item.price ? '<b>' + escapeHtml(item.price) + '</b>' : '') +
-      '</span>' +
-    '</a>';
-  }
-
-  function initLocalAiSearch() {
+  // This guide prepares catalog navigation only; it never retrieves offers or stores queries.
+  function initShoppingGuide() {
     var root = document.getElementById('KsLocalAiSearch130');
-    if (!root || root.getAttribute('data-ks-ai-bound') === '1') return;
-    root.setAttribute('data-ks-ai-bound', '1');
+    if (!root || root.getAttribute('data-ks-guide-bound') === '1') return;
 
-    var input = qs('.ks-ai130-form input', root);
-    var button = qs('.ks-ai130-form button', root);
-    var results = qs('.ks-ai130-results', root);
-    var answer = qs('.ks-ai130-answer p', root);
-    var count = qs('[data-ks-ai-count]', root);
-    var timer = 0;
-    var controller = null;
-    var searchVersion = 0;
-    var searchPending = false;
+    var fields = qs('[data-ks-guide-fields]', root);
+    var input = qs('#ksGuideQuery', root);
+    var detail = qs('#ksGuideDetail', root);
+    var summary = qs('[data-ks-guide-summary]', root);
+    var idle = qs('[data-ks-guide-idle]', root);
+    var status = qs('[data-ks-guide-status]', root);
+    var catalog = qs('[data-ks-guide-catalog]', root);
+    var prepare = qs('[data-ks-guide-prepare]', root);
+    var reset = qs('[data-ks-guide-reset]', root);
+    var edit = qs('[data-ks-guide-edit]', root);
+    if (!fields || !input || !detail || !summary || !idle || !status || !catalog || !prepare || !reset || !edit || !window.URL) return;
 
-    function cancelPendingSearch() {
-      searchVersion += 1;
-      if (timer) {
-        window.clearTimeout(timer);
-        timer = 0;
-      }
-      if (controller && controller.abort) {
-        try { controller.abort(); } catch (ignore) {}
-      }
-      controller = null;
-      return searchVersion;
+    var base = new URL('articoli.aspx', window.location.href);
+    if (base.origin !== window.location.origin) return;
+    var choices = qsa('[data-ks-guide-department]', root);
+    var department = null;
+
+    function clean(value) {
+      return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
-    function catalogLink(query) {
-      return '<a class="ks-ai130-catalog-link" href="articoli.aspx?q=' + encodeURIComponent(query || '') + '">Vedi risultati nel catalogo</a>';
+    function readDepartment(button) {
+      var raw = button.getAttribute('data-ks-guide-department');
+      if (raw === '') return null;
+      // Only exact server-rendered sector links may provide the optional st filter.
+      if (!/^articoli\.aspx\?st=[1-9][0-9]{0,9}$/.test(raw || '')) return false;
+      var url = new URL(raw, window.location.href);
+      if (url.origin !== base.origin || url.pathname !== base.pathname || Number(url.searchParams.get('st')) > 2147483647) return false;
+      return { id: url.searchParams.get('st'), label: clean(button.textContent) };
     }
 
-    function renderEmpty(message, query) {
-      if (results) {
-        results.innerHTML = '<div class="ks-ai130-empty">' + escapeHtml(message) + '<br>' + catalogLink(query || '') + '</div>';
-      }
+    function invalidate() {
+      summary.hidden = true;
+      idle.hidden = false;
+      catalog.setAttribute('href', base.pathname);
+      status.textContent = '';
+      qs('[data-ks-guide-request]', root).textContent = '';
+      qs('[data-ks-guide-scope]', root).textContent = '';
+      qs('[data-ks-guide-question]', root).textContent = '';
+      input.setAttribute('aria-describedby', 'ksGuideLimit');
+      input.removeAttribute('aria-invalid');
+      detail.removeAttribute('aria-invalid');
     }
 
-    function renderPendingSearch() {
-      if (searchPending) return;
-      searchPending = true;
-      if (answer) answer.textContent = 'Sto confrontando la richiesta con i dati reali del catalogo KeepStore.';
-      if (count) count.textContent = 'Ricerca catalogo...';
-      if (results) results.innerHTML = '<div class="ks-ai130-empty">Analisi catalogo in corso...</div>';
-    }
-
-    function runSearch(raw) {
-      var version = cancelPendingSearch();
-      var query = String(raw || '').replace(/\s+/g, ' ').trim();
-      if (query.length < 2) {
-        searchPending = false;
-        if (count) count.textContent = '';
-        if (answer) answer.textContent = 'Scrivi una richiesta: cerco nel catalogo reale per codice, EAN, marca, descrizione e categoria.';
-        renderEmpty('Inserisci almeno 2 caratteri per cercare nel catalogo.', query);
+    function prepareSearch() {
+      invalidate();
+      var request = clean(input.value);
+      var extra = clean(detail.value);
+      var query = clean(request + ' ' + extra);
+      if (request.length < 2 || query.length > 80) {
+        status.textContent = request.length < 2 ? 'Scrivi almeno 2 caratteri per indicare il prodotto.' : 'Accorcia la richiesta: prodotto e dettaglio possono contenere al massimo 80 caratteri in tutto.';
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', 'ksGuideLimit ksGuideStatus');
+        if (query.length > 80) detail.setAttribute('aria-invalid', 'true');
+        input.focus();
         return;
       }
-
-      rememberSearch(query);
-      controller = window.AbortController ? new AbortController() : null;
-      renderPendingSearch();
-
-      fetch(searchEndpoint(query), {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-        signal: controller ? controller.signal : undefined
-      }).then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      }).then(function (data) {
-        if (version !== searchVersion) return;
-        if (!data || data.ok !== true || !Array.isArray(data.suggestions) || data.suggestions.some(function (item) {
-          return !item || typeof item.title !== 'string' || typeof item.url !== 'string' || !item.url;
-        })) throw new Error('Invalid catalog response');
-        searchPending = false;
-        var items = data.suggestions;
-        if (answer) answer.textContent = data.intelligence && typeof data.intelligence.summary === 'string' && data.intelligence.summary ? data.intelligence.summary : 'Risultati ordinati per compatibilita con la richiesta.';
-        if (count) count.textContent = items.length ? items.length + ' risultati dal catalogo' : 'Nessun articolo compatibile';
-        if (items.length) {
-          results.innerHTML = items.map(renderAiCard).join('') + '<div class="ks-ai130-catalog-row">' + catalogLink(query) + '</div>';
-        } else {
-          renderEmpty('Nessun articolo supera la soglia di pertinenza per questa richiesta.', query);
-        }
-      }).catch(function (err) {
-        if (version !== searchVersion) return;
-        if (err && err.name === 'AbortError') return;
-        searchPending = false;
-        if (window.console && console.warn) console.warn('[KeepStore AI]', err);
-        if (answer) answer.textContent = 'Ricerca temporaneamente non disponibile. Puoi continuare nel catalogo.';
-        if (count) count.textContent = 'Catalogo non disponibile';
-        renderEmpty('Errore temporaneo durante la ricerca catalogo.', query);
-      });
+      var url = new URL(base.href);
+      url.searchParams.set('q', query);
+      if (department) url.searchParams.set('st', department.id);
+      catalog.setAttribute('href', url.pathname + url.search);
+      qs('[data-ks-guide-request]', root).textContent = query;
+      qs('[data-ks-guide-scope]', root).textContent = department ? 'Reparto: ' + department.label : 'Tutti i reparti del negozio';
+      qs('[data-ks-guide-question]', root).textContent = query.split(' ').length < 3 && !extra ?
+        'Vuoi precisare un utilizzo o una caratteristica? Puoi modificare la richiesta oppure cercare così.' :
+        'Puoi modificare la richiesta o cercare nel catalogo. I risultati saranno verificati lì.';
+      idle.hidden = true;
+      summary.hidden = false;
+      qs('[data-ks-guide-summary-title]', root).focus();
     }
 
-    if (button) {
-      button.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        runSearch(input ? input.value : '');
-      });
-    }
-    if (input) {
-      input.addEventListener('input', function () {
-        cancelPendingSearch();
-        if (String(input.value || '').replace(/\s+/g, ' ').trim().length < 2) {
-          runSearch(input.value);
-          return;
-        }
-        renderPendingSearch();
-        timer = window.setTimeout(function () {
-          timer = 0;
-          runSearch(input.value);
-        }, 360);
-      });
-      input.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          if (timer) window.clearTimeout(timer);
-          runSearch(input.value);
-        }
-      });
-    }
-    qsa('.ks-ai130-examples button', root).forEach(function (example) {
-      example.addEventListener('click', function () {
-        var value = String(example.textContent || '').replace(/\s+/g, ' ').trim();
-        if (input) input.value = value;
-        runSearch(value);
+    choices.forEach(function (button) {
+      var candidate = readDepartment(button);
+      if (candidate === false) {
+        button.disabled = true;
+        button.hidden = true;
+        return;
+      }
+      button.addEventListener('click', function () {
+        department = candidate;
+        choices.forEach(function (other) { other.setAttribute('aria-pressed', other === button ? 'true' : 'false'); });
+        invalidate();
       });
     });
+    prepare.addEventListener('click', prepareSearch);
+    edit.addEventListener('click', function () { invalidate(); input.focus(); });
+    reset.addEventListener('click', function () {
+      input.value = '';
+      detail.value = '';
+      department = null;
+      choices.forEach(function (button) {
+        button.setAttribute('aria-pressed', button.getAttribute('data-ks-guide-department') === '' ? 'true' : 'false');
+      });
+      invalidate();
+      input.focus();
+    });
+    [input, detail].forEach(function (field) {
+      field.addEventListener('input', invalidate);
+      field.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' && !ev.isComposing && ev.keyCode !== 229) {
+          ev.preventDefault();
+          prepareSearch();
+        }
+      });
+    });
+    // Do not reuse rememberSearch or the legacy mode=ai endpoint.
+    root.setAttribute('data-ks-guide-bound', '1');
+    status.id = 'ksGuideStatus';
+    fields.disabled = false;
+    fields.hidden = false;
+    var fallbackDepartments = qs('.ks-guide-fallback-departments', root);
+    if (fallbackDepartments) fallbackDepartments.hidden = true;
   }
 
   function initHome() {
@@ -390,7 +330,7 @@
     }
     initHomeSwipers();
     initDepartmentsMenu();
-    initLocalAiSearch();
+    initShoppingGuide();
     try {
       if (window.KeepStoreRecentlyViewed && typeof window.KeepStoreRecentlyViewed.render === 'function') {
         window.KeepStoreRecentlyViewed.render('HomeRecentlyViewedSection');

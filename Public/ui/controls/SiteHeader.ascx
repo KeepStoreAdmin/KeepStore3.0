@@ -129,6 +129,10 @@
         </div>
     </div>
 
+    <div class="ks-guide-mobile-entry d-xl-none">
+        <div class="container"><a href="Default.aspx#KsLocalAiSearch130" class="ks-guide-entry">Guida agli acquisti <span aria-hidden="true">&#8594;</span></a></div>
+    </div>
+
     <div class="header-bottom bg-gray-5 d-none d-xl-block">
         <div class="container relative">
             <div class="row">
@@ -152,6 +156,7 @@
                             <ul class="nav-list">
                                 <li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span data-ks-i18n="nav.home">Home</span></a></li>
                                 <li class="nav-item"><a href="articoli.aspx?inpromo=1" class="item-link body-md-2"><span data-ks-i18n="nav.offers">Offerte</span></a></li>
+                                <li class="nav-item"><a href="Default.aspx#KsLocalAiSearch130" class="item-link body-md-2 ks-guide-entry">Guida agli acquisti</a></li>
                                 <li class="nav-item"><a href="Contattaci.aspx" class="item-link body-md-2"><span data-ks-i18n="nav.contact">Contatti</span></a></li>
                             </ul>
                         </nav>

@@ -3406,3 +3406,42 @@ body.ks-page-home .ks-home-adaptive-discovery[data-ks-sector-count="1"] .ks-home
     max-width: 960px;
   }
 }
+
+/* Shopping guide: catalog navigation, progressive enhancement, no commercial cards. */
+.ks-guide-mobile-entry { border-top: 1px solid #eceff3; }
+.ks-guide-entry { display: inline-flex; align-items: center; min-height: 44px; gap: 8px; color: var(--primary-2, #b32119); font-weight: 600; }
+#KsLocalAiSearch130 { scroll-margin-top: 150px; }
+#KsLocalAiSearch130 [hidden] { display: none !important; }
+body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
+.ks-home-ai-search h2 { font-size: clamp(24px, 3vw, 32px); line-height: 1.2; margin: 6px 0 12px; }
+.ks-home-ai-search h3 { font-size: 20px; line-height: 1.3; margin: 0 0 12px; }
+.ks-guide-fields { border: 0; padding: 0; margin: 20px 0 0; min-width: 0; }
+.ks-guide-fields label { display: block; font-weight: 600; margin: 16px 0 6px; }
+.ks-guide-fields label span, .ks-guide-departments p span { font-weight: 400; }
+.ks-guide-fields input { width: 100%; min-width: 0; height: 48px; padding: 10px 12px; border: 1px solid #78838f; border-radius: 6px; background: #fff; color: #17212c; font-size: 16px; }
+.ks-guide-fields input[aria-invalid="true"] { border-color: #a0231b; }
+.ks-guide-hint { color: #4b5563; font-size: 14px; line-height: 1.5; margin: 8px 0 12px; }
+.ks-guide-departments { margin-top: 20px; }
+.ks-guide-choices, .ks-guide-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ks-guide-choices button, .ks-guide-reset, .ks-guide-edit { min-height: 44px; padding: 10px 12px; border: 1px solid #78838f; border-radius: 6px; color: #24313f; background: #fff; font: inherit; line-height: 1.4; white-space: normal; text-align: left; }
+.ks-guide-choices button[aria-pressed="true"] { border-color: #24313f; background: #e9eef4; box-shadow: inset 0 0 0 1px #24313f; font-weight: 600; }
+.ks-guide-actions { margin-top: 16px; }
+.ks-guide-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 18px; border: 1px solid transparent; border-radius: 6px; background: var(--primary-2, #b32119); color: #fff; font: inherit; font-weight: 600; text-align: center; line-height: 1.4; text-decoration: none; }
+.ks-guide-primary:hover { color: #fff; filter: brightness(.9); }
+.ks-guide-next { padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; align-self: start; min-width: 0; }
+.ks-guide-next p, .ks-guide-choices button { overflow-wrap: anywhere; }
+.ks-guide-request { font-size: 18px; font-weight: 600; color: #17212c; }
+.ks-guide-status { color: #8c201a; font-weight: 600; margin-top: 12px; }
+.ks-guide-status:empty { display: none; }
+.ks-guide-catalog-fallback { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; text-decoration: underline; font-weight: 600; }
+.ks-home-ai-search .ks-ai130-tools a { min-height: 44px; display: inline-flex; align-items: center; border-radius: 6px; }
+.ks-guide-fallback-departments { margin-top: 20px; }
+.ks-guide-entry:focus-visible, #KsLocalAiSearch130 :focus-visible { outline: 3px solid #155eab; outline-offset: 3px; }
+@media (min-width: 992px) {
+  body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+}
+@media (max-width: 575px) {
+  body.ks-page-home .ks-ai130-shell { padding: 16px; gap: 20px; }
+  .ks-guide-next { padding: 16px; }
+  .ks-guide-actions { flex-direction: column; align-items: stretch; }
+}
