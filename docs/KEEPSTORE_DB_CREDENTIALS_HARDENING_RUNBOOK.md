@@ -1,5 +1,7 @@
 # KeepStore — configurazione DB privata e Protected Configuration
 
+Checkpoint REV1 2026-10-20: **PR #362 DRAFT**, finding `DBCFG-GUARD-F01` della review 5585799761 sul candidato `bae99d30` corretto nel guard; prove mirate PASS e nuova review differenziale indipendente pendente. Delta 5 percorsi entro manifest cumulativo 25, nessun merge/deploy. Rapporto REV1 `C:\Temp\KeepStoreDbConfigHardening1A\20261020-rev1-c516f63b\final-report.md`/`final-report.json`; le prove Batch A sotto sono riusate senza ripetere RSA/e-mail/parity/precompile o #361.
+
 Data: 2026-10-20. Task `SECURITY-DB-CREDENTIALS-HARDENING-1A`, **solo Batch A software implementato e testato tecnico-localmente PASS; PR DRAFT da revisionare**. Base source #361 REV2 `32bc8714b081f2ecea5b2ad2d13653c21c764512`; branch `task/security-db-credentials-hardening-1a`. Commit e URL PR dal rapporto finale sanitizzato e Git reale; nessun merge/deploy. Fonte del metodo: [AGENTS](../AGENTS.md); manifest e decisioni: [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#security-db-credentials-hardening-1a--batch-a-software).
 
 ## 1. Perimetro autorizzato e stati separati
@@ -52,6 +54,8 @@ Nel processo Windows PowerShell autorizzato il comando di precompile e:
 ```
 
 Gli output sono temporanei e separati dalla copia canonica. Successo di build non equivale a connessione DB, smoke IIS o deploy. Il guard controlla nuove aggiunte, template e artefatti pubblicabili; non riesamina storia, vecchie copie/dump/log o righe eliminate dalla configurazione.
+
+REV1 `DBCFG-GUARD-F01`: prima di escludere file dalla lettura, il guard verifica i **metadati Git dell'indice rispetto a base e HEAD**, con delimitatori NUL/UTF-8 e `--no-renames`. Le destinazioni aggiunte `A` corrispondenti a configurazioni private sono rifiutate anche se il filtro dei contenuti le esclude; il controllo non apre tali file. Il template ammesso resta controllabile, `D` di rimozione dal tracking non costituisce nuova introduzione e `web.config` locale ignorato rimane preservato. Non aggiungere il file privato all'indice, neppure forzatamente: un exit non zero `PRIVATE_PUBLICATION_PATH` richiede rimuovere dal candidato la nuova pubblicazione privata, senza stamparne o copiarne il contenuto. Questo gate incrementale non scandisce la storia o le configurazioni escluse dal mandato.
 
 ## 6. Lettore comune e strumenti amministrativi
 
@@ -109,6 +113,19 @@ Nessuna modifica persistente a CurrentUser/LocalMachine/MachinePolicy/UserPolicy
 Root delle evidenze della ripresa: `C:\Temp\KeepStoreDbConfigHardening1A\20261020-resume-967934c1`. Risorse ammesse: soli file sintetici, eseguibili di prova, rapporti sanitizzati e chiavi CurrentUser univoche `KS-DBCFG-TEST-<GUID>` registrate prima della creazione. Cleanup in finally delle sole risorse create; nessun riuso di chiavi preesistenti, certificato installato nel trust store, identita Windows aggiuntiva, listener, servizio o DB. I rapporti possono conservare metadati/esiti di cleanup, senza segreti o chiavi private.
 
 ## 9. Criteri di accettazione e consegna Batch A
+
+Prove mirate REV1 del codice candidato effettivo: **28 selftest guard, 20 casi Git sull'entrypoint reale, 22 casi ArtifactRoot e 24 file candidati PASS**. L'aggiunta privata staged passava con exit 0 prima del fix ed e rifiutata con exit 1 `PRIVATE_PUBLICATION_PATH` dopo il fix. Rimozione dal tracking e copia locale ignorata con file bloccato PASS, senza lettura privata; template esplicito ammesso. RSA/e-mail/parity/precompile/#361 immutati, prove precedenti riusate e non ripetute. Nessuna chiave nuova o operazione operativa in REV1; un commit figlio del candidato revisionato sulla stessa PR DRAFT e review differenziale ChatGPT ancora pendente. Le evidenze seguenti sono il Batch A precedente.
+
+I due self-test sono modalita esplicite separate: `-SelfTest` prova le regole del guard; `-GitCandidateSelfTest` crea esclusivamente fixture Git sintetiche nella `-TestRoot` autorizzata. La modalita normale non crea fixture implicitamente. Esempi Windows PowerShell 5.1 per il solo perimetro REV1 autorizzato, senza estendere la destinazione ad ambienti operativi:
+
+```powershell
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned `
+    -File 'C:\KeepStoreWeb\KeepStore3.0\Tools\Test-DatabaseSecretsGuard.ps1' -SelfTest
+
+powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned `
+    -File 'C:\KeepStoreWeb\KeepStore3.0\Tools\Test-DatabaseSecretsGuard.ps1' `
+    -GitCandidateSelfTest -TestRoot 'C:\Temp\KeepStoreDbConfigHardening1A\20261020-rev1-c516f63b'
+```
 
 Eseguire il codice candidato effettivo: nome/origine e assenza fallback; configurazione assente/vuota/malformata/provider errato; RSA nativa, chiave assente/errata e ciphertext corrotto; recupero sintetico e cleanup; default non mutativo/Apply/idempotenza/failure rollback; lettura con consumatori reali e wrapper/runner compilati; e-mail/parity offline; precompile 4.8 senza configurazione operativa; conservazione file/metadati e stato locale; guard positivo/negativo; diff/manifest/invarianti.
 

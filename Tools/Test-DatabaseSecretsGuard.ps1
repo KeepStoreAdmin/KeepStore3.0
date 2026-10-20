@@ -4,7 +4,9 @@ param(
     [string]$BaseRef = 'origin/frontend-rebuild',
     [string]$CandidateManifestPath,
     [string]$ArtifactRoot,
-    [switch]$SelfTest
+    [switch]$SelfTest,
+    [switch]$GitCandidateSelfTest,
+    [string]$TestRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,7 +17,7 @@ function Test-SyntheticValue([string]$Value) {
     return $Value -cmatch '^(?:KS-DBCFG-(?:FIXTURE|TEST)-[A-Za-z0-9_.:-]+|SYNTHETIC[_-][A-Za-z0-9_.:-]+|FAKE[_-][A-Za-z0-9_.:-]+|fixture-[A-Za-z0-9_.:-]+)$'
 }
 
-function Invoke-GuardGit([string]$Root, [string[]]$Arguments) {
+function Invoke-GuardGit([string]$Root, [string[]]$Arguments, [switch]$RawOutput) {
     $process=$null
     try {
         $info=New-Object Diagnostics.ProcessStartInfo
@@ -25,6 +27,7 @@ function Invoke-GuardGit([string]$Root, [string[]]$Arguments) {
         $info.CreateNoWindow=$true
         $info.RedirectStandardOutput=$true
         $info.RedirectStandardError=$true
+        $info.StandardOutputEncoding=New-Object Text.UTF8Encoding($false, $true)
         $info.EnvironmentVariables['GIT_OPTIONAL_LOCKS']='0'
         $quoted=@($Arguments|ForEach-Object {
             $argument=[regex]::Replace([string]$_,'(\\*)"','$1$1\"')
@@ -41,8 +44,24 @@ function Invoke-GuardGit([string]$Root, [string[]]$Arguments) {
         [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout,$stderr))
         if($process.ExitCode -ne 0){throw 'SECRETS_GUARD_GIT_FAILED'}
         # Git's CRLF warnings are not content or failures. Do not forward them.
+        if($RawOutput){return $stdout.Result}
         return @($stdout.Result -split '\r?\n'|Where-Object {$_ -ne ''})
     } finally {if($null -ne $process){$process.Dispose()}}
+}
+
+function Get-GuardPrivateIntroductions([string]$Root, [string]$Reference) {
+    # --cached is independent of unstaged edits/deletions. --no-renames makes
+    # copy/rename destinations additions, without examining blob similarity.
+    $raw=[string](Invoke-GuardGit $Root @('diff','--cached','--name-status','-z','--no-renames',$Reference,'--') -RawOutput)
+    if($raw.Length -eq 0){return}
+    $fields=$raw.Split([char]0)
+    if($fields[$fields.Length-1] -cne '' -or $fields.Length % 2 -ne 1){throw 'SECRETS_GUARD_METADATA_INVALID'}
+    for($index=0;$index -lt $fields.Length-1;$index+=2){
+        $status=$fields[$index]
+        $path=$fields[$index+1]
+        if($status -cnotmatch '^[AMDT]$' -or [string]::IsNullOrEmpty($path)){throw 'SECRETS_GUARD_METADATA_INVALID'}
+        if($status -ceq 'A' -and (Test-PrivatePublicationPath $path)){$path}
+    }
 }
 
 function Test-PrivatePublicationPath([string]$Path) {
@@ -122,12 +141,180 @@ function Invoke-GuardSelfTest {
     Write-Output ('SECRETS_GUARD_SELFTEST_PASS checks='+($cases.Count+$privateCases.Count+1))
 }
 
+function Invoke-GuardGitCandidateSelfTest {
+    if([string]::IsNullOrWhiteSpace($TestRoot) -or -not [IO.Path]::IsPathRooted($TestRoot) -or
+       -not (Test-Path -LiteralPath $TestRoot -PathType Container)){throw 'SECRETS_GUARD_TEST_ROOT_REQUIRED'}
+    if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'SECRETS_GUARD_TEST_EXECUTOR_INVALID'}
+    $root=[IO.Path]::GetFullPath($TestRoot).TrimEnd('\')
+    $work=Join-Path $root ('guard-git-'+[Guid]::NewGuid().ToString('N'))
+    $journal=Join-Path $root ('guard-git-resources-'+[Guid]::NewGuid().ToString('N')+'.json')
+    @{Status='PLANNED';Directory=$work}|ConvertTo-Json|Set-Content -LiteralPath $journal -Encoding UTF8
+    $results=New-Object 'System.Collections.Generic.List[object]'
+    $executor=Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $guardPath=$PSCommandPath
+    function New-GuardFixture([string]$Name,[bool]$PrivateBaseline=$false) {
+        $directory=Join-Path $work $Name
+        New-Item -ItemType Directory -Path $directory|Out-Null
+        $null=Invoke-GuardGit $directory @('init','--quiet')
+        [IO.File]::WriteAllText((Join-Path $directory 'seed.txt'),'KS-DBCFG-FIXTURE-seed')
+        $null=Invoke-GuardGit $directory @('add','--','seed.txt')
+        if($PrivateBaseline){
+            [IO.File]::WriteAllText((Join-Path $directory 'web.config'),'KS-DBCFG-FIXTURE-private')
+            $null=Invoke-GuardGit $directory @('add','--','web.config')
+        }
+        $null=Invoke-GuardGit $directory @('-c','user.name=KS-DBCFG-FIXTURE','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','--quiet','-m','Synthetic baseline')
+        $base=@(Invoke-GuardGit $directory @('rev-parse','HEAD'))[0]
+        return [pscustomobject]@{Directory=$directory;Base=$base}
+    }
+    function Test-GuardEntrypoint($Fixture,[string]$Name,[bool]$Reject,[string]$ExpectedCode,[string[]]$Extra=@()) {
+        $arguments=@('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','RemoteSigned','-File',$guardPath,'-RepositoryRoot',$Fixture.Directory,'-BaseRef',$Fixture.Base)+$Extra
+        $output=@(& $executor @arguments)
+        $exit=$LASTEXITCODE
+        $text=$output -join ' '
+        $pass=if($Reject){$exit -eq 1 -and $text -match $ExpectedCode -and $text -notmatch 'SECRETS_GUARD_PASS'}else{$exit -eq 0 -and $text -match 'SECRETS_GUARD_PASS'}
+        $results.Add([pscustomobject]@{Name=$Name;Pass=[bool]$pass;Exit=$exit;ExpectedRejection=$Reject;Output=$output})
+    }
+    try {
+        New-Item -ItemType Directory -Path $work|Out-Null
+        foreach($name in @('staged','manifest','manifest-omits-private','deleted-working','modified-working','empty-casing')){
+            $fixture=New-GuardFixture $name
+            $fileName=if($name -eq 'empty-casing'){'WEB.CONFIG'}else{'web.config'}
+            $private=Join-Path $fixture.Directory $fileName
+            [IO.File]::WriteAllText($private,'')
+            if($name -eq 'staged'){
+                [IO.File]::WriteAllText((Join-Path $fixture.Directory '.gitignore'),'/web.config'+[Environment]::NewLine)
+                $null=Invoke-GuardGit $fixture.Directory @('add','--force','--',$fileName)
+            }else{$null=Invoke-GuardGit $fixture.Directory @('add','--',$fileName)}
+            $extra=@()
+            if($name.StartsWith('manifest')){
+                $manifestPath=Join-Path $work 'explicit-manifest.json'
+                $manifestText=if($name -eq 'manifest'){'["web.config"]'}else{'["seed.txt"]'}
+                [IO.File]::WriteAllText($manifestPath,$manifestText)
+                $extra=@('-CandidateManifestPath',$manifestPath)
+            }
+            if($name -eq 'deleted-working'){Remove-Item -LiteralPath $private}
+            if($name -eq 'modified-working'){[IO.File]::WriteAllText($private,'KS-DBCFG-FIXTURE-working')}
+            Test-GuardEntrypoint $fixture $name $true 'PRIVATE_PUBLICATION_PATH' $extra
+        }
+        foreach($destination in @('web.config','folder with spaces/Web.Config')){
+            $fixture=New-GuardFixture ('rename-'+$results.Count)
+            $parent=Split-Path -Parent (Join-Path $fixture.Directory $destination)
+            if(-not (Test-Path -LiteralPath $parent)){New-Item -ItemType Directory -Path $parent|Out-Null}
+            $null=Invoke-GuardGit $fixture.Directory @('mv','--','seed.txt',$destination)
+            Test-GuardEntrypoint $fixture ('rename-'+$destination) $true 'PRIVATE_PUBLICATION_PATH'
+        }
+        $fixture=New-GuardFixture 'copy'
+        $copyPath=('folder with spaces caf'+[char]0x00e8+'/Web.Release.config')
+        New-Item -ItemType Directory -Path (Split-Path -Parent (Join-Path $fixture.Directory $copyPath))|Out-Null
+        Copy-Item -LiteralPath (Join-Path $fixture.Directory 'seed.txt') -Destination (Join-Path $fixture.Directory $copyPath)
+        $null=Invoke-GuardGit $fixture.Directory @('add','--',$copyPath)
+        Test-GuardEntrypoint $fixture 'copy-unicode-spaces' $true 'PRIVATE_PUBLICATION_PATH'
+        $fixture=New-GuardFixture 'empty-private'
+        [IO.File]::WriteAllText((Join-Path $fixture.Directory '.env'),'')
+        $null=Invoke-GuardGit $fixture.Directory @('add','--','.env')
+        Test-GuardEntrypoint $fixture 'empty-private' $true 'PRIVATE_PUBLICATION_PATH'
+        $fixture=New-GuardFixture 'untracking' $true
+        $private=Join-Path $fixture.Directory 'web.config'
+        $before=(Get-FileHash -LiteralPath $private -Algorithm SHA256).Hash
+        $null=Invoke-GuardGit $fixture.Directory @('rm','--cached','--','web.config')
+        $locked=[IO.File]::Open($private,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+        try {Test-GuardEntrypoint $fixture 'untracking-locked-private-not-read' $false ''}finally{$locked.Dispose()}
+        if((Get-FileHash -LiteralPath $private -Algorithm SHA256).Hash -cne $before){throw 'SECRETS_GUARD_FIXTURE_PRESERVATION_FAILED'}
+        $fixture=New-GuardFixture 'ignored'
+        [IO.File]::WriteAllText((Join-Path $fixture.Directory '.gitignore'),'/web.config'+[Environment]::NewLine)
+        $null=Invoke-GuardGit $fixture.Directory @('add','--','.gitignore')
+        $private=Join-Path $fixture.Directory 'web.config'
+        [IO.File]::WriteAllText($private,'KS-DBCFG-FIXTURE-local')
+        $manifestPath=Join-Path $work 'ignored-manifest.json'
+        [IO.File]::WriteAllText($manifestPath,'["web.config"]')
+        $locked=[IO.File]::Open($private,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+        try {
+            Test-GuardEntrypoint $fixture 'ignored-locked-no-manifest' $false ''
+            Test-GuardEntrypoint $fixture 'ignored-locked-with-manifest' $false '' @('-CandidateManifestPath',$manifestPath)
+        }finally{$locked.Dispose()}
+        $fixture=New-GuardFixture 'template'
+        [IO.File]::WriteAllText((Join-Path $fixture.Directory 'web.config.example'),'<configuration/>')
+        $null=Invoke-GuardGit $fixture.Directory @('add','--','web.config.example')
+        Test-GuardEntrypoint $fixture 'template' $false ''
+        $fixture=New-GuardFixture 'invalid-base'
+        $fixture.Base='missing-fixture-ref'
+        Test-GuardEntrypoint $fixture 'invalid-base' $true 'SECRETS_GUARD_GIT_FAILED'
+        $fixture=New-GuardFixture 'git-error'
+        [IO.File]::WriteAllBytes((Join-Path $fixture.Directory '.git\index'),[byte[]]@(1,2,3))
+        Test-GuardEntrypoint $fixture 'metadata-read-error' $true 'SECRETS_GUARD_GIT_FAILED'
+        $fixture=New-GuardFixture 'not-a-repo'
+        $fixture.Directory=Join-Path $work 'not-a-git-repository'
+        New-Item -ItemType Directory -Path $fixture.Directory|Out-Null
+        Test-GuardEntrypoint $fixture 'git-not-repository' $true 'SECRETS_GUARD_GIT_FAILED'
+        $fixture=New-GuardFixture 'reintroduced-identical' $true
+        $null=Invoke-GuardGit $fixture.Directory @('rm','--cached','--','web.config')
+        $null=Invoke-GuardGit $fixture.Directory @('-c','user.name=KS-DBCFG-FIXTURE','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','--quiet','-m','Synthetic untracking')
+        $null=Invoke-GuardGit $fixture.Directory @('add','--','web.config')
+        Test-GuardEntrypoint $fixture 'reintroduced-identical-to-base' $true 'PRIVATE_PUBLICATION_PATH'
+        $fixture=New-GuardFixture 'committed-addition'
+        [IO.File]::WriteAllText((Join-Path $fixture.Directory 'web.config'),'')
+        $null=Invoke-GuardGit $fixture.Directory @('add','--','web.config')
+        $null=Invoke-GuardGit $fixture.Directory @('-c','user.name=KS-DBCFG-FIXTURE','-c','user.email=fixture@example.invalid','-c','commit.gpgsign=false','commit','--quiet','-m','Synthetic addition')
+        Test-GuardEntrypoint $fixture 'already-committed-addition' $true 'PRIVATE_PUBLICATION_PATH'
+        $fixture=New-GuardFixture 'ordinary-source'
+        [IO.File]::WriteAllText((Join-Path $fixture.Directory 'seed.txt'),'KS-DBCFG-FIXTURE-update')
+        $null=Invoke-GuardGit $fixture.Directory @('add','--','seed.txt')
+        Test-GuardEntrypoint $fixture 'ordinary-modification' $false ''
+
+        # Reuse actual ArtifactRoot entrypoint cases, not just the path predicate.
+        $fixture=New-GuardFixture 'artifact-controls'
+        $artifact=Join-Path $work 'artifact'
+        New-Item -ItemType Directory -Path $artifact|Out-Null
+        $passwordName='pass'+'word'
+        $artifactCases=@(@{Name='safe';File='readme.txt';Text='public synthetic material';Reject=$false})
+        foreach($extension in @('env','ini','toml','yml','yaml','','json','txt')){
+            foreach($value in @('$KS-DBCFG-FIXTURE-literal','[KS-DBCFG-FIXTURE-literal]')){
+                $text=if($extension -in @('yml','yaml')){$passwordName+': "'+$value+'"'}elseif($extension -eq 'json'){'{"'+$passwordName+'":"'+$value+'"}'}else{$passwordName+'="'+$value+'";'}
+                $artifactCases+=@{Name=($extension+'-'+$artifactCases.Count);File=('release'+$(if($extension){'.'+$extension}else{''}));Text=$text;Reject=$true}
+            }
+        }
+        $artifactCases+=@(
+            @{Name='private-config-empty';File='WEB.CONFIG';Text='';Reject=$true},
+            @{Name='private-recovery-empty';File='recovery.dpapi';Text='';Reject=$true},
+            @{Name='rsa-multiline';File='rsa.xml';Text=('<RSA'+'KeyValue><Modulus>synthetic</Modulus>'+[Environment]::NewLine+'<D>synthetic</D></RSA'+'KeyValue>');Reject=$true},
+            @{Name='pem';File='key.pem';Text=('-----BEGIN '+'PRIVATE KEY-----');Reject=$true},
+            @{Name='yaml-comment';File='release.yml';Text=($passwordName+': "$KS-DBCFG-FIXTURE-literal" # comment');Reject=$true}
+        )
+        foreach($case in $artifactCases){
+            $file=Join-Path $artifact $case.File
+            [IO.File]::WriteAllText($file,$case.Text)
+            Test-GuardEntrypoint $fixture ('artifact-'+$case.Name) $case.Reject 'SECRETS_GUARD_REJECTED' @('-ArtifactRoot',$artifact)
+            Remove-Item -LiteralPath $file
+        }
+        $gitCount=$results.Count-$artifactCases.Count
+        $failures=@($results|Where-Object {-not $_.Pass})
+        @{Status=$(if($failures.Count){'FAIL'}else{'PASS'});GitCases=$gitCount;ArtifactCases=$artifactCases.Count;Results=$results.ToArray()}|ConvertTo-Json -Depth 5|Set-Content -LiteralPath (Join-Path $root 'guard-git-candidate-results.json') -Encoding UTF8
+        if($failures.Count){throw 'SECRETS_GUARD_CANDIDATE_SELFTEST_FAILED'}
+        Write-Output ('SECRETS_GUARD_GIT_CANDIDATE_SELFTEST_PASS cases='+$gitCount+' artifacts='+$artifactCases.Count)
+    }finally{
+        $full=[IO.Path]::GetFullPath($work)
+        if(-not $full.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase) -or (Split-Path -Leaf $full) -notmatch '^guard-git-[0-9a-f]{32}$'){throw 'SECRETS_GUARD_TEST_CLEANUP_INVALID'}
+        if(Test-Path -LiteralPath $full){Remove-Item -LiteralPath $full -Recurse -Force}
+        @{Status='CLEANED';Directory=$work;DirectoryExists=(Test-Path -LiteralPath $work)}|ConvertTo-Json|Set-Content -LiteralPath $journal -Encoding UTF8
+    }
+}
+
 function Invoke-DatabaseSecretsGuard {
     if($SelfTest){Invoke-GuardSelfTest;return}
+    if($GitCandidateSelfTest){Invoke-GuardGitCandidateSelfTest;return}
     $repo=[IO.Path]::GetFullPath($RepositoryRoot)
     if($BaseRef -notmatch '^[A-Za-z0-9][A-Za-z0-9._/-]*$'){throw 'SECRETS_GUARD_BASE_INVALID'}
     $resolved=@(Invoke-GuardGit $repo @('rev-parse','--verify',($BaseRef+'^{commit}')))
     if($resolved.Count -ne 1 -or $resolved[0] -notmatch '^[0-9a-f]{40}$'){throw 'SECRETS_GUARD_BASE_INVALID'}
+    $head=@(Invoke-GuardGit $repo @('rev-parse','--verify','HEAD^{commit}'))
+    if($head.Count -ne 1 -or $head[0] -notmatch '^[0-9a-f]{40}$'){throw 'SECRETS_GUARD_METADATA_INVALID'}
+    # Inspect both cumulative and staged candidate metadata BEFORE any content
+    # or manifest processing. A manifest can never exempt an indexed path.
+    $privatePaths=@(foreach($reference in @($resolved[0],$head[0])|Select-Object -Unique){Get-GuardPrivateIntroductions $repo $reference})
+    if($privatePaths.Count -gt 0){
+        foreach($privatePath in @($privatePaths|Sort-Object -Unique)){Write-Output ('SECRETS_GUARD_REJECT PRIVATE_PUBLICATION_PATH '+$privatePath)}
+        throw 'SECRETS_GUARD_REJECTED'
+    }
     $texts=@{}
     # Read only newly added lines of the current delta. Never request or print
     # operational web.config, removed lines, history, dumps, logs or old copies.
@@ -144,7 +331,9 @@ function Invoke-DatabaseSecretsGuard {
     if(-not [string]::IsNullOrWhiteSpace($CandidateManifestPath)){
         $parsedManifest=Get-Content -LiteralPath $CandidateManifestPath -Raw|ConvertFrom-Json
         $candidates=@($parsedManifest|ForEach-Object {$_})
-        $basePaths=@(Invoke-GuardGit $repo @('ls-tree','-r','--name-only',$resolved[0],'--'))
+        $rawBasePaths=[string](Invoke-GuardGit $repo @('ls-tree','-r','--name-only','-z',$resolved[0],'--') -RawOutput)
+        if($rawBasePaths.Length -gt 0 -and -not $rawBasePaths.EndsWith([string][char]0)){throw 'SECRETS_GUARD_METADATA_INVALID'}
+        $basePaths=@($rawBasePaths.Split([char]0)|Where-Object {$_ -cne ''})
         $baseNames=New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
         foreach($basePath in $basePaths){[void]$baseNames.Add($basePath)}
         foreach($relative in $candidates){
