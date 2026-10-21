@@ -350,7 +350,7 @@
     <section id="HomeLegacyBestSection" runat="server" visible="false" class="ks-home-section ks-home-best-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold">Best Seller</h5>
+                <h5 class="fw-semibold"><asp:Literal ID="litHomeBestSellerTitle" runat="server" Mode="Encode" Text="Altri prodotti da scoprire" /></h5>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>

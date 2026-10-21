@@ -389,6 +389,8 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = False
         End If
 
+        ' These mixed pools do not attest company/variant-scoped sales provenance.
+        ' Keep the encoded neutral litHomeBestSellerTitle text even with positive aggregate sales.
         Dim bestRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
         PopulatePromotionDisplaySnapshot(bestRows)
         rptBestSeller.DataSource = bestRows
