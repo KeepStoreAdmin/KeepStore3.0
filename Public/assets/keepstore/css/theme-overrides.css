@@ -3407,7 +3407,7 @@ body.ks-page-home .ks-home-adaptive-discovery[data-ks-sector-count="1"] .ks-home
   }
 }
 
-/* Shopping guide: catalog navigation, progressive enhancement, no commercial cards. */
+/* Shopping guide: progressive enhancement; commercial facts stay server-owned. */
 .ks-guide-mobile-entry { border-top: 1px solid #eceff3; }
 .ks-guide-entry { display: inline-flex; align-items: center; min-height: 44px; gap: 8px; color: var(--primary-2, #b32119); font-weight: 600; }
 #KsLocalAiSearch130 { scroll-margin-top: 150px; }
@@ -3444,4 +3444,47 @@ body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
   body.ks-page-home .ks-ai130-shell { padding: 16px; gap: 20px; }
   .ks-guide-next { padding: 16px; }
   .ks-guide-actions { flex-direction: column; align-items: stretch; }
+}
+
+/* Progressive results are confined to the HOME guide, including its comparison. */
+#KsLocalAiSearch130 .ks-ai130-brain { min-width: 0; }
+#KsLocalAiSearch130 .ks-guide-output { grid-column: 1 / -1; min-width: 0; }
+#KsLocalAiSearch130 .ks-guide-status { color: #24313f; }
+#KsLocalAiSearch130 .ks-guide-fields legend { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+#KsLocalAiSearch130 .ks-guide-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+#KsLocalAiSearch130 .ks-guide-chip { min-height: 44px; padding: 8px 12px; border: 1px solid #64748b; border-radius: 20px; background: #fff; color: #24313f; font: inherit; text-align: left; overflow-wrap: anywhere; max-width: 100%; }
+#KsLocalAiSearch130 .ks-guide-chip-default { display: inline-flex; align-items: center; border-color: #d4dce5; background: #f8fafc; }
+#KsLocalAiSearch130 button:disabled { opacity: .6; cursor: default; }
+#KsLocalAiSearch130 .ks-guide-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 16px 0 24px; }
+#KsLocalAiSearch130 .ks-guide-card { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid #d4dce5; border-radius: 8px; background: #fff; gap: 8px; }
+#KsLocalAiSearch130 .ks-guide-card p { margin: 0; }
+#KsLocalAiSearch130 h4 { font-size: 18px; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+#KsLocalAiSearch130 .ks-guide-card h4 { height: 50.4px; }
+#KsLocalAiSearch130 .ks-guide-card h4 a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 44px; }
+#KsLocalAiSearch130 .ks-guide-card .ks-guide-hint { height: 42px; line-height: 21px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#KsLocalAiSearch130 .ks-guide-media { height: 140px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #526071; font-size: 14px; }
+#KsLocalAiSearch130 .ks-guide-media img { width: 100%; height: 140px; object-fit: contain; }
+#KsLocalAiSearch130 .ks-guide-price { font-size: 22px; font-weight: 700; color: #17212c; }
+#KsLocalAiSearch130 .ks-guide-fiscal, #KsLocalAiSearch130 .ks-guide-stock { color: #334155; font-weight: 600; }
+#KsLocalAiSearch130 .ks-guide-badge { color: #8b2018; font-weight: 600; }
+#KsLocalAiSearch130 .ks-guide-reason { color: #475569; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+#KsLocalAiSearch130 .ks-guide-product-link { display: inline-flex; align-items: center; min-height: 44px; color: #17212c; text-decoration: underline; }
+#KsLocalAiSearch130 .ks-guide-product-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border: 1px solid #64748b; border-radius: 6px; margin-top: auto; color: #24313f; font-weight: 600; }
+#KsLocalAiSearch130 .ks-guide-check { display: flex; align-items: center; min-height: 44px; gap: 10px; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; cursor: pointer; }
+#KsLocalAiSearch130 .ks-guide-check input { flex: 0 0 20px; width: 20px; height: 20px; }
+#KsLocalAiSearch130 .ks-guide-question { padding: 16px; margin: 12px 0; background: #f1f5f9; border-radius: 8px; }
+#KsLocalAiSearch130 .ks-guide-question button, #KsLocalAiSearch130 [data-ks-guide-recovery] > * { margin: 4px 8px 8px 0; }
+#KsLocalAiSearch130 [data-ks-guide-comparison]:not(:empty) { margin-top: 24px; padding-top: 20px; border-top: 1px solid #d4dce5; }
+#KsLocalAiSearch130 .ks-guide-compare-grid { overflow-x: auto; overscroll-behavior-x: contain; padding: 4px 4px 12px; margin-bottom: 8px; }
+#KsLocalAiSearch130 .ks-guide-compare-grid table { width: 100%; min-width: calc(120px + 210px * var(--ks-guide-columns, 2)); table-layout: fixed; border-collapse: collapse; }
+#KsLocalAiSearch130 .ks-guide-compare-grid th, #KsLocalAiSearch130 .ks-guide-compare-grid td { padding: 12px; border: 1px solid #d4dce5; vertical-align: top; text-align: left; overflow-wrap: anywhere; color: #17212c; background: #fff; }
+#KsLocalAiSearch130 .ks-guide-compare-grid th:first-child { width: 120px; position: sticky; left: 0; background: #f1f5f9; font-size: 14px; }
+@media (min-width: 680px) {
+  #KsLocalAiSearch130 .ks-guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  #KsLocalAiSearch130 .ks-guide-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #KsLocalAiSearch130 *, #KsLocalAiSearch130 *::before, #KsLocalAiSearch130 *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

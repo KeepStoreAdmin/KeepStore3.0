@@ -2,9 +2,19 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
-## Suggest — contesto commerciale per-request, candidato 2026-10-21
+## Guida progressiva — candidato source 2026-10-21
 
-`SEARCH-SUGGEST-COMMERCIAL-CONTEXT-1A`, base #364 `0363e53e`, PR #365 DRAFT. Review B `5592701492` sul candidato `c624db03`; REV1 consolidata, review differenziale pendente. #364 e CHIUSA A / SOURCE INTEGRATED; guida e KS-F01 PARZIALE immutati, consegna server sospesa. Il suggest autonomo legge Session ReadOnly, senza eseguire la master, e richiede nome EntropicConnectionString/provider MySQL/server/database espliciti. Nessuna migrazione KSAES2/configurazione o fallback per posizione.
+`SHOPPING-ASSISTANT-PROGRESSIVE-RESULTS-1A` estende soltanto la HOME e il raccordo `mode=guided` del suggest #365 integrato. Un modulo page-scoped `ks-shopping-guide.js`, un bridge idempotente nel controller HOME, stesso endpoint e stessi resolver; Default.aspx.vb e i quattro binding guida invariati. Nessun nuovo endpoint, servizio, DLL, configurazione, SQL builder, algoritmo di prezzo o archivio. Contratto dettagliato e grammatica nel [Blueprint Search](KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md#guida-progressiva--contratto-candidato-2026-10-21).
+
+Guided conserva q e accetta solo criteri espliciti validati; evita l'interpretazione euristica del testo nei soli nuovi invii. Metadata v1 dal contesto gia disponibile: criteri effettivi, label fiscale, limite e conteggio restituito, senza query o identita account/tenant/listino. Prezzi, promo, pubblicabilita, deduplica, ordinamento e stock restano server-owned; il client valida payload e URL id+TCId, non ricalcola ne riprezza. Modi storici e header invariati, regressioni #365 eseguite.
+
+Stato client separato bozza/brief/request/risposta, memoria di massimo otto brief e confronto di 2-3 prodotti correnti; sei card, una domanda facoltativa, recupero dal vuoto su un solo vincolo esplicito. Abort/generazione/timeout 8s, nessuna chiamata iniziale o su digitazione, nessun retry automatico. Invalidazione su modifica/reset/uscita/BFCache/possibile cambio scheda rimuove prezzi e CTA; serve un aggiornamento esplicito. DOM testuale, schema limitato, same-origin e virtual directory; nessun cookie/owner o nuovo storage/telemetria. Fallback catalogo/reparti senza JS o init. La guida deterministica non completa KS-F01 e non installa un LLM.
+
+[Manifest, dipendenze cumulative, Design Gate, prove e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#shopping-assistant-progressive-results-1a--candidato-source-2026-10-21). Source candidato / PR DRAFT, review indipendente pendente; SQL MySQL, IIS, login reali e produzione non certificati. Consegna server SOSPESA PER DECISIONE PO; nessun pacchetto o destinazione implicita.
+
+## Suggest — contesto commerciale per-request, source integrated 2026-10-21
+
+`SEARCH-SUGGEST-COMMERCIAL-CONTEXT-1A`, #365 **CHIUSA A / SOURCE INTEGRATED** a `f39958753a017ee3a7dee6141339e93918010399`: review A [5592875346](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#pullrequestreview-5592875346), autorizzazione [6303795610](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#issuecomment-6303795610), closeout [6303869293](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#issuecomment-6303869293). #364 gia integrata, KS-F01 PARZIALE, consegna server sospesa. Il suggest autonomo legge Session ReadOnly, senza eseguire la master, e richiede nome EntropicConnectionString/provider MySQL/server/database espliciti. Nessuna migrazione KSAES2/configurazione o fallback per posizione.
 
 `SearchSuggestCommercialSupport` riusa resolver host-scoped, validazione scalari tenant, PriceDisplayContext e policy commerciali. Account autenticato riscontrato read-only in vlogin per abilitazioni, azienda, owner, listino e fiscalita; confronto dell'esenzione/aliquota normalizzato come coppia effettiva da `PageMaster.ApplyAuthenticatedPriceDisplayState`, non campi DB indipendenti. ID invalido o override invalido significa ID=-1/override assente; modalita IVA e reverse charge preservati. Incoerenza effettiva rifiutata, nessuna mutazione/idratazione/revoca Session. Owner/listino/IVA client non sono fonte di autorita.
 

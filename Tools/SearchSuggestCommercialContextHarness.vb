@@ -37,6 +37,7 @@ Public Module SearchSuggestCommercialContextHarness
             Else
                 Run()
                 RunRev1(False)
+                RunGuided(If(args.Length > 1, args(1), String.Empty))
             End If
             Console.WriteLine("SEARCH_SUGGEST_ASSERTIONS=" & passed)
             Console.WriteLine("SQL_EXECUTED_ON_MYSQL=NO; REAL_ACCOUNT_LOGIN=NO; DATABASE_CONNECTIONS=0")
@@ -207,6 +208,73 @@ Public Module SearchSuggestCommercialContextHarness
         If recent Then Return DirectCast(Invoke(page, "BuildRecentResult", New List(Of Integer) From {120}, filters, limit), Dictionary(Of String, Object))
         Return DirectCast(Invoke(page, "BuildSearchResult", "SKU120", filters, limit), Dictionary(Of String, Object))
     End Function
+
+Private Sub RunGuided(ByVal payloadPath As String)
+        relationalRows = Nothing : invalidProjection = 0 : offers.Clear()
+        batchStatus = ProductPromotionEligibilityLoadStatus.Success
+        Dim samples As New List(Of Object)()
+        For Each company As Integer In {1, 2}
+            For Each authenticated As Boolean In {False, True}
+                Dim list As Integer = If(company = 1, 1, 10)
+                Dim ctx = Context(company, list, authenticated, "mode=guided&q=SKU120&limit=6")
+                ctx.Session("TC") = 1
+                If authenticated Then account = AccountRow(company, list + 3)
+                Dim support = MakeSupport(ctx)
+                products = ProductRows(support, 42)
+                products.Rows(0)("Descrizione1") = "Synthetic tenant " & company & If(authenticated, " authenticated", " anonymous")
+                Dim page = Endpoint(support)
+                Dim filters = Invoke(page, "ReadFilters")
+                Dim result = DirectCast(Invoke(page, "BuildSearchResult", CStr(Invoke(page, "ReadGuidedQuery")), filters, 6), Dictionary(Of String, Object))
+                Dim meta = DirectCast(result("guided"), Dictionary(Of String, Object))
+                Dim criteria = DirectCast(meta("criteria"), Dictionary(Of String, Object))
+                Dim targetList = If(authenticated, list + 3, list)
+                Assert(support.PriceContext.CompanyId = company AndAlso support.PriceContext.PriceListId = targetList, "guided authoritative company/list " & company & "/" & targetList)
+                Assert(Convert.ToInt32(captures.Last().First(Function(p) p.Name = "?promoListino").Value) = targetList, "guided SQL provenance with coincident prices")
+                Assert(CStr(meta("displayLabel")) = support.PriceContext.DisplayLabel AndAlso meta.Count = 6, "guided fiscal label and bounded public metadata")
+                Assert(CInt(meta("returnedCount")) = 1 AndAlso CBool(meta("selectionLimited")) AndAlso CInt(meta("limit")) = 6, "guided subset count")
+                Assert(CStr(criteria("q")) = "SKU120" AndAlso CStr(criteria("pmax")) = "0", "guided exact effective criteria")
+                Assert(commands.Last().EndsWith(" LIMIT 6"), "guided limit without new candidate query")
+                result("ok") = True
+                samples.Add(New With {.scenario = "tenant" & company & If(authenticated, "-authenticated", "-anonymous"), .expectedList = targetList, .payload = result})
+            Next
+        Next
+        For Each literal As String In {"iPhone 15", "SSD 1 TB", "olio da 1 litro", "telefono massimo 500 euro solo disponibili offerte ricondizionato", "A&B <speciale>", "8000000000120"}
+            Dim ctx = Context(1, 1, False, "mode=guided&q=" & HttpUtility.UrlEncode(literal))
+            Dim support = MakeSupport(ctx) : products = ProductRows(support)
+            Dim page = Endpoint(support), filters = Invoke(page, "ReadFilters")
+            Dim output = DirectCast(Invoke(page, "BuildSearchResult", Invoke(page, "ReadGuidedQuery"), filters, 96), Dictionary(Of String, Object))
+            Dim meta = DirectCast(output("guided"), Dictionary(Of String, Object))
+            Dim criteria = DirectCast(meta("criteria"), Dictionary(Of String, Object))
+            Assert(CStr(output("query")) = literal AndAlso CStr(output("normalized_query")) = literal, "guided literal product words " & literal)
+            Assert(CStr(criteria("pmin")) = "0" AndAlso CStr(criteria("pmax")) = "0" AndAlso Not CBool(criteria("disponibile")), "guided no inferred price/stock")
+            Assert(Not commands.Last().Contains("@maxPrice") AndAlso Not commands.Last().Contains("SuggestHasPromotion <> 0") AndAlso Not commands.Last().Contains("AND COALESCE(v.Ricondizionato"), "guided no implicit promotion/condition")
+            Assert(HttpUtility.ParseQueryString(New Uri("https://tenant1.invalid/" & CStr(output("catalogUrl"))).Query)("q") = literal, "guided catalog preserves query")
+            Assert(commands.Last().EndsWith(" LIMIT 6"), "guided direct call capped")
+        Next
+        Dim explicitContext = Context(2, 10, False, "mode=guided&q=SKU120&st=7&pmin=121.995&pmax=122.005&disponibile=1&ordinamento=p_basso&limit=6")
+        Dim explicitSupport = MakeSupport(explicitContext) : products = ProductRows(explicitSupport)
+        Dim explicitPage = Endpoint(explicitSupport), explicitFilters = Invoke(explicitPage, "ReadFilters")
+        Dim explicitResult = DirectCast(Invoke(explicitPage, "BuildSearchResult", "SKU120", explicitFilters, 6), Dictionary(Of String, Object))
+        Assert(commands.Last().Contains("PrezzoFinale ASC") AndAlso commands.Last().Contains(" AND v.SuggestAvailable > 0"), "guided explicit ordering and availability use existing SQL")
+        Assert(captures.Last().Any(Function(p) p.Name = "@minPrice" AndAlso Convert.ToDecimal(p.Value) = 121.995D), "guided explicit exact decimal price boundary")
+        Assert(CStr(explicitResult("catalogUrl")).Contains("pmax=122.005") AndAlso CStr(explicitResult("catalogUrl")).Contains("st=7"), "guided catalog filter continuity")
+        products.Rows.Clear()
+        Dim empty = DirectCast(Invoke(explicitPage, "BuildSearchResult", "SKU120", explicitFilters, 6), Dictionary(Of String, Object))
+        Assert(CInt(empty("total")) = 0 AndAlso empty.ContainsKey("guided"), "guided empty is successful structured response")
+        For Each query As String In {
+            "q=a", "q=" & New String("x"c, 81), "q=SKU&q=other", "q=SKU&st=0", "q=SKU&st=2147483648",
+            "q=SKU&limit=7", "q=SKU&limit=0", "q=SKU&recent=120", "q=SKU&owner=1", "q=SKU&listino=1",
+            "q=SKU&azienda=2", "q=SKU&pid=7", "q=SKU&ct=7", "q=SKU&available=1", "q=SKU&pmin=10&pmax=9",
+            "q=SKU&pmax=1.000,50", "q=SKU&disponibile=2", "q=SKU&ordinamento=p_alto", "q=SKU&mode=ai"}
+            Dim ctx = Context(1, 1, False, "mode=guided&" & query)
+            Dim support = MakeSupport(ctx)
+            Reject(Sub() Invoke(Endpoint(support), "ReadFilters"), "guided rejected invalid or nonallowlisted request " & query)
+            Assert(commands.Count = 0, "guided invalid request before product query")
+        Next
+        If Not String.IsNullOrEmpty(payloadPath) Then
+            File.WriteAllText(payloadPath, New System.Web.Script.Serialization.JavaScriptSerializer().Serialize(samples), New System.Text.UTF8Encoding(False))
+        End If
+    End Sub
 
     Private Sub RunRev1(ByVal candidate As Boolean)
         relationalRows = Nothing

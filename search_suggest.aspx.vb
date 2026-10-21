@@ -101,11 +101,15 @@ Partial Public Class search_suggest
                 Throw New SearchSuggestCommercialException("forbidden", 403)
             End If
             _commercial = New SearchSuggestCommercialSupport(Context)
-            Dim query As String = NormalizeQuery(SafeRequestValue("q"))
             Dim filters As SearchFilters = ReadFilters()
-            Dim limit As Integer = Math.Max(1, Math.Min(MaxLimit, ReadInt(SafeRequestValue("limit"), DefaultLimit)))
-            Dim recentIds As List(Of Integer) = ParseIds(SafeRequestValue("recent"))
-            If recentIds.Count = 0 Then recentIds = ParseIds(ReadCookieValue("ks_recent"))
+            Dim guided As Boolean = filters.Mode = "guided"
+            Dim query As String = If(guided, ReadGuidedQuery(), NormalizeQuery(SafeRequestValue("q")))
+            Dim limit As Integer = If(guided, ReadGuidedLimit(), Math.Max(1, Math.Min(MaxLimit, ReadInt(SafeRequestValue("limit"), DefaultLimit))))
+            Dim recentIds As New List(Of Integer)()
+            If Not guided Then
+                recentIds = ParseIds(SafeRequestValue("recent"))
+                If recentIds.Count = 0 Then recentIds = ParseIds(ReadCookieValue("ks_recent"))
+            End If
 
             Dim result As Dictionary(Of String, Object)
             If String.IsNullOrWhiteSpace(query) OrElse query.Length < 2 Then
@@ -177,7 +181,12 @@ Partial Public Class search_suggest
     End Function
 
     Private Function BuildSearchResult(ByVal query As String, ByVal filters As SearchFilters, ByVal limit As Integer) As Dictionary(Of String, Object)
-        Dim intent As QueryIntent = InterpretQuery(query)
+        ' Guided requests keep product words literal; only explicit filters constrain offers.
+        Dim guided As Boolean = filters.Mode = "guided"
+        If guided Then limit = Math.Min(6, limit)
+        Dim intent As QueryIntent = If(guided,
+            New QueryIntent With {.Original = query, .SearchText = query, .Tokens = ExtractTokens(query), .IntentName = "guided", .Summary = String.Empty},
+            InterpretQuery(query))
         Dim aiMode As Boolean = String.Equals(Convert.ToString(filters.Mode), "ai", StringComparison.OrdinalIgnoreCase)
         If filters.MaxPrice <= 0D AndAlso intent.MaxPrice > 0D Then filters.MaxPrice = intent.MaxPrice
         If filters.MinPrice <= 0D AndAlso intent.MinPrice > 0D Then filters.MinPrice = intent.MinPrice
@@ -192,7 +201,7 @@ Partial Public Class search_suggest
         If scoringTokens.Count = 0 Then scoringTokens = tokens
 
         Dim parameters As New List(Of SearchSuggestParameter)()
-        Dim normalizedQuery As String = NormalizeQuery(intent.SearchText).ToLowerInvariant()
+        Dim normalizedQuery As String = If(guided, query, NormalizeQuery(intent.SearchText)).ToLowerInvariant()
         If String.IsNullOrWhiteSpace(normalizedQuery) Then normalizedQuery = NormalizeQuery(query).ToLowerInvariant()
 
         Dim likeQuery As String = EscapeLikeValue(normalizedQuery)
@@ -262,7 +271,7 @@ Partial Public Class search_suggest
             End If
         End If
 
-        Return New Dictionary(Of String, Object) From {
+        Dim result As New Dictionary(Of String, Object) From {
             {"query", query},
             {"normalized_query", intent.SearchText},
             {"recent", False},
@@ -278,6 +287,19 @@ Partial Public Class search_suggest
             {"catalogUrl", BuildCatalogUrl(If(String.IsNullOrWhiteSpace(intent.SearchText), query, intent.SearchText), filters)},
             {"quickLinks", BuildQuickLinks(query, mapped, intent)}
         }
+        If guided Then
+            result("guided") = New Dictionary(Of String, Object) From {
+                {"version", 1}, {"displayLabel", _commercial.PriceContext.DisplayLabel},
+                {"returnedCount", mapped.Count}, {"selectionLimited", True}, {"limit", limit},
+                {"criteria", New Dictionary(Of String, Object) From {
+                    {"q", query}, {"st", filters.SettoreId},
+                    {"pmin", filters.MinPrice.ToString("0.############################", CultureInfo.InvariantCulture)},
+                    {"pmax", filters.MaxPrice.ToString("0.############################", CultureInfo.InvariantCulture)},
+                    {"disponibile", filters.SoloDisponibili}, {"ordinamento", If(filters.Sort, String.Empty)}
+                }}
+            }
+        End If
+        Return result
     End Function
 
     Private Sub AppendSelect(ByVal sql As StringBuilder, ByVal includeRank As Boolean, Optional ByVal rankExpr As String = "")
@@ -667,6 +689,10 @@ Partial Public Class search_suggest
     End Function
 
     Private Function ReadFilters() As SearchFilters
+        Dim modes As String() = Request.QueryString.GetValues("mode")
+        If modes IsNot Nothing AndAlso modes.Any(Function(value) String.Equals(value, "guided", StringComparison.OrdinalIgnoreCase)) Then
+            Return ReadGuidedFilters()
+        End If
         Dim minimum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmin", "min")
         Dim maximum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmax", "max")
         Dim filters As New SearchFilters() With {
@@ -688,6 +714,48 @@ Partial Public Class search_suggest
         If filters.MinPrice > 0D AndAlso filters.MaxPrice > 0D AndAlso filters.MinPrice > filters.MaxPrice Then
             Throw New SearchSuggestCommercialException("invalid_filters", 400)
         End If
+        Return filters
+    End Function
+
+    Private Function ReadGuidedQuery() As String
+        Dim value As String = Regex.Replace(If(Request.QueryString("q"), String.Empty), "[\x00-\x1f\x7f\s]+", " ").Trim()
+        If value.Length < 2 OrElse value.Length > 80 Then Throw New SearchSuggestCommercialException("invalid_query", 400)
+        Return value
+    End Function
+
+    Private Function ReadGuidedLimit() As Integer
+        Dim raw As String = Request.QueryString("limit")
+        If raw Is Nothing Then Return 6
+        Dim value As Integer
+        If Not Regex.IsMatch(raw, "^[1-6]$") OrElse Not Integer.TryParse(raw, value) Then Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        Return value
+    End Function
+
+    Private Function ReadGuidedFilters() As SearchFilters
+        Dim allowed As New HashSet(Of String)(StringComparer.Ordinal) From {"q", "st", "pmin", "pmax", "disponibile", "ordinamento", "limit", "mode"}
+        For Each key As String In Request.QueryString.AllKeys
+            If key Is Nothing OrElse Not allowed.Contains(key) OrElse Request.QueryString.GetValues(key).Length <> 1 Then
+                Throw New SearchSuggestCommercialException("invalid_filters", 400)
+            End If
+        Next
+        ReadGuidedQuery()
+        ReadGuidedLimit()
+        Dim sector As Integer = 0
+        Dim rawSector As String = Request.QueryString("st")
+        If rawSector IsNot Nothing AndAlso (Not Regex.IsMatch(rawSector, "^[1-9][0-9]{0,9}$") OrElse Not Integer.TryParse(rawSector, sector)) Then
+            Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        End If
+        Dim minimum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmin")
+        Dim maximum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmax")
+        Dim sort As String = If(Request.QueryString("ordinamento"), String.Empty)
+        If sort <> String.Empty AndAlso sort <> "p_basso" Then Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        Dim filters As New SearchFilters With {
+            .Mode = "guided", .SettoreId = sector, .Sort = sort,
+            .SoloDisponibili = ReadAliasedFilter(AddressOf NormalizeAvailabilityFilter, "disponibile") = "1",
+            .MinPrice = If(minimum.Length = 0, 0D, Decimal.Parse(minimum, CultureInfo.InvariantCulture)),
+            .MaxPrice = If(maximum.Length = 0, 0D, Decimal.Parse(maximum, CultureInfo.InvariantCulture))
+        }
+        If filters.MinPrice > 0D AndAlso filters.MaxPrice > 0D AndAlso filters.MinPrice > filters.MaxPrice Then Throw New SearchSuggestCommercialException("invalid_filters", 400)
         Return filters
     End Function
 

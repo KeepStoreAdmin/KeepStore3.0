@@ -147,15 +147,15 @@
         </div>
     </section>
 
-    <section id="KsLocalAiSearch130" class="ks-ai130-section ks-home-section ks-home-ai-search" aria-labelledby="ksGuideTitle" tabindex="-1">
+    <section id="KsLocalAiSearch130" class="ks-ai130-section ks-home-section ks-home-ai-search" aria-labelledby="ksGuideTitle" tabindex="-1" data-ks-guide-endpoint="<%= ResolveUrl("~/search_suggest.aspx") %>" data-ks-guide-base="<%= ResolveUrl("~/") %>">
         <div class="container">
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
                     <span class="ks-ai130-kicker">Un aiuto per iniziare</span>
                     <h2 id="ksGuideTitle">Guida agli acquisti</h2>
-                    <p id="ksGuideIntro">Cosa cerchi? Prepara la tua ricerca e continua nel catalogo del negozio.</p>
+                    <p id="ksGuideIntro">Trova una selezione di prodotti, precisa le tue preferenze e confronta i dati disponibili.</p>
                     <fieldset class="ks-guide-fields" data-ks-guide-fields hidden disabled>
-                        <legend class="visually-hidden">Prepara la ricerca</legend>
+                        <legend class="visually-hidden">Cerca con la guida agli acquisti</legend>
                         <label for="ksGuideQuery">Che prodotto cerchi?</label>
                         <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Scrivi il prodotto, la marca o il codice" aria-describedby="ksGuideLimit" />
                         <label for="ksGuideDetail">Vuoi aggiungere un dettaglio? <span>(facoltativo)</span></label>
@@ -170,10 +170,10 @@
                                 </asp:Repeater>
                             </div>
                         </asp:Panel>
-                        <p class="ks-guide-status" data-ks-guide-status role="status" aria-live="polite" aria-atomic="true"></p>
                         <div class="ks-guide-actions">
-                            <button type="button" class="ks-guide-primary" data-ks-guide-prepare>Prepara la ricerca</button>
+                            <button type="button" class="ks-guide-primary" data-ks-guide-prepare>Mostra i prodotti</button>
                             <button type="button" class="ks-guide-reset" data-ks-guide-reset>Ricomincia</button>
+                            <button type="button" class="ks-guide-edit" data-ks-guide-undo disabled>Annulla ultima modifica</button>
                         </div>
                     </fieldset>
                     <asp:Panel ID="HomeAiQuickLinksPanel" runat="server" CssClass="ks-guide-fallback-departments" Visible="false">
@@ -187,21 +187,33 @@
                 </div>
                 <div class="ks-guide-next">
                     <div data-ks-guide-summary hidden>
-                        <h3 tabindex="-1" data-ks-guide-summary-title>La tua ricerca</h3>
-                        <p class="ks-guide-request" data-ks-guide-request></p>
-                        <p class="ks-guide-hint" data-ks-guide-scope></p>
-                        <p data-ks-guide-question></p>
-                        <div class="ks-guide-actions">
-                            <a href="articoli.aspx" class="ks-guide-primary" data-ks-guide-catalog>Cerca nel catalogo</a>
-                            <button type="button" class="ks-guide-edit" data-ks-guide-edit>Modifica la richiesta</button>
-                        </div>
+                        <h3>Le tue preferenze</h3>
+                        <div class="ks-guide-chips" data-ks-guide-chips aria-label="Preferenze confermate, seleziona per rimuovere"></div>
+                        <fieldset class="ks-guide-fields" data-ks-guide-refine hidden disabled>
+                            <legend>Affina la selezione</legend>
+                            <div class="ks-guide-choices">
+                                <button type="button" data-ks-guide-command="solo disponibili">Solo disponibili</button>
+                                <button type="button" data-ks-guide-command="prima i meno costosi">Prima i meno costosi</button>
+                            </div>
+                            <label for="ksGuideCommand">Aggiungi una preferenza</label>
+                            <input id="ksGuideCommand" type="text" maxlength="80" autocomplete="off" placeholder="Ad esempio: massimo 500 euro" aria-describedby="ksGuideCommandHelp" />
+                            <p id="ksGuideCommandHelp" class="ks-guide-hint">Puoi indicare un prezzo massimo, la disponibilità o l'ordine dei prezzi. Per cambiare prodotto, usa la richiesta a sinistra o qui sopra.</p>
+                            <button type="button" class="ks-guide-primary" data-ks-guide-apply>Applica preferenza</button>
+                            <button type="button" class="ks-guide-edit" data-ks-guide-new-query hidden>Usa il testo come nuova ricerca</button>
+                        </fieldset>
                     </div>
                     <div data-ks-guide-idle>
-                        <h3>Continua nel catalogo</h3>
-                        <p>Qui prepari le parole da cercare. Prodotti, prezzi e disponibilità saranno mostrati nel catalogo.</p>
+                        <h3>Una scelta alla volta</h3>
+                        <p>Scrivi cosa cerchi. Potrai affinare la selezione, annullare le modifiche e aprire ogni scheda prodotto.</p>
                     </div>
-                    <a href="articoli.aspx" class="ks-guide-catalog-fallback">Esplora tutto il catalogo</a>
+                    <a href="<%= ResolveUrl("~/articoli.aspx") %>" class="ks-guide-catalog-fallback">Esplora tutto il catalogo</a>
                     <noscript><p>La ricerca guidata richiede JavaScript. Puoi usare il catalogo e i link ai reparti.</p></noscript>
+                </div>
+                <div class="ks-guide-output" data-ks-guide-output hidden>
+                    <p id="ksGuideStatus" class="ks-guide-status" data-ks-guide-status role="status" aria-live="polite" aria-atomic="true"></p>
+                    <div data-ks-guide-recovery></div>
+                    <div data-ks-guide-results></div>
+                    <div data-ks-guide-comparison></div>
                 </div>
             </div>
         </div>
@@ -487,5 +499,6 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
-    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261020-guided-entry1a" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261021-progressive1a" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261021-progressive1a" %>"></script>
 </asp:Content>

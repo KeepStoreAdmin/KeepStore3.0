@@ -7,6 +7,75 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### SHOPPING-ASSISTANT-PROGRESSIVE-RESULTS-1A — candidato source, 2026-10-21
+
+Mandato PO ONE-SHOT + FEATURE-BATCH + LOCAL-FIRST, **implementazione, test sintetici, un commit, push e PR DRAFT autorizzati**. Profilo EXCEPTIONAL, Astra/xhigh richiesti dal PO; l'ambiente non espone modello/livello effettivi, quindi nessuna selezione inventata. Base esatta `f39958753a017ee3a7dee6141339e93918010399`, branch `task/shopping-assistant-progressive-results-1a`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. #365 **CHIUSA A / SOURCE INTEGRATED**: review A [5592875346](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#pullrequestreview-5592875346), autorizzazione [6303795610](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#issuecomment-6303795610), closeout [6303869293](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#issuecomment-6303869293). Le sezioni #365/#364 seguenti conservano le evidenze storiche dei candidati; prevale questa chiusura per il loro stato Git.
+
+**A tecnico locale, candidato da review indipendente; KS-F01 PARZIALE.** A-F implementate: brief progressivo con chip espliciti e otto snapshot senza prezzi; comandi finiti e chiarimento degli importi ambigui; massimo sei risultati fondati sui dati server; una domanda facoltativa; recupero dal vuoto modificando un solo vincolo previo click; confronto effimero 2-3 prodotti, tabella accessibile con righe coerenti e scorrimento locale. Nessun LLM o servizio esterno. La grammatica, lo stato e il JSON v1 sono canonici nel [Blueprint Search](KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md#guida-progressiva--contratto-candidato-2026-10-21), non duplicati come altra roadmap.
+
+#### Manifest effettivo esclusivo
+
+| Stato | Percorso | Scopo |
+| --- | --- | --- |
+| MODIFIED | Default.aspx | Sezione guida, binding esistenti, URL applicativi e script page-scoped |
+| MODIFIED | Page.master | Solo cache-buster CSS |
+| MODIFIED | Public/assets/keepstore/js/home-default.js | Solo sostituzione controller guida con bridge |
+| MODIFIED | Public/assets/keepstore/css/theme-overrides.css | Stili circoscritti, righe card, confronto e reduced-motion |
+| MODIFIED | search_suggest.aspx.vb | Raccordo guided e singolo metadata v1 senza query |
+| MODIFIED | Tools/SearchSuggestCommercialContextHarness.vb | Estensione casi guided e payload sintetici dai sorgenti reali |
+| MODIFIED | Tools/Test-SearchSuggestCommercialContext.ps1 | Output opzionale delle sole fixture pubbliche per il browser |
+| MODIFIED | docs/KEEPSTORE_START_HERE.md | Checkpoint e prossimo gate |
+| MODIFIED | docs/KEEPSTORE_PRODUCT_ROADMAP.md | KS-F01 e decisione corrente |
+| MODIFIED | docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md | Manifest, Design Gate, prove e limiti |
+| MODIFIED | docs/KEEPSTORE_SYSTEM_BLUEPRINT.md | Contratti/dependenze architetturali |
+| MODIFIED | docs/KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md | Protocollo, stato, grammatica, privacy e CURRENT/TARGET |
+| ADDED | Public/assets/keepstore/js/ks-shopping-guide.js | Modulo unico, nessuna dipendenza nuova |
+| ADDED | Tools/Test-ShoppingAssistantProgressiveResults.ps1 | Runner nativo PS5.1, runtime esistente e artefatti TEMP |
+| ADDED | Tools/ShoppingAssistantProgressiveResults.test.js | Contratti e browser offline sui sorgenti reali |
+
+Totale **15 = 12 MODIFIED + 3 ADDED**, entro il massimo 16. Nessun REMOVED/RENAMED. **Default.aspx.vb invariato**, quattro binding HOME preservati; fuori scope le quattro cancellazioni tracked preesistenti, configurazione locale, asset/untracked. Nessuna modifica a resolver/SQL builder/catalogo/PDP/auth/cart, Bin, database, IIS, AGENTS o installazioni.
+
+#### Design Gate: reference -> benchmark -> KeepStore -> mobile
+
+ZIP `themeforest-4xrKtJ8L-onsus-electronics-ecommerce-html-template.zip` assente nei percorsi mirati verificati, nessuna scansione del PC. Riutilizzate evidenze #364 e ispezionati i tre originali conservati nel Git: `a97a799^:Public/assets/keepstore/index.html`, `shop-default.html`, `compare.html` (ricerca, card prodotto e tabella confronto). Non attestati rendering originale, versione upstream o licenza del package in questa sessione; nessun dato demo/branding importato.
+
+| Aspetto | Fonte autentica / benchmark pubblico consultato 2026-10-21 | Decisione nel candidato |
+| --- | --- | --- |
+| Preferenze e contesto | ONSUS ricerca e card; Baymard [applied filters](https://baymard.com/research-articles/how-to-design-applied-filters), contenuto pubblico | Brief visibile, chip solo per scelte applicate, valori predefiniti informativi, rimozione e undo espliciti |
+| Recupero dal vuoto | Baymard [no search results](https://baymard.com/ecommerce-design-examples/35-no-search-results-page), sola sintesi pubblica | Una modifica preview alla volta, nessuna promessa o rilassamento automatico; errore distinto |
+| Aggiornamenti e mobile | W3C [status messages](https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html); tabella ONSUS come pattern | ARIA live breve, focus preservato; card 1/2/3 colonne, righe titolo/categoria/prezzo coerenti, confronto con intestazioni e scorrimento locale |
+
+Niente widget flottante, nuova modale, carosello obbligatorio, finto pensiero o claim di conversione/WCAG completa. Gli archivi compare persistenti restano indipendenti; il confronto usa solo i dati gia validati della risposta corrente.
+
+#### Prove reali eseguite e limiti
+
+- **Server: 616/616 PASS** con Windows PowerShell5.1 Desktop, RemoteSigned solo Process; sorgenti reali compilati .NET Framework, I/O sostituito con DataTable/delegati. Incluse le 490 regressioni #365 e 126 verifiche aggiuntive: prodotto letterale/codice/EAN/misure, nessuna estrazione euristica, filtri/tipi/parametri/limit/catalogUrl, metadata fiscale, errori e vuoto. Tenant 1/listino1 e 2/listino10, autenticati sintetici listini4/13, prezzi coincidenti ma provenienza verificata nei parametri effettivi, payload distinti serializzati dal vero endpoint. Zero connessioni DB e login reali; sessioni fixture non attestano autenticazione operativa.
+- **Client/contratto: 453/453 PASS**, funzioni reali Node e Chrome **155.0.8059.80**, Tech/Food ai viewport **360/390/430/768/1365**, quattro scenari commerciali sintetici, root e virtual directory. Flusso richiesta/risultati/comandi/undo/PDP/catalogo, schema reale server, chip e limite80, storia8, confronto3/six-card ceiling, dati assenti/varianti, query ignote/importi ambigui, tastiera/IME/focus, righe card/tabella e overflow/touch. Rete interamente intercettata, service worker bloccati; nessun upstream, account o sito operativo.
+- Race A lenta/B veloce con abort deliberatamente ignorato, reset pendente, doppio invio, cambio reparto, timeout8s accelerato solo nella fixture, offline, HTTP400/403/421/429/503, HTML/JSON invalido/payload parziale/sovradimensionato, id/TCId/URL incoerenti, XSS testuale e immagini esterne/mancanti. BFCache e possibile cambio scheda rimuovono offerte/confronto, senza refresh automatico. Spy storage/cookie/console/beacon/form e allowlist rete PASS. Fixture di fallback no-JS, modulo assente e prerequisito init mancante PASS.
+- **11 screenshot** rappresentativi (Tech/Food, mobile/desktop, confronto, loading, empty, errore); ispezione visiva eseguita su 390/1365 e stati failure. Non certificano HOME IIS completa, screen reader, dispositivi fisici, latenza produzione o contenuti reali. Prima prova interrotta da uso improprio di isDisabled sul fieldset, seconda prova limite4 da check che pretendeva erroneamente il quarto elemento selezionato: corrette le fixture. La verifica visiva ha portato all'allineamento righe e alla tabella confronto, ricollaudati sui sorgenti finali.
+- **Precompile safe .NET Framework4.8 PASS, 354 input**, template sintetico, zero configurazioni operative copiate, sanitizer/cleanup PASS. CSS/JS aggiunti sono verificati dal browser reale. Nessuna suite RSA/e-mail/checkout ripetuta. Header browser #365 riusato per codice immutato; wrapper header/filtri rieseguiti nelle regressioni server, controller Swiper/menu/recenti verificato identico fuori bridge.
+- Guard incrementale, manifest, diff-check e preservazione registrati nel rapporto finale; il guard considera solo i 15 candidati, non la cronologia. Nessun finding critico noto nel perimetro. MySQL/SQL operativo, IIS, login reali, smoke produzione e configurazioni rimangono **NON ESEGUITI / gate pre-deploy**, non PASS client.
+
+Riproduzione: `Tools/Test-ShoppingAssistantProgressiveResults.ps1` richiede i percorsi espliciti di modulo Playwright gia disponibile, Chrome e directory TEMP dedicata; nessun npm/installazione. Include il runner commerciale e il browser; per la sola verifica UI su payload server gia validati si puo eseguire direttamente il file Node. `Tools/Test-KeepStorePrecompileSafe.ps1` separato. Risorse proprie in journal/finally: **36 contesti chiusi, browser chiuso**, directory temporanee compilatore/harness eliminate; conservati soltanto evidenze autorizzate. Nessun server statico o servizio avviato.
+
+#### Misure locali
+
+Byte UTF-8 normalizzati LF: `home-default.js` **12.612 -> 7.471**; CSS **89.663 -> 94.243**; nuovo modulo **30.977**. Saldo JS/CSS **+30.416 byte** non compressi, una risorsa JS page-scoped, nessuna libreria aggiunta. Nessun fetch guida iniziale/focus/digitazione; un GET per azione confermata, zero chiamate per card o spiegazione, niente prefetch/cache prezzo. Corpo/numero/stringhe limitati; massimo sei card e tre colonne confronto.
+
+Dieci campioni fixture da avvio fetch intercettato a mutazione DOM completata: **11,4-30,6 ms**, media **18,89 ms**, mediana **18,75 ms**; tre card e **102 elementi** nell'intera sezione guida per campione. Misura locale con trasporto sintetico e osservatore di test, non CPU-only, MySQL, TTFB o INP. Ordine e prezzi non sono calcolati dal browser. Risultati non estrapolati a produzione.
+
+#### Futuro rilascio cumulativo — consegna SOSPESA
+
+**Nessun file da copiare ora**, nessun rilevatore/pacchetto/server/deploy. Il mandato PO prevale sull'handoff ordinario AGENTS. Delta runtime di questo candidato dalla base #365: **cinque MODIFIED** (`Default.aspx`, `Page.master`, `search_suggest.aspx.vb`, `Public/assets/keepstore/js/home-default.js`, `Public/assets/keepstore/css/theme-overrides.css`) e **un ADDED** (`Public/assets/keepstore/js/ks-shopping-guide.js`). Tools e manuali non vanno nel webroot.
+
+Per un futuro cumulativo **da stable #363 `de85cdd4`**, unione esatta dei delta #364 + #365 + questo batch: `Default.aspx`; `Page.master`; `Public/ui/controls/SiteHeader.ascx`; `Public/assets/keepstore/css/theme-overrides.css`; `Public/assets/keepstore/js/home-default.js`; `Public/assets/keepstore/js/ks-page-flags.js`; **nuovo** `Public/assets/keepstore/js/ks-shopping-guide.js`; `search_suggest.aspx`; `search_suggest.aspx.vb`; `articoli.aspx.vb`; `App_Code/StorefrontPromotionCatalogProvider.vb`; `App_Code/StorefrontEffectivePriceSqlBuilder.vb`; **nuovo rispetto a #363** `App_Code/SearchSuggestCommercialSupport.vb`. Tredici percorsi runtime, di cui il builder fiscale era gia presente nella base. Questo elenco presuppone quella base effettivamente installata: una base differente richiede il suo delta verificato, non un upload parziale presunto.
+
+Prerequisiti: baseline App_Code/Bin coerente, `Page.master.vb` e `Default.aspx.vb` gia allineati; helper `HomeServerStageTiming.vb`, `StorefrontSeoTenantContext.vb`, `StorefrontPriceDisplayContext.vb`, `StorefrontPriceDisplayContextProvider.vb`, `StorefrontCommercialIsolationPolicy.vb`, `ProductPromotionEligibilityResolver.vb`, `AvailabilityDisplayHelper.vb` e resolver fiscali esistenti. Contratto EntropicConnectionString/MySQL nativo gia configurato, nessuna modifica/copia della configurazione operativa da questo batch, nessun Bin aggiunto. Ordine pagina: modulo guida prima di home-default, cache-buster pertinente JS/CSS; mantenerli coerenti con code-behind guided. Nessun pannello gestionale necessario.
+
+Prima di un futuro rollout autorizzato: review indipendente, decisione CI, target/base/delta attestati, prove MySQL/IIS/tenant autenticate sicure e manifest operativo proprio. Backup dei file effettivamente installati con hash/ACL/attributi/date; rollback dell'intero insieme coerente e rimozione dei soli file nuovi prima assenti. Nessun riavvio IIS globale o modifica DB impliciti. Lo stesso insieme coerente evita di combinare markup nuovo con endpoint vecchio.
+
+Evidenze locali: `C:\Users\Taikun\AppData\Local\Temp\KeepStoreShoppingProgressive1A\20261021` — `candidate-manifest.json`, `server-tests.log`, `server-payloads.json`, `browser-report.json`, PNG, `precompile.log`, `resource-journal.json`, guard e rapporto finale. Sorgenti finali nella copia canonica; SHA e URL PR nel rapporto/Git reale. Workflow GitHub **0**, webhook **0**, nessun hook locale attivo: **CI NON CONFIGURATA**, nessuna deroga #365 ereditata. Prossimo passo unico: **review indipendente ChatGPT della PR DRAFT**; nessun merge, deploy o task successivo avviato.
+
 ### SEARCH-SUGGEST-COMMERCIAL-CONTEXT-1A — candidato source, 2026-10-21
 
 Mandato PO CRITICAL / riferimento GPT-6.1 Sol xhigh, ONE-SHOT LOCAL-FIRST. Base `0363e53e661ed00f297052ebe7cff45d630207a2`, branch `task/search-suggest-commercial-context-1a`, main invariato `976e99f17cabc8a5c6a8715463444edfeaadcd91`. #364 **CHIUSA A / SOURCE INTEGRATED**, review 5592073500, autorizzazione 6302358787 e closeout [6302450880](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/364#issuecomment-6302450880) acquisiti. La sua deroga CI/IIS non e estesa a questo candidato. Guida #364 immutata, KS-F01 PARZIALE; consegna server SOSPESA PER DECISIONE PO.

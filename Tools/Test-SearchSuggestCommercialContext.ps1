@@ -1,5 +1,5 @@
 ﻿[CmdletBinding()]
-param([switch]$BaselineCandidate)
+param([switch]$BaselineCandidate, [string]$GuidedPayloadPath = '')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
@@ -125,7 +125,7 @@ fs.writeFileSync(process.argv[3],JSON.stringify(results),'utf8');
         Copy-Item -LiteralPath $file.FullName -Destination $destination
     }
     [IO.File]::WriteAllText((Join-Path $work 'resources.json'),($journal|ConvertTo-Json))
-    if($BaselineCandidate){& $exe $callerUrlsPath '--review-candidate'}else{& $exe $callerUrlsPath}
+    if($BaselineCandidate){& $exe $callerUrlsPath '--review-candidate'}elseif($GuidedPayloadPath){& $exe $callerUrlsPath $GuidedPayloadPath}else{& $exe $callerUrlsPath}
     if($LASTEXITCODE -ne 0){throw 'SEARCH_SUGGEST_HARNESS_FAILED'}
     if($BaselineCandidate){Write-Output 'SEARCH_SUGGEST_CANDIDATE_REPRODUCTION=PASS'}else{Write-Output 'SEARCH_SUGGEST_SYNTHETIC_SUITE=PASS'}
 } finally {
