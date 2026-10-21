@@ -40,6 +40,10 @@ DoD runtime: risultato autorizzato implementato, causa affrontata, manifest/dipe
 - Un solo task attivo; il successivo attende chiusura, stop o sostituzione esplicita di Germano.
 - Ogni task mutativo inizia con `git fetch`, verifica ref/SHA e staging vuoto. Il tracked tree e pulito salvo modifiche preesistenti esplicitamente autorizzate: censirle con hash/inventario e preservarle fuori staging insieme agli untracked. Un audit read-only verifica i ref senza mutazioni non autorizzate.
 
+### Windows PowerShell 5.1
+
+ChatGPT e Codex possono utilizzare Windows PowerShell 5.1 per script, test, verifiche e operazioni locali comprese nei task autorizzati. Quando necessario e consentita ExecutionPolicy `RemoteSigned` limitata al processo. Non sono autorizzati implicitamente `Bypass`, elevazione, modifiche permanenti delle policy, operazioni su server/database/IIS o deploy. ChatGPT utilizza soltanto gli strumenti concretamente disponibili; l'autorizzazione non implica accesso diretto al PC Windows.
+
 ### Priorita ecommerce e moduli futuri
 
 **Prima ecommerce funzionale, affidabile, moderno, bello e navigabile da smartphone, lungo tutto il percorso fino all'ordine/conferma/account; poi rifinimenti e performance non bloccanti, SEO avanzata, integrazioni e automazioni.** Sicurezza, pagamento, correttezza commerciale, SEO tecnica indispensabile e integrita ordine che impediscono un rilascio affidabile non sono polish differibile. La priorita dei requisiti vive soltanto nella PRODUCT_ROADMAP: non riavviare automaticamente task chiusi, differiti o semplicemente proposti. HOME adattiva e assistente acquisti restano requisiti approvati, non funzioni gia completate. Le nuove integrazioni restano progettazione non installata nel [Blueprint modulare](docs/KEEPSTORE_MODULAR_PLATFORM_BLUEPRINT.md), senza licenziare il Core o duplicare resolver Product/Offer.

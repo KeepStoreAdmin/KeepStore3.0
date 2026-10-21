@@ -1,12 +1,14 @@
 # KeepStore — preparazione offline del rilascio per applicazione
 
-Contratto KS-G01, `TENANT-RELEASE-PACKAGE-1A`, 2026-10-21. Questa fase prepara piani e prove sintetiche. **CONSEGNA SERVER SOSPESA PER DECISIONE PO**: nessuna destinazione autorizzata, raccolta sul server, copia, archivio operativo, migrazione o deploy. Regole permanenti in [AGENTS](../AGENTS.md), stato in [START_HERE](KEEPSTORE_START_HERE.md), priorita in [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md).
+Contratto KS-G01, 2026-10-21: fase 1 `TENANT-RELEASE-PACKAGE-1A` integrata nella #367, fase 2 `TENANT-RELEASE-FILE-ATTESTATION-1A` sviluppata e provata esclusivamente su directory sintetiche TEMP. **CONSEGNA SERVER SOSPESA PER DECISIONE PO**: nessuna destinazione reale autorizzata, raccolta sul server, copia, archivio operativo, migrazione o deploy. Regole permanenti in [AGENTS](../AGENTS.md), stato in [START_HERE](KEEPSTORE_START_HERE.md), priorita in [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md).
 
 ## 1. Sorgente integrato e sito aggiornato sono due fatti distinti
 
 La PR #366 e CHIUSA A / SOURCE INTEGRATED nel commit `c8373b08eff0cf9557798802ea4a2d6bfb8e4822`. Questo attesta il codice Git revisionato. Non attesta quale versione sia installata in alcuna applicazione IIS. Due vetrine possono usare lo stesso codice e database, ma physical path, configurazione, identita, asset e data di aggiornamento differenti. Anche due applicazioni con database separati seguono il medesimo procedimento. Il database non identifica da solo la destinazione.
 
 Il generatore confronta **due commit espliciti**. Il parametro FROM indica solo la baseline del confronto: non viene mai trasformato in un commit installato verificato. Il record di destinazione resta UNKNOWN e il piano resta bloccato per la pubblicazione. Un risultato tecnico A di questo batch non chiude KS-G01 per il rilascio reale.
+
+La [#367 CHIUSA A / SOURCE INTEGRATED](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/367) aggiunge il generatore al sorgente stabile `55bd8173fb03fd85f6a892bf2a728e7a02d61748`. Non lo installa sui siti. La fase 2 confronta i soli file espliciti ammessi con gli hash del piano, conservando sconosciuti commit installato e readiness del sito.
 
 ## 2. Preparare e leggere il piano
 
@@ -96,3 +98,41 @@ Riusati i principi deny-first dei percorsi, rifiuto dei reparse point, hash bina
 Suite: [Test-KeepStoreTenantReleasePlan.ps1](../Tools/Test-KeepStoreTenantReleasePlan.ps1), Windows PowerShell 5.1 in processo dedicato `RemoteSigned` secondo l'autorizzazione documentata nel Masterplan; nessuna policy persistente cambiata. Fixture Git sintetiche senza remoti, dati operativi o rete; rapporti in TEMP, cleanup in finally della sola radice univoca delle fixture. Copertura add/modify/delete/rename, Unicode/spazi/binario, esclusioni, helper/JS/CSS e cache-buster, missing/unknown, symlink/submodule, collisioni Windows e traversal, SHA/ancestry, output protetto, determinismo, due applicazioni sintetiche con baseline diverse e confronto storico 23/13. Anche dopo un PASS, compilazione ASP.NET, MySQL, login reale, IIS/HTTP e produzione non sono certificati da questa suite.
 
 Fermarsi e chiedere verifica tecnica per BLOCKED/REVIEW_REQUIRED, record UNKNOWN, hash target differente non riconosciuto, dipendenza mancante/ambigua, backup non provato, compilation/smoke non PASS o autorizzazione target assente. L'uscita 0 del generatore e il completamento della suite non concedono il deploy.
+
+## 7. Verificare i file osservabili: fase 2
+
+Lo strumento [New-KeepStoreTenantFileAttestation.ps1](../Tools/New-KeepStoreTenantFileAttestation.ps1) e un lettore di file, senza funzioni di copia, cancellazione o aggiornamento. Usa Windows PowerShell 5.1 Desktop e API Windows/.NET gia disponibili, senza moduli o programmi da installare. Nella fase corrente **si esegue solo sulle cartelle sintetiche create dalla suite**. Prima di usarlo su una cartella realmente servita occorrono review e autorizzazione separate, con directory esplicita e piano approvato; non cerca siti IIS o altre installazioni.
+
+| Elemento | Cosa dimostra |
+| --- | --- |
+| Manifest Git (`plan.json`) | Quali file differiscono tra FROM e TO e quali hash sono attesi; FROM non e una prova di installazione |
+| Osservazioni (`attestation.json` / `.md`) | Quali byte sono stati letti nei soli percorsi runtime ammessi in quella cartella |
+| Commit installato verificato | Richiede registro affidabile, identita/mapping dell'applicazione e inventario coerente completo; un confronto parziale non basta |
+| Readiness e autorizzazione al deploy | Richiedono inoltre dipendenze, configurazioni/asset preservati, backup/ripristino, prove applicative e decisione di rilascio |
+
+I quattro parametri sono tutti obbligatori: `PlanPath` (JSON locale del generatore #367), `InspectionRoot` (directory locale esplicita), `OutputDirectory` (nuova directory sotto la TEMP del processo, disgiunta dal target) e `TargetLabel` (etichetta opaca di 1-64 caratteri alfanumerici, trattino o underscore; nessun dominio, percorso o dato personale). Il verificatore non usa Git e non riesegue il generatore: controlla il contratto e gli hash dichiarati dal piano, non ne certifica provenienza o firma. Prima di un uso reale il tecnico deve accertare l'origine del piano.
+
+Prima di leggere il target rifiuta schema/modo/permessi errati, SHA e hash non validi, contatori o RuntimePaths incoerenti, classificazioni/disposizioni incompatibili, tipi Git non regolari, percorsi ostili e collisioni Windows anche nei prefissi delle directory. I metadati Changes gia esclusi coerentemente dal generatore sono accettati come **inerti**: non diventano percorsi da ispezionare, non ricevono hash e non sono ripubblicati nei rapporti. Tentare di promuovere `web.config`, dati o Tools a runtime viene rifiutato. Dipendenze e file non elencati non vengono cercati automaticamente: nessuna enumerazione ricorsiva del target.
+
+Percorsi assoluti/device/ADS/traversal nel manifest, root di rete e redirect filesystem non sono ammessi. La catena locale e controllata con handle aperti senza seguire il reparse dell'elemento; nome finale e tipo vengono verificati prima di leggere dati. Directory case-sensitive, junction/symlink, hardlink, file offline o tipi inattesi sono bloccati; se il sistema non permette di accertare questi metadati l'osservazione fallisce chiusa. Un accesso negato non va risolto elevando privilegi o saltando il controllo. La TEMP e le sue antenate devono consentire le necessarie letture di metadati. Nessuna ACL viene modificata.
+
+| Stato per percorso | Interpretazione |
+| --- | --- |
+| `CANDIDATE_MATCH` | Hash dei byte identico all'hash TO dichiarato dal piano; non certifica l'intero candidato installato |
+| `BASELINE_MATCH` | Hash identico a FROM, senza dedurre il commit installato |
+| `MISSING` | File o directory intermedia assente; nessuna creazione autorizzata |
+| `DIFFERENT_UNKNOWN` | File presente con hash non riconosciuto: richiede verifica prima di qualsiasi sostituzione |
+| `UNREADABLE` | Lettura completa/stabile impossibile, sharing/accesso negato, metadati o budget non verificabili; nessun hash parziale positivo |
+| `BLOCKED_UNSAFE_PATH` | Reparse, tipo, hardlink, collisione o altro percorso non sicuro; non seguire il redirect |
+
+Per ADDED sono distinte assenza reale, candidato gia presente e collisione preesistente con contenuto diverso. Per DELETED sono distinte assenza e baseline ancora presente, senza suggerire rimozioni automatiche. RENAMED produce due righe indipendenti, origine e destinazione. Quando baseline e candidato hanno lo stesso hash, `MatchesBothExpected` lo rende esplicito; a parita di hash la riga ordinaria privilegia lo stato candidato. Non si applica questa priorita a un'origine di rinomina o a DELETED, che hanno solo l'hash di origine pertinente.
+
+Il JSON include schema `KeepStore.TenantFileAttestation.v1`, SHA256 del piano, FROM/TO, etichetta, percorsi relativi, hash attesi/osservati ammessi, stati, motivi, conteggi, limiti e gate. Il Markdown e la lettura sintetica per l'operatore. Sono gli unici due file creati, senza contenuti, path fisico completo, account Windows o dati di configurazione. Output gia esistenti sono rifiutati. Codice 0 significa che le osservazioni sono state prodotte, **anche se alcune sono UNREADABLE/BLOCKED**; non significa target verificato. Codice 1 segnala piano/precondizione/output non validi in forma sanitizzata; non usare un output incompleto e non cancellarlo automaticamente. A parita di input e stato osservabile i report sono deterministici, senza timestamp corrente.
+
+Gli hash sono calcolati in streaming sullo stesso handle aperto solo in lettura con condivisione che rifiuta normali writer e cancellazioni durante l'apertura. Due passate e metadati confrontati rilevano cambiamenti osservabili, senza promettere una transazione o uno snapshot atomico di tutti i file. Limiti: piano 4 MiB, massimo 4096 record per array, percorso manifest 200 caratteri e percorso completo 240; massimo 128 MiB per file e 512 MiB complessivi di lettura (due passate comprese). Budget cooperativi di 15 secondi per file e 120 secondi tra le operazioni: non sono deadline capaci di interrompere una singola chiamata nativa bloccata. Un limite raggiunto non produce match con hash parziale.
+
+**READ-ONLY e date di accesso.** Lo strumento non scrive contenuti o metadati del target. La lettura puo pero aggiornare automaticamente LastAccessTime secondo filesystem e Windows ([Microsoft File Times](https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times)). La decisione tecnica `TEST20-LASTACCESS-ENVIRONMENT-1A`, assunta da ChatGPT nel mandato generale, ammette esclusivamente questo effetto informativo: non e una nuova dichiarazione specifica del PO. Restano invarianti contenuti/SHA256, dimensione, CreationTime, LastWriteTime, attributi e ACL. Vietati SetFileTime/SetLastAccessTime, correzioni artificiali delle date, registro o policy per mascherare la variazione. La suite verifica separatamente che il file di controllo non letto mantenga anche LastAccessTime.
+
+Le prove [Test-KeepStoreTenantFileAttestation.ps1](../Tools/Test-KeepStoreTenantFileAttestation.ps1), **73/73 PASS** su PS 5.1.26100.9711, creano un repository sintetico senza remoti e due cartelle A/B in TEMP, invocando una volta il generatore reale per il piano. Provano i sei stati, aggiunte/cancellazioni/rinomine, byte binari e Unicode, junction reale, hardlink, errori di lettura, JSON/percorso ostile, esclusioni, assenza di dati privati nell'output, determinismo, test 20 e cleanup finally. Il caso non leggibile e una violazione di sharing riproducibile, non una certificazione di ACL operative. Non e stata forzata una modifica arbitraria durante la lettura con filesystem o driver ostile: nessuna atomicita certificata. I 59 test del generatore #367 sono riusati per i contratti immutati, non ripetuti; nessuna prova applicativa/IIS/DB o cartella operativa da questa suite.
+
+Lo stato complessivo e sempre **TARGET_ATTESTATION_INCOMPLETE**, anche con tutti i percorsi CANDIDATE_MATCH. Inventario completo, identita IIS, commit installato indipendentemente verificato, backup/ripristino, compatibilita/dipendenze, prove commerciali e autorizzazione al rilascio restano gate aperti. Le applicazioni A e B hanno rapporti indipendenti, anche con database condiviso; nessuna attestazione passa automaticamente da una all'altra.
