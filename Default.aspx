@@ -124,7 +124,7 @@
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
-                    <h5 class="fw-semibold">Categorie principali</h5>
+                    <h5 class="fw-semibold">Esplora i reparti</h5>
                     <p class="body-text-3 text-main-2 mb-0">Esplora i settori del catalogo e trova rapidamente ciò che cerchi.</p>
                 </div>
                 <a id="HomeCategoriesCatalogLink" runat="server" href="articoli.aspx" class="tf-btn btn-line">
@@ -292,7 +292,7 @@
             </div>
         </div>
     </section>
-    <section id="HomeCollectionSection" runat="server" visible="false" class="ks-home-section ks-home-collection-block">
+    <section id="HomeCollectionSection" runat="server" visible="false" class="ks-home-section ks-home-collection-block ks-home-adaptive-discovery" aria-label="Altri reparti">
         <div class="container">
             <div class="ks-home-collection-grid">
                 <asp:Repeater ID="rptHomeCollection" runat="server">
@@ -398,9 +398,9 @@
         </div>
     </section>
 
-    <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product">
+    <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product ks-home-adaptive-discovery" aria-label="Continua a esplorare i reparti">
         <div class="container">
-            <div class="ks-home-bottom-promo-grid">
+            <div class="ks-home-collection-grid">
                 <asp:Repeater ID="rptHomeBottomPromo" runat="server">
                     <ItemTemplate>
                         <a href='<%# SafeText(Eval("DefaultUrl")) %>' class="ks-home-bottom-promo-card d-flex flex-column gap-2">

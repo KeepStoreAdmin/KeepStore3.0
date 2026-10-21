@@ -7,6 +7,43 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### HOME-EDITORIAL-SECTOR-RELEVANCE-1A — KS-E01 fase 2, 2026-10-21
+
+Mandato corrente: migliorare soltanto la navigazione editoriale HOME; branch `task/home-editorial-sector-relevance-1a` da stable `d52818e694cdacf6c3ada543eca091884b7c2719`. Main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` protetti. Profilo DEEP / High richiesto, valori effettivi non esposti. Implementazione e QA locali; un commit/push del task branch e PR DRAFT per review indipendente. **CONSEGNA SERVER SOSPESA PER DECISIONE PO**: nessun IIS, DB, target operativo, payload, ZIP, trasferimento, merge o deploy autorizzato.
+
+**Closeout prevalente #368:** CHIUSA A / SOURCE INTEGRATED, [review 5601362662](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/368#pullrequestreview-5601362662), [closeout 6318722145](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/368#issuecomment-6318722145). FF diretto di un commit `55bd8173... -> d52818e...`, Windows/remoto/GitHub allineati, configurazione e stato locale preservati. KS-G01 fasi 1/2 offline chiuse; le sezioni sottostanti conservano mandato e prove storici, senza riaprire suite o strumenti. Tenant reali GATE APERTO / NON AVVIATO.
+
+Manifest esclusivo **6 file, 1 ADDED / 5 MODIFIED**:
+
+| Stato | Percorso | Scopo |
+| --- | --- | --- |
+| MODIFIED | `Default.aspx.vb` | Un insieme ordinato/deduplicato, distribuzione 12+3+3, hero/guida equivalenti |
+| MODIFIED | `Default.aspx` | `Esplora i reparti`, griglia e focus gia esistenti, regioni editoriali nominate |
+| ADDED | `Tools/Test-HomeEditorialRelevance.ps1` | Metodi VB reali compilati, fixture sintetiche e template editoriali |
+| MODIFIED | `docs/KEEPSTORE_START_HERE.md` | Base, task, prove e limiti correnti |
+| MODIFIED | `docs/KEEPSTORE_PRODUCT_ROADMAP.md` | KS-E01 fase 2 e #368 integrata |
+| MODIFIED | `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md` | Decisione, Design Gate ed evidenze |
+
+**Composizione deterministica.** Il provider esistente continua a selezionare soltanto settori abilitati, nello stesso ordine. Il filtro HOME conserva ID positivo, nome non vuoto, URL `articoli.aspx?st=<id>` esatto e prima occorrenza per ID. Una sola selezione limitata a 18 reparti validi sostituisce le precedenti due selezioni. La griglia principale conserva primi 12/ordine/URL; hero primi 9 e guida primi 5 conservano comportamento e fallback. Il primo blocco editoriale riceve i reparti 13-15 solo se presenti tutti e tre; il secondo i 16-18 solo se completi. Uno/due residui e reparti oltre 18 restano accessibili dal catalogo completo, senza inventare o riordinare categorie. Nessuna cache, resolver, query, tassonomia o inferenza merceologica nuova.
+
+Razionale: entrambi i blocchi usano la griglia esistente a tre colonne, una su mobile. Il browser ha rilevato nel vecchio contenitore inferiore la disposizione 2+1 a 768px: riusata `ks-home-collection-grid` anche li, senza CSS aggiunto. Le due sezioni riusano `ks-home-adaptive-discovery` per l'outline visibile da tastiera, assente sulle vecchie card secondarie; nomi ARIA distinti. Nessun nuovo controllo server o ID rinominato. CSS, master, JS, App_Code, asset, banner, pool prodotti, prezzi/IVA/listini/promo/stock non modificati.
+
+**Design Gate proporzionato.** Riletto in memoria lo ZIP ONSUS originale al percorso mirror del [repertorio](KEEPSTORE_NAVIGATION_UX_BENCHMARK.md#repertorio-aggiornato-2026-10-21--pr-366-rev1), SHA-256 `98B2BFDCCB98A873B732B43AC2FA80076E5C00C6FEDE3FB74BD7D971F9BE5F9A`: soli componenti `s-banner-wrapper`, `cls-category`, Grid Collection/Collection e relativi preview responsive in `index.html`. Nessuna estrazione/importazione di demo, rendering ONSUS o nuova ricerca generale; riusato il benchmark documentato 2026-10-21 e il Design Gate #361, senza presentarli come collaudo live corrente.
+
+| Aspetto | ONSUS originale | Benchmark documentato | KeepStore prima | Decisione KeepStore |
+| --- | --- | --- | --- | --- |
+| Reparti e contenuti secondari | Banner/collection distinti, tassonomia demo | Famiglie reali e accesso al catalogo completo | Primi sette ripetuti nella griglia | 12+3+3 unici, sezioni senza novita omesse |
+| Densita responsive | Preview Collection 4/3/2 nel sorgente, non misure visuali | Reflow e percorsi espliciti | Collection 3 colonne, inferiore 2 a tablet | Griglia esistente comune 3/1, triplette complete |
+| Tastiera e semantica | HTML di riferimento, nessuna certificazione accessibilita | Focus/target e orientamento | Titolo categorie per oggetti settore, outline secondario assente | Titolo reparti, regioni nominate e focus CSS riusato |
+
+**Prove locali:** `Tools/Test-HomeEditorialRelevance.ps1` su Windows PowerShell 5.1 Desktop, RemoteSigned solo Process: **356/356 PASS**. Copertura 0/1/2/4/9/12/13/14/15/16/17/18/19/27, deduplica anche oltre il dodicesimo, null/ID/nome/URL invalidi, ordine non numerico e URL invariati, indipendenza A/B/A Tech/Food, nessun contenitore vuoto, hero/guida equivalenti e sei combinazioni banner/prodotti. I metodi VB sono estratti letteralmente dal candidato e compilati in memoria con i modelli reali; i controlli non pertinenti sono stand-in System.Web, senza BindHome/Page_Load. Il filtro inattivi resta contratto sorgente del provider immutato, non prova SQL nuova.
+
+**Chrome 155.0.8059.80: 140/140 configurazioni offline PASS**, 28 fixture Tech/Food x 360/390/430/768/1365. Frammenti dai repeater/intro ASPX reali, CSS/font locali invariati, prodotti e banner assenti; link/ordine/unicita, regioni omesse, catalogo, target >=44px, contenimento, tastiera/focus/Enter e destinazioni sintetiche verificati. Zero errori pagina, asset mancanti o richieste esterne; screenshot 390/1365 esaminati. Non sono HOME completa, animazioni/Swiper, device fisici, screen reader o tenant reali. **Precompile safe ASP.NET Framework 4.8 PASS**, 354 input, solo configurazione sintetica dal template, zero copie di configurazioni operative e cleanup TEMP verificato.
+
+Misura pertinente su composizione sintetica: con 12 reparti, link nelle tre aree **19 -> 12**, duplicati **7 -> 0**; con 19 reparti, reparti distinti visibili **12 -> 18**, senza duplicati. Sono conteggi deterministici del markup/dati di selezione, non miglioramenti TTFB/INP o conversione misurati. Nessuna chiamata provider/DB aggiuntiva. Evidenze: `%TEMP%\KeepStoreHomeEditorial1A-20261021-3a04b1f2`, `server-4/test-report.json`, `browser-report.json`, `browser-harness.cjs`, `precompile-final.log`, screenshot. Cicli intermedi di fixture/harness distinti dal rapporto finale; nessuna variazione di produzione certificata.
+
+Riusati i contratti storici non influenzati #361/#366, senza rieseguire quelle suite o #367/#368. Configurazione privata con hash/ACL/metadati, 55 untracked preesistenti, quattro cancellazioni e asset da preservare integralmente; staging esclusivamente dei sei percorsi prima del commit, vuoto alla consegna. CI NON CONFIGURATA; KS-E01 resta PARZIALE e `StorefrontCapabilityProfile` non implementato. Prossimo passo unico: review indipendente ChatGPT della PR DRAFT; nessun task successivo avviato.
+
 ### TENANT-RELEASE-FILE-ATTESTATION-1A — fase 2 sintetica, 2026-10-21
 
 Mandato PO: KS-G01 fase 2, verificatore READ-ONLY su percorsi espliciti; sviluppo e test esclusivamente su cartelle sintetiche TEMP, documentazione, un commit/push e PR DRAFT. Base stable `55bd8173fb03fd85f6a892bf2a728e7a02d61748`, branch `task/tenant-release-file-attestation-1a`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` protetti. **CONSEGNA SERVER SOSPESA PER DECISIONE PO**: nessuna esecuzione su cartelle IIS/operative, rilevazione siti, Aruba, configurazione privata, DB, servizi, payload, ZIP, merge o deploy. Profilo DEEP / GPT-6.1 Sol / High richiesto; valori effettivi non attestabili.

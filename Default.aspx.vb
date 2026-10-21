@@ -278,9 +278,9 @@ Partial Public Class _Default
 
         Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If realSectors Is Nothing Then realSectors = New List(Of CatalogMenuSector)()
-        Dim editorialSectors As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(realSectors)
-        Dim sectorRows As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(realSectors, 12)
-        Dim heroSectorRows As List(Of CatalogMenuSector) = editorialSectors
+        Dim editorialNavigation As HomeEditorialNavigation = BuildHomeEditorialNavigation(realSectors)
+        Dim sectorRows As List(Of CatalogMenuSector) = editorialNavigation.MainSectors
+        Dim heroSectorRows As List(Of CatalogMenuSector) = editorialNavigation.HeroSectors
         rptHeroDepartments.DataSource = heroSectorRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHeroDepartments")
             rptHeroDepartments.DataBind()
@@ -298,12 +298,10 @@ Partial Public Class _Default
         End If
         HomeCategoriesCatalogLink.Visible = Not HomeIntroSection.Visible
 
-        ' Editorial navigation and search examples use only the real enabled catalog taxonomy.
-        Dim collectionCount As Integer = Math.Min(4, editorialSectors.Count)
-        Dim bottomCount As Integer = Math.Min(3, editorialSectors.Count - collectionCount)
-        Dim collectionRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(0, collectionCount)
-        Dim bottomRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(collectionCount, bottomCount)
-        Dim searchRows As List(Of CatalogMenuSector) = editorialSectors.GetRange(0, Math.Min(5, editorialSectors.Count))
+        ' The secondary editorial areas continue the main grid; hero and guide keep their own navigation.
+        Dim collectionRows As List(Of CatalogMenuSector) = editorialNavigation.CollectionSectors
+        Dim bottomRows As List(Of CatalogMenuSector) = editorialNavigation.BottomSectors
+        Dim searchRows As List(Of CatalogMenuSector) = editorialNavigation.SearchSectors
         rptHomeCollection.DataSource = collectionRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeCollection")
             rptHomeCollection.DataBind()
@@ -438,6 +436,29 @@ Partial Public Class _Default
             InvalidateHomeQueryConnection()
         End Try
     End Sub
+
+    Private NotInheritable Class HomeEditorialNavigation
+        Public ReadOnly MainSectors As New List(Of CatalogMenuSector)()
+        Public ReadOnly CollectionSectors As New List(Of CatalogMenuSector)()
+        Public ReadOnly BottomSectors As New List(Of CatalogMenuSector)()
+        Public ReadOnly HeroSectors As New List(Of CatalogMenuSector)()
+        Public ReadOnly SearchSectors As New List(Of CatalogMenuSector)()
+    End Class
+
+    Private Shared Function BuildHomeEditorialNavigation(ByVal source As List(Of CatalogMenuSector)) As HomeEditorialNavigation
+        ' One ordered, validated set from the existing enabled-sector provider, owned by this request.
+        Dim sectors As List(Of CatalogMenuSector) = SelectHomeEditorialSectors(source, 18)
+        Dim result As New HomeEditorialNavigation()
+        result.MainSectors.AddRange(sectors.GetRange(0, Math.Min(12, sectors.Count)))
+        result.HeroSectors.AddRange(sectors.GetRange(0, Math.Min(9, sectors.Count)))
+        result.SearchSectors.AddRange(sectors.GetRange(0, Math.Min(5, sectors.Count)))
+
+        ' Both existing secondary grids have three columns. Show complete rows only;
+        ' any remainder stays reachable through the unchanged full-catalog links.
+        If sectors.Count >= 15 Then result.CollectionSectors.AddRange(sectors.GetRange(12, 3))
+        If sectors.Count >= 18 Then result.BottomSectors.AddRange(sectors.GetRange(15, 3))
+        Return result
+    End Function
 
     Private Shared Function SelectHomeEditorialSectors(ByVal source As List(Of CatalogMenuSector), Optional ByVal limit As Integer = 9) As List(Of CatalogMenuSector)
         Dim result As New List(Of CatalogMenuSector)()
