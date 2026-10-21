@@ -2,6 +2,18 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Piano di rilascio offline per applicazione — KS-G01, 2026-10-21
+
+PR #366 CHIUSA A / SOURCE INTEGRATED a `c8373b08eff0cf9557798802ea4a2d6bfb8e4822`, FF-only; review/closeout nel Masterplan. KS-F01 deterministico integrato, assistente completo ancora PARZIALE/TARGET. L'integrazione sorgente non attesta file installati, tenant testati o pubblicazione.
+
+`Tools/New-KeepStoreTenantReleasePlan.ps1`: contratto PLAN ONLY, due SHA Git completi espliciti in ancestry, `RepoRoot`, output TEMP nuovo, etichetta opaca opzionale. Legge alberi e blob ammessi, non la working copy/untracked/configurazioni; hash SHA-256 dei byte e verifica object ID. Output schema `KeepStore.TenantReleasePlan.v1`, `plan.json`/`plan.md` deterministici, differenze e classificazione incluse esclusioni/ambiguita. Nessun payload, modalita Apply, rete, collector target, ZIP, backup reale o accesso IIS/DB. [Runbook canonico](KEEPSTORE_TENANT_RELEASE_RUNBOOK.md).
+
+Nuovi App_Code/JS e altre superfici runtime tracciate non vengono persi dal delta. Rinomine esatte metadata-only con origine/destinazione; spostamenti modificati restano DELETE+ADD. Percorsi Windows invalidi/collidenti, symlink/submodule e tipi ignoti richiedono review. Configurazioni, chiavi, SQL/dump, dati, archivi, Tools e documentazione sono esclusi dal trasferimento standard, senza leggere i contenuti esclusi. I controlli diretti di coppie WebForms, asset letterali/CSS e `ThemeManager.Asset` non promettono una chiusura completa del grafo: compilazione globale App_Code/Bin, codice dinamico, tema attivo e compatibilita target restano gate. Nessun asset esistente aggiunto in massa.
+
+Un record per **applicazione/destinazione**, distinto da host e database: ambiente/identita/physical path e commit installato UNKNOWN, commit candidato noto, prerequisiti/backup/compilation/smoke/DB/rollback/pubblicazione non verificati. FROM e soltanto baseline di confronto. DB condiviso o indipendente, branding/configurazioni e date di release diverse non fanno ereditare attestazioni tra applicazioni. Readiness target sempre BLOCKED in questo generatore; PASS dei test offline non autorizza il rilascio.
+
+Backup e rollback sono istruzioni progettuali per ogni operazione, con hash/metadati/assenze e preservazione privata; cancellazioni/rinomine richiedono stato target attestato, backup e autorizzazione futuri. Rollback file distinto da DB, migrazioni e dati operativi. **CONSEGNA SERVER SOSPESA PER DECISIONE PO**: ripresa soltanto preparazione offline KS-G01, nessuna destinazione autorizzata. Materiali C:\Temp storici preservati, dettagli/evidenze nel Masterplan, nessun pannello gestionale nuovo.
+
 ## Guida progressiva — candidato source 2026-10-21
 
 `SHOPPING-ASSISTANT-PROGRESSIVE-RESULTS-1A` estende soltanto la HOME e il raccordo `mode=guided` del suggest #365 integrato. Un modulo page-scoped `ks-shopping-guide.js`, un bridge idempotente nel controller HOME, stesso endpoint e stessi resolver; Default.aspx.vb e i quattro binding guida invariati. Nessun nuovo endpoint, servizio, DLL, configurazione, SQL builder, algoritmo di prezzo o archivio. Contratto dettagliato e grammatica nel [Blueprint Search](KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md#guida-progressiva--contratto-candidato-2026-10-21).
