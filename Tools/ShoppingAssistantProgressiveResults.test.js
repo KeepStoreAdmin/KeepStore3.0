@@ -4,12 +4,13 @@
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), cp = require('node:child_process');
 const [root, playwrightModule, chrome, evidence, serverPath] = process.argv.slice(2);
 const regressionsOnly = process.argv.includes('--rev1-regressions-only');
+const mediaOnly = process.argv.includes('--rev2-media-only');
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
 const api = require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
 const server = JSON.parse(fs.readFileSync(serverPath, 'utf8'));
 const playwright = require(playwrightModule);
-const report = { assertions: 0, checks: [], viewports: [360,390,430,768,1365], renderMs: [], screenshots: [],
-  suite: regressionsOnly ? 'REV1 regression reproduction' : 'REV1 full client suite', startedUtc: new Date().toISOString(),
+const report = { assertions: 0, checks: [], viewports: mediaOnly ? [390,1365] : [360,390,430,768,1365], renderMs: [], screenshots: [],
+  suite: mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including REV2 media', startedUtc: new Date().toISOString(),
   serverFixtures: server.map(x => ({scenario:x.scenario, expectedList:x.expectedList})), network: 'intercepted; no upstream continuation',
   limitations: ['synthetic HTML rendering, no ASP.NET request execution', 'no MySQL/IIS/login/production/TTFB/INP certification'] };
 const journal = { resources: [], browserClosed: false, contextsClosed: 0 };
@@ -62,6 +63,7 @@ function html(directory,kind,mode) {
     (mode==='missing'?'':'<script src="'+directory+'Public/assets/keepstore/js/ks-shopping-guide.js"></script>')+
     '<script src="'+directory+'Public/assets/keepstore/js/home-default.js"></script></body></html>';
 }
+if(!mediaOnly){
 const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
 for(const raw of ['iPhone 15','SSD 1 TB','olio da 1 litro','8000000000120','SKU-500'])record('product is not command '+raw,api.parseCommand(raw).kind==='unknown');
 for(const raw of ['massimo 1.000 euro','massimo 1,000 euro','fino a 1e3 euro','massimo -5 euro','massimo 0 euro'])record('ambiguous amount clarified '+raw,api.parseCommand(raw).kind==='clarify');
@@ -96,11 +98,25 @@ const stripBridge=s=>s.replace(/\r\n/g,'\n').replace(/  \/\/ (?:This guide prepa
 record('Swiper menu recent controllers byte preserved',stripBridge(homeSource)===stripBridge(baselineHome));
 record('no nested form in section',!/<form\b/i.test(guidemarkup));
 record('readonly session directive preserved',/EnableSessionState="ReadOnly"/i.test(read('search_suggest.aspx')));
+}
+// Two-pixel RGBA PNG, constructed entirely in memory; no operational image file.
+function syntheticPNG() {
+  const chunk=(type,data)=>{
+    const bytes=Buffer.concat([Buffer.from(type),data]);let crc=0xffffffff;
+    for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
+    const size=Buffer.alloc(4),sum=Buffer.alloc(4);size.writeUInt32BE(data.length);sum.writeUInt32BE((crc^0xffffffff)>>>0);
+    return Buffer.concat([size,bytes,sum]);
+  };
+  const header=Buffer.alloc(13);header.writeUInt32BE(2,0);header.writeUInt32BE(1,4);header[8]=8;header[9]=6;
+  return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),
+    chunk('IDAT',require('node:zlib').deflateSync(Buffer.from([0,20,100,180,255,180,100,20,255]))),chunk('IEND',Buffer.alloc(0))]);
+}
+const mediaPNG=syntheticPNG();
 let browser;
 async function fixture(options={}) {
   const directory=options.directory||'/', kind=options.kind||'Tech', host=options.scenario>=2?'tenant2.invalid':'tenant1.invalid';
   const context=await browser.newContext({viewport:{width:options.width||390,height:1000},serviceWorkers:'block',javaScriptEnabled:options.js!==false,reducedMotion:'reduce'});
-  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[];
+  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[];
   const config={...options};
   page.on('pageerror',e=>pageErrors.push(e.message));
   await page.addInitScript(({ignoreAbort,fastTimeout,initFailure})=>{
@@ -130,6 +146,12 @@ async function fixture(options={}) {
   await context.route('**/*',async route=>{
     const req=route.request(),url=new URL(req.url());
     try{
+      if(options.mediaTest&&req.resourceType()==='image'){
+        mediaRequests.push({url:req.url(),method:req.method()});
+        if(url.origin!==('https://'+host)){blocked.push(url.origin);await route.abort();return;}
+        const exists=(config.mediaAssets||[]).includes(url.pathname);
+        await route.fulfill({status:exists?200:404,headers:{'Cache-Control':'no-store'},contentType:exists?'image/png':'text/plain',body:exists?mediaPNG:'Synthetic missing image'});return;
+      }
       if(url.origin!==('https://'+host)){blocked.push(url.origin);await route.abort();return;}
       if(url.pathname===directory+'Default.aspx'){await route.fulfill({contentType:'text/html; charset=utf-8',body:html(directory,kind,options.mode)});return;}
       const assetKey=url.pathname.slice((directory+'Public/assets/keepstore/').length);
@@ -160,13 +182,15 @@ async function fixture(options={}) {
   const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode'].includes(k))));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
   const screenshot=async name=>{const file=path.join(evidence,name+'.png');await page.locator('#KsLocalAiSearch130').screenshot({path:file,animations:'disabled'});journal.resources.push(file);report.screenshots.push(file);};
   const close=async()=>{await context.close();journal.contextsClosed++;};
-  return {context,page,config,requests,pageErrors,blocked,apiErrors,state,wait,submit,refine,privacy,screenshot,close};
+  return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,state,wait,submit,refine,privacy,screenshot,close};
 }
 async function run() {
   browser=await playwright.chromium.launch({executablePath:chrome,headless:true,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(mediaOnly){await mediaRegressions();report.status='PASS';return;}
   await rev1Regressions();
   if(regressionsOnly){report.status='PASS';return;}
+  await mediaRegressions();
   for(const kind of ['Tech','Food'])for(const width of report.viewports){
     const scenario=(report.viewports.indexOf(width)+(kind==='Food'?2:0))%4;
     const f=await fixture({kind,width,scenario,long:width===360});
@@ -435,6 +459,111 @@ async function rev1Regressions() {
   }
   report.rev1Failures=failures;
   assert.equal(failures.length,0,'REV1 regressions: '+failures.join('; '));
+}
+async function mediaRegressions() {
+  const failures=[];
+  const check=(name,value)=>{if(value)record('REV2 '+name);else failures.push(name);};
+  const product='/Public/assets/images/articoli/', host='https://tenant1.invalid';
+  report.mediaCases=[];report.mediaRejected=[];
+  for(const directory of ['/', '/shop/']){
+    const scoped=directory+product.slice(1), url=host+directory+'search_suggest.aspx?q=SKU120&mode=guided&limit=6';
+    const paths=api.urls(host+directory,directory+'search_suggest.aspx'), brief=briefFrom(url);
+    const positives=[
+      {name:'canonical full',image:product+'product.webp',fallback:'',expected:[scoped+'product.webp'],available:[scoped+'product.webp']},
+      {name:'app scoped',image:scoped+'product.webp',fallback:'',expected:[scoped+'product.webp'],available:[scoped+'product.webp']},
+      {name:'absolute app scoped',image:host+scoped+'product.webp',fallback:'',expected:[scoped+'product.webp'],available:[scoped+'product.webp']},
+      {name:'relative app asset',image:'Public/assets/images/articoli/product.webp',fallback:'',expected:[scoped+'product.webp'],available:[scoped+'product.webp']},
+      {name:'canonical thumbnail',image:product+'_product.webp',fallback:product+'product.webp',expected:[scoped+'_product.webp'],available:[scoped+'_product.webp',scoped+'product.webp']},
+      {name:'fallback only',image:'',fallback:product+'product.webp',expected:[scoped+'product.webp'],available:[scoped+'product.webp']},
+      {name:'thumbnail missing full available',image:product+'_missing.webp',fallback:product+'product.webp',expected:[scoped+'_missing.webp',scoped+'product.webp'],available:[scoped+'product.webp']},
+      {name:'both files missing',image:product+'_missing.webp',fallback:product+'missing.webp',expected:[scoped+'_missing.webp',scoped+'missing.webp'],available:[],placeholder:true},
+      {name:'both fields empty',image:'',fallback:'',expected:[],available:[],placeholder:true},
+      {name:'encoded spaces unicode',image:product+'caff%C3%A8%20blu%20%E6%9D%AF.png',fallback:'',expected:[scoped+'caff%C3%A8%20blu%20%E6%9D%AF.png'],available:[scoped+'caff%C3%A8%20blu%20%E6%9D%AF.png']},
+      {name:'encoded thumbnail',image:product+'_caff%C3%A8%20blu.png',fallback:'',expected:[scoped+'_caff%C3%A8%20blu.png'],available:[scoped+'_caff%C3%A8%20blu.png']},
+      {name:'encoded filename punctuation',image:product+'sconto%2050%25%20%23blu.png',fallback:'',expected:[scoped+'sconto%2050%25%20%23blu.png'],available:[scoped+'sconto%2050%25%20%23blu.png']}
+    ];
+    // Distinct URLs prevent the decoded-image memory cache from hiding requests between cases.
+    positives.forEach((sample,i)=>{
+      const unique=value=>value.replace(/\.(webp|png)$/,'-case'+i+'.$1');
+      sample.image=unique(sample.image);sample.fallback=unique(sample.fallback);
+      sample.expected=sample.expected.map(unique);sample.available=sample.available.map(unique);
+    });
+    const negatives=[
+      'https://external.invalid'+product+'product.webp','//external.invalid'+product+'product.webp',
+      '/other'+product+'product.webp','/shop-other'+product+'product.webp',
+      'https://user:password@tenant1.invalid'+scoped+'product.webp','https://@tenant1.invalid'+scoped+'product.webp',
+      'javascript:alert(1)','data:image/png;base64,AA==','file:///tmp/product.png','blob:'+host+'/image.png',
+      scoped+'product.webp?x=1',scoped+'product.webp?',scoped+'product.webp#x',scoped+'product.webp#',
+      scoped+'../articoli/product.webp',scoped+'./product.webp',scoped+'%2e%2e/articoli/product.webp',
+      scoped+'%2E/product.webp',scoped+'%252e%252e/product.webp',scoped+'sub%2fproduct.webp',
+      scoped+'sub%5cproduct.webp',scoped+'sub%252fproduct.webp',scoped+'%00product.webp',scoped+'%0aproduct.webp',
+      scoped+'sub/../../articoli/product.webp','/other/../'+scoped.slice(1)+'product.webp',
+      scoped+'product..webp',scoped+'product.svg',scoped+'product.aspx',scoped+'product.webp.aspx',
+      scoped+'product.p%6Eg',scoped+'product.png%20',scoped+'product%3astream.png',scoped+'%C0%AFproduct.webp',
+      scoped+'product%GG.webp',scoped+'product.webp/extra.png',product+'sub/product.webp',
+      scoped.replace('/images/','/images-else/')+'product.webp',scoped.replace('/Public/','/%50ublic/')+'product.webp',
+      scoped+'product\\.webp',scoped+'pro\tduct.webp'
+    ];
+    if(directory!=='/')negatives.push('/Public/assets/images/marche/logo.png','/Public/assets/images/product.png',host+product+'product.webp');
+    for(const sample of positives)for(const field of ['image','image_fallback']){
+      // validate is the actual public module entry point and uses the same imageURL for both fields.
+      const value=sample.image||sample.fallback;
+      const p=payload(url,{count:1,mutate:p=>{p.suggestions[0].image='';p.suggestions[0].image_fallback='';p.suggestions[0][field]=value;}});
+      const row=api.validate(p,brief,paths).items[0], actual=field==='image'?row.image:row.fallback;
+      const expected=value?host+(value.startsWith(host)?new URL(value).pathname:value.startsWith(product)?directory+value.slice(1):new URL(value,host+directory).pathname):'';
+      check('module positive '+directory+' '+sample.name+' '+field,actual===expected);
+    }
+    for(const raw of negatives)for(const field of ['image','image_fallback']){
+      const p=payload(url,{count:1,mutate:p=>{p.suggestions[0].image='';p.suggestions[0].image_fallback='';p.suggestions[0][field]=raw;}});
+      const row=api.validate(p,brief,paths).items[0];
+      check('module rejects '+directory+' '+field+' '+raw,(field==='image'?row.image:row.fallback)==='');
+    }
+    for(const width of [390,1365]){
+      const f=await fixture({directory,width,mediaTest:true,count:1});
+      try{
+        for(const sample of positives){
+          f.config.count=1;f.config.mediaAssets=sample.available;
+          f.config.mutate=p=>{p.suggestions[0].image=sample.image;p.suggestions[0].image_fallback=sample.fallback;};
+          f.mediaRequests.length=0;await f.submit();
+          await f.page.locator('.ks-guide-media').first().scrollIntoViewIfNeeded();
+          await f.page.waitForFunction(()=>{
+            const media=document.querySelector('.ks-guide-media'),img=media.querySelector('img');
+            return img?img.complete&&img.naturalWidth>0:media.textContent==='Immagine non disponibile';
+          },undefined,{timeout:6000});
+          const actual=await f.page.locator('.ks-guide-media').first().evaluate(e=>{
+            const img=e.querySelector('img');return {src:img?img.currentSrc:'',naturalWidth:img?img.naturalWidth:0,placeholder:e.textContent==='Immagine non disponibile'};
+          });
+          const requested=f.mediaRequests.map(x=>new URL(x.url).pathname), label=directory+' '+width+' '+sample.name;
+          check('browser decoded image '+label,sample.placeholder?actual.placeholder&&actual.naturalWidth===0:!actual.placeholder&&actual.naturalWidth>0&&actual.src===host+sample.expected.at(-1));
+          check('exact media requests '+label,JSON.stringify(requested)===JSON.stringify(sample.expected)&&f.mediaRequests.every(x=>x.method==='GET'&&new URL(x.url).origin===host&&new URL(x.url).pathname.startsWith(scoped)));
+          report.mediaCases.push({directory,width,name:sample.name,...actual,requested});
+        }
+        // Six rejected rows at a time; DOM rejection also catches images below the lazy-load viewport.
+        for(let start=0;start<negatives.length;start+=6){
+          const batch=negatives.slice(start,start+6);f.config.count=batch.length;f.config.mediaAssets=[];
+          f.config.mutate=p=>p.suggestions.forEach((row,i)=>{row.image=batch[i];row.image_fallback=batch[i];});
+          f.mediaRequests.length=0;await f.submit();
+          await f.page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+          check('hostile media no img/request '+directory+' '+width+' '+start,await f.page.locator('.ks-guide-media img').count()===0&&f.mediaRequests.length===0);
+          report.mediaRejected.push({directory,width,inputs:batch,requests:f.mediaRequests.slice()});
+        }
+        // One focused integration check: existing draft and focus behaviour with decoded images.
+        f.config.count=2;f.config.mediaAssets=[scoped+'product.webp'];
+        f.config.mutate=p=>p.suggestions.forEach(row=>{row.image=product+'product.webp';row.image_fallback='';});
+        await f.submit();await f.refine('massimo 200 euro');
+        const n=await f.page.evaluate(()=>window.__privacy.fetch.length);
+        await f.page.locator('#ksGuideQuery').fill('Bozza con immagini');
+        await f.page.getByRole('button',{name:'Rimuovi Massimo: 200 €',exact:true}).press('Enter');
+        check('draft unchanged in media flow '+directory+' '+width,await f.page.locator('#ksGuideQuery').inputValue()==='Bozza con immagini'&&await f.page.evaluate(()=>window.__privacy.fetch.length)===n);
+        await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+        await f.page.locator('[data-ks-guide-compare-key]').nth(0).check();await f.page.locator('[data-ks-guide-compare-key]').nth(1).check();
+        await f.page.getByRole('button',{name:'Svuota confronto',exact:true}).press('Space');
+        check('focus unchanged in media flow '+directory+' '+width,await f.page.locator('[data-ks-guide-compare-key]').first().evaluate(e=>e===document.activeElement));
+        await f.privacy();
+      }finally{await f.close();}
+    }
+  }
+  report.mediaFailures=failures;assert.equal(failures.length,0,'REV2 media regressions: '+failures.join('; '));
 }
 (async()=>{
   try{await run();console.log('SHOPPING_PROGRESSIVE_ASSERTIONS='+report.assertions+'; BROWSER='+report.browser);}

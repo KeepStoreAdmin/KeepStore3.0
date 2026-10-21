@@ -7,6 +7,35 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### PR #366 REV2 MEDIA — SAPR-F01, 2026-10-21
+
+**A tecnico locale REV2, review differenziale finale pendente sul solo residuo media.** Bozza, focus e repertorio ONSUS della REV1 sono **CHIUSI A** nella [review 5597223920](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/366#pullrequestreview-5597223920), commit `8d32782abfdba3cc672c54ac104c59a33fd6ff33`. Non riaperti, nessuna nuova ricerca ONSUS. Il residuo SAPR-F01 risaliva alla review 5593391408 e non era una regressione REV1.
+
+Stesso branch `task/shopping-assistant-progressive-results-1a`, stessa PR #366 DRAFT: un commit REV2 figlio diretto di `8d32782abfdba3cc672c54ac104c59a33fd6ff33`, push normale. Base/stable `f39958753a017ee3a7dee6141339e93918010399`, main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. Profilo EXCEPTIONAL, Astra/xhigh richiesti; modello/livello effettivi non esposti e non attestabili. SHA finale dal Git e rapporto locale, senza alterare il parent approvato.
+
+Manifest incrementale effettivo: **6 MODIFIED**, nessun file aggiunto/rimosso; cumulativo **16 percorsi invariato**, tre commit lineari:
+
+| Percorso | Modifica REV2 |
+| --- | --- |
+| Default.aspx | Solo cache-buster del modulo guida |
+| Public/assets/keepstore/js/ks-shopping-guide.js | Solo funzione imageURL, raccordo canonico e validazione media |
+| Tools/ShoppingAssistantProgressiveResults.test.js | Modalita selezionabile media, immagine sintetica e asserzioni prima/dopo |
+| docs/KEEPSTORE_START_HERE.md | Stato del residuo e prove riusate |
+| docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md | Questo checkpoint ed evidenze |
+| docs/KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md | Contratto media root/virtual directory |
+
+Esaminati in sola lettura i tre metodi ThemeManager e il controllo file app-relative. Il solo prefisso root-relative canonico `/Public/assets/images/articoli/` viene ricondotto alla base corrente; `/shop/` richiede `/shop/Public/assets/images/articoli/`, mai la root del dominio. URL gia qualificati non sono duplicati. Unico raccordo per immagine e fallback; nomi codificati e thumbnail preservati, controlli su origine/percorso/estensione e rifiuto delle normalizzazioni elusive prima del parser. ThemeManager, backend/resolver, CSS, configurazioni e dipendenze immutati; modulo identico alla REV1 fuori da imageURL, regressioni bozza/focus versionate identiche. Contratto canonico nel [Blueprint Search](KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md#guida-progressiva--contratto-candidato-2026-10-21).
+
+Evidenze separate in `C:\Users\Taikun\AppData\Local\Temp\KeepStoreShoppingProgressive1A\20261021-rev2-media`:
+
+- `baseline/browser-report.json` e `baseline/media-suite.log`: runtime REV1 immutato, SAPR-F01 riprodotto in Chrome: stessa immagine/thumbnail sintetica caricata a root (`naturalWidth=2`), scartata con base `/shop/` (`naturalWidth=0`, nessun GET). **FAIL atteso**, 164 asserzioni negative sui casi media/mapping/rifiuto; non sono 164 vulnerabilita o incidenti operativi.
+- `after/browser-report.json` e `after/media-suite.log`: **373/373 PASS** sul modulo candidato reale, funzioni tramite validate e Chrome **155.0.8059.80**. **48 casi browser** a 390/1365, root e `/shop/`: canonico, gia app-scoped/assoluto/relativo, thumbnail, fallback piena dopo 404, entrambe assenti, spazi/Unicode/punteggiatura codificati. Immagine PNG di due pixel generata in memoria; verificati decodifica (`naturalWidth>0`) e URL/GET effettivi, nessuna richiesta errata alla root o altra applicazione. Trenta gruppi browser di input vietati verificano assenza di img e richieste, oltre ai casi diretti su entrambi i campi.
+- Modalita riproducibile del runner Node esistente: stessi cinque percorsi espliciti di repo, Playwright, Chrome, evidenze e payload server, piu `--rev2-media-only`. Nessun nuovo runner/installazione/servizio; rete tutta intercettata, zero upstream/asset operativo/DB. Un controllo bozza e focus nel flusso con immagini PASS; nessuna ripetizione di tutti i percorsi dell'assistente.
+- **RIUSATI, non rieseguiti:** 616 server e precompile .NET Framework4.8 354 input, hash sorgenti/harness/wrapper e prerequisiti invariati; Default.aspx differisce solo nel cache-buster. Le **655** prove REV1 restano evidenza dei comportamenti non influenzati, non copertura del precedente caso media mancante. Storico 439/453/655 e repertorio ONSUS preservati, nessun nuovo rendering ONSUS o collaudo server.
+- Primo tentativo fixture in `before/` interrotto per attesa di scroll sul nodo img rimosso al 404; casi poi isolati con URL distinti per evitare riuso della cache immagine. Il tentativo non e prova del fix: baseline valida e run finale sono nelle directory indicate sopra. Journal/finally verificati per tutti e tre i run: **9 contesti e 3 browser chiusi**; soli rapporti autorizzati conservati.
+
+Sintassi JS, guard incrementale e diff-check PASS; staging finale vuoto, web.config ignorato con hash/ACL/attributi/date, quattro cancellazioni tracked e 55 untracked/asset preservati. CI **NON CONFIGURATA**, nessuna deroga ereditata o automatismo deploy autorizzato. DB/login reali/IIS/produzione **NON ESEGUITI**; nessuna modifica a configurazioni, merge o deploy. **Consegna server SOSPESA.** Prossimo passo unico: review differenziale finale di SAPR-F01 sul commit REV2; nessun task parallelo o successivo avviato. Le sezioni seguenti conservano gli stati storici; prevale questo checkpoint.
+
 ### PR #366 REV1 — bozza, focus e riferimenti, 2026-10-21
 
 Mandato PO circoscritto su `task/shopping-assistant-progressive-results-1a`: un nuovo commit figlio di `ed359cd68bee07b73c762ab8f4f267701073fa44`, push normale e aggiornamento della stessa [PR #366 DRAFT](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/366). Base/stable `f39958753a017ee3a7dee6141339e93918010399`, main `976e99f17cabc8a5c6a8715463444edfeaadcd91`, verificati e invariati. Profilo EXCEPTIONAL, Astra/xhigh richiesti; modello/livello effettivi non esposti e non attestabili. Nessuna deroga CI ereditata, merge o consegna server.

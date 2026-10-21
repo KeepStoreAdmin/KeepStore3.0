@@ -85,11 +85,25 @@
     if (!raw) return '';
     text(raw, 2048, true);
     try {
-      var parsed = new URL(raw, paths.base);
+      // Check the original spelling before URL removes dot segments or controls.
+      if (raw !== raw.trim() || /[\u0000-\u001f\u007f\\?#]/.test(raw) || /%(?:2f|5c)/i.test(raw) ||
+          /^(?:[a-z][a-z0-9+.-]*:)?\/\/[^/]*@/i.test(raw) ||
+          (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^https?:\/\/[^/]/i.test(raw))) return '';
+      var decoded = decodeURIComponent(raw);
+      if (/[\u0000-\u001f\u007f\\]/.test(decoded) || decoded.indexOf('..') >= 0 ||
+          /(?:^|\/)\.(?:\/|$)/.test(decoded) || /%[0-9a-f]{2}/i.test(decoded)) return '';
+      // ThemeManager emits this root-relative product prefix even under a virtual directory.
+      // Only that canonical form is rebased; already scoped URLs keep their original path.
+      var productRoot = '/Public/assets/images/articoli/';
+      var source = raw.indexOf(productRoot) === 0 ? paths.base.pathname + raw.slice(1) : raw;
+      var parsed = new URL(source, paths.base);
       // Unrecognised/external media use a neutral placeholder, never a remote probe.
       if (parsed.origin !== paths.base.origin || parsed.username || parsed.password || parsed.hash || parsed.search ||
           parsed.pathname.toLowerCase().indexOf((paths.base.pathname + 'Public/assets/images/').toLowerCase()) !== 0 ||
           !/\.(?:png|jpe?g|webp|gif)$/i.test(parsed.pathname)) return '';
+      var localPath = parsed.pathname.slice(paths.base.pathname.length), segments = decodeURIComponent(localPath).split('/');
+      if (segments.some(function (part) { return !part || /[<>:"|?*\\]/.test(part) || /[ .]$/.test(part); }) ||
+          (localPath.toLowerCase().indexOf(productRoot.slice(1).toLowerCase()) === 0 && segments.length !== 5)) return '';
       return parsed.href;
     } catch (_) { return ''; }
   }
