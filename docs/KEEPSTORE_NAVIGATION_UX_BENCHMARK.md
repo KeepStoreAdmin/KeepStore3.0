@@ -1,5 +1,47 @@
 # KeepStore Navigation UX Benchmark
 
+## Repertorio aggiornato 2026-10-21 — PR #366 REV1
+
+Questo aggiornamento documenta fonti e limiti del confronto per la guida acquisti. Non riapre le slice storiche e non modifica le priorita della roadmap. La precedente ricerca locale senza esito resta valida per i soli percorsi allora cercati; il mirror del progetto seguente e ora verificato direttamente.
+
+### Onsus HTML: provenienza e livelli di verifica
+
+Riferimento ufficiale: **Onsus - Electronics E-commerce HTML Template**, autore **themesflat**, item **57331031**. Catena indicata e verificata nella review indipendente del 2026-10-21: [scheda ThemeForest HTML](https://themeforest.net/item/onsus-electronics-ecommerce-html-template/57331031) → [Live Preview](https://preview.themeforest.net/item/onsus-electronics-ecommerce-html-template/full_screen_preview/57331031) → [demo collegata](https://onsus.vercel.app/). In questa REV1 consultate nuovamente la scheda (autore, titolo e link Live Preview) e l'estrazione pubblica della demo; il fetch diretto del wrapper preview non e riuscito. Non viene attestata una nuova navigazione interattiva dell'intera catena.
+
+ZIP verificato in sola lettura: `C:\Users\Taikun\.codex\.chatgpt-projects\g-p-691426ea006c8191b8316258cee767f5\sources\themeforest-4xrKtJ8L-onsus-electronics-ecommerce-html-template.zip`.
+SHA-256: `98B2BFDCCB98A873B732B43AC2FA80076E5C00C6FEDE3FB74BD7D971F9BE5F9A`.
+Archivio aperto in memoria; nessuna estrazione, modifica a sources o copia in repository/webroot.
+
+| Livello | Verifica del 2026-10-21 | Limite |
+| --- | --- | --- |
+| Disponibilita ZIP | File presente, hash coincidente con il mandato, 648 entry | Non prova versione commerciale o licenza posseduta |
+| Sorgente HOME | `onsus-package/onsus/index.html`: form ricerca con categorie, offcanvas mobile, card con immagine/informazioni/azioni | Struttura HTML letta, non geometria misurata |
+| Sorgente catalogo | `onsus-package/onsus/shop-default.html`: categorie, filtri espliciti, rimozione filtri e card prodotto | Non eseguito il motore filtri demo |
+| Sorgente confronto | `onsus-package/onsus/compare.html`: tabella per attributi e prodotti, rimozione della colonna tramite icona | Non prova accessibilita: KeepStore conserva button nativi, intestazioni semantiche e focus stabile |
+| Consultazione web | Scheda ufficiale e contenuto pubblico demo disponibili; wrapper preview non acquisito nuovamente | Estratti testuali, nessun login, acquisto o test interattivo |
+| Rendering | Nessun rendering nuovo del package/demo Onsus in REV1 | Il browser offline esegue la guida KeepStore; non e un audit visuale Onsus |
+
+`onsus-package/documentation/link-document.txt` contiene `https://vithemes.com/doc-advitex-html/`: destinazione diversa, **non documentazione Onsus verificata**. Non si deducono versione/licenza del package dai metadati pubblici del marketplace.
+
+Deduzione progettuale per KeepStore: mantenere ricerca, preferenze esplicite, card leggibili e confronto per attributi; usare solo dati commerciali autorevoli. La REV1 preserva la bozza e il percorso da tastiera durante queste azioni. Nessun dato demo, branding, JS/CSS o logica commerciale del template viene importato.
+
+### Ecommerce: repertorio pubblico, senza collaudo interattivo
+
+URL/contenuti gia verificati dalla review indipendente del 2026-10-21; estrazioni pubbliche riconsultate in REV1 nella stessa data. Le osservazioni sotto riguardano testo e destinazioni leggibili, non layout mobile, tap, focus, checkout o risultati commerciali misurati.
+
+| Fonte primaria | Osservazione nell'estrazione | Uso nel confronto KeepStore |
+| --- | --- | --- |
+| [Bytecno](https://www.bytecno.it/) | Ricerca prodotto, confronto e gerarchia di categorie | Coesistenza di ricerca, esplorazione e confronto |
+| [Prezzoforte](https://www.prezzoforte.it/) | Ricerca, famiglie e accessi all'intera famiglia | Mantenere destinazioni ampie esplicite durante l'affinamento |
+| [Stay On](https://www.e-stayon.com/) | Ricerca, categorie e collegamento al confronto | Continuita fra selezione e confronto; nessuna equivalenza funzionale presunta |
+| [IKEA Italia](https://www.ikea.com/it/it/) | Famiglie merceologiche e collegamenti per ambienti/prodotti | Orientamento con etichette comprensibili; non inventare un secondo albero KeepStore |
+| [Decathlon Italia](https://www.decathlon.it/) | Ricerca, prodotti e percorsi per sport/attrezzature | Accesso al prodotto da un catalogo di altra merceologia |
+| [MediaWorld](https://www.mediaworld.it/) | Ricerca, accesso alle categorie e offerte | Coordinare ricerca/catalogo/promozioni; la label AI non prova il funzionamento di un assistente |
+
+**Trend, separato dai retailer:** [Mollie, Ecommerce trends to look out for in 2026](https://www.mollie.com/growth/biggest-ecommerce-trends), URL preciso e pagina pubblica verificati. Riferimento editoriale per spunti futuri, non evidenza di conversione KeepStore, requisito implementato o autorizzazione a provider AI/pagamenti. Nessun collaudo interattivo dei retailer o della loro ricerca e stato svolto in questa REV1.
+
+Le note 2026-10-15 e 2026-10-09 sotto sono storico con i rispettivi limiti; questa sezione prevale soltanto per disponibilita del package e repertorio aggiornato.
+
 ## Nota prevalente 2026-10-15 — benchmark, non roadmap attiva
 
 Classificazione BENCHMARK. Le osservazioni del 2026-10-09 e le proposte sotto restano datate: stati "NON AVVIATO" e ordine delle tre slice non descrivono la release corrente. Le slice risultano integrate dalle PR #325/#326/#327 nella storia del repository; per task/gate consultare Masterplan/Git, per nuovi requisiti e priorita [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md). Il [Design Gate canonico](../AGENTS.md#storefront-ux-design-gate--obbligatorio) resta l'unica regola di metodo. Non riaprire i task a partire da questo benchmark.

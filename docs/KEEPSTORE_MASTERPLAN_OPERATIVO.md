@@ -7,6 +7,37 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+### PR #366 REV1 — bozza, focus e riferimenti, 2026-10-21
+
+Mandato PO circoscritto su `task/shopping-assistant-progressive-results-1a`: un nuovo commit figlio di `ed359cd68bee07b73c762ab8f4f267701073fa44`, push normale e aggiornamento della stessa [PR #366 DRAFT](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/366). Base/stable `f39958753a017ee3a7dee6141339e93918010399`, main `976e99f17cabc8a5c6a8715463444edfeaadcd91`, verificati e invariati. Profilo EXCEPTIONAL, Astra/xhigh richiesti; modello/livello effettivi non esposti e non attestabili. Nessuna deroga CI ereditata, merge o consegna server.
+
+**A tecnico locale REV1; review indipendente ancora pendente.** Il giudizio B sul candidato iniziale riguardava due P2 UX: chip che cancellavano la bozza e pulsanti dinamici che perdevano il focus. Riprodotti prima della modifica al runtime; corretti con guardia condivisa per prodotto/dettaglio/reparto e destinazioni di focus stabili durante l'azione. Anche la stessa frase ridistribuita fra due campi deve essere confermata. Nessuna richiesta, modifica filtri o history quando il controllo blocca l'azione; reset/undo e rimozione intenzionale della ricerca confermata conservati. Confronto, disponibilita, Salta, recupero dal vuoto, retry e nuova ricerca mantengono la continuita da tastiera senza spostamenti al ritorno asincrono. Contratto nel [Blueprint Search](KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md#guida-progressiva--contratto-candidato-2026-10-21).
+
+Manifest REV1 effettivo, **sette MODIFIED**, nessuna aggiunta/cancellazione di file:
+
+| Percorso | Modifica |
+| --- | --- |
+| Default.aspx | Solo cache-buster di ks-shopping-guide.js |
+| Public/assets/keepstore/js/ks-shopping-guide.js | Guardia bozza comune e focus sincrono delle azioni dinamiche |
+| Tools/ShoppingAssistantProgressiveResults.test.js | Regressioni prima/dopo e provenienza del rapporto con hash dei sorgenti |
+| docs/KEEPSTORE_NAVIGATION_UX_BENCHMARK.md | Repertorio canonico Onsus/ecommerce, fonti e limiti |
+| docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md | Questo checkpoint e provenienza delle prove |
+| docs/KEEPSTORE_AI_ASSISTED_SEARCH_BLUEPRINT.md | Contratto bozza/focus e rimando al repertorio |
+| docs/KEEPSTORE_START_HERE.md | Stato corrente e unico prossimo gate |
+
+PR cumulativa: **16 percorsi, 13 MODIFIED e 3 ADDED**, due commit lineari dalla base. Backend commerciale/resolver, CSS, dipendenze, configurazioni e wrapper PowerShell invariati in REV1. Configurazione ignorata, quattro cancellazioni tracked e 55 untracked preesistenti preservati; staging finale vuoto. SHA del commit finale e metadati verificati nel rapporto locale/Git reale.
+
+**Prove e provenienza.** Directory separata `C:\Users\Taikun\AppData\Local\Temp\KeepStoreShoppingProgressive1A\20261021-rev1`:
+
+- `before/browser-report.json` e `before/client-suite.log`: regressioni aggiunte eseguite sul runtime ancora identico a `ed359cd6`, **FAIL atteso**, 76 asserzioni negative sui due difetti e percorsi correlati, non 76 finding distinti. Riproduzione solo regressioni tramite argomento `--rev1-regressions-only`; nessuna aspettativa indebolita per il candidato corretto.
+- `after/browser-report.json` e `after/client-suite.log`: stessa logica di regressione e suite client completa, **655/655 PASS**, Chrome reale, Tech/Food, viewport 360/390/430/768/1365, root e `/shop/`, Enter/Space e nessun submit WebForms. Bozze separate/combinate, conferma esplicita, undo/history8/reset/chip, focus immediato e utente spostato altrove prima della risposta, race/errori/confronto/fallback. Rete tutta intercettata, zero upstream operativo. Hash dei tre sorgenti client e payload riusato nel rapporto; timestamp distinti, browser e tutti i contesti chiusi.
+- **RIUSATI, non rieseguiti:** `20261021/server-tests.log` **616/616 PASS**, relativi quattro payload commerciali sintetici, e `20261021/precompile.log` **PASS Framework4.8, 354 input**. Hash delle sorgenti server/harness/wrapper corrispondenti al rapporto precedente; App_Code, Bin, code-behind, template e runner precompile invariati; differenza Default.aspx limitata al cache-buster. JS reale ricollaudato nella suite client.
+- **Storico immutato:** `20261021/suite.log` **439** e un'esecuzione intermedia del wrapper; il successivo `20261021/browser-report.json` **453** e la verifica finale del candidato iniziale. Nessuno dei due e il rapporto REV1 da 655. Le directory e i log precedenti non sono stati sovrascritti.
+
+ZIP Onsus presente nel mirror autorizzato, SHA-256 coincidente, tre HTML letti in memoria senza estrazione/copia. Riferimenti ufficiali, sei retailer e trend Mollie sono raccolti una sola volta nel [repertorio aggiornato](KEEPSTORE_NAVIGATION_UX_BENCHMARK.md#repertorio-aggiornato-2026-10-21--pr-366-rev1), con separazione fra disponibilita, ispezione sorgente, consultazione pubblica e rendering. Nessun nuovo rendering Onsus o collaudo interattivo retailer; la precedente ricerca nei percorsi locali rimane storico.
+
+CI **NON CONFIGURATA**, nessuna deroga automatica; MySQL, login reali, IIS e produzione **NON ESEGUITI**. Nessun DB, configurazione, servizio AI, server, merge o deploy; **consegna server SOSPESA**, nessun file da copiare. Unico prossimo passo: review indipendente del commit REV1 nella PR esistente. Nessun task successivo avviato. Il checkpoint iniziale sotto resta storico delle prove e del manifest precedenti; questa sezione prevale per lo stato corrente.
+
 ### SHOPPING-ASSISTANT-PROGRESSIVE-RESULTS-1A — candidato source, 2026-10-21
 
 Mandato PO ONE-SHOT + FEATURE-BATCH + LOCAL-FIRST, **implementazione, test sintetici, un commit, push e PR DRAFT autorizzati**. Profilo EXCEPTIONAL, Astra/xhigh richiesti dal PO; l'ambiente non espone modello/livello effettivi, quindi nessuna selezione inventata. Base esatta `f39958753a017ee3a7dee6141339e93918010399`, branch `task/shopping-assistant-progressive-results-1a`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariati. #365 **CHIUSA A / SOURCE INTEGRATED**: review A [5592875346](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#pullrequestreview-5592875346), autorizzazione [6303795610](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#issuecomment-6303795610), closeout [6303869293](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/365#issuecomment-6303869293). Le sezioni #365/#364 seguenti conservano le evidenze storiche dei candidati; prevale questa chiusura per il loro stato Git.

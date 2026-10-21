@@ -3,17 +3,23 @@
 'use strict';
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), cp = require('node:child_process');
 const [root, playwrightModule, chrome, evidence, serverPath] = process.argv.slice(2);
+const regressionsOnly = process.argv.includes('--rev1-regressions-only');
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
 const api = require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
 const server = JSON.parse(fs.readFileSync(serverPath, 'utf8'));
 const playwright = require(playwrightModule);
 const report = { assertions: 0, checks: [], viewports: [360,390,430,768,1365], renderMs: [], screenshots: [],
+  suite: regressionsOnly ? 'REV1 regression reproduction' : 'REV1 full client suite', startedUtc: new Date().toISOString(),
   serverFixtures: server.map(x => ({scenario:x.scenario, expectedList:x.expectedList})), network: 'intercepted; no upstream continuation',
   limitations: ['synthetic HTML rendering, no ASP.NET request execution', 'no MySQL/IIS/login/production/TTFB/INP certification'] };
 const journal = { resources: [], browserClosed: false, contextsClosed: 0 };
 const record = (name, value = true) => { assert.ok(value, name); report.assertions++; report.checks.push(name); };
 const clone = value => JSON.parse(JSON.stringify(value));
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const sha256 = data => require('node:crypto').createHash('sha256').update(data).digest('hex');
+report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.js','Tools/ShoppingAssistantProgressiveResults.test.js']
+  .map(file=>({file,sha256:sha256(fs.readFileSync(path.join(root,file)))}));
+report.serverPayloadSha256 = sha256(fs.readFileSync(serverPath));
 function artifact(name, data) { const file=path.join(evidence,name); fs.writeFileSync(file,data); if(!journal.resources.includes(file))journal.resources.push(file); return file; }
 function briefFrom(url) {
   const p = new URL(url).searchParams;
@@ -159,6 +165,8 @@ async function fixture(options={}) {
 async function run() {
   browser=await playwright.chromium.launch({executablePath:chrome,headless:true,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  await rev1Regressions();
+  if(regressionsOnly){report.status='PASS';return;}
   for(const kind of ['Tech','Food'])for(const width of report.viewports){
     const scenario=(report.viewports.indexOf(width)+(kind==='Food'?2:0))%4;
     const f=await fixture({kind,width,scenario,long:width===360});
@@ -343,8 +351,93 @@ async function run() {
   report.bytes.push({file:'Public/assets/keepstore/js/ks-shopping-guide.js',base:0,candidate:Buffer.byteLength(moduleSource.replace(/\r\n/g,'\n'))});
   report.maximumCards=6;report.storage='zero';report.status='PASS';
 }
+async function rev1Regressions() {
+  const failures=[];
+  const check=(name,value)=>{if(value)record('REV1 '+name);else failures.push(name);};
+  const focused=(f,selector)=>f.page.locator(selector).evaluate(e=>e===document.activeElement);
+  const fetchCount=f=>f.page.evaluate(()=>window.__privacy.fetch.length);
+  const activate=async(f,locator,key)=>{await locator.focus();await f.page.keyboard.press(key);};
+  // Every case starts with a real confirmed brief; no state injection or mocked init.
+  for(const directory of ['/', '/shop/'])for(const draft of ['product','detail','department','combined','split']){
+    const f=await fixture({directory});
+    try{
+      await f.submit('SSD originale');await f.refine('massimo 200 euro');
+      const product=draft==='split'?'SSD':draft==='product'||draft==='combined'?'NUOVO PRODOTTO':'SSD originale';
+      const detail=draft==='split'?'originale':draft==='detail'||draft==='combined'?'nuovo dettaglio':'';
+      const sector=draft==='department'||draft==='combined'?7:0;
+      if(product!=='SSD originale')await f.page.locator('#ksGuideQuery').fill(product);
+      if(detail)await f.page.locator('#ksGuideDetail').fill(detail);
+      if(sector)await f.page.locator('[data-ks-guide-sector="7"]').click();
+      const n=await fetchCount(f), label=directory+' '+draft;
+      await activate(f,f.page.getByRole('button',{name:'Rimuovi Massimo: 200 €',exact:true}),draft==='detail'?'Space':'Enter');
+      check('draft fields retained '+label,await f.page.locator('#ksGuideQuery').inputValue()===product&&await f.page.locator('#ksGuideDetail').inputValue()===detail);
+      check('draft department retained '+label,await f.page.locator('[data-ks-guide-sector="'+sector+'"]').getAttribute('aria-pressed')==='true');
+      check('draft removal no implicit fetch '+label,await fetchCount(f)===n);
+      check('draft budget unchanged '+label,await f.page.getByRole('button',{name:'Rimuovi Massimo: 200 €',exact:true}).count()===1);
+      check('draft confirmation explained '+label,(await f.page.locator('[data-ks-guide-status]').innerText()).includes('Mostra i prodotti'));
+      // The identical guard must also cover quick commands, including a split product/detail
+      // whose concatenation is unchanged. It is still an unconfirmed form edit.
+      await f.page.locator('[data-ks-guide-command="solo disponibili"]').click();
+      check('command respects same draft guard '+label,await fetchCount(f)===n&&await f.page.locator('#ksGuideDetail').inputValue()===detail);
+      if(await fetchCount(f)===n){
+        await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+        const applied=briefFrom(f.requests.at(-1));
+        check('explicit draft confirmation '+label,applied.q===[product,detail].filter(Boolean).join(' ')&&applied.st===sector&&applied.pmax==='200'&&!applied.disponibile);
+        await f.page.locator('[data-ks-guide-undo]').click();await f.wait('results');
+        const previous=briefFrom(f.requests.at(-1));
+        check('blocked action adds no history '+label,previous.q==='SSD originale'&&previous.st===0&&previous.pmax===(draft==='split'?'0':'200'));
+      }
+      await f.privacy();
+    }finally{await f.close();}
+  }
+  for(const directory of ['/', '/shop/'])for(const key of ['Enter','Space']){
+    const f=await fixture({directory});
+    try{
+      const label=directory+' '+key;
+      await f.submit();
+      await f.page.locator('[data-ks-guide-compare-key]').nth(0).check();await f.page.locator('[data-ks-guide-compare-key]').nth(1).check();
+      const n=await fetchCount(f);
+      await activate(f,f.page.getByRole('button',{name:'Svuota confronto',exact:true}),key);
+      check('clear comparison focus '+label,await focused(f,'[data-ks-guide-compare-key="120:42"]'));
+      check('clear comparison local only '+label,await f.page.locator('[data-ks-guide-compare-key]:checked').count()===0&&await f.page.locator('.ks-guide-compare-item').count()===0&&await fetchCount(f)===n);
+      await activate(f,f.page.getByRole('button',{name:'Salta',exact:true}),key);
+      check('skip stable focus '+label,await focused(f,'#ksGuideCommand'));
+      check('skip no request '+label,await fetchCount(f)===n&&await f.page.locator('.ks-guide-question').count()===0);
+      await f.refine('massimo 200 euro');
+      await f.page.locator('[data-ks-guide-sector="7"]').click();await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+      check('availability question selected '+label,(await f.page.locator('.ks-guide-question').innerText()).includes('prodotti disponibili'));
+      f.config.delay=250;
+      await activate(f,f.page.getByRole('button',{name:'Scegli questa preferenza',exact:true}),key);
+      check('availability stable focus '+label,await focused(f,'#ksGuideCommand'));
+      await f.page.locator('#ksGuideQuery').focus();await f.wait('results');
+      check('availability response respects moved focus '+label,await focused(f,'#ksGuideQuery')&&briefFrom(f.requests.at(-1)).disponibile);
+      f.config.delay=0;f.config.empty=true;
+      await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('empty');
+      f.config.empty=false;f.config.delay=250;
+      await activate(f,f.page.getByRole('button',{name:'Applica questa modifica',exact:true}),key);
+      check('empty recovery stable focus '+label,await focused(f,'[data-ks-guide-prepare]'));
+      await f.page.locator('#ksGuideQuery').focus();await f.wait('results');
+      check('empty response respects moved focus '+label,await focused(f,'#ksGuideQuery')&&!briefFrom(f.requests.at(-1)).disponibile);
+      await f.page.locator('#ksGuideCommand').fill('Nuova ricerca esplicita');await f.page.locator('[data-ks-guide-apply]').click();
+      await activate(f,f.page.locator('[data-ks-guide-new-query]'),key);
+      check('new query stable focus '+label,await focused(f,'[data-ks-guide-prepare]'));
+      await f.page.locator('#ksGuideQuery').focus();await f.wait('results');
+      check('new query response respects moved focus '+label,await focused(f,'#ksGuideQuery')&&briefFrom(f.requests.at(-1)).q==='Nuova ricerca esplicita');
+      f.config.delay=0;f.config.status=503;
+      await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('error');
+      f.config.status=0;f.config.delay=250;
+      await activate(f,f.page.getByRole('button',{name:'Riprova',exact:true}),key);
+      check('retry stable focus '+label,await focused(f,'[data-ks-guide-prepare]'));
+      await f.page.locator('#ksGuideQuery').focus();await f.wait('results');
+      check('retry response respects moved focus '+label,await focused(f,'#ksGuideQuery'));
+      await f.privacy();
+    }finally{await f.close();}
+  }
+  report.rev1Failures=failures;
+  assert.equal(failures.length,0,'REV1 regressions: '+failures.join('; '));
+}
 (async()=>{
   try{await run();console.log('SHOPPING_PROGRESSIVE_ASSERTIONS='+report.assertions+'; BROWSER='+report.browser);}
   catch(error){report.status='FAIL';report.failure={name:error.name,message:error.message,stack:error.stack};console.error('SHOPPING_PROGRESSIVE_FAILED='+error.message);process.exitCode=1;}
-  finally{if(browser){await browser.close();journal.browserClosed=true;}artifact('browser-report.json',JSON.stringify(report,null,2));artifact('resource-journal.json',JSON.stringify(journal,null,2));}
+  finally{if(browser){await browser.close();journal.browserClosed=true;}report.completedUtc=new Date().toISOString();artifact('browser-report.json',JSON.stringify(report,null,2));artifact('resource-journal.json',JSON.stringify(journal,null,2));}
 })();

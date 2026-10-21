@@ -196,6 +196,13 @@
       input.value = b.q; detail.value = ''; state.draftSector = b.st;
       choices.forEach(function (choice) { choice.setAttribute('aria-pressed', Number(choice.getAttribute('data-ks-guide-sector')) === b.st ? 'true' : 'false'); });
     }
+    function canRefineConfirmed() {
+      // syncFields stores the confirmed query in the product field and clears detail.
+      // Even redistributing the same words between those fields is an unconfirmed edit.
+      if (!state.confirmed || (clean(input.value) === state.confirmed.q && !clean(detail.value) && state.draftSector === state.confirmed.st)) return true;
+      announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla.');
+      return false;
+    }
     function summaryView() {
       var b = state.confirmed;
       summary.hidden = !b || !b.q; idle.hidden = !summary.hidden;
@@ -210,11 +217,12 @@
       entries.forEach(function (entry) {
         if (b[entry[0]] === blank()[entry[0]]) { chips.appendChild(node('span', entry[1], 'ks-guide-chip ks-guide-chip-default')); return; }
         var chip = button(entry[1] + ' ×', function () {
+          if (!canRefineConfirmed()) return;
           var next = copy(state.confirmed); next[entry[0]] = blank()[entry[0]];
           if (entry[0] === 'pmax') next.pmin = '0';
+          if (!next.q) input.focus(); else prepare.focus();
           accept(next, true);
           announce('Preferenza rimossa: ' + entry[1] + (next.q ? '. Caricamento della selezione.' : '. Indica il prodotto da cercare.'));
-          if (!next.q) input.focus(); else prepare.focus();
         }, 'ks-guide-chip');
         chip.setAttribute('aria-label', 'Rimuovi ' + entry[1]); chips.appendChild(chip);
       });
@@ -254,10 +262,7 @@
       if (parsed.kind === 'ricomincia') { resetGuide(); return; }
       if (parsed.kind === 'annulla') { undoGuide(); return; }
       if (!state.confirmed || !state.confirmed.q) { announce('Prima indica il prodotto da cercare.'); return; }
-      // Unsubmitted product/department edits must never be silently discarded by a refinement.
-      if (clean(input.value + ' ' + detail.value) !== state.confirmed.q || state.draftSector !== state.confirmed.st) {
-        announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla.'); return;
-      }
+      if (!canRefineConfirmed()) return;
       state.unknown = ''; newQuery.hidden = true;
       if (parsed.kind === 'patch') { accept(Object.assign(copy(state.confirmed), parsed.patch), true); return; }
       invalidate('editing');
@@ -327,7 +332,9 @@
       head.appendChild(titles); table.append(head, data); grid.appendChild(table);
       comparison.appendChild(grid);
       comparison.appendChild(button('Svuota confronto', function () {
+        (find('[data-ks-guide-compare-key]') || prepare).focus();
         state.selected = []; root.querySelectorAll('[data-ks-guide-compare-key]').forEach(function (check) { check.checked = false; }); renderCompare();
+        announce('Confronto svuotato. Puoi selezionare altri prodotti.');
       }));
       announce('Confronto aggiornato: ' + items.length + ' prodotti.');
     }
@@ -335,9 +342,9 @@
       var b = state.confirmed, question = node('div', undefined, 'ks-guide-question'), message, action;
       if (b.pmax === '0') { message = 'Vuoi indicare un prezzo massimo?'; action = function () { command.value = 'massimo '; command.focus(); }; }
       else if (!b.st && departments.size > 1) { message = 'Vuoi scegliere un reparto?'; action = function () { var choice = choices.find(function (x) { return !x.disabled && Number(x.getAttribute('data-ks-guide-sector')) > 0; }); if (choice) choice.focus(); }; }
-      else if (!b.disponibile) { message = 'Vuoi limitarti ai prodotti disponibili?'; action = function () { runCommand('solo disponibili'); }; }
+      else if (!b.disponibile) { message = 'Vuoi limitarti ai prodotti disponibili?'; action = function () { command.focus(); runCommand('solo disponibili'); }; }
       else return;
-      question.append(node('p', message), button('Scegli questa preferenza', action), button('Salta', function () { question.remove(); }));
+      question.append(node('p', message), button('Scegli questa preferenza', action), button('Salta', function () { command.focus(); question.remove(); }));
       container.appendChild(question);
     }
     function renderResult() {
@@ -355,7 +362,10 @@
         else if (b.pmax !== '0') { patch = { pmax: '0' }; message = 'Rimuovi solo il prezzo massimo; gli altri criteri restano uguali.'; }
         else if (b.st) { patch = { st: 0 }; message = 'Cerca in tutti i reparti; gli altri criteri restano uguali.'; }
         if (patch) {
-          recovery.append(node('p', message), button('Applica questa modifica', function () { accept(Object.assign(copy(b), patch), true); }));
+          recovery.append(node('p', message), button('Applica questa modifica', function () {
+            if (!canRefineConfirmed()) return;
+            prepare.focus(); accept(Object.assign(copy(b), patch), true);
+          }));
         } else recovery.appendChild(button('Modifica le parole della ricerca', function () { input.focus(); }));
       }
       results.appendChild(link('Continua nel catalogo con queste preferenze', data.catalog));
@@ -363,7 +373,10 @@
     function recover(message, invalid) {
       invalidate(invalid ? 'context-invalid' : 'error'); announce(message);
       if (state.confirmed && state.confirmed.q) {
-        recovery.appendChild(button(invalid ? 'Aggiorna la selezione' : 'Riprova', function () { accept(copy(state.confirmed), false); }));
+        recovery.appendChild(button(invalid ? 'Aggiorna la selezione' : 'Riprova', function () {
+          if (!canRefineConfirmed()) return;
+          prepare.focus(); accept(copy(state.confirmed), false);
+        }));
         recovery.appendChild(link('Continua nel catalogo', catalogURL(state.confirmed, paths).href, 'ks-guide-catalog-fallback'));
       }
     }
@@ -422,7 +435,8 @@
       root.querySelectorAll('[data-ks-guide-command]').forEach(function (quick) { quick.addEventListener('click', function () { runCommand(quick.getAttribute('data-ks-guide-command')); }); });
       newQuery.addEventListener('click', function () {
         if (!state.unknown || state.unknown.length < 2) return;
-        var b = blank(); b.q = state.unknown; accept(b, true);
+        if (!canRefineConfirmed()) return;
+        var b = blank(); b.q = state.unknown; prepare.focus(); accept(b, true);
       });
       [input, detail, command].forEach(function (field) {
         field.addEventListener('input', function () {
