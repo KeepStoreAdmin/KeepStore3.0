@@ -1,11 +1,33 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-21
+Aggiornato: 2026-10-22
 
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
 ## Checkpoint operativo corrente
+
+### HOME-SALES-PUBLIC-CLAIMS-GUARD-1A — 2026-10-22
+
+Mandato KS-A02, DEEP / High richiesto (valori effettivi non attestabili), LOCAL-FIRST / SOURCE ONLY. Base stable `f225d78d6e5ae94588910a60c55a36b8d94fc5f6`, branch `task/home-sales-public-claims-guard-1a`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` protetti. **A tecnico locale / consegna con un commit, push del solo task branch e PR DRAFT per review indipendente**. Nessun merge. **CONSEGNA SERVER SOSPESA**: nessuna lista pronta per upload, ZIP, IIS, DB o deploy.
+
+**Closeout prevalente #370:** CHIUSA A / SOURCE INTEGRATED mediante FF diretto `3566479c... -> f225d78d...`, [review 5605909680](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/370#pullrequestreview-5605909680), [closeout 6326537921](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/370#issuecomment-6326537921). Fetch e refs locali/origin verificati prima del batch, staging iniziale vuoto. Titolo neutro integrato e prove 104/90 della #370 acquisiti; la sezione seguente conserva il mandato storico.
+
+**Audit concluso B / decisione PO:** `HOME-SALES-METRIC-SCOPE-AUDIT-1A` ha ricostruito CURRENT senza accessi operativi o mutazioni. Le subquery sommano per articolo senza scope esplicito azienda/variante; il rapporto venduti/(venduti+giacenza attuale) non certifica vendite annuali. Il codice ordine espone azienda e TCId, ma non attesta schema/cardinalita fisiche, varianti storiche o semantica di stati/resi/origine/unita/periodo. `HOME-SALES-METRIC-SCOPE-F01` resta **APERTO / MEDIUM**, SQL TARGET **BLOCCATO**; contaminazione reale non dimostrata. Servono decisione commerciale PO e attestazioni DB autorizzate; nessuna correzione SQL o equivalenza NULL/0/-1 introdotta.
+
+**Implementazione:** solo `RenderDealCard` e `BuildQuickViewAttributes`. Rimossi intestazione Vendite annuali, Venduti, percentuale, barra e relativi ARIA; eliminati integralmente il wrapper statistiche e il conteggio grezzo di giacenza contenuto in quel blocco. La disponibilita continua a provenire da `RenderAvailability`/helper autorevole. Footer emesso solo con countdown non vuoto; slot preesistenti di allineamento prezzi/disponibilita/risparmio invariati. I due metadati `data-ks-sold`/`data-ks-progress`, senza consumatori nel JS versionato, non vengono piu esportati; tutti gli altri attributi sono identici. Il JS Quick View mostra gia marca/scheda prodotto, senza leggere questi numeri; master e JS invariati, nessuna metrica sostitutiva.
+
+Manifest esclusivo **5 file, 1 ADDED / 4 MODIFIED**: `Default.aspx.vb`, nuovo `Tools/Test-HomeSalesPublicClaims.ps1`, START_HERE, PRODUCT_ROADMAP e questo Masterplan. Il resto del VB e identico normalizzando le terminazioni di riga: SQL, QueryProducts/TryLoadProducts, aggregati, pool/ranking/selezione/deduplica, prezzi/IVA/promo/stock e altre sezioni invariati. Nessuna modifica ASPX, CSS, master, JS, App_Code, asset o configurazione; zero nuove query, dipendenze e richieste applicative.
+
+**168/168 controlli PowerShell PASS**, Desktop 5.1 / RemoteSigned solo Process. Renderer baseline/candidato estratti e compilati separatamente, incluse card deal/grid/row/big, ordinamento offerte e selezione diversificata; helper reali di disponibilita, prezzi, contesto fiscale e immagini, piu metodi cart/stock puri estratti letteralmente. Tech/Food sintetici, anonimo/autenticato, IVA inclusa/esclusa; TCId -1/0/positivi, stesso articolo e varianti distinte, vendite zero/NULL/negative/elevate/frazionarie, promo immediata/a soglia/errore tecnico e countdown presente/assente. Confronto HTML completo, rimosso soltanto il blocco previsto e normalizzati request ID casuali/secondi trascorsi; attributi Quick View restanti, righe complete/ordine e input immutati. Item non valido e riga Quick View nulla restano vuoti. Wrapper Panel/Repeater reali materializzati nelle fixture, nessuna card stand-in.
+
+**40/40 confronti Chrome 155.0.8059.80 offline PASS**, otto fixture x 360/390/430/768/1365, ciascuna confrontata con la baseline. CSS/font locali, card renderizzate dal VB, Bootstrap/Swiper/countdown/home-default/product JS reali e modale Quick View dalla master; immagini e snapshot commerciali sintetici. Verificati claim/barra/ARIA assenti nelle offerte, nessun footer/countdown vuoto residuo, identita/ordine e informazioni commerciali invariati, containment/overflow, larghezze e tipografia; navigazione avanti/indietro Swiper, inizializzazione countdown e apertura/chiusura Quick View con stessi dati/CTA. Desktop con hover previsto dal componente, mobile senza dipendenza da hover; zero errori pagina, risorse mancanti o richieste esterne. Screenshot Tech/Food 390/1365 esaminati dopo rimozione del backdrop. Non certifica HOME completa, IIS, SQL, screen reader, prezzi o tenant operativi.
+
+**Precompile safe ASP.NET Framework 4.8 PASS**, 354 input, configurazione sintetica dal template, zero configurazioni operative copiate, cleanup TEMP compiler PASS. Suite immutate #369 (356 VB/140 Chrome) e #370 (104/90) riusate nei rispettivi limiti, non rieseguite o sommate alle nuove prove. Design Gate proporzionato alla rimozione meccanica: mantenuti struttura/stile del componente gia approvato, nessun nuovo pattern, benchmark generale o restyling. Le otto fixture da sei card riducono ciascuna l'HTML UTF-8 di **5438 byte**, senza query/JS/CSS aggiunti; misura sintetica, nessuna attestazione TTFB/INP/conversione.
+
+Evidenze locali `%TEMP%\KeepStoreHomeSalesClaims1A-20261022-44b605a0`: `server-6/test-report.json` e HTML baseline/candidato, `browser-report.json`, `browser-harness.mjs`, screenshot, `precompile.log`, metadati di preservazione e rapporto finale. Configurazione privata verificata solo tramite hash/ACL/attributi/date, 55 untracked e asset e quattro cancellazioni preesistenti preservati, fuori staging. LastAccessTime automatico informativo, senza modifica volontaria dei metadati. **CI NON CONFIGURATA**, nessuna CI PASS o deroga merge implicita.
+
+Prossimo passo unico: **review indipendente ChatGPT della PR DRAFT**, manifest e prove; nessun merge/server/task successivo avviato. Il futuro `HOME-SALES-METRIC-SCOPE-1A` resta NON AVVIATO, subordinato al contratto PO e alle attestazioni DB; questo A tecnico riguarda la sola protezione pubblica.
 
 ### HOME-BESTSELLER-CLAIM-INTEGRITY-1A — 2026-10-21
 
