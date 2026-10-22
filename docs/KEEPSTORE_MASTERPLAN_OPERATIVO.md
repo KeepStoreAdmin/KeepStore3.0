@@ -7,6 +7,15 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+
+### PO — Vetrina Web: contratto permanente e gap HOME (2026-10-22)
+
+**PR #371 chiusa A / SOURCE INTEGRATED**, FF `f225d78d6e5ae94588910a60c55a36b8d94fc5f6` -> `5bc68e6f933c64b61b2c4525ec5ff7795b0d943f`, review [5612582617](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/371#pullrequestreview-5612582617), closeout [6342280082](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/371#issuecomment-6342280082). Il precedente mandato #371 e storico. `main` invariato a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. CI non configurata; nessun deploy o test tenant live, configurazione/asset/55 untracked/4 cancellazioni preservati secondo report Codex.
+
+**Nuova autorita funzionale PO, screenshot gestionale Vetrina Web:** `articoli.Vetrina=1` abilita l'articolo ad essere scelto per card e rotazioni prodotti sulla HOME. Non abilitato (0/NULL) => mai in liste prodotti HOME o relativi fallback, ma normalmente navigabile in catalogo/categorie/settori/PDP con gli ordinari filtri commerciali. Non e una promo, statistica di vendita o garanzia di render a ogni richiesta. Catalogo condiviso e scope fisico del campo richiedono attestazione, non inventare policy per sito. `System Blueprint` e fonte del contratto permanente; `PRODUCT_ROADMAP` mantiene il futuro task.
+
+**GAP verificato nel solo codice source:** `GetFeaturedPool` richiede gia `v.Vetrina=1`, ma `GetDealOfferPool`, `GetNewArrivalsPool`, gli altri pool di vendite/visite, `GetCatalogFallbackPool` e `GetRecentlyViewedProducts` non lo richiedono. `featuredRows` e `bestRows` possono usare fallback non conformi; `keepstore-recently-viewed.js` puo riempire `HomeRecentlyViewedSection` da cronologia locale senza controllo del flag. Classificazione: **P1 GAP DI REQUISITO / NON CORRETTO**; non dichiarare che siano stati osservati articoli non abilitati in produzione. `HOME-VETRINA-WEB-ELIGIBILITY-1A` separato e NON AVVIATO, nessuna modifica runtime/SQL/DB/server da questo checkpoint. `HOME-SALES-METRIC-SCOPE-F01` resta distinto e aperto. **CONSEGNA SERVER SOSPESA.**
+
 ### HOME-SALES-PUBLIC-CLAIMS-GUARD-1A — 2026-10-22
 
 Mandato KS-A02, DEEP / High richiesto (valori effettivi non attestabili), LOCAL-FIRST / SOURCE ONLY. Base stable `f225d78d6e5ae94588910a60c55a36b8d94fc5f6`, branch `task/home-sales-public-claims-guard-1a`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` protetti. **A tecnico locale / consegna con un commit, push del solo task branch e PR DRAFT per review indipendente**. Nessun merge. **CONSEGNA SERVER SOSPESA**: nessuna lista pronta per upload, ZIP, IIS, DB o deploy.
