@@ -1,5 +1,7 @@
 # KeepStore — START_HERE
 
+**REV1 PR #375 / review 5621011626 — 2026-10-22:** DDL versionato conferma `tipodocumenti.GestioneStato` default 0 e `documenti.StatiId` nullable/default 0. LEFT JOIN dello stato: quando GestioneStato=0 (NULL normalizzato a 0) sono ammessi stati assenti/0/non associati; altrimenti occorre uno stato valido. Uno stato presente certamente annullato/disabilitato resta escluso anche senza gestione stati. Score GREATEST, scope e altre logiche invariati. Due nuovi scenari SQL mirati **2/2 PASS** su SQL emesso dai metodi VB compilati, SQLite sintetico in memoria; modalita `-StateRevisionOnly`. Le precedenti 41 prove, Chrome 4/4 e precompile 4.8 sono riusati, non rieseguiti. Evidenze `%TEMP%\KeepStoreHomeMerchREV1-20261022\test-report.json` e `sql-report.json`. PR ancora DRAFT, nuova review indipendente richiesta; nessun merge. CI NON CONFIGURATA; CONSEGNA SERVER SOSPESA.
+
 Checkpoint breve: 2026-10-22. Parola chiave: **KS-RIPRENDI**. Metodo e autorita: [AGENTS](../AGENTS.md); questo file non autorizza operazioni.
 
 ## Stato verificato e lavoro corrente

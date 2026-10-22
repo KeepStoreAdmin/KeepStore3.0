@@ -996,10 +996,10 @@ Partial Public Class _Default
                "FROM documentirighe dr INNER JOIN documenti d ON d.id=dr.DocumentiId " &
                "INNER JOIN tipodocumenti td ON td.id=d.TipoDocumentiId " &
                "INNER JOIN movimentitipo mt ON mt.id=td.MovimentiTipoId " &
-               "INNER JOIN documentistati ds ON ds.id=d.StatiId " &
+               "LEFT JOIN documentistati ds ON ds.id=d.StatiId " &
                "WHERE @commercialCompany>0 AND d.AziendeId=@commercialCompany " &
                "AND UPPER(TRIM(COALESCE(mt.Descrizione,'')))='USCITA' " &
-               "AND COALESCE(ds.Abilitato,0)=1 AND LOWER(TRIM(COALESCE(ds.Descrizione1,''))) NOT LIKE 'annull%' " &
+               "AND (COALESCE(td.GestioneStato,0)=0 OR ds.id IS NOT NULL) AND (ds.id IS NULL OR (COALESCE(ds.Abilitato,0)=1 AND LOWER(TRIM(COALESCE(ds.Descrizione1,''))) NOT LIKE 'annull%')) " &
                "AND d.DataDocumento>=@commercialStart AND d.DataDocumento<@commercialEnd " &
                "AND COALESCE(dr.ArticoliId,0)>0 AND COALESCE(dr.Qnt,0)>0 AND COALESCE(dr.TipoRiga,'A')='A' " &
                "AND (COALESCE(td.ImpegnaQnt,0)=1 OR COALESCE(td.Segno,0)<0) " &

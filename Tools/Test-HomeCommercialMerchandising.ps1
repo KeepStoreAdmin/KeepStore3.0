@@ -1,5 +1,5 @@
 ﻿[CmdletBinding()]
-param([string]$RepositoryRoot,[Parameter(Mandatory=$true)][string]$EvidenceDirectory)
+param([string]$RepositoryRoot,[Parameter(Mandatory=$true)][string]$EvidenceDirectory,[switch]$StateRevisionOnly)
 $ErrorActionPreference='Stop'
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'HOME_MERCH_REQUIRES_PS51'}
 if(!$RepositoryRoot){$RepositoryRoot=Split-Path -Parent $PSScriptRoot}
@@ -98,10 +98,22 @@ const dir=process.argv[2],q=JSON.parse(fs.readFileSync(path.join(dir,'queries.js
 const today=q.clock.Today, date=n=>{let d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}, start=()=>q.clock.Start;
 const checks=[],fixtures=[];function check(name,ok){checks.push({Name:name,Pass:!!ok});if(!ok)throw Error('HOME_MERCH_SQL_ASSERT: '+name)}
 const db=new DatabaseSync(':memory:');db.function('GREATEST',(a,b)=>Math.max(a,b));db.function('CURDATE',()=>today);db.function('YEAR',d=>Number(String(d).slice(0,4)));
-db.exec('CREATE TABLE vsuperarticoli ('+schema.map(c=>'"'+c.name+'" '+c.type).join(',')+');CREATE TABLE articoli(id INTEGER PRIMARY KEY,Abilitato INTEGER);CREATE TABLE articoli_giacenze(ArticoliId INTEGER,Giacenza NUMERIC,Disponibilita NUMERIC,Impegnata NUMERIC);CREATE TABLE documentirighe(id INTEGER PRIMARY KEY,DocumentiId INTEGER,ArticoliId INTEGER,TCid INTEGER,Qnt NUMERIC,TipoRiga TEXT);CREATE TABLE documenti(id INTEGER PRIMARY KEY,AziendeId INTEGER,TipoDocumentiId INTEGER,StatiId INTEGER,DataDocumento TEXT);CREATE TABLE tipodocumenti(id INTEGER PRIMARY KEY,MovimentiTipoId INTEGER,Segno INTEGER,ImpegnaQnt INTEGER);CREATE TABLE movimentitipo(id INTEGER PRIMARY KEY,Descrizione TEXT);CREATE TABLE documentistati(id INTEGER PRIMARY KEY,Descrizione1 TEXT,Abilitato INTEGER);CREATE TABLE tipodocumenticontabili(TipoDocumentiId INTEGER,NotaCreditoClienti INTEGER,NotaCreditoFornitori INTEGER)');
-db.exec("INSERT INTO movimentitipo VALUES(73,' Uscita '),(81,'INGRESSO');INSERT INTO documentistati VALUES(11,'Valido',1),(29,'Annullato',1),(31,'Disabilitato',0);INSERT INTO tipodocumenti VALUES(401,73,0,1),(402,73,-1,0),(403,73,-1,1),(404,81,-1,1),(405,73,-1,0),(406,73,0,0);INSERT INTO tipodocumenticontabili VALUES(405,1,0),(405,1,0)");
+db.exec('CREATE TABLE vsuperarticoli ('+schema.map(c=>'"'+c.name+'" '+c.type).join(',')+');CREATE TABLE articoli(id INTEGER PRIMARY KEY,Abilitato INTEGER);CREATE TABLE articoli_giacenze(ArticoliId INTEGER,Giacenza NUMERIC,Disponibilita NUMERIC,Impegnata NUMERIC);CREATE TABLE documentirighe(id INTEGER PRIMARY KEY,DocumentiId INTEGER,ArticoliId INTEGER,TCid INTEGER,Qnt NUMERIC,TipoRiga TEXT);CREATE TABLE documenti(id INTEGER PRIMARY KEY,AziendeId INTEGER,TipoDocumentiId INTEGER,StatiId INTEGER,DataDocumento TEXT);CREATE TABLE tipodocumenti(id INTEGER PRIMARY KEY,MovimentiTipoId INTEGER,Segno INTEGER,ImpegnaQnt INTEGER,GestioneStato INTEGER);CREATE TABLE movimentitipo(id INTEGER PRIMARY KEY,Descrizione TEXT);CREATE TABLE documentistati(id INTEGER PRIMARY KEY,Descrizione1 TEXT,Abilitato INTEGER);CREATE TABLE tipodocumenticontabili(TipoDocumentiId INTEGER,NotaCreditoClienti INTEGER,NotaCreditoFornitori INTEGER)');
+db.exec("INSERT INTO movimentitipo VALUES(73,' Uscita '),(81,'INGRESSO');INSERT INTO documentistati VALUES(11,'Valido',1),(29,'Annullato',1),(31,'Disabilitato',0);INSERT INTO tipodocumenti VALUES(401,73,0,1,1),(402,73,-1,0,1),(403,73,-1,1,1),(404,81,-1,1,1),(405,73,-1,0,1),(406,73,0,0,1),(407,73,-1,0,0);INSERT INTO tipodocumenticontabili VALUES(405,1,0),(405,1,0)");
 let docId=0,rowId=0;const doc=db.prepare('INSERT INTO documenti VALUES(?,?,?,?,?)'),line=db.prepare('INSERT INTO documentirighe VALUES(?,?,?,?,?,?)');
 function event(company,article,type,qty,ago=-1,tc=-1,state=11){doc.run(++docId,company,type,state,ago===null?null:typeof ago==='string'?ago:date(ago));line.run(++rowId,docId,article,tc,qty,'A')}
+// REV1: exercise the actual VB-emitted activity SQL; isolate these two scenarios from the original fixtures.
+db.exec('SAVEPOINT state_revision');
+for(const state of [0,null,999])event(101,700,407,2,-1,-1,state);
+for(const type of [402,407])for(const state of [29,31])event(101,701,type,100,-1,-1,state);
+for(const state of [0,null,999])event(101,701,402,100,-1,-1,state);
+const stateRows=db.prepare(q.activity).all({commercialCompany:101,commercialStart:start(),commercialEnd:date(1)});
+check('REV1 unmanaged outgoing discharge with zero/null/unassociated state qualifies',stateRows.some(r=>r.ArticoliId===700&&r.CommercialScore===6));
+check('REV1 managed cancelled/disabled/missing states and certainly invalid unmanaged states excluded',!stateRows.some(r=>r.ArticoliId===701));
+db.exec('ROLLBACK TO state_revision; RELEASE state_revision');docId=0;rowId=0;
+if(process.argv[3]==='states-only'){
+ fs.writeFileSync(path.join(dir,'sql-report.json'),JSON.stringify({backend:'SQLite in-memory; actual VB-emitted SQL; NOT MySQL certification',checks},null,2));db.close();process.stdout.write('HOME_MERCH_REV1 2/2 PASS\n');process.exit(0);
+}
 const insertProduct=db.prepare('INSERT INTO vsuperarticoli('+schema.map(c=>'"'+c.name+'"').join(',')+') VALUES('+schema.map(()=>'?').join(',')+')'),insertArticle=db.prepare('INSERT OR IGNORE INTO articoli VALUES(?,?)');
 function product(company,id,changes={}){const food=company===202;const base=Object.fromEntries(schema.map(c=>[c.name,c.type==='TEXT'?'':0]));Object.assign(base,{id,TCid:-1,Codice:'C'+id,Ean:'EAN'+id,Descrizione1:(food?['Pasta grano duro','Riso integrale bio','Olio extravergine','Farina tipo uno','Caffe arabica','Passata pomodoro','Biscotti avena','Miele acacia','Cioccolato fondente','Legumi misti','Spezie aromatiche','Conserva biologica']:['Router rete mesh','Switch rete gigabit','Cuffie audio wireless','Scheda video professionale','Cavo ethernet schermato','Hub porte multipla','Monitor display professionale','Tastiera meccanica compatta','Mouse laser ergonomico','Access point portatile','Server storage compatto','Webcam panoramica'])[(id%100>=90?id%100-81:id%100-1)%12],Descrizione2:'',Img1:'https://merch-'+(food?'food':'tech')+'.invalid/Public/assets/images/articoli/fixture-'+id+'.jpg',MarcheDescrizione:food?'Alba':'Nova',CategorieDescrizione:food?'Dispensa':'Reti',SettoriDescrizione:food?'Alimentari':'Elettronica',Vetrina:1,Abilitato:1,Attivo:1,Giacenza:5,Disponibilita:5,Prezzo:100,PrezzoIvato:122,DataCreazione:date(-100),NListino:food?10:1,IdIvaRC:-1,ValoreIvaRC:-1,DisplayPromoSnapshotReady:1,DisplayPromoTechnicalError:0,DisplayPromoQtyOnePrice:0,OfferteDataInizio:null,OfferteDataFine:null,DisplayPromoDeadline:null,LastCommercialActivity:null},changes);insertProduct.run(...schema.map(c=>base[c.name]??null));insertArticle.run(id,base.Abilitato);return base}
 for(const company of [101,202]){const n=company===101?0:100;
@@ -132,10 +144,11 @@ check('unresolved company fails closed',run(q.activity,{commercialCompany:0,comm
 fs.writeFileSync(path.join(dir,'sql-report.json'),JSON.stringify({backend:'SQLite in-memory; actual emitted SQL, GREATEST/CURDATE/YEAR compatibility functions; NOT MySQL certification',checks},null,2));fs.writeFileSync(path.join(dir,'fixtures.json'),JSON.stringify(fixtures,null,2));db.close();process.stdout.write('HOME_MERCH_SQL '+checks.length+'/'+checks.length+' PASS\n');
 '@
  [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'sql-fixture.cjs'),$nodeScript,$utf8)
- & $node (Join-Path $EvidenceDirectory 'sql-fixture.cjs') $EvidenceDirectory
+ & $node (Join-Path $EvidenceDirectory 'sql-fixture.cjs') $EvidenceDirectory $(if($StateRevisionOnly){'states-only'}else{'full'})
  if($LASTEXITCODE -ne 0){throw 'HOME_MERCH_SQL_FIXTURE_FAILED'}
  $sqlReport=Get-Content (Join-Path $EvidenceDirectory 'sql-report.json') -Raw|ConvertFrom-Json
  foreach($c in $sqlReport.checks){$checks.Add($c)}
+ if($StateRevisionOnly){Write-Json 'test-report.json' ([ordered]@{Result='PASS';Checks=$checks.Count;Backend=$sqlReport.backend;Mode='REV1 states only; prior 41 tests reused';OperationalDatabaseAccess=$false;ChecksDetail=$checks});Write-Output 'HOME_MERCH_REV1 2/2 PASS';return}
  function Rows($items){$t=$new.Table();foreach($item in @($items)){$r=$t.NewRow();foreach($col in $t.Columns){$value=$item.($col.ColumnName);if($null -eq $value){continue};if($col.DataType -eq [DateTime]){$r[$col.ColumnName]=[DateTime]::Parse([string]$value,[Globalization.CultureInfo]::InvariantCulture)}else{$r[$col.ColumnName]=[Convert]::ChangeType($value,$col.DataType,[Globalization.CultureInfo]::InvariantCulture)}};$t.Rows.Add($r)};return ,$t}
  $fixtures=Get-Content (Join-Path $EvidenceDirectory 'fixtures.json') -Raw|ConvertFrom-Json
  $browserFixtures=New-Object 'Collections.Generic.List[object]'
