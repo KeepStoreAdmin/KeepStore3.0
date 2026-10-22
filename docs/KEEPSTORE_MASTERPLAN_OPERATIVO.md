@@ -7,6 +7,15 @@ Non contiene credenziali, token, password, API signature, dati carta o account P
 
 ## Checkpoint operativo corrente
 
+
+### DOCS-SALES-DOCUMENT-EVENT-CONTRACT-1A — 2026-10-22
+
+**Nuova decisione PO / evidenza source (manifest quattro documenti soltanto).** PR #373 [MERGED/CLOSED](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/373), review [5617459922](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/373#pullrequestreview-5617459922) e [closeout 6345837832](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/373#issuecomment-6345837832); stable `f7f4489c184798bf5f930e9543cd7f869360fec1`; main invariato `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Vetrina Web integrata nel sorgente, nessun collaudo reale o deploy; 1760 prove VB, 100 browser offline e precompile storiche riusate, CI NON CONFIGURATA.
+
+**Contratto movimento/documenti:** il PO chiarisce che il tipo documento e configurabile per impegno, carico/scarico o arrivo e che un ordine impegnato seguito da fattura/documento gestionale NON deve raddoppiare i pezzi venduti. La migration `20260911_ORDER_INVENTORY_ATOMIC_RESERVATION_1A_forward.sql` mostra `ImpegnaQnt=1`, aggiornamento `Impegnata` per `ArticoliId/TCId/MagazziniId=1`, documento `AziendeId` e righe con `QntEvadibile/QntEvasa/movimento/movimentato`. L'aggregato HOME corrente `SUM(Qnt)` per articolo/TipoDocumentiId=4/stato chiuso non equivale automaticamente a vendite effettive. Distinguere ordini, vendite effettive, ricezioni fisiche, merce in arrivo, novita di catalogo e resi; fonte permanente [System Blueprint sezione 22.6](KEEPSTORE_SYSTEM_BLUEPRINT.md#226-eventi-documentali-inventario-e-metriche-home--contratto-po-2026-10-22).
+
+**Blocco esplicito:** non sono verificati schema/flag effettivi di tutte le causali, catena documento derivato, cardinalita/varianti storiche e configurazione applicata al DB. `HOME-SALES-METRIC-SCOPE-F01` resta APERTO/MEDIUM; prossimo passaggio distinto SCHEMA/METADATA-ONLY da autorizzare prima dell'SQL. Nessun dump, credenziale, riga di documenti, test live, nuova query, report operativo o deploy. **CONSEGNA SERVER SOSPESA.**
+
 ### HOME-VETRINA-WEB-ELIGIBILITY-1A — KS-E01 (2026-10-22)
 
 Mandato PO allegato, DEEP / High richiesto (modello/effort effettivi non attestabili), ONE-SHOT / LOCAL-FIRST. Base `b466bc61ea35f81a71d6079572790bdf8de732ce`, [#372 MERGED/CLOSED / SOURCE INTEGRATED](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/372), review 5615640113 e [closeout 6343222569](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/372#issuecomment-6343222569). Branch `task/home-vetrina-web-eligibility-1a`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91` protetti. **A tecnico locale / un commit sul task branch e PR DRAFT per review indipendente**, nessun merge o consegna server. Il precedente gap #372 e storico per il confronto; il candidato realizza il contratto senza attestare tenant operativi.
