@@ -327,37 +327,17 @@ Partial Public Class _Default
         Using HomeServerStageTiming.Measure(_homeTiming, "pool.deals")
             dealPool = GetDealOfferPool(96)
         End Using
-        Dim featuredPool As DataTable
-        Using HomeServerStageTiming.Measure(_homeTiming, "pool.featured")
-            featuredPool = GetFeaturedPool(96)
-        End Using
         Dim newArrivalsPool As DataTable
         Using HomeServerStageTiming.Measure(_homeTiming, "pool.new_arrivals")
-            newArrivalsPool = GetNewArrivalsPool(120)
+            newArrivalsPool = GetNewArrivalsPool(60)
         End Using
-        Dim topRatedPool As DataTable
-        Using HomeServerStageTiming.Measure(_homeTiming, "pool.top_rated")
-            topRatedPool = GetTopRatedPool(120)
+        Dim incomingPool As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.incoming")
+            incomingPool = GetIncomingPool(60)
         End Using
         Dim bestSellerPool As DataTable
         Using HomeServerStageTiming.Measure(_homeTiming, "pool.bestseller")
             bestSellerPool = GetBestSellerPool(120)
-        End Using
-        Dim currentYearSellingPool As DataTable
-        Using HomeServerStageTiming.Measure(_homeTiming, "pool.current_year")
-            currentYearSellingPool = GetCurrentYearSellingPool(120)
-        End Using
-        Dim topSellingPool As DataTable
-        Using HomeServerStageTiming.Measure(_homeTiming, "pool.top_selling_copy_or_fallback")
-        If Not IsTableEmpty(bestSellerPool) Then
-            topSellingPool = bestSellerPool.Copy()
-        Else
-            topSellingPool = GetPureTopSellingPool(120)
-        End If
-        End Using
-        Dim fallbackCatalogPool As DataTable
-        Using HomeServerStageTiming.Measure(_homeTiming, "pool.fallback")
-            fallbackCatalogPool = GetCatalogFallbackPool(160)
         End Using
 
         Dim dealRows As DataTable = TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)
@@ -372,7 +352,7 @@ Partial Public Class _Default
             HomeOffersSliderWrap.Visible = Not IsTableEmpty(dealRows)
         End If
 
-        Dim featuredRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, featuredPool, newArrivalsPool, fallbackCatalogPool)
+        Dim featuredRows As DataTable = TakeHomeArrivalsRows(8, usedBusinessKeys, usedDisplayKeys, newArrivalsPool, incomingPool)
         PopulatePromotionDisplaySnapshot(featuredRows)
         rptHomeFeaturedProducts.DataSource = featuredRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeFeaturedProducts")
@@ -389,9 +369,8 @@ Partial Public Class _Default
             HomeLegacyEditorialSection.Visible = False
         End If
 
-        ' These mixed pools do not attest company/variant-scoped sales provenance.
-        ' Keep the encoded neutral litHomeBestSellerTitle text even with positive aggregate sales.
-        Dim bestRows As DataTable = TakeDiverseRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool, currentYearSellingPool, topSellingPool, topRatedPool, fallbackCatalogPool)
+        ' Only the configured commercial index qualifies this section; no visits/catalog fallback.
+        Dim bestRows As DataTable = TakeRankedHomeRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool)
         PopulatePromotionDisplaySnapshot(bestRows)
         rptBestSeller.DataSource = bestRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptBestSeller")
@@ -990,13 +969,105 @@ Partial Public Class _Default
     End Function
 
     Private Function GetNewArrivalsPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(v.DataCreazione,'1900-01-01') >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)",
-                             "COALESCE(v.DataCreazione,CURDATE()) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
-                             limit)
+        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(v.InOrdine,0)<=0 AND v.DataCreazione >= @homeNewStart AND v.DataCreazione < @homeTodayEnd",
+                             "DataCreazione DESC, id DESC, TCid ASC",
+                             limit, False, False, False, True)
+    End Function
+
+    Private Function GetIncomingPool(ByVal limit As Integer) As DataTable
+        Return QueryProducts("COALESCE(v.InOrdine,0)>0",
+                             "InOrdine DESC, id DESC, TCid ASC",
+                             limit, False, True, False, True)
     End Function
 
     Private Function GetBestSellerPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(s.QtaVenduta,0)>0", "COALESCE(s.QtaVenduta,0) DESC, COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,CURDATE()) DESC, v.id DESC", limit)
+        Return QueryProducts("COALESCE(ca.CommercialScore,0)>0",
+                             "CommercialScore DESC, LastCommercialActivity DESC, id DESC, TCid ASC",
+                             limit, False, False, True)
+    End Function
+
+    Private Function BuildHomeCommercialActivitySql() As String
+        ' Ranking index, not certified sales. One company until a fiscal group is attested.
+        ' The direction lookup is configuration, never the document's name or a type-ID list.
+        Return "SELECT q.ArticoliId, GREATEST(SUM(q.QtaOrdini),SUM(q.QtaScarichi)) AS CommercialScore, MAX(q.LastActivity) AS LastCommercialActivity " &
+               "FROM (SELECT dr.ArticoliId, dr.TCid, " &
+               "SUM(CASE WHEN COALESCE(td.ImpegnaQnt,0)=1 THEN dr.Qnt ELSE 0 END) AS QtaOrdini, " &
+               "SUM(CASE WHEN COALESCE(td.Segno,0)<0 THEN dr.Qnt ELSE 0 END) AS QtaScarichi, MAX(d.DataDocumento) AS LastActivity " &
+               "FROM documentirighe dr INNER JOIN documenti d ON d.id=dr.DocumentiId " &
+               "INNER JOIN tipodocumenti td ON td.id=d.TipoDocumentiId " &
+               "INNER JOIN movimentitipo mt ON mt.id=td.MovimentiTipoId " &
+               "INNER JOIN documentistati ds ON ds.id=d.StatiId " &
+               "WHERE @commercialCompany>0 AND d.AziendeId=@commercialCompany " &
+               "AND UPPER(TRIM(COALESCE(mt.Descrizione,'')))='USCITA' " &
+               "AND COALESCE(ds.Abilitato,0)=1 AND LOWER(TRIM(COALESCE(ds.Descrizione1,''))) NOT LIKE 'annull%' " &
+               "AND d.DataDocumento>=@commercialStart AND d.DataDocumento<@commercialEnd " &
+               "AND COALESCE(dr.ArticoliId,0)>0 AND COALESCE(dr.Qnt,0)>0 AND COALESCE(dr.TipoRiga,'A')='A' " &
+               "AND (COALESCE(td.ImpegnaQnt,0)=1 OR COALESCE(td.Segno,0)<0) " &
+               "AND NOT EXISTS (SELECT 1 FROM tipodocumenticontabili tc WHERE tc.TipoDocumentiId=td.id " &
+               "AND (COALESCE(tc.NotaCreditoClienti,0)=1 OR COALESCE(tc.NotaCreditoFornitori,0)=1)) " &
+               "GROUP BY dr.ArticoliId, dr.TCid) q GROUP BY q.ArticoliId"
+    End Function
+
+    Private Function TakeRankedHomeRows(ByVal count As Integer,
+                                        ByVal usedBusinessKeys As HashSet(Of String),
+                                        ByVal usedDisplayKeys As HashSet(Of String),
+                                        ByVal source As DataTable) As DataTable
+        Dim result As DataTable = If(source Is Nothing, EmptyProductsTable(), source.Clone())
+        If source Is Nothing OrElse count <= 0 Then Return result
+        Dim articles As New HashSet(Of Integer)()
+        For Each row As DataRow In source.Rows
+            Dim id As Integer = SafeInt(row("id"))
+            If id <= 0 OrElse articles.Contains(id) OrElse ToDecimal(row("CommercialScore")) <= 0D Then Continue For
+            Dim businessKey As String = GetBusinessKey(row)
+            Dim displayKey As String = GetDisplayKey(row)
+            If usedBusinessKeys.Contains(businessKey) OrElse usedDisplayKeys.Contains(displayKey) Then Continue For
+            result.ImportRow(row)
+            articles.Add(id)
+            usedBusinessKeys.Add(businessKey)
+            usedDisplayKeys.Add(displayKey)
+            If result.Rows.Count >= count Then Exit For
+        Next
+        Return result
+    End Function
+
+    Private Function TakeHomeArrivalsRows(ByVal count As Integer,
+                                          ByVal usedBusinessKeys As HashSet(Of String),
+                                          ByVal usedDisplayKeys As HashSet(Of String),
+                                          ByVal newRows As DataTable,
+                                          ByVal incomingRows As DataTable) As DataTable
+        Dim result As DataTable = CloneFirstTable(New DataTable() {newRows, incomingRows})
+        result.Columns.Add("HomeMerchandisingLabel", GetType(String))
+        result.Columns.Add("HomeInformativeOnly", GetType(Boolean))
+        Dim pools() As DataTable = {newRows, incomingRows}
+        Dim positions() As Integer = {0, 0}
+        Dim articles As New HashSet(Of Integer)()
+        Do While result.Rows.Count < count
+            Dim added As Boolean = False
+            For group As Integer = 0 To 1
+                Dim pool As DataTable = pools(group)
+                If pool Is Nothing Then Continue For
+                While positions(group) < pool.Rows.Count AndAlso result.Rows.Count < count
+                    Dim row As DataRow = pool.Rows(positions(group))
+                    positions(group) += 1
+                    Dim id As Integer = SafeInt(row("id"))
+                    Dim businessKey As String = GetBusinessKey(row)
+                    Dim displayKey As String = GetDisplayKey(row)
+                    If id <= 0 OrElse articles.Contains(id) OrElse usedBusinessKeys.Contains(businessKey) OrElse usedDisplayKeys.Contains(displayKey) Then Continue While
+                    result.ImportRow(row)
+                    Dim selected As DataRow = result.Rows(result.Rows.Count - 1)
+                    selected("HomeMerchandisingLabel") = If(group = 0, "Novità", "In arrivo")
+                    selected("HomeInformativeOnly") = (group = 1 AndAlso
+                        (ToDecimal(row("Giacenza")) <= 0D OrElse Not AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current).IsAvailable))
+                    articles.Add(id)
+                    usedBusinessKeys.Add(businessKey)
+                    usedDisplayKeys.Add(displayKey)
+                    added = True
+                    Exit While
+                End While
+            Next
+            If Not added Then Exit Do
+        Loop
+        Return result
     End Function
 
     Private Function GetPureTopSellingPool(ByVal limit As Integer) As DataTable
@@ -1018,8 +1089,11 @@ Partial Public Class _Default
     Private Function QueryProducts(ByVal whereClause As String,
                                    ByVal orderClause As String,
                                    ByVal limit As Integer,
-                                   Optional ByVal requireAuthorizedPromotion As Boolean = False) As DataTable
-        Dim dt As DataTable = TryLoadProducts(whereClause, orderClause, limit, requireAuthorizedPromotion)
+                                   Optional ByVal requireAuthorizedPromotion As Boolean = False,
+                                   Optional ByVal allowIncoming As Boolean = False,
+                                   Optional ByVal commercialRanking As Boolean = False,
+                                   Optional ByVal onePerArticle As Boolean = False) As DataTable
+        Dim dt As DataTable = TryLoadProducts(whereClause, orderClause, limit, requireAuthorizedPromotion, allowIncoming, commercialRanking, onePerArticle)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             Return dt
         End If
@@ -1178,7 +1252,10 @@ Partial Public Class _Default
     Private Function TryLoadProducts(ByVal whereClause As String,
                                      ByVal orderClause As String,
                                      ByVal limit As Integer,
-                                     Optional ByVal requireAuthorizedPromotion As Boolean = False) As DataTable
+                                     Optional ByVal requireAuthorizedPromotion As Boolean = False,
+                                     Optional ByVal allowIncoming As Boolean = False,
+                                     Optional ByVal commercialRanking As Boolean = False,
+                                     Optional ByVal onePerArticle As Boolean = False) As DataTable
         Dim prezzoIvatoSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
             "v.Prezzo", "v.PrezzoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
             "@ksRcEnabled", "@ksHasVatOverride", "@ksVatOverride")
@@ -1210,7 +1287,17 @@ Partial Public Class _Default
         sql.Append("COALESCE(v.OfferteQntMinima,0) AS OfferteQntMinima, COALESCE(v.OfferteMultipli,0) AS OfferteMultipli, ")
         sql.Append("COALESCE(v.OffertePrezzo,0) AS OffertePrezzo, COALESCE(v.OfferteSconto,0) AS OfferteSconto, ")
         sql.Append("COALESCE(v.IdIvaRC,-1) AS IdIvaRC, COALESCE(v.ValoreIvaRC,-1) AS ValoreIvaRC, ")
-        sql.Append("COALESCE(s.QtaVenduta,0) AS QtaVenduta, COALESCE(sy.VendutiAnno,0) AS VendutiAnno ")
+        If commercialRanking Then
+            sql.Append("0 AS QtaVenduta, 0 AS VendutiAnno, ca.CommercialScore, ca.LastCommercialActivity, ")
+            sql.Append("ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY COALESCE(v.TCid,-1) ASC) AS HomeVariantOrdinal ")
+        Else
+            sql.Append("COALESCE(s.QtaVenduta,0) AS QtaVenduta, COALESCE(sy.VendutiAnno,0) AS VendutiAnno, ")
+            sql.Append("0 AS CommercialScore, NULL AS LastCommercialActivity")
+            If onePerArticle Then
+                sql.Append(", ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY COALESCE(v.TCid,-1) ASC) AS HomeVariantOrdinal")
+            End If
+            sql.Append(" ")
+        End If
         sql.Append("FROM vsuperarticoli v ")
         sql.Append("INNER JOIN articoli aBase ON aBase.id = v.id ")
         sql.Append("LEFT JOIN (")
@@ -1218,27 +1305,41 @@ Partial Public Class _Default
         sql.Append(" FROM articoli_giacenze")
         sql.Append(" GROUP BY ArticoliId")
         sql.Append(") stk ON stk.ArticoliId = v.id ")
-        sql.Append("LEFT JOIN (")
-        sql.Append(" SELECT dr.ArticoliId, SUM(COALESCE(dr.Qnt,0)) AS QtaVenduta")
-        sql.Append(" FROM documentirighe dr")
-        sql.Append(" INNER JOIN documenti d ON d.id = dr.DocumentiId")
-        sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState")
-        sql.Append(" GROUP BY dr.ArticoliId")
-        sql.Append(") s ON s.ArticoliId = v.id ")
-        sql.Append("LEFT JOIN (")
-        sql.Append(" SELECT dr.ArticoliId, SUM(COALESCE(dr.Qnt,0)) AS VendutiAnno")
-        sql.Append(" FROM documentirighe dr")
-        sql.Append(" INNER JOIN documenti d ON d.id = dr.DocumentiId")
-        sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState AND YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE())")
-        sql.Append(" GROUP BY dr.ArticoliId")
-        sql.Append(") sy ON sy.ArticoliId = v.id ")
+        If commercialRanking Then
+            sql.Append("INNER JOIN (").Append(BuildHomeCommercialActivitySql()).Append(") ca ON ca.ArticoliId=v.id ")
+        Else
+            sql.Append("LEFT JOIN (")
+            sql.Append(" SELECT dr.ArticoliId, SUM(COALESCE(dr.Qnt,0)) AS QtaVenduta")
+            sql.Append(" FROM documentirighe dr")
+            sql.Append(" INNER JOIN documenti d ON d.id = dr.DocumentiId")
+            sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState")
+            sql.Append(" GROUP BY dr.ArticoliId")
+            sql.Append(") s ON s.ArticoliId = v.id ")
+            sql.Append("LEFT JOIN (")
+            sql.Append(" SELECT dr.ArticoliId, SUM(COALESCE(dr.Qnt,0)) AS VendutiAnno")
+            sql.Append(" FROM documentirighe dr")
+            sql.Append(" INNER JOIN documenti d ON d.id = dr.DocumentiId")
+            sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState AND YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE())")
+            sql.Append(" GROUP BY dr.ArticoliId")
+            sql.Append(") sy ON sy.ArticoliId = v.id ")
+        End If
         sql.Append("WHERE v.NListino=@listino AND COALESCE(v.id,0)>0 ")
         sql.Append("AND COALESCE(aBase.Abilitato,1)=1 ")
         sql.Append("AND COALESCE(v.Vetrina,0)=1 ")
-        sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
+        If allowIncoming Then
+            sql.Append("AND (").Append(StockWhereClause()).Append(">=1 OR COALESCE(v.InOrdine,0)>0) ")
+        Else
+            sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
+        End If
         sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
         If Not String.IsNullOrWhiteSpace(whereClause) Then
             sql.Append("AND ").Append(whereClause).Append(" ")
+        End If
+        If commercialRanking OrElse onePerArticle Then
+            ' Choose a single eligible variant before the final ranking/LIMIT.
+            Dim eligibleSql As String = sql.ToString()
+            sql.Clear()
+            sql.Append("SELECT * FROM (").Append(eligibleSql).Append(") homeChosen WHERE HomeVariantOrdinal=1 ")
         End If
         sql.Append("ORDER BY ").Append(orderClause).Append(" ")
         If limit > 0 Then
@@ -1253,7 +1354,17 @@ Partial Public Class _Default
                     cmd.Parameters.Add("@ksRcEnabled", MySqlDbType.Int32).Value = If(_priceDisplayContext.ReverseChargeEnabled, 1, 0)
                     cmd.Parameters.Add("@ksHasVatOverride", MySqlDbType.Int32).Value = If(_priceDisplayContext.VatOverride.HasValue, 1, 0)
                     cmd.Parameters.Add("@ksVatOverride", MySqlDbType.Decimal).Value = _priceDisplayContext.VatOverride.GetValueOrDefault()
-                    cmd.Parameters.AddWithValue("@closedState", GetClosedOrderState())
+                    If whereClause.Contains("@homeNewStart") Then
+                        cmd.Parameters.Add("@homeNewStart", MySqlDbType.Date).Value = Date.Today.AddDays(-90)
+                        cmd.Parameters.Add("@homeTodayEnd", MySqlDbType.Date).Value = Date.Today.AddDays(1)
+                    End If
+                    If commercialRanking Then
+                        cmd.Parameters.Add("@commercialCompany", MySqlDbType.Int32).Value = GetCurrentAziendaId()
+                        cmd.Parameters.Add("@commercialStart", MySqlDbType.Date).Value = Date.Today.AddMonths(-12)
+                        cmd.Parameters.Add("@commercialEnd", MySqlDbType.Date).Value = Date.Today.AddDays(1)
+                    Else
+                        cmd.Parameters.AddWithValue("@closedState", GetClosedOrderState())
+                    End If
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
                         If conn.State <> ConnectionState.Open Then
@@ -1806,6 +1917,8 @@ Partial Public Class _Default
         dt.Columns.Add("ValoreIvaRC", GetType(Decimal))
         dt.Columns.Add("QtaVenduta", GetType(Decimal))
         dt.Columns.Add("VendutiAnno", GetType(Decimal))
+        dt.Columns.Add("CommercialScore", GetType(Decimal))
+        dt.Columns.Add("LastCommercialActivity", GetType(Date))
         Return dt
     End Function
 
@@ -3161,10 +3274,18 @@ Partial Public Class _Default
         sb.Append("<img class='img-product lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
-        sb.Append(RenderActionButtons(row, False))
+        Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
+                                       Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))
+        If Not informativeOnly Then sb.Append(RenderActionButtons(row, False))
         sb.Append(RenderCornerBadgeStack(row, True, False))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
+        If row.Table.Columns.Contains("HomeMerchandisingLabel") Then
+            Dim label As String = Convert.ToString(row("HomeMerchandisingLabel"))
+            If label = "Novità" OrElse label = "In arrivo" Then
+                sb.Append("<span class='badge bg-light text-dark mb-8'>").Append(HttpUtility.HtmlEncode(label)).Append("</span>")
+            End If
+        End If
         sb.Append("<div class='box-title'>")
         sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")

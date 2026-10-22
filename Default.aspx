@@ -227,8 +227,8 @@
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
-                    <h5 class="fw-semibold" data-ks-i18n="home.featured">In Evidenza</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Scopri gli articoli disponibili nel catalogo.</p>
+                    <h5 class="fw-semibold">Novità e arrivi</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Nuovi articoli da scoprire e prodotti in arrivo.</p>
                 </div>
                 <a href="articoli.aspx" class="tf-btn btn-line">
                     <span>Vedi tutti</span>
@@ -350,7 +350,7 @@
     <section id="HomeLegacyBestSection" runat="server" visible="false" class="ks-home-section ks-home-best-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold"><asp:Literal ID="litHomeBestSellerTitle" runat="server" Mode="Encode" Text="Altri prodotti da scoprire" /></h5>
+                <h5 class="fw-semibold"><asp:Literal ID="litHomeBestSellerTitle" runat="server" Mode="Encode" Text="I più scelti dai clienti" /></h5>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
