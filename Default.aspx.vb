@@ -909,7 +909,7 @@ Partial Public Class _Default
 
     Private Function GetDealOfferPool(ByVal limit As Integer) As DataTable
         Dim authorized As DataTable = QueryProducts(OfferWhereClause(),
-                                                    "COALESCE(sy.VendutiAnno,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
+                                                    "COALESCE(v.Visite,0) DESC, v.id DESC, COALESCE(v.TCid,-1) ASC",
                                                     0,
                                                     True)
         Return SortAuthorizedDealRows(authorized, limit)
@@ -926,9 +926,6 @@ Partial Public Class _Default
 
         rows.Sort(
             Function(left As DataRow, right As DataRow) As Integer
-                Dim bySoldPresence As Integer = (ToDecimal(right("VendutiAnno")) > 0D).CompareTo(ToDecimal(left("VendutiAnno")) > 0D)
-                If bySoldPresence <> 0 Then Return bySoldPresence
-
                 Dim leftDeadline As Nullable(Of Date) = RowDateValue(left, "DisplayPromoDeadline")
                 Dim rightDeadline As Nullable(Of Date) = RowDateValue(right, "DisplayPromoDeadline")
                 If leftDeadline.HasValue <> rightDeadline.HasValue Then
@@ -939,11 +936,11 @@ Partial Public Class _Default
                     If byDeadline <> 0 Then Return byDeadline
                 End If
 
-                Dim bySold As Integer = Decimal.Compare(ToDecimal(right("VendutiAnno")), ToDecimal(left("VendutiAnno")))
-                If bySold <> 0 Then Return bySold
                 Dim byVisits As Integer = SafeInt(right("Visite")).CompareTo(SafeInt(left("Visite")))
                 If byVisits <> 0 Then Return byVisits
-                Return SafeInt(right("id")).CompareTo(SafeInt(left("id")))
+                Dim byId As Integer = SafeInt(right("id")).CompareTo(SafeInt(left("id")))
+                If byId <> 0 Then Return byId
+                Return SafeInt(left("TCid")).CompareTo(SafeInt(right("TCid")))
             End Function)
 
         For i As Integer = 0 To Math.Min(limit, rows.Count) - 1
@@ -986,8 +983,33 @@ Partial Public Class _Default
                              limit, False, False, True)
     End Function
 
+    Private Function BuildHomeFiscalCompanyScopeSql() As String
+        ' Only a formal Italian VAT identity can expand the scope; unknown formats stay local.
+        ' Trim outer spaces and accept the standard IT prefix, never strip arbitrary characters.
+        Dim rawVat As String = "TRIM(COALESCE(Piva,''))"
+        Dim normalizedVat As String = "CASE WHEN ASCII(SUBSTRING(" & rawVat & ",1,1)) IN (73,105) AND ASCII(SUBSTRING(" & rawVat & ",2,1)) IN (84,116) THEN SUBSTRING(" & rawVat & ",3) ELSE " & rawVat & " END"
+        Dim checksumTerms As New List(Of String)()
+        For position As Integer = 1 To 10
+            Dim digit As String = "CAST(SUBSTRING(currentFiscal.FiscalVat," & position.ToString(CultureInfo.InvariantCulture) & ",1) AS UNSIGNED)"
+            If position Mod 2 = 0 Then
+                checksumTerms.Add("CAST(SUBSTRING('0246813579'," & digit & "+1,1) AS UNSIGNED)")
+            Else
+                checksumTerms.Add(digit)
+            End If
+        Next
+        ' UNION prevents counting the current company twice. No per-card query or shared cache.
+        Return "SELECT @commercialCompany AS AziendaId UNION " &
+               "SELECT peer.id AS AziendaId FROM (SELECT id," & normalizedVat & " AS FiscalVat FROM aziende) peer " &
+               "INNER JOIN (SELECT " & normalizedVat & " AS FiscalVat FROM aziende WHERE id=@commercialCompany) currentFiscal " &
+               "ON peer.FiscalVat=currentFiscal.FiscalVat " &
+               "AND peer.id>0 AND CHAR_LENGTH(peer.FiscalVat)=11 AND peer.FiscalVat NOT REGEXP '[^0-9]' " &
+               "WHERE CHAR_LENGTH(currentFiscal.FiscalVat)=11 AND currentFiscal.FiscalVat NOT REGEXP '[^0-9]' " &
+               "AND currentFiscal.FiscalVat<>'00000000000' " &
+               "AND MOD(10-MOD(" & String.Join("+", checksumTerms.ToArray()) & ",10),10)=CAST(SUBSTRING(currentFiscal.FiscalVat,11,1) AS UNSIGNED)"
+    End Function
+
     Private Function BuildHomeCommercialActivitySql() As String
-        ' Ranking index, not certified sales. One company until a fiscal group is attested.
+        ' Ranking index, not certified sales. Fiscal scope affects only aggregate activity.
         ' The direction lookup is configuration, never the document's name or a type-ID list.
         Return "SELECT q.ArticoliId, GREATEST(SUM(q.QtaOrdini),SUM(q.QtaScarichi)) AS CommercialScore, MAX(q.LastActivity) AS LastCommercialActivity " &
                "FROM (SELECT dr.ArticoliId, dr.TCid, " &
@@ -997,7 +1019,8 @@ Partial Public Class _Default
                "INNER JOIN tipodocumenti td ON td.id=d.TipoDocumentiId " &
                "INNER JOIN movimentitipo mt ON mt.id=td.MovimentiTipoId " &
                "LEFT JOIN documentistati ds ON ds.id=d.StatiId " &
-               "WHERE @commercialCompany>0 AND d.AziendeId=@commercialCompany " &
+               "INNER JOIN (" & BuildHomeFiscalCompanyScopeSql() & ") fiscalScope ON fiscalScope.AziendaId=d.AziendeId " &
+               "WHERE @commercialCompany>0 " &
                "AND UPPER(TRIM(COALESCE(mt.Descrizione,'')))='USCITA' " &
                "AND (COALESCE(td.GestioneStato,0)=0 OR ds.id IS NOT NULL) AND (ds.id IS NULL OR (COALESCE(ds.Abilitato,0)=1 AND LOWER(TRIM(COALESCE(ds.Descrizione1,''))) NOT LIKE 'annull%')) " &
                "AND d.DataDocumento>=@commercialStart AND d.DataDocumento<@commercialEnd " &
@@ -1071,13 +1094,13 @@ Partial Public Class _Default
     End Function
 
     Private Function GetPureTopSellingPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(s.QtaVenduta,0)>0", "COALESCE(s.QtaVenduta,0) DESC, COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,CURDATE()) DESC, v.id DESC", limit)
+        ' Compatibility entry point for historical fixtures; no legacy sales query.
+        Return GetBestSellerPool(limit)
     End Function
 
     Private Function GetCurrentYearSellingPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(sy.VendutiAnno,0)>0",
-                             "COALESCE(sy.VendutiAnno,0) DESC, COALESCE(s.QtaVenduta,0) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
-                             limit)
+        ' Compatibility entry point for historical fixtures; the HOME uses only the rolling index.
+        Return GetBestSellerPool(limit)
     End Function
 
     Private Function GetCatalogFallbackPool(ByVal limit As Integer) As DataTable
@@ -1291,7 +1314,7 @@ Partial Public Class _Default
             sql.Append("0 AS QtaVenduta, 0 AS VendutiAnno, ca.CommercialScore, ca.LastCommercialActivity, ")
             sql.Append("ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY COALESCE(v.TCid,-1) ASC) AS HomeVariantOrdinal ")
         Else
-            sql.Append("COALESCE(s.QtaVenduta,0) AS QtaVenduta, COALESCE(sy.VendutiAnno,0) AS VendutiAnno, ")
+            sql.Append("0 AS QtaVenduta, 0 AS VendutiAnno, ")
             sql.Append("0 AS CommercialScore, NULL AS LastCommercialActivity")
             If onePerArticle Then
                 sql.Append(", ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY COALESCE(v.TCid,-1) ASC) AS HomeVariantOrdinal")
@@ -1307,21 +1330,6 @@ Partial Public Class _Default
         sql.Append(") stk ON stk.ArticoliId = v.id ")
         If commercialRanking Then
             sql.Append("INNER JOIN (").Append(BuildHomeCommercialActivitySql()).Append(") ca ON ca.ArticoliId=v.id ")
-        Else
-            sql.Append("LEFT JOIN (")
-            sql.Append(" SELECT dr.ArticoliId, SUM(COALESCE(dr.Qnt,0)) AS QtaVenduta")
-            sql.Append(" FROM documentirighe dr")
-            sql.Append(" INNER JOIN documenti d ON d.id = dr.DocumentiId")
-            sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState")
-            sql.Append(" GROUP BY dr.ArticoliId")
-            sql.Append(") s ON s.ArticoliId = v.id ")
-            sql.Append("LEFT JOIN (")
-            sql.Append(" SELECT dr.ArticoliId, SUM(COALESCE(dr.Qnt,0)) AS VendutiAnno")
-            sql.Append(" FROM documentirighe dr")
-            sql.Append(" INNER JOIN documenti d ON d.id = dr.DocumentiId")
-            sql.Append(" WHERE d.TipoDocumentiId = 4 AND COALESCE(d.StatiId,0)=@closedState AND YEAR(COALESCE(d.DataDocumento,CURDATE())) = YEAR(CURDATE())")
-            sql.Append(" GROUP BY dr.ArticoliId")
-            sql.Append(") sy ON sy.ArticoliId = v.id ")
         End If
         sql.Append("WHERE v.NListino=@listino AND COALESCE(v.id,0)>0 ")
         sql.Append("AND COALESCE(aBase.Abilitato,1)=1 ")
@@ -1362,8 +1370,6 @@ Partial Public Class _Default
                         cmd.Parameters.Add("@commercialCompany", MySqlDbType.Int32).Value = GetCurrentAziendaId()
                         cmd.Parameters.Add("@commercialStart", MySqlDbType.Date).Value = Date.Today.AddMonths(-12)
                         cmd.Parameters.Add("@commercialEnd", MySqlDbType.Date).Value = Date.Today.AddDays(1)
-                    Else
-                        cmd.Parameters.AddWithValue("@closedState", GetClosedOrderState())
                     End If
                     Using da As New MySqlDataAdapter(cmd)
                         Dim dt As New DataTable()
@@ -1506,19 +1512,6 @@ Partial Public Class _Default
         Dim parsed As Date
         If TryParseKeepStoreDate(row(columnName), parsed) Then Return parsed
         Return Nothing
-    End Function
-
-    Private Function GetClosedOrderState() As Integer
-        Dim state As Integer = 3
-        Try
-            Dim raw As String = Convert.ToString(ConfigurationManager.AppSettings("OrdineStatoChiuso"))
-            If Not Integer.TryParse(raw, state) OrElse state <= 0 Then
-                state = 3
-            End If
-        Catch
-            state = 3
-        End Try
-        Return state
     End Function
 
     Private Function StockWhereClause() As String

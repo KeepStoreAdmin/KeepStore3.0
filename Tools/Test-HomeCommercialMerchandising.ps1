@@ -26,7 +26,8 @@ try{
  Add-Type -AssemblyName System.Web
  Add-Type -AssemblyName Microsoft.VisualBasic
  $source=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'Default.aspx.vb'))
- $base=(git -C $RepositoryRoot show '77a9e71ede510fbdf3908ee18a29b3ca56a9dd5a:Default.aspx.vb') -join [Environment]::NewLine
+ $baselineRef='f98d9c7986b7c3efd66d31f79b27fb9123659bf1'
+ $base=(git -C $RepositoryRoot show ($baselineRef+':Default.aspx.vb')) -join [Environment]::NewLine
  if($LASTEXITCODE -ne 0){throw 'HOME_MERCH_BASE_UNAVAILABLE'}
  $map=Method-Map $source;$oldMap=Method-Map $base
  $cart=Method-Map ([IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/CartMutationIdempotencyService.vb')))
@@ -39,13 +40,15 @@ try{
   $names=New-Object 'Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
   $queue=New-Object 'Collections.Generic.Queue[string]'
   @('RenderGridCard','EmptyProductsTable')|ForEach-Object{$queue.Enqueue($_)}
-  if($candidate){@('GetBestSellerPool','GetNewArrivalsPool','GetIncomingPool','BuildHomeCommercialActivitySql','TakeRankedHomeRows','TakeHomeArrivalsRows','AvailabilityWhereClause','ReservedWhereClause')|ForEach-Object{$queue.Enqueue($_)}}
+  if($candidate){@('GetBestSellerPool','GetDealOfferPool','SortAuthorizedDealRows','FilterAuthorizedPromotionRows','BuildHomeCommercialActivitySql','TakeRankedHomeRows','TakeHomeArrivalsRows','AvailabilityWhereClause','ReservedWhereClause')+@('GetNewArrivalsPool','GetIncomingPool','GetPureTopSellingPool','GetCurrentYearSellingPool','RenderDealCard')|ForEach-Object{$queue.Enqueue($_)}}
   while($queue.Count){$n=$queue.Dequeue();if(!$names.Add($n)){continue};if(!$methods.ContainsKey($n)){throw ('HOME_MERCH_MISSING_METHOD: '+$n)};if($n -eq 'TryLoadProducts'){continue};foreach($body in $methods[$n]){foreach($call in [regex]::Matches($body,'\b(\w+)\s*\(')){$dependency=$call.Groups[1].Value;if($methods.ContainsKey($dependency) -and !$names.Contains($dependency)){$queue.Enqueue($dependency)}}}}
-  $bodies=foreach($n in $names){if($n -eq 'TryLoadProducts'){$loader=$methods[$n][0];$loader.Substring(0,$loader.IndexOf('        Try'+[Environment]::NewLine))+"        LastSql = sql.ToString()`n        Return EmptyProductsTable()`n    End Function"}else{$methods[$n]}}
+  $bodies=foreach($n in $names){if($n -eq 'TryLoadProducts'){$loader=$methods[$n][0];$loader.Substring(0,$loader.IndexOf('        Try'+[Environment]::NewLine))+"        LastSql = sql.ToString()`n        LastAuthorized = requireAuthorizedPromotion`n        Return If(FixtureRows, EmptyProductsTable())`n    End Function"}else{$methods[$n]}}
   $wrapper=@'
     Private ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
     Private _priceDisplayContext As StorefrontPriceDisplayContext
     Public LastSql As String
+    Public LastAuthorized As Boolean
+    Public FixtureRows As DataTable
     Public Sub Configure(company As Integer, listino As Integer, authenticated As Boolean, included As Boolean)
         _priceDisplayContext = New StorefrontPriceDisplayContext(company, listino, authenticated, If(included, StorefrontVatDisplayMode.VatIncluded, StorefrontVatDisplayMode.VatExcluded), Nothing, -1, "", False)
     End Sub
@@ -57,6 +60,9 @@ try{
     Public Function Card(row As DataRow) As String
         Return RenderGridCard(row.Table.DefaultView(row.Table.Rows.IndexOf(row)))
     End Function
+    Public Function DealCard(row As DataRow) As String
+        Return RenderDealCard(row.Table.DefaultView(row.Table.Rows.IndexOf(row)))
+    End Function
 '@
   if($candidate){$wrapper+=[Environment]::NewLine+@'
     Public Function Sql(name As String) As String
@@ -64,6 +70,9 @@ try{
             Case "rank" : GetBestSellerPool(8)
             Case "new" : GetNewArrivalsPool(60)
             Case "incoming" : GetIncomingPool(60)
+            Case "deals" : GetDealOfferPool(8)
+            Case "compat-top" : GetPureTopSellingPool(8)
+            Case "compat-year" : GetCurrentYearSellingPool(8)
         End Select
         Return LastSql
     End Function
@@ -76,6 +85,15 @@ try{
     Public Function Arrivals(fresh As DataTable, incoming As DataTable) As DataTable
         Return TakeHomeArrivalsRows(8, New HashSet(Of String)(StringComparer.OrdinalIgnoreCase), New HashSet(Of String)(StringComparer.OrdinalIgnoreCase), fresh, incoming)
     End Function
+    Public Function Deals(rows As DataTable, limit As Integer) As DataTable
+        ' Explicit synthetic authorized snapshot: the production resolver is never connected.
+        FixtureRows = FilterAuthorizedPromotionRows(rows)
+        Try
+            Return GetDealOfferPool(limit)
+        Finally
+            FixtureRows = Nothing
+        End Try
+    End Function
 '@}
   $code="Imports System`nImports System.Data`nImports System.Collections.Generic`nImports System.Globalization`nImports System.Text`nImports System.Text.RegularExpressions`nImports System.Web`nPublic Class "+$name+[Environment]::NewLine+($bodies -join [Environment]::NewLine)+[Environment]::NewLine+$wrapper+[Environment]::NewLine+'End Class'
   $parameters=New-Object CodeDom.Compiler.CompilerParameters
@@ -86,9 +104,9 @@ try{
   if($compiled.Errors.HasErrors){throw ('HOME_MERCH_COMPILE: '+(($compiled.Errors|Where-Object{!$_.IsWarning}|ForEach-Object{'line '+$_.Line+': '+$_.ErrorText}) -join '; '))}
   return [Activator]::CreateInstance($compiled.CompiledAssembly.GetType($name,$true))
  }
- $new=Compile-Home $map 'CandidateHomeMerch' $true;$old=Compile-Home $oldMap 'BaselineHomeMerch' $false
+ $new=Compile-Home $map 'CandidateHomeMerch' $true;$old=Compile-Home $oldMap 'BaselineHomeMerch' $true
  $new.Configure(101,1,$false,$true)
- Write-Json 'queries.json' ([ordered]@{rank=$new.Sql('rank');fresh=$new.Sql('new');incoming=$new.Sql('incoming');activity=$new.ActivitySql();clock=@{Today=[DateTime]::Today.ToString('yyyy-MM-dd');Start=[DateTime]::Today.AddMonths(-12).ToString('yyyy-MM-dd')}})
+ Write-Json 'queries.json' ([ordered]@{rank=$new.Sql('rank');fresh=$new.Sql('new');incoming=$new.Sql('incoming');deals=$new.Sql('deals');activity=$new.ActivitySql();clock=@{Today=[DateTime]::Today.ToString('yyyy-MM-dd');Start=[DateTime]::Today.AddMonths(-12).ToString('yyyy-MM-dd')}})
  $table=$new.Table()
  $schema=@($table.Columns|ForEach-Object{[pscustomobject]@{name=$_.ColumnName;type=$(if($_.DataType -eq [string] -or $_.DataType -eq [DateTime]){'TEXT'}else{'NUMERIC'})}})+@([pscustomobject]@{name='NListino';type='NUMERIC'})
  Write-Json 'schema.json' $schema
@@ -98,6 +116,8 @@ const dir=process.argv[2],q=JSON.parse(fs.readFileSync(path.join(dir,'queries.js
 const today=q.clock.Today, date=n=>{let d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}, start=()=>q.clock.Start;
 const checks=[],fixtures=[];function check(name,ok){checks.push({Name:name,Pass:!!ok});if(!ok)throw Error('HOME_MERCH_SQL_ASSERT: '+name)}
 const db=new DatabaseSync(':memory:');db.function('GREATEST',(a,b)=>Math.max(a,b));db.function('CURDATE',()=>today);db.function('YEAR',d=>Number(String(d).slice(0,4)));
+db.function('ASCII',s=>String(s).charCodeAt(0));db.function('CHAR_LENGTH',s=>String(s).length);db.function('MOD',(a,b)=>a%b);db.function('regexp',(pattern,value)=>Number(new RegExp(pattern).test(String(value))));
+db.exec('CREATE TABLE aziende(id INTEGER PRIMARY KEY,Piva TEXT);INSERT INTO aziende VALUES(101,NULL),(202,NULL),(303,NULL)');
 db.exec('CREATE TABLE vsuperarticoli ('+schema.map(c=>'"'+c.name+'" '+c.type).join(',')+');CREATE TABLE articoli(id INTEGER PRIMARY KEY,Abilitato INTEGER);CREATE TABLE articoli_giacenze(ArticoliId INTEGER,Giacenza NUMERIC,Disponibilita NUMERIC,Impegnata NUMERIC);CREATE TABLE documentirighe(id INTEGER PRIMARY KEY,DocumentiId INTEGER,ArticoliId INTEGER,TCid INTEGER,Qnt NUMERIC,TipoRiga TEXT);CREATE TABLE documenti(id INTEGER PRIMARY KEY,AziendeId INTEGER,TipoDocumentiId INTEGER,StatiId INTEGER,DataDocumento TEXT);CREATE TABLE tipodocumenti(id INTEGER PRIMARY KEY,MovimentiTipoId INTEGER,Segno INTEGER,ImpegnaQnt INTEGER,GestioneStato INTEGER);CREATE TABLE movimentitipo(id INTEGER PRIMARY KEY,Descrizione TEXT);CREATE TABLE documentistati(id INTEGER PRIMARY KEY,Descrizione1 TEXT,Abilitato INTEGER);CREATE TABLE tipodocumenticontabili(TipoDocumentiId INTEGER,NotaCreditoClienti INTEGER,NotaCreditoFornitori INTEGER)');
 db.exec("INSERT INTO movimentitipo VALUES(73,' Uscita '),(81,'INGRESSO');INSERT INTO documentistati VALUES(11,'Valido',1),(29,'Annullato',1),(31,'Disabilitato',0);INSERT INTO tipodocumenti VALUES(401,73,0,1,1),(402,73,-1,0,1),(403,73,-1,1,1),(404,81,-1,1,1),(405,73,-1,0,1),(406,73,0,0,1),(407,73,-1,0,0);INSERT INTO tipodocumenticontabili VALUES(405,1,0),(405,1,0)");
 let docId=0,rowId=0;const doc=db.prepare('INSERT INTO documenti VALUES(?,?,?,?,?)'),line=db.prepare('INSERT INTO documentirighe VALUES(?,?,?,?,?,?)');
@@ -141,6 +161,42 @@ for(const company of [101,202]){const n=company===101?0:100,p={commercialCompany
  fixtures.push({name:company===101?'Tech':'Food',company,listino:p.listino,rank,fresh,incoming});
 }
 check('unresolved company fails closed',run(q.activity,{commercialCompany:0,commercialStart:start(),commercialEnd:date(1)}).length===0);
+// Same real emitted query, synthetic fiscal identities only; rollback leaves the original card fixtures untouched.
+db.exec('SAVEPOINT fiscal_group');
+function vat(seed){const digits=[...seed].map(Number),sum=digits.reduce((s,d,i)=>{const x=d*(i%2===1?2:1);return s+(x>9?x-9:x)},0);return seed+((10-sum%10)%10)}
+const vatA=vat('1234567890'),vatB=vat('9876543210'),vatC=vat('2468013579'),setVat=db.prepare('UPDATE aziende SET Piva=? WHERE id=?');
+function configureVats(a,b,c=vatC){setVat.run(a,101);setVat.run(b,202);setVat.run(c,303)}
+const groupParams=company=>({commercialCompany:company,commercialStart:start(),commercialEnd:date(1),listino:company===101?1:10,ksRcEnabled:0,ksHasVatOverride:0,ksVatOverride:0});
+const groupScore=company=>run(q.activity,groupParams(company)).find(r=>r.ArticoliId===700)?.CommercialScore||0;
+db.prepare('INSERT INTO aziende VALUES(?,?)').run(0,vatA);db.prepare('INSERT INTO aziende VALUES(?,?)').run(-7,vatA);
+event(0,700,402,99999);event(-7,700,402,99999);
+event(101,700,401,6,-1,11);event(101,700,402,3,-1,11);event(202,700,401,4,-1,12);event(202,700,402,5,-1,12);event(303,700,402,9999);
+for(const company of [101,202]){product(company,700,{Prezzo:company===101?100:200,PrezzoIvato:company===101?122:244});product(company,701,{Vetrina:0});event(company,701,401,99999)}
+configureVats(vatA,' it'+vatA+' ');
+check('same valid VAT shares company activity before GREATEST, without duplicating the current company',groupScore(101)===10&&groupScore(202)===10);
+const rankA=run(q.rank,groupParams(101)),rankB=run(q.rank,groupParams(202));
+check('shared score preserves storefront listino/prices and Vetrina/variant gates',rankA.some(r=>r.id===700&&r.Prezzo===100&&r.PrezzoIvato===122)&&rankB.some(r=>r.id===700&&r.Prezzo===200&&r.PrezzoIvato===244)&&![...rankA,...rankB].some(r=>r.id===701)&&new Set(rankA.map(r=>r.id)).size===rankA.length&&new Set(rankB.map(r=>r.id)).size===rankB.length);
+configureVats(vatA,vatB);
+check('different valid VAT isolates commercial activity',groupScore(101)===6&&groupScore(202)===5);
+configureVats(null,'');
+check('null/empty VAT falls back to current company',groupScore(101)===6&&groupScore(202)===5);
+configureVats('not-a-vat','not-a-vat');
+check('identical invalid VAT does not create a group',groupScore(101)===6&&groupScore(202)===5);
+const badChecksum=vatA.slice(0,10)+((Number(vatA[10])+1)%10);configureVats(badChecksum,badChecksum);
+check('wrong check digit does not create a group',groupScore(101)===6&&groupScore(202)===5);
+configureVats(vatA+'/'+vatB,vatA+'/'+vatB);
+check('ambiguous multiple VAT values fall back to current company',groupScore(101)===6&&groupScore(202)===5);
+configureVats('00000000000','00000000000');
+check('all-zero VAT falls back to current company',groupScore(101)===6&&groupScore(202)===5);
+configureVats('IT'+vatA,'LV'+vatA);
+check('country prefixes never collapse different fiscal identities',groupScore(101)===6&&groupScore(202)===5);
+configureVats('IT'+vatA,'ıT'+vatA);
+check('non-ASCII country lookalike remains local',groupScore(101)===6&&groupScore(202)===5);
+configureVats('LV'+vatA,'LV'+vatA);
+check('unsupported foreign VAT format remains local',groupScore(101)===6&&groupScore(202)===5);
+db.exec('ROLLBACK TO fiscal_group; RELEASE fiscal_group');
+const p={listino:1,homeNewStart:date(-90),homeTodayEnd:date(1),ksRcEnabled:0,ksHasVatOverride:0,ksVatOverride:0};
+check('all noncommercial SQL has no document aggregates, fiscal scope or legacy aliases', ['fresh','incoming','deals'].every(name=>!/(?:documentirighe|documenti\s|aziende\s|\bs\.|\bsy\.|@closedState)/i.test(q[name])&&run(q[name],p).every(r=>r.QtaVenduta===0&&r.VendutiAnno===0)));
 fs.writeFileSync(path.join(dir,'sql-report.json'),JSON.stringify({backend:'SQLite in-memory; actual emitted SQL, GREATEST/CURDATE/YEAR compatibility functions; NOT MySQL certification',checks},null,2));fs.writeFileSync(path.join(dir,'fixtures.json'),JSON.stringify(fixtures,null,2));db.close();process.stdout.write('HOME_MERCH_SQL '+checks.length+'/'+checks.length+' PASS\n');
 '@
  [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'sql-fixture.cjs'),$nodeScript,$utf8)
@@ -161,21 +217,49 @@ fs.writeFileSync(path.join(dir,'sql-report.json'),JSON.stringify({backend:'SQLit
   $reserved=@($arrivals.Rows|Where-Object{$_['Giacenza'] -gt 0 -and $_['Impegnata'] -ge $_['Giacenza']})[0]
   Check ($f.name+' incoming reserved stock also uses the canonical availability guard') (!$new.Card($reserved).Contains('js-ks-cart-link') -and $reserved['HomeInformativeOnly'])
   $positive=@($arrivals.Rows|Where-Object{$_['Giacenza'] -gt 0})[0]
-  $withoutBadge=[regex]::Replace($new.Card($positive),"<span class='badge bg-light text-dark mb-8'>.*?</span>",'')
-  Check ($f.name+' existing positive-stock prices/IVA/promo/stock/images/CTA markup unchanged') ((Stable $withoutBadge) -ceq (Stable ($old.Card($positive))))
+  Check ($f.name+' existing positive-stock prices/IVA/promo/stock/images/CTA markup unchanged') ((Stable ($new.Card($positive))) -ceq (Stable ($old.Card($positive))))
   $new.Configure($f.company,$f.listino,$true,$false);$old.Configure($f.company,$f.listino,$true,$false)
-  $withoutBadge=[regex]::Replace($new.Card($positive),"<span class='badge bg-light text-dark mb-8'>.*?</span>",'')
-  Check ($f.name+' authenticated VAT-excluded renderer parity') ((Stable $withoutBadge) -ceq (Stable ($old.Card($positive))))
+  Check ($f.name+' authenticated VAT-excluded renderer parity') ((Stable ($new.Card($positive))) -ceq (Stable ($old.Card($positive))))
   $new.Configure($f.company,$f.listino,$false,$true)
   $rankHtml=($rank.Rows|ForEach-Object{"<div class='swiper-slide'>"+$new.Card($_)+"</div>"}) -join ''
   $arrivalsHtml=($arrivals.Rows|ForEach-Object{$new.Card($_)}) -join ''
-  Check ($f.name+' no public score or numeric sales metadata') (($rankHtml+$arrivalsHtml) -notmatch 'CommercialScore|LastCommercialActivity|data-ks-sold|VendutiAnno|QtaVenduta')
+  Check ($f.name+' no public score, fiscal identity or document metadata') (($rankHtml+$arrivalsHtml) -notmatch 'CommercialScore|LastCommercialActivity|data-ks-sold|VendutiAnno|QtaVenduta|FiscalVat|Piva|AziendeId|StatiId')
   $browserFixtures.Add([pscustomobject]@{Name=$f.name;RankHtml=$rankHtml;ArrivalsHtml=$arrivalsHtml;RankCount=$rank.Rows.Count;ArrivalsCount=$arrivals.Rows.Count})
  }
  Check 'empty signal pools yield sections with zero rows' ($new.Arrivals($new.Table(),$new.Table()).Rows.Count -eq 0 -and $new.Ranked($new.Table()).Rows.Count -eq 0)
- $critical=@('articoli.aspx','articoli.aspx.vb','articolo.aspx','articolo.aspx.vb','App_Code/AvailabilityDisplayHelper.vb','App_Code/StorefrontEffectivePriceSqlBuilder.vb','App_Code/CartStorefrontScopePolicy.vb','Public/assets/keepstore/js/keepstore-product.js')
- $unchanged=$true;foreach($p in $critical){$before=(git -C $RepositoryRoot show ('77a9e71ede510fbdf3908ee18a29b3ca56a9dd5a:'+$p)) -join "`n";$after=([IO.File]::ReadAllText((Join-Path $RepositoryRoot $p))).Replace("`r",'').TrimEnd([char[]]"`n");if($before.TrimEnd([char[]]"`n") -cne $after){$unchanged=$false}}
+ $critical=@('Default.aspx','articoli.aspx','articoli.aspx.vb','articolo.aspx','articolo.aspx.vb','App_Code/AvailabilityDisplayHelper.vb','App_Code/StorefrontEffectivePriceSqlBuilder.vb','App_Code/CartStorefrontScopePolicy.vb','Public/assets/keepstore/js/keepstore-product.js')
+ $unchanged=$true;foreach($p in $critical){$before=(git -C $RepositoryRoot show ($baselineRef+':'+$p)) -join "`n";$after=([IO.File]::ReadAllText((Join-Path $RepositoryRoot $p))).Replace("`r",'').TrimEnd([char[]]"`n");if($before.TrimEnd([char[]]"`n") -cne $after){$unchanged=$false}}
  Check 'catalog/PDP/commercial helpers/cart scope/product JS untouched' $unchanged
+ $outsideBefore=$base;$outsideAfter=$source
+ foreach($method in @('GetDealOfferPool','SortAuthorizedDealRows','BuildHomeFiscalCompanyScopeSql','BuildHomeCommercialActivitySql','GetPureTopSellingPool','GetCurrentYearSellingPool','TryLoadProducts','GetClosedOrderState')){
+  foreach($body in @($oldMap[$method])){if($body){$outsideBefore=$outsideBefore.Replace($body,'')}}
+  foreach($body in @($map[$method])){if($body){$outsideAfter=$outsideAfter.Replace($body,'')}}
+ }
+ Check 'all other HOME methods including promotion resolver/snapshot, filters, renderer and composition unchanged' ((($outsideBefore -replace '\s+',' ').Trim()) -ceq (($outsideAfter -replace '\s+',' ').Trim()))
+ $new.Configure(101,1,$false,$true);$old.Configure(101,1,$false,$true)
+ $dealRows=$new.Table()
+ function Add-Deal([int]$id,[int]$visits,$deadline,[decimal]$sold,[decimal]$price){
+  $r=$dealRows.NewRow();$r['id']=$id;$r['TCid']=-1;$r['Visite']=$visits;$r['VendutiAnno']=$sold;$r['DisplayPromoQtyOnePrice']=$price;$r['OfferteDataFine']=[DateTime]::Today.AddDays(100)
+  if($null -ne $deadline){$r['DisplayPromoDeadline']=$deadline};$dealRows.Rows.Add($r)
+ }
+ Add-Deal 501 0 ([DateTime]::Today.AddDays(1)) 0 90
+ Add-Deal 502 99 ([DateTime]::Today.AddDays(2)) 99999 90
+ Add-Deal 503 20 ([DateTime]::Today.AddDays(1)) 0 90
+ Add-Deal 504 20 ([DateTime]::Today.AddDays(1)) 0 90
+ Add-Deal 505 999 $null 999999 90
+ Add-Deal 506 99999 ([DateTime]::Today) 9999999 0
+ $deals=$new.Deals($dealRows,8)
+ Check 'authorized deals use real deadline then visits and ID, ignoring old sales/raw end date' ((@($deals.Rows|ForEach-Object{$_['id']}) -join ',') -ceq '504,503,501,502,505')
+ Check 'deal query still requires authorized promotions and retains its original candidate loading contract' ($new.LastAuthorized -and $new.LastSql -match 'InOfferta' -and $new.LastSql -notmatch 'VendutiAnno[^,]*DESC|\bsy\.|\bs\.')
+ Check 'authorized deal limit and zero/empty behavior preserved' ($new.Deals($dealRows,2).Rows.Count -eq 2 -and $new.Deals($dealRows,0).Rows.Count -eq 0 -and $new.Deals($new.Table(),8).Rows.Count -eq 0)
+ foreach($f in $fixtures){
+  $new.Configure($f.company,$f.listino,$false,$true);$old.Configure($f.company,$f.listino,$false,$true)
+  $r=(Rows $f.rank).Rows[0];$r['DisplayPromoQtyOnePrice']=90;$r['DisplayPromoDeadline']=[DateTime]::Today.AddDays(2)
+  Check ($f.name+' authorized deal renderer and commercial values identical to stable') ((Stable ($new.DealCard($r))) -ceq (Stable ($old.DealCard($r))))
+ }
+ Check 'historical private pool entry points have no remaining legacy SQL aliases' ($new.Sql('compat-top') -notmatch '\bs\.|\bsy\.' -and $new.Sql('compat-year') -notmatch '\bs\.|\bsy\.')
+ $old.Configure(101,1,$false,$true)
+ Write-Json 'query-cost-structure.json' ([ordered]@{Baseline=$baselineRef;OldNonCommercialDocumentAggregates=([regex]::Matches($old.Sql('new'),'SUM\(COALESCE\(dr.Qnt')).Count;NewNonCommercialDocumentAggregates=([regex]::Matches($new.Sql('new'),'SUM\(COALESCE\(dr.Qnt')).Count;PoolCallsBefore=4;PoolCallsAfter=4;PerCardFiscalQueries=0;NewCache=$false;Measurement='static SQL/call structure, not MySQL execution time';DealCandidateLimit='unchanged: SQL limit=0, authorized resolver snapshot then final limit'})
  Write-Json 'browser-fixtures.json' $browserFixtures
  Write-Json 'test-report.json' ([ordered]@{Result='PASS';Checks=$checks.Count;Backend=$sqlReport.backend;Compiled='real VB methods and baseline renderer';OperationalDatabaseAccess=$false;ChecksDetail=$checks})
  Write-Output ('HOME_MERCH '+$checks.Count+'/'+$checks.Count+' PASS')
