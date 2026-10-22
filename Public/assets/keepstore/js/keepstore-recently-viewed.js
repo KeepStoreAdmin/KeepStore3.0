@@ -183,6 +183,22 @@
     var target = block.querySelector('[data-ks-recent-items]');
     if (!target) return;
 
+    // La HOME pubblica soltanto le card validate dal server per Vetrina Web.
+    // Una nuova renderizzazione conserva card, posizione e istanza Swiper.
+    if (block.getAttribute('data-ks-authoritative-only') === '1') {
+      var hasServerCards = target.children.length > 0;
+      block.classList.toggle('d-none', !hasServerCards);
+      if (hasServerCards) {
+        var swiperEl = block.querySelector('.ks-recently-viewed-swiper');
+        if (!swiperEl || !swiperEl.swiper || swiperEl.swiper.destroyed ||
+            block.ksAuthoritativeRecentSwiper !== swiperEl.swiper) {
+          initSwiper(block);
+          if (swiperEl) block.ksAuthoritativeRecentSwiper = swiperEl.swiper;
+        }
+      }
+      return;
+    }
+
     // Le card server-side contengono prezzi e promozioni live: la cronologia
     // locale non deve sostituire una sorgente commerciale piu autorevole.
     if (block.getAttribute('data-ks-server-fallback') === '1' && target.children.length) {

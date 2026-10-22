@@ -408,7 +408,7 @@ Partial Public Class _Default
             rptRecentlyViewed.DataBind()
         End Using
         If HomeRecentlyViewedSection IsNot Nothing Then
-            HomeRecentlyViewedSection.Visible = True
+            HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
         End If
 
         HomePriceDisplayNote.Visible = Not IsTableEmpty(featuredRows) OrElse
@@ -1234,6 +1234,7 @@ Partial Public Class _Default
         sql.Append(") sy ON sy.ArticoliId = v.id ")
         sql.Append("WHERE v.NListino=@listino AND COALESCE(v.id,0)>0 ")
         sql.Append("AND COALESCE(aBase.Abilitato,1)=1 ")
+        sql.Append("AND COALESCE(v.Vetrina,0)=1 ")
         sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
         sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
         If Not String.IsNullOrWhiteSpace(whereClause) Then
