@@ -361,3 +361,31 @@
         padding: 16px 16px max(16px, env(safe-area-inset-bottom));
     }
 }
+
+/* Quantity editing stays inside the established drawer, without changing product cards. */
+#ksMiniCartCanvas .ks-mini-quantity-editor,
+#ksMiniCartCanvas .ks-mini-quantity-readonly {
+    grid-column: 1 / -1;
+    min-width: 0;
+    font-size: 14px;
+}
+#ksMiniCartCanvas .ks-mini-quantity-editor label { display: block; margin-bottom: 6px; font-size: 13px; }
+#ksMiniCartCanvas .ks-mini-quantity-fields { display: flex; gap: 10px; flex-wrap: wrap; }
+#ksMiniCartCanvas [data-ks-mini-quantity-input] {
+    width: 88px; min-width: 72px; min-height: 44px; padding: 8px 10px;
+    border: 1px solid #73787d; border-radius: 6px; color: #333e48; background: #fff;
+    font: inherit; font-variant-numeric: tabular-nums;
+}
+#ksMiniCartCanvas .ks-mini-quantity-update { min-width: 108px; min-height: 44px; padding: 8px 14px; border-radius: 6px; }
+#ksMiniCartCanvas [data-ks-mini-quantity-input]:focus-visible { outline: 3px solid #004ec3; outline-offset: 2px; }
+#ksMiniCartCanvas .ks-mini-more-items { margin: 4px 0 14px; padding: 10px; font-size: 13px; line-height: 1.5; background: #f5f6f7; border-radius: 6px; }
+#ksMiniCartCanvas .ks-mini-quantity-status { flex: 0 0 auto; margin: 0; padding: 0 20px; font-size: 14px; line-height: 1.5; color: #333e48; }
+#ksMiniCartCanvas .ks-mini-quantity-status:not(:empty) { padding-top: 10px; padding-bottom: 10px; border-bottom: 1px solid #e5e5e5; }
+#ksMiniCartCanvas .ks-mini-quantity-status[data-state="error"] { color: #9d172b; }
+#ksMiniCartCanvas [aria-busy="true"] { cursor: progress; }
+#ksMiniCartCanvas .ks-mini-quantity-update:disabled { opacity: .65; cursor: progress; }
+@media(max-height: 560px) {
+    #ksMiniCartCanvas .canvas-header { padding-top: 8px; padding-bottom: 8px; }
+    #ksMiniCartCanvas .ks-mini-cart-footer { padding-top: 10px; padding-bottom: 10px; }
+}
+#ksMiniCartCanvas textarea[data-ks-mini-quantity-input] { height: 44px; resize: none; overflow: hidden; }

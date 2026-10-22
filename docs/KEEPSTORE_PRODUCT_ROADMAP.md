@@ -20,6 +20,8 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-A01 — Percorso shopping continuo
 
+- **MINICART-QUANTITY-CONTINUITY-1A — candidato source 2026-10-23, trasversale KS-B01/KS-C01:** base #376 SOURCE INTEGRATED `f744df72e8e49295f07bd6d4f5d475321383173d`, branch `task/minicart-quantity-continuity-1a`. Il drawer esistente aggiunge quantita intera 1..9999 e Aggiorna per le righe standard supportate, riusando `cart-set`, CSRF e RequestId; rendering esistente e collegamento al carrello completo per righe non supportate. Snapshot autorevole, non il solo HTTP o il numero digitato, conferma il SET e aggiorna totale/contatori completi; nessun retry POST o prezzo ottimistico. Oltre dieci righe un avviso esplicito conserva l'accesso agli altri articoli. [Manifest, criteri, Design Gate e prove](KEEPSTORE_MASTERPLAN_OPERATIVO.md#minicart-quantity-continuity-1a--2026-10-23). Requisiti complessivi PARZIALI; review indipendente della PR DRAFT e collaudi reali distinti, nessun merge/DB operativo/IIS/deploy. CI NON CONFIGURATA, CONSEGNA SERVER SOSPESA; HOME e F01 non riaperti, nessun task successivo automatico.
+
 - Batch `HEADER-SEARCH-CONTINUITY-1A`, KS-A01 / KS-B01, PR #360 **CHIUSO A / SOURCE INTEGRATION ONLY**: runtime `0916a1ddcb0c6e0cc2c479c83381e1c4af942e18` immutato, review ChatGPT A #5564548438. **WAIVER-PR360 — SOURCE INTEGRATION ONLY**, PO 2026-10-18: autorizzati solo closeout docs e FF-only dalla base `ffab4224a3c8c1ccf0d8072cc3cf1f47fa25c5c5`. Evidenze acquisite **418/418 PASS**, 108 scenari Tech/Food, Chrome fixture offline **10/10 PASS**, non tenant reali. **Precompile ASP.NET 4.8 NON ESEGUITA** (ExecutionPolicy prima del compilatore), **smoke IIS NON ESEGUITO**. Prima del deploy obbligatori compilazione compatibile 4.8, smoke applicativo ricerca header, verifica reale desktop/mobile su due tenant e regressioni pertinenti. Nessun bypass, falsa certificazione o estensione deroghe precedenti (#359 inclusa); macro-percorso PARZIALE. Nessun deploy/server/DB o prossimo task; hardening credenziali PIANIFICATO / NON AVVIATO. Evidenze nel Masterplan, task chiusi non riaperti.
 - Fonte/data: mandato PO `CORE-SHOPPING-CONTINUITY-1A` acquisito 2026-10-15, base #353 `8fdeebe7e269ef40a7113bb0cb922d420b5f34dc`, S2/S3. Priorita P1; requisito PARZIALE, batch #354 CHIUSO A / INTEGRATED con deroga autorizzata allo smoke Integration (NON ESEGUITO), non certificazione completa del percorso.
 - CURRENT: HOME, header/menu/search, listing quattro viste, facet, PDP, compare e CTA esistono; navigazione #315-#327, filtri #328-#336, confronto #337-#340 e ViewState #349 hanno chiusure circoscritte. Non full parity ONSUS, non collaudo completo di ogni pagina/dispositivo.
@@ -46,6 +48,8 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-B01 — Esperienza premium accessibile, non sola leggerezza
 
+- MiniCart quantita 2026-10-23: batch corrente documentato una sola volta in [KS-A01](#ks-a01--percorso-shopping-continuo). Riutilizza offcanvas/footer/stile esistenti, target 44px, etichette e messaggi di stato, continuita di focus/scroll; Design Gate proporzionato e limiti delle fixture nel Masterplan. Non certifica tutti i dispositivi o l'intero percorso ecommerce.
+
 - REV1 #355: F01 focus corretto con priorita al trigger Filtri e fallback utilizzabile per sostituzione/desktop; nessun nuovo listener o cambiamento commerciale. Review REV1 A e test focus mirati su fixture browser Tech/Food PASS; #355 MERGED/CLOSED con deroga PO specifica allo smoke Integration NON ESEGUITO. Sync locale A; nessuna attestazione production deployed (dettaglio Masterplan).
 - Fonte/data: S1/S5 e mandato PO `SHOPPING-MOBILE-EXCELLENCE-1A`, 2026-10-15, base #354 `7ef9482e6795403cad7587313c1593aa16d7251f`. P1; macro-requisito PARZIALE, batch CHIUSO A / INTEGRATED #355 con deroga circoscritta; nessuna certificazione visuale universale.
 - CURRENT: componenti ONSUS adattati, card/menu/offcanvas e checkout migliorati da task chiusi; benchmark storico e limiti dei browser/test nel Masterplan. #349 ha prova funzionale HTTP ma non browser visuale.
@@ -57,6 +61,8 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 ## C. ORDER-TO-CONFIRMATION
 
 ### KS-C01 — Carrello, checkout e conferma senza esiti ambigui
+
+- MiniCart quantita 2026-10-23: [batch corrente KS-A01](#ks-a01--percorso-shopping-continuo), riuso della mutazione autorevole gia esistente, fallback POST/303 senza JS e nessun successo non verificato. Business logic, ownership, sessione, checkout, ordine e pagamenti invariati; nessuna nuova certificazione operativa o chiusura del macro-percorso.
 
 - Chiusura prevalente 2026-10-16: #356 MERGED/CLOSED a `f287b7371b334aaa24f83cff6775ac5c42803db8`, FF-only, review REV1 A e deroga PO specifica allo smoke Integration NON ESEGUITO. Il seguente mandato/test rimane storico; il batch non e piu attivo e non certifica il macro-percorso completo.
 - REV1 #356: F01 corretto nella sola presentazione anche con righe ViewState positive e lettura non verificabile; avviso e blocco visuale finale, senza alterare Session, ownership o regole ordine. 95 test isolati mirati e precompile safe PASS; review REV1 e gate applicativo pendenti, non certificazione IIS/E2E (Masterplan).

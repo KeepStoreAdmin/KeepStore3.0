@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/minicart-ui.css") & "?v=20261005-minicart-cards-r7" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/minicart-ui.css") & "?v=20261023-mini-quantity-1a" %>" />
 
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
         <script type="application/ld+json"><asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" /></script>
@@ -319,6 +319,7 @@
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20261021-suggest-commercial1a"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
         <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260929-cart-quantity-async-ux-1b"></script>
+        <script src="<%= ThemeManager.Asset("js/ks-minicart-quantity.js") %>?v=20261023-mini-quantity-1a"></script>
         <asp:ContentPlaceHolder ID="ScriptsContent" runat="server" />
 
         <script type="text/javascript">

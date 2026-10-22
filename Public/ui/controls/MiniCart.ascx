@@ -9,6 +9,7 @@
         <button type="button" class="icon-close icon-close-popup link ks-mini-cart-close" data-bs-dismiss="offcanvas" aria-label="Chiudi"></button>
     </div>
 
+    <p class="ks-mini-quantity-status" data-ks-mini-quantity-status role="status" aria-live="polite" aria-atomic="true"></p>
     <div class="ks-mini-cart-content">
         <asp:PlaceHolder ID="phMiniCartEmpty" runat="server" Visible="false">
             <div class="offcanvas-body">
@@ -28,6 +29,10 @@
                     <asp:Literal ID="litMiniClearCart" runat="server" />
                 </div>
 
+                <asp:PlaceHolder ID="phMiniMoreItems" runat="server" Visible="false">
+                    <p class="ks-mini-more-items"><asp:Literal ID="litMiniMoreItems" runat="server" /> <a href="/carrello.aspx" class="link js-ks-cart-context" data-ks-cart-full-link>Vedi il carrello completo</a>.</p>
+                </asp:PlaceHolder>
+
                 <asp:Repeater ID="rptMiniCart" runat="server">
                     <ItemTemplate>
                         <article class="ks-mini-cart-item">
@@ -40,13 +45,13 @@
                                     <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>
                                 </a>
 
-                                <div class="ks-mini-quantity">Quantità <strong><%# Eval("Qnt") %></strong></div>
                             </div>
 
                             <div class="ks-mini-remove-wrap">
                                 <button type="submit" form="ksNativeCartForm" name="ksCartAction" value='<%# BuildRemoveCartActionValue(Eval("Id")) %>'
                                     class="btn btn-sm btn-outline-secondary ks-mini-remove" title="Rimuovi articolo" aria-label="Rimuovi articolo"><span class="icon-close" aria-hidden="true"></span><span class="visually-hidden">Rimuovi articolo</span></button>
                             </div>
+                            <%# RenderQuantityControl(Container.DataItem) %>
                             <dl class="ks-mini-cart-costs">
                                 <div>
                                     <dt>Prezzo unitario</dt>

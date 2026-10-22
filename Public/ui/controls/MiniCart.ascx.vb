@@ -1,5 +1,6 @@
 Imports System
 Imports System.Data
+Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Web
 Imports System.Web.UI.WebControls
@@ -9,6 +10,7 @@ Partial Class MiniCart
 
     ' 1 = prezzi + IVA (netto), 2 = prezzi IVA inclusa (ivato)
     Private _ivaTipo As Integer = 2
+    Private _editableKeys As New HashSet(Of String)(StringComparer.Ordinal)
 
     ' Only the read-only cart snapshot endpoint uses this mode. Normal pages retain
     ' their progressive request IDs and existing native POST behavior.
@@ -35,6 +37,8 @@ Partial Class MiniCart
 
     Private Sub BindMiniCart()
         Dim cart As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+        phMiniMoreItems.Visible = False
+        _editableKeys.Clear()
         If Not cart.HasOwner Then
             phMiniCartEmpty.Visible = True
             phMiniCartList.Visible = False
@@ -44,6 +48,8 @@ Partial Class MiniCart
         _ivaTipo = GetIvaTipoSafe()
 
         Dim dt As DataTable = cart.GetMiniCartItems(10)
+        Dim allItems As DataTable = cart.GetAllItems()
+        _editableKeys = BuildEditableQuantityKeys(allItems)
         Dim qty As Decimal = cart.TotalQuantity
         Dim total As Decimal = If(_ivaTipo = 1, cart.TotalNet, cart.TotalGross)
 
@@ -57,6 +63,13 @@ Partial Class MiniCart
 
         phMiniCartEmpty.Visible = False
         phMiniCartList.Visible = True
+        Dim hiddenRows As Integer = HiddenRowCount(allItems.Rows.Count, dt.Rows.Count)
+        phMiniMoreItems.Visible = hiddenRows > 0
+        If hiddenRows > 0 Then
+            litMiniMoreItems.Text = "Mostrate " & dt.Rows.Count.ToString(CultureInfo.InvariantCulture) &
+                " di " & allItems.Rows.Count.ToString(CultureInfo.InvariantCulture) & " righe. Righe aggiuntive nel carrello completo: " &
+                hiddenRows.ToString(CultureInfo.InvariantCulture) & "."
+        End If
 
         rptMiniCart.DataSource = dt
         rptMiniCart.DataBind()
@@ -241,6 +254,69 @@ Partial Class MiniCart
             output &= parts(i)
         Next
         Return output
+    End Function
+
+    Public Shared Function HiddenRowCount(ByVal totalRows As Integer, ByVal shownRows As Integer) As Integer
+        Return Math.Max(0, totalRows - Math.Max(0, shownRows))
+    End Function
+
+    Private Function QuantityKey(ByVal articleId As Integer, ByVal tcId As Integer) As String
+        Return articleId.ToString(CultureInfo.InvariantCulture) & ":" & tcId.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function QuantityTCId(ByVal value As Object) As Integer
+        If value Is Nothing OrElse value Is DBNull.Value Then Return -1
+        Dim parsed As Integer
+        If Not Integer.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed) OrElse parsed < -1 Then Return Integer.MinValue
+        Return If(parsed = 0, -1, parsed)
+    End Function
+
+    Private Function BuildEditableQuantityKeys(ByVal rows As DataTable) As HashSet(Of String)
+        Dim counts As New Dictionary(Of String, Integer)(StringComparer.Ordinal)
+        Dim eligible As New HashSet(Of String)(StringComparer.Ordinal)
+        If rows Is Nothing Then Return eligible
+        For Each row As DataRow In rows.Rows
+            Dim articleId As Integer = SafeInt(row("ArticoliId"))
+            Dim tcId As Integer = QuantityTCId(row("TCId"))
+            Dim key As String = QuantityKey(articleId, tcId)
+            If Not counts.ContainsKey(key) Then counts(key) = 0
+            counts(key) += 1
+            Dim quantity As Decimal = SafeDec(row("Qnt"))
+            If SafeInt(row("id")) > 0 AndAlso articleId > 0 AndAlso tcId <> Integer.MinValue AndAlso quantity >= 1D AndAlso quantity <= 9999D AndAlso
+               Decimal.Truncate(quantity) = quantity AndAlso
+               (SafeDec(row("Prezzo")) > 0D OrElse SafeDec(row("PrezzoIvato")) > 0D) Then eligible.Add(key)
+        Next
+        eligible.RemoveWhere(Function(key As String) counts(key) <> 1)
+        Return eligible
+    End Function
+
+    Public Function RenderQuantityControl(ByVal dataItem As Object) As String
+        Dim item As DataRowView = TryCast(dataItem, DataRowView)
+        If item Is Nothing Then Return String.Empty
+        Dim row As DataRow = item.Row
+        Dim articleId As Integer = SafeInt(row("ArticoliId"))
+        Dim tcId As Integer = QuantityTCId(row("TCId"))
+        Dim quantity As String = SafeDec(row("Qnt")).ToString("0.########", CultureInfo.InvariantCulture)
+        If Not _editableKeys.Contains(QuantityKey(articleId, tcId)) Then
+            Return "<div class='ks-mini-quantity-readonly'>Quantità <strong>" & HttpUtility.HtmlEncode(quantity) &
+                "</strong> · <a class='link js-ks-cart-context' data-ks-cart-full-link href='/carrello.aspx'>Gestisci nel carrello</a></div>"
+        End If
+        Dim rowId As Integer = SafeInt(row("id"))
+        Dim field As String = "ksMiniQty_" & rowId.ToString(CultureInfo.InvariantCulture)
+        Dim requestId As String = If(StatelessActionRequestIds, CartMutationIdempotencyService.CreateRequestId(),
+            CartMutationIdempotencyService.GetOrCreateProgressiveRequestId(HttpContext.Current,
+                "cart-set:mini:" & rowId.ToString(CultureInfo.InvariantCulture), "cart-set",
+                CartMutationIdempotencyService.BuildSetQuantityPayload(articleId, tcId, SafeDec(row("Qnt")))))
+        Dim action As String = CartMutationIdempotencyService.BuildNativeSetActionValue(articleId, tcId, field, requestId)
+        Dim label As String = HttpUtility.HtmlAttributeEncode("Quantità intera da 1 a 9999 di " & Convert.ToString(row("Descrizione1")))
+        Return "<div class='ks-mini-quantity-editor' data-ks-mini-quantity data-ks-id='" & articleId.ToString(CultureInfo.InvariantCulture) &
+            "' data-ks-tcid='" & tcId.ToString(CultureInfo.InvariantCulture) & "' data-ks-quantity='" & quantity & "'>" &
+            "<label for='" & field & "'>Quantità</label><div class='ks-mini-quantity-fields'>" &
+            "<textarea rows='1' inputmode='numeric' autocomplete='off' form='ksNativeCartForm' id='" & field &
+            "' name='" & field & "' aria-label='" & label & "' data-ks-mini-quantity-input>" & quantity & "</textarea>" &
+            "<button type='submit' form='ksNativeCartForm' name='ksCartAction' value='" & HttpUtility.HtmlAttributeEncode(action) &
+            "' class='tf-btn btn-line ks-mini-quantity-update' data-ks-mini-update aria-label='" & HttpUtility.HtmlAttributeEncode("Aggiorna quantità di " & Convert.ToString(row("Descrizione1"))) &
+            "'>Aggiorna</button></div></div>"
     End Function
 
 End Class
