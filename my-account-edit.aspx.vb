@@ -44,35 +44,48 @@ Partial Class my_account_edit
             Return
         End If
 
-        Dim current As AccountProfileData = LoadProfileData(loginId)
-        If current Is Nothing OrElse current.UtentiId <= 0 Then
+        Dim scope As AccountProfileScope = CurrentProfileScope()
+        If scope Is Nothing Then
             ShowMessage("Non e stato possibile caricare il profilo account.", False)
             Return
         End If
 
-        Dim updated As New AccountProfileData()
-        updated.UtentiId = current.UtentiId
-        updated.Email = CleanText(txtEmail.Text)
-        updated.Indirizzo = MergeText(txtIndirizzo, current.Indirizzo)
-        updated.Cap = MergeText(txtCap, current.Cap)
-        updated.Citta = MergeText(txtCitta, current.Citta)
-        updated.Provincia = MergeText(txtProvincia, current.Provincia)
-        updated.Nazione = MergeText(txtNazione, current.Nazione)
-        updated.Telefono = SubmittedText(txtTelefono)
-        updated.Cellulare = SubmittedText(txtCellulare)
-        updated.Fax = SubmittedText(txtFax)
-
-        Dim validationMessage As String = ""
-        If Not ValidateProfileInput(updated, validationMessage) Then
-            ShowMessage(validationMessage, False)
-            Return
-        End If
-
         Try
-            Using conn As New MySqlConnection(ConnString)
+            ' Matched rows distinguish a legitimate no-op from a missing/unauthorized row.
+            ' This is local to the save connection; no installed configuration is changed.
+            Dim settings As New MySqlConnectionStringBuilder(ConnString)
+            settings.UseAffectedRows = False
+            Using conn As New MySqlConnection(settings.ConnectionString)
                 conn.Open()
 
                 Using tr As MySqlTransaction = conn.BeginTransaction()
+                    RequireProfileScope(scope)
+                    ' Lock the login and its owner together before reading editable values.
+                    Dim current As AccountProfileData = LoadProfileData(loginId, conn, tr)
+                    If current Is Nothing OrElse current.UtentiId <> scope.UserId Then
+                        ShowMessage("Non e stato possibile caricare il profilo account.", False)
+                        Return
+                    End If
+
+                    Dim updated As New AccountProfileData()
+                    updated.UtentiId = current.UtentiId
+                    updated.Email = CleanText(txtEmail.Text)
+                    updated.Indirizzo = MergeText(txtIndirizzo, current.Indirizzo)
+                    updated.Cap = MergeText(txtCap, current.Cap)
+                    updated.Citta = MergeText(txtCitta, current.Citta)
+                    updated.Provincia = MergeText(txtProvincia, current.Provincia)
+                    updated.Nazione = MergeText(txtNazione, current.Nazione)
+                    updated.Telefono = SubmittedText(txtTelefono)
+                    updated.Cellulare = SubmittedText(txtCellulare)
+                    updated.Fax = SubmittedText(txtFax)
+
+                    Dim validationMessage As String = ""
+                    If Not ValidateProfileInput(updated, validationMessage) Then
+                        ShowMessage(validationMessage, False)
+                        Return
+                    End If
+
+                    RequireProfileScope(scope)
                     Dim sqlUtente As String =
                         "UPDATE utenti u " &
                         "INNER JOIN login l ON l.UtentiId = u.id " &
@@ -85,33 +98,36 @@ Partial Class my_account_edit
                         "u.Telefono = @Telefono, " &
                         "u.Cellulare = @Cellulare, " &
                         "u.Fax = @Fax " &
-                        "WHERE u.id = @UtentiId AND l.id = @LoginId"
+                        "WHERE u.id = @UtentiId AND l.id = @LoginId " &
+                        "AND u.AziendeId = @AziendaId AND u.Abilitato = 1 AND l.Abilitato = 1"
 
                     Using cmd As New MySqlCommand(sqlUtente, conn, tr)
-                        cmd.Parameters.AddWithValue("@Email", updated.Email)
-                        cmd.Parameters.AddWithValue("@Indirizzo", updated.Indirizzo)
-                        cmd.Parameters.AddWithValue("@Cap", updated.Cap)
-                        cmd.Parameters.AddWithValue("@Citta", updated.Citta)
-                        cmd.Parameters.AddWithValue("@Provincia", updated.Provincia)
-                        cmd.Parameters.AddWithValue("@Nazione", updated.Nazione)
-                        cmd.Parameters.AddWithValue("@Telefono", updated.Telefono)
-                        cmd.Parameters.AddWithValue("@Cellulare", updated.Cellulare)
-                        cmd.Parameters.AddWithValue("@Fax", updated.Fax)
-                        cmd.Parameters.AddWithValue("@UtentiId", current.UtentiId)
-                        cmd.Parameters.AddWithValue("@LoginId", loginId)
-                        cmd.ExecuteNonQuery()
+                        cmd.Parameters.Add("@Email", MySqlDbType.VarChar).Value = updated.Email
+                        cmd.Parameters.Add("@Indirizzo", MySqlDbType.VarChar).Value = updated.Indirizzo
+                        cmd.Parameters.Add("@Cap", MySqlDbType.VarChar).Value = updated.Cap
+                        cmd.Parameters.Add("@Citta", MySqlDbType.VarChar).Value = updated.Citta
+                        cmd.Parameters.Add("@Provincia", MySqlDbType.VarChar).Value = updated.Provincia
+                        cmd.Parameters.Add("@Nazione", MySqlDbType.VarChar).Value = updated.Nazione
+                        cmd.Parameters.Add("@Telefono", MySqlDbType.VarChar).Value = updated.Telefono
+                        cmd.Parameters.Add("@Cellulare", MySqlDbType.VarChar).Value = updated.Cellulare
+                        cmd.Parameters.Add("@Fax", MySqlDbType.VarChar).Value = updated.Fax
+                        AddProfileScopeParameters(cmd, scope)
+                        If cmd.ExecuteNonQuery() <> 1 Then Throw New InvalidOperationException("Profile update was not authorized.")
                     End Using
 
+                    RequireProfileScope(scope)
                     Dim sqlLogin As String =
-                        "UPDATE login SET Email = @Email WHERE id = @LoginId AND UtentiId = @UtentiId"
+                        "UPDATE login l INNER JOIN utenti u ON l.UtentiId = u.id " &
+                        "SET l.Email = @Email WHERE l.id = @LoginId AND u.id = @UtentiId " &
+                        "AND u.AziendeId = @AziendaId AND u.Abilitato = 1 AND l.Abilitato = 1"
 
                     Using cmdLogin As New MySqlCommand(sqlLogin, conn, tr)
-                        cmdLogin.Parameters.AddWithValue("@Email", updated.Email)
-                        cmdLogin.Parameters.AddWithValue("@LoginId", loginId)
-                        cmdLogin.Parameters.AddWithValue("@UtentiId", current.UtentiId)
-                        cmdLogin.ExecuteNonQuery()
+                        cmdLogin.Parameters.Add("@Email", MySqlDbType.VarChar).Value = updated.Email
+                        AddProfileScopeParameters(cmdLogin, scope)
+                        If cmdLogin.ExecuteNonQuery() <> 1 Then Throw New InvalidOperationException("Login update was not authorized.")
                     End Using
 
+                    RequireProfileScope(scope)
                     tr.Commit()
                 End Using
             End Using
@@ -154,64 +170,107 @@ Partial Class my_account_edit
         txtNazione.Text = profile.Nazione
     End Sub
 
-    Private Function LoadProfileData(ByVal loginId As Integer) As AccountProfileData
-        If loginId <= 0 Then Return Nothing
+    Private Function LoadProfileData(ByVal loginId As Integer,
+                                     Optional ByVal connection As MySqlConnection = Nothing,
+                                     Optional ByVal transaction As MySqlTransaction = Nothing) As AccountProfileData
+        Dim scope As AccountProfileScope = CurrentProfileScope()
+        If scope Is Nothing OrElse loginId <> scope.LoginId Then Return Nothing
 
-        Using conn As New MySqlConnection(ConnString)
-            Dim sql As String =
-                "SELECT " &
-                "u.id AS UtentiId, " &
-                "COALESCE(v.Username,'') AS Username, " &
-                "COALESCE(v.email, u.Email, '') AS Email, " &
-                "COALESCE(u.CognomeNome, v.cognomenome, '') AS CognomeNome, " &
-                "v.ultimoaccesso AS UltimoAccesso, " &
-                "COALESCE(u.Codice,'') AS Codice, " &
-                "COALESCE(u.RagioneSociale,'') AS RagioneSociale, " &
-                "COALESCE(u.Piva,'') AS Piva, " &
-                "COALESCE(u.CodiceFiscale,'') AS CodiceFiscale, " &
-                "COALESCE(u.Telefono,'') AS Telefono, " &
-                "COALESCE(u.Cellulare,'') AS Cellulare, " &
-                "COALESCE(u.Fax,'') AS Fax, " &
-                "COALESCE(u.Indirizzo,'') AS Indirizzo, " &
-                "COALESCE(u.Cap,'') AS Cap, " &
-                "COALESCE(u.Citta,'') AS Citta, " &
-                "COALESCE(u.Provincia,'') AS Provincia, " &
-                "COALESCE(u.Nazione,'') AS Nazione " &
-                "FROM vlogin v " &
-                "INNER JOIN utenti u ON v.utentiid = u.id " &
-                "WHERE v.id = @LoginId " &
-                "LIMIT 1"
+        If connection Is Nothing Then
+            Using owned As New MySqlConnection(ConnString)
+                owned.Open()
+                Return LoadProfileData(loginId, owned)
+            End Using
+        End If
 
-            Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@LoginId", loginId)
-                conn.Open()
+        ' vlogin projects these fields directly from login/utenti. Base tables avoid
+        ' locking unrelated address/exemption joins during the transactional read.
+        Dim sql As String =
+            "SELECT " &
+            "u.id AS UtentiId, " &
+            "COALESCE(l.Username,'') AS Username, " &
+            "COALESCE(l.email, u.Email, '') AS Email, " &
+            "COALESCE(u.CognomeNome, l.cognomenome, '') AS CognomeNome, " &
+            "l.ultimoaccesso AS UltimoAccesso, " &
+            "COALESCE(u.Codice,'') AS Codice, " &
+            "COALESCE(u.RagioneSociale,'') AS RagioneSociale, " &
+            "COALESCE(u.Piva,'') AS Piva, " &
+            "COALESCE(u.CodiceFiscale,'') AS CodiceFiscale, " &
+            "COALESCE(u.Telefono,'') AS Telefono, " &
+            "COALESCE(u.Cellulare,'') AS Cellulare, " &
+            "COALESCE(u.Fax,'') AS Fax, " &
+            "COALESCE(u.Indirizzo,'') AS Indirizzo, " &
+            "COALESCE(u.Cap,'') AS Cap, " &
+            "COALESCE(u.Citta,'') AS Citta, " &
+            "COALESCE(u.Provincia,'') AS Provincia, " &
+            "COALESCE(u.Nazione,'') AS Nazione " &
+            "FROM login l " &
+            "INNER JOIN utenti u ON l.utentiid = u.id " &
+            "WHERE l.id = @LoginId AND u.id = @UtentiId AND u.AziendeId = @AziendaId " &
+            "AND u.Abilitato = 1 AND l.Abilitato = 1 " &
+            "LIMIT 1"
+        If transaction IsNot Nothing Then sql &= " FOR UPDATE"
 
-                Using r As MySqlDataReader = cmd.ExecuteReader()
-                    If Not r.Read() Then Return Nothing
+        Using cmd As New MySqlCommand(sql, connection, transaction)
+            AddProfileScopeParameters(cmd, scope)
 
-                    Dim profile As New AccountProfileData()
-                    profile.UtentiId = SafeInt(r("UtentiId"))
-                    profile.Username = SafeString(r("Username"))
-                    profile.Email = SafeString(r("Email"))
-                    profile.CognomeNome = SafeString(r("CognomeNome"))
-                    profile.UltimoAccessoText = FormatDate(r("UltimoAccesso"))
-                    profile.Codice = SafeString(r("Codice"))
-                    profile.RagioneSociale = SafeString(r("RagioneSociale"))
-                    profile.Piva = SafeString(r("Piva"))
-                    profile.CodiceFiscale = SafeString(r("CodiceFiscale"))
-                    profile.Telefono = SafeString(r("Telefono"))
-                    profile.Cellulare = SafeString(r("Cellulare"))
-                    profile.Fax = SafeString(r("Fax"))
-                    profile.Indirizzo = SafeString(r("Indirizzo"))
-                    profile.Cap = SafeString(r("Cap"))
-                    profile.Citta = SafeString(r("Citta"))
-                    profile.Provincia = SafeString(r("Provincia"))
-                    profile.Nazione = SafeString(r("Nazione"))
-                    Return profile
-                End Using
+            Using r As MySqlDataReader = cmd.ExecuteReader()
+                If Not r.Read() Then Return Nothing
+
+                Dim profile As New AccountProfileData()
+                profile.UtentiId = SafeInt(r("UtentiId"))
+                profile.Username = SafeString(r("Username"))
+                profile.Email = SafeString(r("Email"))
+                profile.CognomeNome = SafeString(r("CognomeNome"))
+                profile.UltimoAccessoText = FormatDate(r("UltimoAccesso"))
+                profile.Codice = SafeString(r("Codice"))
+                profile.RagioneSociale = SafeString(r("RagioneSociale"))
+                profile.Piva = SafeString(r("Piva"))
+                profile.CodiceFiscale = SafeString(r("CodiceFiscale"))
+                profile.Telefono = SafeString(r("Telefono"))
+                profile.Cellulare = SafeString(r("Cellulare"))
+                profile.Fax = SafeString(r("Fax"))
+                profile.Indirizzo = SafeString(r("Indirizzo"))
+                profile.Cap = SafeString(r("Cap"))
+                profile.Citta = SafeString(r("Citta"))
+                profile.Provincia = SafeString(r("Provincia"))
+                profile.Nazione = SafeString(r("Nazione"))
+                Return profile
             End Using
         End Using
     End Function
+
+    Private Function CurrentProfileScope() As AccountProfileScope
+        If Context Is Nothing OrElse Context.Session Is Nothing Then Return Nothing
+        Dim loginId As Integer = CurrentLoginId()
+        Dim userId As Integer = SafeInt(Session("UtentiId"))
+        Dim companyId As Integer = SafeInt(Session("AuthenticatedAziendaID"))
+        Dim priceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Session("Listino"), Session("listino"))
+        ' Consume only the resolver result already published by master Init, never perform another lookup.
+        Dim tenant As StorefrontSeoTenantIdentity = TryCast(Context.Items("KeepStore.StorefrontSeoTenant"), StorefrontSeoTenantIdentity)
+        If loginId <= 0 OrElse userId <= 0 OrElse companyId <= 0 OrElse priceListId <= 0 OrElse
+           companyId <> SafeInt(Session("AziendaID")) OrElse tenant Is Nothing OrElse tenant.CompanyId <> companyId Then Return Nothing
+        Dim databaseScope As String = StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey()
+        If String.IsNullOrEmpty(databaseScope) Then Return Nothing
+        ' Exact contract of PageMaster.CurrentAuthenticatedScopeKey (#359), including owner and listino.
+        Dim marker As String = databaseScope & ":" & companyId.ToString() & ":" & loginId.ToString() & ":" &
+            userId.ToString() & ":" & companyId.ToString() & ":" & priceListId.ToString()
+        If Not String.Equals(TryCast(Context.Items("KeepStore.Authentication.ValidatedScope"), String), marker, StringComparison.Ordinal) Then Return Nothing
+        Return New AccountProfileScope() With {.LoginId = loginId, .UserId = userId, .CompanyId = companyId, .Marker = marker}
+    End Function
+
+    Private Sub RequireProfileScope(ByVal expected As AccountProfileScope)
+        Dim current As AccountProfileScope = CurrentProfileScope()
+        If current Is Nothing OrElse Not String.Equals(current.Marker, expected.Marker, StringComparison.Ordinal) Then
+            Throw New InvalidOperationException("Validated profile scope is unavailable.")
+        End If
+    End Sub
+
+    Private Sub AddProfileScopeParameters(ByVal command As MySqlCommand, ByVal scope As AccountProfileScope)
+        command.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = scope.LoginId
+        command.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = scope.UserId
+        command.Parameters.Add("@AziendaId", MySqlDbType.Int32).Value = scope.CompanyId
+    End Sub
 
     Private Function CurrentLoginId() As Integer
         If Session("LoginId") Is Nothing Then Return 0
@@ -332,6 +391,13 @@ Partial Class my_account_edit
         pnlMessage.CssClass = If(success, "alert alert-success mb-4", "alert alert-danger mb-4")
         litMessage.Text = Server.HtmlEncode(message)
     End Sub
+
+    Private NotInheritable Class AccountProfileScope
+        Public LoginId As Integer
+        Public UserId As Integer
+        Public CompanyId As Integer
+        Public Marker As String
+    End Class
 
     Private Class AccountProfileData
         Public Property UtentiId As Integer

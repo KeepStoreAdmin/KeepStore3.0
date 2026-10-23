@@ -2,13 +2,21 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Confine profilo — ACCOUNT-PROFILE-TENANT-SCOPE-1A, 2026-10-24
+
+La pagina `my-account-edit.aspx.vb` consuma la convalida per-request della master #359: marker esatto per database/azienda/login/utente/azienda autenticata/listino, ID positivi e azienda coerente con il tenant gia risolto nel contesto. Nessun nuovo lookup auth/tenant o valore client autorizza il profilo; hidUtentiId resta espositivo. Scope assente o cambiato impedisce lettura/scrittura senza pulire/modificare la sessione autenticata.
+
+Il DDL versionato assegna AziendeId a utenti, non a login. Lettura e UPDATE applicano congiuntamente login PK, utenti PK, u.AziendeId e abilitazione di entrambi. Proiezione da login JOIN utenti equivalente ai campi usati di vlogin, evitando le sue join non necessarie. Save: la lettura preesistente viene eseguita con FOR UPDATE nella stessa transazione dei due UPDATE; lo scope viene ricontrollato prima delle scritture e del commit. UseAffectedRows=False soltanto sulla connessione save conserva tutte le altre opzioni e consente esito esattamente uno anche per valori invariati; ogni altro risultato fallisce, rollback alla disposizione della transazione incompleta. Parametri Int32/VarChar espliciti. Trigger di log utenti preesistente invariato, anche per no-op; nessuna promessa di zero scritture tecniche in quel caso.
+
+Campi, validazioni/normalizzazione, messaggi, URL, form/ONSUS/sidebar, indirizzi alternativi, password, email transazionali e contesto commerciale invariati. [Manifest, DDL, prove e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#account-profile-tenant-scope-1a--2026-10-24): **604 controlli VB/System.Web/MySql provider con SQLite sintetico e precompile safe PASS**, nessuna certificazione InnoDB/protocollo/MySQL/IIS operativo. Base #386 SOURCE INTEGRATED `390e529a...`, candidato SOURCE ONLY/PR DRAFT e review indipendente pendente. Rilascio e KS-C02 complessivo restano separati; consegna server sospesa.
+
 ## Contratto auth — LOGIN-POST-ORIGIN-GUARD-1A, 2026-10-24
 
 Guard condiviso in PageMaster, riusato dalla pagina login e dal login legacy prima di lettura credenziali/query. POST obbligatorio per invocare auth; normale GET/HEAD login invariato. Tenant gia risolto da LeggiAzienda, nessuna nuova query o resolver: confronto esatto scheme/IdnHost/porta con Request.Url, mai X-Forwarded. Primario/alias e punto DNS finale non diventano origini intercambiabili. Origin singolo valido richiesto se presente; solo in sua assenza Referer assoluto same-origin. Intestazioni malformate/multiple/contraddittorie rifiutate prima della normalizzazione Uri.
 
 Il rifiuto 403 o 405/Allow POST e conservato in HttpContext.Items; risposta generica/no-store, nessuna pulizia dell'identita valida o effetto auth. Guard in Init pagina e nei chiamanti; controllo successivo di Load/PreRender/Render senza considerare CompleteRequest terminale. Page.Error registrato una sola volta al rifiuto conserva direttamente stato/body anche se LoadViewState salta Render; tratta solo richieste gia rifiutate, senza modificare MAC, ViewStateUserKey o gestore globale degli altri errori. Query tenant-scoped, password legacy, rivalidazione #359, listino/IVA/owner, username autofill e PostLoginReturnUrlPolicy invariati. Nessuna nuova crittografia, token o persistenza.
 
-[Manifest, prove e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#login-post-origin-guard-1a--2026-10-24): 2.353 controlli VB/System.Web, due tenant e baseline, frontiere DB/audit/carrello e trasporto sintetiche, error dispatch reale senza ciclo IIS completo. Hardening source-evidenced, nessun exploit live dimostrato. Base #385 SOURCE INTEGRATED `743e4d4...`; nuovo candidato SOURCE ONLY/PR DRAFT, review indipendente pendente. Hash migration/session regeneration e gate operativi restano separati; consegna server sospesa.
+[Manifest, prove e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#login-post-origin-guard-1a--2026-10-24): 2.353 controlli VB/System.Web, due tenant e baseline, frontiere DB/audit/carrello e trasporto sintetiche, error dispatch reale senza ciclo IIS completo. Hardening source-evidenced, nessun exploit live dimostrato. **#386 SOURCE INTEGRATED** a `390e529ac8021c5cb87b73b7519e9136c9a3c5ee`, FF-only/review A e CI acquisiti senza ripetere i test; compatibilita login IIS reale ancora aperta. Hash migration/session regeneration e gate operativi restano separati; consegna server sospesa.
 
 ## Contratto PO — CART-RECOMMENDATIONS-COMMERCIAL-1A, 2026-10-24
 
