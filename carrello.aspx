@@ -88,6 +88,31 @@
                 <p data-ks-cart-recovery-message><asp:Literal ID="litCartRecoveryMessage" runat="server" /></p>
             </asp:Panel>
 
+            <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">
+                <div class="ks-cart-conditions-heading">Prezzi e condizioni del carrello</div>
+                <asp:Literal ID="litCartPriceRevalidation" runat="server" />
+            </asp:Panel>
+
+            <asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false" CssClass="ks-alert ks-alert-danger mb-3" role="alert" aria-live="assertive" tabindex="-1">
+                <strong>Ordine non inviato.</strong>
+                <span class="d-block mt-1"><asp:Literal ID="litCheckoutSubmitError" runat="server" /></span>
+                <asp:ValidationSummary ID="vsCheckoutSubmit" runat="server" ValidationGroup="checkoutSubmit" CssClass="mt-2" HeaderText="Controlla prima di riprovare:" />
+            </asp:Panel>
+
+            <span id="ksCartStockError" aria-hidden="true"></span>
+            <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" aria-labelledby="ksCartStockErrorTitle" tabindex="-1">
+                <span class="ks-order-inventory-alert__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 8v5m0 3.5v.1M10.1 3.9 2.3 17.4A2 2 0 0 0 4 20.4h16a2 2 0 0 0 1.7-3L13.9 3.9a2.2 2.2 0 0 0-3.8 0Z" />
+                    </svg>
+                </span>
+                <div class="ks-order-inventory-alert__content">
+                    <span class="ks-order-inventory-alert__eyebrow">Disponibilità aggiornata</span>
+                    <h2 id="ksCartStockErrorTitle">Ordine non inviato</h2>
+                    <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
+                </div>
+            </asp:Panel>
+
             <asp:ObjectDataSource ID="sdsArticoli" runat="server"
                 TypeName="CartAuthoritativeReadDataSource" SelectMethod="SelectStandardItems">
             </asp:ObjectDataSource>
@@ -395,31 +420,6 @@
             <div id="Qnt_Errata" runat="server" class="ks-alert ks-alert-danger" visible="false">
                 E' stata impostata una quantità articolo minore o uguale a 0.<br />Eliminare l'articolo dal carrello o impostare una quantità maggiore di 0.
             </div>
-
-            <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">
-                <div class="ks-cart-conditions-heading">Prezzi e condizioni del carrello</div>
-                <asp:Literal ID="litCartPriceRevalidation" runat="server" />
-            </asp:Panel>
-
-            <asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false" CssClass="ks-alert ks-alert-danger mb-3" role="alert" aria-live="assertive" tabindex="-1">
-                <strong>Ordine non inviato.</strong>
-                <span class="d-block mt-1"><asp:Literal ID="litCheckoutSubmitError" runat="server" /></span>
-                <asp:ValidationSummary ID="vsCheckoutSubmit" runat="server" ValidationGroup="checkoutSubmit" CssClass="mt-2" HeaderText="Controlla prima di riprovare:" />
-            </asp:Panel>
-
-            <span id="ksCartStockError" aria-hidden="true"></span>
-            <asp:Panel ID="pnlOrderInventoryAvailability" runat="server" ClientIDMode="Static" CssClass="ks-order-inventory-alert" Visible="false" role="alert" aria-live="assertive" aria-labelledby="ksCartStockErrorTitle" tabindex="-1">
-                <span class="ks-order-inventory-alert__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" focusable="false">
-                        <path d="M12 8v5m0 3.5v.1M10.1 3.9 2.3 17.4A2 2 0 0 0 4 20.4h16a2 2 0 0 0 1.7-3L13.9 3.9a2.2 2.2 0 0 0-3.8 0Z" />
-                    </svg>
-                </span>
-                <div class="ks-order-inventory-alert__content">
-                    <span class="ks-order-inventory-alert__eyebrow">Disponibilità aggiornata</span>
-                    <h2 id="ksCartStockErrorTitle">Ordine non inviato</h2>
-                    <asp:Literal ID="litOrderInventoryAvailability" runat="server" />
-                </div>
-            </asp:Panel>
 
             <asp:Panel ID="pnlLoginRequired" runat="server" ClientIDMode="Static" CssClass="ks-cart-message ks-cart-message-login" Visible="false" tabindex="-1">
                 <div class="ks-cart-message-icon">
