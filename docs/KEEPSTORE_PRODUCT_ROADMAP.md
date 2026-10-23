@@ -154,6 +154,8 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-G01 — Pacchetto e stato reale di ogni tenant
 
+- **CI-FOUNDATION-1A — candidato SOURCE ONLY, 2026-10-23:** mandato PO per automatizzare i gate sorgente prima delle integrazioni future, riusando secret guard, carrello sintetico e precompile safe. Base #382 SOURCE INTEGRATED `57eff366ead32c3fad921892b18c99dfa1ab8720`, Windows sincronizzato con preservazione. Job `keepstore-source-gates` su push task/stable e PR verso frontend-rebuild, verifica dello SHA head oltre al check PR. Actions consentito; run verde e required check sono gate di accettazione distinti, stato effettivo da GitHub/closeout. [Manifest e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#ci-foundation-1a--2026-10-23). Nessun deploy o certificazione tenant reale; KS-G01 resta PARZIALE/GATE APERTO. Deroga CI #382 non estesa ad altre PR.
+
 - Fonte/data: S1/S3/S4, 2026-10-15. P0 rilascio; GATE APERTO, nessuna produzione globale certificata.
 - Fase 1 `TENANT-RELEASE-PACKAGE-1A` **INTEGRATA SOURCE ONLY** nella [#367](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/367), stable `55bd8173fb03fd85f6a892bf2a728e7a02d61748`. Generatore PLAN ONLY, hash Git, dipendenze dirette/gate e backup/rollback progettati; 59/59 prove sintetiche storiche, nessuna certificazione target ereditata. Confronto storico non operativo `de85cdd4... -> c8373b08...`: 23 differenze / 13 runtime / 10 Tools-manuali.
 - Fase 2 `TENANT-RELEASE-FILE-ATTESTATION-1A` **INTEGRATA SOURCE ONLY** nella [#368](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/368), FF diretto a `d52818e694cdacf6c3ada543eca091884b7c2719`, review 5601362662, closeout Windows 6318722145. Verificatore dei soli percorsi runtime ammessi dal piano; 73/73 prove storiche su cartelle TEMP, non ripetute; [runbook](KEEPSTORE_TENANT_RELEASE_RUNBOOK.md#7-verificare-i-file-osservabili-fase-2). Test 20: LastAccessTime automatico informativo, nessuna scrittura esplicita o modifica di policy. Commit installato UNKNOWN, stato sempre `TARGET_ATTESTATION_INCOMPLETE`. **CONSEGNA SERVER SOSPESA PER DECISIONE PO**; certificazione tenant reali GATE APERTO / NON AVVIATA. Nessuna installazione reale, IIS, DB, payload o deploy.
@@ -194,7 +196,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-2026-10-23: #381 MERGED/CLOSED / SOURCE INTEGRATED a `4582271a750da47375fa8e0eb995ef7149935eab`; `main` protetto `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariato. Task corrente MYACCOUNT-RECENT-ORDERS-TENANT-SCOPE-1A, sei file, candidato SOURCE ONLY / PR DRAFT per review indipendente. Coupon/Groupon resta STANDBY fino a nuova autorizzazione PO: nessun nuovo test o fix; standby non disabilita tecnicamente le pagine esistenti. CONSEGNA SERVER SOSPESA; nessun merge, deploy o task successivo automatico.
+2026-10-23: #382 MERGED/CLOSED / SOURCE INTEGRATED a `57eff366ead32c3fad921892b18c99dfa1ab8720`, Windows sincronizzato FF-only; `main` invariato e protetto. Task corrente CI-FOUNDATION-1A, sette file massimi, SOURCE ONLY / PR DRAFT per review indipendente. Verificare run reale sullo SHA head e required check compatibile FF: YAML presente non equivale a CI funzionante. Deroga CI #382 esclusiva; coupon/Groupon STANDBY, CONSEGNA SERVER SOSPESA e nessun merge automatico.
 
 ## Aggiornamento della roadmap
 

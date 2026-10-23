@@ -1919,6 +1919,12 @@ Non implementare runtime email senza task dedicato e senza conferma delle fonti 
 
 ## 16. Registro modifiche tecniche
 
+### CI-FOUNDATION-1A — contratto candidato dei gate sorgente
+
+Workflow `.github/workflows/keepstore-ci.yml` e wrapper `Tools/Invoke-KeepStoreCiGates.ps1`: Windows 2022/PowerShell 5.1 x64, job stabile `keepstore-source-gates`, token sola lettura, nessuna configurazione operativa o credenziale persistita. PR controlla il tree dello SHA head esatto; push task produce un check sullo stesso commit per il futuro FF. Basi: PR base SHA, task merge-base origin/frontend-rebuild (delta cumulativo), stable before SHA dell'evento. Git richiede base antenata, linearita e index/tracked identici a HEAD; seguono diff-check, secret guard incrementale, carrello isolato e precompile sintetica 4.8. Ogni fallimento termina il job, senza fallback/skip. Non prova comportamenti IIS/MySQL, accessi reali o deploy.
+
+Il required check e una risorsa GitHub separata: attivazione sulla sola frontend-rebuild dopo verde reale sul commit integrabile, sorgente GitHub Actions, compatibile con push FF diretto. Stato del run e della regola dal GitHub corrente e rapporto PR, non dedotto dal YAML. [Manifest, prove e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#ci-foundation-1a--2026-10-23). Review indipendente e autorizzazione PO restano necessarie; nessun merge CI automatico, consegna server sospesa.
+
 | Data | Task | PR | Commit | File modificati | Sintesi tecnica | Impatto funzionale | Note/debito residuo |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-09-10 | CART-DEADLOCK-RETRY-1A | #245 | `d773408588c4fc91472a4b71ef9d3980e1c93072` | sette servizi `App_Code` del perimetro carrello | Retry transazionale limitato per MySQL 1213/1205, commit ambiguo fail-closed, idempotenza `indeterminate` e lock merge deterministici | Riduce i fallimenti transitori senza doppio replay o perdita di atomicita | Merge fast-forward da `ef3bce60...`, un commit, zero merge commit; remove/clear, persistenza idempotenza, ordine/inventario e promo ambigua restano audit separati |

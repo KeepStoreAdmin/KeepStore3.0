@@ -242,6 +242,12 @@ Nessuna nuova persistenza in chiaro, funzione crittografica isolata o fallback d
 
 ## Commit, push, review, smoke e merge
 
+### CI dei gate sorgente
+
+`CI-FOUNDATION-1A` definisce il job univoco `keepstore-source-gates`: Git/diff, secret guard incrementale, carrello isolato e precompile safe 4.8 su Windows/PowerShell 5.1, senza configurazioni operative, credenziali o deploy. Il file YAML da solo non prova CI funzionante: verificare run, job, risultato e SHA effettivi su GitHub. Per il FF deve esistere un risultato verde sullo **SHA head integrabile**, prodotto dal push task; il solo check sul merge sintetico PR non basta. Nessun gate obbligatorio puo essere saltato o trasformato in successo dopo un errore.
+
+L'attivazione del required check su `frontend-rebuild` segue il primo verde verificato: solo questo contesto, sorgente GitHub Actions, senza obbligo PR/merge queue o aggiornamenti tramite merge commit; mantenere compatibile il push FF diretto. Non rimuovere protezioni preesistenti. Stato effettivo della regola e dei run dal GitHub corrente/closeout; assenza o errore resta B salvo deroga PO esplicita e specifica. La deroga CI della #382 vale soltanto per #382. Review indipendente e autorizzazione PO al merge rimangono obbligatorie; CI verde non le sostituisce e non certifica IIS/MySQL/produzione.
+
 ### Consegna release e handoff gestionale
 
 Per ogni task runtime fornire il manifest esatto `added/modified/deleted/renamed` (origine/destinazione per rename), dipendenze `App_Code`/Bin e asset/cache-buster pertinenti, commit sorgente, destinazioni esplicitamente autorizzate, prerequisiti configurazione, backup, rollback e test con relativi limiti. I file aggiunti sono obbligatori quanto i modificati: evitare pacchetti parziali. Nessuna destinazione di produzione si deduce da un tenant compatibile. PR integrata non significa file pubblicati: registrare separatamente source integrated, Integration tested e production deployed/verified per tenant. Docs-only: nessun file da pubblicare sul server.

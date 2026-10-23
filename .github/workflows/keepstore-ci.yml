@@ -1,0 +1,43 @@
+name: KeepStore source gates
+
+on:
+  pull_request:
+    branches: [frontend-rebuild]
+  push:
+    branches:
+      - frontend-rebuild
+      - 'task/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keepstore-source-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/frontend-rebuild' }}
+
+jobs:
+  keepstore-source-gates:
+    name: keepstore-source-gates
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Validate source gates
+        env:
+          KS_EVENT_NAME: ${{ github.event_name }}
+          KS_REF_NAME: ${{ github.ref_name }}
+          KS_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          KS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          & .\Tools\Invoke-KeepStoreCiGates.ps1 `
+            -EventName $env:KS_EVENT_NAME -RefName $env:KS_REF_NAME `
+            -CandidateSha $env:KS_CANDIDATE_SHA -BaseSha $env:KS_BASE_SHA
