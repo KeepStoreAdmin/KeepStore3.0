@@ -2,6 +2,16 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Contratto PO — CART-RECOMMENDATIONS-COMMERCIAL-1A, 2026-10-24
+
+Suggerimenti del carrello esclusivamente nello step Carrello: recenti, poi correlati, poi catalogo se il pool precedente non rende card utilizzabili; massimo otto articoli distinti, nessuno gia nel carrello, nessun acquisto diretto nuovo. In checkout/confirm si svuotano pannello e literal prima di qualunque lettura. Il doppio guard nel loader impedisce I/O raccomandazioni anche da chiamanti alternativi; non modifica ordine, consensi, totali o sessioni transazionali.
+
+Contesto da StorefrontPriceDisplayContextProvider, mai listino di default su errore; stesso listino parametrizzato per seed/candidati. Articolo abilitato e Export pubblicato, TCId -1 o variante positiva appartenente all'articolo, inventario unico per articolo/TCId in magazzino web 1, netto >=1. Base positiva della modalita IVA selezionata: netto oppure BuildEffectiveGrossExpression con override/reverse charge; nessun fallback fra modalita o promo-only. Tutti i predicati prima di ROW_NUMBER e LIMIT; Vetrina resta un vincolo HOME, non di questa funzione.
+
+ThemeManager per placeholder; ProductPromotionEligibilityResolver.CreateBatch per un solo snapshot locale alla selezione, riusato nei fallback; ProductPromotionDisplayHelper.BuildForProduct(batch) per quantita uno. Il prezzo formattato viene predisposto sulle righe; rendering e chiavi duplicati non aprono connessioni. Nessuna nuova autorita fiscale, store o cache condivisa. Layout cart-ui invariato, focus-visible circoscritto nel renderer; nessun JS o mutazione cart introdotti.
+
+Manifest sei file e limiti di collaudo nel Masterplan: VB/controlli WebForms reali con frontiere DB sintetiche, SQLite e Chrome HTTP isolato non certificano IIS/MySQL/checkout completo. Base f3703ed9266843673bf3ef613c0de3299fa1c0aa (#384 SOURCE INTEGRATED); nuovo candidato resta SOURCE ONLY/PR DRAFT per review, consegna server sospesa.
+
 ## Decisione PO prevalente — Coupon in standby, 2026-10-23
 
 Tutte le funzionalita coupon sono sospese fino a nuova autorizzazione esplicita. Nessuna modifica, correzione, ripetizione dei test o riattivazione; le registrazioni storiche della PR #380 e della QA B sono archiviate e non la riaprono. STANDBY non equivale a disabilitazione tecnica delle pagine esistenti e non spegne menu o pagamenti. Una futura attivazione richiede decisione PO, riesame dell'esposizione delle rotte e collaudi dedicati. La registrazione standard resta fuori dal vincolo. Esito e limiti QA nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-prevalente--coupon-in-standby-2026-10-23).

@@ -1094,16 +1094,7 @@ End Function
 
 Private Function CartRecommendationImage(ByVal row As DataRow) As String
     If row Is Nothing Then Return ""
-
-    Dim raw As String = Convert.ToString(row("Img1")).Trim()
-    If String.IsNullOrWhiteSpace(raw) Then Return ""
-    If raw.Contains("..") OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Return ""
-
-    Dim imageUrl As String = ThemeManager.ProductImageUrl(raw)
-    If String.IsNullOrWhiteSpace(imageUrl) Then Return ""
-    If imageUrl.IndexOf("placeholder.svg", StringComparison.OrdinalIgnoreCase) >= 0 Then Return ""
-
-    Return imageUrl
+    Return ThemeManager.ProductImageUrl(row("Img1"))
 End Function
 
 Private Function CartRecommendationUrl(ByVal row As DataRow) As String
@@ -1117,33 +1108,8 @@ Private Function CartRecommendationUrl(ByVal row As DataRow) As String
 End Function
 
 Private Function CartRecommendationPrice(ByVal row As DataRow) As String
-    If row Is Nothing Then Return ""
-
-    Dim useNetPrice As Boolean = (GetSessionInt("IvaTipo", 0) = 1)
-    Dim baseNet As Decimal = Convert.ToDecimal(SafeDbl(row("Prezzo"), 0), CultureInfo.InvariantCulture)
-    Dim baseGross As Decimal = Convert.ToDecimal(SafeDbl(row("PrezzoIvato"), 0), CultureInfo.InvariantCulture)
-    Dim articleId As Integer = SafeInt(row("id"), 0)
-    Dim tcId As Integer = SafeInt(row("TCid"), -1)
-    Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
-    Dim eligibilityContext As ProductPromotionEligibilityContext =
-        ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, listino)
-    Dim promotionModel As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
-        ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
-        articleId,
-        tcId,
-        eligibilityContext,
-        baseNet,
-        baseGross)
-
-    Dim displayPrice As Decimal = If(useNetPrice, baseNet, baseGross)
-    If promotionModel IsNot Nothing AndAlso promotionModel.HasDefaultQuantityOffer Then
-        displayPrice = If(useNetPrice,
-                          promotionModel.BestDefaultQuantityPriceNet,
-                          promotionModel.BestDefaultQuantityPriceGross)
-    End If
-
-    If displayPrice <= 0 Then Return ""
-    Return FormatCurrencyIt(Convert.ToDouble(displayPrice, CultureInfo.InvariantCulture))
+    If row Is Nothing OrElse Not row.Table.Columns.Contains("CartRecommendationDisplayPrice") Then Return ""
+    Return Convert.ToString(row("CartRecommendationDisplayPrice"))
 End Function
 
 Private Function CartRecommendationKey(ByVal row As DataRow, ByVal mode As String) As String
@@ -2019,18 +1985,67 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Next
     End Sub
 
-    Private Function CartRecommendationSelectFields() As String
-        Return "v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Descrizione1, v.Descrizione2, " & _
-               "IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, " & _
-               "v.Img1, COALESCE(v.Prezzo,0) AS Prezzo, COALESCE(v.PrezzoIvato,0) AS PrezzoIvato, " & _
-               "COALESCE(v.PrezzoPromo,0) AS PrezzoPromo, COALESCE(v.PrezzoPromoIvato,0) AS PrezzoPromoIvato, COALESCE(v.InOfferta,0) AS InOfferta "
+Private Function CartRecommendationSelectFields() As String
+        Return "v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Descrizione1, v.Descrizione2, " &
+               "IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, " &
+               "v.Img1, COALESCE(v.Prezzo,0) AS Prezzo, " & CartRecommendationGrossSql() & " AS PrezzoIvato, " &
+               "COALESCE(v.InOfferta,0) AS InOfferta, COALESCE(v.visite,0) AS Visite, " &
+               "GREATEST(0,COALESCE(stk.Giacenza,0)-COALESCE(stk.Impegnata,0)) AS RecommendationAvailable "
     End Function
 
-    Private Function CartRecommendationStockWhere() As String
-        Return "(COALESCE(v.Disponibilita,0)>0 OR (COALESCE(v.Giacenza,0)-COALESCE(v.Impegnata,0))>0)"
+    Private Function CartRecommendationGrossSql() As String
+        Return StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
+            "v.Prezzo", "v.PrezzoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
+            "@ksRcEnabled", "@ksHasVatOverride", "@ksVatOverride")
     End Function
 
-    Private Function LoadCartRecentlyViewedProducts(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
+    Private Function LoadCartRecommendationPool(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer),
+                                                ByVal filter As String, ByVal score As String,
+                                                Optional ByVal recentOrder As Boolean = False) As DataTable
+        Dim priceContext As StorefrontPriceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        If priceContext Is Nothing OrElse IsCheckoutStepVisible() OrElse IsCartEmptyState() Then Return Nothing
+        Dim excluded As New List(Of String)()
+        If cartIds IsNot Nothing Then
+            For Each id As Integer In cartIds
+                If id > 0 Then excluded.Add(id.ToString(CultureInfo.InvariantCulture))
+            Next
+        End If
+        Dim exclusion As String = If(excluded.Count = 0, "", "AND v.id NOT IN (" & String.Join(",", excluded.ToArray()) & ") ")
+        Dim selectedBase As String = If(priceContext.IsVatIncluded, CartRecommendationGrossSql(), "COALESCE(v.Prezzo,0)")
+        ' WHERE eligibility is evaluated before ROW_NUMBER; LIMIT never consumes an ineligible variant.
+        Dim sql As String = "SELECT * FROM (SELECT " & CartRecommendationSelectFields() & ", " & score & " AS RecommendationScore, " &
+            "ROW_NUMBER() OVER (PARTITION BY v.id ORDER BY COALESCE(v.TCid,-1) ASC) AS RecommendationVariant " &
+            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " &
+            "INNER JOIN (SELECT ArticoliId,TCId,MAX(COALESCE(Giacenza,0)) AS Giacenza,MAX(COALESCE(Impegnata,0)) AS Impegnata " &
+            "FROM articoli_giacenze WHERE MagazziniId=1 GROUP BY ArticoliId,TCId HAVING COUNT(*)=1) stk " &
+            "ON stk.ArticoliId=v.id AND stk.TCId=COALESCE(v.TCid,-1) " &
+            "WHERE v.NListino=@listino AND aBase.Abilitato=1 AND COALESCE(v.Export,0)<>0 AND v.id>0 " &
+            "AND (COALESCE(v.TCid,-1)=-1 OR (v.TCid>0 AND EXISTS(SELECT 1 FROM articoli_tagliecolori validTc " &
+            "WHERE validTc.id=v.TCid AND validTc.ArticoliId=v.id))) AND " & CartRecommendationStockWhere() &
+            " AND " & selectedBase & ">0 " & exclusion & "AND (" & filter & ") " &
+            ") chosen WHERE RecommendationVariant=1 ORDER BY RecommendationScore " & If(recentOrder, "ASC", "DESC") &
+            ", InOfferta DESC, RecommendationAvailable DESC, Visite DESC, id DESC LIMIT " & Math.Min(8, Math.Max(1, maxItems)).ToString(CultureInfo.InvariantCulture)
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            Using cmd As New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@listino", priceContext.PriceListId)
+                cmd.Parameters.AddWithValue("@ksRcEnabled", If(priceContext.ReverseChargeEnabled, 1, 0))
+                cmd.Parameters.AddWithValue("@ksHasVatOverride", If(priceContext.VatOverride.HasValue, 1, 0))
+                cmd.Parameters.AddWithValue("@ksVatOverride", priceContext.VatOverride.GetValueOrDefault())
+                Using da As New MySqlDataAdapter(cmd)
+                    Dim dt As New DataTable()
+                    conn.Open()
+                    da.Fill(dt)
+                    Return dt
+                End Using
+            End Using
+        End Using
+    End Function
+
+Private Function CartRecommendationStockWhere() As String
+        Return "GREATEST(0,COALESCE(stk.Giacenza,0)-COALESCE(stk.Impegnata,0))>=1"
+    End Function
+
+Private Function LoadCartRecentlyViewedProducts(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
         Dim recentIds As List(Of Integer) = GetCartRecentlyViewedIds(40)
         If recentIds.Count = 0 Then Return Nothing
 
@@ -2046,30 +2061,12 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             orderParts.Add("WHEN " & safeIds(i).ToString(CultureInfo.InvariantCulture) & " THEN " & i.ToString(CultureInfo.InvariantCulture))
         Next
 
-        Dim sql As String = _
-            "SELECT " & CartRecommendationSelectFields() & _
-            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
-            "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
-            "AND COALESCE(v.id,0) IN (" & String.Join(",", safeIds.ToArray()) & ") " & _
-            "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
-            "AND " & CartRecommendationStockWhere() & " " & _
-            "ORDER BY CASE v.id " & String.Join(" ", orderParts.ToArray()) & " ELSE 9999 END " & _
-            "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
-
-        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@listino", GetListinoSafe(1))
-                Using da As New MySqlDataAdapter(cmd)
-                    Dim dt As New DataTable()
-                    conn.Open()
-                    da.Fill(dt)
-                    Return dt
-                End Using
-            End Using
-        End Using
+        Return LoadCartRecommendationPool(maxItems, cartIds,
+            "v.id IN (" & String.Join(",", safeIds.ToArray()) & ")",
+            "CASE v.id " & String.Join(" ", orderParts.ToArray()) & " ELSE 9999 END", True)
     End Function
 
-    Private Function LoadCartFallbackRecommendations(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
+Private Function LoadCartFallbackRecommendations(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
         If cartIds Is Nothing OrElse cartIds.Count = 0 Then Return Nothing
 
         Dim ids As New List(Of Integer)()
@@ -2080,7 +2077,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         If ids.Count = 0 Then Return Nothing
 
         Dim idsCsv As String = String.Join(",", ids.ToArray())
-        Dim seedWhere As String = "COALESCE(seed.NListino,1)=@listino AND COALESCE(seed.id,0) IN (" & idsCsv & ")"
+        Dim seedWhere As String = "seed.NListino=@listino AND COALESCE(seed.id,0) IN (" & idsCsv & ")"
         Dim categoryMatch As String = "COALESCE(v.CategorieId,0)>0 AND v.CategorieId IN (SELECT DISTINCT seed.CategorieId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.CategorieId,0)>0)"
         Dim typeMatch As String = "COALESCE(v.TipologieId,0)>0 AND v.TipologieId IN (SELECT DISTINCT seed.TipologieId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.TipologieId,0)>0)"
         Dim brandMatch As String = "COALESCE(v.MarcheId,0)>0 AND v.MarcheId IN (SELECT DISTINCT seed.MarcheId FROM vsuperarticoli seed WHERE " & seedWhere & " AND COALESCE(seed.MarcheId,0)>0)"
@@ -2091,77 +2088,66 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             "CASE WHEN " & brandMatch & " THEN 3 ELSE 0 END + " & _
             "CASE WHEN " & sectorMatch & " THEN 1 ELSE 0 END)"
 
-        Dim sql As String = _
-            "SELECT " & CartRecommendationSelectFields() & _
-            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
-            "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
-            "AND COALESCE(v.id,0) NOT IN (" & idsCsv & ") " & _
-            "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
-            "AND " & CartRecommendationStockWhere() & " " & _
-            "AND ((" & categoryMatch & ") OR (" & typeMatch & ") OR (" & brandMatch & ") OR (" & sectorMatch & ")) " & _
-            "ORDER BY " & relevance & " DESC, COALESCE(v.InOfferta,0) DESC, (COALESCE(v.Giacenza,0)-COALESCE(v.Impegnata,0)) DESC, COALESCE(v.visite,0) DESC, v.id DESC " & _
-            "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
-
-        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@listino", GetListinoSafe(1))
-                Using da As New MySqlDataAdapter(cmd)
-                    Dim dt As New DataTable()
-                    conn.Open()
-                    da.Fill(dt)
-                    Return dt
-                End Using
-            End Using
-        End Using
+        Return LoadCartRecommendationPool(maxItems, cartIds,
+            "(" & categoryMatch & ") OR (" & typeMatch & ") OR (" & brandMatch & ") OR (" & sectorMatch & ")", relevance)
     End Function
 
-    Private Function LoadCatalogFallbackRecommendations(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
-        Dim excludedIds As New List(Of Integer)()
-        If cartIds IsNot Nothing Then
-            For Each id As Integer In cartIds
-                If id > 0 AndAlso Not excludedIds.Contains(id) Then excludedIds.Add(id)
-                If excludedIds.Count >= 80 Then Exit For
-            Next
-        End If
-
-        Dim exclusion As String = ""
-        If excludedIds.Count > 0 Then exclusion = "AND COALESCE(v.id,0) NOT IN (" & String.Join(",", excludedIds.ToArray()) & ") "
-
-        Dim sql As String = _
-            "SELECT " & CartRecommendationSelectFields() & _
-            "FROM vsuperarticoli v INNER JOIN articoli aBase ON aBase.id=v.id " & _
-            "WHERE COALESCE(v.NListino,1)=@listino AND COALESCE(aBase.Abilitato,1)=1 " & _
-            exclusion & _
-            "AND COALESCE(NULLIF(v.Img1,''),'')<>'' " & _
-            "AND " & CartRecommendationStockWhere() & " " & _
-            "ORDER BY COALESCE(v.InOfferta,0) DESC, (COALESCE(v.Giacenza,0)-COALESCE(v.Impegnata,0)) DESC, COALESCE(v.visite,0) DESC, v.id DESC " & _
-            "LIMIT " & Math.Max(1, maxItems).ToString(CultureInfo.InvariantCulture)
-
-        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-            Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@listino", GetListinoSafe(1))
-                Using da As New MySqlDataAdapter(cmd)
-                    Dim dt As New DataTable()
-                    conn.Open()
-                    da.Fill(dt)
-                    Return dt
-                End Using
-            End Using
-        End Using
+Private Function LoadCatalogFallbackRecommendations(ByVal maxItems As Integer, ByVal cartIds As HashSet(Of Integer)) As DataTable
+        Return LoadCartRecommendationPool(maxItems, cartIds, "1=1", "0")
     End Function
 
-    Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title As String) As DataTable
+Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title As String) As DataTable
         title = "Visti di recente"
+        If IsCheckoutStepVisible() OrElse IsCartEmptyState() Then Return Nothing
         Dim cartIds As HashSet(Of Integer) = GetCartArticleIds()
-
-        Dim recentItems As DataTable = LoadCartRecentlyViewedProducts(maxItems, cartIds)
-        If recentItems IsNot Nothing AndAlso recentItems.Rows.Count > 0 Then Return recentItems
-
+        Dim promotionBatch As IProductPromotionEligibilityBatch = Nothing
+        Dim items As DataTable = PrepareCartRecommendationRows(LoadCartRecentlyViewedProducts(maxItems, cartIds), maxItems, promotionBatch)
+        If items IsNot Nothing AndAlso items.Rows.Count > 0 Then Return items
         title = "Potrebbe interessarti anche"
-        Dim relatedItems As DataTable = LoadCartFallbackRecommendations(maxItems, cartIds)
-        If relatedItems IsNot Nothing AndAlso relatedItems.Rows.Count > 0 Then Return relatedItems
+        items = PrepareCartRecommendationRows(LoadCartFallbackRecommendations(maxItems, cartIds), maxItems, promotionBatch)
+        If items IsNot Nothing AndAlso items.Rows.Count > 0 Then Return items
+        Return PrepareCartRecommendationRows(LoadCatalogFallbackRecommendations(maxItems, cartIds), maxItems, promotionBatch)
+    End Function
 
-        Return LoadCatalogFallbackRecommendations(maxItems, cartIds)
+    Private Function CreateCartRecommendationPromotionBatch(ByVal priceContext As StorefrontPriceDisplayContext) As IProductPromotionEligibilityBatch
+        Dim eligibility As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateContext(
+            HttpContext.Current, priceContext.CompanyId, priceContext.PriceListId, 0)
+        Return ProductPromotionEligibilityResolver.CreateBatch(
+            ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString, eligibility)
+    End Function
+
+    Private Function PrepareCartRecommendationRows(ByVal items As DataTable, ByVal maxItems As Integer,
+                                                   ByRef promotionBatch As IProductPromotionEligibilityBatch) As DataTable
+        If items Is Nothing OrElse items.Rows.Count = 0 Then Return Nothing
+        Dim priceContext As StorefrontPriceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+        If priceContext Is Nothing Then Return Nothing
+        If Not items.Columns.Contains("CartRecommendationDisplayPrice") Then items.Columns.Add("CartRecommendationDisplayPrice", GetType(String))
+        Dim usable As DataTable = items.Clone()
+        Dim seen As New HashSet(Of Integer)()
+        For Each row As DataRow In items.Rows
+            Dim id As Integer = SafeInt(row("id"), 0)
+            Dim tc As Integer = SafeInt(row("TCid"), -1)
+            If id <= 0 OrElse (tc <> -1 AndAlso tc <= 0) OrElse seen.Contains(id) Then Continue For
+            Dim net As Decimal = Convert.ToDecimal(SafeDbl(row("Prezzo"), 0), CultureInfo.InvariantCulture)
+            Dim gross As Decimal = Convert.ToDecimal(SafeDbl(row("PrezzoIvato"), 0), CultureInfo.InvariantCulture)
+            Dim selected As Nullable(Of Decimal) = priceContext.SelectPrice(net, gross)
+            If Not selected.HasValue Then Continue For
+            Dim displayPrice As Decimal = selected.Value
+            If net > 0D AndAlso gross > 0D Then
+                If promotionBatch Is Nothing Then promotionBatch = CreateCartRecommendationPromotionBatch(priceContext)
+                Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(promotionBatch, id, tc, net, gross, Not priceContext.IsVatIncluded)
+                If model IsNot Nothing AndAlso model.HasDefaultQuantityOffer Then
+                    displayPrice = If(priceContext.IsVatIncluded, model.BestDefaultQuantityPriceGross, model.BestDefaultQuantityPriceNet)
+                End If
+            End If
+            If displayPrice <= 0D Then Continue For
+            row("CartRecommendationDisplayPrice") = UiPriceFormatter.FormatStorefrontValue(displayPrice)
+            If String.IsNullOrWhiteSpace(RenderCartRecommendationCard(row)) Then Continue For
+            seen.Add(id)
+            usable.ImportRow(row)
+            If usable.Rows.Count >= Math.Min(8, Math.Max(1, maxItems)) Then Exit For
+        Next
+        Return usable
     End Function
 
     Private Function RenderCartRecommendationCard(ByVal row As DataRow) As String
@@ -2173,7 +2159,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Dim meta As String = CartRecommendationMeta(row)
         Dim price As String = CartRecommendationPrice(row)
 
-        If String.IsNullOrWhiteSpace(title) OrElse String.IsNullOrWhiteSpace(url) OrElse String.IsNullOrWhiteSpace(imageUrl) Then Return ""
+        If SafeInt(row("id"), 0) <= 0 OrElse String.IsNullOrWhiteSpace(price) OrElse String.IsNullOrWhiteSpace(title) OrElse String.IsNullOrWhiteSpace(url) OrElse String.IsNullOrWhiteSpace(imageUrl) Then Return ""
 
         Dim sb As New StringBuilder()
         sb.Append("<article class=""ks-rv-card"">")
@@ -2221,6 +2207,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
                                     "Prodotti che hai consultato di recente.")
 
         Dim sb As New StringBuilder()
+        sb.Append("<style>.ks-rv-section a:focus-visible{outline:3px solid currentColor;outline-offset:3px;transition:none}</style>")
         sb.Append("<section class=""ks-rv-section"" aria-labelledby=""ks-rv-title"">")
         sb.Append("<div class=""ks-rv-container"">")
         sb.Append("<div class=""ks-rv-head""><div>")
@@ -2239,7 +2226,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
 
             RecommendedProductsPanel.Visible = False
             RecommendedProductsHtml.Text = ""
-            If IsCheckoutConfirmStep() OrElse IsCartEmptyState() Then Return
+            If IsCheckoutStepVisible() OrElse IsCartEmptyState() Then Return
 
             Dim recommendationTitle As String = "Visti di recente"
             Dim items As DataTable = LoadCartRecommendations(16, recommendationTitle)

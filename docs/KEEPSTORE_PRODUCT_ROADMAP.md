@@ -8,6 +8,12 @@ Tutte le funzionalita coupon sono in **STANDBY fino a nuova autorizzazione espli
 
 STANDBY **non equivale alla disabilitazione tecnica delle pagine esistenti**. Questa decisione non spegne pagine, menu o pagamenti e non modifica la registrazione standard. Prima di una futura attivazione servono una nuova decisione PO, il riesame dell'esposizione delle rotte e collaudi dedicati. Dettaglio e limiti dell'evidenza sono nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-prevalente--coupon-in-standby-2026-10-23).
 
+## CART-RECOMMENDATIONS-COMMERCIAL-1A — P1 KS-A01/KS-A02/KS-C01, 2026-10-24
+
+Mandato PO acquisito: suggerimenti attendibili solo nello step Carrello, con priorita recenti -> correlati -> catalogo e massimo otto card effettive. Prezzo nella modalita IVA corrente, listino validato, articolo abilitato/pubblicazione Export e stock netto del magazzino web/TCId esatta prima di scelta variante e limite; esclusione articoli gia nel carrello, placeholder ammesso, nessun vincolo HOME Vetrina. Usare autorita fiscali/promozionali esistenti e nessuna nuova query per card. In Spedizione/pagamento e Riepilogo il blocco e le sue letture devono mancare.
+
+Stato: candidato SOURCE ONLY, prove locali 534/534 + Chrome 130/130, PR DRAFT/CI sullo SHA effettivo da rapporto GitHub; review indipendente pendente. Nessuna riapertura checkout #356/#378/#379, nessun ordine/pagamento o tenant reale certificato. #384 gia SOURCE INTEGRATED a f3703ed9266843673bf3ef613c0de3299fa1c0aa; KS-E01 complessivo resta PARZIALE. Il gate PayPal LIVE resta separato e APERTO. Coupon STANDBY; CONSEGNA SERVER SOSPESA.
+
 ## Priorita e lettura degli stati
 
 Mandato PO: **PRIMA ecommerce funzionale, affidabile, moderno, bello e navigabile da smartphone, lungo tutto il percorso fino all'ordine. POI rifinimenti, performance non bloccanti, SEO avanzata, integrazioni e automazioni.** Sicurezza, correttezza commerciale, integrita ordine e pagamento, HTTPS e SEO tecnica indispensabile rimangono gate di rilascio, non polish. HOME adattiva e assistente sono requisiti approvati: non implicano sistemi gia implementati o chiamate AI autorizzate.
