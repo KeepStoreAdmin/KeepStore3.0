@@ -2,6 +2,14 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Contratto auth — LOGIN-POST-ORIGIN-GUARD-1A, 2026-10-24
+
+Guard condiviso in PageMaster, riusato dalla pagina login e dal login legacy prima di lettura credenziali/query. POST obbligatorio per invocare auth; normale GET/HEAD login invariato. Tenant gia risolto da LeggiAzienda, nessuna nuova query o resolver: confronto esatto scheme/IdnHost/porta con Request.Url, mai X-Forwarded. Primario/alias e punto DNS finale non diventano origini intercambiabili. Origin singolo valido richiesto se presente; solo in sua assenza Referer assoluto same-origin. Intestazioni malformate/multiple/contraddittorie rifiutate prima della normalizzazione Uri.
+
+Il rifiuto 403 o 405/Allow POST e conservato in HttpContext.Items; risposta generica/no-store, nessuna pulizia dell'identita valida o effetto auth. Guard in Init pagina e nei chiamanti; controllo successivo di Load/PreRender/Render senza considerare CompleteRequest terminale. Page.Error registrato una sola volta al rifiuto conserva direttamente stato/body anche se LoadViewState salta Render; tratta solo richieste gia rifiutate, senza modificare MAC, ViewStateUserKey o gestore globale degli altri errori. Query tenant-scoped, password legacy, rivalidazione #359, listino/IVA/owner, username autofill e PostLoginReturnUrlPolicy invariati. Nessuna nuova crittografia, token o persistenza.
+
+[Manifest, prove e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#login-post-origin-guard-1a--2026-10-24): 2.353 controlli VB/System.Web, due tenant e baseline, frontiere DB/audit/carrello e trasporto sintetiche, error dispatch reale senza ciclo IIS completo. Hardening source-evidenced, nessun exploit live dimostrato. Base #385 SOURCE INTEGRATED `743e4d4...`; nuovo candidato SOURCE ONLY/PR DRAFT, review indipendente pendente. Hash migration/session regeneration e gate operativi restano separati; consegna server sospesa.
+
 ## Contratto PO — CART-RECOMMENDATIONS-COMMERCIAL-1A, 2026-10-24
 
 Suggerimenti del carrello esclusivamente nello step Carrello: recenti, poi correlati, poi catalogo se il pool precedente non rende card utilizzabili; massimo otto articoli distinti, nessuno gia nel carrello, nessun acquisto diretto nuovo. In checkout/confirm si svuotano pannello e literal prima di qualunque lettura. Il doppio guard nel loader impedisce I/O raccomandazioni anche da chiamanti alternativi; non modifica ordine, consensi, totali o sessioni transazionali.
@@ -10,7 +18,7 @@ Contesto da StorefrontPriceDisplayContextProvider, mai listino di default su err
 
 ThemeManager per placeholder; ProductPromotionEligibilityResolver.CreateBatch per un solo snapshot locale alla selezione, riusato nei fallback; ProductPromotionDisplayHelper.BuildForProduct(batch) per quantita uno. Il prezzo formattato viene predisposto sulle righe; rendering e chiavi duplicati non aprono connessioni. Nessuna nuova autorita fiscale, store o cache condivisa. Layout cart-ui invariato, focus-visible circoscritto nel renderer; nessun JS o mutazione cart introdotti.
 
-Manifest sei file e limiti di collaudo nel Masterplan: VB/controlli WebForms reali con frontiere DB sintetiche, SQLite e Chrome HTTP isolato non certificano IIS/MySQL/checkout completo. Base f3703ed9266843673bf3ef613c0de3299fa1c0aa (#384 SOURCE INTEGRATED); nuovo candidato resta SOURCE ONLY/PR DRAFT per review, consegna server sospesa.
+Manifest sei file e limiti di collaudo nel Masterplan: VB/controlli WebForms reali con frontiere DB sintetiche, SQLite e Chrome HTTP isolato non certificano IIS/MySQL/checkout completo. Base f3703ed9266843673bf3ef613c0de3299fa1c0aa (#384 SOURCE INTEGRATED); **#385 ora MERGED/CLOSED / SOURCE INTEGRATED a `743e4d4aa47a7b184249224e8c05b4dc444a24c2`**, senza nuova esecuzione dei collaudi storici o pubblicazione; consegna server sospesa.
 
 ## Decisione PO prevalente — Coupon in standby, 2026-10-23
 

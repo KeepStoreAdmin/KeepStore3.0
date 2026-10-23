@@ -16,6 +16,9 @@ Partial Class PageMaster
     Implements ISeoMaster
 
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
+    Private Const LoginPostRejectionKey As String = "KeepStore.Login.PostOriginRejected"
+    Private Const LoginPostErrorHandlerKey As String = "KeepStore.Login.RejectionErrorHandler"
+    Private Const LoginPostRejectionMessage As String = "Richiesta di accesso non consentita."
     Private Const TenantPriceDisplayCompanyKey As String = "KeepStore.PriceDisplay.TenantCompanyId"
     Private Const TenantPriceDisplayListKey As String = "KeepStore.PriceDisplay.TenantPriceListId"
     Private Const TenantPriceDisplayModeKey As String = "KeepStore.PriceDisplay.TenantMode"
@@ -25,6 +28,109 @@ Partial Class PageMaster
     Private _priceDisplayDefaultListId As Integer
     Private _priceDisplayTenantMode As StorefrontVatDisplayMode
     Private _priceDisplayCarrierVat As Nullable(Of Decimal)
+
+    Public Shared Function IsLoginPostRejected(ByVal context As HttpContext) As Boolean
+        Return context IsNot Nothing AndAlso context.Items(LoginPostRejectionKey) IsNot Nothing
+    End Function
+
+    Public Shared Sub RejectLoginPost(ByVal context As HttpContext, ByVal status As Integer)
+        If context Is Nothing Then Return
+        If Not IsLoginPostRejected(context) Then context.Items(LoginPostRejectionKey) = If(status = 405, 405, 403)
+        If context.Items(LoginPostErrorHandlerKey) Is Nothing Then
+            Dim page As System.Web.UI.Page = TryCast(context.CurrentHandler, System.Web.UI.Page)
+            If page IsNot Nothing Then
+                AddHandler page.Error, AddressOf HandleRejectedLoginError
+                context.Items(LoginPostErrorHandlerKey) = True
+            End If
+        End If
+        Dim response As HttpResponse = context.Response
+        response.Clear()
+        response.RedirectLocation = Nothing
+        response.StatusCode = CInt(context.Items(LoginPostRejectionKey))
+        response.TrySkipIisCustomErrors = True
+        response.SuppressFormsAuthenticationRedirect = True
+        response.ContentType = "text/plain"
+        response.ContentEncoding = Encoding.UTF8
+        response.Cache.SetCacheability(HttpCacheability.NoCache)
+        response.Cache.SetNoStore()
+        If response.StatusCode = 405 Then response.AppendHeader("Allow", "POST")
+        If context.ApplicationInstance IsNot Nothing Then context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    Private Shared Sub HandleRejectedLoginError(ByVal sender As Object, ByVal e As EventArgs)
+        Dim context As HttpContext = HttpContext.Current
+        If Not IsLoginPostRejected(context) Then Return
+        ' An error during LoadViewState skips Render. Keep an already refused login terminal,
+        ' including MAC failures, without changing validation or the ordinary global error path.
+        context.Server.ClearError()
+        RejectLoginPost(context, CInt(context.Items(LoginPostRejectionKey)))
+        context.Response.Write(LoginPostRejectionMessage)
+    End Sub
+
+    Public Shared Function RenderRejectedLoginPost(ByVal context As HttpContext, ByVal writer As System.Web.UI.HtmlTextWriter) As Boolean
+        If Not IsLoginPostRejected(context) Then Return False
+        RejectLoginPost(context, CInt(context.Items(LoginPostRejectionKey)))
+        writer.Write(LoginPostRejectionMessage)
+        Return True
+    End Function
+
+    Protected Overrides Sub Render(ByVal writer As System.Web.UI.HtmlTextWriter)
+        If RenderRejectedLoginPost(Context, writer) Then Return
+        MyBase.Render(writer)
+    End Sub
+
+    Private Shared Function TryParseLoginSource(ByVal raw As String, ByVal originOnly As Boolean, ByRef source As Uri) As Boolean
+        source = Nothing
+        If String.IsNullOrEmpty(raw) OrElse raw.Length > 8192 Then Return False
+        For Each ch As Char In raw
+            If Char.IsWhiteSpace(ch) OrElse Char.IsControl(ch) OrElse ch = "\"c Then Return False
+        Next
+        ' Validate the raw authority before Uri can normalize backslashes, paths or escaped delimiters.
+        Dim authority As String = "https?://(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.?|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?"
+        Dim pattern As String = "\A" & authority & If(originOnly, "\z", "(?:[/?][^#]*)?\z")
+        If Not Regex.IsMatch(raw, pattern, RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant) Then Return False
+        If Regex.IsMatch(raw, ",https?://", RegexOptions.IgnoreCase Or RegexOptions.CultureInvariant) Then Return False
+        If Not Uri.TryCreate(raw, UriKind.Absolute, source) OrElse source.UserInfo <> String.Empty OrElse source.Fragment <> String.Empty Then Return False
+        Return source.Scheme = Uri.UriSchemeHttp OrElse source.Scheme = Uri.UriSchemeHttps
+    End Function
+
+    Private Shared Function LoginSourceMatches(ByVal source As Uri, ByVal target As Uri) As Boolean
+        Return String.Equals(source.Scheme, target.Scheme, StringComparison.OrdinalIgnoreCase) AndAlso
+            String.Equals(source.IdnHost, target.IdnHost, StringComparison.OrdinalIgnoreCase) AndAlso source.Port = target.Port
+    End Function
+
+    Public Function EnsureLoginPostOrigin() As Boolean
+        If IsLoginPostRejected(Context) Then
+            RejectLoginPost(Context, CInt(Context.Items(LoginPostRejectionKey)))
+            Return False
+        End If
+        If Not String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+            RejectLoginPost(Context, 405)
+            Return False
+        End If
+        ' LeggiAzienda set this field during master Init using the authoritative tenant resolver.
+        ' Reuse that successful request state; do not perform a second tenant lookup here.
+        Dim target As Uri = Request.Url
+        If _priceDisplayCompanyId <= 0 OrElse target Is Nothing OrElse
+           (target.Scheme <> Uri.UriSchemeHttp AndAlso target.Scheme <> Uri.UriSchemeHttps) Then
+            RejectLoginPost(Context, 403)
+            Return False
+        End If
+        Dim origins As String() = Request.Headers.GetValues("Origin")
+        Dim referrers As String() = Request.Headers.GetValues("Referer")
+        Dim source As Uri = Nothing
+        Dim allowed As Boolean = False
+        If origins IsNot Nothing Then
+            allowed = origins.Length = 1 AndAlso TryParseLoginSource(origins(0), True, source) AndAlso LoginSourceMatches(source, target)
+        ElseIf referrers IsNot Nothing Then
+            allowed = referrers.Length = 1 AndAlso TryParseLoginSource(referrers(0), False, source) AndAlso LoginSourceMatches(source, target)
+        End If
+        If allowed AndAlso referrers IsNot Nothing Then
+            allowed = referrers.Length = 1 AndAlso TryParseLoginSource(referrers(0), False, source) AndAlso LoginSourceMatches(source, target)
+        End If
+        If Not allowed Then RejectLoginPost(Context, 403)
+        Return allowed
+    End Function
     Private Const CartFeedbackKindKey As String = "ks_cart_feedback_kind"
     Private Const CartFeedbackProductNameKey As String = "ks_cart_feedback_product_name"
     Private Const CartFeedbackArticleIdKey As String = "ks_cart_feedback_article_id"
@@ -778,6 +884,11 @@ Dim IvaTipo As Integer
     ' LOAD: login automatico, cookie, scadenza password, partners
     '==========================================================
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        If IsLoginPostRejected(Context) Then Return
+        If String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) AndAlso
+           Me.FindControl("tbUsername") IsNot Nothing AndAlso Me.FindControl("tbPassword") IsNot Nothing Then
+            If Not EnsureLoginPostOrigin() Then Return
+        End If
         ' Tema grafico: tagging per CSS token/switch (non altera la logica business)
         ApplyThemeTagging()
 
@@ -800,13 +911,15 @@ Dim IvaTipo As Integer
         Dim tbPass As TextBox = TryCast(Me.FindControl("tbPassword"), TextBox)
 
         If tbUser IsNot Nothing AndAlso tbPass IsNot Nothing Then
-            ' Dati legacy post-registrazione: non usare password in sessione per auto-login.
-            If Session.Item("Inserimento_User") IsNot Nothing Then Session.Item("Inserimento_User") = ""
-            If Session.Item("Inserimento_Password") IsNot Nothing Then Session.Item("Inserimento_Password") = ""
+            If String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then
+                ' Dati legacy post-registrazione: non usare password in sessione per auto-login.
+                If Session.Item("Inserimento_User") IsNot Nothing Then Session.Item("Inserimento_User") = ""
+                If Session.Item("Inserimento_Password") IsNot Nothing Then Session.Item("Inserimento_Password") = ""
 
-            ' Login automatico se i campi sono compilati
-            If tbUser.Text <> "" AndAlso tbUser.Text <> "Username" AndAlso tbPass.Text <> "" Then
-                Login(tbUser.Text.Replace("'", ""), tbPass.Text.Replace("'", ""))
+                If tbUser.Text <> "" AndAlso tbUser.Text <> "Username" AndAlso tbPass.Text <> "" Then
+                    Login(tbUser.Text.Replace("'", ""), tbPass.Text.Replace("'", ""))
+                    If IsLoginPostRejected(Context) Then Return
+                End If
             End If
 
             tbPass.ReadOnly = True
@@ -884,6 +997,7 @@ End Sub
     ' PRE-RENDER: mini-login, badge ordini, carrello, meta
     '==========================================================
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        If IsLoginPostRejected(Context) Then Return
 
         ' controlli dinamici (il tema non espone tutti gli ID legacy)
         Dim lbl4 As Label = FindCtrl(Of Label)("Label4")
@@ -1685,6 +1799,7 @@ End Function
     ' LOGIN + AGGIORNAMENTO DATI
     '==========================================================
     Public Sub Login(ByVal user As String, ByVal pass As String)
+        If Not EnsureLoginPostOrigin() Then Return
         Dim authenticationSucceeded As Boolean = False
         conn.Open()
 

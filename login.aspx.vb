@@ -7,6 +7,25 @@ Partial Class Login
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
     Private Const SessionExpiredMessage As String = "La sessione e' scaduta per inattivita. Accedi di nuovo per continuare dal carrello."
 
+    Private Function EnsureLoginPostOrigin() As Boolean
+        Dim masterPage As PageMaster = TryCast(Me.Master, PageMaster)
+        If masterPage Is Nothing Then
+            PageMaster.RejectLoginPost(Context, 403)
+            Return False
+        End If
+        Return masterPage.EnsureLoginPostOrigin()
+    End Function
+
+    Protected Sub Page_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Init
+        ' Master Init has already resolved the storefront. Reject POST before Page_Load can consume return context.
+        If String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then EnsureLoginPostOrigin()
+    End Sub
+
+    Protected Overrides Sub Render(ByVal writer As System.Web.UI.HtmlTextWriter)
+        If PageMaster.RenderRejectedLoginPost(Context, writer) Then Return
+        MyBase.Render(writer)
+    End Sub
+
     Private Function ResolveAndConsumePostLoginTarget() As String
         Dim target As String = PostLoginReturnUrlPolicy.ResolvePostLoginTarget(
             HttpContext.Current,
@@ -56,6 +75,7 @@ Partial Class Login
     '   (nessuna password salvata in chiaro nei cookie, per ovvi motivi)
     '================================================================
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+        If PageMaster.IsLoginPostRejected(Context) Then Return
         If Not IsPostBack Then
 
             ' Se è già loggato, non ha senso stare sulla pagina di login
@@ -92,6 +112,7 @@ Partial Class Login
     ' CLICK DEL BOTTONE DI LOGIN
     '================================================================
     Protected Sub btnLogin_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles btnLogin.Click
+        If Not EnsureLoginPostOrigin() Then Return
         ' Rispetto i RequiredFieldValidator
         If Not Page.IsValid Then
             Exit Sub
@@ -150,6 +171,7 @@ Partial Class Login
     ' LOGICA DI LOGIN (DB)
     '================================================================
     Private Function EseguiLogin(ByVal user As String, ByVal pass As String) As Boolean
+        If Not EnsureLoginPostOrigin() Then Return False
 
         lblLogin.Text = ""
 
