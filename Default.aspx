@@ -3,6 +3,28 @@
     <asp:Literal ID="litHomePageTitle" runat="server" Mode="Encode" />
 </asp:Content>
 
+<asp:Content ID="cntDiscoveryHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <style id="ksHomeCatalogDiscoveryStyles">
+        body.ks-page-home .ks-home-main .ks-home-catalog-discovery .flat-title > .tf-btn {
+            box-sizing: border-box;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        body.ks-page-home .ks-home-main .ks-home-catalog-discovery .flat-title > .tf-btn:focus-visible {
+            outline: 3px solid currentColor;
+            outline-offset: 3px;
+        }
+
+        body.ks-page-home .ks-home-main .ks-home-catalog-discovery .card-product .list-product-btn > li:first-child,
+        body.ks-page-home .ks-home-main .ks-home-catalog-discovery .card-product:focus-within .list-product-btn > li {
+            opacity: 1;
+            visibility: visible;
+            transform: none;
+        }
+    </style>
+</asp:Content>
+
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
 
     <section id="ksHomePage"
@@ -222,6 +244,22 @@
     <asp:Panel ID="HomePriceDisplayNote" runat="server" CssClass="container" Visible="false">
         <p class="body-text-3 text-main-2"><asp:Literal ID="litHomePriceDisplayLabel" runat="server" /></p>
     </asp:Panel>
+
+    <section id="HomeCatalogDiscoverySection" runat="server" visible="false" class="ks-home-section ks-home-featured ks-home-catalog-discovery">
+        <div class="container">
+            <div class="flat-title">
+                <h5 class="fw-semibold">Dal nostro catalogo</h5>
+                <a href="articoli.aspx" class="tf-btn btn-line"><span>Esplora tutto il catalogo</span></a>
+            </div>
+            <div class="ks-home-product-grid">
+                <asp:Repeater ID="rptHomeCatalogDiscovery" runat="server">
+                    <ItemTemplate>
+                        <%# RenderGridCard(Container.DataItem) %>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
+        </div>
+    </section>
 
     <section id="HomeFeaturedProductsSection" runat="server" class="ks-home-section ks-home-featured">
         <div class="container">

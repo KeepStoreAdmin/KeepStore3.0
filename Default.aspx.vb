@@ -390,9 +390,18 @@ Partial Public Class _Default
             HomeRecentlyViewedSection.Visible = Not IsTableEmpty(recentRows)
         End If
 
+        Dim discoveryRows As DataTable = LoadHomeCatalogDiscovery(dealRows, featuredRows, bestRows, recentRows)
+        PopulatePromotionDisplaySnapshot(discoveryRows)
+        rptHomeCatalogDiscovery.DataSource = discoveryRows
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeCatalogDiscovery")
+            rptHomeCatalogDiscovery.DataBind()
+        End Using
+        HomeCatalogDiscoverySection.Visible = Not IsTableEmpty(discoveryRows)
+
         HomePriceDisplayNote.Visible = Not IsTableEmpty(featuredRows) OrElse
                                        Not IsTableEmpty(dealRows) OrElse
-                                       Not IsTableEmpty(bestRows) OrElse Not IsTableEmpty(recentRows)
+                                       Not IsTableEmpty(bestRows) OrElse Not IsTableEmpty(recentRows) OrElse
+                                       Not IsTableEmpty(discoveryRows)
 
         ApplyHomeComposition(HomePriceDisplayNote.Visible)
 
@@ -1103,10 +1112,20 @@ Partial Public Class _Default
         Return GetBestSellerPool(limit)
     End Function
 
+    Private Function LoadHomeCatalogDiscovery(ByVal deals As DataTable,
+                                              ByVal arrivals As DataTable,
+                                              ByVal ranked As DataTable,
+                                              ByVal recent As DataTable) As DataTable
+        If Not IsTableEmpty(deals) OrElse Not IsTableEmpty(arrivals) OrElse
+           Not IsTableEmpty(ranked) OrElse Not IsTableEmpty(recent) Then Return EmptyProductsTable()
+        Return GetCatalogFallbackPool(8)
+    End Function
+
     Private Function GetCatalogFallbackPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(NULLIF(v.Img1,''),'')<>''",
-                             "COALESCE(v.DataCreazione,CURDATE()) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
-                             limit)
+        If limit <= 0 Then Return EmptyProductsTable()
+        ' Neutral selection only; images use the existing renderer/ThemeManager placeholder.
+        Return QueryProducts(String.Empty, "DataCreazione DESC, Visite DESC, id DESC, TCid ASC",
+                             Math.Min(8, limit), False, False, False, True, True)
     End Function
 
     Private Function QueryProducts(ByVal whereClause As String,
@@ -1115,8 +1134,8 @@ Partial Public Class _Default
                                    Optional ByVal requireAuthorizedPromotion As Boolean = False,
                                    Optional ByVal allowIncoming As Boolean = False,
                                    Optional ByVal commercialRanking As Boolean = False,
-                                   Optional ByVal onePerArticle As Boolean = False) As DataTable
-        Dim dt As DataTable = TryLoadProducts(whereClause, orderClause, limit, requireAuthorizedPromotion, allowIncoming, commercialRanking, onePerArticle)
+                                   Optional ByVal onePerArticle As Boolean = False, Optional ByVal catalogDiscovery As Boolean = False) As DataTable
+        Dim dt As DataTable = TryLoadProducts(whereClause, orderClause, limit, requireAuthorizedPromotion, allowIncoming, commercialRanking, onePerArticle, catalogDiscovery)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             Return dt
         End If
@@ -1278,7 +1297,7 @@ Partial Public Class _Default
                                      Optional ByVal requireAuthorizedPromotion As Boolean = False,
                                      Optional ByVal allowIncoming As Boolean = False,
                                      Optional ByVal commercialRanking As Boolean = False,
-                                     Optional ByVal onePerArticle As Boolean = False) As DataTable
+                                     Optional ByVal onePerArticle As Boolean = False, Optional ByVal catalogDiscovery As Boolean = False) As DataTable
         Dim prezzoIvatoSql As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
             "v.Prezzo", "v.PrezzoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
             "@ksRcEnabled", "@ksHasVatOverride", "@ksVatOverride")
@@ -1286,6 +1305,11 @@ Partial Public Class _Default
             "v.PrezzoPromo", "v.PrezzoPromoIvato", "v.IdIvaRC", "v.ValoreIvaRC",
             "@ksRcEnabled", "@ksHasVatOverride", "@ksVatOverride")
 
+        Dim stockSql As String = If(catalogDiscovery, "COALESCE(stk.Giacenza,0)", StockWhereClause())
+        Dim reservedSql As String = If(catalogDiscovery, "COALESCE(stk.Impegnata,0)", ReservedWhereClause())
+        ' Same net quantity as OrderInventoryAvailabilityService; the card initially requests one unit.
+        Dim availableSql As String = If(catalogDiscovery,
+            "GREATEST(0,COALESCE(stk.Giacenza,0)-COALESCE(stk.Impegnata,0))", AvailabilityWhereClause())
         Dim sql As New StringBuilder()
         sql.Append("SELECT ")
         sql.Append("v.id, COALESCE(v.TCid,-1) AS TCid, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, IFNULL(v.DescrizioneLunga,'') AS DescrizioneLunga, ")
@@ -1296,9 +1320,9 @@ Partial Public Class _Default
         sql.Append("COALESCE(aBase.Abilitato,1) AS Abilitato, COALESCE(aBase.Abilitato,1) AS Attivo, ")
         sql.Append("COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.DataCreazione,CURDATE()) AS DataCreazione, COALESCE(v.Visite,0) AS Visite, ")
         sql.Append("0 AS Stato, COALESCE(v.Ricondizionato,0) AS Ricondizionato, ")
-        sql.Append(StockWhereClause()).Append(" AS Giacenza, ")
-        sql.Append(AvailabilityWhereClause()).Append(" AS Disponibilita, ")
-        sql.Append(ReservedWhereClause()).Append(" AS Impegnata, ")
+        sql.Append(stockSql).Append(" AS Giacenza, ")
+        sql.Append(availableSql).Append(" AS Disponibilita, ")
+        sql.Append(reservedSql).Append(" AS Impegnata, ")
         sql.Append("COALESCE(v.InOrdine,0) AS InOrdine, ")
         sql.Append("COALESCE(v.Prezzo,0) AS Prezzo, ")
         sql.Append(prezzoIvatoSql).Append(" AS PrezzoIvato, ")
@@ -1323,18 +1347,29 @@ Partial Public Class _Default
         End If
         sql.Append("FROM vsuperarticoli v ")
         sql.Append("INNER JOIN articoli aBase ON aBase.id = v.id ")
-        sql.Append("LEFT JOIN (")
-        sql.Append(" SELECT ArticoliId, SUM(COALESCE(Giacenza,0)) AS Giacenza, SUM(COALESCE(Disponibilita,0)) AS Disponibilita, SUM(COALESCE(Impegnata,0)) AS Impegnata")
-        sql.Append(" FROM articoli_giacenze")
-        sql.Append(" GROUP BY ArticoliId")
-        sql.Append(") stk ON stk.ArticoliId = v.id ")
+        If catalogDiscovery Then
+            ' Web warehouse 1 and exact TCId match the existing inventory service.
+            ' Missing or ambiguous stock identities fail closed; never borrow another variant/warehouse.
+            sql.Append("INNER JOIN (SELECT ArticoliId, TCId, MAX(COALESCE(Giacenza,0)) AS Giacenza, MAX(COALESCE(Impegnata,0)) AS Impegnata ")
+            sql.Append("FROM articoli_giacenze WHERE MagazziniId=1 GROUP BY ArticoliId, TCId HAVING COUNT(*)=1")
+            sql.Append(") stk ON stk.ArticoliId=v.id AND stk.TCId=COALESCE(v.TCid,-1) ")
+        Else
+            sql.Append("LEFT JOIN (")
+            sql.Append(" SELECT ArticoliId, SUM(COALESCE(Giacenza,0)) AS Giacenza, SUM(COALESCE(Disponibilita,0)) AS Disponibilita, SUM(COALESCE(Impegnata,0)) AS Impegnata")
+            sql.Append(" FROM articoli_giacenze")
+            sql.Append(" GROUP BY ArticoliId")
+            sql.Append(") stk ON stk.ArticoliId = v.id ")
+        End If
         If commercialRanking Then
             sql.Append("INNER JOIN (").Append(BuildHomeCommercialActivitySql()).Append(") ca ON ca.ArticoliId=v.id ")
         End If
         sql.Append("WHERE v.NListino=@listino AND COALESCE(v.id,0)>0 ")
         sql.Append("AND COALESCE(aBase.Abilitato,1)=1 ")
         sql.Append("AND COALESCE(v.Vetrina,0)=1 ")
-        If allowIncoming Then
+        If catalogDiscovery Then
+            sql.Append("AND ").Append(availableSql).Append(">=1 ")
+            sql.Append("AND (COALESCE(v.TCid,-1)=-1 OR v.TCid>0) ")
+        ElseIf allowIncoming Then
             sql.Append("AND (").Append(StockWhereClause()).Append(">=1 OR COALESCE(v.InOrdine,0)>0) ")
         Else
             sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
