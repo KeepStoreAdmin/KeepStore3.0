@@ -1325,7 +1325,7 @@
                                     <a href="privacy.aspx" target="_blank" rel="noopener">Privacy Policy</a>.
                                 </label>
                             </div>
-                            <asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" />
+                            <span id="ksTermsConsentFeedback" class="text-danger body-text-3" aria-live="polite"><asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" /></span>
                         </div>
                         <asp:LinkButton CausesValidation="true" ValidationGroup="checkoutSubmit" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">Invia ordine con obbligo di pagamento</asp:LinkButton>
                     <%else%>
@@ -1341,18 +1341,46 @@
 </asp:Panel>
     <script type="text/javascript">
         (function () {
+            function updateTermsConsentError(checkbox, message) {
+                var feedback = document.getElementById('ksTermsConsentFeedback');
+                var error = document.getElementById('lblTermsConsentError') || feedback;
+                if (error) error.textContent = message;
+                if (!checkbox) return;
+
+                var descriptions = (checkbox.getAttribute('aria-describedby') || '').split(/\s+/);
+                var retained = [];
+                for (var i = 0; i < descriptions.length; i++) {
+                    if (descriptions[i] && descriptions[i] !== 'ksTermsConsentFeedback') retained.push(descriptions[i]);
+                }
+                if (message) {
+                    if (feedback) retained.push('ksTermsConsentFeedback');
+                    checkbox.setAttribute('aria-invalid', 'true');
+                } else {
+                    checkbox.removeAttribute('aria-invalid');
+                }
+                if (retained.length) checkbox.setAttribute('aria-describedby', retained.join(' '));
+                else checkbox.removeAttribute('aria-describedby');
+            }
+
+            // Delegation follows the same input through the mobile footer and postback replacements.
+            if (!document.ksTermsConsentRecoveryBound) {
+                document.ksTermsConsentRecoveryBound = true;
+                document.addEventListener('change', function (event) {
+                    var checkbox = event.target;
+                    if (checkbox && checkbox.id === 'chkTermsConsent' && checkbox.checked) {
+                        updateTermsConsentError(checkbox, '');
+                    }
+                });
+            }
+
             window.ksValidateCheckoutTermsConsent = function () {
                 var checkbox = document.getElementById('chkTermsConsent');
-                var error = document.getElementById('lblTermsConsentError');
                 if (checkbox && !checkbox.checked) {
-                    if (error) {
-                        error.innerHTML = 'Per proseguire devi accettare le Condizioni Generali di Vendita.';
-                    }
+                    updateTermsConsentError(checkbox, 'Per proseguire devi accettare le Condizioni Generali di Vendita.');
+                    checkbox.focus();
                     return false;
                 }
-                if (error) {
-                    error.innerHTML = '';
-                }
+                updateTermsConsentError(checkbox, '');
                 if (typeof visualizza_spinner_caricamento === 'function') {
                     visualizza_spinner_caricamento();
                 }
