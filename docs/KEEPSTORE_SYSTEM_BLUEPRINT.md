@@ -933,7 +933,9 @@ Backlog successivo non immediato: ulteriori evoluzioni ecommerce, SEO, AI search
 
 ### 9.4 Carrello
 
-**Recupero consenso checkout — candidato SOURCE ONLY 2026-10-23**
+**Recupero consenso checkout — SOURCE INTEGRATED #379, 2026-10-23**
+
+PR #379 MERGED/CLOSED a `4458835840a966e86a14f9aeaeeaba4a8c7b0dcd`, review A 5625709899 e [closeout 6360804153](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/379#issuecomment-6360804153), FF-only, main invariato. Le prove seguenti conservano i limiti sintetici, senza nuova certificazione operativa o deploy.
 
 `CHECKOUT-CONSENT-RECOVERY-1A`, base #378 `b1b2b9d8...`, modifica solo `carrello.aspx` nel runtime. Il contenitore stabile `ksTermsConsentFeedback` conserva il Label nativo esistente e permette il feedback anche se quel Label non viene renderizzato (`Visible=false`). Al tentativo senza consenso la funzione esistente aggiorna il testo, aggiunge quel solo riferimento ad aria-describedby preservando le altre descrizioni, imposta aria-invalid e focalizza l'input statico `chkTermsConsent` reale. Selezionare la casella cancella immediatamente il messaggio e gli attributi gestiti, senza submit; deselezionarla non anticipa un nuovo errore. Un solo listener change delegato al document, protetto dalla reinizializzazione, segue i nodi spostati da `checkout-ui.js` e i controlli sostituiti; nessuna nuova registrazione per ogni nodo o endRequest.
 
@@ -1373,6 +1375,10 @@ Debito residuo account:
 - Cleanup completo sidebar/nav inline legacy non ancora concluso su `datiutente.aspx`.
 
 ## 14. Login, registrazione e recupero password - audit LOGIN-REGISTER-1A
+
+**REGISTRATION-POSTSAVE-REFERRER-GUARD-1A — candidato SOURCE ONLY 2026-10-23.** Il solo registrazione.aspx.vb riusa IsCouponRegistration per selezionare il master in PreInit e il percorso post-save. Stato coupon singolo/case-insensitive come la conferma #358, poi segnale legacy del referrer assoluto; header assente/URI malformato non impedisce la conferma ordinaria. Nel redirect finale la precedenza e **carrello=1 > coupon > ordinario**, indipendentemente dal master selezionato. Nessun referrer determina identita, azienda o URL di destinazione: solo percorsi locali fissi e inoltro del parametro redirect gia esistente. registrazioneok.aspx.vb e PostLoginReturnUrlPolicy restano invariati. La #358 e gia integrata e non viene ripetuta; KS-C02 PARZIALE.
+
+Il Catch e limitato a UriFormatException nell'helper, senza catturare errori di persistenza; account/e-mail/password/sessioni autenticate e logiche commerciali sono identici alla base. Tre prove baseline precedono la patch, 462 controlli finali VB/System.Web e precompile safe 4.8 PASS; HttpRequest e sessione sono reali in memoria, salvataggio/e-mail e terminazione del redirect sono simulati. Password di login classificate secondo lo standard canonico, nessuna migrazione o cifratura aggiunta. [Manifest, precedenze, test e recupero](KEEPSTORE_MASTERPLAN_OPERATIVO.md#registration-postsave-referrer-guard-1a--2026-10-23). Nessuna certificazione IIS/MySQL/account reale; CI NON CONFIGURATA, CONSEGNA SERVER SOSPESA.
 
 Esito audit: A.
 

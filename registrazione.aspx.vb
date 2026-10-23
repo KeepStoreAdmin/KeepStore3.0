@@ -479,15 +479,23 @@ Partial Class registrazione
 		Me.lblPecAndSdi.Text = ""
     End Sub
 
-    Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit
+    Private Function IsCouponRegistration() As Boolean
+        Dim stateValues() As String = Request.QueryString.GetValues("state")
+        If stateValues IsNot Nothing AndAlso stateValues.Length = 1 AndAlso
+           String.Equals(stateValues(0), "coupon", StringComparison.OrdinalIgnoreCase) Then
+            Return True
+        End If
+
         Try
-            If Request.UrlReferrer.AbsoluteUri.Contains("coupon") Or (Request.QueryString("state") = "coupon") Then
-                Page.MasterPageFile = "Coupon.master"
-            Else
-                Page.MasterPageFile = "Page.master"
-            End If
-        Catch
+            Dim referrer As Uri = Request.UrlReferrer
+            Return referrer IsNot Nothing AndAlso referrer.IsAbsoluteUri AndAlso referrer.AbsoluteUri.Contains("coupon")
+        Catch ex As UriFormatException
+            Return False
         End Try
+    End Function
+
+    Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreInit
+        Page.MasterPageFile = If(IsCouponRegistration(), "Coupon.master", "Page.master")
     End Sub
 
     Protected Sub Page_PreLoad(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreLoad
@@ -598,25 +606,14 @@ Partial Class registrazione
                 'Me.tbEmail.Focus()
             End Try
             'Setto dove reindirizzare l'uitente
-            If Not Session("StavonelCarrello") Is Nothing Then
-                If (Session("StavonelCarrello") = 1) Then
-                    Session("StavonelCarrello") = 0
-                    Response.Redirect("carrello.aspx")
-                Else
-                    If Request.UrlReferrer.AbsoluteUri.Contains("coupon") Then
-                        Session("Login_User") = tbUsername.Text
-                        Response.Redirect("registrazioneok.aspx?state=coupon")
-                    Else
-                        Response.Redirect("registrazioneok.aspx?redirect=" & Request.QueryString("redirect"))
-                    End If
-                End If
+            If Session("StavonelCarrello") IsNot Nothing AndAlso Session("StavonelCarrello") = 1 Then
+                Session("StavonelCarrello") = 0
+                Response.Redirect("carrello.aspx")
+            ElseIf IsCouponRegistration() Then
+                Session("Login_User") = tbUsername.Text
+                Response.Redirect("registrazioneok.aspx?state=coupon")
             Else
-                If Request.UrlReferrer.AbsoluteUri.Contains("coupon") Then
-                    Session("Login_User") = tbUsername.Text
-                    Response.Redirect("registrazioneok.aspx?state=coupon")
-                Else
-                    Response.Redirect("registrazioneok.aspx?redirect=" & Request.QueryString("redirect"))
-                End If
+                Response.Redirect("registrazioneok.aspx?redirect=" & Request.QueryString("redirect"))
             End If
         End If
 
