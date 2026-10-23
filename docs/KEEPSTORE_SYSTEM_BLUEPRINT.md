@@ -1358,6 +1358,8 @@ L'audit DB non ha invocato gateway, non ha letto dati ordine reali e non ha ripo
 
 ## 13. Area account - stato consolidato
 
+**Ordini recenti — candidato MYACCOUNT-RECENT-ORDERS-TENANT-SCOPE-1A, 2026-10-23:** da base #381 SOURCE INTEGRATED `4582271a750da47375fa8e0eb995ef7149935eab`, `sdsRecentOrders` applica owner (`UtentiID`) e azienda del documento con SessionParameter Int32 `AziendaId` da `AuthenticatedAziendaID`, prima di ordinamento/LIMIT 5. Nessun default/fallback, query preliminare o resolver aggiunto. `Page.master.vb` resta autorevole: Init risolve l'host e rivalida login/owner/azienda, reidratando il marker nelle sessioni legacy valide; le discordanti terminano prima del binding. SqlDataSource conserva CancelSelectOnNullParameter, ma non e un validatore autonomo di host/marker. Colonne, pagamenti, importi, link, code-behind e layout invariati. [Prove e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#myaccount-recent-orders-tenant-scope-1a--2026-10-23): binding/provider nativi intercettati prima di Open, SQL/account sintetici; non certificazione IIS/MySQL. Sei file, PR DRAFT per review, nessun merge/deploy.
+
 - `myaccount.aspx`: stabile con dashboard e profilo separato tra `RagioneSociale` e `CognomeNome`.
 - `my-account-edit.aspx`: stabile con dettagli account, validazioni profilo e campi fiscali read-only allineati.
 - `my-account-address.aspx`: stabile ONSUS autonomo per indirizzi account, con add/edit sedi alternative e scelta predefinito.

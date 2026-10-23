@@ -33,9 +33,10 @@
                 <asp:SqlDataSource ID="sdsRecentOrders" runat="server"
                     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                    SelectCommand="SELECT vdocumenti.Id, vdocumenti.NDocumento, vdocumenti.DataDocumento, vdocumenti.TotaleDocumento, vdocumenti.StatiDescrizione1, vdocumenti.StatiDescrizione2, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione FROM vdocumenti LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id LEFT JOIN documenti dpay ON dpay.id = vdocumenti.Id WHERE vdocumenti.UtentiId = ?UtentiId AND vdocumenti.TipoDocumentiId = 4 ORDER BY vdocumenti.ID DESC LIMIT 5">
+                    SelectCommand="SELECT vdocumenti.Id, vdocumenti.NDocumento, vdocumenti.DataDocumento, vdocumenti.TotaleDocumento, vdocumenti.StatiDescrizione1, vdocumenti.StatiDescrizione2, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione FROM vdocumenti LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id LEFT JOIN documenti dpay ON dpay.id = vdocumenti.Id WHERE vdocumenti.UtentiId = ?UtentiId AND vdocumenti.AziendeId = ?AziendaId AND vdocumenti.TipoDocumentiId = 4 ORDER BY vdocumenti.ID DESC LIMIT 5">
                     <SelectParameters>
                         <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="Int32" />
+                        <asp:SessionParameter Name="AziendaId" SessionField="AuthenticatedAziendaID" Type="Int32" />
                     </SelectParameters>
                 </asp:SqlDataSource>
 
