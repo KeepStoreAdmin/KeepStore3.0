@@ -2,6 +2,12 @@
 
 Unica roadmap di prodotto vigente, 2026-10-20. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
 
+## Decisione PO prevalente — Coupon in standby, 2026-10-23
+
+Tutte le funzionalita coupon sono in **STANDBY fino a nuova autorizzazione esplicita del Product Owner**. Nessuno sviluppo, correzione, nuovo collaudo, modernizzazione o riattivazione e autorizzato. La PR #380 e il successivo QA-REGISTRATION-COUPON-HTTP-CONTINUITY-1A restano evidenze storiche archiviate: il risultato B non riapre la PR e non crea un bugfix prioritario.
+
+STANDBY **non equivale alla disabilitazione tecnica delle pagine esistenti**. Questa decisione non spegne pagine, menu o pagamenti e non modifica la registrazione standard. Prima di una futura attivazione servono una nuova decisione PO, il riesame dell'esposizione delle rotte e collaudi dedicati. Dettaglio e limiti dell'evidenza sono nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-prevalente--coupon-in-standby-2026-10-23).
+
 ## Priorita e lettura degli stati
 
 Mandato PO: **PRIMA ecommerce funzionale, affidabile, moderno, bello e navigabile da smartphone, lungo tutto il percorso fino all'ordine. POI rifinimenti, performance non bloccanti, SEO avanzata, integrazioni e automazioni.** Sicurezza, correttezza commerciale, integrita ordine e pagamento, HTTPS e SEO tecnica indispensabile rimangono gate di rilascio, non polish. HOME adattiva e assistente sono requisiti approvati: non implicano sistemi gia implementati o chiamate AI autorizzate.
@@ -82,7 +88,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ### KS-C02 — Account, autenticazione e handoff gestionale affidabili
 
-- **REGISTRATION-POSTSAVE-REFERRER-GUARD-1A — candidato SOURCE ONLY, 2026-10-23:** referrer facoltativo e helper coupon comune per PreInit e post-salvataggio. Precedenza finale carrello=1, coupon, conferma ordinaria; nessun nuovo inserimento/e-mail o destinazione esterna. Difetto dimostrato sulla base #379 prima della patch; **462 verifiche finali VB/System.Web e precompile safe 4.8 PASS**. [Manifest, scenari e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#registration-postsave-referrer-guard-1a--2026-10-23). Persistenza/invii/redirect terminante simulati, nessun collaudo IIS/account reale; review indipendente pendente e CONSEGNA SERVER SOSPESA. Autenticazione, password e contratti della #358 invariati.
+- **REGISTRATION-POSTSAVE-REFERRER-GUARD-1A / PR #380 — storico SOURCE INTEGRATED:** il codice resta nello stable; la successiva evidenza coupon e archiviata con esito B. La decisione PO prevalente sospende ogni ulteriore lavoro coupon. Non riaprire la PR e non ripetere le prove.
 - Checkpoint PO 2026-10-18: #359 `ACCOUNT-SESSION-REVOCATION-1A` / APAT-F01 MEDIUM **CHIUSO A / SOURCE INTEGRATION ONLY**, FF-only da #358 `e5a8b309c7dc7f4c171a15b080bc22cc897e0d59`, runtime revisionato `be1033112bd5ad3acce4d21480800da612fe59e2` invariato e solo chiusura documentale aggiunta; SHA finale dal Git reale. Review indipendente A, baseline 6/6, candidata System.Web 207/207 e precompile safe PASS gia acquisiti, senza ripetizione. **Smoke IIS 0/8 NON ESEGUITO** per permessi `web.config`; deroga esplicita PO alla sola integrazione source, nessun PASS IIS o deploy. #358 mantiene F01 chiuso con 28/28, #357 F02/F03 con 19/19 e limiti accettati. Nessuna compromissione di altri owner dimostrata; KS-C02 resta PARZIALE e autenticato reale non certificato.
 - Fonte/data: S3/S4, 2026-10-15. P0 sicurezza, P1 percorso account; PARZIALE / rischi DA VERIFICARE prima del rilascio.
 - CURRENT: login contestuale, reset tokenizzato, profilo/indirizzi/documenti/email con task integrati. Debito storico password legacy in chiaro/hash migration e copertura anti-CSRF auth non dichiarati risolti dal reset tokenizzato; verificare stato corrente e impatto, non rinviarli come dettaglio estetico. Account sintetici non certificano autenticato reale.
@@ -186,7 +192,7 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 
 ## Decisione operativa corrente
 
-2026-10-23: #375 MERGED/CLOSED / SOURCE INTEGRATED, frontend-rebuild `f98d9c7986b7c3efd66d31f79b27fb9123659bf1`, main invariato. Task corrente HOME-COMMERCIAL-SIGNALS-CONSOLIDATION-1A, sei file, A tecnico locale / PR DRAFT per review indipendente; nessun merge. F01 vendite esatte resta APERTO, vecchie statistiche rimosse dalla sola HOME. KS-A02/KS-E01 PARZIALI; CI NON CONFIGURATA, CONSEGNA SERVER SOSPESA, nessun task successivo.
+2026-10-23: decisione PO prevalente: tutte le funzionalita coupon in STANDBY fino a nuova autorizzazione esplicita. Le pagine esistenti non sono disabilitate tecnicamente. Ogni attivazione futura richiede decisione PO, riesame delle rotte esposte e collaudi dedicati. QA B archiviata; nessun bugfix prioritario o riapertura #380. Questa modifica registra il vincolo con soli commenti ASP.NET non renderizzati e manuali; nessun comportamento funzionale cambia. Stable di base `cea4571402a867948677a79e5631cb2bd97847a1`; `main` protetto `976e99f17cabc8a5c6a8715463444edfeaadcd91`.
 
 ## Aggiornamento della roadmap
 

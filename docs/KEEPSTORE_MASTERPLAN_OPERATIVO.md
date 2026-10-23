@@ -5,7 +5,13 @@ Aggiornato: 2026-10-23
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
-## Checkpoint operativo corrente
+## Decisione PO prevalente — Coupon in standby, 2026-10-23
+
+Tutte le funzionalita coupon sono in **STANDBY fino a nuova autorizzazione esplicita del Product Owner**. Non sviluppare, correggere, ripetere test, modernizzare o riattivare funzioni coupon; la PR #380 non si riapre. La decisione sospende il lavoro, non disabilita tecnicamente le pagine esistenti e non modifica menu, pagamenti o registrazione standard. Ogni futura attivazione richiede una nuova decisione PO, riesame dell'esposizione delle rotte e collaudi dedicati.
+
+**Evidenza storica archiviata — QA-REGISTRATION-COUPON-HTTP-CONTINUITY-1A, esito B:** 60 scenari e 473 controlli di caratterizzazione; due difetti riprodotti con HTTP/System.Web in hosting ridotto: il master coupon non soddisfa i placeholder della pagina di registrazione e il contesto coupon non sopravvive al POST finale quando l'action generata perde la query e manca un referrer utilizzabile. Il percorso legacy ?coupon condivide il problema di continuita. Risposte/route e lifecycle verificati nell'harness limitato; nessuna certificazione IIS o produzione, nessun account/database/e-mail reali. I rilievi non sono task attivi, priorita bugfix o autorizzazione a intervenire. Nessuna suite coupon va ripetuta durante lo standby.
+
+## Evidenza operativa storica — registrazione coupon (stato superato)
 
 ### REGISTRATION-POSTSAVE-REFERRER-GUARD-1A — 2026-10-23
 

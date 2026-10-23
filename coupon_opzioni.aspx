@@ -1,4 +1,5 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_opzioni.aspx.vb" Inherits="coupon_opzioni" title="Pagina senza titolo" %>
+﻿<%-- FUNZIONALITÀ COUPON IN STANDBY PER DECISIONE PO DEL 23/10/2026. Nessuna modifica funzionale o riattivazione senza autorizzazione. Consultare KEEPSTORE_PRODUCT_ROADMAP.md. --%>
+<%@ Page Language="VB" MasterPageFile="~/Coupon.master" AutoEventWireup="false" CodeFile="coupon_opzioni.aspx.vb" Inherits="coupon_opzioni" title="Pagina senza titolo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 

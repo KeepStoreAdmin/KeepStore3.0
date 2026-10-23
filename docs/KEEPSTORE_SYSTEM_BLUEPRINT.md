@@ -2,6 +2,10 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Decisione PO prevalente — Coupon in standby, 2026-10-23
+
+Tutte le funzionalita coupon sono sospese fino a nuova autorizzazione esplicita. Nessuna modifica, correzione, ripetizione dei test o riattivazione; le registrazioni storiche della PR #380 e della QA B sono archiviate e non la riaprono. STANDBY non equivale a disabilitazione tecnica delle pagine esistenti e non spegne menu o pagamenti. Una futura attivazione richiede decisione PO, riesame dell'esposizione delle rotte e collaudi dedicati. La registrazione standard resta fuori dal vincolo. Esito e limiti QA nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#decisione-po-prevalente--coupon-in-standby-2026-10-23).
+
 ## Piano di rilascio offline per applicazione — KS-G01, 2026-10-21
 
 PR #366 CHIUSA A / SOURCE INTEGRATED a `c8373b08eff0cf9557798802ea4a2d6bfb8e4822`, FF-only; review/closeout nel Masterplan. KS-F01 deterministico integrato, assistente completo ancora PARZIALE/TARGET. L'integrazione sorgente non attesta file installati, tenant testati o pubblicazione.

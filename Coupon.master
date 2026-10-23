@@ -1,3 +1,4 @@
+<%-- FUNZIONALITÀ COUPON IN STANDBY PER DECISIONE PO DEL 23/10/2026. Nessuna modifica funzionale o riattivazione senza autorizzazione. Consultare KEEPSTORE_PRODUCT_ROADMAP.md. --%>
 <%@ Master Language="VB" CodeFile="Coupon.master.vb" Inherits="Coupon" %>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
