@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$RepositoryRoot, [Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$BrowserOnly, [string]$ReuseBrowserFixtures)
+param([string]$RepositoryRoot, [Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$BrowserOnly, [string]$ReuseBrowserFixtures, [switch]$PriceOnly)
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'HOME_DISCOVERY_REQUIRES_PS51' }
 if (!$RepositoryRoot) { $RepositoryRoot = Split-Path -Parent $PSScriptRoot }
@@ -132,6 +132,11 @@ try {
     Public Sub Configure(company As Integer, listino As Integer, authenticated As Boolean, included As Boolean)
         _priceDisplayContext=New StorefrontPriceDisplayContext(company,listino,authenticated,If(included,StorefrontVatDisplayMode.VatIncluded,StorefrontVatDisplayMode.VatExcluded),Nothing,-1,"",False)
     End Sub
+    Public Sub ConfigureFiscal(included As Boolean, hasOverride As Boolean, rate As Decimal, reverseCharge As Boolean)
+        Dim vat As Nullable(Of Decimal)=Nothing
+        If hasOverride Then vat=rate
+        _priceDisplayContext=New StorefrontPriceDisplayContext(101,1,True,If(included,StorefrontVatDisplayMode.VatIncluded,StorefrontVatDisplayMode.VatExcluded),vat,-1,"",reverseCharge)
+    End Sub
     Public Function Table() As DataTable
         Dim rows As DataTable=EmptyProductsTable()
         If Not rows.Columns.Contains("TCid") Then rows.Columns.Add("TCid",GetType(Integer))
@@ -139,6 +144,9 @@ try {
     End Function
     Public Function Card(row As DataRow) As String
         Return RenderGridCard(row.Table.DefaultView(row.Table.Rows.IndexOf(row)))
+    End Function
+    Public Function SelectedBase(row As DataRow) As Decimal
+        Return GetBasePrice(row)
     End Function
     Public Function Sql(pool As String) As String
         Select Case pool
@@ -165,12 +173,29 @@ try {
     }
     $new=Compile-Home $map 'CandidateHomeDiscovery' $true; $old=Compile-Home $oldMap 'BaselineHomeDiscovery' $false
     $new.Configure(101,1,$false,$true); $old.Configure(101,1,$false,$true)
-    Check 'baseline source identifies first-visit gap; no live defect claimed' ($oldMap.BindHome[0] -notmatch 'GetCatalogFallbackPool|LoadHomeCatalogDiscovery')
+    if (!$PriceOnly) { Check 'baseline source identifies first-visit gap; no live defect claimed' ($oldMap.BindHome[0] -notmatch 'GetCatalogFallbackPool|LoadHomeCatalogDiscovery') }
     foreach ($pool in @('new','incoming','rank')) { Check ($pool+' SQL byte-equivalent to stable') ($new.Sql($pool) -ceq $old.Sql($pool)) }
     Write-Json 'queries.json' @{Candidate=$new.Sql('catalog');Baseline=$old.Sql('catalog')}
     $table=$new.Table()
     $schema=@($table.Columns|ForEach-Object{[pscustomobject]@{name=$_.ColumnName;type=$(if($_.DataType -eq [string] -or $_.DataType -eq [DateTime]){'TEXT'}else{'NUMERIC'})}})+@([pscustomobject]@{name='NListino';type='NUMERIC'})
     Write-Json 'schema.json' $schema
+    # Price-only mode still compiles the actual VB loader/renderers; only SQL I/O is synthetic.
+    $previousSource=(git -C $RepositoryRoot show '618efac7e41f1a3f7863a99bd719bc4f5e05e6d7:Default.aspx.vb') -join [Environment]::NewLine
+    if($LASTEXITCODE -ne 0){throw 'HOME_DISCOVERY_REVIEWED_HEAD_UNAVAILABLE'}
+    $previous=Compile-Home (Methods $previousSource) 'ReviewedHomeDiscovery' $true
+    $priceQueries=@()
+    foreach($mode in @(
+        @{Name='included';Included=$true;Override=$false;Rate=0;Rc=$false},
+        @{Name='excluded';Included=$false;Override=$false;Rate=0;Rc=$false},
+        @{Name='override';Included=$true;Override=$true;Rate=10;Rc=$false},
+        @{Name='exempt';Included=$true;Override=$true;Rate=0;Rc=$false},
+        @{Name='reverse';Included=$true;Override=$true;Rate=10;Rc=$true}
+    )) {
+        $new.ConfigureFiscal($mode.Included,$mode.Override,$mode.Rate,$mode.Rc)
+        $previous.ConfigureFiscal($mode.Included,$mode.Override,$mode.Rate,$mode.Rc)
+        $priceQueries+=@{Name=$mode.Name;Included=$mode.Included;HasOverride=$mode.Override;Rate=$mode.Rate;Rc=$mode.Rc;Sql=$new.Sql('catalog');PreviousSql=$previous.Sql('catalog')}
+    }
+    Write-Json 'price-queries.json' $priceQueries
     $sqlScript=@'
 const fs=require('node:fs'),path=require('node:path'),{DatabaseSync}=require('node:sqlite');
 const dir=process.argv[2],q=JSON.parse(fs.readFileSync(path.join(dir,'queries.json'),'utf8')),schema=JSON.parse(fs.readFileSync(path.join(dir,'schema.json'),'utf8'));
@@ -180,8 +205,9 @@ db.function('GREATEST',(a,b)=>Math.max(a,b));db.function('CURDATE',()=>'2026-10-
 db.exec('CREATE TABLE vsuperarticoli('+schema.map(c=>'"'+c.name+'" '+c.type).join(',')+');CREATE TABLE articoli(id INTEGER PRIMARY KEY,Abilitato INTEGER);CREATE TABLE articoli_giacenze(ArticoliId INTEGER,TCId INTEGER,MagazziniId INTEGER,Giacenza NUMERIC,Disponibilita NUMERIC,Impegnata NUMERIC)');
 const cols=schema.map(c=>c.name),insert=db.prepare('INSERT INTO vsuperarticoli('+cols.join(',')+') VALUES('+cols.map(()=>'?').join(',')+')'),stock=db.prepare('INSERT INTO articoli_giacenze VALUES(?,?,?,?,?,?)');
 function product(id,over={},inventory=true,wh=1){const r={id,TCid:-1,NListino:1,Codice:'SKU'+id,Descrizione1:'Prodotto '+id,Descrizione2:'',DescrizioneLunga:'',Img1:'fixture.svg',Img2:'',Img3:'',Img4:'',Abilitato:1,Vetrina:1,DataCreazione:'2025-01-01',Visite:0,Giacenza:5,Disponibilita:999,Impegnata:0,Prezzo:10,PrezzoIvato:12.2,InOrdine:0,DisplayPromoSnapshotReady:1,...over};db.prepare('INSERT OR IGNORE INTO articoli VALUES(?,?)').run(id,r.Abilitato);insert.run(...cols.map(c=>r[c]??null));if(inventory)stock.run(id,r.TCid,wh,r.Giacenza,r.Disponibilita,r.Impegnata)}
-function run(sql,listino=1){const values={listino,ksRcEnabled:0,ksHasVatOverride:0,ksVatOverride:0};return db.prepare(sql).all(Object.fromEntries([...new Set(sql.match(/@[A-Za-z][A-Za-z0-9]*/g)||[])].map(k=>[k.slice(1),values[k.slice(1)]])))}
+function run(sql,listino=1,fiscal={}){const values={listino,ksRcEnabled:0,ksHasVatOverride:0,ksVatOverride:0,...fiscal};return db.prepare(sql).all(Object.fromEntries([...new Set(sql.match(/@[A-Za-z][A-Za-z0-9]*/g)||[])].map(k=>[k.slice(1),values[k.slice(1)]])))}
 function reset(){db.exec('DELETE FROM vsuperarticoli;DELETE FROM articoli;DELETE FROM articoli_giacenze')}
+if(process.argv[3]!=='price-only') {
 for(const sector of ['Tech','Food'])for(const count of [1,2,8,12]){reset();for(let n=1;n<=count;n++)product(n,{Descrizione1:sector==='Tech'?'Computer professionale con descrizione molto lunga per controllare la leggibilita e la scheda prodotto':'Prodotto alimentare con descrizione molto lunga e dettagli del formato confezione',Descrizione2:sector+' '+n,Img1:n===1?null:'fixture.svg',Prezzo:sector==='Tech'?100:20,PrezzoIvato:sector==='Tech'?122:24.4});const rows=run(q.Candidate);check(sector+' '+count+' cap and article uniqueness',rows.length===Math.min(count,8)&&new Set(rows.map(r=>r.id)).size===rows.length);check(sector+' '+count+' deterministic order',rows.map(r=>r.id).join(',')===Array.from({length:Math.min(count,8)},(_,i)=>count-i).join(','));if(count<=8)check(sector+' '+count+' image absent remains eligible',rows.some(r=>r.id===1));if(count===8)fixtures.push({name:sector,company:sector==='Tech'?101:202,listino:1,rows})}
 reset();product(1,{Giacenza:1,Impegnata:1});check('reserved stock excluded despite misleading Disponibilita',run(q.Candidate).length===0);check('baseline dormant pool would admit reserved stock',run(q.Baseline).length===1);
 reset();product(1,{Giacenza:1.5,Impegnata:0.6});check('net fractional remainder below initial unit excluded',run(q.Candidate).length===0);
@@ -195,10 +221,33 @@ reset();for(let tc=1;tc<=40;tc++)product(100,{TCid:tc,Giacenza:tc===1?0:5});for(
 for(const [label,over] of [['disabled',{Abilitato:0}],['Vetrina zero',{Vetrina:0}],['Vetrina null',{Vetrina:null}],['foreign listino',{NListino:99}],['zero price',{Prezzo:0,PrezzoIvato:0}],['negative price',{Prezzo:-1,PrezzoIvato:-1}],['null stock',{Giacenza:null,Impegnata:null}],['negative net',{Giacenza:1,Impegnata:5}]]){reset();product(1,over);check(label+' excluded',run(q.Candidate).length===0)}
 reset();product(1,{NListino:1,Prezzo:100,PrezzoIvato:122});product(1,{NListino:10,Prezzo:200,PrezzoIvato:244},false);for(const listino of [1,10,1])check('alternating authoritative listino '+listino,run(q.Candidate,listino)[0]?.Prezzo===(listino===1?100:200));
 reset();check('empty catalog produces zero cards',run(q.Candidate).length===0);
+}
+const priceModes=JSON.parse(fs.readFileSync(path.join(dir,'price-queries.json'),'utf8'));
+for(const m of priceModes){
+ const fiscal={ksRcEnabled:+m.Rc,ksHasVatOverride:+m.HasOverride,ksVatOverride:m.Rate},select=()=>run(m.Sql,1,fiscal);
+ for(const missing of [null,0,-1]){
+  reset();product(1,m.Included?{Prezzo:10,PrezzoIvato:missing}:{Prezzo:missing,PrezzoIvato:12.2});
+  check(m.Name+' missing selected base '+missing,select().length===(m.Included&&m.HasOverride?1:0));
+  if(!m.HasOverride)check(m.Name+' previous raw OR admits unusable '+missing,run(m.PreviousSql,1,fiscal).length===1);
+ }
+ reset();product(1,{Prezzo:null,PrezzoIvato:null,PrezzoPromo:8,PrezzoPromoIvato:9.76});check(m.Name+' promo only excluded',select().length===0);
+ reset();product(1,{Prezzo:0,PrezzoIvato:12.2,IdIvaRC:1,ValoreIvaRC:0});
+ check(m.Name+' fiscal calculation cannot borrow gross with missing net',select().length===(m.Included&&!m.HasOverride?1:0));
+ reset();product(100,{TCid:1,...(m.Included&&!m.HasOverride?{Prezzo:10,PrezzoIvato:null}:{Prezzo:null,PrezzoIvato:12.2})});product(100,{TCid:2,Prezzo:10,PrezzoIvato:12.2,IdIvaRC:1,ValoreIvaRC:0});
+ for(let id=1;id<=10;id++)product(id,{IdIvaRC:1,ValoreIvaRC:0});
+ product(200,{Prezzo:null,PrezzoIvato:null,PrezzoPromo:8,PrezzoPromoIvato:9.76});
+ const rows=select();check(m.Name+' valid variant before row_number',rows[0]?.id===100&&rows[0]?.TCid===2);
+ check(m.Name+' eight slots without unusable prices',rows.length===8&&new Set(rows.map(r=>r.id)).size===8&&!rows.some(r=>r.id===200));
+ check(m.Name+' selected price positive',rows.every(r=>(m.Included?r.PrezzoIvato:r.Prezzo)>0));
+ check(m.Name+' authoritative fiscal value',Math.abs(rows[0].PrezzoIvato-(m.Rc?10:m.HasOverride?10*(1+m.Rate*.01):12.2))<1e-9);
+ const previous=run(m.PreviousSql,1,fiscal);check(m.Name+' previous OR wastes slot and selects unpriced variant',previous.some(r=>r.id===200)&&previous.find(r=>r.id===100)?.TCid===1);
+ fixtures.push({...m,rows});
+ if(m.Rc){reset();product(1,{Prezzo:10,PrezzoIvato:null,IdIvaRC:-1,ValoreIvaRC:-1});check('unavailable RC metadata follows authoritative override',Math.abs(select()[0]?.PrezzoIvato-11)<1e-9)}
+}
 fs.writeFileSync(path.join(dir,'sql-report.json'),JSON.stringify({Result:'PASS',Checks:checks.length,ChecksDetail:checks,Backend:'SQLite in memory; actual VB-emitted SQL, not MySQL certification'},null,2));fs.writeFileSync(path.join(dir,'fixtures.json'),JSON.stringify(fixtures,null,2));
 '@
     [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'sql-fixture.cjs'),$sqlScript,$utf8)
-    & $node (Join-Path $EvidenceDirectory 'sql-fixture.cjs') $EvidenceDirectory
+    & $node (Join-Path $EvidenceDirectory 'sql-fixture.cjs') $EvidenceDirectory $(if($PriceOnly){'price-only'}else{'all'})
     if ($LASTEXITCODE -ne 0) { throw 'HOME_DISCOVERY_SQL_FAILED' }
     $sqlReport=Get-Content (Join-Path $EvidenceDirectory 'sql-report.json') -Raw|ConvertFrom-Json
     foreach ($c in $sqlReport.ChecksDetail) { Check $c.Name $c.Pass }
@@ -211,6 +260,22 @@ fs.writeFileSync(path.join(dir,'sql-report.json'),JSON.stringify({Result:'PASS',
         }; $t.Rows.Add($r) }; return ,$t
     }
     $fixtures=Get-Content (Join-Path $EvidenceDirectory 'fixtures.json') -Raw|ConvertFrom-Json
+    foreach($f in @($fixtures|Where-Object{$null -ne $_.Included})) {
+        $new.ConfigureFiscal($f.Included,$f.HasOverride,$f.Rate,$f.Rc)
+        $rows=Rows $f.rows
+        foreach($r in $rows.Rows) {
+            $html=$new.Card($r)
+            $expected=if($f.Included){$r.PrezzoIvato}else{$r.Prezzo}
+            Check ($f.Name+' selected base matches SQL '+$r.id+'/'+$r.TCid) ($new.SelectedBase($r) -gt 0 -and [Math]::Abs($new.SelectedBase($r)-[decimal]$expected) -lt 0.000001)
+            Check ($f.Name+' priced card '+$r.id+'/'+$r.TCid) ($html -notmatch 'Prezzo su richiesta' -and $html -match 'cart_add\.aspx\?id=' -and $html -match ('TCid='+$r.TCid+'(?:&|%26|''|"|$)'))
+        }
+    }
+    if($PriceOnly) {
+        Write-Json 'price-report.json' @{Result='PASS';Checks=$checks.Count;ChecksDetail=$checks;Backend='Actual VB SQL/renderers, SQLite synthetic; connection/adapter replaced; no MySQL/IIS';BrowserQaReused='110/110; markup/styles unchanged'}
+        Write-Output ('HOME_DISCOVERY_PRICE '+$checks.Count+'/'+$checks.Count+' PASS')
+        exit 0
+    }
+    $fixtures=@($fixtures|Where-Object{$null -eq $_.Included})
     $browser=New-Object 'Collections.Generic.List[object]'
     foreach ($f in $fixtures) {
         $new.Configure($f.company,$f.listino,$false,$true); $old.Configure($f.company,$f.listino,$false,$true)

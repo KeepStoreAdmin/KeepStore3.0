@@ -1374,7 +1374,12 @@ Partial Public Class _Default
         Else
             sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
         End If
-        sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
+        If catalogDiscovery Then
+            ' Filter the selected base unit price before variant ranking/LIMIT; promo alone cannot qualify.
+            sql.Append("AND ").Append(If(_priceDisplayContext.IsVatIncluded, prezzoIvatoSql, "COALESCE(v.Prezzo,0)")).Append(">0 ")
+        Else
+            sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
+        End If
         If Not String.IsNullOrWhiteSpace(whereClause) Then
             sql.Append("AND ").Append(whereClause).Append(" ")
         End If
