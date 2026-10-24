@@ -1,4 +1,4 @@
-﻿<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="registrazione.aspx.vb" Inherits="registrazione" %>
+<%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="registrazione.aspx.vb" Inherits="registrazione" %>
 
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
@@ -6,7 +6,23 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    
+    <% If TypeOf Me.Master Is PageMaster Then %>
+    <script type="text/javascript" data-ks-registration-script="standard-head">
+        (function () {
+            if (document.__ksRegistrationEnterBound) return;
+            document.__ksRegistrationEnterBound = true;
+            document.addEventListener("keydown", function (e) {
+                if (e.isComposing || e.keyCode === 229 || (e.key !== "Enter" && e.keyCode !== 13)) return;
+                var field = e.target;
+                var wrap = document.querySelector('.ks-auth-register[data-ks-registration-form="standard"]');
+                if (!wrap || !field || !wrap.contains(field) || field.tagName.toLowerCase() !== "input") return;
+                if (field.disabled || field.readOnly || !/^(text|search|email|url|tel|password|number)$/.test(field.type)) return;
+                // Only single-line text entry suppresses an accidental submit; native actions stay usable.
+                e.preventDefault();
+            });
+        })();
+    </script>
+    <% Else %>
     <script type="text/javascript">
         // Prevent accidental submit on ENTER inside registration form fields
         (function () {
@@ -28,6 +44,7 @@
             });
         })();
     </script>
+    <% End If %>
 </asp:Content>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
@@ -42,7 +59,38 @@
         </div>
     </div>
 
-    <section class="flat-spacing-2 ks-auth-register">
+    <% If TypeOf Me.Master Is PageMaster Then
+        lblNomeCognome.AssociatedControlID = tbNomeCognome.ID
+        lblPartitaIva.AssociatedControlID = tbPartitaIva.ID
+        lblRagioneSociale.AssociatedControlID = tbRagioneSociale.ID
+        label_codice_fiscale.AssociatedControlID = tbCodiceFiscale.ID
+        lblEmailPec.AssociatedControlID = tbEmailPec.ID
+        lblCsdi.AssociatedControlID = tbCsdi.ID
+        tbIndirizzo.Attributes("aria-label") = "Indirizzo di fatturazione"
+        tbCap.Attributes("aria-label") = "CAP di fatturazione"
+        tbCap.Attributes("inputmode") = "numeric"
+        ddlCitta.Attributes("aria-label") = "Citta di fatturazione"
+        tbProvincia.Attributes("aria-label") = "Provincia di fatturazione"
+        tbTelefono.Attributes("aria-label") = "Telefono"
+        tbCellulare.Attributes("aria-label") = "Cellulare"
+        tbFax.Attributes("aria-label") = "Fax"
+        tbNomeA.Attributes("aria-label") = "Nome destinatario"
+        tbRagioneSocialeA.Attributes("aria-label") = "Ragione sociale destinatario"
+        tbIndirizzo2.Attributes("aria-label") = "Indirizzo di spedizione"
+        tbCap2.Attributes("aria-label") = "CAP di spedizione"
+        tbCap2.Attributes("inputmode") = "numeric"
+        ddlCitta2.Attributes("aria-label") = "Citta di spedizione"
+        tbProvincia2.Attributes("aria-label") = "Provincia di spedizione"
+        tbTelefono2.Attributes("aria-label") = "Telefono destinatario"
+        tbCellulare2.Attributes("aria-label") = "Cellulare destinatario"
+        tbFax2.Attributes("aria-label") = "Fax destinatario"
+        tbUsername.Attributes("aria-label") = "username"
+        tbPassword.Attributes("aria-label") = "password"
+        tbPasswordConferma.Attributes("aria-label") = "conferma password"
+        tbEmail.Attributes("aria-label") = "email"
+        tbEmailConferma.Attributes("aria-label") = "conferma email"
+    End If %>
+    <section class="flat-spacing-2 ks-auth-register" data-ks-registration-form="<%= If(TypeOf Me.Master Is PageMaster, "standard", "legacy") %>">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-xl-10 col-lg-11">
@@ -100,7 +148,7 @@
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbNomeCognome" AutoPostBack="false" runat="server" Width="98%" MaxLength="100" Visible="False" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbNomeA');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbNomeA');" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
                                         <br />
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator7" runat="server" ControlToValidate="tbNomeCognome" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_DatiAnagrafici" Visible="False" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator7" runat="server" ControlToValidate="tbNomeCognome" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_DatiAnagrafici" Visible="False" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
                             <%End if %>
@@ -111,8 +159,8 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbPartitaIva" runat="server" AutoPostBack="true" OnTextChanged="check_vat" CausesValidation="False" Width="98%" MaxLength="11" ValidationGroup="registrazione_DatiAnagrafici" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator16" runat="server" ControlToValidate="tbPartitaIva" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
-                                        <asp:RegularExpressionValidator ID="RegularExpressionValidator5" runat="server" ControlToValidate="tbPartitaIva" ErrorMessage="P.IVA non corretta" ValidationExpression="^[A-Za-z0-9]{2,11}$" Width="137px" Display="Dynamic" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>  
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator16" runat="server" ControlToValidate="tbPartitaIva" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidator5" runat="server" ControlToValidate="tbPartitaIva" ErrorMessage="P.IVA non corretta" ValidationExpression="^[A-Za-z0-9]{2,11}$" Width="137px" Display="Dynamic" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
                                         <asp:Label ID="lblPiva" runat="server" Font-Bold="True" ForeColor="Red"></asp:Label>
                                     </td>
                                 </tr>
@@ -126,7 +174,7 @@
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbRagioneSociale" runat="server" Width="98%" MaxLength="100" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbRagioneSocialeA');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbRagioneSocialeA');" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
                                     <br />
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator19" runat="server" ControlToValidate="tbRagioneSociale" Display="Dynamic" ErrorMessage="Campo obbligatorio" ValidationGroup="registrazione_DatiAnagrafici" Width="133px" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator19" runat="server" ControlToValidate="tbRagioneSociale" Display="Dynamic" ErrorMessage="Campo obbligatorio" ValidationGroup="registrazione_DatiAnagrafici" Width="133px" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                 </td>
                             </tr>
                             <tr>
@@ -135,8 +183,8 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbCodiceFiscale" runat="server" Width="98%" MaxLength="16" ValidationGroup="registrazione_DatiAnagrafici" style="text-transform:uppercase; font-size:10pt; padding:1%; font-weight:bold;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator12" runat="server" ControlToValidate="tbCodiceFiscale" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><br />
-                                    <asp:RegularExpressionValidator ID="RegularExpressionValidator6" runat="server" ControlToValidate="tbCodiceFiscale" ErrorMessage="Codice Fiscale non corretto" Width="185px" Display="Dynamic" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator12" runat="server" ControlToValidate="tbCodiceFiscale" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><br />
+                                    <asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidator6" runat="server" ControlToValidate="tbCodiceFiscale" ErrorMessage="Codice Fiscale non corretto" Width="185px" Display="Dynamic" ValidationGroup="registrazione_DatiAnagrafici" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
                                 </td>    
 							</tr>
 							<tr>
@@ -152,8 +200,8 @@
                                                 </td>
                                                 <td>
                                                     <asp:TextBox ID="txtDataNascita" Text="gg/mm/aaaa" runat="server" Width="98%" ValidationGroup="cf" style="padding:1%; font-size:10pt;"></asp:TextBox>
-                                                    <asp:RegularExpressionValidator ID="revDataNascita" runat="server" ControlToValidate="txtDataNascita" ErrorMessage="Inserire una data corretta" ValidationExpression="(0[1-9]|[12][0-9]|3[01])[/](0[1-9]|1[012])[/](19|20)\d\d" Display="Dynamic" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
-                                                    <asp:RequiredFieldValidator ID="rfvDataNascita" runat="server" ControlToValidate="txtDataNascita" ErrorMessage="Campo obbligatorio" Width="141px" Display="Dynamic" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>                                        
+                                                    <asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="revDataNascita" runat="server" ControlToValidate="txtDataNascita" ErrorMessage="Inserire una data corretta" ValidationExpression="(0[1-9]|[12][0-9]|3[01])[/](0[1-9]|1[012])[/](19|20)\d\d" Display="Dynamic" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="rfvDataNascita" runat="server" ControlToValidate="txtDataNascita" ErrorMessage="Campo obbligatorio" Width="141px" Display="Dynamic" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -181,7 +229,7 @@
                                                 </td>
                                                 <td>
                                                       <asp:DropDownList ID="ddlStatoNascita" runat="server" Width="100%" DataSourceID="StatiSqlDataSource" DataTextField="Stato" DataValueField="Codice_ISTAT" ValidationGroup="cf"></asp:DropDownList>
-                                                      <asp:CompareValidator ID="covStatoNascita" runat="server" ErrorMessage="Indicare lo stato di nascita!" Operator="NotEqual" ValueToCompare="--------" ControlToValidate="ddlStatoNascita" Width="176px" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
+                                                      <asp:CompareValidator CssClass="ks-registration-validation" ID="covStatoNascita" runat="server" ErrorMessage="Indicare lo stato di nascita!" Operator="NotEqual" ValueToCompare="--------" ControlToValidate="ddlStatoNascita" Width="176px" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
                                                 </td>
                                             </tr>
 		                                    <tr id="pnlNatiItalia" runat="server" visible="true">
@@ -196,7 +244,7 @@
                                                                 <asp:ListItem>--------</asp:ListItem>
                                                     </asp:DropDownList>
 
-                                                    <asp:CompareValidator ID="covProvinciaNascita"  runat="server" 
+                                                    <asp:CompareValidator CssClass="ks-registration-validation" ID="covProvinciaNascita"  runat="server"
                                                           ErrorMessage="Indicare la provincia di nascita!" Operator="NotEqual" 
                                                           ValueToCompare="--------" ControlToValidate="ddlProvinciaNascita" Width="236px" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>                        
                                                 </td>
@@ -210,7 +258,7 @@
                                                             <asp:ListItem>--------</asp:ListItem>
                                                         </asp:DropDownList>
 
-                                                        <asp:CompareValidator ID="covComuneNascita" runat="server" 
+                                                        <asp:CompareValidator CssClass="ks-registration-validation" ID="covComuneNascita" runat="server"
                                                             ErrorMessage="Indicare il comune di nascita!" Operator="NotEqual" 
                                                             ValueToCompare="--------" ControlToValidate="ddlComuneNascita" Width="244px" ValidationGroup="cf" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>                                         
                                                </td>
@@ -234,7 +282,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbEmailPec" runat="server" CausesValidation="True" Width="98%" MaxLength="256" ValidationGroup="registrazione_FatturaElettronica" style="font-size:10pt; padding:1%;"></asp:TextBox>
-									<asp:RegularExpressionValidator ID="RegularExpressionValidatorEmailPec" runat="server" ControlToValidate="tbEmailPec" Display="Dynamic" ErrorMessage="Indirizzo email non valido" SetFocusOnError="True" ValidationExpression="(?=^.{7,256}$)[\s]*\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*[\s]*" ValidationGroup="registrazione_FatturaElettronica" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+									<asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidatorEmailPec" runat="server" ControlToValidate="tbEmailPec" Display="Dynamic" ErrorMessage="Indirizzo email non valido" SetFocusOnError="True" ValidationExpression="(?=^.{7,256}$)[\s]*\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*[\s]*" ValidationGroup="registrazione_FatturaElettronica" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
 								</td>
                             </tr>
 							<tr>
@@ -243,7 +291,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbCsdi" runat="server" Width="98%" MaxLength="7" ValidationGroup="registrazione_FatturaElettronica" CausesValidation="True" style="font-size:10pt; padding:1%;"></asp:TextBox>
-									<asp:RegularExpressionValidator ID="RegularExpressionValidatorCsdi" runat="server" ControlToValidate="tbCsdi" Display="Dynamic" ErrorMessage="Codice SDI non valido" SetFocusOnError="True" ValidationExpression="^([X]{0}|[A-Za-z0-9]{7})$" ValidationGroup="registrazione_FatturaElettronica" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+									<asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidatorCsdi" runat="server" ControlToValidate="tbCsdi" Display="Dynamic" ErrorMessage="Codice SDI non valido" SetFocusOnError="True" ValidationExpression="^([X]{0}|[A-Za-z0-9]{7})$" ValidationGroup="registrazione_FatturaElettronica" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
 									<asp:Label ID="lblPecAndSdi" runat="server" Font-Bold="True" ForeColor="Red" Text=""></asp:Label>
 								</td>
                             </tr>
@@ -263,7 +311,7 @@
                                 </td>
                                 <td style="padding:5px;">
 									<asp:TextBox ID="tbIndirizzo" runat="server" Width="98%" MaxLength="100" ValidationGroup="registrazione_indirizzoP" CausesValidation="True" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbIndirizzo2');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbIndirizzo2');" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator8" runat="server" ControlToValidate="tbIndirizzo" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator8" runat="server" ControlToValidate="tbIndirizzo" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 								</td>
                             </tr>
 							<tr>
@@ -272,7 +320,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbCap" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data" CausesValidation="False" Width="98%" MaxLength="5" ValidationGroup="registrazione_indirizzoP" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbCap2');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbCap2');"  style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator11" runat="server" ControlToValidate="tbCap" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator11" runat="server" ControlToValidate="tbCap" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 								</td>      
                             </tr>
                             <tr>
@@ -281,7 +329,7 @@
                                 </td>
                                 <td style="padding:5px;">                                    
 									<asp:DropDownList ID="ddlCitta" onSelectedIndexChanged="Province_Bind_Data" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione_indirizzoP" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:DropDownList>
-									<asp:RequiredFieldValidator ID="RequiredFieldValidator9" runat="server" ControlToValidate="ddlCitta" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+									<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator9" runat="server" ControlToValidate="ddlCitta" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 								</td>      
                             </tr>
                             <tr>
@@ -290,7 +338,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbProvincia" runat="server" ReadOnly="true" Width="98%" MaxLength="20" ValidationGroup="registrazione_indirizzoP" CausesValidation="True" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbProvincia2');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbProvincia2');"  style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator10" runat="server" ControlToValidate="tbProvincia" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator10" runat="server" ControlToValidate="tbProvincia" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                 </td>      
                             </tr>
                             <tr>
@@ -299,7 +347,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbTelefono" runat="server" Width="98%" MaxLength="25" ValidationGroup="registrazione_indirizzoP" CausesValidation="True" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbTelefono2');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbTelefono2');"  style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator13" runat="server" ControlToValidate="tbTelefono" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator13" runat="server" ControlToValidate="tbTelefono" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoP" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                 </td>      
                             </tr>
                             <tr>
@@ -370,7 +418,7 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbRagioneSocialeA" runat="server" Width="98%" MaxLength="100" ValidationGroup="registrazione_indirizzoS" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox><asp:TextBox ID="tbRagioneSocialeAId" runat="server" Width="20" Visible="False" style="text-transform:uppercase; font-size:10pt; padding:1%;" ></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator6" runat="server" ControlToValidate="tbRagioneSocialeA" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator6" runat="server" ControlToValidate="tbRagioneSocialeA" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
                                 <tr>
@@ -387,7 +435,7 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbIndirizzo2" runat="server" Width="98%" MaxLength="100" ValidationGroup="registrazione_indirizzoS" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox><asp:TextBox ID="tbIndirizzoId" runat="server" Width="0" Visible="False" ></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator14" runat="server" ControlToValidate="tbIndirizzo2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator14" runat="server" ControlToValidate="tbIndirizzo2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
                                 <tr>
@@ -396,7 +444,7 @@
 									</td>
 									<td style="padding:5px;">
 										<asp:TextBox ID="tbCap2" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data2" CausesValidation="False" Width="98%" MaxLength="5" ValidationGroup="registrazione_indirizzoS" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbCap2');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbCap2');"  style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-										<asp:RequiredFieldValidator ID="RequiredFieldValidator21" runat="server" ControlToValidate="tbCap2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+										<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator21" runat="server" ControlToValidate="tbCap2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 									</td>      
 								</tr>
 								<tr>
@@ -405,7 +453,7 @@
 									</td>
 									<td style="padding:5px;">                                    
 										<asp:DropDownList ID="ddlCitta2" onSelectedIndexChanged="Province_Bind_Data2" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione_indirizzoS" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:DropDownList>
-										<asp:RequiredFieldValidator ID="RequiredFieldValidator15" runat="server" ControlToValidate="ddlCitta2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+										<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator15" runat="server" ControlToValidate="ddlCitta2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 									</td>      
 								</tr>
 								<tr>
@@ -414,7 +462,7 @@
 									</td>
 									<td style="padding:5px;">
 										<asp:TextBox ID="tbProvincia2" runat="server" ReadOnly="true" Width="98%" MaxLength="20" ValidationGroup="registrazione_indirizzoS" CausesValidation="True" onkeyup="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbProvincia2');" onblur="javascript:compilaAutomaticamente(this.id,'ctl00_cph_tbProvincia2');"  style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-										<asp:RequiredFieldValidator ID="RequiredFieldValidator20" runat="server" ControlToValidate="tbProvincia2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+										<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator20" runat="server" ControlToValidate="tbProvincia2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 									</td>      
 								</tr>
 								<tr>
@@ -431,7 +479,7 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbTelefono2" runat="server" Width="98%" MaxLength="25" ValidationGroup="registrazione_indirizzoS" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator22" runat="server" ControlToValidate="tbTelefono2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator22" runat="server" ControlToValidate="tbTelefono2" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_indirizzoS" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
 								<!--
@@ -485,7 +533,7 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbRagioneSocialeADest" runat="server" Width="98%" MaxLength="100" ValidationGroup="registrazione_Destinazione" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox><asp:TextBox ID="tbRagioneSocialeAIdDest" runat="server" Width="20" Visible="False" style="text-transform:uppercase; font-size:10pt; padding:1%;" ></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator6Dest" runat="server" ControlToValidate="tbRagioneSocialeADest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator6Dest" runat="server" ControlToValidate="tbRagioneSocialeADest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
                                 <tr>
@@ -502,7 +550,7 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbIndirizzo2Dest" runat="server" Width="98%" MaxLength="100" ValidationGroup="registrazione_Destinazione" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox><asp:TextBox ID="tbIndirizzoIdDest" runat="server" Width="0" Visible="False" ></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator14Dest" runat="server" ControlToValidate="tbIndirizzo2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator14Dest" runat="server" ControlToValidate="tbIndirizzo2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
 								<tr>
@@ -511,7 +559,7 @@
 									</td>
 									<td style="padding:5px;">
 										<asp:TextBox ID="tbCap2Dest" runat="server" AutoPostBack="true" OnTextChanged="City_Bind_Data3" CausesValidation="False" Width="98%" MaxLength="5" ValidationGroup="registrazione_Destinazione" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-										<asp:RequiredFieldValidator ID="RequiredFieldValidatorCap2Dest" runat="server" ControlToValidate="tbCap2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+										<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidatorCap2Dest" runat="server" ControlToValidate="tbCap2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 									</td>      
 								</tr>
 								<tr>
@@ -520,7 +568,7 @@
 									</td>
 									<td style="padding:5px;">                                    
 										<asp:DropDownList ID="ddlCitta2Dest" onSelectedIndexChanged="Province_Bind_Data3" AutoPostBack="true" runat="server" Width="100%" ValidationGroup="registrazione_Destinazione" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:DropDownList>
-										<asp:RequiredFieldValidator ID="RequiredFieldValidatorDdlCitta2Dest" runat="server" ControlToValidate="ddlCitta2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+										<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidatorDdlCitta2Dest" runat="server" ControlToValidate="ddlCitta2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 									</td>      
 								</tr>
 								<tr>
@@ -529,7 +577,7 @@
 									</td>
 									<td style="padding:5px;">
 										<asp:TextBox ID="tbProvincia2Dest" runat="server" ReadOnly="true" Width="98%" MaxLength="20" ValidationGroup="registrazione_Destinazione" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-										<asp:RequiredFieldValidator ID="RequiredFieldValidatorProvincia2Dest" runat="server" ControlToValidate="tbProvincia2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+										<asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidatorProvincia2Dest" runat="server" ControlToValidate="tbProvincia2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
 									</td>      
 								</tr>
 								<tr>
@@ -546,7 +594,7 @@
                                     </td>
                                     <td style="padding:5px;">
                                         <asp:TextBox ID="tbTelefono2Dest" runat="server" Width="98%" MaxLength="25" ValidationGroup="registrazione_Destinazione" CausesValidation="True" style="text-transform:uppercase; font-size:10pt; padding:1%;"></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="RequiredFieldValidator22Dest" runat="server" ControlToValidate="tbTelefono2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator22Dest" runat="server" ControlToValidate="tbTelefono2Dest" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Destinazione" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
                                     </td>
                                 </tr>
                                 <tr>
@@ -635,11 +683,11 @@
                             <tr>
                                 <td bgcolor="whitesmoke" width="200"><b>Email Istituzionale</b> **</td>
                                 <td ><asp:TextBox ID="tbEmailIstituzionale" runat="server" Width="200" MaxLength="50" ValidationGroup="registrazione" CausesValidation="True" Enabled="False"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator17" runat="server" ControlToValidate="tbEmailIstituzionale"
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator17" runat="server" ControlToValidate="tbEmailIstituzionale"
                                         Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione" Enabled="false">
                                     </asp:RequiredFieldValidator>
                                         <asp:RegularExpressionValidator
-                                            ID="RegularExpressionValidator4" runat="server" ControlToValidate="tbEmailIstituzionale" Display="Dynamic"
+ CssClass="ks-registration-validation"                                            ID="RegularExpressionValidator4" runat="server" ControlToValidate="tbEmailIstituzionale" Display="Dynamic"
                                             ErrorMessage="Indirizzo email non valido" SetFocusOnError="True" ValidationExpression="[\s]*\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*[\s]*"
                                             ValidationGroup="registrazione">
                                         </asp:RegularExpressionValidator>
@@ -664,8 +712,9 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbUsername" runat="server" Width="98%" MaxLength="50" ValidationGroup="registrazione_Accesso" CausesValidation="True" onclick="nascondi_errore_username();" style="font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator1" runat="server" ControlToValidate="tbUsername" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
-                                    <asp:RegularExpressionValidator ID="RegularExpressionValidator1" runat="server" ControlToValidate="tbUsername" Display="Dynamic" ErrorMessage="Inserire min. 6 caratteri senza spazi" SetFocusOnError="True" ValidationExpression="[\w]{6,}" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator1" runat="server" ControlToValidate="tbUsername" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator>
+                                    <asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidator1" runat="server" ControlToValidate="tbUsername" Display="Dynamic" ErrorMessage="Inserire min. 6 caratteri senza spazi" SetFocusOnError="True" ValidationExpression="[\w]{6,}" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                    <% If Not TypeOf Me.Master Is PageMaster Then %>
                                     <script type="text/javascript">
                                         function nascondi_errore_username (){
                                             document.getElementById("ctl00_cph_lblUser").style.display='none';
@@ -674,6 +723,7 @@
                                             document.getElementById("ctl00_cph_lblEmail").style.display='none';
                                         }
                                     </script>
+                                    <% End If %>
                                     <asp:Label ID="lblUser" runat="server" Font-Bold="True" style="background-color:Red; font-weight:bold; color:White; font-size:9pt;"></asp:Label>
                                 </td>
                             </tr>
@@ -683,7 +733,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbPassword" runat="server" Width="98%" MaxLength="25" TextMode="Password" ValidationGroup="registrazione_Accesso" CausesValidation="True" style="font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator ID="RegularExpressionValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="la password deve avere tra 8 e 25 caratteri" SetFocusOnError="True" ValidationExpression="^[\s\S]{8,25}$" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="la password deve avere tra 8 e 25 caratteri" SetFocusOnError="True" ValidationExpression="^[\s\S]{8,25}$" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
                                 </td>
                             </tr>
                             <tr>
@@ -692,7 +742,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbPasswordConferma" runat="server" Width="98%" MaxLength="25" TextMode="Password" ValidationGroup="registrazione_Accesso" CausesValidation="True" style="font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator3" runat="server" ControlToValidate="tbPasswordConferma" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:CompareValidator ID="CompareValidator1" runat="server" ControlToCompare="tbPassword" ControlToValidate="tbPasswordConferma" Display="Dynamic" ErrorMessage="Le Password devono coincidere" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator3" runat="server" ControlToValidate="tbPasswordConferma" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:CompareValidator CssClass="ks-registration-validation" ID="CompareValidator1" runat="server" ControlToCompare="tbPassword" ControlToValidate="tbPasswordConferma" Display="Dynamic" ErrorMessage="Le Password devono coincidere" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
                                 </td>
                             </tr>
                             <tr>
@@ -701,7 +751,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbEmail" runat="server" Width="98%" MaxLength="50" ValidationGroup="registrazione_Accesso" CausesValidation="True" onclick="nascondi_errore_email();" style="font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator4" runat="server" ControlToValidate="tbEmail" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator ID="RegularExpressionValidator3" runat="server" ControlToValidate="tbEmail" Display="Dynamic" ErrorMessage="Indirizzo email non valido" SetFocusOnError="True" ValidationExpression="[\s]*\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*[\s]*" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator4" runat="server" ControlToValidate="tbEmail" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidator3" runat="server" ControlToValidate="tbEmail" Display="Dynamic" ErrorMessage="Indirizzo email non valido" SetFocusOnError="True" ValidationExpression="[\s]*\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*[\s]*" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
                                     <asp:Label ID="lblEmail" runat="server" Font-Bold="True" ForeColor="Red"></asp:Label>
                                 </td>
                             </tr>
@@ -711,7 +761,7 @@
                                 </td>
                                 <td style="padding:5px;">
                                     <asp:TextBox ID="tbEmailConferma" runat="server" Width="98%" MaxLength="50" ValidationGroup="registrazione_Accesso" CausesValidation="True" style="font-size:10pt; padding:1%;"></asp:TextBox>
-                                    <asp:RequiredFieldValidator ID="RequiredFieldValidator5" runat="server" ControlToValidate="tbEmailConferma" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:CompareValidator ID="CompareValidator2" runat="server" ControlToCompare="tbEmail" ControlToValidate="tbEmailConferma" Display="Dynamic" ErrorMessage="Le Email devono coincidere" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
+                                    <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator5" runat="server" ControlToValidate="tbEmailConferma" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:CompareValidator CssClass="ks-registration-validation" ID="CompareValidator2" runat="server" ControlToCompare="tbEmail" ControlToValidate="tbEmailConferma" Display="Dynamic" ErrorMessage="Le Email devono coincidere" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
                                 </td>
                             </tr>
 							<tr><td colspan="2" align="right">
@@ -720,7 +770,7 @@
                         </table>
                         <asp:Panel ID="PnlPrivacy" runat="server">
                         <!-- Accettazione Condizioni -->
-                        <table style="width:100%; margin-top:20px; border-style:solid; border-width:2px; border-color:red; background-color:rgb(250, 250, 250); font-size:11pt; text-align:center; border-collapse:collapse;">
+                        <table class="ks-register-consents" style="width:100%; margin-top:20px; border-style:solid; border-width:2px; border-color:red; background-color:rgb(250, 250, 250); font-size:11pt; text-align:center; border-collapse:collapse;">
                             <tr>
                                 <td style="width:50%; border-right-style:dotted; border-width:1px; border-color:Gray;">
                                     Privacy Policy *
@@ -788,6 +838,103 @@
                         <div style="width:100%; text-align:left; font-size:9pt; margin-top:10px;">Tutti i campi contrassegnati dall' asterisco sono obbligatori.</div>
     </div>
     
+<% If TypeOf Me.Master Is PageMaster Then %>
+<script type="text/javascript" data-ks-registration-script="standard-form">
+    (function () {
+        if (window.ksRegistrationForm) {
+            window.ksRegistrationForm.init();
+            return;
+        }
+        var ids = {
+            cap: "<%= tbCap.ClientID %>", vat: "<%= tbPartitaIva.ClientID %>", fiscalCode: "<%= tbCodiceFiscale.ClientID %>",
+            userError: "<%= lblUser.ClientID %>", emailError: "<%= lblEmail.ClientID %>",
+            sameAddress: "<%= RB_IndirizzoSpedizioneUguale.ClientID %>", differentAddress: "<%= RB_IndirizzoSpedizioneDiverso.ClientID %>",
+            privacy: "<%= cbPrivacy.ClientID %>", privacyValue: "<%= tbPrivacy.ClientID %>",
+            terms: "<%= cbCondizioniVendita.ClientID %>", termsValue: "<%= tbCondizioni.ClientID %>"
+        };
+        var addressPairs = [
+            ["<%= tbNomeCognome.ClientID %>", "<%= tbNomeA.ClientID %>"],
+            ["<%= tbRagioneSociale.ClientID %>", "<%= tbRagioneSocialeA.ClientID %>"],
+            ["<%= tbIndirizzo.ClientID %>", "<%= tbIndirizzo2.ClientID %>"],
+            ["<%= tbCap.ClientID %>", "<%= tbCap2.ClientID %>"],
+            ["<%= tbProvincia.ClientID %>", "<%= tbProvincia2.ClientID %>"],
+            ["<%= tbTelefono.ClientID %>", "<%= tbTelefono2.ClientID %>"],
+            ["<%= tbFax.ClientID %>", "<%= tbFax2.ClientID %>"],
+            ["<%= tbCellulare.ClientID %>", "<%= tbCellulare2.ClientID %>"]
+        ];
+        function root() {
+            return document.querySelector('.ks-auth-register[data-ks-registration-form="standard"]');
+        }
+        function control(id) {
+            var wrap = root(), element = document.getElementById(id);
+            return wrap && element && wrap.contains(element) ? element : null;
+        }
+        function hideError(id) {
+            var error = control(id);
+            if (error) error.style.display = "none";
+        }
+        function consentValue(checkId, valueId) {
+            var check = control(checkId), value = control(valueId);
+            if (check && value) value.value = check.checked ? "ok" : "";
+        }
+        function copySameAddress(sourceId) {
+            var same = control(ids.sameAddress), different = control(ids.differentAddress);
+            if (!same || !same.checked || (different && different.checked)) return;
+            for (var i = 0; i < addressPairs.length; i++) {
+                if (addressPairs[i][0] !== sourceId) continue;
+                var source = control(sourceId), target = control(addressPairs[i][1]);
+                if (source && target && !target.disabled && !target.readOnly) target.value = source.value;
+                return;
+            }
+        }
+        function setInputFilter(input, inputFilter) {
+            if (!input || input.__ksRegistrationFilter) return;
+            input.__ksRegistrationFilter = true;
+            input.oldValue = input.value;
+            input.oldSelectionStart = input.selectionStart;
+            input.oldSelectionEnd = input.selectionEnd;
+            ["input", "keydown", "keyup", "mousedown", "mouseup", "select", "contextmenu", "drop"].forEach(function (event) {
+                input.addEventListener(event, function (e) {
+                    if (e.isComposing) return;
+                    if (inputFilter(this.value)) {
+                        this.oldValue = this.value;
+                        this.oldSelectionStart = this.selectionStart;
+                        this.oldSelectionEnd = this.selectionEnd;
+                    } else {
+                        this.value = this.oldValue;
+                        try { this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd); } catch (ignored) { }
+                    }
+                });
+            });
+        }
+        function init() {
+            var wrap = root();
+            if (!wrap) return;
+            // Replace only the old copy handlers; native onchange/AutoPostBack remains untouched.
+            Array.prototype.forEach.call(wrap.querySelectorAll("input[onkeyup], input[onblur]"), function (field) {
+                ["onkeyup", "onblur"].forEach(function (name) {
+                    if (/^\s*(?:javascript:)?compilaAutomaticamente\([^)]*\);?\s*$/.test(field.getAttribute(name) || "")) field.removeAttribute(name);
+                });
+            });
+            setInputFilter(control(ids.cap), function (value) { return /^\d*$/.test(value); });
+            setInputFilter(control(ids.vat), function (value) { return /^[0-9a-z]*$/i.test(value); });
+            setInputFilter(control(ids.fiscalCode), function (value) { return /^[0-9a-z]*$/i.test(value); });
+        }
+        window.nascondi_errore_username = function () { hideError(ids.userError); };
+        window.nascondi_errore_email = function () { hideError(ids.emailError); };
+        window.privacy = function () { consentValue(ids.privacy, ids.privacyValue); };
+        window.condizioni = function () { consentValue(ids.terms, ids.termsValue); };
+        // Compatibility for existing inline callers; destinations come only from the ClientID map.
+        window.compilaAutomaticamente = function (sourceId) { copySameAddress(sourceId); };
+        window.ksRegistrationForm = { init: init };
+        document.addEventListener("keyup", function (e) { if (e.target) copySameAddress(e.target.id); });
+        document.addEventListener("focusout", function (e) { if (e.target) copySameAddress(e.target.id); });
+        if (window.Sys && window.Sys.Application && typeof window.Sys.Application.add_load === "function") window.Sys.Application.add_load(init);
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+        else init();
+    })();
+</script>
+<% Else %>
 <script type="text/javascript" language="javascript">
 <!--
 function privacy() {
@@ -852,6 +999,7 @@ setInputFilter(document.getElementById("hexTextBox"), function(value) {
   return /^[0-9a-f]*$/i.test(value); });
 */
 </script>
+<% End If %>
 
 
 <table cellpadding="1" cellspacing="5" border="0" width="100%" runat="server" id="tConclusa" visible="false">

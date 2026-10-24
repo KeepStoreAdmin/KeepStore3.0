@@ -146,6 +146,100 @@ body.ks-page-auth .tf-btn {
 /* ------------------------------------------------------------
    ACCESSO NEGATO
    ------------------------------------------------------------ */
+/* Standard registration: use its real wrapper, independently of optional body flags.
+   Other masters retain their existing presentation and scripts. */
+.ks-auth-register[data-ks-registration-form="standard"] .ks-register-card {
+  min-width: 0;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] .ks-legacy-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] :is(input[type="text"], input[type="password"], input[type="email"], input[type="tel"], select, textarea) {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px !important;
+  font-size: 16px !important;
+  line-height: 1.4;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] :is(input[type="submit"], input[type="button"], button) {
+  min-width: 44px;
+  min-height: 48px;
+  max-width: 100%;
+  padding: 10px 14px;
+  white-space: normal;
+  line-height: 1.4;
+  transform: none;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] :is(input[type="radio"], input[type="checkbox"]) + label {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 6px;
+  vertical-align: middle;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] a {
+  display: inline-block;
+  min-height: 44px;
+  padding-block: 10px;
+  overflow-wrap: anywhere;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] .ks-registration-validation {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 14px !important;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] :is(input, select, textarea, button, a):focus-visible {
+  outline: 3px solid var(--ks-color-primary, #1b5ca8) !important;
+  outline-offset: 2px;
+  scroll-margin-block: 16px;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] .ks-register-consents {
+  table-layout: fixed;
+}
+
+.ks-auth-register[data-ks-registration-form="standard"] .ks-register-consents td {
+  width: 50%;
+  vertical-align: top;
+}
+
+@media (max-width: 767.98px) {
+  .ks-auth-register[data-ks-registration-form="standard"] .ks-legacy-panel {
+    padding: 12px;
+  }
+
+  .ks-auth-register[data-ks-registration-form="standard"] table:not(.ks-register-consents) > tbody > tr,
+  .ks-auth-register[data-ks-registration-form="standard"] table:not(.ks-register-consents) > tbody > tr > td {
+    display: block;
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .ks-auth-register[data-ks-registration-form="standard"] table:not(.ks-register-consents) > tbody > tr > td {
+    padding: 6px !important;
+  }
+
+  .ks-auth-register[data-ks-registration-form="standard"] .ks-register-consents td {
+    padding: 6px !important;
+  }
+}
+
 body.ks-page-accessonegato .ks-access-denied {
   max-width: 640px;
   margin: 0 auto;
