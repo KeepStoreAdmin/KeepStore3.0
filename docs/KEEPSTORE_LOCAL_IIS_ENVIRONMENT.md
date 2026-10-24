@@ -1,5 +1,15 @@
 # KeepStore 3.0 — Mappa ambienti IIS e test locale
 
+## Aggiornamento prevalente — 2026-10-24, LOGIN-IIS-COMPATIBILITY-GATE-1A
+
+Il corpo successivo conserva lo snapshot 2026-10-13. #388/#386 sono SOURCE INTEGRATED; base locale/remota `55ed4f2bf207c24088ce8f827177f7a4019b38ac`. Il PO conferma ora che KeepStoreSmoke :8443 serve direttamente `C:\KeepStoreWeb\KeepStore3.0` e che la sessione osservata e TEST/PROVA. KeepStoreIntegration :18443 resta distinto. Mapping acquisito come attestazione PO, non lettura automatica: appcmd negato su redirection.config e UI IIS non navigabile non dimostrano indisponibilita del sito.
+
+Il PO attesta login PROVA riuscito e redirect a `https://www.taikun.it:8443/Default.aspx`; profilo Edge separato e host-resolver-rules verso loopback come riportati nel mandato. Ora eseguiti direttamente **30/30 casi HTTP + 2/2 approfondimenti validator PASS** sui due tenant, 40 richieste curl con TLS Schannel rigoroso/--resolve/nessun proxy o redirect seguito. Navigazione login GET/HEAD, origini rifiutate con ViewState invalido, Origin valido/fallback Referer con credenziali sintetiche errate e validazione campi vuoti: [matrice e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#evidenze-e-confini-della-sessione). Nessun bypass TLS o cambio certificati.
+
+La scheda iniziale mostrava intestazione autenticata e MiniCart vuoto; nuova navigazione login e rinnovo della HOME mostrano ora sessione non autenticata senza logout dell'agente. Timeout configurato 30 minuti; causa/momento non determinati. Richiesto nuovo accesso PROVA nella scheda pronta con ReturnUrl=/compare.aspx; ReturnUrl autenticato, isolamento account e continuita carrello popolato restano B. Non trasformare il login attestato o il verde HTTP anonimo in attestazione release.
+
+Il consenso PO consente test applicativi TEST/PROVA e fixture reversibili secondo la fonte unica [autorizzazione e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#autorizzazione-po-ai-test-applicativi-testprova). Il DB resta condiviso con produzione: niente dati reali, SQL diretto, cambio IIS/configurazione, deploy, addebiti/gateway live, notifiche a terzi o effetti irreversibili. La deroga supera solo il divieto generale di mutazioni applicative di test nello snapshot sotto; conservare PROVA e audit. In questa sessione nessuna mutazione ecommerce, ordine, mail/SMS o pagamento dell'agente. CONSEGNA SERVER SOSPESA.
+
 Stato: ricognizione 2026-10-13; osservazioni da screenshot del Product Owner e dichiarazioni esplicite, non certificazione automatica del runtime. Fonte del metodo: AGENTS.md; roadmap/gate: docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md. Questo documento e' una scheda infrastrutturale consultabile prima di richiedere nuove schermate o bloccare gli smoke.
 
 ## 1. Distinguere sempre le macchine
