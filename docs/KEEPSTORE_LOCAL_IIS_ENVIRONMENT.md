@@ -1,5 +1,15 @@
 # KeepStore 3.0 — Mappa ambienti IIS e test locale
 
+## Aggiornamento prevalente — 2026-10-24, LOGIN-IIS-COMPATIBILITY-GATE-1A
+
+Il corpo successivo conserva la fotografia 2026-10-13 e non descrive da solo lo stato attuale delle PR. #388 e #386 sono SOURCE INTEGRATED; checkpoint Git locale/remoto `55ed4f2bf207c24088ce8f827177f7a4019b38ac`. Lo storico successivo acquisito in START_HERE indica KeepStoreSmoke :8443 sulla copia canonica e KeepStoreIntegration :18443 sulla copia distinta: non equiparare i due runtime.
+
+Il PO attesta Accedi accessibile, login PROVA riuscito e redirect a `https://www.taikun.it:8443/Default.aspx`; riporta Edge con profilo separato e host-resolver-rules per www.taikun.it e www.webaffare.it su 127.0.0.1, curl --resolve HTTP 200/TLS PASS su entrambi. In questa sessione e stata osservata la scheda Edge autenticata, senza nuovo login, richieste curl o verifica indipendente del resolver. Il mapping corrente non e stato letto automaticamente: appcmd negato su redirection.config, vista IIS Manager non navigabile dall'automazione. Non dedurne indisponibilita del sito; ottenere soltanto l'attestazione residua necessaria al confronto runtime/checkpoint.
+
+Il nuovo consenso PO consente test applicativi TEST/PROVA e fixture reversibili, comprese le categorie registrate nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#autorizzazione-po-ai-test-applicativi-testprova), che e la fonte unica dell'autorizzazione, dei limiti e dell'inventario. Il DB resta condiviso con produzione; nessuna scrittura diretta DB, cambio IIS/configurazione, deploy, gateway/addebito effettivo, notifiche a terzi o effetto irreversibile. Questa deroga circoscritta supera il divieto generale di mutazioni di test nello snapshot sotto, senza autorizzare altre operazioni. Conservare PROVA e i suoi audit.
+
+Il gate login resta B: identita TEST/PROVA della sessione e mapping corrente da confermare, poi matrice mirata guard/tenant/ReturnUrl/sessione/carrello. Nessun test applicativo deliberato eseguito qui, nessuna release o copertura completa attestata; CONSEGNA SERVER SOSPESA.
+
 Stato: ricognizione 2026-10-13; osservazioni da screenshot del Product Owner e dichiarazioni esplicite, non certificazione automatica del runtime. Fonte del metodo: AGENTS.md; roadmap/gate: docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md. Questo documento e' una scheda infrastrutturale consultabile prima di richiedere nuove schermate o bloccare gli smoke.
 
 ## 1. Distinguere sempre le macchine
