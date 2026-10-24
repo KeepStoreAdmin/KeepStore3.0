@@ -1,23 +1,53 @@
 # KeepStore Masterplan Operativo
 
-Aggiornato: 2026-10-24
+Aggiornato: 2026-10-25
 
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).
 Non contiene credenziali, token, password, API signature, dati carta o account PayPal reali.
 
+## Chiusura login e CART-RUNTIME-CONTINUITY-1A — 2026-10-25
+
+**Stato prevalente: login A tecnico approvato dal PO; carrello A runtime nel perimetro Taikun/PROVA, baseline vuota.** Supera il B autenticato del 2026-10-24 sotto, conservato come storico. Nessuna riapertura #386 o ripetizione del gate: riusate le 27/27 prove browser pregresse, cinque POST negativi 403, ReturnUrl/sessione/logout e TLS 1.3 locale. Referer contraddittorio coperto solo dal wire precedente; 30/30 + 2/2 wire riusati, non nuove prove. Non certifica produzione o autenticazione multi-tenant complessiva.
+
+Mandato PO STANDARD / Medium, ONE-SHOT: scritture applicative controllate del carrello sul DB condiviso con produzione. Stable/origin `55ed4f2bf207c24088ce8f827177f7a4019b38ac`; branch documentale preesistente `task/login-iis-compatibility-gate-1a`, HEAD `9a241f5aa8e21086f2a9e9776dac588eda27d2f4`; main/origin-main `976e99f17cabc8a5c6a8715463444edfeaadcd91`. Ref dopo fetch invariati; indice vuoto, quattro cancellazioni storiche preservate, runtime uguale alla stable. Cinque manuali preparati fuori staging: START_HERE, PRODUCT_ROADMAP, MASTERPLAN, SYSTEM_BLUEPRINT e scheda IIS esistente. Nessun nuovo branch, commit, PR, merge o deploy.
+
+Node/Playwright/Edge gia installati, profilo proprio temporaneo e secondo contesto isolato, nessun trasferimento cookie/stato. Pipe senza debugging TCP; resolver di processo verso loopback. Test commerciali solo su `https://www.taikun.it:8443`: response.serverAddr 127.0.0.1:8443 e securityDetails TLS 1.3, ignoreHTTPSErrors=false. Due login PROVA inseriti manualmente dal PO, credenziali mai lette/esportate. Traffico browser limitato all'origine locale.
+
+**87/87 asserzioni PASS in sette fasi, non 87 scenari indipendenti.** Articolo reale acquistabile `22008`, TCId `-1`, stock visualizzato 5; massimo 3 pezzi di prova. Baseline vuota da cart_state_async. UI WebForms/JavaScript ed endpoint IIS reali, nessun adattatore DB o fixture sintetica. PDP con Purpose:prefetch per evitare l'incremento ordinario Visite.
+
+| Fase | Evidenza effettiva | Esito |
+| --- | --- | --- |
+| Inserimento PROVA | POST nativo cart_add 303, nuova riga 132912, quantita 1, MiniCart/carrello coerenti | PASS, 13 asserzioni |
+| Quantita carrello | Un POST cart_quantity_async 200, 1 -> 2; snapshot e reload persistenti | PASS, 16 |
+| Quantita MiniCart | Un POST, 2 -> 3; successo verificato, snapshot e reload coerenti | PASS, 15 |
+| Prima rimozione | POST 303 della sola riga 132912, account/MiniCart vuoti | PASS, 6 |
+| Anonimo isolato | Nuova riga 132913, quantita 1; contemporanea sessione PROVA vuota | PASS, 6 |
+| Migrazione login | Stesso ID riga/articolo/TCId/quantita; anche la sessione PROVA separata vede un solo articolo | PASS, 17 |
+| Ripristino e IVA | Rimossa solo 132913, entrambe le sessioni autenticate e anonimo dopo logout vuoti; 390/1365 px senza overflow | PASS, 14 |
+
+Prezzi server: unitario netto EUR9,99/lordo EUR12,19; con 2 pezzi EUR19,98/EUR24,38; con 3 EUR29,97/EUR36,57. Identita e basi preservate dopo update/reload, MiniCart e subtotale nella modalita corrente. Anonimo IvaTipo=2 mostra lordo; PROVA IvaTipo=1 mostra netto anche dopo migrazione. Verificati i totali articoli dello step Carrello; spese/consegna/pagamento e totale ordine appartengono agli step non eseguiti. Nessuna attestazione indipendente di ogni listino/aliquota/reverse charge/promozione.
+
+**Inventario azioni e ripristino:** sei richieste applicative carrello (inserimento, update carrello, update MiniCart, rimozione, inserimento anonimo, rimozione dopo migrazione) e due login manuali. Migrazione e rivalidazione native del login. Nessun cart-clear, riga preesistente modificata, account/ordine creato, email/pagamento, SQL diretto, schema/configurazione/IIS/gateway. Nessun contenuto personale, credenziale, cookie/token, storageState, HAR, trace o screenshot privato salvato. Ripristinate le due sole righe create; nessun confronto SQL di tutto il DB: sessioni, registri di persistenza e audit tecnici automatici conservati.
+
+**Limite del driver, nessuna regressione confermata:** il POST fetch redirect:manual del MiniCart non ha emesso l'evento response atteso dal driver; il browser aveva gia verificato 3 pezzi e mostrato successo. Nessun reinvio: sola lettura indipendente cart_state_async e reload con stessi dati. Non attribuito un codice HTTP non osservato. Zero eccezioni JavaScript applicative non gestite e nessuna richiesta mutativa fuori da login.aspx/cart_add.aspx/cart_quantity_async.aspx; non e strumentazione di ogni effetto backend.
+
+**Preservazione:** inventario attuale 52 untracked + web.config = 53 protetti, distinto dai vecchi 55/56. Configurazione, asset e altri file invariati per SHA256/ACL/attributi/Creation-LastWrite. Solo App_Data/Logs/cart-transaction-retry.log cresce automaticamente per append di 3326 byte: prefisso originale SHA256 integro e sicurezza preservata, 18 decision=committed nel nuovo log (non 18 azioni utente). Non cancellato/ripristinato alcun audit. Browser/controller propri chiusi e zero processi rimasti; profili preesistenti intatti. Rimozione della sola directory TEMP del batch PENDENTE: la revisione automatica ha rifiutato la cancellazione ricorsiva con motivo blocked by policy, anche dopo verifica separata di percorso assoluto, assenza di reparse point e processi. Nessun metodo alternativo tentato; A per il collaudo carrello, B per questo residuo di pulizia. Directory propria KeepStoreCartRuntime-5ec6928588c34dc8abf7c695e297b438 sotto TEMP, non il repository. Evidenze sanitizzate fuori repo nella cartella chat Codex `output/cart-runtime-continuity-1a/20261025-5ec69285`: summary/checks, baseline, sette risultati e ledger delle sole righe di prova.
+
+Autorizzazione PO permanente confermata il 2026-10-25 nella [fonte unica TEST/PROVA](#autorizzazione-po-ai-test-applicativi-testprova). Questo batch esclude ordini/pagamenti/email; registrazione e percorso ordine con verifica tenant/provenienza sono NON AVVIATI. Non certificati Webaffare reale, carrello account inizialmente popolato, varianti, tutte le condizioni fiscali/promozionali o produzione. Nessun correttivo senza anomalia dimostrata. Coupon/Groupon STANDBY, SOMEC escluso, CONSEGNA SERVER SOSPESA.
+
 ## LOGIN-IIS-COMPATIBILITY-GATE-1A — 2026-10-24
 
-**Stato: B / gate operativo incompleto; aggiornamento documentale separato e verificabile.** Mandato PO corrente: riprendere dal checkpoint `55ed4f2bf207c24088ce8f827177f7a4019b38ac`, senza main, merge, deploy o configurazioni IIS/DB. Profilo DEEP per la verifica del confine operativo, nessuna modifica auth/runtime. Gate anti-spreco: mandato esplicito vigente, KS-C02 P0/P1 e beneficio continuita login/carrello; requisito residuo IIS gia documentato dalla #386, nessun nuovo exploit o difetto riprodotto; nessun duplicato nelle PR aperte pertinenti. Coupon/Groupon STANDBY; PayPal LIVE e produzione restano gate separati.
+**Storico 2026-10-24: B / gate allora incompleto, superato dalla chiusura A tecnico PO del 2026-10-25 sopra.** Mandato PO corrente: riprendere dal checkpoint `55ed4f2bf207c24088ce8f827177f7a4019b38ac`, senza main, merge, deploy o configurazioni IIS/DB. Profilo DEEP per la verifica del confine operativo, nessuna modifica auth/runtime. Gate anti-spreco: mandato esplicito vigente, KS-C02 P0/P1 e beneficio continuita login/carrello; requisito residuo IIS gia documentato dalla #386, nessun nuovo exploit o difetto riprodotto; nessun duplicato nelle PR aperte pertinenti. Coupon/Groupon STANDBY; PayPal LIVE e produzione restano gate separati.
 
 ### Autorizzazione PO ai test applicativi TEST/PROVA
 
-Il PO autorizza ChatGPT e Codex a eseguire test applicativi reali con gli account TEST/PROVA: creare account di test, aggiungere/modificare carrelli, modificare anagrafiche e dati commerciali di test e creare ordini di prova. L'autorizzazione riguarda i percorsi applicativi e non autorizza SQL diretto, modifiche schema/SP/configurazioni, IIS, deploy, merge, credenziali o accessi amministrativi. E acquisita dalla richiesta corrente e dalla conferma PO nella conversazione del 2026-10-24; non contiene segreti.
+Il PO autorizza in modo permanente ChatGPT e Codex a eseguire test applicativi reali con gli account TEST/PROVA (consenso 2026-10-24 confermato 2026-10-25, senza richiederlo nuovamente per le stesse operazioni gia autorizzate): creare account di test, aggiungere/modificare carrelli, modificare anagrafiche e dati commerciali di test e creare ordini di prova. L'autorizzazione riguarda i percorsi applicativi e non autorizza SQL diretto, modifiche schema/SP/configurazioni, IIS, deploy, merge, credenziali o accessi amministrativi. E acquisita dalla richiesta corrente e dalla conferma PO nella conversazione del 2026-10-24; non contiene segreti.
 
 Il database e condiviso con produzione: nomi host locali, loopback e porta 8443 non lo rendono isolato. Usare solo account e record identificati come test, con marcatore univoco del tipo `KS-TEST-20261024-LOGIN-<progressivo>` e inventario sanitizzato prima/dopo. Non alterare clienti, ordini o dati reali; nessun addebito effettivo, gateway live, mail/SMS a terzi o effetto irreversibile. Prima di creare account/ordini verificare destinatari, notifiche, integrazioni, stock/impegni, numerazione e percorso di ripristino: se un effetto non e controllabile/reversibile, fermare quel caso con B. Il consenso generale non equivale a pagamento LIVE o deroga ai gate di rilascio.
 
 Per ogni azione mutativa annotare: identificatore test, ambiente/host/tenant e account verificato, oggetto/ID tecnico necessario al ripristino, stato iniziale, percorso applicativo, risultato, stato finale, azione inversa e sua verifica. Non salvare credenziali, cookie, SessionID, token, dati personali o payload riservati; non inventare un ripristino non verificato. Conservare PROVA per l'intero progetto, senza cancellarlo, disabilitarlo, rinominarlo, cambiarne la password o eliminare audit/dati storici; il PO resta responsabile dell'eventuale cancellazione finale. Ripristinare solo le proprie variazioni reversibili tramite il percorso applicativo, conservando evidenza.
 
-Questa autorizzazione supera i precedenti divieti generali di mutazioni soltanto per il perimetro applicativo di test descritto. Non riapre funzioni in standby e non costituisce autorizzazione a eseguire immediatamente ogni categoria di test: il gate corrente resta limitato a login, tenant, ReturnUrl, sessione e continuita carrello.
+Questa autorizzazione permanente supera i precedenti divieti generali di mutazioni soltanto nel perimetro applicativo di test descritto. Non riapre funzioni in standby e non avvia automaticamente ogni categoria: ciascun batch dichiara oggetti, operazioni, effetti e ripristino. Il mandato 2026-10-25 copre carrello e migrazione PROVA ed esclude ordini, pagamenti ed email; registrazione/ordini restano la sequenza successiva NON AVVIATA. Se dati o effetti non sono isolabili, STOP B prima della scrittura; nessuna richiesta ridondante del consenso gia acquisito.
 
 ### Evidenze e confini della sessione
 

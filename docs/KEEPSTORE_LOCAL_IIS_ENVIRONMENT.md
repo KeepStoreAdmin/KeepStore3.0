@@ -1,6 +1,12 @@
 # KeepStore 3.0 — Mappa ambienti IIS e test locale
 
-## Aggiornamento prevalente — 2026-10-24, LOGIN-IIS-COMPATIBILITY-GATE-1A
+## Aggiornamento prevalente — 2026-10-25, login A e carrello runtime
+
+Il PO chiude A tecnico LOGIN-IIS-COMPATIBILITY-GATE-1A per Taikun/PROVA sulle prove browser pregresse (27/27, cinque POST negativi; Referer contraddittorio wire-only). Nessuna riapertura #386 o ripetizione del gate. CART-RUNTIME-CONTINUITY-1A: Playwright/Edge reale via pipe, contesti isolati, strict TLS 1.3 e serverAddr 127.0.0.1:8443; 87/87 asserzioni su inserimento, quantita carrello/MiniCart, netto/lordo, rimozione e migrazione anonimo -> PROVA. Carrello iniziale/finale vuoto, due sole righe test rimosse; nessun ordine/email/pagamento.
+
+KeepStoreSmoke :8443 non isola il DB operativo condiviso: [autorizzazione permanente TEST/PROVA e precauzioni](KEEPSTORE_MASTERPLAN_OPERATIVO.md#autorizzazione-po-ai-test-applicativi-testprova), [matrice e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#chiusura-login-e-cart-runtime-continuity-1a--2026-10-25). Nessun cambio IIS/certificati/configurazioni/SQL diretto. Gli snapshot sotto sono storici; Webaffare account/carrello, casi non provati e produzione non certificati. Browser propri chiusi e profili preesistenti preservati; directory TEMP propria ancora presente, cancellazione ricorsiva rifiutata dalla revisione automatica (blocked by policy). Nessun bypass; residuo B di pulizia distinto dal collaudo carrello A. Log automatici conservati. CONSEGNA SERVER SOSPESA.
+
+## Storico superato — 2026-10-24, LOGIN-IIS-COMPATIBILITY-GATE-1A
 
 Il corpo successivo conserva lo snapshot 2026-10-13. #388/#386 sono SOURCE INTEGRATED; base locale/remota `55ed4f2bf207c24088ce8f827177f7a4019b38ac`. Il PO conferma ora che KeepStoreSmoke :8443 serve direttamente `C:\KeepStoreWeb\KeepStore3.0` e che la sessione osservata e TEST/PROVA. KeepStoreIntegration :18443 resta distinto. Mapping acquisito come attestazione PO, non lettura automatica: appcmd negato su redirection.config e UI IIS non navigabile non dimostrano indisponibilita del sito.
 

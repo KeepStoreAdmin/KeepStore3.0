@@ -2,6 +2,12 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Evidenza runtime prevalente — login e carrello, 2026-10-25
+
+Login chiuso A tecnico PO nel perimetro Taikun/PROVA, senza ripetere le prove pregresse (27/27 browser e cinque POST negativi; Referer contraddittorio wire-only). CART-RUNTIME-CONTINUITY-1A verifica il codice esistente su IIS/DB condiviso: stato autorevole CartAuthoritativeReadModel/cart_state_async, mutazioni native owner-scoped e migrazione CartOwnershipService. **87/87 asserzioni runtime PASS**, baseline vuota, due righe identificate/rimosse, quantita 1/2/3 e riletture da contesti isolati. Anonimo IVA inclusa e PROVA IVA esclusa; netto/lordo, subtotale articoli e MiniCart coerenti dopo login. Nessuna simulazione DB o nuovo contratto runtime; combinazioni fiscali/promozionali ulteriori e totale ordine non certificati.
+
+Playwright/Edge via pipe, strict TLS, serverAddr 127.0.0.1:8443, profilo temporaneo e credenziali soltanto manuali; nessuna copia di cookie/stato. Redirect opaco MiniCart verificato tramite snapshot/persistenza senza inventare codice HTTP o reinviare il POST. Ripristino delle sole righe test tramite UI, audit e append del log conservati. [Matrice e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#chiusura-login-e-cart-runtime-continuity-1a--2026-10-25), [autorizzazione permanente TEST/PROVA](KEEPSTORE_MASTERPLAN_OPERATIVO.md#autorizzazione-po-ai-test-applicativi-testprova). Ordini/pagamenti/email non eseguiti, nessun deploy; KS-C01/KS-C02 PARZIALI, CONSEGNA SERVER SOSPESA.
+
 ## Continuita form — REGISTRATION-FORM-CONTINUITY-1A, 2026-10-24
 
 La sola registrazione standard (`TypeOf Me.Master Is PageMaster`) usa ClientID emessi dal naming container reale per filtri, messaggi e coppie fatturazione/spedizione. Helper e inizializzazioni tollerano controlli non renderizzati; filtri numerici CAP e alfanumerici fiscali conservano gli alfabeti precedenti. Listener installati una sola volta, anche con reinizializzazione; composizione IME preservata. Invio viene prevenuto soltanto nei campi editabili a riga singola; pulsanti, radio, checkbox, select, link e textarea mantengono il comportamento nativo.
@@ -24,7 +30,7 @@ Guard condiviso in PageMaster, riusato dalla pagina login e dal login legacy pri
 
 Il rifiuto 403 o 405/Allow POST e conservato in HttpContext.Items; risposta generica/no-store, nessuna pulizia dell'identita valida o effetto auth. Guard in Init pagina e nei chiamanti; controllo successivo di Load/PreRender/Render senza considerare CompleteRequest terminale. Page.Error registrato una sola volta al rifiuto conserva direttamente stato/body anche se LoadViewState salta Render; tratta solo richieste gia rifiutate, senza modificare MAC, ViewStateUserKey o gestore globale degli altri errori. Query tenant-scoped, password legacy, rivalidazione #359, listino/IVA/owner, username autofill e PostLoginReturnUrlPolicy invariati. Nessuna nuova crittografia, token o persistenza.
 
-[Manifest, prove e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#login-post-origin-guard-1a--2026-10-24): 2.353 controlli VB/System.Web, due tenant e baseline, frontiere DB/audit/carrello e trasporto sintetiche, error dispatch reale senza ciclo IIS completo. Hardening source-evidenced, nessun exploit live dimostrato. **#386 SOURCE INTEGRATED** a `390e529ac8021c5cb87b73b7519e9136c9a3c5ee`, FF-only/review A e CI acquisiti senza ripetere i test; compatibilita login IIS reale ancora aperta. Hash migration/session regeneration e gate operativi restano separati; consegna server sospesa.
+[Manifest, prove e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#login-post-origin-guard-1a--2026-10-24): 2.353 controlli VB/System.Web, due tenant e baseline, frontiere DB/audit/carrello e trasporto sintetiche, error dispatch reale senza ciclo IIS completo. Hardening source-evidenced, nessun exploit live dimostrato. **#386 SOURCE INTEGRATED** a `390e529ac8021c5cb87b73b7519e9136c9a3c5ee`, FF-only/review A e CI acquisiti senza ripetere i test; compatibilita login IIS chiusa A tecnico PO il 2026-10-25 per Taikun/PROVA, senza certificare gli altri tenant. Hash migration/session regeneration e gate operativi restano separati; consegna server sospesa.
 
 ## Contratto PO — CART-RECOMMENDATIONS-COMMERCIAL-1A, 2026-10-24
 
