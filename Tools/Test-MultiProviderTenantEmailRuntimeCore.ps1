@@ -38,7 +38,7 @@ try {
     $vbc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\vbc.exe'
     $exe = Join-Path $tempRoot 'EmailTransportRuntimeCoreHarness.exe'
     $references = @(
-        'System.dll', 'System.Core.dll', 'System.Data.dll', 'System.Web.dll', 'System.Configuration.dll', 'System.Security.dll',
+        'System.dll', 'System.Core.dll', 'System.Data.dll', 'System.Web.dll', 'System.Configuration.dll', 'System.Security.dll', 'System.Xml.dll',
         (Join-Path $repo 'Bin\MySql.Data.dll'),
         (Join-Path $repo 'Bin\MailKit.dll'),
         (Join-Path $repo 'Bin\MimeKit.dll'),
@@ -52,6 +52,7 @@ try {
     )
     $arguments = @('/nologo', '/target:exe', '/optionstrict-', ('/out:' + $exe), ('/reference:' + ($references -join ',')))
     $arguments += $runtimeFiles | ForEach-Object { Join-Path $repo $_ }
+    $arguments += Join-Path $repo 'App_Code\KeepStoreTestIsolation.vb'
     $arguments += Join-Path $repo 'App_Code\KeepStoreEmailTemplate.vb'
     # Compile the actual pure order guards/footer, not a second implementation of their rules.
     $orderSource = Get-Content -LiteralPath (Join-Path $repo 'ordine.aspx.vb') -Raw

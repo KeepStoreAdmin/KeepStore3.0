@@ -8,6 +8,7 @@
 ' - Per funzionare, IIS deve avere il binding HTTPS (certificato valido) sul sito.
 
 Sub Application_BeginRequest(ByVal sender As Object, ByVal e As EventArgs)
+    KeepStoreTestIsolation.DemandRequestReady(Context)
     Try
         If Context Is Nothing OrElse Request Is Nothing OrElse Request.Url Is Nothing Then Exit Sub
 

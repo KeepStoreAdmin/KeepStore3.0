@@ -56,12 +56,30 @@ Public NotInheritable Class TenantEmailDeliveryService
 
     Private ReadOnly _transport As IEmailTransport
     Private ReadOnly _connectionString As String
+    Private ReadOnly _testIsolation As Boolean
 
     Public Sub New()
-        Me.New(New MailKitEmailTransport(), ResolveConnectionString())
+        Me.New(Nothing, Nothing, KeepStoreTestIsolation.ResolveCurrent(), True)
     End Sub
 
     Public Sub New(ByVal transport As IEmailTransport, ByVal connectionString As String)
+        Me.New(transport, connectionString, KeepStoreTestIsolation.ResolveCurrent(), False)
+    End Sub
+
+    Friend Sub New(ByVal transport As IEmailTransport, ByVal connectionString As String,
+                   ByVal isolation As KeepStoreIsolationDecision, ByVal useDefaults As Boolean)
+        If isolation Is Nothing Then Throw New ArgumentNullException("isolation")
+        If isolation.Mode <> KeepStoreIsolationMode.Native Then
+            _transport = New KeepStoreTestCaptureTransport(isolation)
+            _connectionString = String.Empty
+            _testIsolation = True
+            Return
+        End If
+        If useDefaults Then
+            _transport = New MailKitEmailTransport()
+            _connectionString = ResolveConnectionString()
+            Return
+        End If
         If transport Is Nothing Then Throw New ArgumentNullException("transport")
         _transport = transport
         _connectionString = Convert.ToString(connectionString)
@@ -71,7 +89,8 @@ Public NotInheritable Class TenantEmailDeliveryService
         Dim correlationId As String = NormalizeCorrelationId(If(request Is Nothing, Nothing, request.CorrelationId))
         Dim classification As String = NormalizeClassification(If(request Is Nothing, Nothing, request.Classification))
 
-        If request Is Nothing OrElse request.AziendaId <= 0 OrElse String.IsNullOrWhiteSpace(_connectionString) Then
+        If request Is Nothing OrElse request.AziendaId <= 0 OrElse
+           (Not _testIsolation AndAlso String.IsNullOrWhiteSpace(_connectionString)) Then
             Return Reject("EMAIL_FACADE_SCOPE_INVALID", correlationId, classification)
         End If
         If classification = String.Empty Then

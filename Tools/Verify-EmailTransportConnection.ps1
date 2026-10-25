@@ -76,6 +76,7 @@ function New-EmailVerifierBuild([string]$Root) {
         'App_Code\TenantEmailTransportProfileResolver.vb',
         'App_Code\EmailCredentialStore.vb',
         'App_Code\MailKitEmailTransport.vb',
+        'App_Code\KeepStoreTestIsolation.vb',
         'App_Code\KeepStoreLog.vb',
         'Tools\KeepStoreConfigurationReader.vb',
         'Tools\EmailTransportConnectionVerifier.vb'

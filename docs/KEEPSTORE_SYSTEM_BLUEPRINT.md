@@ -2,6 +2,18 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## Isolamento email di test — candidato SOURCE ONLY, 2026-10-25
+
+La variabile di processo WAS `KEEPSTORE_TEST_ISOLATION`, assente/vuota, conserva il percorso nativo senza letture di attestazione. Il valore esatto `SMOKE` richiede identita server reale: macchina, root application ID `/LM/W3SVC/<id>/ROOT`, site ID, APP_POOL_ID, physical path e SID dell'identita ApplicationPoolIdentity. Header, hostname, porta e dati client non attivano il meccanismo. Qualunque valore non vuoto diverso da SMOKE o attestazione incoerente fallisce chiuso.
+
+Descrittore futuro `%ProgramData%/KeepStore/TestIsolation/site-<id>.xml`, otto attributi esatti (version, mode, machine, siteId, applicationId, pool, physicalPath, captureDirectory), version=1/mode=SMOKE. XML con DTD vietato e limite 16 KiB; destinazione catture vincolata a `captures/site-<id>`. Directory/descrittore con proprietario amministratori/SYSTEM e nessuno scrittore non fidato; il pool puo scrivere soltanto nella directory catture, senza poterne cambiare le ACL. Percorsi reparse rifiutati, readiness del sink verificata prima delle operazioni applicative. Nessuno di questi descrittori/ACL e stato creato ora.
+
+Global.asax chiama la barriera prima del Try/Catch e dell'uscita IsLocal: 503/no-store e Response.End interrompono realmente il lifecycle, con eccezione terminale di riserva; CompleteRequest da solo non e usato come arresto. La facciata sceglie il trasporto di cattura prima di costruire il trasporto nativo o leggere la connessione; anche il costruttore a dipendenze esplicite rispetta la decisione corrente. Il confine SMTP nativo rifiuta Deliver/VerifyConnection, creazione sessione e Connect/Authenticate/Send quando il marcatore di processo e presente.
+
+Il sink salva una ricevuta con conteggi To/Cc/Bcc e flag di destinatario/copia amministrativa richiesta, senza espandere il profilo ReplyTo, aprire SMTP o caricare credenziali. Nessun indirizzo, oggetto, corpo, allegato, dato account o correlation chiamante persiste. Successo della cattura: Status=Succeeded dell'operazione, Code=CAPTURED_TEST_ONLY, Phase=test-capture, SecurityMode=NO_SMTP; non EMAIL_SENT e non prova di consegna. Sink guasto: errore, nessun fallback. La facciata e i chiamanti produttivi senza marcatore conservano composizione, profili, credenziali, copie amministrative e invio precedenti.
+
+[Prove e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#keepstore-test-email-isolation-1a--2026-10-25): 158 asserzioni dedicate, System.Web reale con pagina mutativa sintetica e SEO stub; identita/attestazioni/ACL positive modellate, nessuna certificazione IIS effettiva. Compilazione safe 4.8 PASS, 355 input. L'isolamento email non impedisce gli effetti Newutenti o Carrello_Documento sul DB condiviso: attivazione e dati restano gate distinti, nessuna registrazione/ordine reale autorizzata da questo candidato. CONSEGNA SERVER SOSPESA.
+
 ## Evidenza runtime prevalente — login e carrello, 2026-10-25
 
 Login chiuso A tecnico PO nel perimetro Taikun/PROVA, senza ripetere le prove pregresse (27/27 browser e cinque POST negativi; Referer contraddittorio wire-only). CART-RUNTIME-CONTINUITY-1A verifica il codice esistente su IIS/DB condiviso: stato autorevole CartAuthoritativeReadModel/cart_state_async, mutazioni native owner-scoped e migrazione CartOwnershipService. **87/87 asserzioni runtime PASS**, baseline vuota, due righe identificate/rimosse, quantita 1/2/3 e riletture da contesti isolati. Anonimo IVA inclusa e PROVA IVA esclusa; netto/lordo, subtotale articoli e MiniCart coerenti dopo login. Nessuna simulazione DB o nuovo contratto runtime; combinazioni fiscali/promozionali ulteriori e totale ordine non certificati.

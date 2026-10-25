@@ -57,6 +57,7 @@ Public NotInheritable Class MailKitEmailSmtpSessionFactory
     Implements IEmailSmtpSessionFactory
 
     Public Function Create() As IEmailSmtpSession Implements IEmailSmtpSessionFactory.Create
+        KeepStoreTestIsolation.DemandNativeSmtp()
         Return New MailKitEmailSmtpSession()
     End Function
 End Class
@@ -68,6 +69,7 @@ Public NotInheritable Class MailKitEmailSmtpSession
     Private _lastTlsFailureKind As EmailTransportFailureKind
 
     Public Sub New()
+        KeepStoreTestIsolation.DemandNativeSmtp()
         _client = New SmtpClient()
         _client.CheckCertificateRevocation = True
         _client.ServerCertificateValidationCallback = AddressOf ValidateCertificate
@@ -80,11 +82,13 @@ Public NotInheritable Class MailKitEmailSmtpSession
     Public Sub Connect(ByVal host As String,
                        ByVal port As Integer,
                        ByVal options As SecureSocketOptions) Implements IEmailSmtpSession.Connect
+        KeepStoreTestIsolation.DemandNativeSmtp()
         _lastTlsFailureKind = EmailTransportFailureKind.None
         _client.Connect(host, port, options)
     End Sub
 
     Public Sub Authenticate(ByVal username As String, ByVal secret As String) Implements IEmailSmtpSession.Authenticate
+        KeepStoreTestIsolation.DemandNativeSmtp()
         _client.AuthenticationMechanisms.Remove("XOAUTH2")
         _client.AuthenticationMechanisms.Remove("OAUTHBEARER")
         _client.Authenticate(username, secret)
@@ -92,6 +96,7 @@ Public NotInheritable Class MailKitEmailSmtpSession
 
     Public Sub Send(ByVal message As MimeMessage,
                     ByVal envelopeFromAddress As String) Implements IEmailSmtpSession.Send
+        KeepStoreTestIsolation.DemandNativeSmtp()
         If message Is Nothing Then Throw New ArgumentNullException("message")
 
         Dim recipients As New List(Of MailboxAddress)()
@@ -204,6 +209,9 @@ Public NotInheritable Class MailKitEmailTransport
     End Sub
 
     Public Function Deliver(ByVal request As EmailTransportRequest) As EmailDeliveryResult Implements IEmailTransport.Deliver
+        If Not KeepStoreTestIsolation.NativeSmtpAllowed() Then
+            Return KeepStoreTestIsolation.TestDeliveryResult("TEST_NATIVE_SMTP_FORBIDDEN")
+        End If
         Dim correlationId As String = NormalizeCorrelationId(If(request Is Nothing, Nothing, request.CorrelationId))
         If request Is Nothing OrElse request.Message Is Nothing OrElse
            (request.PrimaryRecipientFromProfileReplyTo AndAlso
@@ -232,6 +240,7 @@ Public NotInheritable Class MailKitEmailTransport
                                      ByVal aziendaId As Integer,
                                      ByVal purpose As String,
                                      ByVal correlationId As String) As EmailConnectionVerificationResult Implements IEmailTransport.VerifyConnection
+        If Not KeepStoreTestIsolation.NativeSmtpAllowed() Then Return KeepStoreTestIsolation.TestVerificationRejected()
         Dim normalizedCorrelation As String = NormalizeCorrelationId(correlationId)
         Dim outcome As EmailTransportExecutionOutcome = ExecuteVerification(connectionString,
                                                                             aziendaId,
