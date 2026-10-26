@@ -2,6 +2,12 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## REV1 carrello SQL rigoroso — PR #391, 2026-10-26
+
+Entrambe le sdsPromo selezionano esplicitamente identita articolo/TC/offerta/dettaglio/listino, prezzi base/promo, IVA RC e condizioni. DISTINCT interno elimina copie esatte dei join; filtro TC normalizzato e listino prima della deduplica, ordinamento esterno conserva la precedenza quantita/multipli con discriminanti finali deterministici. I dettagli distinti restano candidati, nessuna riga commerciale aggregata. Riusati senza modifiche rPromo_ItemDataBound e ProductPromotionDisplayHelper per l'autorizzazione effettiva; nessun nuovo motore promozionale. I due parametri TCId leggono tbTCID della riga carrello server.
+
+[Evidenze REV1](KEEPSTORE_MASTERPLAN_OPERATIVO.md#rev1--due-sdspromo-e-prosecuzione-checkout): 38 controlli/9 SQL MySQL CTE read-only, handler/helper reali con I/O autorizzativo esplicitamente simulato e precompile 4.8 PASS. Carrello standard e spedizione gratuita GET 200 reali, quantita/prezzi/totale coerenti; nessuna offerta persistente attiva nel dataset browser. Il proseguimento pagamento incontra un nuovo 1055 su vpagamentitipo.UtenteId (sdsPagamenti SELECT * / GROUP BY id), fuori REV1 e non corretto. Ordine/documento, origine WEB, numerazione, impegno, IVA/spedizione finali e isolamento del documento restano non certificati. Dati di test rimossi e staging lab ripristinato integralmente; candidato canonico nella stessa PR DRAFT, nessun merge/deploy. Le evidenze del checkpoint sotto sono riusate e il suo blocco sdsPromo e superato; CONSEGNA SERVER SOSPESA.
+
 ## Compatibilita SQL rigorosa — candidato REGORDER-SQL8-COMPAT-1A, 2026-10-26
 
 LoadCandidates deduplica la stessa proiezione in una derived table e ordina all'esterno: contratto TC, prezzo/IVA/RC, parametri e lock invariati. Catalogo: tre facet per identita/descrizione/ordine, gruppo con ID concatenati e minimo ordine di presentazione; arrivi aggregati per articolo/data e poi per articolo prima del join. Il listing non aggrega valori commerciali: ROW_NUMBER sceglie una riga intera tra i candidati gia filtrati per listino/ricerca/facet/prezzo/TC; priorita positiva-TC/minimo TC/ArticoliListiniId riusata dai recenti catalogo, poi offer-detail-ID. Sort whitelist e paginazione si applicano alla selezione per articolo. La scelta arbitraria del vecchio GROUP BY id non e un'autorita commerciale da riprodurre; testate coerenza riga e identita, nessun ANY_VALUE, modifica fiscale o nuovo resolver. SQL mode invariato.
