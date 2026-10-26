@@ -300,7 +300,10 @@ Public Module CartPriceRevalidationHelper
                                     ByVal lockCommercialRows As Boolean) As List(Of CartPriceCandidate)
         Dim candidates As New List(Of CartPriceCandidate)()
         If lockCommercialRows Then LockBaseCommercialRows(conn, transaction, articleId, listino)
-        Dim sql As String = "SELECT DISTINCT v.ID, COALESCE(v.TCid,-1) AS TCid, COALESCE(v.Codice,'') AS Codice, COALESCE(v.Descrizione1,'') AS Descrizione1, v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.DescrizioneIvaRC FROM vsuperarticoli v WHERE v.NListino=?listino AND v.ID=?id ORDER BY v.ID, CASE WHEN COALESCE(v.TCid,-1) IN (-1,0) THEN 0 ELSE 1 END, COALESCE(v.TCid,-1) ASC"
+        Dim sql As String = "SELECT c.ID, c.TCid, c.Codice, c.Descrizione1, c.Prezzo, c.PrezzoIvato, c.IdIvaRC, c.ValoreIvaRC, c.DescrizioneIvaRC " &
+            "FROM (SELECT DISTINCT v.ID, COALESCE(v.TCid,-1) AS TCid, COALESCE(v.Codice,'') AS Codice, COALESCE(v.Descrizione1,'') AS Descrizione1, v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.DescrizioneIvaRC " &
+            "FROM vsuperarticoli v WHERE v.NListino=?listino AND v.ID=?id) c " &
+            "ORDER BY c.ID, CASE WHEN c.TCid IN (-1,0) THEN 0 ELSE 1 END, c.TCid ASC"
         Using cmd As New MySqlCommand(sql, conn, transaction)
             cmd.Parameters.Add("?listino", MySqlDbType.Int32).Value = listino
             cmd.Parameters.Add("?id", MySqlDbType.Int32).Value = articleId

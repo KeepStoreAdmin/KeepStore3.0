@@ -878,18 +878,19 @@ End Sub
             " COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid, -1) AS TCid, COALESCE(vsuperarticoli.Ricondizionato,0) AS Ricondizionato, IF(COALESCE(vsuperarticoli.Ricondizionato,0) = 1, 'visible', 'hidden') as refurbished," &
             " IFNULL(taglie.descrizione,'') as taglia," &
             " CONVERT(CONCAT('<table style=""width:100%;"" border=""1""><tr style=""background-color:#00FF99;""><td>Data di arrivo</td><td>Quantit&agrave;</td></tr><tr style=""background-color:#00FFFF;""><td>'," &
-            "       GROUP_CONCAT(arrivi SEPARATOR '</td></tr><tr style=""background-color:#00FFFF;""><td>'),'</td></tr></table>'),CHAR) as arrivi," &
+            "       arrivi.arrivi,'</td></tr></table>'),CHAR) as arrivi," &
             " IFNULL(colori.descrizione,'') as colore," &
             " IF(vsuperarticoli.PrezzoPromoIvato IS NULL," & effectiveBaseGrossSql & "," & effectivePromoGrossSql & ") AS PrezzoOldIvato," &
-            " " & searchScoreSql &
+            " " & searchScoreSql & ",vsuperarticoli.visite,vsuperarticoli.Vetrina," &
+            " tc_lookup.TagliaId AS CatalogTagliaId,tc_lookup.ColoreId AS CatalogColoreId," &
+            BuildCatalogRowRankSql() &
             " FROM vsuperarticoli " &
             " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id" &
             promotionMainJoin &
             " LEFT OUTER JOIN articoli_tagliecolori tc_lookup ON tc_lookup.id=COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid)" &
             " LEFT OUTER JOIN taglie ON tc_lookup.tagliaid = taglie.id" &
             " LEFT OUTER JOIN colori ON tc_lookup.coloreid = colori.id" &
-            " LEFT OUTER JOIN (SELECT articoliid, CONCAT(DATE_FORMAT(dataArrivo, '%d/%m/%Y'),'</td><td>', (TRIM(TRAILING '.' FROM(CAST(TRIM(TRAILING '0' FROM SUM(arrivi)) AS CHAR))))) AS arrivi" &
-            "                 FROM articoli_arrivi WHERE dataArrivo>NOW() and arrivi > 0 GROUP BY dataArrivo) arrivi ON arrivi.articoliid = vsuperarticoli.id"
+            BuildCatalogArrivalsJoinSql()
 
         Dim strWhere As String = ""
         Dim strWhere2 As String = "WHERE 1=1 "
@@ -1061,40 +1062,40 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
 
-strWhere = strWhere & " GROUP BY id"
+        Dim sortSql As String = String.Empty
 
         ' Ordinamento (whitelist)
         Select Case sortValue
             Case "p_offerta"
-                strWhere &= " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY InOfferta DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
             Case "p_basso"
-                strWhere &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice ASC, (Giacenza-Impegnata) DESC, id ASC"
+                sortSql &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice ASC, (Giacenza-Impegnata) DESC, id ASC"
             Case "p_alto"
-                strWhere &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice DESC, (Giacenza-Impegnata) DESC, id ASC"
+                sortSql &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice DESC, (Giacenza-Impegnata) DESC, id ASC"
             Case "p_popolarita"
-                strWhere &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
             Case "p_recenti"
-                strWhere &= " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
             Case "p_codice"
-                strWhere &= " ORDER BY Codice ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY Codice ASC, (Giacenza-Impegnata) DESC"
             Case "p_descrizione"
-                strWhere &= " ORDER BY Descrizione1 ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY Descrizione1 ASC, (Giacenza-Impegnata) DESC"
             Case "p_disponibilita"
-                strWhere &= " ORDER BY ((Giacenza-Impegnata)>0) DESC, Disponibilita DESC, InOfferta DESC, id DESC"
+                sortSql &= " ORDER BY ((Giacenza-Impegnata)>0) DESC, Disponibilita DESC, InOfferta DESC, id DESC"
             Case Else
                 ' Default: rilevanza (stabile)
                 If userCerca <> "" Then
-                    strWhere &= " ORDER BY SearchScore DESC, ((Giacenza-Impegnata)>0) DESC, InOfferta DESC, COALESCE(Vetrina,0) DESC, visite DESC, id DESC"
+                    sortSql &= " ORDER BY SearchScore DESC, ((Giacenza-Impegnata)>0) DESC, InOfferta DESC, COALESCE(Vetrina,0) DESC, visite DESC, id DESC"
                 Else
-                    strWhere &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
+                    sortSql &= " ORDER BY (Giacenza-Impegnata) DESC, id DESC"
                 End If
         End Select
 
         If TC = 1 Then
-            strWhere = strWhere & " ,tc_lookup.TagliaId, tc_lookup.ColoreId"
+            sortSql &= " ,CatalogTagliaId, CatalogColoreId"
         End If
 
-        Me.sdsArticoli.SelectCommand = strSelect & " WHERE Nlistino=?NListino " & strWhere
+        Me.sdsArticoli.SelectCommand = BuildCatalogListingSql(strSelect, strWhere, sortSql)
 
         strWhere2 = " LEFT JOIN vsuperarticoli ON vsuperarticoli.Id = varticolibase.id " &
                     promotionFacetJoin & quantityOneFacetJoin & strWhere2 & " AND Nlistino=?NListino"
@@ -1104,22 +1105,22 @@ strWhere = strWhere & " GROUP BY id"
             "`Marche`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `Marche` on(`varticolibase`.`MarcheId` = `Marche`.`id`) " &
             Regex.Replace(strWhere2, " AND varticolibase.MarcheId in \(([^\)])+\) ", String.Empty) &
-            " group by `Marche`.`Descrizione` order by `Marche`.`Ordinamento`, `Marche`.`Descrizione`"
+            " group by `varticolibase`.`MarcheId`, `Marche`.`Descrizione`, `Marche`.`Ordinamento` order by `Marche`.`Ordinamento`, `Marche`.`Descrizione`"
 
         Me.sdsTipologie.SelectCommand =
             "select `varticolibase`.`TipologieId` AS `TipologieId`,`tipologie`.`Descrizione` AS `Descrizione`," &
             "`tipologie`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `tipologie` on(`varticolibase`.`TipologieId` = `tipologie`.`id`) " &
             Regex.Replace(strWhere2, " AND varticolibase.TipologieId in \(([^\)])+\) ", String.Empty) &
-            " group by `tipologie`.`Descrizione` order by `tipologie`.`Ordinamento`, `tipologie`.`Descrizione`"
+            " group by `varticolibase`.`TipologieId`, `tipologie`.`Descrizione`, `tipologie`.`Ordinamento` order by `tipologie`.`Ordinamento`, `tipologie`.`Descrizione`"
 
         Me.sdsGruppo.SelectCommand =
             "select GROUP_CONCAT(DISTINCT `varticolibase`.`GruppiId` SEPARATOR '|') AS `GruppiId`," &
-            "`Gruppi`.`Descrizione` AS `Descrizione`,`Gruppi`.`Ordinamento` AS `Ordinamento`," &
+            "`Gruppi`.`Descrizione` AS `Descrizione`,MIN(`Gruppi`.`Ordinamento`) AS `Ordinamento`," &
             "count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `Gruppi` on(`varticolibase`.`GruppiId` = `Gruppi`.`id`) " &
             Regex.Replace(strWhere2, " AND varticolibase.GruppiId in \(([^\)])+\) ", String.Empty) &
-            " group by `Gruppi`.`Descrizione` order by `Gruppi`.`Ordinamento`, `Gruppi`.`Descrizione`"
+            " group by `Gruppi`.`Descrizione` order by MIN(`Gruppi`.`Ordinamento`), `Gruppi`.`Descrizione`"
 
         Me.sdsSottogruppo.SelectCommand =
             "select `varticolibase`.`SottoGruppiId` AS `SottoGruppiId`," &
@@ -1127,7 +1128,7 @@ strWhere = strWhere & " GROUP BY id"
             "count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `SottoGruppi` on(`varticolibase`.`SottoGruppiId` = `SottoGruppi`.`id`) " &
             Regex.Replace(strWhere2, " AND varticolibase.SottogruppiId in \(([^\)])+\) ", String.Empty) &
-            " group by `SottoGruppi`.`Descrizione` order by `SottoGruppi`.`Ordinamento`, `SottoGruppi`.`Descrizione`"
+            " group by `varticolibase`.`SottoGruppiId`, `SottoGruppi`.`Descrizione`, `SottoGruppi`.`Ordinamento` order by `SottoGruppi`.`Ordinamento`, `SottoGruppi`.`Descrizione`"
 
 
         ' Ensure all filter datasources reuse the exact same parameters (100% param-only)
@@ -1148,6 +1149,33 @@ strWhere = strWhere & " GROUP BY id"
 
         Dim sdsArticoliToShow = Me.sdsArticoli.SelectCommand.Replace("'", """").ToUpper
     End Sub
+
+    Private Shared Function BuildCatalogRowRankSql() As String
+        ' Same positive-TC/default priority as the catalog's recently viewed rows.
+        ' Rank complete matching rows; never aggregate a price or stock from another variant.
+        Return " ROW_NUMBER() OVER (PARTITION BY vsuperarticoli.id ORDER BY" &
+               " CASE WHEN COALESCE(vsuperarticoli.TCid,0)>0 THEN 0 ELSE 1 END," &
+               " COALESCE(vsuperarticoli.TCid,-1),COALESCE(vsuperarticoli.ArticoliListiniId,0)," &
+               " COALESCE(vsuperarticoli.OfferteDettagliId,0)) AS CatalogRowRank"
+    End Function
+
+    Private Shared Function BuildCatalogListingSql(ByVal selectSql As String,
+                                                   ByVal whereSql As String,
+                                                   ByVal sortSql As String) As String
+        ' Filters and the price list apply before choosing one coherent row per article.
+        Return "SELECT catalog.* FROM (" & selectSql & " WHERE Nlistino=?NListino " & whereSql &
+               ") catalog WHERE catalog.CatalogRowRank=1" & sortSql
+    End Function
+
+    Private Shared Function BuildCatalogArrivalsJoinSql() As String
+        Return " LEFT JOIN (SELECT daily.articoliid," &
+               " GROUP_CONCAT(daily.arrivi ORDER BY daily.dataArrivo SEPARATOR '</td></tr><tr style=""background-color:#00FFFF;""><td>') AS arrivi" &
+               " FROM (SELECT articoliid,dataArrivo," &
+               " CONCAT(DATE_FORMAT(dataArrivo, '%d/%m/%Y'),'</td><td>'," &
+               " TRIM(TRAILING '.' FROM CAST(TRIM(TRAILING '0' FROM SUM(arrivi)) AS CHAR))) AS arrivi" &
+               " FROM articoli_arrivi WHERE dataArrivo>NOW() AND arrivi>0 GROUP BY articoliid,dataArrivo) daily" &
+               " GROUP BY daily.articoliid) arrivi ON arrivi.articoliid=vsuperarticoli.id"
+    End Function
 
     Public Sub SetSelectedIndex(ByVal dl As DataList, ByVal val As Integer)
         Dim Index As Integer = -1
