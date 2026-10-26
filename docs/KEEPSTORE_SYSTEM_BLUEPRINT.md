@@ -2,6 +2,12 @@
 
 Documento tecnico permanente del progetto KeepStore 3.0.
 
+## REV2 pagamento deterministico — PR #391, 2026-10-26
+
+Le tre viste sono attestate mediante confronto esatto blob versionato/statement del provisioning eseguito con successo e metadati colonne live; fingerprint conservati, nuovo SHOW CREATE VIEW non disponibile e non sostituito da un falso readback. Pagamento: costi generali sul tipo, collegamento cliente come autorizzazione, nessun override personale nel modello. sdsPagamento usa EXISTS per evitare righe moltiplicate dagli utenti e filtra azienda/importo/abilitazione prima delle configurazioni; banca della stessa azienda/pagamento, copie identiche deduplicate e alternative ambigue o incomplete escluse. Nessun nuovo resolver: i venti campi legacy, autorita checkout/PayPal e calcoli spese restano quelli esistenti; nessun ANY_VALUE, cambio vista o SQL mode. La struttura storica del join bancario non basta a dichiarare una contaminazione operativa, non riprodotta nel DB persistente privo di configurazioni attive.
+
+[Prove REV2](KEEPSTORE_MASTERPLAN_OPERATIVO.md#rev2-resume--attestazione-viste-e-pagamento): 27 controlli/10 SQL read-only e precompile 4.8 PASS, positivi commerciali con CTE esplicite. Query vettori eseguibili senza 1055 e invariate. POST reale Carrello → Spedizione e pagamento 200; fixture senza fasce vettore e con massimali offline zero, quindi opzioni assenti e riepilogo/ordine non raggiunti. Nessun ordine, replay o modifica alle configurazioni commerciali per forzare il risultato; totale prodotti 20,00 + IVA 4,40. Test ripulito, sorgenti lab ripristinati, stessa PR DRAFT e nessun merge/deploy; CONSEGNA SERVER SOSPESA. I checkpoint sotto precedono la REV2.
+
 ## REV1 carrello SQL rigoroso — PR #391, 2026-10-26
 
 Entrambe le sdsPromo selezionano esplicitamente identita articolo/TC/offerta/dettaglio/listino, prezzi base/promo, IVA RC e condizioni. DISTINCT interno elimina copie esatte dei join; filtro TC normalizzato e listino prima della deduplica, ordinamento esterno conserva la precedenza quantita/multipli con discriminanti finali deterministici. I dettagli distinti restano candidati, nessuna riga commerciale aggregata. Riusati senza modifiche rPromo_ItemDataBound e ProductPromotionDisplayHelper per l'autorizzazione effettiva; nessun nuovo motore promozionale. I due parametri TCId leggono tbTCID della riga carrello server.

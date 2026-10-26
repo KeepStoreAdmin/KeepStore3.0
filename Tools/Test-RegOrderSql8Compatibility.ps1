@@ -7,7 +7,8 @@ param(
     [string]$IsolatedMySqlRunner,
     [string]$ExpectedServerUuid,
     [string]$ExpectedDatabase,
-    [switch]$PromoOnly
+    [switch]$PromoOnly,
+    [switch]$CheckoutOnly
 )
 $ErrorActionPreference='Stop'
 if ($PSVersionTable.PSEdition -ne 'Desktop') { throw 'SQL8_TEST_REQUIRES_PS51' }
@@ -79,6 +80,108 @@ function Rows([string]$statement) {
 }
 function Bound([string]$statement,[int]$listino,[int]$id) {
     return $statement.Replace('?listino',$listino.ToString()).Replace('?NListino',$listino.ToString()).Replace('?id',$id.ToString())
+}
+
+if ($CheckoutOnly) {
+    Add-Type -AssemblyName System.Web
+    if ($PromoOnly -or !$RunIsolatedMySql -or !(Test-Path -LiteralPath $IsolatedMySqlRunner)) { throw 'SQL8_CHECKOUT_REQUIRES_ISOLATED_MYSQL' }
+    $markup=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'carrello.aspx'))
+    $oldMarkup=Read-Baseline 'carrello.aspx'
+    $pattern='(?s)<asp:SqlDataSource ID="sdsPagamento".*?SelectCommand="(?<sql>[^"]*)"'
+    $match=[regex]::Match($markup,$pattern)
+    $oldMatch=[regex]::Match($oldMarkup,$pattern)
+    Check 'payment datasource remains unique' ($match.Success -and $oldMatch.Success -and [regex]::Matches($markup,$pattern).Count -eq 1)
+    $query=[Web.HttpUtility]::HtmlDecode($match.Groups['sql'].Value)
+    $oldQuery=[Web.HttpUtility]::HtmlDecode($oldMatch.Groups['sql'].Value)
+    $masked=$markup.Replace($match.Groups['sql'].Value,'PAYMENT_SQL').Replace("`r`n","`n").TrimEnd("`n")
+    $oldMasked=$oldMarkup.Replace($oldMatch.Groups['sql'].Value,'PAYMENT_SQL').Replace("`r`n","`n").TrimEnd("`n")
+    Check 'only payment SQL changes in checkout markup' ($masked -ceq $oldMasked)
+    Check 'no arbitrary group any value or wildcard' ($query -notmatch '(?i)GROUP\s+BY|ANY_VALUE|SELECT\s+\*')
+    Check 'tenant gates payment and bank before choices' ($query -match 'p\.AziendeID=\?AziendaID' -and $query -match 'p\.AziendeID=b\.AziendeId' -and $query -match 'b\.AziendeId=\?AziendaID')
+    Check 'client association authorizes without multiplying payment' ($query -match 'EXISTS \(SELECT 1 FROM utentirapporto ur WHERE ur.TipoPagamento=p.id AND ur.UtenteId=\?UtenteID\)')
+    Check 'ambiguous bank configuration is not ranked arbitrarily' ($query -match 'COUNT\(1\) OVER' -and $query -match 'b.ConfigCount=1' -and $query -notmatch '(?i)ROW_NUMBER|MIN\(|MAX\(')
+    foreach ($path in @('carrello.aspx.vb','App_Code/CheckoutDraftService.vb','App_Code/PayPalCheckoutSafetyPolicy.vb')) {
+        $actual=[IO.File]::ReadAllText((Join-Path $RepositoryRoot $path)).Replace("`r`n","`n").TrimEnd("`n")
+        $before=(Read-Baseline $path).Replace("`r`n","`n").TrimEnd("`n")
+        Check ('authoritative source unchanged '+$path) ($actual -ceq $before)
+    }
+    $result='FAIL'
+    try {
+        $identity=@(Rows 'SELECT DATABASE(),@@server_uuid,@@sql_mode;')
+        $parts=$identity[0] -split "`t"
+        Check 'checkout SQL targets exact strict lab' ($parts[0] -ceq $ExpectedDatabase -and $parts[1] -ceq $ExpectedServerUuid -and $parts[2] -match 'ONLY_FULL_GROUP_BY')
+        $mode=$parts[2]
+        function Payment-Bound([string]$sql,[int]$company,[int]$user,[decimal]$amount) {
+            return $sql.Replace('?AziendaID',$company.ToString()).Replace('?UtenteID',$user.ToString()).Replace('?CostoMassimo',$amount.ToString([Globalization.CultureInfo]::InvariantCulture))
+        }
+        $old=Sql ((Payment-Bound $oldQuery 1 1 24.4)+';')
+        Check 'installed original payment query reproduces 1055' ($old.code -ne 0 -and $old.stderr -match 'ERROR\s+1055')
+        # CTEs replace only data sources. Candidate SQL below is extracted from
+        # the real datasource; no persistent tables, banking profiles or users.
+        $fixture=@'
+WITH pagamentitipo(id,AziendeID,Descrizione,Informazioni,Abilitato,Web,Ordinamento,Predefinito,CostoPercentuale,CostoFisso,CostoMassimo,NumeroOrdini,Contrassegno,OnLine,img) AS (
+SELECT 101,1,'SYNTHETIC-PUBLIC','',1,1,1,1,2.50,1.25,100,0,0,0,''
+UNION ALL SELECT 102,1,'SYNTHETIC-PRIVATE','',1,0,2,0,1.00,3.00,100,0,0,0,''
+UNION ALL SELECT 103,1,'SYNTHETIC-DISABLED','',0,1,3,0,0,0,100,0,0,0,''
+UNION ALL SELECT 104,2,'SYNTHETIC-TENANT2','',1,1,1,1,0,2.00,100,0,0,0,''
+UNION ALL SELECT 105,1,'SYNTHETIC-CAPPED','',1,1,5,0,0,0,20,0,0,0,''
+UNION ALL SELECT 106,1,'SYNTHETIC-OTHERCLIENT','',1,0,6,0,0,0,100,0,0,0,''
+UNION ALL SELECT 107,1,'SYNTHETIC-DUPBANK','',1,1,7,0,0,0,100,0,0,0,''
+UNION ALL SELECT 108,1,'SYNTHETIC-AMBIGUOUS','',1,1,8,0,0,0,100,0,0,0,''
+UNION ALL SELECT 109,1,'SYNTHETIC-INCOMPLETEBANK','',1,1,9,0,0,0,100,0,0,0,''
+UNION ALL SELECT 110,1,'SYNTHETIC-NULLPERCENT','',1,1,10,0,NULL,0,100,0,0,0,''
+UNION ALL SELECT 111,1,'SYNTHETIC-NULLPOLICY','',1,1,11,0,0,0,100,0,0,NULL,''
+UNION ALL SELECT 112,1,'SYNTHETIC-NULLFIXED','',1,1,12,0,0,NULL,100,0,0,0,''
+UNION ALL SELECT 113,1,'SYNTHETIC-PAYPAL-FLAG','',1,1,13,0,0,0,100,0,0,2,''
+), utentirapporto(TipoPagamento,UtenteId) AS (
+SELECT 101,11 UNION ALL SELECT 101,22 UNION ALL SELECT 102,11 UNION ALL SELECT 102,11 UNION ALL SELECT 106,22
+), vbancasella_azienda(AziendeId,PagamentiTipoId,URL1,URL2,Nome,shopLogin,Attivo) AS (
+SELECT 2,101,'','','SYNTHETIC-FOREIGN','SYNTHETIC-FOREIGN',1
+UNION ALL SELECT 1,107,'','','SYNTHETIC-OWN','SYNTHETIC-OWN',1
+UNION ALL SELECT 1,107,'','','SYNTHETIC-OWN','SYNTHETIC-OWN',1
+UNION ALL SELECT 2,107,'','','SYNTHETIC-FOREIGN','SYNTHETIC-FOREIGN',1
+UNION ALL SELECT 1,108,'','','SYNTHETIC-A','SYNTHETIC-A',1
+UNION ALL SELECT 1,108,'','','SYNTHETIC-B','SYNTHETIC-B',1
+UNION ALL SELECT 1,109,'','','SYNTHETIC-MISSING',NULL,1
+UNION ALL SELECT 1,101,'','','SYNTHETIC-INACTIVE','SYNTHETIC-INACTIVE',0
+),
+'@
+        function Payment-Rows([int]$company,[int]$user,[decimal]$amount) {
+            $sql=Payment-Bound $query $company $user $amount
+            if (!$sql.StartsWith('WITH ')) { throw 'CHECKOUT_EXPECTED_CTE' }
+            return @(Rows ($fixture+$sql.Substring(5)+';'))
+        }
+        $one=@(Payment-Rows 1 11 24.4)
+        $oneIds=@($one|ForEach-Object {($_ -split "`t")[0]})
+        Check 'one exact row per authorized payment in presentation order' (($oneIds -join ',') -ceq '101,102,107,113')
+        Check 'payment still projects all twenty legacy fields' (@($one|Where-Object {$_.Split([char]9).Count -ne 20}).Count -eq 0)
+        $public=$one[0].Split([char]9)
+        Check 'public method keeps tenant identity and default' ($public[1] -eq '1' -and $public[7] -eq '1')
+        Check 'percentage fixed cost and cap unchanged' ([decimal]$public[8] -eq 2.5 -and [decimal]$public[9] -eq 1.25 -and [decimal]$public[10] -eq 100)
+        Check 'foreign banking configuration does not populate own method' (($public[16..19] -join '') -eq '')
+        Check 'client-specific association retains same base payment costs' ([decimal]($one[1] -split "`t")[8] -eq 1 -and [decimal]($one[1] -split "`t")[9] -eq 3)
+        $bank=$one[2].Split([char]9)
+        Check 'identical own banking rows deduplicate and foreign row excluded' ($bank[19] -ceq 'SYNTHETIC-OWN')
+        Check 'ambiguous incomplete and disabled payments are absent' (@($oneIds|Where-Object {$_ -in @('103','106','108','109','110','111','112')}).Count -eq 0)
+        Check 'online policy value reaches unchanged safety authority' (($one[3] -split "`t")[13] -eq '2')
+        $two=@(Payment-Rows 2 22 24.4)
+        Check 'company two sees only its payment and fixed cost' ($two.Count -eq 1 -and ($two[0] -split "`t")[0] -eq '104' -and [decimal]($two[0] -split "`t")[9] -eq 2)
+        $other=@(Payment-Rows 1 99 24.4)
+        Check 'private payment is not enabled for unrelated customer' (($other|ForEach-Object {($_ -split "`t")[0]}) -join ',' -eq '101,107,113')
+        $edge=@(Payment-Rows 1 11 20)
+        Check 'amount cap includes exact boundary' (@($edge|Where-Object {($_ -split "`t")[0] -eq '105'}).Count -eq 1)
+        $over=@(Payment-Rows 1 11 20.01)
+        Check 'amount cap excludes excess before deduplication' (@($over|Where-Object {($_ -split "`t")[0] -eq '105'}).Count -eq 0)
+        Check 'all methods unavailable beyond cap' (@(Payment-Rows 1 11 100.01).Count -eq 0)
+        Check 'installed source query executes under unchanged strict mode' ((Sql ((Payment-Bound $query 1 1 24.4)+';')).code -eq 0)
+        $after=@(Rows 'SELECT @@sql_mode;')
+        Check 'SQL mode unchanged after payment tests' ($after[0] -ceq $mode)
+        $result='PASS'
+    } finally {
+        [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'checkout-rev2-results.json'),(@{Result=$result;Checks=$checks.Count;Details=$checks;SqlCalls=$sqlCalls;MySql='REAL_READONLY_CTE';Prior230And38='REUSED_NOT_RERUN';Browser='SEPARATE';GatewayCalls=0;PersistentFixtureWrites=0}|ConvertTo-Json -Depth 6),$utf8)
+    }
+    Write-Output ('SQL8_CHECKOUT_REV2_PASS checks='+$checks.Count+' sql='+$sqlCalls)
+    exit 0
 }
 
 if ($PromoOnly) {
