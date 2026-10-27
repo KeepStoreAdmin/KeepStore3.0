@@ -5,6 +5,36 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <style>
+        .ks-myaccount .ks-document-date {
+            min-width: 0;
+            flex: 1 1 150px;
+        }
+
+        .ks-myaccount .ks-document-calendar {
+            box-sizing: border-box;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            min-height: 44px;
+            flex: 0 0 44px;
+            padding: 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .ks-myaccount .ks-document-calendar:hover {
+            border-color: #181818;
+            background-color: #f5f5f5;
+        }
+
+        .ks-myaccount .ks-document-calendar:focus-visible {
+            outline: 2px solid #181818;
+            outline-offset: 3px;
+        }
+    </style>
 <script type="text/javascript">
         function ksHideSpinnerAndShowContent() {
             var spinner = document.getElementById('<%= pnlLoading.ClientID %>');
@@ -239,16 +269,16 @@
                                         <div class="col-12 col-md-6">
                                             <div class="body-small text-main-2 mb-1">Dal</div>
                                             <div class="d-flex align-items-center gap-2">
-                                                <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="/Public/Images/calendar_icon.gif" />
+                                                <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input ks-document-date" Width="150px"></asp:TextBox>
+                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="~/Public/assets/images/calendar.svg" CssClass="ks-document-calendar" AlternateText="Apri il calendario della data Dal" ToolTip="Seleziona la data iniziale (Dal)" />
                                             </div>
                                         </div>
 
                                         <div class="col-12 col-md-6">
                                             <div class="body-small text-main-2 mb-1">Al</div>
                                             <div class="d-flex align-items-center gap-2">
-                                                <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="/Public/Images/calendar_icon.gif" />
+                                                <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input ks-document-date" Width="150px"></asp:TextBox>
+                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="~/Public/assets/images/calendar.svg" CssClass="ks-document-calendar" AlternateText="Apri il calendario della data Al" ToolTip="Seleziona la data finale (Al)" />
                                             </div>
                                         </div>
                                     </div>
