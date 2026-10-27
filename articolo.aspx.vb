@@ -492,12 +492,9 @@ Partial Class articolo
         If row Is Nothing Then Return Nothing
 
         Dim nameVal As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), "Articolo")
-        Dim imgVal As String = NormalizeImageUrl(GetRowString(row, "Img1"))
-        If String.IsNullOrEmpty(imgVal) Then
-            imgVal = ThemeManager.PlaceholderProductImageUrl()
-        End If
-        Dim imgHover As String = NormalizeImageUrl(GetRowString(row, "Img2"))
-        If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
+        Dim imageSlots As List(Of String) = StorefrontProductImageSlots.FromDataItem(row)
+        Dim imgVal As String = imageSlots(0)
+        Dim imgHover As String = imageSlots(1)
 
         Dim tcidVal As Integer = GetRowInt(row, "TCid", _tcid)
         Dim codiceVal As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
@@ -636,7 +633,7 @@ Partial Class articolo
     End Function
 
     Private Function RelatedSelectSql(fromSql As String, tailSql As String) As String
-        Return "SELECT v.id, v.TCid, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.Img1, v.Img2, v.InOfferta, " &
+        Return "SELECT v.id, v.TCid, v.Codice, v.Ean, v.Descrizione1, v.Descrizione2, v.Img1, v.Img2, v.Img3, v.Img4, extraImages.Img5, extraImages.Img6, v.InOfferta, " &
                "v.CategorieId, v.TipologieId, v.MarcheId, " &
                "v.SettoriDescrizione, v.CategorieDescrizione, v.TipologieDescrizione, v.MarcheDescrizione, " &
                "v.Prezzo, v.PrezzoIvato, v.IdIvaRC, v.ValoreIvaRC, v.PrezzoPromo, v.PrezzoPromoIvato, " &
@@ -644,6 +641,7 @@ Partial Class articolo
                "IFNULL(tg.Descrizione,'') AS TCTaglia, IFNULL(cl.Descrizione,'') AS TCColore, " &
                "TRIM(CONCAT(IFNULL(tg.Descrizione,''), ' ', IFNULL(cl.Descrizione,''), ' ', IFNULL(atc.Barcode,''))) AS TCDescrizione " &
                "FROM " & fromSql & " " &
+               "LEFT JOIN (SELECT id AS ImageArticleId, Img5, Img6 FROM articoli) extraImages ON extraImages.ImageArticleId=v.id " &
                "LEFT JOIN articoli_tagliecolori atc ON atc.id=v.TCid " &
                "LEFT JOIN taglie tg ON tg.id=atc.TagliaId " &
                "LEFT JOIN colori cl ON cl.id=atc.ColoreId " & tailSql
@@ -1161,11 +1159,11 @@ Partial Class articolo
                 Dim codiceVal As String = Convert.ToString(rdr("Codice"))
                 Dim eanVal As String = SafeReaderString(rdr, "Ean")
                 Dim nameVal As String = Convert.ToString(rdr("Descrizione1"))
-                Dim imgVal As String = NormalizeImageUrl(Convert.ToString(rdr("Img1")))
-                Dim imgHover As String = NormalizeImageUrl(SafeReaderString(rdr, "Img2"))
-                If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
-                If String.IsNullOrEmpty(imgVal) Then imgVal = ThemeManager.PlaceholderProductImageUrl()
-                If String.IsNullOrEmpty(imgHover) Then imgHover = imgVal
+                Dim imageSlots As List(Of String) = StorefrontProductImageSlots.Resolve(New Object() {
+                    SafeReaderString(rdr, "Img1"), SafeReaderString(rdr, "Img2"), SafeReaderString(rdr, "Img3"),
+                    SafeReaderString(rdr, "Img4"), SafeReaderString(rdr, "Img5"), SafeReaderString(rdr, "Img6")})
+                Dim imgVal As String = imageSlots(0)
+                Dim imgHover As String = imageSlots(1)
                 Dim netPrice As Nullable(Of Decimal) = SafeDec(rdr("Prezzo"), 0D)
                 Dim effectiveGross As Nullable(Of Decimal) = ResolveEffectiveGross(netPrice,
                     SafeDec(rdr("PrezzoIvato"), 0D), SafeInt(rdr("IdIvaRC"), -1),
@@ -1393,8 +1391,9 @@ Partial Class articolo
     Private Function BuildProductSql(includeTcidFilter As Boolean) As String
         Dim sb As New StringBuilder()
 
-        sb.AppendLine("SELECT *")
-        sb.AppendLine("FROM vsuperarticoli")
+        sb.AppendLine("SELECT productSource.*, extraImages.Img5, extraImages.Img6")
+        sb.AppendLine("FROM vsuperarticoli productSource")
+        sb.AppendLine("LEFT JOIN (SELECT id AS ImageArticleId, Img5, Img6 FROM articoli) extraImages ON extraImages.ImageArticleId=productSource.id")
         sb.AppendLine("WHERE ID=@id AND NListino=@nlistino")
 
         If includeTcidFilter Then
@@ -1437,16 +1436,9 @@ Partial Class articolo
             shortDescHtml = "<li><p class=""body-text-3"">" & Server.HtmlEncode(shortDesc) & "</p></li>"
         End If
 
-        Dim mainImageUrl As String = NormalizeImageUrl(GetRowString(row, "Img1"))
-        Dim placeholderImageUrl As String = ThemeManager.PlaceholderProductImageUrl()
-        If String.IsNullOrWhiteSpace(mainImageUrl) Then
-            mainImageUrl = placeholderImageUrl
-        End If
-
         Dim galleryImageUrls As List(Of String) = BuildProductDetailGalleryImageUrls(row)
-        If galleryImageUrls.Count = 0 AndAlso Not String.IsNullOrWhiteSpace(mainImageUrl) Then
-            galleryImageUrls.Add(mainImageUrl)
-        End If
+        Dim mainImageUrl As String = galleryImageUrls(0)
+        Dim placeholderImageUrl As String = ThemeManager.PlaceholderProductImageUrl()
 
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
         Dim availabilityModel As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
@@ -1534,17 +1526,7 @@ Partial Class articolo
     End Function
 
     Private Function BuildProductDetailGalleryImageUrls(row As DataRow) As List(Of String)
-        Dim images As New List(Of String)()
-        If row Is Nothing Then Return images
-
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-        For i As Integer = 1 To 6
-            Dim imageUrl As String = NormalizeImageUrl(GetRowString(row, "Img" & i.ToString(CultureInfo.InvariantCulture)))
-            If String.IsNullOrWhiteSpace(imageUrl) Then Continue For
-            If seen.Add(imageUrl) Then images.Add(imageUrl)
-        Next
-
-        Return images
+        Return StorefrontProductImageSlots.FromDataItem(row)
     End Function
 
     Private Sub BindProduct(row As DataRow)
@@ -2002,40 +1984,9 @@ Partial Class articolo
 
     Private Sub BindImages(row As DataRow, productName As String)
         Dim imgs As New List(Of ImgItem)()
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-
-        For i As Integer = 1 To 6
-            Dim raw As String = GetRowString(row, "Img" & i.ToString())
-            Dim url As String = NormalizeImageUrl(raw)
-
-            If String.IsNullOrEmpty(url) Then
-                Continue For
-            End If
-
-            If seen.Contains(url) Then
-                Continue For
-            End If
-
-            seen.Add(url)
+        For Each url As String In StorefrontProductImageSlots.FromDataItem(row)
             imgs.Add(New ImgItem() With {.Url = url, .Alt = productName})
         Next
-
-        If imgs.Count = 0 Then
-            imgs.Add(New ImgItem() With {.Url = ThemeManager.PlaceholderProductImageUrl(), .Alt = productName})
-        End If
-
-        Dim fillUrl As String = imgs(0).Url
-        If String.IsNullOrEmpty(fillUrl) Then
-            fillUrl = ThemeManager.PlaceholderProductImageUrl()
-        End If
-
-        While imgs.Count < 6
-            imgs.Add(New ImgItem() With {.Url = fillUrl, .Alt = productName})
-        End While
-
-        If imgs.Count > 6 Then
-            imgs.RemoveRange(6, imgs.Count - 6)
-        End If
 
         rptMainImages.DataSource = imgs
         rptMainImages.DataBind()
@@ -2589,8 +2540,7 @@ Partial Class articolo
             End If
 
             Dim name As String = FirstNonEmpty(GetRowString(row, "Descrizione1"), GetRowString(row, "Nome"), "Prodotto")
-            Dim img As String = NormalizeImageUrl(GetRowString(row, "Img1"))
-            If String.IsNullOrWhiteSpace(img) Then img = ThemeManager.PlaceholderProductImageUrl()
+            Dim img As String = StorefrontProductImageSlots.CoverUrl(row)
 
             Dim item As New Dictionary(Of String, Object)()
             item("id") = _id.ToString()

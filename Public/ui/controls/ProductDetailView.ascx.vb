@@ -189,12 +189,11 @@ Partial Class Public_ui_controls_ProductDetailView
             _galleryImageUrls = New List(Of String)()
             If value Is Nothing Then Return
 
-            Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            Dim rawImages As New List(Of Object)()
             For Each imageUrl As String In value
-                Dim safeUrl As String = If(imageUrl, String.Empty).Trim()
-                If safeUrl.Length = 0 Then Continue For
-                If seen.Add(safeUrl) Then _galleryImageUrls.Add(safeUrl)
+                rawImages.Add(imageUrl)
             Next
+            _galleryImageUrls = StorefrontProductImageSlots.Resolve(rawImages)
         End Set
     End Property
 

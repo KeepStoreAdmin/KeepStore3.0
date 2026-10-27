@@ -337,8 +337,8 @@
                                     <div class="card-product-wrapper">
                                         <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="product-img">
                                             <img class="lazyload img-product" alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione1"))) %>'
-                                                 src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>'
-                                                 data-src='<%# ThemeManager.ProductImageUrl(Eval("img1")) %>' />
+                                                 src='<%# StorefrontProductImageSlots.CoverUrl(Container.DataItem) %>'
+                                                 data-src='<%# StorefrontProductImageSlots.CoverUrl(Container.DataItem) %>' />
                                         </a>
 
                                         <ul class="list-product-btn top-0 end-0">
@@ -526,8 +526,8 @@
                                                 <div class="card-product-wrapper">
                                                     <a href='<%# CatalogProductUrl(Container.DataItem) %>' class="product-img">
                                                         <img class="lazyload img-product" alt='<%# Server.HtmlEncode(UiData.Str(Container.DataItem, "Descrizione1")) %>'
-                                                             src='<%# ThemeManager.ProductImageUrl(UiData.Get(Container.DataItem, "Img1")) %>'
-                                                             data-src='<%# ThemeManager.ProductImageUrl(UiData.Get(Container.DataItem, "Img1")) %>' />
+                                                             src='<%# StorefrontProductImageSlots.CoverUrl(Container.DataItem) %>'
+                                                             data-src='<%# StorefrontProductImageSlots.CoverUrl(Container.DataItem) %>' />
                                                     </a>
                                                     <ul class="list-product-btn top-0 end-0">
                                                         <li>

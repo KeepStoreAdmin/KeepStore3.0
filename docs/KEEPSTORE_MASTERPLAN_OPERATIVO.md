@@ -1,5 +1,40 @@
 # KeepStore Masterplan Operativo
 
+## STOREFRONT-PRODUCT-IMAGE-SLOTS-1A — 2026-10-27
+
+Mandato SOURCE ONLY da stable f9fb9ce4052b079a7a75d840298e07b4fb0aee32, PR #391 verificata MERGED/CLOSED. Stable gia allineata nella canonica, checkout protetto/FF-only senza delta e nuovo branch task/storefront-product-image-slots-1a. Nessun DB, IIS, server, fixture operativa o asset non tracciato toccato; P1 fiscale ancora APERTO e bloccante deploy. Smoke browser/runtime esplicitamente riservato al PO: non eseguito e mai presentato come PASS.
+
+### Regola immagini prodotto Img1–Img6
+
+Unico helper StorefrontProductImageSlots: restituisce esattamente sei URL visualizzati, preserva le posizioni e i duplicati. Uno slot vuoto/non valido eredita l'ultima immagine valida precedente; i vuoti iniziali usano la prima valida successiva come copertina senza spostare gli slot originali. Nessuna foto valida: sei riferimenti al placeholder ThemeManager esistente. Gestiti Nothing/NULL, DBNull, spazi/stringhe vuote, sentinel letterali img1…img6 senza distinzione maiuscole, file locali assenti e path non validi attraverso ThemeManager. Esempi:
+- A → A,A,A,A,A,A.
+- A,B → A,B,B,B,B,B.
+- A,B,C,D → A,B,C,D,D,D.
+- A,vuoto,C → A,A,C,C,C,C.
+- A,B,C,D,E,F → invariato.
+- vuoto,B,C → B,B,C,C,C,C; vuoti iniziali mantenuti come posizioni, copertina B.
+- Nessuna foto valida → placeholder esistente in ciascuna posizione.
+
+I duplicati sono soltanto riferimenti URL nel rendering: nessuna copia fisica, modifica di campo o deduplica/riordino del database. La normalizzazione usa il resolver immagini ThemeManager; cache di sola risoluzione per richiesta riduce i controlli ripetuti sul medesimo valore, senza cache commerciale o contaminazione fra richieste. Compatibilita URL esterni/data del ThemeManager preesistente preservata, nessun probe HTTP. SEO/JSON-LD restano sul metodo di selezione delle fotografie originali/distinte, invariato: non ricevono gli slot artificialmente riempiti.
+
+### Implementazione, verifiche e limiti
+
+PDP BindImages usa un'unica lista di sei ImgItem per main e thumbs; preview e suo setter non deduplicano. Markup articolo.aspx, Swiper, zoom, PhotoSwipe, CSS/JS e lazyload invariati. BuildProductSql aggiunge Img5/6 dalla tabella articoli mediante join su PK in una sola query; WHERE, ORDER BY e LIMIT invariati. Stessa estensione bulk per correlati/recenti, senza query per articolo. Home usa aBase gia presente per5/6, gallery sei posizioni e cover/hover comuni; catalogo e recenti proiettano sei campi, card/quick-view usano cover/secondo slot senza aggiungere miniature alle card a immagine singola. Il dato recente PDP conserva la cover risolta. Prezzi, listini, IVA, stock, filtri, paging, autorita commerciali e viste non modificati.
+
+Gate UI proporzionato: letto in sola lettura il package ONSUS originale product-detail.html (main/thumb Swiper, zoom e PhotoSwipe), confrontato con markup KeepStore immutato. Correzione meccanica del dato immagini, nessun redesign o claim di nuovo benchmark UX contemporaneo; nessun asset/demo del template importato. Metrica strutturale: zero nuove richieste DB per prodotto e zero HTTP per validare immagini; join bulk a chiave articolo dove necessari, nessuna latenza o prestazione operativa misurata nel mandato senza runtime.
+
+Tools/Test-StorefrontProductImageSlots.ps1 compila helper/ThemeManager/UiData reali e metodi BindImages, preview/Home e query estratti dal sorgente; AppDomain System.Web sintetico con file SVG TEMP generati, nessun browser, listener HTTP, IIS o DB. 102/102 PASS: sequenze richieste, duplicati, leading gap, Nothing/DBNull/sentinel/missing/traversal, cover/hover, due cataloghi sintetici e isolamento cache per richiesta, binding Repeater main/thumb e setter preview reali, invarianti query e SEO. Le rettifiche iniziali del solo harness riguardano nome variabile PS riservato, newline finale git show, import VB e costruttore WorkerRequest in AppDomain ospitato; nessuna soglia/aspettativa cambiata per ottenere PASS. Precompile safe Framework64 ASP.NET4.8 PASS su356 file, zero config operative, cleanup proprio PASS. Test unitari/compilazione non certificano MySQL installato, resa browser o produzione.
+
+Finding gestionale riferito dal PO: img5/img6 controllano erroneamente img4.Tag; lastimage puo rimanere vuoto con prima foto gia salvata e non modificata. Il file funzione immagini.txt non e presente negli allegati Codex, working copy o directory Public/assets/images/articoli indicata dal PO: **NON RIVERIFICATO DIRETTAMENTE**, nessun intervento gestionale/Enzo o nuovo task automatico. La specifica storefront e esplicita nel mandato e verificata indipendentemente dal file gestionale.
+
+### Manifest e collaudo personale
+
+Runtime ADDED: App_Code/StorefrontProductImageSlots.vb. MODIFIED: articolo.aspx.vb, Default.aspx.vb, articoli.aspx.vb, articoli.aspx, Public/ui/controls/ProductDetailView.ascx.vb. Test ADDED: Tools/Test-StorefrontProductImageSlots.ps1. Manuali MODIFIED: START_HERE, PRODUCT_ROADMAP, MASTERPLAN_OPERATIVO, SYSTEM_BLUEPRINT. Totale11 file, nessun CSS/JS/config/DDL o asset. Il nuovo helper App_Code e dipendenza obbligatoria di tutti i consumer: evitare consegne parziali, nessun nuovo DLL/runtime package. Un solo commit lineare e PR DRAFT, nessun merge.
+
+PO sul solo ambiente di sviluppo gia autorizzato: articoli con una/quattro/sei foto, vuoto intermedio, prima foto mancante e nessuna foto; confrontare sei slide/miniature, cambio immagine/zoom desktop e smartphone, cover/hover/quick-view e gallery Home/catalogo. Controllare che D sia ripetuta negli slot5/6 per quattro foto e che il cambio thumb segua la stessa slide; nessuna aggiunta di miniature alle card singole. Esito visivo PO ancora PENDENTE, merge vietato prima di A. FILE PRONTI PER SMOKE SERVER DEL PRODUCT OWNER indica qui solo i sei file runtime per eventuale sviluppo autorizzato, **NON** permesso di pubblicazione produttiva: CONSEGNA SERVER SOSPESA.
+
+Backup/snapshot e metadati in C:/Temp/KeepStoreProductImageSlots-20261027-81e63f4b; nessun segreto nel rapporto. Rollback futuro del solo codice: ripristino coerente dei cinque consumer alla base f9fb9ce4, poi rimozione helper aggiunto, senza alterare asset o DB. Operazione soltanto progettata, non eseguita. Preservati53 protetti,52 untracked originali e quattro cancellazioni; staging finale vuoto dopo commit. main intoccato; Coupon/Groupon STANDBY, SOMEC escluso; ORDER-VAT-ID-SEMANTICS-P1-1A aperto, nessun merge/deploy.
+
 Aggiornato: 2026-10-26
 
 Questo documento conserva task, evidenze e storico del repository KeepStoreAdmin/KeepStore3.0. Per ripartire: [START_HERE](KEEPSTORE_START_HERE.md); per requisiti/priorita vigenti: [PRODUCT_ROADMAP](KEEPSTORE_PRODUCT_ROADMAP.md); per regole permanenti: [AGENTS](../AGENTS.md).

@@ -867,7 +867,7 @@ End Sub
         Dim strSelect As String =
             "SELECT vsuperarticoli.id, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo," &
             " " & effectiveBaseGrossSql & " AS PrezzoIvato, vsuperarticoli.IdIvaRC, vsuperarticoli.ValoreIvaRC," &
-            " Img1, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta," &
+            " vsuperarticoli.Img1, vsuperarticoli.Img2, vsuperarticoli.Img3, vsuperarticoli.Img4, extraImages.Img5, extraImages.Img6, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta," &
             " " & promotionTcSelect &
             " SettoriDescrizione, CategorieDescrizione, TipologieDescrizione, GruppiDescrizione, SottogruppiDescrizione," &
             " Marche_img, PrezzoPromo," &
@@ -885,6 +885,7 @@ End Sub
             " tc_lookup.TagliaId AS CatalogTagliaId,tc_lookup.ColoreId AS CatalogColoreId," &
             BuildCatalogRowRankSql() &
             " FROM vsuperarticoli " &
+            " LEFT JOIN (SELECT id AS ImageArticleId, Img5, Img6 FROM articoli) extraImages ON extraImages.ImageArticleId=vsuperarticoli.id " &
             " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id" &
             promotionMainJoin &
             " LEFT OUTER JOIN articoli_tagliecolori tc_lookup ON tc_lookup.id=COALESCE(NULLIF(vsuperarticoli.TCid,0), atc_default.DefaultTCid)" &
@@ -3507,7 +3508,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
 
             Dim sql As String =
                 "SELECT recent.id,recent.Codice,recent.Descrizione1,recent.Descrizione2,recent.DescrizioneLunga," &
-                " recent.Prezzo,recent.PrezzoIvato,recent.Img1,recent.MarcheDescrizione,recent.Disponibilita," &
+                " recent.Prezzo,recent.PrezzoIvato,recent.Img1,recent.Img2,recent.Img3,recent.Img4,recent.Img5,recent.Img6,recent.MarcheDescrizione,recent.Disponibilita," &
                 " recent.Giacenza,recent.InOrdine,recent.Impegnata,recent.InOfferta,recent.SettoriDescrizione," &
                 " recent.CategorieDescrizione,recent.TipologieDescrizione,recent.GruppiDescrizione,recent.SottogruppiDescrizione," &
                 " recent.PrezzoPromo,recent.PrezzoPromoIvato,recent.MarcheId,recent.CategorieId,recent.TipologieId," &
@@ -3515,7 +3516,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
                 "FROM (" &
                 " SELECT v.id,v.Codice,v.Descrizione1,v.Descrizione2,v.DescrizioneLunga,v.Prezzo," &
                 " " & effectiveBaseGrossSql & " AS PrezzoIvato,v.IdIvaRC,v.ValoreIvaRC," &
-                " v.Img1,v.MarcheDescrizione,v.Disponibilita,v.Giacenza,v.InOrdine,v.Impegnata,v.InOfferta," &
+                " v.Img1,v.Img2,v.Img3,v.Img4,extraImages.Img5,extraImages.Img6,v.MarcheDescrizione,v.Disponibilita,v.Giacenza,v.InOrdine,v.Impegnata,v.InOfferta," &
                 " v.SettoriDescrizione,v.CategorieDescrizione,v.TipologieDescrizione,v.GruppiDescrizione,v.SottogruppiDescrizione," &
                 " v.PrezzoPromo," &
                 " " & effectivePromoGrossSql & " AS PrezzoPromoIvato," &
@@ -3525,6 +3526,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
                 "   CASE WHEN COALESCE(v.TCid,0)>0 THEN 0 ELSE 1 END," &
                 "   COALESCE(v.TCid,-1),COALESCE(v.ArticoliListiniId,0)) AS RecentRank" &
                 " FROM vsuperarticoli v" &
+                " LEFT JOIN (SELECT id AS ImageArticleId, Img5, Img6 FROM articoli) extraImages ON extraImages.ImageArticleId=v.id" &
                 " LEFT JOIN (SELECT ArticoliId,MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default" &
                 "   ON atc_default.ArticoliId=v.id" &
                 " WHERE v.NListino=@recentListino AND v.id IN (" & String.Join(",", idParameters.ToArray()) & ")" &
@@ -3959,7 +3961,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     End Function
 
     Private Function BuildProductCardModel(ByVal dataItem As Object) As ProductCardModel
-        Dim imageUrl As String = ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1"))
+        Dim imageUrl As String = StorefrontProductImageSlots.CoverUrl(dataItem)
         If String.IsNullOrWhiteSpace(imageUrl) Then imageUrl = ThemeManager.PlaceholderProductImageUrl()
 
         Dim descriptionText As String = UiData.Str(dataItem, "Descrizione2")
@@ -3999,7 +4001,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         model.ProductCode = UiData.Str(dataItem, "Codice")
         model.ProductUrl = CatalogProductUrl(dataItem)
         model.ImageUrl = imageUrl
-        model.HoverImageUrl = imageUrl
+        model.HoverImageUrl = StorefrontProductImageSlots.HoverUrl(dataItem)
         model.BrandName = UiData.Str(dataItem, "MarcheDescrizione")
         model.CategoryName = CatalogCategoryLabel(dataItem)
         model.PriceText = CatalogPriceText(dataItem)
@@ -4142,7 +4144,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         attrs.Append(" data-ks-category=""").Append(HA(CatalogCategoryLabel(dataItem))).Append("""")
         attrs.Append(" data-ks-code=""").Append(HA(UiData.Str(dataItem, "Codice"))).Append("""")
         attrs.Append(" data-ks-url=""").Append(HA(CatalogProductUrl(dataItem))).Append("""")
-        attrs.Append(" data-ks-img=""").Append(HA(ThemeManager.ProductImageUrl(UiData.Get(dataItem, "Img1")))).Append("""")
+        attrs.Append(" data-ks-img=""").Append(HA(StorefrontProductImageSlots.CoverUrl(dataItem))).Append("""")
         attrs.Append(" data-ks-price=""").Append(HA(priceText)).Append("""")
         attrs.Append(" data-ks-available=""").Append(HA(CatalogAvailabilityText(dataItem))).Append("""")
         attrs.Append(" data-ks-cart-url=""").Append(HA(CatalogCartAddUrl(dataItem))).Append("""")

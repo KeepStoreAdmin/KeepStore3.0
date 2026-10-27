@@ -1316,7 +1316,7 @@ Partial Public Class _Default
         sql.Append("COALESCE(v.MarcheId,0) AS MarcheId, IFNULL(v.MarcheDescrizione,'') AS MarcheDescrizione, ")
         sql.Append("IFNULL(v.SettoriDescrizione,'') AS SettoriDescrizione, IFNULL(v.CategorieDescrizione,'') AS CategorieDescrizione, ")
         sql.Append("IFNULL(v.TipologieDescrizione,'') AS TipologieDescrizione, IFNULL(v.GruppiDescrizione,'') AS GruppiDescrizione, ")
-        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, ")
+        sql.Append("v.Img1, v.Img2, v.Img3, v.Img4, aBase.Img5, aBase.Img6, ")
         sql.Append("COALESCE(aBase.Abilitato,1) AS Abilitato, COALESCE(aBase.Abilitato,1) AS Attivo, ")
         sql.Append("COALESCE(v.Vetrina,0) AS Vetrina, COALESCE(v.DataCreazione,CURDATE()) AS DataCreazione, COALESCE(v.Visite,0) AS Visite, ")
         sql.Append("0 AS Stato, COALESCE(v.Ricondizionato,0) AS Ricondizionato, ")
@@ -2966,7 +2966,7 @@ Partial Public Class _Default
         Dim category As String = CardCaption(row)
         Dim code As String = Convert.ToString(row("Codice")).Trim()
         Dim url As String = ProductUrl(row("id"))
-        Dim img As String = ProductImageFull(row("Img1"))
+        Dim img As String = StorefrontProductImageSlots.CoverUrl(row)
         Dim current As Decimal = CurrentPrice(row)
         Dim priceText As String = If(current > 0D, FormatMoney(current), "Prezzo su richiesta")
         Dim availableText As String = AvailabilityDisplayHelper.BuildText(row, HttpContext.Current)
@@ -2989,32 +2989,7 @@ Partial Public Class _Default
     End Function
 
     Private Function ProductGalleryImages(ByVal row As DataRow) As List(Of String)
-        Dim images As New List(Of String)()
-        If row Is Nothing Then
-            images.Add(ProductImageFull(Nothing))
-            Return images
-        End If
-
-        Dim fields As String() = {"Img1", "Img2", "Img3", "Img4"}
-        For Each fieldName As String In fields
-            If row.Table.Columns.Contains(fieldName) Then
-                Dim rawValue As String = Convert.ToString(row(fieldName)).Trim()
-                If String.IsNullOrWhiteSpace(rawValue) Then
-                    Continue For
-                End If
-
-                Dim imageUrl As String = ProductImageFull(rawValue)
-                If Not String.IsNullOrWhiteSpace(imageUrl) AndAlso Not images.Contains(imageUrl) Then
-                    images.Add(imageUrl)
-                End If
-            End If
-        Next
-
-        If images.Count = 0 Then
-            images.Add(ProductImageFull(Nothing))
-        End If
-
-        Return images
+        Return StorefrontProductImageSlots.FromDataItem(row)
     End Function
 
     Private Function RenderActionButtons(ByVal row As DataRow, ByVal compact As Boolean) As String
@@ -3171,7 +3146,7 @@ Partial Public Class _Default
         sb.Append("<div class='card-product-wrapper overflow-visible'>")
         sb.Append("<div class='product-thumb-image'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='card-image'>")
-        sb.Append("<img class='lazyload img-product' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
+        sb.Append("<img class='lazyload img-product' src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' data-src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
         sb.Append("</a>")
         sb.Append(RenderActionButtons(row, False))
         sb.Append(RenderCornerBadgeStack(row, True, False))
@@ -3183,7 +3158,7 @@ Partial Public Class _Default
         sb.Append(">")
         If galleryImages.Count > 0 Then
             sb.Append("<ul class='list-image-product ks-deal-thumbs'>")
-            For i As Integer = 0 To Math.Min(4, galleryImages.Count - 1)
+            For i As Integer = 0 To galleryImages.Count - 1
                 sb.Append("<li class='image-swap")
                 If i = 0 Then sb.Append(" active")
                 sb.Append("'><img class='lazyload' src='").Append(galleryImages(i)).Append("' data-src='").Append(galleryImages(i)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append(" anteprima ").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append("'></li>")
@@ -3230,8 +3205,8 @@ Partial Public Class _Default
         sb.Append("<div class='card-product style-row row-small-2 ks-row-card'>")
         sb.Append("<div class='card-product-wrapper'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
-        sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(ProductImageThumb(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-hover lazyload' src='").Append(StorefrontProductImageSlots.HoverUrl(row)).Append("' data-src='").Append(StorefrontProductImageSlots.HoverUrl(row)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
         sb.Append(RenderCornerBadgeStack(row, False, False))
         sb.Append("</div>")
@@ -3304,8 +3279,8 @@ Partial Public Class _Default
         sb.Append("<div class='card-product style-img-border wow fadeInLeft ks-grid-card' data-wow-delay='0s'>")
         sb.Append("<div class='card-product-wrapper'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
-        sb.Append("<img class='img-product lazyload' src='").Append(ProductImageFull(row("Img1"))).Append("' data-src='").Append(ProductImageFull(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageThumb(row("Img1"))).Append("' data-src='").Append(ProductImageThumb(row("Img1"))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-product lazyload' src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' data-src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row))).Append("' data-src='").Append(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
         Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
                                        Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))
