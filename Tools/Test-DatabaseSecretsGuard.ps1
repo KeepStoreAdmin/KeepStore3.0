@@ -60,12 +60,21 @@ function Get-GuardPrivateIntroductions([string]$Root, [string]$Reference) {
         $status=$fields[$index]
         $path=$fields[$index+1]
         if($status -cnotmatch '^[AMDT]$' -or [string]::IsNullOrEmpty($path)){throw 'SECRETS_GUARD_METADATA_INVALID'}
-        if($status -ceq 'A' -and (Test-PrivatePublicationPath $path)){$path}
+        if($status -ceq 'A' -and (Test-PrivatePublicationPath $path -AllowApprovedSourceMigration)){$path}
     }
 }
 
-function Test-PrivatePublicationPath([string]$Path) {
+function Test-PrivatePublicationPath([string]$Path, [switch]$AllowApprovedSourceMigration) {
     $normalized = $Path.Replace('\','/')
+    # PO-authorized source-only exception for four named migration files.
+    # This never exempts content scanning or publication artifacts/dumps.
+    $approvedVatMigrations = @(
+        'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_preflight.sql',
+        'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_forward.sql',
+        'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_verify.sql',
+        'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_rollback.sql'
+    )
+    if ($AllowApprovedSourceMigration -and $normalized -cin $approvedVatMigrations) { return $false }
     return $normalized -match '(?i)(?:^|/)(?:web(?:\.[^/]+)?\.config|\.env(?:\.[^/]+)?|[^/]+\.(?:pfx|p12|key|dpapi|bak|backup|sql|log))$' -or
         $normalized -match '(?i)(?:^|/)(?:App_Data|backups|EmailCredentials)(?:/|$)'
 }
@@ -138,7 +147,16 @@ function Invoke-GuardSelfTest {
         if(-not (Test-PrivatePublicationPath $path)){throw 'SECRETS_GUARD_PATH_SELFTEST_FAILED'}
     }
     if(Test-PrivatePublicationPath 'web.config.example'){throw 'SECRETS_GUARD_EXAMPLE_REJECTED'}
-    Write-Output ('SECRETS_GUARD_SELFTEST_PASS checks='+($cases.Count+$privateCases.Count+1))
+    $migrationChecks=0
+    foreach($suffix in @('preflight','forward','verify','rollback')){
+        $path='Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_'+$suffix+'.sql'
+        if(Test-PrivatePublicationPath $path -AllowApprovedSourceMigration){throw 'SECRETS_GUARD_APPROVED_SOURCE_REJECTED'}
+        if(-not (Test-PrivatePublicationPath $path)){throw 'SECRETS_GUARD_SQL_ARTIFACT_ACCEPTED'}
+        if(@(Find-SecretViolations ($connectionName+'='+$marker+';') $path $false).Count -eq 0){throw 'SECRETS_GUARD_APPROVED_SOURCE_SECRET_ACCEPTED'}
+        $migrationChecks+=3
+    }
+    if(-not (Test-PrivatePublicationPath 'Database Taikun/Migrations/other.sql' -AllowApprovedSourceMigration)){throw 'SECRETS_GUARD_OTHER_SQL_ACCEPTED'}
+    Write-Output ('SECRETS_GUARD_SELFTEST_PASS checks='+($cases.Count+$privateCases.Count+2+$migrationChecks))
 }
 
 function Invoke-GuardGitCandidateSelfTest {
@@ -261,6 +279,17 @@ function Invoke-GuardGitCandidateSelfTest {
         $null=Invoke-GuardGit $fixture.Directory @('add','--','seed.txt')
         Test-GuardEntrypoint $fixture 'ordinary-modification' $false ''
 
+        foreach($mode in @('allowed','secret','other-sql')){
+            $fixture=New-GuardFixture ('vat-migration-'+$mode)
+            $directory=Join-Path $fixture.Directory 'Database Taikun/Migrations'
+            New-Item -ItemType Directory -Path $directory|Out-Null
+            $relative=if($mode -eq 'other-sql'){'Database Taikun/Migrations/other.sql'}else{'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_forward.sql'}
+            $text=if($mode -eq 'secret'){('pass'+'word')+'=''KS-DBCFG-FIXTURE-intentionally-rejected'';'}else{'SELECT 1;'}
+            [IO.File]::WriteAllText((Join-Path $fixture.Directory $relative),$text)
+            $null=Invoke-GuardGit $fixture.Directory @('add','--',$relative)
+            Test-GuardEntrypoint $fixture ('vat-migration-'+$mode) ($mode -ne 'allowed') $(if($mode -eq 'secret'){'CONNECTION_PASSWORD'}elseif($mode -eq 'other-sql'){'PRIVATE_PUBLICATION_PATH'}else{''})
+        }
+
         # Reuse actual ArtifactRoot entrypoint cases, not just the path predicate.
         $fixture=New-GuardFixture 'artifact-controls'
         $artifact=Join-Path $work 'artifact'
@@ -347,7 +376,7 @@ function Invoke-DatabaseSecretsGuard {
     }
     $violations=@()
     foreach($relative in $texts.Keys){
-        if(Test-PrivatePublicationPath $relative){$violations+=@([pscustomobject]@{Path=$relative;Code='PRIVATE_PUBLICATION_PATH'})}
+        if(Test-PrivatePublicationPath $relative -AllowApprovedSourceMigration){$violations+=@([pscustomobject]@{Path=$relative;Code='PRIVATE_PUBLICATION_PATH'})}
         $allowFixture=($relative -match '(?i)\.(?:ps1|vb)$')
         $violations+=@(Find-SecretViolations ([string]$texts[$relative]) $relative $allowFixture)
     }

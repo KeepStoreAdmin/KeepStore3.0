@@ -1,5 +1,14 @@
 # KeepStore System Blueprint
 
+## Identificativi IVA degli ordini Web — candidato 2026-10-27
+
+ORDER-VAT-ID-SEMANTICS-P1-1A, base93f41c88: documentirighe.iva riferisce iva.id, mai una percentuale. Il candidato Carrello_Documento persiste pIdIvaRC -> pidEsenzioneIva -> parIva secondo condizioni/prevalenza RC/esenzione/ordinario esistenti. pValoreIvaRC/pValoreEsenzioneIva/parValoreIva restano aliquote nelle formule preesistenti. Firma19, transazione del chiamante, tenant, numerazione annua/tipo, inventario, DEFINER/SQL SECURITY e metadati invariati; nessun nuovo resolver/calcolo fiscale.
+
+Migrazione nuova con backup e readback completi, fingerprint/firma/metadati e quiescenza prima del DROP/CREATE non transazionale; rollback dal precedente CREATE con inventario. Solo LAB attestato: shared memory temporanea sotto require_secure_transport ON, uso DPAPI interno, configurazione ripristinata, nessun account/grant/password nuovo. SQL pubblici con placeholder DEFINER, senza dati d'installazione o segreti; produzione richiede attestazione/autorizzazione distinta.
+
+A tecnico LAB per ordinario22%/ID1, RC0%/ID701, esenzione0%/ID702 e priorita RC: procedure/viste reali, due ordini browser offline Taikun/list1 e Webaffare/list10, receipt/dettaglio/replay/WEB/impegno/proprieta e cattura a soli metadati. Non certifica regimi ulteriori o fiscalita produttiva; candidato SOURCE ONLY per review. Eccezione PO al guard solo sui quattro nomi di sorgenti SQL della migrazione; contenuti sempre scansionati e artifact SQL bloccati. [Evidenze e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#order-vat-id-semantics-p1-1a--fix-and-test-2026-10-27). CONSEGNA SERVER SOSPESA.
+
+
 Documento tecnico permanente del progetto KeepStore 3.0.
 
 ## Regola immagini prodotto Img1–Img6

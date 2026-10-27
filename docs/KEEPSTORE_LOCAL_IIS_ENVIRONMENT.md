@@ -1,5 +1,16 @@
 # KeepStore 3.0 — Mappa ambienti IIS e test locale
 
+## Checkpoint fiscale LAB — 2026-10-27
+
+ORDER-VAT-ID-SEMANTICS-P1-1A: A tecnico sul solo sito40390/MySQL127.0.0.1:13317, base93f41c88. Stesso UUID/schema/datadir attestati, backup CREATE completo e permessi verificati, sito/pool fermi e zero checkout prima del solo forward. Root via shared memory temporanea con require_secure_transport ON, TCP applicativo CA verificata; configurazione SHA/ACL/date/attributi e stato Started ripristinati. Nessun grant/password/account/firewall nuovo o intervento su Smoke/DB operativo.
+
+Quattro casi CALL/ROLLBACK reali (cinque esecuzioni incluso il solo rerun esenzione): ordinario22%/ID1, RC0%/ID701, esenzione0%/ID702, priorita RC. Due soli ordini browser offline conservati: Taikun166627/n.3 totale17,75, Webaffare166628/n.4 totale21,25; receipt/dettaglio/vista coerenti, WEB, isolamento proprieta reciproco e replay senza duplicati A. Finale giacenza100/impegno6/carrello0/COMPLETED4, retry storico1; documenti166620/166621 e righe/piedi immutati. Due nuove catture CAPTURED_TEST_ONLY (totale7), nessun corpo/SMTP/gateway LIVE.
+
+Ripristinati flag anagrafici/prodotto e costi/massimali offline, eliminate fasce414/415; IVA701/702 conservate per i documenti. Ripristinate quattro copie sorgente LAB necessarie al checkout stable (dipendenza immagini inizialmente assente rimossa), sonda e solo profilo browser del task. Contenuto/date/attributi e owner/group/protezione/ACE uguali; unico flag informativo DACL_AUTO_INHERITED canonicalizzato sul helper carrello, senza modifiche ai permessi.53 protetti canonici intatti. Rollback DBA predisposto e privilegi verificati, non eseguito poiche forward/readback A.
+
+157 controlli consolidati (46 sorgente/109 evidenze salvate), guard41+45 PASS; nessuna ripetizione dei gate generali login/registrazione/SQL8. Precompile locale non necessaria senza modifiche WebForms/App_Code canoniche; CI/review distinti. [Manifest11, autorizzazione guard e rollback](KEEPSTORE_MASTERPLAN_OPERATIVO.md#order-vat-id-semantics-p1-1a--fix-and-test-2026-10-27). Evidenze C:/Temp/KeepStoreOrderVatFix-20261027-e7a91c2d. CONSEGNA SERVER SOSPESA.
+
+
 ## FINAL-DOCS e confine fiscale — 2026-10-26
 
 Consolidato il rapporto laboratorio IVA ordinaria A: documento166621/riga549885/ordine2-2026, totale32,51, OrigineOrdine WEB e magazzino100/4/96, idempotenza e isolamento tenant verificati; documento166620/audit storici immutati e fiscalmente non certificati. Prove runtime acquisite riusate integralmente, nessun nuovo browser, SQL, IIS, ordine o modifica configurazione in questo batch. Cattura email certificata, corpo non conservato dal sink. Il task separato **ORDER-VAT-ID-SEMANTICS-P1-1A**, alias findingF06, e P1 **NON AVVIATO** e blocca la successiva pubblicazione produttiva: **RC/esenzione non collaudati end-to-end**; procedura installata, contratti e migrazione reversibile richiedono mandato fiscale distinto. Non invalida SQL8 della #391 e non autorizza modifiche al lab/procedura o ai documenti storici. Cinque manuali sulla stessa PR DRAFT, nessun merge; [decisione PO](KEEPSTORE_MASTERPLAN_OPERATIVO.md#regorder-sql8-compat-1a--final-docs-2026-10-26). **CONSEGNA SERVER SOSPESA**.
