@@ -195,19 +195,36 @@ Partial Class cart_add
             batchResult = CartMutationService.AddStandardProductsBatchForCurrentOwner(
                 HttpContext.Current, bundleItems)
         Catch ex As Exception
-            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+            CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(HttpContext.Current, True)
             Try
                 KeepStoreLog.Error("cart_add.aspx", "Errore aggiunta bundle PDP.", ex, HttpContext.Current)
             Catch logError As Exception
                 System.Diagnostics.Trace.TraceError("cart_add bundle logging failed. Error type: " & logError.GetType().Name & ".")
             End Try
-            RedirectMutationFailure(cartReturnUrl)
+            RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
             Return
         End Try
 
-        If batchResult Is Nothing OrElse Not batchResult.Succeeded OrElse batchResult.Items.Count = 0 Then
-            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
-            RedirectMutationFailure(cartReturnUrl, "I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
+        If batchResult Is Nothing OrElse Not batchResult.Succeeded OrElse
+           batchResult.FailureKind <> CartMutationFailureKind.None OrElse
+           batchResult.Items Is Nothing OrElse batchResult.Items.Count = 0 OrElse
+           batchResult.Items.Exists(Function(item) item Is Nothing OrElse Not item.Succeeded OrElse
+                                                  item.FailureKind <> CartMutationFailureKind.None) Then
+            ' Commercial failures are returned only after a confirmed rollback.
+            If batchResult IsNot Nothing AndAlso Not batchResult.Succeeded AndAlso
+               batchResult.Items IsNot Nothing AndAlso batchResult.Items.Count = 0 AndAlso
+               (batchResult.FailureKind = CartMutationFailureKind.Commercial OrElse
+                batchResult.FailureKind = CartMutationFailureKind.StockInsufficient) Then
+                CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+                If batchResult.FailureKind = CartMutationFailureKind.StockInsufficient Then
+                    RedirectMutationFailure(cartReturnUrl, "Disponibilità insufficiente per la quantità richiesta. I prodotti selezionati non sono stati aggiunti.")
+                Else
+                    RedirectMutationFailure(cartReturnUrl, "I prodotti selezionati non sono stati aggiunti. Verifica disponibilità e prezzo.")
+                End If
+            Else
+                CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(HttpContext.Current, True)
+                RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
+            End If
             Return
         End If
 
