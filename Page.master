@@ -159,59 +159,6 @@
             </button>
         </asp:Panel>
 
-        <div class="modal fade modalCentered modal-def modal-quick-view" id="quickView" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content flex-md-row">
-                    <span class="icon-close icon-close-popup link" data-bs-dismiss="modal"></span>
-                    <div class="quickview-image">
-                        <div class="product-thumb-slider">
-                            <a href="articoli.aspx" class="d-block tf-image-view" id="ksQuickViewImageLink">
-                                <img id="ksQuickViewMainImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'%3E%3Crect width='640' height='480' fill='%23f4f6f8'/%3E%3Cpath d='M160 150h320v210H160z' fill='%23ffffff' stroke='%23dce3eb' stroke-width='8'/%3E%3Cpath d='M205 305l70-72 50 48 44-34 66 58z' fill='%23dbeafe'/%3E%3Ccircle cx='420' cy='205' r='34' fill='%23bfdbfe'/%3E%3C/svg%3E" alt="Anteprima prodotto" class="lazyload" />
-                            </a>
-                        </div>
-                    </div>
-                    <div class="quickview-info-wrap">
-                        <div class="quickview-info-inner">
-                            <div class="tf-product-info-content">
-                                <div class="infor-heading">
-                                    <p class="caption" id="ksQuickViewMeta">Prodotto</p>
-                                    <h5 class="product-info-name fw-semibold">
-                                        <a href="articoli.aspx" class="link" id="ksQuickViewTitle">Anteprima prodotto</a>
-                                    </h5>
-                                    <ul class="product-info-rate-wrap">
-                                        <li><p class="caption text-main-2" id="ksQuickViewSold">Venduti: 0</p></li>
-                                        <li><p class="caption text-main-2" id="ksQuickViewAvailable">Disponibili: 0</p></li>
-                                    </ul>
-                                </div>
-                                <div class="infor-center">
-                                    <div class="product-info-price">
-                                        <h4 class="text-primary" id="ksQuickViewPrice">0,00</h4>
-                                    </div>
-                                    <div class="product-progress-sale mt-3">
-                                        <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-                                            <div class="progress-bar bg-danger" id="ksQuickViewProgress" style="width:0%"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="infor-bottom">
-                                    <h6 class="fw-semibold">Descrizione</h6>
-                                    <p class="body-text-3" id="ksQuickViewDescription">Apri l'anteprima rapida per vedere i dettagli essenziali del prodotto.</p>
-                                </div>
-                            </div>
-                            <div class="box-quantity-wrap">
-                                <button type="submit" form="ksNativeCartForm" name="ksCartAction" value="" class="tf-btn btn-gray js-ks-cart-link" id="ksQuickViewCartLink" data-ks-cart-url="cart_add.aspx">
-                                    <span class="text-white">Aggiungi al carrello</span>
-                                </button>
-                                <a href="articoli.aspx" class="tf-btn btn-line" id="ksQuickViewOpenLink">
-                                    <span>Vedi prodotto</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="offcanvas offcanvas-bottom offcanvas-compare" id="compare" tabindex="-1" aria-labelledby="compareLabel">
             <div class="offcanvas-content">
                 <div class="header">
@@ -468,6 +415,59 @@
         </script>
 
 </form>
+        <div class="modal fade modalCentered modal-def modal-quick-view" id="quickView" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content flex-md-row">
+                    <span class="icon-close icon-close-popup link" data-bs-dismiss="modal"></span>
+                    <div class="quickview-image">
+                        <div class="product-thumb-slider">
+                            <a href="articoli.aspx" class="d-block tf-image-view" id="ksQuickViewImageLink">
+                                <img id="ksQuickViewMainImage" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'%3E%3Crect width='640' height='480' fill='%23f4f6f8'/%3E%3Cpath d='M160 150h320v210H160z' fill='%23ffffff' stroke='%23dce3eb' stroke-width='8'/%3E%3Cpath d='M205 305l70-72 50 48 44-34 66 58z' fill='%23dbeafe'/%3E%3Ccircle cx='420' cy='205' r='34' fill='%23bfdbfe'/%3E%3C/svg%3E" alt="Anteprima prodotto" class="lazyload" />
+                            </a>
+                        </div>
+                    </div>
+                    <div class="quickview-info-wrap">
+                        <div class="quickview-info-inner">
+                            <div class="tf-product-info-content">
+                                <div class="infor-heading">
+                                    <p class="caption" id="ksQuickViewMeta">Prodotto</p>
+                                    <h5 class="product-info-name fw-semibold">
+                                        <a href="articoli.aspx" class="link" id="ksQuickViewTitle">Anteprima prodotto</a>
+                                    </h5>
+                                    <ul class="product-info-rate-wrap">
+                                        <li><p class="caption text-main-2" id="ksQuickViewSold">Venduti: 0</p></li>
+                                        <li><p class="caption text-main-2" id="ksQuickViewAvailable">Disponibili: 0</p></li>
+                                    </ul>
+                                </div>
+                                <div class="infor-center">
+                                    <div class="product-info-price">
+                                        <h4 class="text-primary" id="ksQuickViewPrice">0,00</h4>
+                                    </div>
+                                    <div class="product-progress-sale mt-3">
+                                        <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar bg-danger" id="ksQuickViewProgress" style="width:0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="infor-bottom">
+                                    <h6 class="fw-semibold">Descrizione</h6>
+                                    <p class="body-text-3" id="ksQuickViewDescription">Apri l'anteprima rapida per vedere i dettagli essenziali del prodotto.</p>
+                                </div>
+                            </div>
+                            <div class="box-quantity-wrap">
+                                <button type="submit" form="ksNativeCartForm" name="ksCartAction" value="" class="tf-btn btn-gray js-ks-cart-link" id="ksQuickViewCartLink" data-ks-cart-url="cart_add.aspx">
+                                    <span class="text-white">Aggiungi al carrello</span>
+                                </button>
+                                <a href="articoli.aspx" class="tf-btn btn-line" id="ksQuickViewOpenLink">
+                                    <span>Vedi prodotto</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 <form id="ksNativeCartForm" method="post" action="<%= ResolveUrl("~/cart_add.aspx") %>">
     <asp:Literal ID="litNativeCartSecurityFields" runat="server" />
 </form>

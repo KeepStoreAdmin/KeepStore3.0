@@ -787,16 +787,53 @@
       setHref('ksQuickViewImageLink', item.url);
       setHref('ksQuickViewOpenLink', item.url);
       setCartButton('ksQuickViewCartLink', item, quickViewQtyToAdd);
-      showQuickViewModal();
+      showQuickViewModal(link);
     }, true);
   }
 
-  function showQuickViewModal() {
+  function showQuickViewModal(trigger) {
     var modal = document.getElementById('quickView');
     if (!modal) return;
 
+    if (!modal.ksQuickViewFocus) {
+      var state = modal.ksQuickViewFocus = { trigger: null, leaving: false };
+      modal.addEventListener('shown.bs.modal', function () {
+        if (!state.leaving && !modal.contains(document.activeElement)) modal.focus();
+      });
+      modal.addEventListener('hidden.bs.modal', function () {
+        var opener = state.trigger;
+        state.trigger = null;
+        if (state.leaving || document.visibilityState !== 'visible' ||
+            document.querySelector('.modal.show, .offcanvas.show')) return;
+        var active = document.activeElement;
+        if (active !== document.body && active !== document.documentElement && !modal.contains(active)) return;
+        if (!opener || !opener.isConnected || opener.disabled || opener.getAttribute('aria-disabled') === 'true') {
+          if (modal.contains(active)) active.blur();
+          return;
+        }
+        var style = window.getComputedStyle(opener);
+        if (!opener.getClientRects().length || style.visibility !== 'visible' || style.opacity === '0') {
+          if (modal.contains(active)) active.blur();
+          return;
+        }
+        opener.focus({ preventScroll: true });
+      });
+      modal.addEventListener('click', function (event) {
+        var link = event.target.closest ? event.target.closest('a[href]') : null;
+        if (!link || !modal.contains(link) || !link.getAttribute('href') || link.getAttribute('href').charAt(0) === '#') return;
+        Promise.resolve().then(function () { if (!event.defaultPrevented) state.leaving = true; });
+      });
+      var cartForm = document.getElementById('ksNativeCartForm');
+      if (cartForm) cartForm.addEventListener('submit', function (event) {
+        if (!event.submitter || !modal.contains(event.submitter)) return;
+        Promise.resolve().then(function () { if (!event.defaultPrevented) state.leaving = true; });
+      });
+    }
+    modal.ksQuickViewFocus.trigger = trigger;
+    modal.ksQuickViewFocus.leaving = false;
+
     if (window.bootstrap && bootstrap.Modal) {
-      bootstrap.Modal.getOrCreateInstance(modal).show();
+      bootstrap.Modal.getOrCreateInstance(modal).show(trigger);
       return;
     }
 
