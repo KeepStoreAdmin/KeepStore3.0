@@ -153,17 +153,36 @@ Partial Class cart_add
         End If
 
         Dim result As CartStandardMutationResult
-        If setAbsoluteQuantity Then
-            result = CartMutationService.SetStandardProductQuantityForCurrentOwner(
-                HttpContext.Current, articleId, tcId, quantity)
-        Else
-            result = CartMutationService.AddStandardProductForCurrentOwner(
-                HttpContext.Current, articleId, tcId, quantity)
-        End If
+        Try
+            If setAbsoluteQuantity Then
+                result = CartMutationService.SetStandardProductQuantityForCurrentOwner(
+                    HttpContext.Current, articleId, tcId, quantity)
+            Else
+                result = CartMutationService.AddStandardProductForCurrentOwner(
+                    HttpContext.Current, articleId, tcId, quantity)
+            End If
+        Catch ex As Exception
+            CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(HttpContext.Current, True)
+            Try
+                KeepStoreLog.Error("cart_add.aspx", "Errore aggiornamento singolo carrello.", ex, HttpContext.Current)
+            Catch
+                System.Diagnostics.Trace.TraceError("Native single cart mutation logging failed.")
+            End Try
+            RedirectMutationFailure(ResolveUrl("~/carrello.aspx"), IndeterminateMessage)
+            Return
+        End Try
 
-        If result Is Nothing OrElse Not result.Succeeded Then
-            CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
-            RedirectPdpFailure(articleId, tcId)
+        If result Is Nothing OrElse Not result.Succeeded OrElse
+           result.FailureKind <> CartMutationFailureKind.None OrElse result.ArticleId <> articleId Then
+            If result IsNot Nothing AndAlso Not result.Succeeded AndAlso
+               (result.FailureKind = CartMutationFailureKind.Commercial OrElse
+                result.FailureKind = CartMutationFailureKind.StockInsufficient) Then
+                CartMutationIdempotencyService.AbandonIntent(HttpContext.Current, requestId)
+                RedirectPdpFailure(articleId, tcId)
+            Else
+                CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(HttpContext.Current, True)
+                RedirectMutationFailure(ResolveUrl("~/carrello.aspx"), IndeterminateMessage)
+            End If
             Return
         End If
 
@@ -201,7 +220,7 @@ Partial Class cart_add
             Catch logError As Exception
                 System.Diagnostics.Trace.TraceError("cart_add bundle logging failed. Error type: " & logError.GetType().Name & ".")
             End Try
-            RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
+            RedirectMutationFailure(ResolveUrl("~/carrello.aspx"), IndeterminateMessage)
             Return
         End Try
 
@@ -223,7 +242,7 @@ Partial Class cart_add
                 End If
             Else
                 CartMutationIdempotencyService.MarkCurrentIntentIndeterminate(HttpContext.Current, True)
-                RedirectMutationFailure(cartReturnUrl, IndeterminateMessage)
+                RedirectMutationFailure(ResolveUrl("~/carrello.aspx"), IndeterminateMessage)
             End If
             Return
         End If
@@ -360,7 +379,9 @@ Partial Class cart_add
                                       ByVal articleId As Integer,
                                       ByVal tcId As Integer,
                                       Optional ByVal message As String = "")
-        If articleId > 0 Then
+        If Not String.IsNullOrWhiteSpace(message) Then
+            RedirectMutationFailure(ResolveUrl("~/carrello.aspx"), message)
+        ElseIf articleId > 0 Then
             RedirectPdpFailure(articleId, tcId)
         Else
             RedirectMutationFailure(returnUrl, message)
@@ -381,6 +402,9 @@ Partial Class cart_add
         If IsRemovalOperation(operationType) Then
             RedirectRemovalOutcome(returnUrl, recoveryCode)
         Else
+            If recoveryCode = "mutation_processing" AndAlso String.IsNullOrWhiteSpace(legacyMessage) Then
+                legacyMessage = "Aggiornamento carrello in corso. Riprova tra poco."
+            End If
             RedirectIntentFailure(returnUrl, articleId, tcId, legacyMessage)
         End If
     End Sub
