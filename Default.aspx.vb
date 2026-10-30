@@ -303,6 +303,13 @@ Partial Public Class _Default
         End If
         HomeCategoriesCatalogLink.Visible = Not HomeIntroSection.Visible
 
+        Dim directCategories As List(Of HomeDirectCategory) = SelectHomeDirectCategories(realSectors, navigationAssortment)
+        rptHomeDirectCategories.DataSource = directCategories
+        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeDirectCategories")
+            rptHomeDirectCategories.DataBind()
+        End Using
+        HomeDirectCategoriesSection.Visible = (directCategories.Count > 0)
+
         ' The secondary editorial areas continue the main grid; hero and guide keep their own navigation.
         Dim collectionRows As List(Of CatalogMenuSector) = editorialNavigation.CollectionSectors
         Dim bottomRows As List(Of CatalogMenuSector) = editorialNavigation.BottomSectors
@@ -432,6 +439,69 @@ Partial Public Class _Default
         End Try
     End Sub
 
+    Private NotInheritable Class HomeDirectCategory
+        Public Property Id As Integer
+        Public Property SectorId As Integer
+        Public Property Name As String
+        Public Property SectorName As String
+        Public Property DefaultUrl As String
+    End Class
+
+    Private Shared Function SelectHomeDirectCategories(ByVal source As List(Of CatalogMenuSector),
+                                                       ByVal assortment As DataTable,
+                                                       Optional ByVal limit As Integer = 8) As List(Of HomeDirectCategory)
+        Dim result As New List(Of HomeDirectCategory)()
+        If source Is Nothing OrElse assortment Is Nothing OrElse limit <= 0 Then Return result
+        limit = Math.Min(limit, 8)
+        Dim present As New HashSet(Of String)(StringComparer.Ordinal)
+        For Each row As DataRow In assortment.Rows
+            Dim sectorId As Integer
+            Dim categoryId As Integer
+            If Integer.TryParse(Convert.ToString(row("SectorId")), sectorId) AndAlso sectorId > 0 AndAlso
+               Integer.TryParse(Convert.ToString(row("CategoryId")), categoryId) AndAlso categoryId > 0 Then
+                present.Add(sectorId.ToString(CultureInfo.InvariantCulture) & ":" & categoryId.ToString(CultureInfo.InvariantCulture))
+            End If
+        Next
+
+        Dim sectors As New List(Of CatalogMenuSector)()
+        Dim positions As New Dictionary(Of Integer, Integer)()
+        For Each sector As CatalogMenuSector In source
+            If sector Is Nothing OrElse sector.Id <= 0 OrElse String.IsNullOrWhiteSpace(sector.Descrizione) OrElse
+               sector.Categories Is Nothing OrElse sector.Categories.Count = 0 OrElse positions.ContainsKey(sector.Id) Then Continue For
+            If Not String.Equals(sector.DefaultUrl, "articoli.aspx?st=" & sector.Id.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase) Then Continue For
+            sectors.Add(sector)
+            positions.Add(sector.Id, 0)
+        Next
+
+        Dim seen As New HashSet(Of Integer)()
+        Dim added As Boolean = True
+        While result.Count < limit AndAlso added
+            added = False
+            For Each sector As CatalogMenuSector In sectors
+                While positions(sector.Id) < sector.Categories.Count
+                    Dim category As CatalogMenuCategory = sector.Categories(positions(sector.Id))
+                    positions(sector.Id) += 1
+                    If category Is Nothing OrElse category.Id <= 0 OrElse category.SettoriId <> sector.Id OrElse
+                       String.IsNullOrWhiteSpace(category.Descrizione) OrElse seen.Contains(category.Id) Then Continue While
+                    Dim key As String = sector.Id.ToString(CultureInfo.InvariantCulture) & ":" & category.Id.ToString(CultureInfo.InvariantCulture)
+                    If Not present.Contains(key) Then Continue While
+                    ' Pure overload: validate against the already-loaded authoritative tree, without SQL/cache lookups.
+                    Dim taxonomy As CatalogTaxonomyContext = CatalogTaxonomyResolver.Resolve(source, sector.Id, category.Id, String.Empty)
+                    If Not taxonomy.IsCoherent OrElse taxonomy.SectorId <> sector.Id OrElse taxonomy.CategoryId <> category.Id OrElse
+                       String.IsNullOrWhiteSpace(taxonomy.CategoryName) OrElse String.IsNullOrWhiteSpace(taxonomy.SectorName) OrElse
+                       Not String.Equals(taxonomy.CategoryUrl, "~/" & category.DefaultUrl, StringComparison.OrdinalIgnoreCase) Then Continue While
+                    result.Add(New HomeDirectCategory With {.Id = category.Id, .SectorId = sector.Id,
+                               .Name = taxonomy.CategoryName, .SectorName = taxonomy.SectorName, .DefaultUrl = taxonomy.CategoryUrl})
+                    seen.Add(category.Id)
+                    added = True
+                    Exit While
+                End While
+                If result.Count >= limit Then Return result
+            Next
+        End While
+        Return result
+    End Function
+
     Private NotInheritable Class HomeEditorialNavigation
         Public ReadOnly MainSectors As New List(Of CatalogMenuSector)()
         Public ReadOnly CollectionSectors As New List(Of CatalogMenuSector)()
@@ -439,6 +509,8 @@ Partial Public Class _Default
         Public ReadOnly HeroSectors As New List(Of CatalogMenuSector)()
         Public ReadOnly SearchSectors As New List(Of CatalogMenuSector)()
     End Class
+
+
 
     Private Shared Function BuildHomeEditorialNavigation(ByVal source As List(Of CatalogMenuSector)) As HomeEditorialNavigation
         ' One ordered, validated set from the existing enabled-sector provider, owned by this request.
@@ -469,6 +541,8 @@ Partial Public Class _Default
         Next
         Return result
     End Function
+
+
 
     Protected Function HomeSectorMicrocopy(ByVal value As Object) As String
         Dim categories As List(Of CatalogMenuCategory) = TryCast(value, List(Of CatalogMenuCategory))
@@ -2045,7 +2119,7 @@ Partial Public Class _Default
 
     Private Shared Function BuildHomeNavigationAssortmentSql() As String
         ' Ordinary catalog membership only; enabled menu sectors and usable brand logos are filtered later.
-        Return "SELECT DISTINCT COALESCE(v.SettoriId,0) AS SectorId, m.id, m.Descrizione, m.img, m.link," &
+        Return "SELECT DISTINCT COALESCE(v.SettoriId,0) AS SectorId, COALESCE(v.CategorieId,0) AS CategoryId, m.id, m.Descrizione, m.img, m.link," &
                " COALESCE(m.Ordinamento,0) AS BrandOrder FROM vsuperarticoli v" &
                " LEFT JOIN marche m ON m.id=v.MarcheId AND COALESCE(m.Abilitato,1)=1" &
                " WHERE v.NListino=@listino ORDER BY BrandOrder, m.Descrizione, m.id"

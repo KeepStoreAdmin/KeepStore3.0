@@ -23,6 +23,41 @@
             transform: none;
         }
     </style>
+    <style id="ksHomeDirectCategoryStyles">
+        body.ks-page-home .ks-home-main .ks-home-direct-category-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-list > li { min-width: 0; }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-link {
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 4px;
+            width: 100%;
+            min-width: 44px;
+            min-height: 72px;
+            padding: 12px;
+            text-align: left;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            transition-property: color, background-color, border-color;
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-link:focus-visible {
+            outline: 4px solid var(--main, #333e48);
+            outline-offset: 3px;
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-link > span { max-width: 100%; }
+        @media (min-width: 1200px) {
+            body.ks-page-home .ks-home-main .ks-home-direct-category-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -166,6 +201,26 @@
                     </ItemTemplate>
                 </asp:Repeater>
             </div>
+        </div>
+    </section>
+
+    <section id="HomeDirectCategoriesSection" runat="server" visible="false" class="ks-home-section ks-home-direct-categories" aria-labelledby="ksHomeDirectCategoriesTitle">
+        <div class="container">
+            <div class="flat-title">
+                <h5 id="ksHomeDirectCategoriesTitle" class="fw-semibold">Esplora le categorie</h5>
+            </div>
+            <ul class="ks-home-direct-category-list">
+                <asp:Repeater ID="rptHomeDirectCategories" runat="server">
+                    <ItemTemplate>
+                        <li>
+                            <a href='<%# SafeText(ResolveUrl(Convert.ToString(Eval("DefaultUrl")))) %>' class="tf-btn btn-line ks-home-direct-category-link">
+                                <span class="body-text-3 fw-semibold"><%# SafeText(Eval("Name")) %></span>
+                                <span class="caption text-main-2"><%# SafeText(Eval("SectorName")) %></span>
+                            </a>
+                        </li>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </ul>
         </div>
     </section>
 
