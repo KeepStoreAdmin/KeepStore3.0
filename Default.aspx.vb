@@ -278,6 +278,11 @@ Partial Public Class _Default
 
         Dim realSectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If realSectors Is Nothing Then realSectors = New List(Of CatalogMenuSector)()
+        Dim navigationAssortment As DataTable
+        Using HomeServerStageTiming.Measure(_homeTiming, "home.navigation.assortment")
+            navigationAssortment = LoadHomeNavigationAssortment()
+        End Using
+        realSectors = FilterHomeAssortmentSectors(realSectors, navigationAssortment)
         Dim editorialNavigation As HomeEditorialNavigation = BuildHomeEditorialNavigation(realSectors)
         Dim sectorRows As List(Of CatalogMenuSector) = editorialNavigation.MainSectors
         Dim heroSectorRows As List(Of CatalogMenuSector) = editorialNavigation.HeroSectors
@@ -411,7 +416,7 @@ Partial Public Class _Default
 
         Dim brandRows As DataTable
         Using HomeServerStageTiming.Measure(_homeTiming, "home.brands.resolve")
-            brandRows = FilterBrandRows(GetBrands(24), 12)
+            brandRows = FilterBrandRows(SelectHomeAssortmentBrands(navigationAssortment), 12)
         End Using
         rptBrands.DataSource = brandRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptBrands")
@@ -2038,9 +2043,63 @@ Partial Public Class _Default
         End Using
     End Sub
 
-    Private Function GetBrands(ByVal limit As Integer) As DataTable
-        Dim sql As String = "SELECT id, Descrizione, img, link FROM marche WHERE COALESCE(Abilitato,1)=1 ORDER BY COALESCE(Ordinamento,0), Descrizione LIMIT " & Math.Max(1, limit).ToString(CultureInfo.InvariantCulture)
-        Return SafeTableQuery(sql, New DataTable(), "GetBrands")
+    Private Shared Function BuildHomeNavigationAssortmentSql() As String
+        ' Ordinary catalog membership only; enabled menu sectors and usable brand logos are filtered later.
+        Return "SELECT DISTINCT COALESCE(v.SettoriId,0) AS SectorId, m.id, m.Descrizione, m.img, m.link," &
+               " COALESCE(m.Ordinamento,0) AS BrandOrder FROM vsuperarticoli v" &
+               " LEFT JOIN marche m ON m.id=v.MarcheId AND COALESCE(m.Abilitato,1)=1" &
+               " WHERE v.NListino=@listino ORDER BY BrandOrder, m.Descrizione, m.id"
+    End Function
+
+    Private Function LoadHomeNavigationAssortment() As DataTable
+        Try
+            Dim listino As Integer = GetCurrentListino()
+            If listino <= 0 Then Throw New InvalidOperationException("HOME_NAVIGATION_CONTEXT_INVALID")
+            Using lease As HomeQueryConnectionLease = AcquireHomeQueryLease()
+                Using cmd As New MySqlCommand(BuildHomeNavigationAssortmentSql(), lease.Connection)
+                    cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
+                    Using adapter As New MySqlDataAdapter(cmd)
+                        Dim result As New DataTable()
+                        If lease.Connection.State <> ConnectionState.Open Then lease.Connection.Open()
+                        adapter.Fill(result)
+                        Return result
+                    End Using
+                End Using
+            End Using
+        Catch
+            InvalidateHomeQueryConnection()
+            ' Do not log connector errors, SQL text or installation/connection details.
+            ReportHomeError("HomeNavigationAssortment", New InvalidOperationException("HOME_NAVIGATION_ASSORTMENT_READ_FAILED"))
+            Return Nothing
+        End Try
+    End Function
+
+    Private Shared Function FilterHomeAssortmentSectors(ByVal source As List(Of CatalogMenuSector),
+                                                       ByVal assortment As DataTable) As List(Of CatalogMenuSector)
+        Dim result As New List(Of CatalogMenuSector)()
+        If source Is Nothing Then Return result
+        ' Nothing is a read failure; an empty table is a successfully read empty assortment.
+        If assortment Is Nothing Then Return New List(Of CatalogMenuSector)(source)
+        Dim present As New HashSet(Of Integer)()
+        For Each row As DataRow In assortment.Rows
+            Dim sectorId As Integer
+            If Integer.TryParse(Convert.ToString(row("SectorId")), sectorId) AndAlso sectorId > 0 Then present.Add(sectorId)
+        Next
+        For Each sector As CatalogMenuSector In source
+            If sector IsNot Nothing AndAlso present.Contains(sector.Id) Then result.Add(sector)
+        Next
+        Return result
+    End Function
+
+    Private Shared Function SelectHomeAssortmentBrands(ByVal assortment As DataTable) As DataTable
+        If assortment Is Nothing Then Return New DataTable()
+        Dim result As DataTable = assortment.Clone()
+        Dim seen As New HashSet(Of Integer)()
+        For Each row As DataRow In assortment.Rows
+            Dim brandId As Integer
+            If Integer.TryParse(Convert.ToString(row("id")), brandId) AndAlso brandId > 0 AndAlso seen.Add(brandId) Then result.ImportRow(row)
+        Next
+        Return result
     End Function
 
     Private Function FilterBrandRows(ByVal source As DataTable, ByVal limit As Integer) As DataTable
