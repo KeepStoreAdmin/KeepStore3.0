@@ -5,12 +5,19 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 const [root, playwrightModule, chrome, evidence, serverPath] = process.argv.slice(2);
 const regressionsOnly = process.argv.includes('--rev1-regressions-only');
 const mediaOnly = process.argv.includes('--rev2-media-only');
+const handoffOnly = process.argv.includes('--catalog-handoff-only');
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
 const api = require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
-const server = JSON.parse(fs.readFileSync(serverPath, 'utf8'));
+const serverEvidence = JSON.parse(fs.readFileSync(serverPath, 'utf8').replace(/^\uFEFF/,''));
+// Handoff exercises transport/UI, not commercial pricing: this response is explicitly synthetic.
+const server = handoffOnly ? [{scenario:'synthetic-handoff-only', expectedList:'not-resolved', payload:{
+  ok:true, mode:'guided', recent:false, query:'SKU120', total:1, catalogUrl:'articoli.aspx?q=SKU120',
+  guided:{version:1,criteria:{q:'SKU120',st:0,pmin:'0',pmax:'0',disponibile:false,ordinamento:''},displayLabel:'Prezzi visualizzati IVA inclusa',returnedCount:1,selectionLimited:true,limit:6},
+  suggestions:[{id:120,TCId:42,url:'articolo.aspx?id=120&TCId=42',title:'Prodotto sintetico',code:'SKU120',ean:'',brand:'',category:'',image:'',image_fallback:'',price:'12,20 €',priceValue:12.2,availability:7,isOffer:false,isRefurbished:false}]
+}}] : serverEvidence;
 const playwright = require(playwrightModule);
 const report = { assertions: 0, checks: [], viewports: mediaOnly ? [390,1365] : [360,390,430,768,1365], renderMs: [], screenshots: [],
-  suite: mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including REV2 media', startedUtc: new Date().toISOString(),
+  suite: handoffOnly ? 'Catalog handoff delta only' : mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including REV2 media', startedUtc: new Date().toISOString(),
   serverFixtures: server.map(x => ({scenario:x.scenario, expectedList:x.expectedList})), network: 'intercepted; no upstream continuation',
   limitations: ['synthetic HTML rendering, no ASP.NET request execution', 'no MySQL/IIS/login/production/TTFB/INP certification'] };
 const journal = { resources: [], browserClosed: false, contextsClosed: 0 };
@@ -18,7 +25,7 @@ const record = (name, value = true) => { assert.ok(value, name); report.assertio
 const clone = value => JSON.parse(JSON.stringify(value));
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const sha256 = data => require('node:crypto').createHash('sha256').update(data).digest('hex');
-report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.js','Tools/ShoppingAssistantProgressiveResults.test.js']
+report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.js','Tools/ShoppingAssistantProgressiveResults.test.js', ...(handoffOnly?['articoli.aspx','articoli.aspx.vb','Tools/Test-ShoppingAssistantProgressiveResults.ps1']:[])]
   .map(file=>({file,sha256:sha256(fs.readFileSync(path.join(root,file)))}));
 report.serverPayloadSha256 = sha256(fs.readFileSync(serverPath));
 function artifact(name, data) { const file=path.join(evidence,name); fs.writeFileSync(file,data); if(!journal.resources.includes(file))journal.resources.push(file); return file; }
@@ -28,7 +35,7 @@ function briefFrom(url) {
 }
 function payload(url, options = {}) {
   const base = new URL('./',url), paths = api.urls(base.href, new URL('search_suggest.aspx',base).href), b=briefFrom(url);
-  const original = clone(server[options.scenario||0].payload), row=original.suggestions[0];
+  const original = clone((server[options.scenario||0]||server[0]).payload), row=original.suggestions[0];
   const count=options.empty?0:(options.count||3), food=options.food, prefix=food?'Olio extra vergine di oliva':'Notebook compatto';
   original.query=b.q; original.normalized_query=b.q; original.catalogUrl=api.catalogURL(b,paths).href;
   original.guided.criteria=b; original.guided.returnedCount=count; original.total=count;
@@ -50,11 +57,13 @@ record('real section isolated',guidemarkup.includes('data-ks-guide-results')&&!g
 const styles=['bootstrap.min.css','keepstore.css','keepstore-overrides.css','styles.css','theme-overrides.css'];
 const assets=new Map(styles.map(name=>['css/'+name,read('Public/assets/keepstore/css/'+name)]));
 assets.set('js/ks-shopping-guide.js',moduleSource);assets.set('js/home-default.js',homeSource);
+if(handoffOnly)for(const name of ['catalog-ui.css','catalog-filters-ui.css','catalog-product-flow.css'])assets.set('css/'+name,read('Public/assets/keepstore/css/'+name));
 function html(directory,kind,mode) {
   const food=kind==='Food', sectors=food?[[7,'Alimentari'],[8,'Dispensa']]:[[7,'Informatica'],[8,'Accessori']];
   let block=guidemarkup.replace(/<%=\s*ResolveUrl\("~\/([^"]*)"\)\s*%>/g,(_,s)=>directory+s);
   block=block.replace(/<asp:Repeater ID="rptHomeAiExamples"[\s\S]*?<\/asp:Repeater>/g,sectors.map(([id,label])=>'<button type="button" data-ks-guide-department="articoli.aspx?st='+id+'" aria-pressed="false">'+label+'</button>').join(''));
   block=block.replace(/<asp:Repeater ID="rptHomeAiQuickLinks"[\s\S]*?<\/asp:Repeater>/g,sectors.map(([id,label])=>'<a href="articoli.aspx?st='+id+'">'+label+'</a>').join(''));
+  if(mode==='no-departments')block=block.replace(/<asp:Panel ID="HomeAiExamplesPanel"[\s\S]*?<\/asp:Panel>/,'');
   block=block.replace(/<asp:Panel[^>]*CssClass="([^"]*)"[^>]*>/g,'<div class="$1">').replace(/<\/asp:Panel>/g,'</div>');
   assert.ok(!block.includes('<%')&&!block.includes('<asp:'));
   return '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fixture '+kind+'</title>'+
@@ -63,7 +72,7 @@ function html(directory,kind,mode) {
     (mode==='missing'?'':'<script src="'+directory+'Public/assets/keepstore/js/ks-shopping-guide.js"></script>')+
     '<script src="'+directory+'Public/assets/keepstore/js/home-default.js"></script></body></html>';
 }
-if(!mediaOnly){
+if(!mediaOnly&&!handoffOnly){
 const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
 for(const raw of ['iPhone 15','SSD 1 TB','olio da 1 litro','8000000000120','SKU-500'])record('product is not command '+raw,api.parseCommand(raw).kind==='unknown');
 for(const raw of ['massimo 1.000 euro','massimo 1,000 euro','fino a 1e3 euro','massimo -5 euro','massimo 0 euro'])record('ambiguous amount clarified '+raw,api.parseCommand(raw).kind==='clarify');
@@ -133,6 +142,7 @@ async function fixture(options={}) {
     window.fetch=(...args)=>{window.__fixtureStarted=performance.now();return measuredFetch(...args);};
     document.addEventListener('DOMContentLoaded',()=>{
       const root=document.getElementById('KsLocalAiSearch130');
+      if(!root)return;
       new MutationObserver(()=>{
         if(root.getAttribute('data-ks-guide-state')==='results'&&window.__fixtureStarted){
           window.__fixtureRender={ms:performance.now()-window.__fixtureStarted,sectionNodes:root.querySelectorAll('*').length,cards:root.querySelectorAll('.ks-guide-card').length};
@@ -167,6 +177,9 @@ async function fixture(options={}) {
         let response=payload(req.url(),{...current,food:kind==='Food'});
         await route.fulfill({status:current.status||200,contentType:'application/json',body:current.raw||JSON.stringify(response)});return;
       }
+      if(url.pathname===directory+'articoli.aspx'&&options.catalogFirst){
+        await route.fulfill({contentType:'text/html; charset=utf-8',body:catalogHtml(directory,options.catalogTarget,options.queryText)});return;
+      }
       if(url.pathname===directory+'articolo.aspx'||url.pathname===directory+'articoli.aspx'){
         await route.fulfill({contentType:'text/html',body:'<p>Offline navigation target</p>'});return;
       }
@@ -174,7 +187,7 @@ async function fixture(options={}) {
       blocked.push(url.pathname);await route.abort();
     }catch(e){apiErrors.push(e.message);}
   });
-  await page.goto('https://'+host+directory+'Default.aspx');
+  await page.goto('https://'+host+(options.catalogFirst ? directory+'articoli.aspx?q=fixture' : directory+'Default.aspx'+(options.search||'')+(options.search?'#KsLocalAiSearch130':'')));
   const state=()=>page.locator('#KsLocalAiSearch130').getAttribute('data-ks-guide-state');
   const wait=async value=>{await page.waitForFunction(v=>document.getElementById('KsLocalAiSearch130').getAttribute('data-ks-guide-state')===v,value,{timeout:6000});};
   const submit=async(q='SKU120')=>{await page.locator('#ksGuideQuery').fill(q);await page.locator('[data-ks-guide-prepare]').click();await wait(config.empty?'empty':config.status===403||config.status===421?'context-invalid':config.status||config.raw||config.html||config.offline?'error':'results');};
@@ -185,8 +198,9 @@ async function fixture(options={}) {
   return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,state,wait,submit,refine,privacy,screenshot,close};
 }
 async function run() {
-  browser=await playwright.chromium.launch({executablePath:chrome,headless:true,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
+  browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(handoffOnly){await catalogHandoffRegressions();report.status='PASS';return;}
   if(mediaOnly){await mediaRegressions();report.status='PASS';return;}
   await rev1Regressions();
   if(regressionsOnly){report.status='PASS';return;}
@@ -564,6 +578,140 @@ async function mediaRegressions() {
     }
   }
   report.mediaFailures=failures;assert.equal(failures.length,0,'REV2 media regressions: '+failures.join('; '));
+}
+function catalogHtml(directory,target,query) {
+  const source=read('articoli.aspx'), encode=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let toolbar=source.slice(source.indexOf('                    <div class="tf-shop-control'),source.indexOf('                    <div id="ksActiveFilters"'));
+  let empty=/<EmptyDataTemplate>([\s\S]*?)<\/EmptyDataTemplate>/.exec(source)[1];
+  function controls(s) {
+    return s.replace(/<asp:DropDownList\b([^>]*)>([\s\S]*?)<\/asp:DropDownList>/g,(_,attrs,items)=>{
+      const label=/aria-label="([^"]*)"/.exec(attrs),css=/CssClass="([^"]*)"/.exec(attrs);
+      return '<select class="'+css[1]+'" aria-label="'+label[1]+'">'+items.replace(/<asp:ListItem Value="([^"]*)" Text="([^"]*)"><\/asp:ListItem>/g,'<option value="$1">$2</option>')+'</select>';
+    }).replace(/<asp:Label\b([^>]*?)\/>/g,(_,attrs)=>/Visible="false"/.test(attrs)?'':encode((/Text="([^"]*)"/.exec(attrs)||[])[1]))
+      .replace(/<asp:PlaceHolder\b[^>]*>/g,'').replace(/<\/asp:PlaceHolder>/g,'')
+      .replace(/<asp:Literal ID="litEmptySearchQuery"[^>]*\/>/g,encode(query))
+      .replace(/<asp:Literal ID="litEmptySearchLinks"[^>]*\/>/g,'')
+      .replace(/<%=\s*Server.HtmlEncode\(CatalogShoppingGuideUrl\)\s*%>/g,encode(target))
+      .replace(/<%=\s*Server.HtmlEncode\(ClearCatalogFiltersUrl\)\s*%>/g,directory+'articoli.aspx');
+  }
+  toolbar=controls(toolbar);empty=controls(empty);
+  assert.ok(toolbar.includes('Guida agli acquisti')&&!/<asp:|<%/.test(toolbar+empty),'REAL_CATALOG_CONTROLS_MATERIALIZED');
+  const scoped=/<style>([\s\S]*?)<\/style>/.exec(source)[1], names=[...styles,'catalog-ui.css','catalog-filters-ui.css','catalog-product-flow.css'];
+  return '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    names.map(n=>'<link rel="stylesheet" href="'+directory+'Public/assets/keepstore/css/'+n+'">').join('')+'<style>'+scoped+'</style></head><body><form id="form1"><main><section id="ksCatalogPage" class="flat-content ks-catalog-page"><div class="container"><div class="content-area">'+toolbar+empty+'</div></div></section></main></form></body></html>';
+}
+async function catalogHandoffRegressions() {
+  const departments=new Map([[0,'Tutti i reparti'],[7,'Informatica'],[8,'Accessori']]);
+  const valid='?guide=catalog-v1&guide_q=SSD+1+TB&guide_st=7';
+  record('ordinary HOME ignores catalog q/st',api.catalogHandoff('?q=SSD&st=7',departments).kind==='none');
+  record('ordinary HOME empty URL unchanged',api.catalogHandoff('',departments).kind==='none');
+  record('explicit contract imports only draft',api.catalogHandoff(valid,departments).kind==='draft');
+  record('whitespace normalized',api.catalogHandoff('?guide=catalog-v1&guide_q=++SSD+++1+TB++',departments).q==='SSD 1 TB');
+  record('Unicode normalized NFC',api.catalogHandoff('?guide=catalog-v1&guide_q=caffe%CC%80',departments).q==='caffè');
+  record('80 characters accepted',api.catalogHandoff('?guide=catalog-v1&guide_q='+'x'.repeat(80),departments).q.length===80);
+  const bad=[
+    '?guide=catalog-v1','?guide=catalog-v1&guide_q=','?guide=catalog-v1&guide_q=+++','?guide=catalog-v1&guide_q=x',
+    '?guide=catalog-v1&guide_q='+'x'.repeat(81),'?guide=catalog-v1&guide_q=SSD%zz','?guide=catalog-v1&guide_q=SSD%ff',
+    '?guide=catalog-v1&guide_q=SSD%00x','?guide=catalog-v1&guide_q=SSD%0ax','?guide=catalog-v1&guide_q=SSD\ud800',
+    '?guide=catalog-v1&guide_q=SSD&guide_q=Olio','?guide=catalog-v1&guide=catalog-v1&guide_q=SSD',
+    valid+'&guide_st=7',valid+'&owner=private',valid+'&listino=99',valid+'&q=OTHER',valid+'&GUIDE_Q=OTHER',
+    '?guide=unknown&guide_q=SSD','?guide_q=SSD','?guide_st=7',
+    ...['','0','-7','07','2147483648','7x'].map(x=>'?guide=catalog-v1&guide_q=SSD&guide_st='+x)
+  ];
+  for(let i=0;i<bad.length;i++)record('malformed/duplicate contract rejected '+i,api.catalogHandoff(bad[i],departments).kind==='invalid');
+  const unavailable=api.catalogHandoff('?guide=catalog-v1&guide_q=SSD&guide_st=99',departments);
+  record('unavailable sector retained as unresolved',unavailable.kind==='draft'&&unavailable.st===99&&unavailable.sectorUnavailable);
+  for(const row of serverEvidence.cases){
+    const url=new URL(row.url,'https://tenant1.invalid'), parsed=api.catalogHandoff(url.search,departments);
+    record('actual VB to JS contract '+row.name,row.expectedQuery ? parsed.kind==='draft'&&parsed.q===row.expectedQuery : parsed.kind==='none');
+  }
+  report.serverAssertions=serverEvidence.assertions;
+  report.scope=process.argv.includes('--handoff-fallback-only')?'residual fallback only':'complete handoff delta';
+  const baseline=cp.execFileSync('git',['show','773131cf932dfcc5dfbad843011cb668611c03f5:articoli.aspx'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n');
+  const current=read('articoli.aspx').replace(/\r\n/g,'\n'), empty=s=>/<EmptyDataTemplate>([\s\S]*?)<\/EmptyDataTemplate>/.exec(s)[1];
+  record('existing empty-state/reset/suggestions byte preserved',empty(current).replace(/^.*class="tf-btn btn-line ks-catalog-guide-link".*\n/m,'')===empty(baseline));
+  record('all four catalog view IDs preserved',['tabgrid-1','tabgrid-2','tablist-1','tablist-2'].every(id=>current.includes('data-ks-layout="'+id+'"')));
+  record('server builder has no per-card I/O',!/(?:MySql|ExecuteReader|ExecuteScalar|HttpWebRequest)/.test(/Private Shared Function BuildCatalogGuideHandoffUrl[\s\S]*?End Function/.exec(read('articoli.aspx.vb'))[0]));
+  report.performance={beforeModuleBytes:Buffer.byteLength(cp.execFileSync('git',['show','773131cf932dfcc5dfbad843011cb668611c03f5:Public/assets/keepstore/js/ks-shopping-guide.js'],{cwd:root,encoding:'utf8'}).replace(/\r\n/g,'\n')),
+    afterModuleBytes:Buffer.byteLength(moduleSource.replace(/\r\n/g,'\n')),normalization:'UTF8, LF for both samples',startupSnapshotRequests:0,confirmationSnapshotRequests:1,liveTimings:'not measured'};
+  report.limitations.push('Catalog controls are materialized from actual ASPX, URL builder runs real VB/System.Web; no full WebForms lifecycle, MySQL, physical devices or screen-reader certification.',
+    'Commercial JSON is a synthetic transport fixture; earlier commercial resolver evidence is reused, not rerun.');
+  if(!process.argv.includes('--handoff-fallback-only')){
+  for(const kind of ['Tech','Food'])for(const width of report.viewports){
+    const directory=[390,768].includes(width)?'/shop/':'/', row=serverEvidence.cases.find(x=>x.name===kind+(directory==='/'?'-root':'-virtual'));
+    const f=await fixture({kind,width,directory,scenario:kind==='Food'?2:0,catalogFirst:true,catalogTarget:row.url,queryText:row.expectedQuery});
+    try{
+      const targets=f.page.locator('.ks-catalog-guide-link');
+      record('two contextual entries '+kind+width,await targets.count()===2);
+      record('same real server handoff '+kind+width,(await targets.evaluateAll(a=>a.map(x=>x.getAttribute('href')))).every(x=>x===row.url));
+      record('four existing views '+kind+width,await f.page.locator('[data-ks-layout]').count()===4);
+      record('existing Reset/catalog entries '+kind+width,await f.page.getByRole('link',{name:'Reset filtri',exact:true}).count()===1&&await f.page.getByRole('link',{name:'Vai al catalogo',exact:true}).count()===1);
+      const boxes=await targets.evaluateAll(a=>a.map(x=>({w:x.getBoundingClientRect().width,h:x.getBoundingClientRect().height})));
+      record('44x44 real clickable entries '+kind+width,boxes.every(x=>x.w>=44&&x.h>=44));
+      record('catalog no horizontal overflow '+kind+width,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await targets.first().focus();
+      await f.page.keyboard.press('Tab');await f.page.keyboard.press('Shift+Tab');
+      (report.catalogFocus ||= []).push({kind,width,...await targets.first().evaluate(x=>({active:x===document.activeElement,visible:x.matches(':focus-visible'),outline:getComputedStyle(x).outline}))});
+      record('catalog focus visible '+kind+width,await targets.first().evaluate(x=>x===document.activeElement&&getComputedStyle(x).outlineStyle!=='none'&&parseFloat(getComputedStyle(x).outlineWidth)>0));
+      if([390,1365].includes(width)){const file=path.join(evidence,kind+'-'+width+'-catalog.png');await f.page.screenshot({path:file,fullPage:true});report.screenshots.push(file);journal.resources.push(file);}
+      await f.page.getByRole('link',{name:width===390?'Aiutami a trovare il prodotto':'Guida agli acquisti',exact:true}).press('Enter');
+      await f.page.waitForFunction(()=>document.getElementById('KsLocalAiSearch130')?.getAttribute('data-ks-guide-bound')==='1');
+      record('root/virtual navigation and anchor '+kind+width,new URL(f.page.url()).pathname===directory+'Default.aspx'&&new URL(f.page.url()).hash==='#KsLocalAiSearch130');
+      record('import visible and unconfirmed '+kind+width,await f.page.locator('#ksGuideQuery').inputValue()===row.expectedQuery&&await f.state()==='editing'&&await f.page.locator('[data-ks-guide-summary]').isHidden()&&await f.page.locator('[data-ks-guide-handoff]').isVisible());
+      record('offered sector imported '+kind+width,await f.page.locator('[data-ks-guide-sector="7"]').getAttribute('aria-pressed')==='true');
+      await f.page.locator('#ksGuideQuery').focus();await f.page.locator('#ksGuideDetail').fill('portatile');await f.page.locator('#ksGuideDetail').fill('');
+      await f.page.evaluate(()=>{const r=document.getElementById('KsLocalAiSearch130');KeepStoreShoppingGuide.init(r);KeepStoreShoppingGuide.init(r);});
+      record('arrival/focus/typing/reinit no fetch '+kind+width,f.requests.length===0&&await f.page.locator('.ks-guide-card').count()===0);
+      record('guide no horizontal overflow '+kind+width,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      if([390,1365].includes(width))await f.screenshot(kind+'-'+width+'-imported-draft');
+      await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+      record('one explicit authoritative request '+kind+width,f.requests.length===1&&new URL(f.requests[0]).searchParams.get('q')===row.expectedQuery&&new URL(f.requests[0]).searchParams.get('st')==='7'&&new URL(f.requests[0]).pathname===directory+'search_suggest.aspx');
+      record('request omits handoff and private fields '+kind+width,Array.from(new URL(f.requests[0]).searchParams.keys()).every(k=>!/^guide|owner|listino|account|iva$/i.test(k)));
+      await f.privacy();
+    }finally{await f.close();}
+  }
+  for(const search of ['', '?q=ordinary&st=7',...bad.filter((_,i)=>[1,4,5,6,7,10,11,12,13,17,23].includes(i))]){
+    const f=await fixture({search});
+    try{
+      record('HOME malformed/ordinary draft remains empty '+search,await f.page.locator('#ksGuideQuery').inputValue()===''&&await f.page.locator('.ks-guide-card').count()===0&&f.requests.length===0);
+      const imported=api.catalogHandoff(search,departments).kind!=='none';
+      record('only explicit invalid handoff gets notice '+search,await f.page.locator('[data-ks-guide-handoff]').isVisible()===imported);
+      await f.page.locator('#ksGuideQuery').fill('Scelta manuale');record('manual editing no automatic request '+search,f.requests.length===0);
+      await f.privacy();
+    }finally{await f.close();}
+  }
+  for(const mode of [undefined,'no-departments']){
+    const f=await fixture({search:'?guide=catalog-v1&guide_q=SSD&guide_st=99',mode});
+    try{
+      record('unavailable sector query kept '+mode,await f.page.locator('#ksGuideQuery').inputValue()==='SSD'&&await f.page.locator('[data-ks-guide-department][aria-pressed="true"]').count()===0);
+      await f.page.locator('[data-ks-guide-prepare]').click();
+      record('unavailable sector blocks implicit fallback '+mode,f.requests.length===0&&(await f.page.locator('[data-ks-guide-status]').innerText()).includes('Scegli un reparto'));
+      await (mode?f.page.getByRole('button',{name:'Usa tutti i reparti',exact:true}):f.page.getByRole('button',{name:'Tutti i reparti',exact:true})).press('Enter');
+      record('explicit all-departments choice still no request '+mode,f.requests.length===0);
+      await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+      record('explicit sector choice respected '+mode,f.requests.length===1&&!new URL(f.requests[0]).searchParams.has('st'));
+      await f.privacy();
+    }finally{await f.close();}
+  }
+  const reset=await fixture({search:valid});
+  try{
+    await reset.page.locator('[data-ks-guide-reset]').click();
+    await reset.page.evaluate(()=>{KeepStoreShoppingGuide.init(document.getElementById('KsLocalAiSearch130'));window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
+    record('reset/reinit/BFCache never reimports or fetches',await reset.page.locator('#ksGuideQuery').inputValue()===''&&reset.requests.length===0&&await reset.page.locator('[data-ks-guide-handoff]').isHidden());
+    await reset.privacy();
+  }finally{await reset.close();}
+  }
+  for(const config of [{js:false},{mode:'missing'},{mode:'failure'}]){
+    const f=await fixture({...config,search:valid,directory:'/shop/'});
+    try{
+      (report.fallbackDiagnostics ||= []).push({config,visible:await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).isVisible(),links:await f.page.locator('.ks-guide-fallback-departments a').count(),disabled:await f.page.locator('[data-ks-guide-fields]').isDisabled(),attributes:await f.page.locator('[data-ks-guide-fields]').evaluate(x=>({disabled:x.disabled,hidden:x.hidden})),requests:f.requests.length});
+      record('no JS/module/init fallback survives '+JSON.stringify(config),await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).isVisible()&&await f.page.locator('.ks-guide-fallback-departments a').count()===2&&await f.page.locator('[data-ks-guide-fields]').evaluate(x=>x.disabled&&x.hidden)&&await f.page.locator('#ksGuideQuery').isDisabled()&&f.requests.length===0);
+      await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).click();
+      record('no-JS virtual-directory catalog works '+JSON.stringify(config),new URL(f.page.url()).pathname==='/shop/articoli.aspx');
+    }finally{await f.close();}
+  }
+  const safe=await fixture({search:'?guide=catalog-v1&guide_q='+encodeURIComponent('<img src=x>')});
+  try{record('import is text, never markup',await safe.page.locator('#ksGuideQuery').inputValue()==='<img src=x>'&&await safe.page.locator('[data-ks-guide-fields] img').count()===0&&safe.requests.length===0);await safe.privacy();}finally{await safe.close();}
 }
 (async()=>{
   try{await run();console.log('SHOPPING_PROGRESSIVE_ASSERTIONS='+report.assertions+'; BROWSER='+report.browser);}

@@ -40,6 +40,25 @@
     if (primary.length < 2 || combined.length > MAX_TEXT) throw new Error('query');
     return combined;
   }
+  function catalogHandoff(search, departments) {
+    var params = new URLSearchParams(search), names = ['guide', 'guide_q', 'guide_st'];
+    if (!names.some(function (name) { return params.has(name); })) return { kind: 'none' };
+    var invalid = { kind: 'invalid' };
+    if (/%(?![0-9a-f]{2})/i.test(search) || Array.from(params.keys()).some(function (name) { return names.indexOf(name) < 0; }) ||
+        params.getAll('guide').length !== 1 || params.get('guide') !== 'catalog-v1' || params.getAll('guide_q').length !== 1 ||
+        params.getAll('guide_st').length > 1) return invalid;
+    var q = params.get('guide_q');
+    if (q.length > 1024 || /[\u0000-\u001f\u007f\ufffd]/.test(q) ||
+        /[\ud800-\udbff](?![\udc00-\udfff])|(?:^|[^\ud800-\udbff])[\udc00-\udfff]/.test(q)) return invalid;
+    q = q.normalize('NFC').replace(/\s+/g, ' ').trim();
+    if (q.length < 2 || q.length > MAX_TEXT) return invalid;
+    var sector = params.get('guide_st'), id = 0;
+    if (sector !== null) {
+      if (!/^[1-9][0-9]{0,9}$/.test(sector) || Number(sector) > 2147483647) return invalid;
+      id = Number(sector);
+    }
+    return { kind: 'draft', q: q, st: id, sectorUnavailable: id > 0 && !departments.has(id) };
+  }
   function urls(base, endpoint) {
     var directory = new URL(base), target = new URL(endpoint, directory);
     if (!/^https?:$/.test(directory.protocol) || directory.username || directory.password || directory.search || directory.hash ||
@@ -182,7 +201,9 @@
         button.setAttribute('data-ks-guide-sector', String(id));
       } catch (_) { button.disabled = true; button.hidden = true; }
     });
-    var state = { phase: 'idle', confirmed: null, draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '' };
+    var state = { phase: 'idle', confirmed: null, draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
+    var handoffNotice = find('[data-ks-guide-handoff]');
+    function handoffMessage(message) { if (handoffNotice) { handoffNotice.textContent = message; handoffNotice.hidden = !message; } }
     function node(tag, label, className) {
       var element = doc.createElement(tag);
       if (label !== undefined) element.textContent = label;
@@ -252,6 +273,7 @@
     }
     function resetGuide() {
       remember(state.confirmed); state.confirmed = null; state.unknown = '';
+      state.handoffSectorPending = false; handoffMessage('');
       syncFields(blank()); command.value = ''; newQuery.hidden = true;
       invalidate('idle'); summaryView(); announce('La guida è pronta per una nuova ricerca.'); input.focus();
     }
@@ -260,6 +282,12 @@
       accept(state.history.pop(), false);
     }
     function prepareSearch() {
+      if (state.handoffSectorPending) {
+        announce('Il reparto importato non è disponibile. Scegli un reparto proposto oppure “Tutti i reparti”, poi conferma la ricerca.');
+        var choice = choices.find(function (item) { return !item.disabled && !item.hidden; });
+        if (choice) choice.focus();
+        return;
+      }
       try {
         var b = copy(state.confirmed || blank());
         b.q = queryText(input.value, detail.value); b.st = state.draftSector;
@@ -439,6 +467,7 @@
       choices.forEach(function (choice) {
         if (choice.disabled) return;
         choice.addEventListener('click', function () {
+          if (state.handoffSectorPending) { state.handoffSectorPending = false; handoffMessage('Reparto scelto. Controlla la bozza e premi “Mostra i prodotti”.'); }
           state.draftSector = Number(choice.getAttribute('data-ks-guide-sector'));
           choices.forEach(function (other) { other.setAttribute('aria-pressed', other === choice ? 'true' : 'false'); });
           invalidate('editing'); announce('Reparto modificato. Premi “Mostra i prodotti” per confermare.');
@@ -472,11 +501,28 @@
       instances.add(root); root.setAttribute('data-ks-guide-bound', '1');
       fields.hidden = false; fields.disabled = false; output.hidden = false;
       var fallback = find('.ks-guide-fallback-departments'); if (fallback) fallback.hidden = true;
+      var handoff = catalogHandoff(win.location.search, departments);
+      if (handoff.kind === 'invalid') {
+        handoffMessage('La ricerca del catalogo non è stata importata. Scrivi cosa cerchi e scegli se limitare a un reparto.');
+      } else if (handoff.kind === 'draft') {
+        var draft = blank(); draft.q = handoff.q; draft.st = handoff.sectorUnavailable ? 0 : handoff.st;
+        syncFields(draft); phase('editing'); state.handoffSectorPending = handoff.sectorUnavailable;
+        if (handoff.sectorUnavailable) choices.forEach(function (choice) { choice.setAttribute('aria-pressed', 'false'); });
+        handoffMessage(handoff.sectorUnavailable ?
+          'Il reparto del catalogo non è disponibile nella guida. Scegli un reparto proposto oppure “Tutti i reparti”, poi premi “Mostra i prodotti”.' :
+          'Ricerca importata dal catalogo come bozza. Controllala e premi “Mostra i prodotti” per confermarla.');
+        if (handoff.sectorUnavailable && handoffNotice && !choices.some(function (choice) { return !choice.disabled && !choice.hidden; })) {
+          handoffNotice.appendChild(button('Usa tutti i reparti', function () {
+            state.handoffSectorPending = false; state.draftSector = 0; prepare.focus();
+            handoffMessage('Hai scelto tutti i reparti. Controlla la bozza e premi “Mostra i prodotti”.');
+          }));
+        }
+      }
     } catch (_) {
       fields.hidden = true; fields.disabled = true; refine.hidden = true; refine.disabled = true;
       output.hidden = true; summary.hidden = true; idle.hidden = false;
     }
   }
   return { init: init, parseCommand: parseCommand, queryText: queryText, blank: blank, urls: urls,
-    requestURL: requestURL, catalogURL: catalogURL, validate: validate, reason: reason };
+    requestURL: requestURL, catalogURL: catalogURL, validate: validate, reason: reason, catalogHandoff: catalogHandoff };
 }));

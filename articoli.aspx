@@ -12,6 +12,10 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261015-mobile-excellence1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261015-mobile-excellence1a" />
+    <style>
+        #ksCatalogPage .ks-catalog-guide-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px 14px; max-width: 100%; white-space: normal; text-align: center; }
+        #ksCatalogPage .ks-catalog-guide-link:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; transition: none; }
+    </style>
 </asp:Content>
 
 <asp:Content ID="BreadcrumbContent1" ContentPlaceHolderID="BreadcrumbContent" runat="server">
@@ -215,7 +219,7 @@
                 <div class="content-area">
                     <p class="body-text-3 text-main-2 mb-2"><asp:Label ID="lblPrezzi" runat="server" /></p>
                     <div class="tf-shop-control flex-wrap gap-10">
-                        <div class="ks-shop-control-summary d-flex align-items-center gap-10">
+                        <div class="ks-shop-control-summary d-flex flex-wrap align-items-center gap-10">
                             <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none" aria-controls="ksCatalogFiltersPanel" aria-expanded="false" aria-haspopup="dialog">
                                 <span class="icon icon-filter"></span>
                                 <span class="body-md-2 fw-medium">Filtri</span>
@@ -224,6 +228,7 @@
                                 <asp:Label ID="lblLinee" runat="server" Text="" Visible="false" />
                                 <asp:Label ID="lblCatalogSummary" runat="server" Text="Sfoglia il catalogo" />
                             </p>
+                            <a class="tf-btn btn-line ks-catalog-guide-link" href="<%= Server.HtmlEncode(CatalogShoppingGuideUrl) %>">Guida agli acquisti</a>
                         </div>
 
                         <div class="tf-control-view flat-title-tab-product flex-wrap">
@@ -461,6 +466,7 @@
                                     <div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
                                         <a class="tf-btn btn-fill" href="<%= Server.HtmlEncode(ClearCatalogFiltersUrl) %>">Reset filtri</a>
                                         <a class="tf-btn btn-line" href="articoli.aspx">Vai al catalogo</a>
+                                        <a class="tf-btn btn-line ks-catalog-guide-link" href="<%= Server.HtmlEncode(CatalogShoppingGuideUrl) %>">Aiutami a trovare il prodotto</a>
                                     </div>
                                     <div class="mt-3 d-flex flex-wrap gap-2 justify-content-center">
                                         <asp:Literal ID="litEmptySearchLinks" runat="server" />

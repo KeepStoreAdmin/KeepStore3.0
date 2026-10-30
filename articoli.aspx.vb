@@ -55,6 +55,42 @@ Partial Class Articoli
 
     Protected ClearCatalogFiltersUrl As String = "articoli.aspx"
 
+    Protected ReadOnly Property CatalogShoppingGuideUrl As String
+        Get
+            Dim taxonomy As CatalogTaxonomyContext = GetCatalogTaxonomyContext()
+            Dim sectorId As Integer = If(taxonomy IsNot Nothing AndAlso taxonomy.IsCoherent, taxonomy.SectorId, 0)
+            Return BuildCatalogGuideHandoffUrl(ResolveUrl("~/Default.aspx"), Request.QueryString, sectorId, Request.RawUrl)
+        End Get
+    End Property
+
+    Private Shared Function BuildCatalogGuideHandoffUrl(ByVal homeUrl As String,
+                                                       ByVal values As System.Collections.Specialized.NameValueCollection,
+                                                       ByVal resolvedSectorId As Integer,
+                                                       ByVal rawQuery As String) As String
+        Dim fallback As String = homeUrl & "#KsLocalAiSearch130"
+        If values Is Nothing OrElse values.GetValues(CType(Nothing, String)) IsNot Nothing OrElse Regex.IsMatch(If(rawQuery, ""), "%(?![0-9a-fA-F]{2})") Then Return fallback
+        Dim queries As String() = values.GetValues("q")
+        If queries Is Nothing OrElse queries.Length <> 1 Then Return fallback
+        Dim query As String = If(queries(0), "")
+        If query.Length > 1024 OrElse Regex.IsMatch(query, "[\u0000-\u001f\u007f\ufffd]") Then Return fallback
+        Try
+            query = Regex.Replace(query.Normalize(NormalizationForm.FormC), "\s+", " ").Trim()
+        Catch ex As ArgumentException
+            Return fallback
+        End Try
+        If query.Length < 2 OrElse query.Length > 80 Then Return fallback
+        Dim sector As Integer = 0
+        Dim sectors As String() = values.GetValues("st")
+        If sectors IsNot Nothing Then
+            If sectors.Length <> 1 OrElse Not Regex.IsMatch(sectors(0), "^[1-9][0-9]{0,9}$") OrElse
+                Not Integer.TryParse(sectors(0), NumberStyles.None, CultureInfo.InvariantCulture, sector) OrElse
+                sector <> resolvedSectorId Then Return fallback
+        End If
+        Dim target As String = homeUrl & "?guide=catalog-v1&guide_q=" & HttpUtility.UrlEncode(query)
+        If sector > 0 Then target &= "&guide_st=" & sector.ToString(CultureInfo.InvariantCulture)
+        Return target & "#KsLocalAiSearch130"
+    End Function
+
     Private Class ProductCardModel
         Public Property ProductId As Integer
         Public Property TCId As Integer

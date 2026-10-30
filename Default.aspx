@@ -234,10 +234,11 @@
                     <fieldset class="ks-guide-fields" data-ks-guide-fields hidden disabled>
                         <legend class="visually-hidden">Cerca con la guida agli acquisti</legend>
                         <label for="ksGuideQuery">Che prodotto cerchi?</label>
-                        <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Scrivi il prodotto, la marca o il codice" aria-describedby="ksGuideLimit" />
+                        <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Scrivi il prodotto, la marca o il codice" aria-describedby="ksGuideLimit ksGuideHandoff" />
                         <label for="ksGuideDetail">Vuoi aggiungere un dettaglio? <span>(facoltativo)</span></label>
-                        <input id="ksGuideDetail" type="text" maxlength="80" autocomplete="off" placeholder="Ad esempio un utilizzo o una caratteristica" aria-describedby="ksGuideLimit" />
+                        <input id="ksGuideDetail" type="text" maxlength="80" autocomplete="off" placeholder="Ad esempio un utilizzo o una caratteristica" aria-describedby="ksGuideLimit ksGuideHandoff" />
                         <p id="ksGuideLimit" class="ks-guide-hint">Massimo 80 caratteri in tutto. Non inserire dati personali.</p>
+                        <p id="ksGuideHandoff" class="ks-guide-hint" data-ks-guide-handoff hidden></p>
                         <asp:Panel ID="HomeAiExamplesPanel" runat="server" CssClass="ks-guide-departments" Visible="false">
                             <p id="ksGuideDepartmentsLabel">Limita a un reparto <span>(facoltativo)</span></p>
                             <div class="ks-guide-choices" role="group" aria-labelledby="ksGuideDepartmentsLabel">
@@ -593,6 +594,6 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20261022-home-vetrina-1a"></script>
-    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261021-progressive1a-rev2-media" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261030-catalog-handoff1a" %>"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261021-progressive1a" %>"></script>
 </asp:Content>
