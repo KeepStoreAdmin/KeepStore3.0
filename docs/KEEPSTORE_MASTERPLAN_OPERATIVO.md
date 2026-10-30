@@ -1,5 +1,12 @@
 # KeepStore Masterplan Operativo
 
+## Decisione PO — ORDINE ROADMAP PO 2026-10-30
+
+Approvate cinque fasi e 18 macro-task: **1** affidabilita commerciale e ordini (01-03); **2** esperienza d'acquisto premium (04-08); **3** gestionale Enzo, multi-azienda e preparazione release (09-12); **4** pagamenti e sicurezza (13-15); **5** performance, SEO avanzata e nuove integrazioni (16-18). Rispetto alla precedente proposta si sposta soltanto il blocco Pagamenti e sicurezza immediatamente prima della Fase 5; tutti gli altri task mantengono ordine relativo. PDF operativo V1.0 consegnato al PO con outcome, acceptance criteria, prerequisiti, registro stato/PR/SHA e checklist di rilascio. La sola PRODUCT_ROADMAP resta autorita per priorita e requisiti; questo Masterplan conserva decisione e prove.
+
+**Gate inter-fase non derogato:** il task 12 prepara il rilascio, ma la sua esecuzione go-live e successiva a 13 PayPal LIVE se offerto, 14 Banca Sella se offerto, 15 sicurezza/credenziali e a tutti gli altri gate P0 applicabili. Niente produzione, IIS, database, SMTP, transazioni o cambio configurazioni da questa decisione. **CONSEGNA SERVER SOSPESA.**
+
+**Checkpoint tecnico:** #401 MERGED/CLOSED a `4da8ec31532f8480bdb0a270763f4fce5ad96b57` in FF-only, parent diretto `773131cf932dfcc5dfbad843011cb668611c03f5`, Actions stable 41105747600 SUCCESS; main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariato. #393 (IVA RC/esenzione) MERGED/CLOSED e LAB A, non deploy; CART REV1 #396/#397 integrata e LAB A, no ripetizione senza regressione reale. Prossimo macro-task 01 `KS-C01-CART-CHECKOUT-REMAINING-GATES-1A` NON AVVIATO, scope SOURCE ONLY e gap circoscritti: criteri e stop nel PRODUCT_ROADMAP. Nessuna modifica runtime da questo aggiornamento docs.
 ## SHOPPING-ASSISTANT-CATALOG-HANDOFF-1A — 2026-10-30
 
 Mandato PO KS-F01, FEATURE-BATCH SOURCE ONLY dalla stable #400 integrata `773131cf932dfcc5dfbad843011cb668611c03f5`; main invariato. Tre risultati collegati: accesso Guida agli acquisti accanto agli strumenti del catalogo, CTA Aiutami a trovare il prodotto nel vuoto, trasferimento facoltativo della ricerca alla guida deterministica gia integrata #364-#366. Reset filtri, Vai al catalogo, suggerimenti, quattro viste, ordinamento e motori commerciali conservati. Nessun nuovo assistente/endpoint/dipendenza, sorgente catalogo/search o resolver riscritto.

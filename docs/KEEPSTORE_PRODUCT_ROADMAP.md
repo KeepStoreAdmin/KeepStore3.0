@@ -1,6 +1,23 @@
 # KeepStore — PRODUCT_ROADMAP
 
-Unica roadmap di prodotto vigente, 2026-10-20. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
+## Decisione PO prevalente — ORDINE ROADMAP PO 2026-10-30
+
+Roadmap di completamento APPROVATA dal Product Owner il 2026-10-30: 18 macro-task in cinque fasi. Questa decisione aggiorna l'ordine di esecuzione, non dichiara completata alcuna macro-funzione, non riapre task gia integrati e non autorizza operazioni runtime. Un FEATURE-BATCH per volta secondo AGENTS, con verifica delle evidenze e dei duplicati prima di ogni prompt Codex. La descrizione completa e il registro A/B/E sono contenuti nel PDF operativo consegnato al PO; i requisiti tecnici restano qui e nei Blueprint canonici.
+
+| Fase | Task in sequenza | Priorita e stato del residuo |
+| --- | --- | --- |
+| 1 - Affidabilita commerciale e ordini | 01 Carrello/checkout: gate residui; 02 parita prezzi, IVA, promozioni, stock; 03 account, storico documenti e conferma | P0; LAB carrello e IVA A, macro-percorsi non certificati produzione |
+| 2 - Esperienza d'acquisto premium | 04 HOME adattiva; 05 catalogo/PDP/Quick View; 06 Mobile Excellence; 07 Shopping Assistant evolutivo; 08 merchandising e metriche attendibili | P1; molte componenti integrate, outcome complessivi parziali |
+| 3 - Gestionale, multi-azienda, release readiness | 09 schermate/manuali Enzo; 10 tenant/varianti; 11 pacchetto e rollback; 12 preparazione go-live e collaudo finale | P1/P0; il task 12 NON viene eseguito prima della Fase 4 |
+| 4 - Pagamenti e sicurezza | 13 PayPal LIVE; 14 Banca Sella; 15 KSAES2, hash password, account e segreti | P0; gate pagamenti reali e migrazioni operative aperti |
+| 5 - Performance ed evoluzione | 16 performance misurate; 17 SEO avanzata; 18 marketplace, automazioni e moduli | P2; differiti salvo gate tecnici indispensabili al rilascio |
+
+**Dipendenza prevalente:** per richiesta PO la precedente Fase 2 Pagamenti e sicurezza e stata spostata immediatamente prima della Fase 5. L'ordine relativo degli altri task resta invariato. Il task 12 resta numerato nella Fase 3 per preparare la release, ma il GO-LIVE e vietato prima della chiusura dei gate 13-15 per i metodi effettivamente offerti, dei requisiti fiscali/sicurezza/tenant pertinenti e dell'autorizzazione PO separata a destinazioni e operazioni. **CONSEGNA SERVER SOSPESA.**
+
+**Riconciliazione Git verificata 2026-10-30:** PR #393 ORDER-VAT-ID-SEMANTICS-P1-1A, #396/#397 cart recovery e #399/#400 HOME navigation sono gia MERGED/CLOSED. PR #401 SHOPPING-ASSISTANT-CATALOG-HANDOFF-1A MERGED/CLOSED a `4da8ec31532f8480bdb0a270763f4fce5ad96b57`; CI stable run 41105747600 SUCCESS. Non duplicare fix, test A circoscritti o review di queste PR. IVA P1 SOURCE INTEGRATED + LAB A non equivale a migrazione/certificazione produttiva. PayPal LIVE non e incasso verificato. Coupon/Groupon STANDBY, SOMEC escluso.
+
+**Primo macro-task approvato:** 01 `KS-C01-CART-CHECKOUT-REMAINING-GATES-1A`; esecuzione iniziale SOURCE ONLY mirata al residuo dimostrato delle verifiche terminali, con riuso delle evidenze LAB 26-30 ottobre, stop se nessun nuovo gap tecnico identificabile. Stato NON AVVIATO in questo checkpoint; nessun test/dato operativo implicitamente autorizzato. Il prossimo micro-task va definito e avviato dopo sincronizzazione della decisione documentale, senza ripetere matrice CART REV1 chiusa A.
+Unica roadmap di prodotto vigente, aggiornata 2026-10-30. Metodo/autorita in [AGENTS](../AGENTS.md), stato breve in [START_HERE](KEEPSTORE_START_HERE.md), task e prove nel [Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md). Le vecchie scalette nei Blueprint, benchmark e Masterplan sono storiche, non ordini concorrenti. Git/codice e prove reali prevalgono sulle etichette documentali.
 
 ## Decisione PO prevalente — Coupon in standby, 2026-10-23
 
