@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CART-REV1-FINAL-CLOSEOUT-1A — 2026-10-30
+
+**Decisione PO: REV1 carrello CHIUSA A nel perimetro LAB autorizzato.** Stable `fbaf7177c5efecbb8533c720b5a39967e787c437`, #396/#397 integrate; main `976e99f17cabc8a5c6a8715463444edfeaadcd91` invariato. Fonte primaria locale `C:/Temp/KeepStoreCartFinalResume-20261030-a7514e03/report.md`, con ricevute e10 screenshot sanitizzati nella stessa directory. Consolidamento documentale soltanto: nessun nuovo browser, IIS/MySQL, test applicativo o benchmark in questo closeout.
+
+FINAL-RESUME96/96 nuove asserzioni PASS. Harness corretto:13 risposte303/Location originali prima della navigazione, zero GET automatiche, successiva GET manuale nella stessa sessione senza esportare cookie/token. Taikun: add/set, stock, replay e assenza di aggiornamenti parziali gia acquisiti e riusati; nuova preparazione della riga e sole prove PRG residue. Webaffare: add1/set2, replay senza duplicati, stock rifiutato e bundle senza variazioni parziali PASS. Listini1/10 distinti, netti10/12 e lordi12,20/14,64; quattro rimozioni cross-owner respinte senza variazioni. Chrome390/1365: righe, feedback visibili, alert assertive, navigazione e assenza overflow PASS.
+
+Indeterminati SQL runtime **NON ESEGUITI**: nessun articolo inesistente per simularli, nessun fault injection/crash/timeout artificiale;500 single/262 bundle sintetici #396/#397 e14 HTTP read-only restano evidenze pregresse riusate, non nuove prove runtime. Il redirect stock PDP e verificato senza seguirlo: nessun GET PDP nel batch finale, Visite articolo1=11→11; il delta precedente resta non ricostruibile, conservato senza rettifiche arbitrarie.
+
+Ripristino verificato dei soli `cart_add.aspx.vb`, `App_Code/CartPriceRevalidationHelper.vb`, `carrello.aspx` per SHA/ACL/attributi/date creation-write UTC. Righe proprie3739/3740 eliminate, carrello0, stock100/impegno6, quattro documenti/progressivo4, digest storici e sette catture email invariati; profilo browser proprio rimosso. IIS/MySQL LAB mantenuti funzionanti; nessun ordine/pagamento/email esterna o modifica produttiva.53 protetti/52 untracked/quattro cancellazioni e staging vuoto preservati nel collaudo.
+
+Non riaprire carrello/recupero esiti o ripetere queste matrici senza modifica reale o regressione dimostrata. Il P1 IVA e gia integrato e collaudato nel LAB previsto; prossima priorita funzionale da scegliere sui requisiti realmente incompleti dei due tenant, non avviata qui. PayPal LIVE senza incasso reale verificato, transazioni soggette a specifica autorizzazione separata; Coupon/Groupon STANDBY. **CONSEGNA SERVER SOSPESA**. Cronologia successiva conservata come storico; nessuna pubblicazione produttiva implicita.
+
 ## CART-NATIVE-SINGLE-OUTCOME-RECOVERY-1A — 2026-10-28
 
 **Candidato SOURCE ONLY; review indipendente e integrazione pendenti.** Base `3a7f1972e3b27ea9f97ca359bb9eb5a114768f87`, PR #396 verificata MERGED/CLOSED; branch `task/cart-native-single-outcome-recovery-1a`. Manifest esclusivo: `cart_add.aspx.vb`, questo Masterplan e Product Roadmap. Il recupero nativo add/set distingue Commercial/StockInsufficient certi, con AbandonIntent e ritorno PDP esistenti, da Technical/Indeterminate/Nothing/risultati incoerenti, marcati indeterminati senza abbandono. Catch limitato alla chiamata del servizio, log a messaggio fisso senza parametri commerciali, stessi esiti prudenti; successo confermato, feedback, CompleteIntent e PRG 303 preservati.
