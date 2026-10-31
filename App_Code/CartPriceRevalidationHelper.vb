@@ -362,7 +362,6 @@ Public Module CartPriceRevalidationHelper
 
         Dim candidates As List(Of CartPriceCandidate) = allCandidates.FindAll(Function(x) x.TCId = tcId)
         If candidates.Count = 0 AndAlso tcId <= 0 Then candidates = allCandidates.FindAll(Function(x) x.TCId <= 0)
-        If candidates.Count = 0 Then candidates = allCandidates.FindAll(Function(x) x.TCId <= 0)
         If candidates.Count = 0 Then Return resolved
 
         Dim baseRow As CartPriceCandidate = candidates(0)
