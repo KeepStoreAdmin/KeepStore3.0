@@ -261,14 +261,16 @@ Partial Class articolo
     Private Sub LoadPage()
         Dim row As DataRow = GetProductRow(_id, _tcid, includeTcidFilter:=(_tcidPresent AndAlso _tcEnabled AndAlso _tcid > 0))
 
-        ' Se TCid presente ma non esiste (vecchio link o variante rimossa), provo a caricare senza TCid e redirigo sulla variante di default
+        ' Un TCid non trovato puo solo portare a un redirect esplicito verso una riga del listino corrente.
         If row Is Nothing AndAlso _tcEnabled AndAlso _tcidPresent Then
             Dim fallback As DataRow = GetProductRow(_id, -1, includeTcidFilter:=False)
             If fallback IsNot Nothing Then
                 Dim defaultTcid As Integer = GetRowInt(fallback, "TCid", -1)
-                Dim redirectUrl As String = BuildProductUrl(_id, defaultTcid, includeTcid:=True)
-                Response.Redirect(redirectUrl, True)
-                Return
+                If defaultTcid <> _tcid Then
+                    Dim redirectUrl As String = BuildProductUrl(_id, defaultTcid, includeTcid:=True)
+                    Response.Redirect(redirectUrl, True)
+                    Return
+                End If
             End If
         End If
 
@@ -1344,12 +1346,11 @@ Partial Class articolo
 
 
     Private Function GetProductRow(id As Integer, tcid As Integer, includeTcidFilter As Boolean) As DataRow
-        ' Nota: in alcuni DB TCid "non variante" puo' essere -1 oppure 0.
-        ' Per evitare falsi "Articolo non trovato" quando arriva TCid dal listing,
-        ' se il filtro TCid non restituisce righe riproviamo senza filtro.
+        ' Le varianti positive richiedono una corrispondenza esatta; LoadPage gestisce il redirect esplicito.
+        ' Il ripiego storico resta ammesso soltanto per i TCid non variante (-1/0).
         Try
             Dim row As DataRow = TryGetProductRowInternal(id, tcid, includeTcidFilter)
-            If row Is Nothing AndAlso includeTcidFilter Then
+            If row Is Nothing AndAlso includeTcidFilter AndAlso tcid <= 0 Then
                 row = TryGetProductRowInternal(id, tcid, False)
             End If
             Return row
@@ -1905,6 +1906,7 @@ Partial Class articolo
 
     Private Function LoadVariantOptions(id As Integer, listino As Integer) As List(Of KeyValuePair(Of Integer, String))
         Dim results As New List(Of KeyValuePair(Of Integer, String))()
+        If id <= 0 OrElse listino <= 0 Then Return results
 
         Try
             Using cn As New MySqlConnection(GetConnectionString())
@@ -1915,10 +1917,12 @@ Partial Class articolo
                                     "LEFT JOIN colori c ON c.id=atc.ColoreId " &
                                     "LEFT JOIN taglie t ON t.id=atc.TagliaId " &
                                     "WHERE atc.ArticoliId=@idarticolo " &
+                                    "AND EXISTS (SELECT 1 FROM vsuperarticoli v WHERE v.ID=atc.ArticoliId AND v.TCid=atc.id AND v.NListino=@nlistino) " &
                                     "ORDER BY c.Descrizione, t.Descrizione, atc.id"
 
                 Using cmd As New MySqlCommand(sql, cn)
                     cmd.Parameters.AddWithValue("@idarticolo", id)
+                    cmd.Parameters.AddWithValue("@nlistino", listino)
 
                     Using r As MySqlDataReader = cmd.ExecuteReader()
                         While r.Read()
