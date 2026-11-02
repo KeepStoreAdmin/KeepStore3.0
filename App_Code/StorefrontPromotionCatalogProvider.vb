@@ -47,6 +47,7 @@ Public Module StorefrontPromotionCatalogProvider
             " THEN " & baseNet & "*(1-CAST(offer_header.Sconto AS DECIMAL(38,16))*0.01)" &
             " ELSE NULL END)"
         Dim resolvedTc As String = If(useDefaultVariant, "COALESCE(NULLIF(catalog.TCId,0),qty_default.DefaultTCid,-1)", "COALESCE(NULLIF(catalog.TCId,0),-1)")
+        Dim outerResolvedTc As String = If(useDefaultVariant, "COALESCE(NULLIF(vsuperarticoli.TCid,0),atc_default.DefaultTCid,-1)", "COALESCE(NULLIF(vsuperarticoli.TCid,0),-1)")
         Dim effectiveGross As String = StorefrontEffectivePriceSqlBuilder.BuildEffectiveGrossExpression(
             "catalog.Prezzo", "catalog.PrezzoIvato", "catalog.IdIvaRC", "catalog.ValoreIvaRC",
             "?ksRcEnabled", "?ksHasVatOverride", "?ksVatOverride")
@@ -54,7 +55,7 @@ Public Module StorefrontPromotionCatalogProvider
         Return " LEFT JOIN (SELECT ranked.ArticleId,ranked.ArticleListPriceId,ranked.ResolvedTCId," &
                " ranked.OfferDetailId AS AppliedOfferDetailId,ranked.PromoNet AS AppliedPromoNet" &
                " FROM (SELECT candidate.*,ROW_NUMBER() OVER (" &
-               " PARTITION BY candidate.ArticleListPriceId ORDER BY candidate.VariantPriority ASC," &
+               " PARTITION BY candidate.ArticleListPriceId,candidate.ResolvedTCId ORDER BY candidate.VariantPriority ASC," &
                " candidate.PromoNet ASC,candidate.OfferDetailId ASC) AS PriceRank" &
                " FROM (SELECT catalog.id AS ArticleId,catalog.ArticoliListiniId AS ArticleListPriceId," &
                " " & resolvedTc & " AS ResolvedTCId,detail.id AS OfferDetailId," &
@@ -92,7 +93,8 @@ Public Module StorefrontPromotionCatalogProvider
                " AND " & promoNet & ">0 AND " & promoNet & "<" & baseNet &
                ") candidate) ranked WHERE ranked.PriceRank=1) ks_qty1_price" &
                " ON ks_qty1_price.ArticleId=vsuperarticoli.id" &
-               " AND ks_qty1_price.ArticleListPriceId=vsuperarticoli.ArticoliListiniId "
+               " AND ks_qty1_price.ArticleListPriceId=vsuperarticoli.ArticoliListiniId" &
+               " AND ks_qty1_price.ResolvedTCId=" & outerResolvedTc & " "
     End Function
 
     Public Sub AddParameters(ByVal parameters As ParameterCollection,

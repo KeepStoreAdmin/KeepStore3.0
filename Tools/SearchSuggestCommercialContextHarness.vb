@@ -715,7 +715,11 @@ Private Sub RunGuided(ByVal payloadPath As String)
                Not commands(commands.Count - 1).Contains("v.id = @pid"), "promotion membership independent from unit price")
         Assert(CStr(response("catalogUrl")).Contains("pid=7"), "campaign catalog semantics")
         Reject(Sub() MakeSupport(Context(2, 10, False, "pid=invalid")), "invalid campaign")
-        Assert(StorefrontPromotionCatalogProvider.BuildQuantityOnePriceJoin() = SearchSuggestBaselinePromotionCatalogProvider.BuildQuantityOnePriceJoin(), "catalog quantity join byte equivalence")
+        Dim expectedQuantityOneJoin As String = SearchSuggestBaselinePromotionCatalogProvider.BuildQuantityOnePriceJoin().
+            Replace(" PARTITION BY candidate.ArticleListPriceId ORDER BY", " PARTITION BY candidate.ArticleListPriceId,candidate.ResolvedTCId ORDER BY").
+            Replace(" AND ks_qty1_price.ArticleListPriceId=vsuperarticoli.ArticoliListiniId ",
+                    " AND ks_qty1_price.ArticleListPriceId=vsuperarticoli.ArticoliListiniId AND ks_qty1_price.ResolvedTCId=COALESCE(NULLIF(vsuperarticoli.TCid,0),atc_default.DefaultTCid,-1) ")
+        Assert(StorefrontPromotionCatalogProvider.BuildQuantityOnePriceJoin() = expectedQuantityOneJoin, "catalog quantity join differs only by resolved variant identity")
         Assert(StorefrontPromotionCatalogProvider.BuildMainCatalogJoin() = SearchSuggestBaselinePromotionCatalogProvider.BuildMainCatalogJoin(), "catalog membership join byte equivalence")
         Assert(StorefrontPromotionCatalogProvider.BuildFacetCatalogJoin() = SearchSuggestBaselinePromotionCatalogProvider.BuildFacetCatalogJoin(), "catalog facet join byte equivalence")
 
