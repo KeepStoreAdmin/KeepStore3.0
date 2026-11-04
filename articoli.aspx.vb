@@ -1056,7 +1056,9 @@ If catalogQuantityOnePriceRequired Then
     displayPriceSql = "ROUND(CAST(" & rawDisplayPriceSql & " AS DECIMAL(38,16)),2)"
     strSelect = "SELECT " & displayPriceSql & " AS CatalogDisplayPrice," & strSelect.Substring(7) & quantityOneJoin
     If hasPriceRange Then
-        quantityOneFacetJoin = quantityOneJoin
+        quantityOneFacetJoin =
+            " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id" &
+            quantityOneJoin
         Dim pricePredicate As String = " AND (" & displayPriceSql & ")>0 AND (" & displayPriceSql & ")"
         If hasPmin AndAlso hasPmax Then
             pricePredicate &= " BETWEEN ?Pmin AND ?Pmax"
