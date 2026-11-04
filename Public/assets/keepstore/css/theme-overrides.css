@@ -2829,6 +2829,45 @@ body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-price-value {
   min-height: 46px;
 }
 
+/* Recent-card metadata must not shift the price between adjacent products. */
+#ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-card-brand-code {
+  display: -webkit-box;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  height: 2lh;
+  min-height: 2lh;
+  max-height: 2lh;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Keep the native buy action available without hover in both recent carousels. */
+:is(#ksRecentlyViewedBlock, #HomeRecentlyViewedSection) .list-product-btn > li:has(> button.js-ks-cart-link) {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+:is(#ksRecentlyViewedBlock, #HomeRecentlyViewedSection) .list-product-btn button.js-ks-cart-link {
+  box-sizing: border-box;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  transform: none !important;
+  touch-action: manipulation;
+}
+
+:is(#ksRecentlyViewedBlock, #HomeRecentlyViewedSection) button.js-ks-cart-link:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: 3px;
+}
+
 .ks-recent-card .ks-price,
 .ks-recent-card .ks-recent-price-slot {
   display: flex;
