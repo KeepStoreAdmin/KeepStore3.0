@@ -778,6 +778,30 @@ body.ks-page-home .ks-home-hero-actions {
   margin-top: 12px;
 }
 
+body.ks-page-home .ks-home-hero-actions .tf-btn:focus-visible,
+body.ks-page-home .ks-home-side-banner .tf-btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+  transition: none;
+}
+
+body.ks-page-home .ks-home-hero-media:focus-visible,
+body.ks-page-home .ks-home-side-banner .img-box:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -6px;
+}
+
+body.ks-page-home .ks-home-hero-media:focus-visible::before,
+body.ks-page-home .ks-home-side-banner .img-box:focus-visible::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px #111;
+  z-index: 3;
+  pointer-events: none;
+}
+
 body.ks-page-home .ks-home-side-promos {
   display: grid;
   grid-template-rows: 1fr 1fr;
@@ -834,6 +858,12 @@ body.ks-page-home .ks-home-side-banner .box-sale-wrap {
   padding: 3px 8px;
   border-radius: 999px;
   background: rgba(255, 255, 255, .18);
+}
+
+body.ks-page-home .ks-home-side-banner .box-title {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 body.ks-page-home .ks-home-side-banner .box-sale-wrap .small-text {
@@ -1906,7 +1936,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   }
 
   body.ks-page-home .ks-home-hero-actions .tf-btn {
-    min-height: 42px;
+    min-height: 44px;
     padding: 0 14px;
     font-size: 13px;
   }
