@@ -102,6 +102,19 @@
             body.ks-page-home .ks-home-main .ks-home-direct-category-link { transition: none; }
         }
     </style>
+    <style id="ksHomeOffersHandoffStyles">
+        body.ks-page-home .ks-home-main .ks-home-offers-catalog-link {
+            min-width: 44px;
+            min-height: 44px;
+            max-width: 100%;
+            white-space: normal;
+        }
+        body.ks-page-home .ks-home-main .ks-home-offers-catalog-link:focus-visible {
+            outline: 3px solid var(--primary-2, #D80027);
+            outline-offset: 3px;
+            transition: none;
+        }
+    </style>
 </asp:Content>
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -392,9 +405,14 @@
                     </h5>
                     <p class="body-text-3 text-main-2 mb-0">Promozioni e occasioni disponibili nel catalogo.</p>
                 </div>
-                <div class="box-btn-slide relative">
-                    <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
-                    <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
+                <div class="d-flex flex-wrap align-items-center gap-10 mw-100">
+                    <a href="articoli.aspx?inpromo=1" class="tf-btn btn-line ks-home-offers-catalog-link">
+                        <span>Scopri le offerte</span><i class="icon-arrow-right-lg" aria-hidden="true"></i>
+                    </a>
+                    <div class="box-btn-slide relative">
+                        <div class="swiper-button-prev nav-swiper nav-prev-products"><i class="icon-arrow-left-lg"></i></div>
+                        <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
+                    </div>
                 </div>
             </div>
             <asp:Panel ID="HomeOffersSliderWrap" runat="server" CssClass="box-btn-slide-2 sw-nav-effect">
