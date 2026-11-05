@@ -1,5 +1,11 @@
 # KeepStore Masterplan Operativo
 
+## HOME-ARRIVALS-CTA-CLARITY-1A — 2026-11-05
+
+Mandato PO: rendere esplicita la destinazione generale della CTA Novita e arrivi. Base `2d52c0c5cebc9ade5e2004c30b3e294c4a461d8f`; unica variazione runtime in Default.aspx: Vedi tutti -> Esplora il catalogo. Href `articoli.aspx`, markup/classi e tutto il resto del file invariati (confronto letterale normalizzando CRLF/LF). Nessun filtro, parametro, code-behind, renderer, prezzo o nuova risorsa.
+
+Verifica proporzionata: riusata presentazione HTTP loopback precedente con header corrente e CSS/font KeepStore; Chrome reale390/1365 prima/dopo, testo/URL esatti, nessun overflow o sovrapposizione. CTA166,71px contro96,67px precedenti, altezza43,33px invariata; nessuna certificazione aggiuntiva dei target touch. Screenshot e visual.json in `C:/Users/Taikun/AppData/Local/Temp/KeepStoreHomeArrivalsClarity-20261105/`. Browser e server propri chiusi. Non e un collaudo IIS/MySQL; nessuna nuova fixture DB o suite commerciale. Precompile safe ASP.NET4.8 PASS, zero configurazioni operative e pulizia propria PASS; diff-check/secret guard sul manifest. Tre file: Default.aspx e i due manuali.53/52/4 preservati, main invariato; PR DRAFT per review, nessun merge/deploy o task successivo. **CONSEGNA SERVER SOSPESA**.
+
 ## HOME-OFFERS-CATALOG-HANDOFF-1A — 2026-11-05
 
 **MIGLIORAMENTO autorizzato / candidato SOURCE ONLY.** Base `1a0b9f762935dfb411544e3e0d1e0d45fd449989`, #409 integrata. Gate A/B/C/D: mandato vigente, collegamento utile KS-A01/KS-E01, assenza CTA confermata nel sorgente, nessuna duplicazione del filtro inpromo gia esistente. Manifest3: `Default.aspx`, Product Roadmap e questo manuale. L'intestazione HomeOffersSection contiene ora un solo anchor Scopri le offerte con href letterale `articoli.aspx?inpromo=1`, tf-btn/btn-line e icona esistente aria-hidden. Gruppo flex responsive insieme alle frecce; struttura interna dei controlli invariata. Minimo44 e focus3px in un piccolo style locale alla sola nuova classe; nessun CSS esterno/cache-buster, immagine, JS o dipendenza aggiunta.

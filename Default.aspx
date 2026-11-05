@@ -383,7 +383,7 @@
                     <p class="body-text-3 text-main-2 mb-0">Nuovi articoli da scoprire e prodotti in arrivo.</p>
                 </div>
                 <a href="articoli.aspx" class="tf-btn btn-line">
-                    <span>Vedi tutti</span>
+                    <span>Esplora il catalogo</span>
                 </a>
             </div>
             <div class="ks-home-product-grid">
