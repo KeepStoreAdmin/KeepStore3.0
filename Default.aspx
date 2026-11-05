@@ -27,7 +27,7 @@
         body.ks-page-home .ks-home-main .ks-home-direct-category-list {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
+            gap: 10px;
             margin: 0;
             padding: 0;
             list-style: none;
@@ -35,27 +35,71 @@
         body.ks-page-home .ks-home-main .ks-home-direct-category-list > li { min-width: 0; }
         body.ks-page-home .ks-home-main .ks-home-direct-category-link {
             box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-            gap: 4px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 16px;
+            grid-template-rows: auto 1fr;
+            gap: 6px 8px;
             width: 100%;
+            height: 100%;
             min-width: 44px;
-            min-height: 72px;
-            padding: 12px;
+            min-height: 80px;
+            padding: 10px 12px;
+            border: 1px solid #e3e7ed;
+            border-radius: 8px;
+            background: #fff;
+            color: #222a35;
+            box-shadow: 0 2px 6px rgba(34, 42, 53, .04);
             text-align: left;
+            text-decoration: none;
             white-space: normal;
             overflow-wrap: anywhere;
-            transition-property: color, background-color, border-color;
+            touch-action: manipulation;
+            transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-link:hover,
+        body.ks-page-home .ks-home-main .ks-home-direct-category-link:focus-visible {
+            border-color: var(--primary-2, #D80027);
+            background: #fffafb;
+            box-shadow: 0 3px 10px rgba(34, 42, 53, .08);
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-link:active {
+            background: #fff1f4;
+            box-shadow: none;
         }
         body.ks-page-home .ks-home-main .ks-home-direct-category-link:focus-visible {
-            outline: 4px solid var(--main, #333e48);
+            outline: 3px solid var(--primary-2, #D80027);
             outline-offset: 3px;
         }
-        body.ks-page-home .ks-home-main .ks-home-direct-category-link > span { max-width: 100%; }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-name {
+            grid-column: 1 / -1;
+            min-width: 0;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 20px;
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-sector {
+            align-self: end;
+            display: -webkit-box;
+            min-width: 0;
+            overflow: hidden;
+            color: #66717f;
+            font-size: 12px;
+            line-height: 16px;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+        body.ks-page-home .ks-home-main .ks-home-direct-category-arrow {
+            align-self: end;
+            margin-bottom: 2px;
+            color: var(--primary-2, #D80027);
+            font-size: 14px;
+            line-height: 16px;
+        }
         @media (min-width: 1200px) {
             body.ks-page-home .ks-home-main .ks-home-direct-category-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            body.ks-page-home .ks-home-main .ks-home-direct-category-link { transition: none; }
         }
     </style>
 </asp:Content>
@@ -213,9 +257,10 @@
                 <asp:Repeater ID="rptHomeDirectCategories" runat="server">
                     <ItemTemplate>
                         <li>
-                            <a href='<%# SafeText(ResolveUrl(Convert.ToString(Eval("DefaultUrl")))) %>' class="tf-btn btn-line ks-home-direct-category-link">
-                                <span class="body-text-3 fw-semibold"><%# SafeText(Eval("Name")) %></span>
-                                <span class="caption text-main-2"><%# SafeText(Eval("SectorName")) %></span>
+                            <a href='<%# SafeText(ResolveUrl(Convert.ToString(Eval("DefaultUrl")))) %>' class="ks-home-direct-category-link">
+                                <span class="ks-home-direct-category-name"><%# SafeText(Eval("Name")) %></span>
+                                <span class="ks-home-direct-category-sector"><%# SafeText(Eval("SectorName")) %></span>
+                                <i class="icon-arrow-right-lg ks-home-direct-category-arrow" aria-hidden="true"></i>
                             </a>
                         </li>
                     </ItemTemplate>
