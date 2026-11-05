@@ -673,7 +673,7 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
 
     Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
         Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, -1)
 
         If pagato = 1 OrElse stato = 2 Then Return "Pagato"
 
@@ -686,8 +686,10 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                 Return "Annullato dall'utente"
             Case 5
                 Return "In verifica"
-            Case Else
+            Case 0
                 Return "Non avviato"
+            Case Else
+                Return "Non verificabile"
         End Select
     End Function
 
@@ -715,11 +717,13 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
                                                    ByVal esitoObj As Object,
                                                    ByVal onlineObj As Object,
                                                    ByVal pagamentoObj As Object) As String
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, -1)
+        If pagato <> 1 AndAlso (stato < 0 OrElse stato > 5) Then Return "Stato del pagamento non verificabile."
+
         Dim esito As String = SafePaymentMessage(esitoObj)
         If esito <> "" Then Return esito
 
-        Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, 0)
         Dim online As Integer = SafeInt(onlineObj, 0)
         Dim pagamento As String = SafeStatusText(pagamentoObj)
 

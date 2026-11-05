@@ -457,7 +457,7 @@ Partial Class documentidettaglio
 
     Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
         Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, -1)
 
         If pagato = 1 OrElse stato = 2 Then Return "Pagato"
 
@@ -470,8 +470,10 @@ Partial Class documentidettaglio
                 Return "Annullato dall'utente"
             Case 5
                 Return "In verifica"
-            Case Else
+            Case 0
                 Return "Non avviato"
+            Case Else
+                Return "Non verificabile"
         End Select
     End Function
 
@@ -495,11 +497,13 @@ Partial Class documentidettaglio
     End Function
 
     Protected Function GetPaymentStatusDescription(ByVal pagatoObj As Object, ByVal statoObj As Object, ByVal esitoObj As Object) As String
+        Dim pagato As Integer = SafeInt(pagatoObj, 0)
+        Dim stato As Integer = SafeInt(statoObj, -1)
+        If pagato <> 1 AndAlso (stato < 0 OrElse stato > 5) Then Return "Stato del pagamento non verificabile."
+
         Dim esito As String = SafeStatusText(esitoObj)
         If esito <> "" Then Return esito
 
-        Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, 0)
 
         If pagato = 1 OrElse stato = 2 Then Return "Pagamento confermato."
 
