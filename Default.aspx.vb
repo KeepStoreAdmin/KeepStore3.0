@@ -1195,9 +1195,48 @@ Partial Public Class _Default
                                               ByVal arrivals As DataTable,
                                               ByVal ranked As DataTable,
                                               ByVal recent As DataTable) As DataTable
-        If Not IsTableEmpty(deals) OrElse Not IsTableEmpty(arrivals) OrElse
-           Not IsTableEmpty(ranked) OrElse Not IsTableEmpty(recent) Then Return EmptyProductsTable()
-        Return GetCatalogFallbackPool(8)
+        If Not IsTableEmpty(deals) OrElse Not IsTableEmpty(ranked) OrElse
+           Not IsTableEmpty(recent) Then Return EmptyProductsTable()
+        If IsTableEmpty(arrivals) Then Return GetCatalogFallbackPool(8)
+        If Not HasOnlyInformativeHomeArrivals(arrivals) Then Return EmptyProductsTable()
+
+        ' Reuse the authoritative pool once; never fetch extra rows to fill gaps.
+        Dim pool As DataTable = GetCatalogFallbackPool(8)
+        Dim result As DataTable = If(pool Is Nothing, EmptyProductsTable(), pool.Clone())
+        If IsTableEmpty(pool) Then Return result
+
+        Dim articleIds As New HashSet(Of Integer)()
+        Dim businessKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim displayKeys As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each row As DataRow In arrivals.Rows
+            articleIds.Add(SafeInt(row("id")))
+            businessKeys.Add(GetBusinessKey(row))
+            displayKeys.Add(GetDisplayKey(row))
+        Next
+        For Each row As DataRow In pool.Rows
+            Dim articleId As Integer = SafeInt(row("id"))
+            Dim businessKey As String = GetBusinessKey(row)
+            Dim displayKey As String = GetDisplayKey(row)
+            If articleId <= 0 OrElse articleIds.Contains(articleId) OrElse
+               businessKeys.Contains(businessKey) OrElse displayKeys.Contains(displayKey) Then Continue For
+            result.ImportRow(row)
+            articleIds.Add(articleId)
+            businessKeys.Add(businessKey)
+            displayKeys.Add(displayKey)
+            If result.Rows.Count >= 8 Then Exit For
+        Next
+        Return result
+    End Function
+
+    Private Function HasOnlyInformativeHomeArrivals(ByVal arrivals As DataTable) As Boolean
+        If IsTableEmpty(arrivals) OrElse Not arrivals.Columns.Contains("HomeInformativeOnly") OrElse
+           Not arrivals.Columns.Contains("id") Then Return False
+        For Each row As DataRow In arrivals.Rows
+            If Not TypeOf row("HomeInformativeOnly") Is Boolean OrElse
+               Not CBool(row("HomeInformativeOnly")) OrElse SafeInt(row("id")) <= 0 OrElse
+               HasPromotionDisplayTechnicalError(row) Then Return False
+        Next
+        Return True
     End Function
 
     Private Function GetCatalogFallbackPool(ByVal limit As Integer) As DataTable

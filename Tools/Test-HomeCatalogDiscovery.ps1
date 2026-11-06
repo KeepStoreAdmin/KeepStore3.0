@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$RepositoryRoot, [Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$BrowserOnly, [string]$ReuseBrowserFixtures, [switch]$PriceOnly)
+param([string]$RepositoryRoot, [Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$BrowserOnly, [string]$ReuseBrowserFixtures, [switch]$PriceOnly, [switch]$IncomingOnly)
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'HOME_DISCOVERY_REQUIRES_PS51' }
 if (!$RepositoryRoot) { $RepositoryRoot = Split-Path -Parent $PSScriptRoot }
@@ -11,7 +11,8 @@ $node = (Get-Command node -ErrorAction Stop).Source
 $utf8 = New-Object Text.UTF8Encoding($false)
 [Console]::OutputEncoding = $utf8
 $checks = New-Object 'Collections.Generic.List[object]'
-$baselineRef='d509ef15b4abd681739d894f1ac2a9ed4b22e843'
+$baselineRef=if($IncomingOnly){'92858746d5f9878776ebf47f70f28d02d995d49d'}else{'d509ef15b4abd681739d894f1ac2a9ed4b22e843'}
+if($IncomingOnly -and ($BrowserOnly -or $PriceOnly)){throw 'HOME_DISCOVERY_INCOMPATIBLE_MODES'}
 function Check([string]$name, [bool]$ok) { $checks.Add([pscustomobject]@{Name=$name;Pass=$ok}); if (!$ok) { throw ('HOME_DISCOVERY_ASSERT: '+$name) } }
 function Write-Json([string]$name, $value) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory $name),($value|ConvertTo-Json -Depth 16),$utf8) }
 function Methods([string]$text) {
@@ -97,6 +98,7 @@ $map=Methods $source; $oldMap=Methods $base
 $cart=Methods ([IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/CartMutationIdempotencyService.vb')))
 $cartCode="Imports System`nImports System.Globalization`nImports System.Web`nPublic Class CartMutationIdempotencyService`n"+((@('CreateRequestId','BuildNativeActionValue','NormalizeTCId')|ForEach-Object{$cart[$_]}) -join [Environment]::NewLine)+"`nEnd Class"
 $shared=@('StorefrontPriceDisplayContext.vb','UiPriceFormatter.vb','AvailabilityDisplayHelper.vb','ThemeManager.vb','UiData.vb','StorefrontEffectivePriceSqlBuilder.vb')|ForEach-Object{[IO.File]::ReadAllText((Join-Path $RepositoryRoot ('App_Code/'+$_)))}
+if($IncomingOnly){$shared+=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/StorefrontProductImageSlots.vb'))}
 $inventory=Methods ([IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/OrderInventoryAvailabilityService.vb')))
 $shared+=('Imports System'+[Environment]::NewLine+'Public Class OrderInventoryAvailabilityService'+[Environment]::NewLine+$inventory.CalculateNetAvailableQuantity[0]+[Environment]::NewLine+'End Class')
 $compiler=New-Object Microsoft.VisualBasic.VBCodeProvider
@@ -106,6 +108,7 @@ try {
         $queue=New-Object 'Collections.Generic.Queue[string]'
         @('RenderGridCard','EmptyProductsTable','GetCatalogFallbackPool','GetNewArrivalsPool','GetIncomingPool','GetBestSellerPool','ReservedWhereClause','AvailabilityWhereClause','BuildHomeCommercialActivitySql')|ForEach-Object{$queue.Enqueue($_)}
         if ($candidate) { $queue.Enqueue('LoadHomeCatalogDiscovery') }
+        if ($IncomingOnly) { $queue.Enqueue('TakeHomeArrivalsRows') }
         while ($queue.Count) {
             $n=$queue.Dequeue(); if (!$names.Add($n)) { continue }
             if (!$methods.ContainsKey($n)) { throw ('HOME_DISCOVERY_MISSING_METHOD: '+$n) }
@@ -163,6 +166,11 @@ try {
         Return LoadHomeCatalogDiscovery(a,b,c,d)
     End Function
 '@ }
+        if ($IncomingOnly) { $wrapper+=[Environment]::NewLine+@'
+    Public Function Arrivals(incoming As DataTable) As DataTable
+        Return TakeHomeArrivalsRows(8,New HashSet(Of String)(StringComparer.OrdinalIgnoreCase),New HashSet(Of String)(StringComparer.OrdinalIgnoreCase),Table(),incoming)
+    End Function
+'@ }
         $code="Imports System`nImports System.Data`nImports System.Collections.Generic`nImports System.Globalization`nImports System.Text`nImports System.Text.RegularExpressions`nImports System.Web`nPublic Class "+$name+[Environment]::NewLine+($bodies -join [Environment]::NewLine)+[Environment]::NewLine+$wrapper+[Environment]::NewLine+'End Class'
         $parameters=New-Object CodeDom.Compiler.CompilerParameters
         $parameters.GenerateInMemory=$true; $parameters.CompilerOptions='/optionInfer+ /optionExplicit+ /optionStrict- /imports:Microsoft.VisualBasic'
@@ -171,7 +179,95 @@ try {
         if ($compiled.Errors.HasErrors) { throw ('HOME_DISCOVERY_COMPILE: '+(($compiled.Errors|Where-Object{!$_.IsWarning}|ForEach-Object{'line '+$_.Line+': '+$_.ErrorText}) -join '; ')) }
         return [Activator]::CreateInstance($compiled.CompiledAssembly.GetType($name,$true))
     }
-    $new=Compile-Home $map 'CandidateHomeDiscovery' $true; $old=Compile-Home $oldMap 'BaselineHomeDiscovery' $false
+    $new=Compile-Home $map 'CandidateHomeDiscovery' $true; $old=Compile-Home $oldMap 'BaselineHomeDiscovery' $IncomingOnly.IsPresent
+    if($IncomingOnly){
+        # Delta only: same real SQL/renderers, existing adapter seam; no SQL suite or DB replay.
+        function Product($owner,[int]$id,[string]$name,[decimal]$net,[string]$ean='') {
+            $t=$owner.Table();$r=$t.NewRow()
+            $values=@{id=$id;TCid=-1;Codice=('SKU'+$id);Ean=$ean;Descrizione1=$name;Descrizione2='';MarcheDescrizione='Marca sintetica';CategorieDescrizione='Assortimento';Prezzo=$net;PrezzoIvato=($net*1.22D);Giacenza=10;Disponibilita=999;Impegnata=1;InOrdine=0;DisplayPromoSnapshotReady=$true;DisplayPromoTechnicalError=$false;DisplayPromoHasQuantityOne=$false;DisplayPromoHasTier=$false}
+            foreach($key in $values.Keys){if($t.Columns.Contains($key)){$r[$key]=$values[$key]}}
+            $t.Rows.Add($r);return ,$t
+        }
+        function Append($target,$rows){foreach($r in $rows.Rows){$target.ImportRow($r)}}
+        function TableXml($t){$data=New-Object Data.DataSet;$data.Tables.Add($t.Copy());return $data.GetXml()}
+        $browser=New-Object 'Collections.Generic.List[object]'
+        $metrics=New-Object 'Collections.Generic.List[object]'
+        foreach($scope in @(@{Name='Tech';Company=1;Listino=1;Net=10D;Offset=100},@{Name='Food';Company=2;Listino=10;Net=12D;Offset=200})){
+            foreach($owner in @($new,$old)){$owner.Configure($scope.Company,$scope.Listino,$false,$true);$owner.SqlReads=0}
+            $incoming=Product $new $scope.Offset ($scope.Name+' articolo in arrivo') $scope.Net 'INCOMING-EAN'
+            $incoming.Rows[0].Giacenza=0;$incoming.Rows[0].Impegnata=0;$incoming.Rows[0].InOrdine=5
+            $arrivals=$new.Arrivals($incoming);$empty=$new.Table()
+            Check ($scope.Name+' real arrivals selector produces a strict informative flag') ($arrivals.Rows.Count -eq 1 -and $arrivals.Rows[0].HomeInformativeOnly -is [bool] -and $arrivals.Rows[0].HomeInformativeOnly)
+            $beforeXml=TableXml $arrivals;$beforeCard=Stable ($old.Card($arrivals.Rows[0]))
+            $pool=$new.Table()
+            foreach($n in 1..8){Append $pool (Product $new ($scope.Offset+$n) ($scope.Name+' prodotto '+@('Alfa','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel')[$n-1]) $scope.Net)}
+            $new.FixtureRows=$pool;$old.FixtureRows=$pool
+            $oldReads=$old.SqlReads;$newReads=$new.SqlReads
+            $baseline=$old.Discover($empty,$arrivals,$empty,$empty);$actual=$new.Discover($empty,$arrivals,$empty,$empty)
+            Check ($scope.Name+' baseline informative arrivals suppress discovery without a pool read') ($baseline.Rows.Count -eq 0 -and $old.SqlReads -eq $oldReads)
+            Check ($scope.Name+' candidate discovers at most eight with exactly one pool read') ($actual.Rows.Count -eq 8 -and $new.SqlReads -eq $newReads+1)
+            Check ($scope.Name+' arrivals data and native informative card unchanged') ((TableXml $arrivals) -ceq $beforeXml -and (Stable ($new.Card($arrivals.Rows[0]))) -ceq $beforeCard -and $beforeCard -notmatch 'cart_add\.aspx')
+            $discoveryHtml=($actual.Rows|ForEach-Object{$new.Card($_)}) -join ''
+            Check ($scope.Name+' prices and native initial quantity remain authoritative in the renderer') ($discoveryHtml -notmatch 'Prezzo su richiesta' -and $discoveryHtml -match 'cart_add\.aspx\?id=' -and $discoveryHtml -match 'TCid=-1' -and $discoveryHtml -match 'qty=1' -and $new.SelectedBase($actual.Rows[0]) -eq ($scope.Net*1.22D))
+            Check ($scope.Name+' missing images retain the existing placeholder') ($discoveryHtml -match 'placeholder\.svg|Immagine%20(?:prodotto%20)?non%20disponibile')
+            $browser.Add([pscustomobject]@{Name=$scope.Name;Company=$scope.Company;Listino=$scope.Listino;ArrivalsHtml=($new.Card($arrivals.Rows[0]));BeforeDiscoveryHtml='';DiscoveryHtml=$discoveryHtml;Count=$actual.Rows.Count})
+            foreach($included in @($false,$true)){
+                $new.Configure($scope.Company,$scope.Listino,$false,$included);$old.Configure($scope.Company,$scope.Listino,$false,$included)
+                Check ($scope.Name+' unchanged pool SQL VATincluded='+$included) ($new.Sql('catalog') -ceq $old.Sql('catalog'))
+                Check ($scope.Name+' native renderer byte-equivalent VATincluded='+$included) ((Stable ($new.Card($pool.Rows[0]))) -ceq (Stable ($old.Card($pool.Rows[0]))))
+            }
+            $new.Configure($scope.Company,$scope.Listino,$false,$true)
+            foreach($section in @(0,2,3)){
+                $args=@($empty,$arrivals,$empty,$empty);$args[$section]=$pool;$reads=$new.SqlReads
+                Check ($scope.Name+' existing selection '+$section+' prevents discovery read') ($new.Discover($args[0],$args[1],$args[2],$args[3]).Rows.Count -eq 0 -and $new.SqlReads -eq $reads)
+            }
+            foreach($flag in @($false,$null,[DBNull]::Value,'true','false',1,0,'invalid')){
+                $bad=New-Object Data.DataTable;[void]$bad.Columns.Add('id',[int]);[void]$bad.Columns.Add('HomeInformativeOnly',[object]);$r=$bad.NewRow();$r.id=$scope.Offset;$r.HomeInformativeOnly=if($null -eq $flag){[DBNull]::Value}else{$flag};$bad.Rows.Add($r);$reads=$new.SqlReads
+                Check ($scope.Name+' flag '+[string]$flag+' does not authorize a pool read') ($new.Discover($empty,$bad,$empty,$empty).Rows.Count -eq 0 -and $new.SqlReads -eq $reads)
+            }
+            foreach($bad in @($incoming,$empty)){$reads=$new.SqlReads;if($bad.Rows.Count){Check ($scope.Name+' absent flag prevents pool read') ($new.Discover($empty,$bad,$empty,$empty).Rows.Count -eq 0 -and $new.SqlReads -eq $reads)}}
+            $mixed=$arrivals.Copy();Append $mixed $arrivals;$mixed.Rows[1].HomeInformativeOnly=$false;$reads=$new.SqlReads
+            Check ($scope.Name+' mixed purchasable arrivals prevent pool read') ($new.Discover($empty,$mixed,$empty,$empty).Rows.Count -eq 0 -and $new.SqlReads -eq $reads)
+            $broken=$arrivals.Copy();$broken.Rows[0].DisplayPromoTechnicalError=$true;$reads=$new.SqlReads
+            Check ($scope.Name+' known promotion failure does not enable fallback') ($new.Discover($empty,$broken,$empty,$empty).Rows.Count -eq 0 -and $new.SqlReads -eq $reads)
+            foreach($size in @(0,1,3,8,12)){
+                $sample=$new.Table();foreach($n in 0..($size-1)){if($size -gt 0){Append $sample (Product $new ($scope.Offset+100+$n) ($scope.Name+' Selezione '+@('Alfa','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet','Kilo','Lima')[$n]) $scope.Net)}}
+                $new.FixtureRows=$sample;$reads=$new.SqlReads;$found=$new.Discover($empty,$arrivals,$empty,$empty)
+                Check ($scope.Name+' small/empty/large fixture '+$size+' no artificial fill or extra reads') ($found.Rows.Count -eq [Math]::Min(8,$size) -and $new.SqlReads -eq $reads+1)
+                $new.FixtureRows=$sample;$old.FixtureRows=$sample;$a=$new.SqlReads;$b=$old.SqlReads
+                Check ($scope.Name+' legacy empty selections unchanged '+$size) ((TableXml ($new.Discover($empty,$empty,$empty,$empty))) -ceq (TableXml ($old.Discover($empty,$empty,$empty,$empty))) -and $new.SqlReads -eq $a+1 -and $old.SqlReads -eq $b+1)
+            }
+            $duplicates=$new.Table();foreach($row in $pool.Rows){$duplicates.ImportRow($row);$duplicates.ImportRow($row)}
+            $sameId=Product $new $scope.Offset ($scope.Name+' altro TC stesso articolo') $scope.Net;$sameId.Rows[0].TCid=77;Append $duplicates $sameId
+            Append $duplicates (Product $new ($scope.Offset+88) ($scope.Name+' diverso nome stesso EAN') $scope.Net 'INCOMING-EAN')
+            Append $duplicates (Product $new ($scope.Offset+89) ($scope.Name+' articolo in arrivo') $scope.Net 'OTHER-EAN')
+            # Put collisions first, so the eight-card cap cannot hide a missing exclusion.
+            $ordered=$duplicates.Clone();foreach($n in @(($duplicates.Rows.Count-3),($duplicates.Rows.Count-2),($duplicates.Rows.Count-1))){ $ordered.ImportRow($duplicates.Rows[$n]) };foreach($n in 0..($duplicates.Rows.Count-4)){ $ordered.ImportRow($duplicates.Rows[$n]) }
+            $new.FixtureRows=$ordered;$reads=$new.SqlReads;$dedup=$new.Discover($empty,$arrivals,$empty,$empty)
+            Check ($scope.Name+' excludes same article other TC, business and display duplicates') ($dedup.Rows.Count -eq 8 -and @($dedup.Rows|Where-Object{$_.id -in @($scope.Offset,$scope.Offset+88,$scope.Offset+89)}).Count -eq 0 -and @($dedup.Rows|ForEach-Object{$_.id}|Select-Object -Unique).Count -eq 8 -and $new.SqlReads -eq $reads+1)
+            $new.FailRead=$true;$reads=$new.SqlReads
+            Check ($scope.Name+' read failure is empty after exactly one attempt') ($new.Discover($empty,$arrivals,$empty,$empty).Rows.Count -eq 0 -and $new.SqlReads -eq $reads+1)
+            $new.FailRead=$false;$new.FixtureRows=$pool
+            $underfilled=$pool.Clone();$underfilled.ImportRow($ordered.Rows[0]);foreach($n in 0..2){$underfilled.ImportRow($pool.Rows[$n])}
+            $new.FixtureRows=$underfilled;$reads=$new.SqlReads
+            Check ($scope.Name+' deduplication does not refill a short selection') ($new.Discover($empty,$arrivals,$empty,$empty).Rows.Count -eq 3 -and $new.SqlReads -eq $reads+1)
+            $pair=$pool.Clone();$pair.ImportRow($pool.Rows[0]);$pair.ImportRow($pool.Rows[0]);$pair.Rows[1].TCid=91;$pair.Rows[1].Codice='OTHER-VARIANT';$pair.Rows[1].Descrizione1='Different display identity'
+            $new.FixtureRows=$pair;$reads=$new.SqlReads
+            Check ($scope.Name+' same article with different business/display keys stays one card') ($new.Discover($empty,$arrivals,$empty,$empty).Rows.Count -eq 1 -and $new.SqlReads -eq $reads+1)
+            $unidentified=$arrivals.Copy();$unidentified.Rows[0].id=0;$reads=$new.SqlReads
+            Check ($scope.Name+' malformed arrival identity cannot activate discovery') ($new.Discover($empty,$unidentified,$empty,$empty).Rows.Count -eq 0 -and $new.SqlReads -eq $reads)
+            $metrics.Add([pscustomobject]@{Scope=$scope.Name;InformativeOnlyBefore=0;InformativeOnlyAfter=1;PurchasableSelectionBefore=0;PurchasableSelectionAfter=0;MaximumDiscoveryCards=8})
+        }
+        $before=$base.Replace($oldMap.LoadHomeCatalogDiscovery[0],'');$after=$source.Replace($map.LoadHomeCatalogDiscovery[0],'').Replace($map.HasOnlyInformativeHomeArrivals[0],'')
+        # Removing two methods instead of one leaves an extra blank separator.
+        $before=[regex]::Replace(($before -replace "`r`n","`n"),"`n{2,}","`n`n").Trim()
+        $after=[regex]::Replace(($after -replace "`r`n","`n"),"`n{2,}","`n`n").Trim()
+        Check 'all other HOME source unchanged after EOL and blank-separator normalization' ($before -ceq $after)
+        Write-Json 'incoming-browser-fixtures.json' $browser
+        Write-Json 'incoming-report.json' @{Result='PASS';Checks=$checks.Count;ChecksDetail=$checks;Baseline=$baselineRef;Metrics=$metrics;Limits='Actual compiled VB and generated SQL; existing connection/adapter seam replaced with synthetic rows. No MySQL/IIS, host authentication, promotion I/O or operational availability certification.'}
+        Write-Output ('HOME_INCOMING_DISCOVERY '+$checks.Count+'/'+$checks.Count+' PASS')
+        exit 0
+    }
     $new.Configure(101,1,$false,$true); $old.Configure(101,1,$false,$true)
     if (!$PriceOnly) { Check 'baseline source identifies first-visit gap; no live defect claimed' ($oldMap.BindHome[0] -notmatch 'GetCatalogFallbackPool|LoadHomeCatalogDiscovery') }
     foreach ($pool in @('new','incoming','rank')) { Check ($pool+' SQL byte-equivalent to stable') ($new.Sql($pool) -ceq $old.Sql($pool)) }
