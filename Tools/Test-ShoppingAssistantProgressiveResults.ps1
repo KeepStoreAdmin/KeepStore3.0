@@ -4,11 +4,13 @@ param(
     [Parameter(Mandatory=$true)][string]$BrowserExecutable,
     [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
     [switch]$CatalogHandoffOnly,
-    [switch]$DecisionJourneyOnly
+    [switch]$DecisionJourneyOnly,
+    [switch]$NeedToChoiceOnly
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if($CatalogHandoffOnly -and $DecisionJourneyOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
+if($NeedToChoiceOnly -and ($CatalogHandoffOnly -or $DecisionJourneyOnly)){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
 $root=Split-Path -Parent $PSScriptRoot
 $output=[IO.Path]::GetFullPath($EvidenceDirectory)
@@ -18,7 +20,9 @@ if(-not (Test-Path -LiteralPath $PlaywrightModulePath) -or -not (Test-Path -Lite
 [void][IO.Directory]::CreateDirectory($output)
 $payload=Join-Path $output 'server-payloads.json'
 $serverLog=Join-Path $output 'server-tests.log'
-if($CatalogHandoffOnly){
+if($NeedToChoiceOnly){
+    if(-not (Test-Path -LiteralPath $payload -PathType Leaf)){throw 'ATTESTED_EXISTING_GUIDED_PAYLOAD_REQUIRED'}
+}elseif($CatalogHandoffOnly){
     # Compile the actual URL builder; System.Web performs real query decoding and URL encoding.
     # The resolved sector is an input attested by the unchanged taxonomy contract, not a database fixture.
     Add-Type -AssemblyName System.Web
@@ -90,7 +94,9 @@ End Class
     if(-not (Select-String -LiteralPath $serverLog -Pattern '^SEARCH_SUGGEST_SYNTHETIC_SUITE=PASS$' -Quiet)){throw 'COMMERCIAL_CONTRACT_SUITE_FAILED'}
 }
 $node=(Get-Command node -CommandType Application -ErrorAction Stop).Source
-if($CatalogHandoffOnly){
+if($NeedToChoiceOnly){
+    & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --need-to-choice-only
+}elseif($CatalogHandoffOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --catalog-handoff-only
 }elseif($DecisionJourneyOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --decision-journey-only

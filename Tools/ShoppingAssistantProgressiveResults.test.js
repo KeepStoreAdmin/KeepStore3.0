@@ -207,6 +207,10 @@ async function fixture(options={}) {
   return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,transport,state,wait,submit,refine,privacy,screenshot,close};
 }
 async function run() {
+  if(process.argv.includes('--need-to-choice-only')){
+    browser=await playwright.chromium.launch({executablePath:chrome,headless:true});report.browser=await browser.version();
+    await needToChoiceRegressions(); report.status='PASS';return;
+  }
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
   if(baselineVisualOnly){
@@ -233,7 +237,7 @@ async function run() {
       record('results preserve triggering focus '+kind+width,await f.page.locator('[data-ks-guide-prepare]').evaluate(e=>e===document.activeElement));
       record('three grounded cards '+kind+width,await f.page.locator('.ks-guide-card').count()===3);
       (report.domSamples ||= []).push({kind,width,...await f.page.evaluate(()=>window.__fixtureRender)});
-      record('one optional question '+kind+width,await f.page.locator('.ks-guide-question').count()===1);
+      record('uniform known criteria do not cause an irrelevant question '+kind+width,await f.page.locator('.ks-guide-question').count()===0);
       record('subset count copy '+kind+width,(await f.page.locator('[data-ks-guide-results]').innerText()).includes('Non è il totale del catalogo'));
       record('no misleading food or ranking claims '+kind+width,!/migliore per te|allergen|confidenza|probabilità|garantit/i.test(await f.page.locator('[data-ks-guide-results]').innerText()));
       await f.refine('solo disponibili');record('availability request '+kind+width,new URL(f.requests.at(-1)).searchParams.get('disponibile')==='1');
@@ -404,6 +408,59 @@ async function run() {
   }
   report.bytes.push({file:'Public/assets/keepstore/js/ks-shopping-guide.js',base:0,candidate:Buffer.byteLength(moduleSource.replace(/\r\n/g,'\n'))});
   report.maximumCards=6;report.storage='zero';report.status='PASS';
+}
+async function needToChoiceRegressions() {
+  const brief=api.blank();
+  for(const [raw,q] of [['Cerco SSD 1 TB','SSD 1 TB'],['Mi serve olio da 1 litro','olio da 1 litro'],['Vorrei SKU-500','SKU-500'],['Cerco non ricondizionato','non ricondizionato']])record('literal need '+raw,api.interpretNeed(raw).query===q);
+  record('model numbers not budget',!api.interpretNeed('Cerco iPhone 15 500 GB').patch.pmax);
+  record('cost need changes ordering',api.interpretNeed('Cerco SSD; spendere meno').patch.ordinamento==='p_basso');
+  record('availability need changes selection',api.interpretNeed('Cerco SSD; escludere indisponibili').patch.disponibile===true);
+  record('budget contradiction explicit',api.interpretNeed('Cerco SSD; massimo 100 euro; massimo 200 euro').conflicts.length===1);
+  for(const raw of ['Ho bisogno di stampante compatibile; 500 pagine/mese; consumabili economici','Cerco olio senza allergeni; ingredienti certificati'])record('specific unsupported requirement '+raw,api.interpretNeed(raw).limits.length>0);
+  const mixed=[{priceValue:10,price:'10 €',availability:2},{priceValue:20,price:'20 €',availability:0}];
+  record('stock question from actual difference',api.chooseQuestion(mixed,brief,[]).key==='stock');
+  record('price question from actual difference',api.chooseQuestion(mixed.map(x=>({...x,availability:2})),brief,[]).key==='budget');
+  record('uniform data no question',api.chooseQuestion([mixed[0],mixed[0]],brief,[])===null);
+  record('one candidate no fabricated comparison',api.chooseQuestion([mixed[0]],brief,[])===null);
+  record('skipped question not repeated',api.chooseQuestion(mixed,brief,['stock']).key!=='stock');
+  for(const kind of ['Tech','Food'])for(const width of report.viewports)for(const preference of ['prima i meno costosi','solo disponibili']){
+    const scenario=(kind==='Food'?2:0)+report.viewports.indexOf(width)%2, q=kind==='Food'?'olio da 1 litro':'SSD 1 TB';
+    const f=await fixture({kind,width,scenario,directory:width===430?'/shop/':'/',mutate:p=>p.suggestions.forEach((x,i)=>{x.priceValue=10+i;x.price=(10+i)+',00 €';x.availability=7;})});
+    try{
+      await f.page.locator('#ksGuideGoal').fill('Cerco '+q+'; '+preference);
+      if(width<=430)await f.page.locator('[data-ks-guide-understand]').tap();else await f.page.locator('[data-ks-guide-understand]').click();
+      record('understanding never searches '+kind+width+preference,f.requests.length===0);
+      await f.page.getByRole('button',{name:'Usa questa proposta nel brief',exact:true}).click();
+      record('proposal no request and no rewrite '+kind+width+preference,f.requests.length===0&&await f.page.locator('#ksGuideQuery').inputValue()===q);
+      await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      const request=new URL(f.requests[0]);record('counterfactual confirmed criteria '+kind+width+preference,f.requests.length===1&&(preference==='solo disponibili'?request.searchParams.get('disponibile')==='1':request.searchParams.get('ordinamento')==='p_basso'));
+      record('full goal never transmitted '+kind+width,!request.searchParams.has('goal')&&request.searchParams.get('q')===q);
+      const dims=await f.page.evaluate(()=>({width:innerWidth,actual:document.documentElement.scrollWidth}));record('need no overflow '+kind+width,dims.actual<=dims.width+1);
+      if(preference==='solo disponibili')await f.screenshot('need-'+kind+'-'+width);
+      await f.privacy();
+    }finally{await f.close();}
+  }
+  const unknown=await fixture();try{
+    await unknown.page.locator('#ksGuideGoal').fill('Organizzare un evento');await unknown.page.locator('[data-ks-guide-understand]').click();
+    record('unknown need real taxonomy clarification',unknown.requests.length===0&&await unknown.page.locator('[data-ks-guide-interpretation] button').count()>0);
+    await unknown.page.locator('[data-ks-guide-interpretation] button').first().click();
+    record('taxonomy choice proposes actual family without fetch',unknown.requests.length===0&&(await unknown.page.locator('#ksGuideQuery').inputValue()).length>0);
+    await unknown.page.locator('[data-ks-guide-prepare]').click();await unknown.wait('results');
+    const target=await unknown.page.locator('.ks-guide-product-cta').first().getAttribute('href');
+    record('family journey exact variant PDP',new URL(target).searchParams.get('id')==='120'&&new URL(target).searchParams.get('TCId')==='42');
+    await unknown.privacy();
+  }finally{await unknown.close();}
+  for(const goal of ['Cerco stampante; 500 pagine/mese; consumabili economici','Cerco olio; ingredienti e allergeni non documentati']){
+    const f=await fixture();try{
+      await f.page.locator('#ksGuideGoal').fill(goal);await f.page.locator('[data-ks-guide-understand]').click();
+      record('unsupported need specific before search '+goal,f.requests.length===0&&(await f.page.locator('[data-ks-guide-interpretation]').innerText()).includes(goal.split('; ')[1]));
+      await f.page.getByRole('button',{name:'Continua sui soli criteri supportati',exact:true}).click();
+      record('unsupported continuation still a draft '+goal,f.requests.length===0);
+      await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+      record('specific missing requirement retained in shortlist '+goal,(await f.page.locator('.ks-guide-card').first().innerText()).includes(goal.split('; ')[1]));
+      await f.privacy();
+    }finally{await f.close();}
+  }
 }
 async function decisionRegressions() {
   const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
@@ -598,7 +655,7 @@ async function rev1Regressions() {
     }finally{await f.close();}
   }
   for(const directory of ['/', '/shop/'])for(const key of ['Enter','Space']){
-    const f=await fixture({directory});
+    const f=await fixture({directory,mutate:p=>{if(!p.guided.criteria.disponibile)p.suggestions[1].availability=0;}});
     try{
       const label=directory+' '+key;
       await f.submit();
@@ -612,7 +669,7 @@ async function rev1Regressions() {
       check('skip no request '+label,await fetchCount(f)===n&&await f.page.locator('.ks-guide-question').count()===0);
       await f.refine('massimo 200 euro');
       await f.page.locator('[data-ks-guide-sector="7"]').click();await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
-      check('availability question selected '+label,(await f.page.locator('.ks-guide-question').innerText()).includes('prodotti disponibili'));
+      check('availability question selected '+label,(await f.page.locator('.ks-guide-question').innerText()).includes('disponibili'));
       f.config.delay=250;
       await activate(f,f.page.getByRole('button',{name:'Scegli questa preferenza',exact:true}),key);
       check('availability stable focus '+label,await focused(f,'#ksGuideCommand'));

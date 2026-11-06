@@ -1,5 +1,7 @@
 # KeepStore — START_HERE
 
+Checkpoint candidato06/11/2026: #417 SOURCE INTEGRATED a6269fe9e, non pubblicata. Task attivo SHOPPING-ASSISTANT-NEED-TO-CHOICE-1B nel worktree isolato; grammatica locale e domande adattive, protocollo v1 e servizi commerciali invariati. Prove e limiti nel Masterplan omonimo; nessuna certificazione LAB/IIS. KS-F01 PARZIALE, Task08 NON AVVIATO, SERVER E LAB SOSPESI.
+
 **Checkpoint prevalente 2026-10-30 — ORDINE ROADMAP PO 2026-10-30 APPROVATO.** Il PO dispone la sequenza Fase 1 affidabilita ordini (01-03), Fase 2 esperienza premium (04-08), Fase 3 gestionale/multi-tenant/preparazione rilascio (09-12), Fase 4 pagamenti/sicurezza (13-15), Fase 5 performance/SEO/integrations (16-18). L'ordine restante e invariato; task 12 solo preparazione prima dei gate 13-15, mai deploy anticipato. Prossimo macro-task 01 `KS-C01-CART-CHECKOUT-REMAINING-GATES-1A` NON AVVIATO. Dettagli e mappa nel PRODUCT_ROADMAP; storico e prova nel MASTERPLAN. **CONSEGNA SERVER SOSPESA.**
 
 **Riconciliazione Git 2026-10-30:** PR #401 MERGED/CLOSED, stable `4da8ec31532f8480bdb0a270763f4fce5ad96b57`, CI 41105747600 SUCCESS, main invariato a `976e99f17cabc8a5c6a8715463444edfeaadcd91`. #393 fix IVA SOURCE INTEGRATED e LAB A; #396/#397 CART REV1 chiusa A nel LAB. Pagamenti LIVE e produzione NON certificati. Coupon/Groupon STANDBY.

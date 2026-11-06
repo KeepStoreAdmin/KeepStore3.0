@@ -1,5 +1,12 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
+## Need-to-choice — contratto candidato 2026-11-06
+
+Base #417 SOURCE INTEGRATED6269fe9e; grammatica finita «Cerco/Vorrei/Mi serve/Ho bisogno di …» e preferenze esplicite separate da punto e virgola. Il testo originale resta locale; proposta e conferma commerciale sono azioni distinte. Nessuna inferenza universale o semantica LLM. Negazioni/codici non eliminati, conflitti da correggere; bisogno ambiguo chiarito dai reparti reali. Criteri non supportati specificati, con scelta di continuare sui soli filtri utilizzabili oppure consultare il negozio.
+
+Domande derivate dai candidati correnti: almeno due, differenze note su stock o prezzo, dimensione non risolta/saltata; una domanda inline per volta. Fascia proposta dal prezzo effettivo corrente, mai calcolo alternativo di prezzo. Nuova conferma → nuovo snapshot, nessun filtro locale mascherato da globale. guided v1, endpoint, resolver e contratti commerciali invariati; niente ID categoria dedotti da etichette/fallback, v2 non introdotta. Motivazioni ancorate a budget/stock/ordine confermati e requisiti mancanti specifici, confronto/PDP #417 riusati.
+
+[Prove, manifest, limiti e requisiti gestionali Enzo](KEEPSTORE_MASTERPLAN_OPERATIVO.md#shopping-assistant-need-to-choice-1b--2026-11-06). KS-F01 PARZIALE, Task08 NON AVVIATO; SERVER E LAB SOSPESI.
 ## Decision journey — contratto candidato 2026-11-06
 
 `SHOPPING-ASSISTANT-DECISION-JOURNEY-1A`, base `bb89975e`, estende la guida deterministica #364-366/#401 nella sola HOME. Protocollo guided v1, endpoint e resolver commerciali restano invariati. Non installa un LLM/RAG, non interpreta automaticamente un bisogno e non introduce cache, provider, session key, query o archivio conversazionale.

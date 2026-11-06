@@ -47,6 +47,43 @@
     if (!amount || amount === '0') throw new Error('budget');
     return amount;
   }
+  function interpretNeed(raw) {
+    var original = clean(raw), remaining = original, patch = {}, limits = [], conflicts = [];
+    if (!original || original.length > MAX_GOAL) return { query: '', patch: patch, limits: limits, conflicts: ['Descrivi un bisogno in massimo 160 caratteri.'] };
+    // Delimited commercial clauses only. Product numbers and negations remain literal.
+    var parts = original.split(/\s*;\s*/), first = parts.shift();
+    parts.forEach(function (part) {
+      var controlled = { 'spendere meno': 'prima i meno costosi', 'escludere indisponibili': 'solo disponibili' };
+      var command = parseCommand(controlled[part.toLocaleLowerCase('it-IT')] || part);
+      if (command.kind === 'patch') {
+        Object.keys(command.patch).forEach(function (key) {
+          if (Object.prototype.hasOwnProperty.call(patch, key) && patch[key] !== command.patch[key]) conflicts.push('Preferenze in conflitto: ' + part);
+          patch[key] = command.patch[key];
+        });
+      } else limits.push('Non verificabile con i dati disponibili: «' + part + '». Mancano attributi certificati per applicare questo requisito; puoi continuare sui soli criteri supportati o contattare il negozio.');
+    });
+    var match = /^(?:cerco|vorrei|mi serve|ho bisogno di)\s+(.+)$/i.exec(first);
+    remaining = match ? match[1] : '';
+    if (/^(?:spendere meno|escludere indisponibili)$/i.test(remaining)) remaining = '';
+    if (remaining.length > MAX_TEXT) { limits.push('Le parole da cercare superano 80 caratteri: precisale senza troncarle.'); remaining = ''; }
+    // These requirements have no certified attributes in guided v1; never turn them into product facts.
+    if (/\b(?:compatib\w*|allergen\w*|ingredient\w*|consumabil\w*|resa|pagine\s*\/\s*mese|costo d['’]uso)\b/i.test(remaining)) {
+      limits.push('Per «' + remaining + '» mancano attributi certificati di compatibilità, composizione o costo d’uso. Specifica il prodotto oppure consulta il negozio.'); remaining = '';
+    }
+    return { query: remaining, patch: patch, limits: limits, conflicts: conflicts, source: original };
+  }
+  function chooseQuestion(items, brief, skipped) {
+    skipped = skipped || [];
+    if (items.length < 2) return null;
+    if (!brief.disponibile && skipped.indexOf('stock') < 0 && items.some(function (x) { return x.availability > 0; }) && items.some(function (x) { return x.availability !== null && x.availability <= 0; }))
+      return { key: 'stock', message: 'Alcuni di questi candidati non sono disponibili. Vuoi escluderli?', patch: { disponibile: true } };
+    var prices = Array.from(new Set(items.map(function (x) { return x.priceValue; }))).sort(function (a, b) { return a - b; });
+    if (prices.length > 1 && decimal(String(prices[0])) && brief.pmax === '0' && skipped.indexOf('budget') < 0)
+      return { key: 'budget', message: 'Questi candidati hanno prezzi diversi. Vuoi fissare il massimo a ' + items.find(function (x) { return x.priceValue === prices[0]; }).price + '?', patch: { pmax: String(prices[0]) } };
+    if (prices.length > 1 && !brief.ordinamento && skipped.indexOf('sort') < 0)
+      return { key: 'sort', message: 'Vuoi vedere prima i meno costosi, mantenendo gli altri criteri?', patch: { ordinamento: 'p_basso' } };
+    return null;
+  }
   function catalogHandoff(search, departments) {
     var params = new URLSearchParams(search), names = ['guide', 'guide_q', 'guide_st'];
     if (!names.some(function (name) { return params.has(name); })) return { kind: 'none' };
@@ -240,6 +277,7 @@
       } catch (_) { button.disabled = true; button.hidden = true; }
     });
     var state = { phase: 'idle', confirmed: null, confirmedGoal: '', draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
+    var skippedQuestions = [], proposedNeed = null, needPatch = null;
     var handoffNotice = find('[data-ks-guide-handoff]');
     function handoffMessage(message) { if (handoffNotice) { handoffNotice.textContent = message; handoffNotice.hidden = !message; } }
     function node(tag, label, className) {
@@ -323,13 +361,17 @@
       var purpose = typeof nextGoal === 'string' ? nextGoal : state.confirmedGoal;
       if (state.request && same(state.request.brief, b) && purpose === state.confirmedGoal) return;
       if (record && (!same(state.confirmed, b) || purpose !== state.confirmedGoal)) remember(state.confirmed);
+      if (!same(state.confirmed, b) || purpose !== state.confirmedGoal) skippedQuestions = [];
       state.confirmedGoal = purpose;
+      needPatch = null;
       state.confirmed = copy(b); state.unknown = ''; newQuery.hidden = true; command.value = '';
       syncFields(b); summaryView();
       if (!b.q) { invalidate('editing'); announce('Indica il prodotto da cercare.'); return; }
       search(b);
     }
     function resetGuide() {
+      needPatch = null; proposedNeed = null; skippedQuestions = [];
+      var proposedView = find('[data-ks-guide-interpretation]'); if (proposedView) proposedView.replaceChildren();
       remember(state.confirmed); state.confirmed = null; state.confirmedGoal = ''; state.unknown = '';
       state.handoffSectorPending = false; handoffMessage('');
       syncFields(blank()); command.value = ''; newQuery.hidden = true;
@@ -364,6 +406,7 @@
       if (budget) budget.removeAttribute('aria-invalid');
       try {
         var b = copy(state.confirmed || blank());
+        if (needPatch) b = Object.assign(b, needPatch);
         b.q = queryText(input.value, detail.value); b.st = state.draftSector;
         if (maximum !== null) b.pmax = maximum;
         input.removeAttribute('aria-invalid'); detail.removeAttribute('aria-invalid');
@@ -415,6 +458,11 @@
       article.appendChild(node('p', proof.matched.length && !proof.unverified.length ? 'Termini presenti nei dati' : 'Corrispondenza da verificare', 'ks-guide-match'));
       article.appendChild(node('p', reason(item, state.confirmed), 'ks-guide-reason ks-guide-evidence'));
       if (proof.unverified.length) article.appendChild(node('p', 'Non verificati nei dati mostrati: ' + proof.unverified.join(', ') + '.', 'ks-guide-unverified'));
+      if (state.confirmed.pmax !== '0') article.appendChild(node('p', 'Rispetta il massimo confermato di ' + state.confirmed.pmax.replace('.', ',') + ' € nel contesto IVA indicato.', 'ks-guide-evidence'));
+      if (state.confirmed.disponibile) article.appendChild(node('p', 'Rispetta il filtro disponibilità. Non è una promessa di consegna o prenotazione.', 'ks-guide-evidence'));
+      if (state.confirmed.ordinamento === 'p_basso' && decision(state.result.items).lowest.indexOf(item.key) >= 0) article.appendChild(node('p', 'Da approfondire se la priorità è il prezzo: minimo fra i candidati restituiti, non dell’intero catalogo.', 'ks-guide-evidence'));
+      var requirements = interpretNeed(state.confirmedGoal).limits;
+      if (requirements.length) article.appendChild(node('p', requirements.join(' '), 'ks-guide-unverified'));
       article.appendChild(link(item.availability > 0 ? 'Vai alla scheda e acquista' : 'Scopri questo prodotto', item.url, 'ks-guide-product-cta'));
       var label = node('label', undefined, 'ks-guide-check'), check = doc.createElement('input');
       check.type = 'checkbox'; check.setAttribute('data-ks-guide-compare-key', item.key);
@@ -481,12 +529,13 @@
       announce('Confronto aggiornato: ' + items.length + ' prodotti.');
     }
     function nextQuestion(container) {
-      var b = state.confirmed, question = node('div', undefined, 'ks-guide-question'), message, action;
-      if (b.pmax === '0') { message = 'Vuoi indicare un prezzo massimo per restringere la selezione?'; action = function () { if (budget) budget.focus(); else { command.value = 'massimo '; command.focus(); } }; }
-      else if (!b.st && departments.size > 1) { message = 'Vuoi scegliere un reparto?'; action = function () { var choice = choices.find(function (x) { return !x.disabled && Number(x.getAttribute('data-ks-guide-sector')) > 0; }); if (choice) choice.focus(); }; }
-      else if (!b.disponibile) { message = 'Vuoi limitarti ai prodotti disponibili?'; action = function () { command.focus(); runCommand('solo disponibili'); }; }
-      else return;
-      question.append(node('p', message), button('Scegli questa preferenza', action), button('Salta', function () { command.focus(); question.remove(); }));
+      var b = state.confirmed, proposal = chooseQuestion(state.result.items, b, skippedQuestions);
+      if (!proposal) return;
+      var question = node('div', undefined, 'ks-guide-question');
+      question.append(node('p', proposal.message), node('p', 'La domanda riguarda soltanto i candidati attuali, non l’intero catalogo.', 'ks-guide-hint'), button('Scegli questa preferenza', function () {
+        if (!canRefineConfirmed()) return;
+        command.focus(); accept(Object.assign(copy(b), proposal.patch), true);
+      }), button('Salta', function () { skippedQuestions.push(proposal.key); command.focus(); question.remove(); nextQuestion(container); }));
       container.appendChild(question);
     }
     function renderResult() {
@@ -572,6 +621,41 @@
       }
     }
     try {
+      var understand = find('[data-ks-guide-understand]'), interpretation = find('[data-ks-guide-interpretation]');
+      if (understand && interpretation && goal) understand.addEventListener('click', function () {
+        invalidate('editing'); proposedNeed = interpretNeed(goal.value); interpretation.replaceChildren();
+        interpretation.appendChild(node('p', 'Interpretazione proposta: conferma o correggi, senza ricerca automatica.'));
+        proposedNeed.limits.concat(proposedNeed.conflicts).forEach(function (message) { interpretation.appendChild(node('p', message, 'ks-guide-unverified')); });
+        if (proposedNeed.query && !proposedNeed.conflicts.length) {
+          interpretation.appendChild(node('p', 'Parole espresse nel bisogno: ' + proposedNeed.query));
+          Object.keys(proposedNeed.patch).forEach(function (key) {
+            var value = proposedNeed.patch[key];
+            var label = key === 'disponibile' ? (value ? 'Solo disponibili' : 'Includi anche i non disponibili') : key === 'ordinamento' ? (value ? 'Prima i meno costosi' : 'Ordina per pertinenza') : (key === 'pmax' ? 'Prezzo massimo: ' : 'Prezzo minimo: ') + String(value).replace('.', ',') + ' €';
+            interpretation.appendChild(node('p', 'Preferenza espressa: ' + label));
+          });
+          interpretation.appendChild(button(proposedNeed.limits.length ? 'Continua sui soli criteri supportati' : 'Usa questa proposta nel brief', function () {
+            if (clean(goal.value) !== proposedNeed.source) { announce('Il bisogno è cambiato. Rileggilo prima di confermare la proposta.'); return; }
+            var max = proposedNeed.patch.pmax;
+            var currentMaximum; try { currentMaximum = budget && clean(budget.value) ? budgetValue(budget.value) : null; } catch (_) { announce('Correggi il budget nel campo prima di usare la proposta.'); budget.focus(); return; }
+            if (max && currentMaximum && currentMaximum !== max) { announce('Il budget del bisogno e quello nel campo sono diversi. Correggi uno dei due prima di confermare.'); budget.focus(); return; }
+            input.value = proposedNeed.query; detail.value = '';
+            needPatch = copy(proposedNeed.patch);
+            if (max && budget) budget.value = max.replace('.', ',');
+            // Non-price criteria are shown for a second, explicit commercial confirmation.
+            interpretation.appendChild(node('p', 'Controlla il brief e premi Mostra i prodotti.'));
+            reviewDraft(); prepare.focus();
+          }));
+        } else {
+          interpretation.appendChild(node('p', 'Quale famiglia di prodotti intendi? Scegli un reparto reale oppure precisa con «Cerco …». Nessun prodotto è stato dedotto.'));
+          choices.filter(function (choice) { return !choice.disabled && Number(choice.getAttribute('data-ks-guide-sector')) > 0; }).forEach(function (choice) {
+            interpretation.appendChild(button(clean(choice.textContent), function () {
+              choice.click(); var name = clean(choice.textContent);
+              if (name.length <= MAX_TEXT) { input.value = name; detail.value = ''; reviewDraft(); }
+              input.focus(); announce('Famiglia scelta dalla tassonomia del negozio. Controlla le parole proposte e conferma con Mostra i prodotti.');
+            }));
+          });
+        }
+      });
       choices.forEach(function (choice) {
         if (choice.disabled) return;
         choice.addEventListener('click', function () {
@@ -591,6 +675,7 @@
       });
       [input, detail, command, goal, budget].filter(Boolean).forEach(function (field) {
         field.addEventListener('input', function () {
+          if (field === goal) needPatch = null;
           invalidate('editing'); state.unknown = ''; newQuery.hidden = true;
           field.removeAttribute('aria-invalid'); reviewDraft();
           announce(field === command ? 'Preferenza in modifica. Premi “Applica preferenza” per confermare.' : 'Richiesta in modifica. Premi “Mostra i prodotti” per confermare.');
@@ -634,5 +719,5 @@
   }
   return { init: init, parseCommand: parseCommand, queryText: queryText, blank: blank, urls: urls,
     requestURL: requestURL, catalogURL: catalogURL, validate: validate, reason: reason, evidence: evidence, decision: decision,
-    budgetValue: budgetValue, catalogHandoff: catalogHandoff };
+    budgetValue: budgetValue, interpretNeed: interpretNeed, chooseQuestion: chooseQuestion, catalogHandoff: catalogHandoff };
 }));

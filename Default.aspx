@@ -337,7 +337,9 @@
                         <legend class="visually-hidden">Cerca con la guida agli acquisti</legend>
                         <label for="ksGuideGoal">Quale esigenza vuoi risolvere? <span>(facoltativo)</span></label>
                         <textarea id="ksGuideGoal" rows="2" maxlength="160" autocomplete="off" placeholder="Descrivi il tuo obiettivo, senza dati personali" aria-describedby="ksGuideGoalHelp"></textarea>
-                        <p id="ksGuideGoalHelp" class="ks-guide-hint">L'obiettivo resta in questa pagina: non diventa un filtro e non certifica l'idoneità dei prodotti. Precisa sotto cosa cercare.</p>
+                        <p id="ksGuideGoalHelp" class="ks-guide-hint">Puoi iniziare con «Cerco …» e aggiungere preferenze separate da punto e virgola, come «solo disponibili» o «prima i meno costosi». La proposta richiede la tua conferma.</p>
+                        <button type="button" class="ks-guide-edit" data-ks-guide-understand>Chiarisci il mio bisogno</button>
+                        <div data-ks-guide-interpretation aria-live="polite"></div>
                         <label for="ksGuideQuery">Quale prodotto o categoria può aiutarti?</label>
                         <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Scrivi il prodotto, la marca o il codice" aria-describedby="ksGuideLimit ksGuideHandoff" />
                         <label for="ksGuideDetail">Vuoi aggiungere un dettaglio? <span>(facoltativo)</span></label>
@@ -709,6 +711,6 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20261022-home-vetrina-1a"></script>
-    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261106-decision-journey1a" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261106-need-to-choice1b" %>"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261021-progressive1a" %>"></script>
 </asp:Content>
