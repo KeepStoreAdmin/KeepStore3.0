@@ -804,6 +804,12 @@ La sicurezza password e stata consolidata nel flow account e LOGIN-REGISTER-SECU
 
 ### HOME adattiva e assistente — confine CURRENT / TARGET
 
+#### HOME-ADAPTIVE-EXPERIENCE-COMPLETION-1B (2026-11-06)
+
+**Contratto del candidato SOURCE:** `full` e `hero-only` conservano banner, ordinamento, CTA/Contattaci, ricerca e accesso guida dell'header. `none` riusa HomeIntroSection: catalogo completo sempre disponibile, collegamento alla guida esistente e link interno alle categorie mostrate, altrimenti ai reparti mostrati. `BindHomeIntroNavigation` consuma soltanto il successo della lettura assortimento gia effettuata e la visibilita dei due binding, senza nuove query o resolver. Nessun salto tassonomico se vuoto/non verificato; frammento costruito dal ClientID del controllo reale, destinazione focalizzabile con tabindex=-1, senza cambiare URL st/ct o introdurre una ricerca duplicata.
+
+**Presentazione:** azioni introduttive compatte su due righe mobili, target>=44 e focus; CSS soltanto in HeadContent. Nel range576-991 i contenuti Hero prima assoluti diventano in flusso, rispettando minimi esistenti, immagini cover e script Swiper originali; ogni slide occupa l'altezza comune anche con testi differenti e i laterali non riservano righe vuote. Fuori dal range, layout Hero precedente. Offerte, arrivi informativi, classifica, recenti, discovery #413, SQL/listino/IVA/promo/stock/TCId e servizi commerciali restano invariati. Prove compilate e browser di presentazione non certificano IIS/MySQL, prestazioni operative o device reale; KS-E01 rimane PARZIALE e non introduce una capability engine.
+
 #### Contratto PO — HOME-CATALOG-DISCOVERY-1A (2026-10-23)
 
 **APPROVATO; esecuzione completa SOURCE ONLY autorizzata**, KS-E01 P1, coerente con KS-A01. Miglioramento con evidenza sorgente: nello stable `d509ef15b4abd681739d894f1ac2a9ed4b22e843` il pool neutro esiste ma BindHome non lo richiama. Non e dichiarato un difetto riprodotto su tenant reali. Un task completo, una PR DRAFT, nessun merge/deploy; il contratto specifico approvato non completa tutta KS-E01.

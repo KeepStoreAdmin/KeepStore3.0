@@ -309,6 +309,7 @@ Partial Public Class _Default
             rptHomeDirectCategories.DataBind()
         End Using
         HomeDirectCategoriesSection.Visible = (directCategories.Count > 0)
+        BindHomeIntroNavigation(navigationAssortment IsNot Nothing)
 
         ' The secondary editorial areas continue the main grid; hero and guide keep their own navigation.
         Dim collectionRows As List(Of CatalogMenuSector) = editorialNavigation.CollectionSectors
@@ -619,6 +620,22 @@ Partial Public Class _Default
         If HomeHeroSection IsNot Nothing Then
             HomeHeroSection.Attributes("class") = "ks-home-hero-area ks-home-hero-mode-" & normalizedMode
             HomeHeroSection.Attributes("data-ks-hero-mode") = normalizedMode
+        End If
+    End Sub
+
+    Private Sub BindHomeIntroNavigation(ByVal hasVerifiedAssortment As Boolean)
+        Dim target As HtmlGenericControl = Nothing
+        If hasVerifiedAssortment AndAlso HomeDirectCategoriesSection.Visible Then
+            target = HomeDirectCategoriesSection
+        ElseIf hasVerifiedAssortment AndAlso HomeMainCategoriesSection.Visible Then
+            target = HomeMainCategoriesSection
+        End If
+        HomeIntroBrowseLink.Visible = (target IsNot Nothing)
+        HomeIntroBrowseLink.HRef = String.Empty
+        HomeIntroBrowseLabel.InnerText = String.Empty
+        If target IsNot Nothing Then
+            HomeIntroBrowseLink.HRef = "#" & target.ClientID
+            HomeIntroBrowseLabel.InnerText = If(HomeDirectCategoriesSection.Visible, "Esplora le categorie", "Esplora i reparti")
         End If
     End Sub
 

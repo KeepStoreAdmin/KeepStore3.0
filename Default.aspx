@@ -4,6 +4,35 @@
 </asp:Content>
 
 <asp:Content ID="cntDiscoveryHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <style id="ksHomeAdaptiveExperienceStyles">
+        .ks-home-adaptive-intro .ks-home-intro-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .ks-home-adaptive-intro .ks-home-intro-actions .tf-btn { min-width: 44px; min-height: 44px; }
+        .ks-home-adaptive-intro .ks-home-intro-actions .tf-btn.btn-line { background: transparent; color: var(--main, #333e48); padding: 10px 12px; }
+        .ks-home-adaptive-intro .ks-home-intro-actions .tf-btn.btn-line:hover { border-color: var(--primary-2, #D80027); color: var(--primary-2, #D80027); }
+        .ks-home-adaptive-discovery:focus,
+        .ks-home-direct-categories:focus { outline: 3px solid var(--main, #333e48); outline-offset: -3px; }
+        .ks-home-adaptive-discovery,
+        .ks-home-direct-categories { scroll-margin-top: 24px; }
+        @media (max-width: 575.98px) {
+            .ks-home-adaptive-intro .ks-home-intro-actions { width: 100%; }
+            .ks-home-adaptive-intro .ks-home-intro-actions > .tf-btn:first-child { flex-basis: 100%; }
+            .ks-home-adaptive-intro .ks-home-intro-actions > .btn-line { flex: 1 1 140px; }
+        }
+        @media (min-width: 576px) and (max-width: 991.98px) {
+            body.ks-page-home .ks-home-hero-area #HeroSliderWrap,
+            body.ks-page-home .ks-home-hero-area .ks-home-main-hero,
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-slider,
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-slider .swiper-wrapper,
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-slider .swiper-slide,
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-banner { height: auto; }
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-slider .swiper-slide { display: flex; }
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-banner { display: flex; align-items: flex-end; width: 100%; }
+            body.ks-page-home .ks-home-hero-area .ks-home-hero-content { position: relative; inset: auto; margin: 24px; width: calc(100% - 48px); max-width: none; }
+            body.ks-page-home .ks-home-hero-area .ks-home-side-promos { grid-template-rows: auto; }
+            body.ks-page-home .ks-home-hero-area .ks-home-side-banner { display: flex; align-items: flex-end; }
+            body.ks-page-home .ks-home-hero-area .ks-home-side-banner .content { position: relative; inset: auto; margin: 14px; }
+        }
+    </style>
     <style id="ksHomeCatalogDiscoveryStyles">
         body.ks-page-home .ks-home-main .ks-home-catalog-discovery .flat-title > .tf-btn {
             box-sizing: border-box;
@@ -227,18 +256,20 @@
                     <h1 id="ksHomeIntroTitle" class="fw-semibold"><asp:Literal ID="litHomeIntroName" runat="server" Mode="Encode" /></h1>
                     <p class="body-text mb-0"><asp:Literal ID="litHomeIntroDescription" runat="server" Mode="Encode" /></p>
                 </div>
-                <div class="box-btn">
+                <div class="box-btn ks-home-intro-actions">
                     <a href="articoli.aspx" class="tf-btn btn-large"><span>Esplora il catalogo</span><i class="icon-arrow-right-lg" aria-hidden="true"></i></a>
+                    <a id="HomeIntroBrowseLink" runat="server" visible="false" class="tf-btn btn-line"><span id="HomeIntroBrowseLabel" runat="server"></span><i class="icon-arrow-right-lg" aria-hidden="true"></i></a>
+                    <a href="#KsLocalAiSearch130" class="tf-btn btn-line"><span>Guida agli acquisti</span><i class="icon-arrow-right-lg" aria-hidden="true"></i></a>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="HomeMainCategoriesSection" runat="server" class="ks-home-section ks-home-categories ks-home-adaptive-discovery">
+    <section id="HomeMainCategoriesSection" runat="server" class="ks-home-section ks-home-categories ks-home-adaptive-discovery" aria-labelledby="ksHomeDepartmentsTitle" tabindex="-1">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
                 <div>
-                    <h5 class="fw-semibold">Esplora i reparti</h5>
+                    <h5 id="ksHomeDepartmentsTitle" class="fw-semibold">Esplora i reparti</h5>
                     <p class="body-text-3 text-main-2 mb-0">Esplora i settori del catalogo e trova rapidamente ciò che cerchi.</p>
                 </div>
                 <a id="HomeCategoriesCatalogLink" runat="server" href="articoli.aspx" class="tf-btn btn-line">
@@ -261,7 +292,7 @@
         </div>
     </section>
 
-    <section id="HomeDirectCategoriesSection" runat="server" visible="false" class="ks-home-section ks-home-direct-categories" aria-labelledby="ksHomeDirectCategoriesTitle">
+    <section id="HomeDirectCategoriesSection" runat="server" visible="false" class="ks-home-section ks-home-direct-categories" aria-labelledby="ksHomeDirectCategoriesTitle" tabindex="-1">
         <div class="container">
             <div class="flat-title">
                 <h5 id="ksHomeDirectCategoriesTitle" class="fw-semibold">Esplora le categorie</h5>
