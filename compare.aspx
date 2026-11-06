@@ -26,7 +26,7 @@
                 <div class="heading">Nessun prodotto da confrontare</div>
                 <p class="text-main-2 mt-2">Aggiungi prodotti al confronto dal catalogo per visualizzarli qui.</p>
                 <div class="mt-4">
-                    <a class="tf-btn btn-fill" href="articoli.aspx">Vai al catalogo</a>
+                    <a class="tf-btn btn-fill" href="articoli.aspx" id="ksCompareEmptyCatalogLink">Vai al catalogo</a>
                 </div>
             </div>
 
@@ -51,5 +51,5 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261012-compare-commercial-snapshot-1c"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
 </asp:Content>

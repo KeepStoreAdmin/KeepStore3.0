@@ -812,6 +812,12 @@
           return;
         }
         var style = window.getComputedStyle(opener);
+        if (style.visibility !== 'visible' && opener.closest('#ksCatalogPage #gridLayout article.card-product')) {
+          var card = opener.closest('#ksCatalogPage #gridLayout article.card-product');
+          var entry = card.querySelector('.product-img');
+          if (entry) entry.focus({ preventScroll: true });
+          style = window.getComputedStyle(opener);
+        }
         if (!opener.getClientRects().length || style.visibility !== 'visible' || style.opacity === '0') {
           if (modal.contains(active)) active.blur();
           return;
@@ -871,7 +877,7 @@
         '<a class="link text-secondary body-md-2 fw-semibold" href="' + escapeHtml(item.url || '#') + '">' + escapeHtml(item.title || '') + '</a>' +
         '<p class="price-wrap fw-medium">' + escapeHtml(item.price || '') + '</p>' +
         '</div>' +
-        '<button type="button" class="remove link" data-ks-remove-compare="' + idx + '"><i class="icon icon-close"></i></button>' +
+        '<button type="button" class="remove link" data-ks-remove-compare="' + idx + '" aria-label="' + escapeHtml('Rimuovi ' + (item.title || 'prodotto')) + '"><i class="icon icon-close"></i></button>' +
         '</div>';
     }).join('');
 
@@ -923,6 +929,48 @@
     return result;
   }
 
+  function captureComparePageFocus(grid, shell, becomingEmpty) {
+    var active = document.activeElement;
+    var state = { scrollLeft: grid.scrollLeft };
+    if (!grid.contains(active) && !(becomingEmpty && shell && shell.contains(active))) return state;
+
+    state.active = active;
+    var card = active.closest ? active.closest('.ks-compare-page-card') : null;
+    if (!card || !grid.contains(card)) return state;
+    state.position = qsa('.ks-compare-page-card', grid).indexOf(card);
+    var productLink = card.querySelector('.content > a');
+    state.url = productLink ? productLink.getAttribute('href') : null;
+    state.action = active.matches('[data-ks-remove-compare]') ? '[data-ks-remove-compare]' :
+      active.matches('.js-ks-cart-link') ? '.js-ks-cart-link' :
+      active.matches('a.image') ? 'a.image' : active.matches('.content > a') ? '.content > a' : '.content .tf-btn[href]';
+    return state;
+  }
+
+  function restoreComparePageFocus(grid, state, becomingEmpty) {
+    if (state.active && document.visibilityState === 'visible') {
+      var active = document.activeElement;
+      if (active === state.active || active === document.body || active === document.documentElement) {
+        var target;
+        if (becomingEmpty) {
+          target = document.getElementById('ksCompareEmptyCatalogLink');
+        } else if (state.position !== undefined) {
+          var cards = qsa('.ks-compare-page-card', grid);
+          var card = cards[state.position];
+          function sameProduct(candidate) {
+            var link = candidate && candidate.querySelector('.content > a');
+            return link && link.getAttribute('href') === state.url;
+          }
+          if (!sameProduct(card)) card = cards.filter(sameProduct)[0];
+          if (!card) card = cards[Math.min(state.position, cards.length - 1)];
+          if (card) target = card.querySelector(state.action) || card.querySelector('.content > a');
+        }
+        if (!target && !becomingEmpty) target = grid;
+        if (target) target.focus({ preventScroll: true });
+      }
+    }
+    grid.scrollLeft = state.scrollLeft;
+  }
+
   function renderCompareCards(list, snapshot, loading) {
     var grid = document.getElementById('ksCompareGrid');
     if (!grid) return;
@@ -930,6 +978,7 @@
     var shell = document.getElementById('ksCompareShell');
     var empty = document.getElementById('ksCompareEmptyState');
     var status = document.getElementById('ksCompareCommercialStatus');
+    var focus = captureComparePageFocus(grid, shell, !list.length);
     grid.setAttribute('aria-busy', loading ? 'true' : 'false');
     if (status) status.textContent = !list.length ? '' : loading ? 'Verifica prezzi e disponibilità in corso…' :
       list.every(function (item) { return snapshot && snapshot[compareCommercialKey(item.id, item.TCId)]; }) ?
@@ -939,6 +988,7 @@
       grid.innerHTML = '';
       if (shell) shell.classList.add('d-none');
       if (empty) empty.classList.remove('d-none');
+      restoreComparePageFocus(grid, focus, true);
       return;
     }
 
@@ -967,9 +1017,10 @@
             (current && current.availability.available ? '<button type="submit" form="ksNativeCartForm" name="ksCartAction" class="tf-btn btn-fill js-ks-cart-link" data-ks-cart-url="' + escapeHtml(cartUrl) + '" data-ks-id="' + escapeHtml(item.id) + '" data-ks-tcid="' + escapeHtml(item.TCId) + '"><span>Aggiungi</span></button>' : '') +
           '</div>' +
         '</div>' +
-        '<button type="button" class="remove link" data-ks-remove-compare="' + item.idx + '" aria-label="Rimuovi"><i class="icon icon-close"></i></button>' +
+        '<button type="button" class="remove link" data-ks-remove-compare="' + item.idx + '" aria-label="' + escapeHtml('Rimuovi ' + title) + '"><i class="icon icon-close"></i></button>' +
       '</div>';
     }).join('');
+    restoreComparePageFocus(grid, focus, false);
   }
 
   function renderComparePage() {

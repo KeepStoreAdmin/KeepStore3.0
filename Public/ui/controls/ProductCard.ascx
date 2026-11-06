@@ -107,7 +107,7 @@
                 <asp:HiddenField ID="hfTCId" runat="server" />
                 <div class="d-flex align-items-center gap-2 mt-2 ks-card-purchase-actions <%= SafeLegacyQuantityStateCssClass %>"<%= SafeLegacyQuantityStateAttributes %>>
                     <asp:CheckBox ID="CheckBox_SelezioneMultipla" runat="server" CssClass="form-check-input" />
-                    <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" />
+                    <asp:TextBox ID="tbQuantita" runat="server" CssClass="form-control form-control-sm ks-qty" Width="70" aria-label="Quantità da acquistare" />
                     <% If RenderAddToCart Then %>
                     <button type="submit"
                        form="ksNativeCartForm"

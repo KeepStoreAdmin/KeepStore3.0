@@ -11,7 +11,7 @@
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261015-mobile-excellence1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261015-mobile-excellence1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261106-catalog-pdp-shopping-continuity-1a" />
     <style>
         #ksCatalogPage .ks-catalog-guide-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px 14px; max-width: 100%; white-space: normal; text-align: center; }
         #ksCatalogPage .ks-catalog-guide-link:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; transition: none; }
@@ -611,6 +611,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261015-mobile-excellence1a-rev1"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
 </asp:Content>

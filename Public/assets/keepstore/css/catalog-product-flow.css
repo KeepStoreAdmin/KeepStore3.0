@@ -71,6 +71,15 @@
   z-index:3;
 }
 
+/* Match hover visibility when keyboard navigation enters a catalog card. */
+#ksCatalogPage #gridLayout article.card-product:focus-within .list-product-btn li,
+#ksCatalogPage #gridLayout article.card-product:focus-within .list-product-btn .box-icon{
+  opacity:1;
+  visibility:visible;
+  transform:none;
+  transition:none;
+}
+
 .ks-catalog-card .list-product-btn .box-icon .icon,
 .ks-recent-card .list-product-btn .box-icon .icon{
   display:inline-flex;
