@@ -72,6 +72,9 @@
                     </div>
                 </div>
             </nav>
+            <noscript>
+                <p class="mb-3"><a href="carrello.aspx" class="tf-btn btn-gray">Torna al carrello</a></p>
+            </noscript>
 
             <div class="heading-section mb-3">
                 <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Riepilogo ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e pagamento<% Else %>Il tuo carrello<% End If %></h3>
@@ -157,7 +160,7 @@
                                     data-ks-cart-row-id='<%#: Eval("id") %>' data-ks-article-id='<%#: Eval("ArticoliId") %>' data-ks-tcid='<%#: Eval("TCId") %>'>
                                     <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
-                                            <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
+                                            <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' />
                                         </asp:HyperLink>
                                         <div class="cart-info">
                                             <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
@@ -213,7 +216,7 @@
                                         </div>
                                         <span class="ks-cart-qty-status" data-ks-cart-qty-status aria-live="polite"></span>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-cart-qty-fallback">Aggiorna</asp:LinkButton>
+                                            <asp:Button ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" UseSubmitBehavior="true" CssClass="link body-text-3 ks-cart-qty-fallback tf-btn btn-gray" Text="Aggiorna" />
                                         </div>
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
@@ -278,7 +281,7 @@
                                     data-ks-cart-row-id='<%#: Eval("id") %>' data-ks-article-id='<%#: Eval("ArticoliId") %>' data-ks-tcid='<%#: Eval("TCId") %>'>
                                     <td class="tf-cart-item_product">
                                         <asp:HyperLink ID="HyperLink3" runat="server" CssClass="img-box" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
-                                            <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText="" />
+                                            <asp:Image ID="Image2" runat="server" ImageUrl='<%# checkImg(Eval("img1")) %>' AlternateText='<%# Convert.ToString(Eval("Descrizione1")) %>' />
                                         </asp:HyperLink>
                                         <div class="cart-info">
                                             <asp:HyperLink ID="HyperLink5" runat="server" CssClass="cart-title body-md-2 fw-semibold link" NavigateUrl='<%# "~/articolo.aspx?id=" & Eval("articoliid") & "&TCid=" & Eval("TCId") %>'>
@@ -334,7 +337,7 @@
                                         </div>
                                         <span class="ks-cart-qty-status" data-ks-cart-qty-status aria-live="polite"></span>
                                         <div class="mt-2">
-                                            <asp:LinkButton ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" CssClass="link body-text-3 ks-cart-qty-fallback">Aggiorna</asp:LinkButton>
+                                            <asp:Button ID="LB_Aggiorna" CommandName="Aggiorna" runat="server" CausesValidation="false" UseSubmitBehavior="true" CssClass="link body-text-3 ks-cart-qty-fallback tf-btn btn-gray" Text="Aggiorna" />
                                         </div>
                                         <asp:TextBox ID="tbID" runat="server" Text='<%#: Eval("id") %>' Visible="false" />
                                     </td>
@@ -583,8 +586,8 @@
                     <asp:Button ID="btCompleta" runat="server" CssClass="tf-btn" CausesValidation="false" Text="Continua con spedizione e pagamento" />
                     <span class="ks-cart-checkout-wait" data-ks-cart-checkout-wait role="status" hidden="hidden">Attendi il salvataggio della quantità.</span>
                 </div>
-                <asp:LinkButton ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false">Continua lo Shopping</asp:LinkButton>
-                <asp:LinkButton ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray ks-cart-qty-fallback" CausesValidation="false">Aggiorna Carrello</asp:LinkButton>
+                <asp:Button ID="btContinua" runat="server" CssClass="tf-btn btn-gray" CausesValidation="false" UseSubmitBehavior="true" Text="Continua lo Shopping" />
+                <asp:Button ID="btAggiorna" runat="server" CssClass="tf-btn btn-gray ks-cart-qty-fallback" CausesValidation="false" UseSubmitBehavior="true" Text="Aggiorna Carrello" />
                 <asp:Panel ID="btSvuota" runat="server" style="display:contents">
                     <asp:Literal ID="litClearCartAction" runat="server" />
                 </asp:Panel>
@@ -1118,9 +1121,9 @@
                     <asp:TextBox ID="tbCartCapA" runat="server" CssClass="form-control ks-form-control" MaxLength="5" AutoPostBack="true" OnTextChanged="tbCartCapA_TextChanged" />
                 </div>
                 <div class="ks-form-field">
-                    <label for="<%= tbCartCittaA.ClientID %>">Citta *</label>
+                    <label id="ksCartCityLabel" for="<%= tbCartCittaA.ClientID %>">Citta *</label>
                     <asp:TextBox ID="tbCartCittaA" runat="server" CssClass="form-control ks-form-control" MaxLength="80" ReadOnly="true" />
-                    <asp:DropDownList ID="ddlCartCittaA" runat="server" CssClass="form-select ks-form-select ks-cart-city-select" Visible="false" AutoPostBack="true" OnSelectedIndexChanged="ddlCartCittaA_SelectedIndexChanged" />
+                    <asp:DropDownList ID="ddlCartCittaA" runat="server" CssClass="form-select ks-form-select ks-cart-city-select" Visible="false" AutoPostBack="true" OnSelectedIndexChanged="ddlCartCittaA_SelectedIndexChanged" aria-labelledby="ksCartCityLabel" />
                 </div>
                 <div class="ks-form-field">
                     <label for="<%= tbCartProvinciaA.ClientID %>">Provincia</label>
@@ -1254,9 +1257,9 @@
             </asp:Panel>
 			</div>
 		<asp:Panel ID="Panel_Note" runat="server" Width="100%" Visible="False" CssClass="wrap ks-checkout-section ks-note-section">
-                    <h5 class="title fw-semibold">Note per l'ordine <span class="ks-optional-label">Opzionali</span></h5>
-                <p class="body-text-3 text-main-2 ks-section-help">Aggiungi solo le indicazioni utili alla preparazione o alla consegna.</p>
-				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="3" runat="server" Width="100%" MaxLength="255"></asp:TextBox>
+                    <h5 id="ksOrderNotesLabel" class="title fw-semibold">Note per l'ordine <span class="ks-optional-label">Opzionali</span></h5>
+                <p id="ksOrderNotesHelp" class="body-text-3 text-main-2 ks-section-help">Aggiungi solo le indicazioni utili alla preparazione o alla consegna.</p>
+				<asp:TextBox ID="txtNoteSpedizione" CssClass="form-control ks-form-control" TextMode="MultiLine" Rows="3" runat="server" Width="100%" MaxLength="255" aria-labelledby="ksOrderNotesLabel" aria-describedby="ksOrderNotesHelp ksOrderNotesCounter"></asp:TextBox>
                 <p class="body-text-3 text-main-2 mt-2 mb-0">
                     <span id="ksOrderNotesCounter">0 / 255 caratteri</span>
                 </p>
@@ -1269,7 +1272,7 @@
             </div>
             <div class="ks-checkout-actions">
                 <asp:LinkButton Visible="False" CausesValidation="false" ID="btSalvaPreventivo" runat="server" CssClass="tf-btn btn-gray" OnClientClick="javascript:visualizza_spinner_caricamento();">SALVA PREVENTIVO</asp:LinkButton>
-                <asp:LinkButton CausesValidation="false" ID="btnVaiConfermaOrdine" runat="server" CssClass="tf-btn" OnClick="btnVaiConfermaOrdine_Click">Rivedi ordine</asp:LinkButton>
+                <asp:Button CausesValidation="false" ID="btnVaiConfermaOrdine" runat="server" CssClass="tf-btn" OnClick="btnVaiConfermaOrdine_Click" UseSubmitBehavior="true" Text="Rivedi ordine" />
             </div>
         </div>
         <asp:Panel ID="pnlCheckoutConfirm" runat="server" Visible="false" CssClass="wrap ks-checkout-section ks-final-confirm-section">
@@ -1313,7 +1316,7 @@
             <p class="ks-final-review-help">Vuoi cambiare qualcosa? Puoi modificare spedizione e pagamento prima di inviare l'ordine.</p>
             <div id="FinalCheckoutActionsInlineSlot" class="ks-final-actions-inline-slot">
                 <div class="ks-checkout-actions">
-                    <asp:LinkButton CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click">Modifica spedizione e pagamento</asp:LinkButton>
+                    <asp:Button CausesValidation="false" ID="btnModificaCheckout" runat="server" CssClass="tf-btn btn-gray" OnClick="btnModificaCheckout_Click" UseSubmitBehavior="true" Text="Modifica spedizione e pagamento" />
                     <%if Session("DESTINAZIONEALTERNATIVA")=0 then %>
                         <div class="ks-checkout-consent" style="width:100%;margin:0 0 14px 0;">
                             <div style="display:flex;gap:10px;align-items:flex-start;">
@@ -1329,7 +1332,7 @@
                             </div>
                             <span id="ksTermsConsentFeedback" class="text-danger body-text-3" aria-live="polite"><asp:Label ID="lblTermsConsentError" runat="server" ClientIDMode="Static" EnableViewState="false" CssClass="text-danger body-text-3" /></span>
                         </div>
-                        <asp:LinkButton CausesValidation="true" ValidationGroup="checkoutSubmit" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();">Invia ordine con obbligo di pagamento</asp:LinkButton>
+                        <asp:Button CausesValidation="true" ValidationGroup="checkoutSubmit" ID="btInviaOrdine" runat="server" CssClass="tf-btn" OnClientClick="return ksValidateCheckoutTermsConsent();" UseSubmitBehavior="true" Text="Invia ordine con obbligo di pagamento" />
                     <%else%>
                         <span class="tf-btn btn-gray" style="pointer-events:none;opacity:.6;">Conferma ordine e procedi al pagamento</span>
                     <%end if%>

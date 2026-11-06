@@ -1,5 +1,13 @@
 # KeepStore System Blueprint
 
+## Comandi nativi checkout mobile — candidato 2026-11-06
+
+`MOBILE-SHOPPING-CHECKOUT-EXCELLENCE-1A`, base `a64eb4f76ca68ece3f26e87aefc295ef6075cff3`: le due azioni riga `LB_Aggiorna`, `btAggiorna`, `btContinua`, `btnVaiConfermaOrdine`, `btnModificaCheckout` e `btInviaOrdine` diventano Button WebForms con UseSubmitBehavior=true. ID/naming container, Click/CommandName, CausesValidation, ValidationGroup e OnClientClick restano quelli esistenti. Senza JavaScript il browser invia il nome del submitter; WebForms inoltra allo stesso handler, senza nuovo endpoint o __EVENTTARGET costruito dal client. Consenso e validatori checkoutSubmit rimangono autorevoli sul server. Entrambi i comandi riga Aggiorna delegano gia all'aggiornamento globale di tutti i repeater.
+
+Lo stepper conserva i tre LinkButton e il relativo helper tipizzato: non e una seconda navigazione nativa senza JavaScript. Il solo link GET `carrello.aspx` nel noscript offre il ritorno al carrello; i comandi delle fasi offrono avanzamento/modifica/invio nativi. Nessuna nuova session key o logica di avanzamento. Spinner, prevenzione doppio invio, placeFinalConfirmActionsForMobile e feedback delle quantita sono invariati.
+
+Miniature carrello con descrizione prodotto come AlternateText codificato dal controllo Image; select Citta collegata al label visibile; note collegate a titolo, istruzioni e contatore esistenti. Valori, selezioni, limiti, indirizzi e note persistite conservati. CSS/JS, MiniCart/PDP, mutazioni, snapshot e validazioni server sono riusati invariati. [Manifest, Design Gate e limiti](KEEPSTORE_MASTERPLAN_OPERATIVO.md#mobile-shopping-checkout-excellence-1a--2026-11-06); nessuna nuova certificazione IIS/MySQL o commerciale.
+
 ## Continuita accessibile catalogo e confronto — candidato 2026-11-06
 
 `CATALOG-PDP-SHOPPING-CONTINUITY-1A`, base `9d77586ec2aaf19aa5858a94a3d7aaef380ffa39`: il TextBox server `ProductCard.tbQuantita` conserva ID, naming container, valore, dimensioni e flusso nativo; aggiunge soltanto `aria-label="Quantità da acquistare"`. I pulsanti di rimozione generati per drawer e pagina confronto ricevono `Rimuovi <titolo prodotto>` tramite l'escaping HTML gia esistente, senza cambiare indici, storage, eventi o dati commerciali.
