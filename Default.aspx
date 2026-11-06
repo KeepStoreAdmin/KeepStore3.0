@@ -4,6 +4,19 @@
 </asp:Content>
 
 <asp:Content ID="cntDiscoveryHead" ContentPlaceHolderID="HeadContent" runat="server">
+    <style id="ksShoppingDecisionStyles">
+        #KsLocalAiSearch130 .ks-guide-fields textarea { width: 100%; min-width: 0; min-height: 80px; padding: 10px 12px; border: 1px solid #78838f; border-radius: 6px; background: #fff; color: #17212c; font: inherit; font-size: 16px; line-height: 1.5; resize: vertical; }
+        #KsLocalAiSearch130 .ks-guide-fields textarea[aria-invalid="true"] { border-color: #a0231b; }
+        #KsLocalAiSearch130 .ks-guide-brief-preview { padding: 12px; margin-top: 16px; border-left: 3px solid #64748b; background: #f8fafc; overflow-wrap: anywhere; }
+        #KsLocalAiSearch130 .ks-guide-brief-preview p { margin: 0 0 6px; }
+        #KsLocalAiSearch130 .ks-guide-evidence { padding-left: 18px; margin: 0; color: #334155; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+        #KsLocalAiSearch130 .ks-guide-unverified { color: #475569; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+        #KsLocalAiSearch130 .ks-guide-decision-summary { padding: 12px 16px; margin-bottom: 16px; border-left: 3px solid #64748b; background: #f8fafc; overflow-wrap: anywhere; }
+        #KsLocalAiSearch130 .ks-guide-decision-summary p { margin: 0 0 8px; }
+        #KsLocalAiSearch130 .ks-guide-difference td { background: #f8fafc; }
+        #KsLocalAiSearch130 .ks-guide-match { font-weight: 600; color: #24313f; }
+        #KsLocalAiSearch130 .ks-guide-product-cta { padding: 10px 12px; text-align: center; overflow-wrap: anywhere; }
+    </style>
     <style id="ksHomeAdaptiveExperienceStyles">
         .ks-home-adaptive-intro .ks-home-intro-actions { display: flex; flex-wrap: wrap; gap: 10px; }
         .ks-home-adaptive-intro .ks-home-intro-actions .tf-btn { min-width: 44px; min-height: 44px; }
@@ -317,16 +330,19 @@
         <div class="container">
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
-                    <span class="ks-ai130-kicker">Un aiuto per iniziare</span>
+                    <span class="ks-ai130-kicker">Dall'esigenza alla scelta</span>
                     <h2 id="ksGuideTitle">Guida agli acquisti</h2>
-                    <p id="ksGuideIntro">Trova una selezione di prodotti, precisa le tue preferenze e confronta i dati disponibili.</p>
+                    <p id="ksGuideIntro">Definisci cosa ti serve, scegli i criteri e confronta una selezione del negozio. Sei tu a confermare ogni ricerca.</p>
                     <fieldset class="ks-guide-fields" data-ks-guide-fields hidden disabled>
                         <legend class="visually-hidden">Cerca con la guida agli acquisti</legend>
-                        <label for="ksGuideQuery">Che prodotto cerchi?</label>
+                        <label for="ksGuideGoal">Quale esigenza vuoi risolvere? <span>(facoltativo)</span></label>
+                        <textarea id="ksGuideGoal" rows="2" maxlength="160" autocomplete="off" placeholder="Descrivi il tuo obiettivo, senza dati personali" aria-describedby="ksGuideGoalHelp"></textarea>
+                        <p id="ksGuideGoalHelp" class="ks-guide-hint">L'obiettivo resta in questa pagina: non diventa un filtro e non certifica l'idoneità dei prodotti. Precisa sotto cosa cercare.</p>
+                        <label for="ksGuideQuery">Quale prodotto o categoria può aiutarti?</label>
                         <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Scrivi il prodotto, la marca o il codice" aria-describedby="ksGuideLimit ksGuideHandoff" />
                         <label for="ksGuideDetail">Vuoi aggiungere un dettaglio? <span>(facoltativo)</span></label>
-                        <input id="ksGuideDetail" type="text" maxlength="80" autocomplete="off" placeholder="Ad esempio un utilizzo o una caratteristica" aria-describedby="ksGuideLimit ksGuideHandoff" />
-                        <p id="ksGuideLimit" class="ks-guide-hint">Massimo 80 caratteri in tutto. Non inserire dati personali.</p>
+                        <input id="ksGuideDetail" type="text" maxlength="80" autocomplete="off" placeholder="Altre parole da cercare nel catalogo" aria-describedby="ksGuideLimit ksGuideHandoff" />
+                        <p id="ksGuideLimit" class="ks-guide-hint">Prodotto e dettaglio: massimo 80 caratteri in tutto. Le parole orientano la ricerca, senza provare compatibilità o caratteristiche tecniche. Non inserire dati personali.</p>
                         <p id="ksGuideHandoff" class="ks-guide-hint" data-ks-guide-handoff hidden></p>
                         <asp:Panel ID="HomeAiExamplesPanel" runat="server" CssClass="ks-guide-departments" Visible="false">
                             <p id="ksGuideDepartmentsLabel">Limita a un reparto <span>(facoltativo)</span></p>
@@ -337,6 +353,10 @@
                                 </asp:Repeater>
                             </div>
                         </asp:Panel>
+                        <label for="ksGuideBudget">Prezzo massimo per prodotto <span>(facoltativo)</span></label>
+                        <input id="ksGuideBudget" type="text" inputmode="decimal" maxlength="11" autocomplete="off" placeholder="Senza limite" aria-describedby="ksGuideBudgetHelp" />
+                        <p id="ksGuideBudgetHelp" class="ks-guide-hint">In euro, nel contesto IVA mostrato con i risultati. Ad esempio 500,50; senza separatori delle migliaia.</p>
+                        <div class="ks-guide-brief-preview" data-ks-guide-draft-review aria-label="Bozza dei criteri, non ancora confermata"></div>
                         <div class="ks-guide-actions">
                             <button type="button" class="ks-guide-primary" data-ks-guide-prepare>Mostra i prodotti</button>
                             <button type="button" class="ks-guide-reset" data-ks-guide-reset>Ricomincia</button>
@@ -354,7 +374,7 @@
                 </div>
                 <div class="ks-guide-next">
                     <div data-ks-guide-summary hidden>
-                        <h3>Le tue preferenze</h3>
+                        <h3>Criteri confermati</h3>
                         <div class="ks-guide-chips" data-ks-guide-chips aria-label="Preferenze confermate, seleziona per rimuovere"></div>
                         <fieldset class="ks-guide-fields" data-ks-guide-refine hidden disabled>
                             <legend>Affina la selezione</legend>
@@ -371,9 +391,10 @@
                     </div>
                     <div data-ks-guide-idle>
                         <h3>Una scelta alla volta</h3>
-                        <p>Scrivi cosa cerchi. Potrai affinare la selezione, annullare le modifiche e aprire ogni scheda prodotto.</p>
+                        <p>Parti dal prodotto o da una categoria. Se conosci solo l'obiettivo, precisa prima le parole da cercare. Poi valuta i dati disponibili e apri la scheda della variante scelta.</p>
                     </div>
                     <a href="<%= ResolveUrl("~/articoli.aspx") %>" class="ks-guide-catalog-fallback">Esplora tutto il catalogo</a>
+                    <p><a href="<%= ResolveUrl("~/Contattaci.aspx") %>" class="ks-guide-catalog-fallback" data-ks-guide-contact>Hai bisogno di un consiglio? Contattaci</a></p>
                     <noscript><p>La ricerca guidata richiede JavaScript. Puoi usare il catalogo e i link ai reparti.</p></noscript>
                 </div>
                 <div class="ks-guide-output" data-ks-guide-output hidden>
@@ -688,6 +709,6 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20261022-home-vetrina-1a"></script>
-    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261030-catalog-handoff1a" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261106-decision-journey1a" %>"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261021-progressive1a" %>"></script>
 </asp:Content>

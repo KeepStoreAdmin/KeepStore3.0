@@ -6,8 +6,13 @@ const [root, playwrightModule, chrome, evidence, serverPath] = process.argv.slic
 const regressionsOnly = process.argv.includes('--rev1-regressions-only');
 const mediaOnly = process.argv.includes('--rev2-media-only');
 const handoffOnly = process.argv.includes('--catalog-handoff-only');
+const decisionOnly = process.argv.includes('--decision-journey-only');
+const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only');
+const decisionBase = 'bb89975eaed397b2ac35b3de058c6627e459173b';
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
-const api = require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
+function baselineSource(file) { return cp.execFileSync('git',['show',decisionBase+':'+file],{cwd:root,encoding:'utf8'}); }
+function sourceApi(source) { const sandbox={module:{exports:{}},URL,URLSearchParams};require('node:vm').runInNewContext(source,sandbox);return sandbox.module.exports; }
+const api = baselineVisualOnly ? sourceApi(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js')) : require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
 const serverEvidence = JSON.parse(fs.readFileSync(serverPath, 'utf8').replace(/^\uFEFF/,''));
 // Handoff exercises transport/UI, not commercial pricing: this response is explicitly synthetic.
 const server = handoffOnly ? [{scenario:'synthetic-handoff-only', expectedList:'not-resolved', payload:{
@@ -16,17 +21,19 @@ const server = handoffOnly ? [{scenario:'synthetic-handoff-only', expectedList:'
   suggestions:[{id:120,TCId:42,url:'articolo.aspx?id=120&TCId=42',title:'Prodotto sintetico',code:'SKU120',ean:'',brand:'',category:'',image:'',image_fallback:'',price:'12,20 €',priceValue:12.2,availability:7,isOffer:false,isRefurbished:false}]
 }}] : serverEvidence;
 const playwright = require(playwrightModule);
-const report = { assertions: 0, checks: [], viewports: mediaOnly ? [390,1365] : [360,390,430,768,1365], renderMs: [], screenshots: [],
-  suite: handoffOnly ? 'Catalog handoff delta only' : mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including REV2 media', startedUtc: new Date().toISOString(),
+const report = { assertions: 0, checks: [], viewports: mediaOnly ? [390,1365] : [360,390,430,768,1024,1365], renderMs: [], screenshots: [],
+  suite: baselineVisualOnly ? 'Immutable decision baseline visuals only' : decisionOnly ? 'Decision journey delta only' : handoffOnly ? 'Catalog handoff delta only' : mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including decision journey', startedUtc: new Date().toISOString(),
   serverFixtures: server.map(x => ({scenario:x.scenario, expectedList:x.expectedList})), network: 'intercepted; no upstream continuation',
-  limitations: ['synthetic HTML rendering, no ASP.NET request execution', 'no MySQL/IIS/login/production/TTFB/INP certification'] };
+  limitations: ['synthetic HTML rendering, no ASP.NET request execution', 'no MySQL/IIS/login/production/TTFB/INP certification',
+    'tenant/list provenance and variant ownership are checked by the real-source VB harness with synthetic I/O; the browser cannot authenticate arbitrary plausible price or stock values'] };
 const journal = { resources: [], browserClosed: false, contextsClosed: 0 };
 const record = (name, value = true) => { assert.ok(value, name); report.assertions++; report.checks.push(name); };
 const clone = value => JSON.parse(JSON.stringify(value));
-const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+const read = file => baselineVisualOnly&&['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.js'].includes(file) ? baselineSource(file) : fs.readFileSync(path.join(root, file), 'utf8');
 const sha256 = data => require('node:crypto').createHash('sha256').update(data).digest('hex');
-report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.js','Tools/ShoppingAssistantProgressiveResults.test.js', ...(handoffOnly?['articoli.aspx','articoli.aspx.vb','Tools/Test-ShoppingAssistantProgressiveResults.ps1']:[])]
-  .map(file=>({file,sha256:sha256(fs.readFileSync(path.join(root,file)))}));
+report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.js','search_suggest.aspx.vb','Tools/ShoppingAssistantProgressiveResults.test.js','Tools/Test-ShoppingAssistantProgressiveResults.ps1', ...(handoffOnly?['articoli.aspx','articoli.aspx.vb']:[])]
+  .map(file=>({file,sha256:sha256(read(file))}));
+if(baselineVisualOnly)report.baselineRef=decisionBase;
 report.serverPayloadSha256 = sha256(fs.readFileSync(serverPath));
 function artifact(name, data) { const file=path.join(evidence,name); fs.writeFileSync(file,data); if(!journal.resources.includes(file))journal.resources.push(file); return file; }
 function briefFrom(url) {
@@ -36,7 +43,7 @@ function briefFrom(url) {
 function payload(url, options = {}) {
   const base = new URL('./',url), paths = api.urls(base.href, new URL('search_suggest.aspx',base).href), b=briefFrom(url);
   const original = clone((server[options.scenario||0]||server[0]).payload), row=original.suggestions[0];
-  const count=options.empty?0:(options.count||3), food=options.food, prefix=food?'Olio extra vergine di oliva':'Notebook compatto';
+  const count=options.empty?0:(options.count===undefined?3:options.count), food=options.food, prefix=food?'Olio extra vergine di oliva':'Notebook compatto';
   original.query=b.q; original.normalized_query=b.q; original.catalogUrl=api.catalogURL(b,paths).href;
   original.guided.criteria=b; original.guided.returnedCount=count; original.total=count;
   original.suggestions=Array.from({length:count},(_,i)=>Object.assign({},row,{
@@ -44,7 +51,7 @@ function payload(url, options = {}) {
     title:(options.long?'Prodotto con descrizione lunga '.repeat(8):prefix)+' '+(i+1),
     code:i===0?b.q:'DEMO'+i, ean:'800000000012'+i, brand:i===2?'':(food?'Frantoio esempio':'Marca esempio'),
     category:i===2?'':(food?'Oli alimentari':'Computer'), image:'',image_fallback:'',
-    availability:i===2?null:7, isOffer:i===1, isRefurbished:false
+    availability:i===2&&!b.disponibile?null:7, isOffer:i===1, isRefurbished:false
   }));
   if(options.mutate)options.mutate(original);
   return original;
@@ -53,6 +60,7 @@ const moduleSource=read('Public/assets/keepstore/js/ks-shopping-guide.js');
 const homeSource=read('Public/assets/keepstore/js/home-default.js');
 const markup=read('Default.aspx');
 const guidemarkup=markup.slice(markup.indexOf('    <section id="KsLocalAiSearch130"'),markup.indexOf('    <asp:Panel ID="HomePriceDisplayNote"'));
+const decisionStyle=(/<style\b[^>]*id="ksShoppingDecisionStyles"[^>]*>[\s\S]*?<\/style>/.exec(markup)||[''])[0];
 record('real section isolated',guidemarkup.includes('data-ks-guide-results')&&!guidemarkup.includes('HomePriceDisplayNote'));
 const styles=['bootstrap.min.css','keepstore.css','keepstore-overrides.css','styles.css','theme-overrides.css'];
 const assets=new Map(styles.map(name=>['css/'+name,read('Public/assets/keepstore/css/'+name)]));
@@ -67,12 +75,12 @@ function html(directory,kind,mode) {
   block=block.replace(/<asp:Panel[^>]*CssClass="([^"]*)"[^>]*>/g,'<div class="$1">').replace(/<\/asp:Panel>/g,'</div>');
   assert.ok(!block.includes('<%')&&!block.includes('<asp:'));
   return '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fixture '+kind+'</title>'+
-    styles.map(n=>'<link rel="stylesheet" href="'+directory+'Public/assets/keepstore/css/'+n+'">').join('')+
+    styles.map(n=>'<link rel="stylesheet" href="'+directory+'Public/assets/keepstore/css/'+n+'">').join('')+decisionStyle+
     '</head><body class="ks-page-home"><form id="form1"><header class="container"><a class="ks-guide-entry" href="#KsLocalAiSearch130">Guida agli acquisti</a></header><main>'+block+'</main></form>'+
     (mode==='missing'?'':'<script src="'+directory+'Public/assets/keepstore/js/ks-shopping-guide.js"></script>')+
     '<script src="'+directory+'Public/assets/keepstore/js/home-default.js"></script></body></html>';
 }
-if(!mediaOnly&&!handoffOnly){
+if(!mediaOnly&&!handoffOnly&&!baselineVisualOnly){
 const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
 for(const raw of ['iPhone 15','SSD 1 TB','olio da 1 litro','8000000000120','SKU-500'])record('product is not command '+raw,api.parseCommand(raw).kind==='unknown');
 for(const raw of ['massimo 1.000 euro','massimo 1,000 euro','fino a 1e3 euro','massimo -5 euro','massimo 0 euro'])record('ambiguous amount clarified '+raw,api.parseCommand(raw).kind==='clarify');
@@ -124,12 +132,12 @@ const mediaPNG=syntheticPNG();
 let browser;
 async function fixture(options={}) {
   const directory=options.directory||'/', kind=options.kind||'Tech', host=options.scenario>=2?'tenant2.invalid':'tenant1.invalid';
-  const context=await browser.newContext({viewport:{width:options.width||390,height:1000},serviceWorkers:'block',javaScriptEnabled:options.js!==false,reducedMotion:'reduce'});
-  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[];
+  const context=await browser.newContext({viewport:{width:options.width||390,height:1000},hasTouch:(options.width||390)<=430,serviceWorkers:'block',javaScriptEnabled:options.js!==false,reducedMotion:'reduce'});
+  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[], transport=[];
   const config={...options};
   page.on('pageerror',e=>pageErrors.push(e.message));
   await page.addInitScript(({ignoreAbort,fastTimeout,initFailure})=>{
-    window.__privacy={storage:0,cookies:0,beacons:0,logs:0,fetch:[],recent:0,submits:0};
+    window.__privacy={storage:0,cookies:0,beacons:0,logs:0,fetch:[],aborts:0,recent:0,submits:0};
     for(const name of ['getItem','setItem','removeItem','clear'])Storage.prototype[name]=function(){window.__privacy.storage++;throw new Error('STORAGE_FORBIDDEN');};
     Object.defineProperty(document,'cookie',{configurable:true,get(){window.__privacy.cookies++;throw new Error('COOKIE_READ_FORBIDDEN');},set(){window.__privacy.cookies++;throw new Error('COOKIE_WRITE_FORBIDDEN');}});
     navigator.sendBeacon=()=>{window.__privacy.beacons++;return false;};
@@ -137,7 +145,7 @@ async function fixture(options={}) {
     window.KeepStoreRecentlyViewed={render(){window.__privacy.recent++;}};
     document.addEventListener('submit',e=>{window.__privacy.submits++;e.preventDefault();});
     const realFetch=window.fetch.bind(window);
-    window.fetch=(url,opts)=>{window.__privacy.fetch.push({url:String(url),credentials:opts.credentials,cache:opts.cache});return realFetch(url,ignoreAbort?{...opts,signal:undefined}:opts);};
+    window.fetch=(url,opts)=>{window.__privacy.fetch.push({url:String(url),credentials:opts.credentials,cache:opts.cache});if(opts.signal)opts.signal.addEventListener('abort',()=>window.__privacy.aborts++);return realFetch(url,ignoreAbort?{...opts,signal:undefined}:opts);};
     const measuredFetch=window.fetch;
     window.fetch=(...args)=>{window.__fixtureStarted=performance.now();return measuredFetch(...args);};
     document.addEventListener('DOMContentLoaded',()=>{
@@ -155,6 +163,7 @@ async function fixture(options={}) {
   },{ignoreAbort:!!options.ignoreAbort,fastTimeout:!!options.fastTimeout,initFailure:options.mode==='failure'});
   await context.route('**/*',async route=>{
     const req=route.request(),url=new URL(req.url());
+    transport.push({origin:url.origin,path:url.pathname,method:req.method(),type:req.resourceType()});
     try{
       if(options.mediaTest&&req.resourceType()==='image'){
         mediaRequests.push({url:req.url(),method:req.method()});
@@ -192,19 +201,26 @@ async function fixture(options={}) {
   const wait=async value=>{await page.waitForFunction(v=>document.getElementById('KsLocalAiSearch130').getAttribute('data-ks-guide-state')===v,value,{timeout:6000});};
   const submit=async(q='SKU120')=>{await page.locator('#ksGuideQuery').fill(q);await page.locator('[data-ks-guide-prepare]').click();await wait(config.empty?'empty':config.status===403||config.status===421?'context-invalid':config.status||config.raw||config.html||config.offline?'error':'results');};
   const refine=async cmd=>{await page.locator('#ksGuideCommand').fill(cmd);await page.locator('[data-ks-guide-apply]').click();await wait('results');};
-  const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode'].includes(k))));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
-  const screenshot=async name=>{const file=path.join(evidence,name+'.png');await page.locator('#KsLocalAiSearch130').screenshot({path:file,animations:'disabled'});journal.resources.push(file);report.screenshots.push(file);};
+  const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode'].includes(k))));record('no external request attempted',transport.every(x=>x.origin==='https://'+host));record('no mutative HTTP attempted',transport.every(x=>x.method==='GET'));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
+  const screenshot=async(name,selector='#KsLocalAiSearch130')=>{const file=path.join(evidence,name+'.png');await page.locator(selector).screenshot({path:file,animations:'disabled'});journal.resources.push(file);report.screenshots.push(file);};
   const close=async()=>{await context.close();journal.contextsClosed++;};
-  return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,state,wait,submit,refine,privacy,screenshot,close};
+  return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,transport,state,wait,submit,refine,privacy,screenshot,close};
 }
 async function run() {
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(baselineVisualOnly){
+    report.viewports=[390,1365];
+    for(const width of report.viewports){const f=await fixture({width});try{await f.submit();await f.page.locator('[data-ks-guide-compare-key]').nth(0).check();await f.page.locator('[data-ks-guide-compare-key]').nth(1).check();await f.screenshot('baseline-Tech-'+width+'-workspace');await f.privacy();}finally{await f.close();}}
+    report.status='PASS';return;
+  }
+  if(decisionOnly){await decisionRegressions();report.status='PASS';return;}
   if(handoffOnly){await catalogHandoffRegressions();report.status='PASS';return;}
   if(mediaOnly){await mediaRegressions();report.status='PASS';return;}
   await rev1Regressions();
   if(regressionsOnly){report.status='PASS';return;}
   await mediaRegressions();
+  await decisionRegressions();
   for(const kind of ['Tech','Food'])for(const width of report.viewports){
     const scenario=(report.viewports.indexOf(width)+(kind==='Food'?2:0))%4;
     const f=await fixture({kind,width,scenario,long:width===360});
@@ -229,7 +245,7 @@ async function run() {
       record('compare two current items '+kind+width,await f.page.locator('.ks-guide-compare-item').count()===2);
       await f.page.locator('[data-ks-guide-compare-key]').nth(2).check();
       record('compare three with missing data '+kind+width,await f.page.locator('.ks-guide-compare-item').count()===3&&(await f.page.locator('[data-ks-guide-comparison]').innerText()).includes('Dato non disponibile'));
-      record('comparison row/column semantics '+kind+width,await f.page.locator('.ks-guide-compare-grid tbody th[scope="row"]').count()===7&&await f.page.locator('.ks-guide-compare-item[scope="col"]').count()===3);
+      record('comparison row/column semantics '+kind+width,await f.page.locator('.ks-guide-compare-grid tbody th[scope="row"]').count()>=7&&await f.page.locator('.ks-guide-compare-item[scope="col"]').count()===3);
       if(width>=768){const tops=await f.page.locator('.ks-guide-price').evaluateAll(items=>items.map(e=>e.getBoundingClientRect().top));record('card price rows align '+kind+width,Math.abs(tops[0]-tops[1])<1);}
       const dims=await f.page.evaluate(()=>({w:innerWidth,doc:document.documentElement.scrollWidth,body:document.body.scrollWidth,targets:[...document.querySelectorAll('#KsLocalAiSearch130 button:not([disabled]),#KsLocalAiSearch130 a,#KsLocalAiSearch130 .ks-guide-check')].filter(e=>e.getClientRects().length).map(e=>({tag:e.tagName,h:e.getBoundingClientRect().height}))}));
       record('no page horizontal overflow '+kind+width,dims.doc<=dims.w+1&&dims.body<=dims.w+1);
@@ -237,12 +253,12 @@ async function run() {
       if([360,390,768,1365].includes(width))await f.screenshot(kind+'-'+width+'-compare');
       const catalog=await f.page.getByRole('link',{name:'Continua nel catalogo con queste preferenze'}).getAttribute('href');
       record('catalog exact confirmed criteria '+kind+width,new URL(catalog).searchParams.get('pmax')==='500.5'&&new URL(catalog).searchParams.get('disponibile')==='1');
-      const pdp=await f.page.getByRole('link',{name:'Vedi prodotto',exact:true}).first().getAttribute('href');
+      const pdp=await f.page.getByRole('link',{name:'Vai alla scheda e acquista',exact:true}).first().getAttribute('href');
       record('PDP identity '+kind+width,new URL(pdp).searchParams.get('id')==='120'&&new URL(pdp).searchParams.get('TCId')==='42');
       await f.privacy();
-      const destination=width===390||width===1365?'Vedi prodotto':'Continua nel catalogo con queste preferenze';
+      const destination=width===390||width===1365?'Vai alla scheda e acquista':'Continua nel catalogo con queste preferenze';
       await f.page.getByRole('link',{name:destination,exact:true}).first().click();
-      record('complete flow navigation '+kind+width+' '+server[scenario].scenario,new URL(f.page.url()).pathname===(destination==='Vedi prodotto'?'/articolo.aspx':'/articoli.aspx'));
+      record('complete flow navigation '+kind+width+' '+server[scenario].scenario,new URL(f.page.url()).pathname===(destination==='Vai alla scheda e acquista'?'/articolo.aspx':'/articoli.aspx'));
     }finally{await f.close();}
   }
   // Real serialized endpoint samples, all four commercial fixture contexts, virtual path.
@@ -250,7 +266,7 @@ async function run() {
     const f=await fixture({scenario,directory:'/shop/',count:1,mutate:p=>Object.assign(p,clone(server[scenario].payload))});
     try{await f.submit();record('real endpoint JSON renders '+scenario,await f.page.locator('.ks-guide-card').count()===1);
       record('virtual-directory request '+scenario,new URL(f.requests[0]).pathname==='/shop/search_suggest.aspx');
-      await f.page.getByRole('link',{name:'Vedi prodotto',exact:true}).click();
+      await f.page.getByRole('link',{name:'Vai alla scheda e acquista',exact:true}).click();
       record('explicit PDP navigation '+scenario,new URL(f.page.url()).pathname==='/shop/articolo.aspx');
     }finally{await f.close();}
   }
@@ -389,6 +405,157 @@ async function run() {
   report.bytes.push({file:'Public/assets/keepstore/js/ks-shopping-guide.js',base:0,candidate:Buffer.byteLength(moduleSource.replace(/\r\n/g,'\n'))});
   report.maximumCards=6;report.storage='zero';report.status='PASS';
 }
+async function decisionRegressions() {
+  const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
+  const plain=Object.assign(api.blank(),{q:'SKU120'}), raw=payload(api.requestURL(plain,paths));
+  const old=sourceApi(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js'));
+  record('decision helpers available',typeof api.evidence==='function'&&typeof api.decision==='function');
+  record('scoped decision style included',decisionStyle.includes('#KsLocalAiSearch130'));
+  const constraints=[
+    ['over maximum',{pmax:'100'},p=>p.suggestions.forEach(x=>{x.priceValue=122;x.price='122,00 €';})],
+    ['under minimum',{pmin:'200'},p=>p.suggestions.forEach(x=>{x.priceValue=122;x.price='122,00 €';})],
+    ['unavailable while required',{disponibile:true},p=>p.suggestions[0].availability=0],
+    ['unknown availability while required',{disponibile:true},p=>p.suggestions[0].availability=null]
+  ];
+  for(const [name,patch,mutate] of constraints){
+    const brief=Object.assign({},plain,patch), response=payload(api.requestURL(brief,paths),{mutate});
+    record('baseline reproduces unverified constraint '+name,old.validate(response,brief,paths).items.length===3);
+    assert.throws(()=>api.validate(response,brief,paths));record('candidate fails closed on '+name);
+  }
+  const item=api.validate(raw,plain,paths).items[0];
+  record('numeric display price retained for current comparison',item.priceValue===raw.suggestions[0].priceValue);
+  record('exact code is verified evidence',api.evidence(item,plain).exactCode===true);
+  const match=api.evidence({...item,title:'Notebook SSD compatto',brand:'Marca esempio',category:'Computer'}, {...plain,q:'SSD allergeni'});
+  record('visible term matched with evidence',match.matched.some(x=>x.term.toLowerCase()==='ssd'));
+  record('unsupported term explicitly unverified',match.unverified.some(x=>x.toLowerCase()==='allergeni'));
+  record('no suitability inferred from text',!('compatible' in match)&&!('recommended' in match));
+  const samples=[{...item,key:'120:42',priceValue:100,price:'100,00 €',availability:0},{...item,key:'121:43',priceValue:150,price:'150,00 €',availability:7},{...item,key:'122:44',priceValue:100,price:'100,00 €',availability:null}];
+  const choice=api.decision(samples);
+  record('minimum limited to current comparison',choice.minimum===100&&choice.lowest.length===2&&choice.lowest.includes('120:42')&&choice.lowest.includes('122:44'));
+  record('comparison exposes factual differences only',Array.isArray(choice.differences)&&choice.differences.length>0);
+  const equal=api.decision(samples.map(x=>({...x,priceValue:100,price:'100,00 €'})));
+  record('equal prices keep ties instead of invented winner',equal.lowest.length===3);
+  report.decisionBaseline={ref:decisionBase,reproducedConstraintGaps:constraints.length,proof:'same synthetic guided responses passed old validator and are refused by candidate'};
+  report.decisionMatrix=[];
+  for(const kind of ['Tech','Food'])for(const width of report.viewports){
+    const scenario=(report.viewports.indexOf(width)+(kind==='Food'?2:0))%4;
+    const directory=[390,768,1024].includes(width)?'/shop/':'/';
+    const f=await fixture({kind,width,scenario,directory,count:3,mutate:p=>p.suggestions.forEach((x,i)=>{x.priceValue=[122,100,150][i];x.price=['122,00 €','100,00 €','150,00 €'][i];})});
+    try{
+      const goal=kind==='Food'?'Preparare una cena per gli ospiti':'Organizzare il lavoro in mobilità';
+      const query=kind==='Food'?'olio da 1 litro':'SSD 1 TB';
+      await f.page.locator('#ksGuideGoal').fill(goal);
+      await f.page.locator('#ksGuideQuery').fill(query);
+      await f.page.locator('#ksGuideBudget').fill('200,50');
+      record('goal/query/budget drafting sends nothing '+kind+width,f.requests.length===0);
+      if(width<=430)await f.page.locator('[data-ks-guide-prepare]').tap();else await f.page.locator('[data-ks-guide-prepare]').press('Enter');
+      await f.wait('results');
+      const sent=new URL(f.requests[0]);
+      record('one complete brief request '+kind+width,f.requests.length===1&&sent.searchParams.get('q')===query&&sent.searchParams.get('pmax')==='200.5');
+      record('goal is local only '+kind+width,!decodeURIComponent(sent.href).includes(goal)&&!sent.searchParams.has('goal'));
+      record('goal review accessible '+kind+width,await f.page.locator('#ksGuideGoal').evaluate(x=>!!document.querySelector('label[for="'+x.id+'"]'))&&await f.page.locator('#ksGuideBudget').evaluate(x=>!!document.querySelector('label[for="'+x.id+'"]')));
+      record('confirmed query unchanged by goal '+kind+width,await f.page.locator('#ksGuideQuery').inputValue()===query);
+      for(let i=0;i<3;i++)await f.page.locator('[data-ks-guide-compare-key]').nth(i).check();
+      record('workspace compares current response '+kind+width,await f.page.locator('.ks-guide-compare-item').count()===3);
+      const workspace=await f.page.locator('[data-ks-guide-comparison]').innerText();
+      record('workspace explains evidence and limits '+kind+width,/Corrispondenze verificate/.test(workspace)&&/Da verificare/.test(workspace));
+      record('no global best or suitability claim '+kind+width,!/migliore del catalogo|migliore per te|compatibilità garantita|senza allergeni|risparmi il/i.test(workspace));
+      const dimensions=await f.page.evaluate(()=>({width:innerWidth,document:document.documentElement.scrollWidth,targets:[...document.querySelectorAll('#KsLocalAiSearch130 button,#KsLocalAiSearch130 a,#KsLocalAiSearch130 .ks-guide-check')].filter(x=>x.getClientRects().length&&!x.disabled).map(x=>({height:x.getBoundingClientRect().height,width:x.getBoundingClientRect().width}))}));
+      record('decision no horizontal page overflow '+kind+width,dimensions.document<=dimensions.width+1);
+      record('decision touch targets '+kind+width,dimensions.targets.every(x=>x.height>=43.9&&x.width>=43.9));
+      record('polite status and keyboard focus available '+kind+width,await f.page.locator('[data-ks-guide-status]').getAttribute('aria-live')==='polite');
+      await f.screenshot('decision-'+kind+'-'+width+'-workspace');
+      if(width===390){await f.screenshot('decision-'+kind+'-390-brief','#KsLocalAiSearch130 .ks-ai130-brain');await f.screenshot('decision-'+kind+'-390-comparison','[data-ks-guide-comparison]');}
+      const previous=f.requests.length;
+      await f.page.locator('.ks-guide-compare-item').nth(1).getByRole('button',{name:/Rimuovi dal confronto/}).press('Enter');
+      record('remove comparison restores associated product focus '+kind+width,await f.page.locator('.ks-guide-compare-item').count()===2&&await f.page.locator('[data-ks-guide-compare-key="121:43"]').evaluate(x=>x===document.activeElement)&&f.requests.length===previous);
+      await f.page.getByRole('button',{name:'Correggi una preferenza',exact:true}).press('Enter');
+      record('correct preference clears stale snapshot and focuses budget '+kind+width,await f.page.locator('.ks-guide-price,.ks-guide-compare-item').count()===0&&await f.page.locator('#ksGuideBudget').evaluate(x=>x===document.activeElement)&&f.requests.length===previous);
+      await f.page.locator('#ksGuideGoal').fill(goal+' domani');
+      record('goal edit immediately removes commercial snapshot '+kind+width,await f.page.locator('.ks-guide-price,.ks-guide-compare-item').count()===0&&f.requests.length===previous);
+      await f.page.locator('[data-ks-guide-command="solo disponibili"]').click();
+      record('goal draft guarded from implicit confirmation '+kind+width,f.requests.length===previous&&await f.page.locator('#ksGuideGoal').inputValue()===goal+' domani');
+      await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('results');
+      record('explicit revised goal triggers one fresh result '+kind+width,f.requests.length===previous+1&&new URL(f.requests.at(-1)).searchParams.get('q')===query);
+      const pdp=await f.page.locator('.ks-guide-card').first().getByRole('link',{name:'Vai alla scheda e acquista',exact:true}).getAttribute('href');
+      record('exact variant conversion path '+kind+width,new URL(pdp).pathname===directory+'articolo.aspx'&&new URL(pdp).searchParams.get('id')==='120'&&new URL(pdp).searchParams.get('TCId')==='42');
+      const contact=f.page.getByRole('link',{name:/contatt/i}).filter({hasText:/commercial|contatt/i});
+      record('commercial contact uses existing page '+kind+width,await contact.count()>0&&(await contact.first().getAttribute('href')).endsWith('Contattaci.aspx'));
+      await f.privacy();
+      report.decisionMatrix.push({kind,width,scenario:server[scenario].scenario,directory,input:width<=430?'touch tap':'keyboard Enter',requests:f.requests.length,status:'PASS'});
+    }finally{await f.close();}
+  }
+  for(const count of [0,1,2,3,6]){
+    const f=await fixture({count,empty:count===0});
+    try{await f.submit();record('decision exact result cardinality '+count,await f.page.locator('.ks-guide-card').count()===count&&f.requests.length===1);if(count===0)await f.screenshot('decision-empty');await f.privacy();}finally{await f.close();}
+  }
+  const ambiguous=await fixture();
+  try{
+    await ambiguous.page.locator('#ksGuideGoal').fill('Vorrei qualcosa di adatto alla mia esigenza');
+    await ambiguous.page.locator('#ksGuideGoal').press('Enter');
+    record('goal textarea Enter does not send a request',ambiguous.requests.length===0);
+    await ambiguous.page.locator('[data-ks-guide-prepare]').click();
+    record('ambiguous goal asks for clarification without rewriting query',ambiguous.requests.length===0&&await ambiguous.page.locator('#ksGuideQuery').inputValue()===''&&await ambiguous.page.locator('.ks-guide-card').count()===0);
+    await ambiguous.screenshot('decision-goal-clarification');
+    await ambiguous.page.locator('#ksGuideQuery').fill('SKU120');
+    for(const value of ['1.000','1,000','1e3','-5','0','500 euro']){
+      await ambiguous.page.locator('#ksGuideBudget').fill(value);await ambiguous.page.locator('[data-ks-guide-prepare]').click();
+      record('invalid budget requires correction '+value,ambiguous.requests.length===0&&await ambiguous.page.locator('.ks-guide-price').count()===0);
+    }
+    await ambiguous.page.locator('#ksGuideBudget').fill('500.50');await ambiguous.page.locator('[data-ks-guide-prepare]').click();await ambiguous.wait('results');
+    record('valid explicit budget accepted after correction',ambiguous.requests.length===1&&new URL(ambiguous.requests[0]).searchParams.get('pmax')==='500.5');
+    const n=ambiguous.requests.length;await ambiguous.page.locator('#ksGuideBudget').fill('600');
+    await ambiguous.page.locator('[data-ks-guide-command="solo disponibili"]').click();
+    record('budget draft retained and snapshot cleared',ambiguous.requests.length===n&&await ambiguous.page.locator('#ksGuideBudget').inputValue()==='600'&&await ambiguous.page.locator('.ks-guide-price').count()===0);
+    await ambiguous.privacy();
+  }finally{await ambiguous.close();}
+  for(const [name,mutate] of [
+    ['foreign tenant URL',p=>p.suggestions[0].url='https://tenant2.invalid/articolo.aspx?id=120&TCId=42'],
+    ['variant identity mismatch',p=>p.suggestions[0].url='articolo.aspx?id=120&TCId=999'],
+    ['unvalidated output envelope',p=>delete p.guided],
+    ['noncommercial numeric price',p=>p.suggestions[0].priceValue=-10]
+  ]){
+    const f=await fixture({mutate});
+    try{await f.page.locator('#ksGuideQuery').fill('SKU120');await f.page.locator('[data-ks-guide-prepare]').click();await f.wait('error');record('negative commercial response hidden '+name,await f.page.locator('.ks-guide-card,.ks-guide-compare-item').count()===0&&f.requests.length===1);if(name==='unvalidated output envelope')await f.screenshot('decision-error');await f.privacy();}finally{await f.close();}
+  }
+  const claims=await fixture({mutate:p=>{p.suggestions[0].reason='Compatibilità garantita, senza allergeni';p.suggestions[0].recommendation='<img src=x onerror=window.unsupported=1>';}});
+  try{await claims.submit();record('unknown provider claims never rendered',!/Compatibilità garantita|senza allergeni/.test(await claims.page.locator('[data-ks-guide-results]').innerText())&&await claims.page.evaluate(()=>!window.unsupported));await claims.privacy();}finally{await claims.close();}
+  const punctuation=await fixture();
+  try{await punctuation.submit('???');record('punctuation query cannot become positive evidence',(await punctuation.page.locator('.ks-guide-card').first().innerText()).includes('Corrispondenza da verificare'));await punctuation.privacy();}finally{await punctuation.close();}
+  const unavailable=await fixture({mutate:p=>{p.suggestions[0].availability=0;p.suggestions[1].availability=null;p.suggestions[2].availability=-1;}});
+  try{await unavailable.submit();record('no purchase promise for zero unknown or negative stock',await unavailable.page.locator('.ks-guide-card').getByRole('link',{name:'Scopri questo prodotto',exact:true}).count()===3&&await unavailable.page.locator('.ks-guide-card').getByRole('link',{name:'Vai alla scheda e acquista',exact:true}).count()===0);record('unavailable variant still has exact PDP discovery link',new URL(await unavailable.page.locator('.ks-guide-card').first().getByRole('link',{name:'Scopri questo prodotto',exact:true}).getAttribute('href')).searchParams.get('TCId')==='42');await unavailable.privacy();}finally{await unavailable.close();}
+  const recovery=await fixture({empty:true});
+  try{
+    await recovery.page.locator('#ksGuideQuery').fill('SKU120');await recovery.page.locator('#ksGuideBudget').fill('200');
+    await recovery.page.locator('[data-ks-guide-sector="7"]').click();await recovery.page.locator('[data-ks-guide-prepare]').click();await recovery.wait('empty');
+    record('empty budget/reparto never relax automatically',recovery.requests.length===1);
+    await recovery.page.getByRole('button',{name:'Applica questa modifica',exact:true}).press('Enter');await recovery.wait('empty');
+    let latest=briefFrom(recovery.requests.at(-1));
+    record('empty recovery removes only budget after explicit action',recovery.requests.length===2&&latest.pmax==='0'&&latest.st===7&&latest.q==='SKU120');
+    record('recovery holds stable keyboard focus',await recovery.page.locator('[data-ks-guide-prepare]').evaluate(x=>x===document.activeElement));
+    await recovery.page.locator('[data-ks-guide-undo]').click();await recovery.wait('empty');latest=briefFrom(recovery.requests.at(-1));
+    record('recovery reversible using fresh authoritative request',recovery.requests.length===3&&latest.pmax==='200'&&latest.st===7);
+    await recovery.privacy();
+  }finally{await recovery.close();}
+  const fresh=await fixture({delay:250,ignoreAbort:true});
+  try{
+    await fresh.page.locator('#ksGuideQuery').fill('Prima ricerca');await fresh.page.locator('[data-ks-guide-prepare]').click();
+    await fresh.page.waitForFunction(()=>window.__privacy.fetch.length===1);
+    await fresh.page.locator('#ksGuideGoal').fill('Obiettivo ancora in bozza');
+    record('goal edit aborts outstanding request',await fresh.page.evaluate(()=>window.__privacy.aborts===1));
+    await new Promise(resolve=>setTimeout(resolve,300));
+    record('late response cannot repopulate edited goal',await fresh.page.locator('.ks-guide-price').count()===0&&fresh.requests.length===1);
+    fresh.config.delay=0;await fresh.page.locator('[data-ks-guide-prepare]').click();await fresh.wait('results');
+    await fresh.page.locator('[data-ks-guide-compare-key]').nth(0).check();await fresh.page.locator('[data-ks-guide-compare-key]').nth(1).check();
+    await fresh.page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+    record('decision BFCache discards snapshot without fetch',await fresh.state()==='context-invalid'&&await fresh.page.locator('.ks-guide-price,.ks-guide-compare-item').count()===0&&fresh.requests.length===2);
+    fresh.config.mutate=p=>p.suggestions.forEach(x=>{x.availability=0;});
+    await fresh.page.getByRole('button',{name:'Aggiorna la selezione',exact:true}).click();await fresh.wait('results');
+    record('explicit refresh replaces old stock and comparison',fresh.requests.length===3&&(await fresh.page.locator('.ks-guide-card').first().innerText()).includes('Non disponibile')&&await fresh.page.locator('.ks-guide-compare-item').count()===0);
+    await fresh.privacy();
+  }finally{await fresh.close();}
+  report.decisionLimits=['source validation and all browser responses are synthetic', 'plausible cross-tenant prices, alien variant membership and stock freshness require authoritative server resolver evidence; no browser authenticity claim', 'no real account, IIS/MySQL, purchase, email or external AI call'];
+}
 async function rev1Regressions() {
   const failures=[];
   const check=(name,value)=>{if(value)record('REV1 '+name);else failures.push(name);};
@@ -407,6 +574,8 @@ async function rev1Regressions() {
       if(detail)await f.page.locator('#ksGuideDetail').fill(detail);
       if(sector)await f.page.locator('[data-ks-guide-sector="7"]').click();
       const n=await fetchCount(f), label=directory+' '+draft;
+      check('draft preview agrees with separate fields '+label,/da confermare/i.test(await f.page.locator('[data-ks-guide-draft-review]').innerText()));
+      check('draft preview accessible name agrees '+label,/non ancora confermat|da confermare|bozza/i.test(await f.page.locator('[data-ks-guide-draft-review]').getAttribute('aria-label')));
       await activate(f,f.page.getByRole('button',{name:'Rimuovi Massimo: 200 €',exact:true}),draft==='detail'?'Space':'Enter');
       check('draft fields retained '+label,await f.page.locator('#ksGuideQuery').inputValue()===product&&await f.page.locator('#ksGuideDetail').inputValue()===detail);
       check('draft department retained '+label,await f.page.locator('[data-ks-guide-sector="'+sector+'"]').getAttribute('aria-pressed')==='true');

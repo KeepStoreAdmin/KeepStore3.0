@@ -7,7 +7,7 @@
   else host.KeepStoreShoppingGuide = { init: api.init };
 }(typeof window !== 'undefined' ? window : this, function () {
   'use strict';
-  var MAX_TEXT = 80, MAX_BODY = 65536, MAX_RESULTS = 6, MAX_HISTORY = 8;
+  var MAX_TEXT = 80, MAX_GOAL = 160, MAX_BODY = 65536, MAX_RESULTS = 6, MAX_HISTORY = 8;
   var instances = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
   function clean(value) { return String(value || '').replace(/[\u0000-\u001f\u007f\s]+/g, ' ').trim(); }
   function blank() { return { q: '', st: 0, pmin: '0', pmax: '0', disponibile: false, ordinamento: '' }; }
@@ -39,6 +39,13 @@
     var primary = clean(product), combined = clean(primary + ' ' + clean(detail));
     if (primary.length < 2 || combined.length > MAX_TEXT) throw new Error('query');
     return combined;
+  }
+  function budgetValue(raw) {
+    var value = clean(raw);
+    if (!value) return '0';
+    var amount = decimal(value);
+    if (!amount || amount === '0') throw new Error('budget');
+    return amount;
   }
   function catalogHandoff(search, departments) {
     var params = new URLSearchParams(search), names = ['guide', 'guide_q', 'guide_st'];
@@ -152,8 +159,13 @@
       if (typeof row.priceValue !== 'number' || !Number.isFinite(row.priceValue) || row.priceValue <= 0 ||
           typeof row.isOffer !== 'boolean' || typeof row.isRefurbished !== 'boolean' ||
           (row.availability !== null && (typeof row.availability !== 'number' || !Number.isFinite(row.availability)))) throw new Error('payload');
+      // A malformed response must never turn an essential filter into a recommendation.
+      if ((brief.pmax !== '0' && row.priceValue > Number(brief.pmax)) ||
+          (brief.pmin !== '0' && row.priceValue < Number(brief.pmin)) ||
+          (brief.disponibile && !(row.availability > 0))) throw new Error('criteria');
       return { key: key, id: row.id, tc: row.TCId, url: link.href, title: text(row.title, 500, false),
-        price: text(row.price, 80, false), brand: text(row.brand, 180, true), category: text(row.category, 180, true),
+        price: text(row.price, 80, false), priceValue: row.priceValue, brand: text(row.brand, 180, true), category: text(row.category, 180, true),
+        department: text(row.department, 180, true),
         code: text(row.code, 120, true), ean: text(row.ean, 120, true),
         image: imageURL(row.image, paths), fallback: imageURL(row.image_fallback, paths),
         availability: row.availability, offer: row.isOffer, refurbished: row.isRefurbished };
@@ -161,14 +173,39 @@
     return { items: items, label: label, catalog: actual.href };
   }
   function stock(item) { return item.availability === null ? 'Disponibilità: dato non disponibile' : item.availability > 0 ? 'Disponibile' : 'Non disponibile'; }
+  function words(value) {
+    // Literal, whole tokens only: never expand synonyms or interpret an intended use.
+    return clean(value).normalize('NFC').toLocaleLowerCase('it-IT').match(/[\p{L}\p{N}]+(?:[-.,/+][\p{L}\p{N}]+)*/gu) || [];
+  }
+  function evidence(item, b) {
+    var fields = [['title', 'titolo'], ['code', 'codice'], ['ean', 'EAN'], ['brand', 'marca'], ['category', 'categoria'], ['department', 'reparto']];
+    var tokens = Array.from(new Set(words(b.q))), matched = [], unverified = [];
+    tokens.forEach(function (term) {
+      var found = fields.find(function (field) { return words(item[field[0]]).indexOf(term) >= 0; });
+      if (found) matched.push({ term: term, field: found[1] }); else unverified.push(term);
+    });
+    var q = clean(b.q).toLocaleLowerCase('it-IT');
+    return { matched: matched, unverified: unverified,
+      exactCode: [item.code, item.ean].some(function (value) { return value && clean(value).toLocaleLowerCase('it-IT') === q; }) };
+  }
   function reason(item, b) {
-    var q = b.q.toLocaleLowerCase('it-IT');
-    if ((item.code && item.code.toLocaleLowerCase('it-IT') === q) || (item.ean && item.ean.toLocaleLowerCase('it-IT') === q)) return 'Corrispondenza esatta del codice cercato.';
-    if (item.offer) return 'Offerta applicabile dichiarata dal negozio.';
-    if (b.disponibile && item.availability > 0) return 'Disponibilità dichiarata, con il filtro “Solo disponibili” attivo.';
-    if (item.brand) return 'Marca indicata nel catalogo: ' + item.brand + '.';
-    if (item.category) return 'Categoria indicata nel catalogo: ' + item.category + '.';
-    return 'Articolo restituito per la tua ricerca. Verifica i dettagli nella scheda.';
+    var proof = evidence(item, b);
+    if (proof.exactCode) return 'Corrispondenza esatta del codice cercato.';
+    if (proof.matched.length) return 'Termini presenti nei dati: ' + proof.matched.map(function (match) { return '“' + match.term + '” (' + match.field + ')'; }).join(', ') + '.';
+    return 'Nessuna corrispondenza testuale verificabile nei dati mostrati.';
+  }
+  function decision(items) {
+    if (!items.length) return { minimum: null, lowest: [], differences: [] };
+    var minimum = Math.min.apply(null, items.map(function (item) { return item.priceValue; }));
+    var cheapest = items.find(function (item) { return item.priceValue === minimum; });
+    // Equal formatted prices are tied for the customer, even if source decimals differ below a cent.
+    var lowest = items.filter(function (item) { return item.priceValue === minimum || item.price === cheapest.price; }).map(function (item) { return item.key; });
+    var fields = [['Prezzo', function (item) { return item.price; }], ['Disponibilità', stock],
+      ['Marca', function (item) { return item.brand || ''; }], ['Categoria', function (item) { return item.category || ''; }],
+      ['Condizione', function (item) { return item.refurbished; }], ['Offerta', function (item) { return item.offer; }]];
+    return { minimum: minimum, lowest: lowest, differences: fields.filter(function (field) {
+      return new Set(items.map(field[1])).size > 1;
+    }).map(function (field) { return field[0]; }) };
   }
   function init(root) {
     if (!root || !instances || instances.has(root)) return;
@@ -180,6 +217,7 @@
       refine = find('[data-ks-guide-refine]'), command = find('#ksGuideCommand'), apply = find('[data-ks-guide-apply]'),
       newQuery = find('[data-ks-guide-new-query]'), output = find('[data-ks-guide-output]'), status = find('[data-ks-guide-status]'),
       recovery = find('[data-ks-guide-recovery]'), results = find('[data-ks-guide-results]'), comparison = find('[data-ks-guide-comparison]');
+    var goal = find('#ksGuideGoal'), budget = find('#ksGuideBudget'), draftReview = find('[data-ks-guide-draft-review]');
     if (![fields, input, detail, prepare, reset, undo, summary, idle, chips, refine, command, apply, newQuery, output, status, recovery, results, comparison].every(Boolean) ||
         !win.fetch || !win.AbortController || !win.URL || !win.Promise) return;
     var paths;
@@ -201,7 +239,7 @@
         button.setAttribute('data-ks-guide-sector', String(id));
       } catch (_) { button.disabled = true; button.hidden = true; }
     });
-    var state = { phase: 'idle', confirmed: null, draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
+    var state = { phase: 'idle', confirmed: null, confirmedGoal: '', draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
     var handoffNotice = find('[data-ks-guide-handoff]');
     function handoffMessage(message) { if (handoffNotice) { handoffNotice.textContent = message; handoffNotice.hidden = !message; } }
     function node(tag, label, className) {
@@ -227,14 +265,32 @@
       root.removeAttribute('aria-busy'); prepare.removeAttribute('aria-disabled');
       phase(next);
     }
+    function reviewDraft() {
+      if (!draftReview) return;
+      var query = clean(input.value + ' ' + detail.value), purpose = goal ? clean(goal.value) : '', maximum = budget ? clean(budget.value) : '';
+      var confirmed = state.confirmed && clean(input.value) === state.confirmed.q && !clean(detail.value) &&
+        purpose === state.confirmedGoal && state.draftSector === state.confirmed.st;
+      try { confirmed = confirmed && (!budget || budgetValue(maximum) === state.confirmed.pmax); } catch (_) { confirmed = false; }
+      draftReview.setAttribute('aria-label', confirmed ? 'Brief confermato' : 'Brief da confermare');
+      draftReview.replaceChildren(node('strong', confirmed ? 'Il tuo brief confermato' : 'Il tuo brief, da confermare'),
+        node('p', purpose ? 'Obiettivo: ' + purpose : 'Obiettivo facoltativo: puoi iniziare da un prodotto o un codice.'),
+        node('p', query ? 'Parole da cercare: ' + query : 'Indica il prodotto, la marca o il codice: non deduciamo prodotti dall’obiettivo.'),
+        node('p', 'Reparto: ' + (departments.get(state.draftSector) || 'Da scegliere') + ' · ' + (maximum ? 'Budget massimo: ' + maximum + ' €' : 'Nessun limite di prezzo')));
+    }
     function syncFields(b) {
       input.value = b.q; detail.value = ''; state.draftSector = b.st;
+      if (goal) goal.value = state.confirmedGoal;
+      if (budget) budget.value = b.pmax === '0' ? '' : b.pmax.replace('.', ',');
       choices.forEach(function (choice) { choice.setAttribute('aria-pressed', Number(choice.getAttribute('data-ks-guide-sector')) === b.st ? 'true' : 'false'); });
+      reviewDraft();
     }
     function canRefineConfirmed() {
       // syncFields stores the confirmed query in the product field and clears detail.
       // Even redistributing the same words between those fields is an unconfirmed edit.
-      if (!state.confirmed || (clean(input.value) === state.confirmed.q && !clean(detail.value) && state.draftSector === state.confirmed.st)) return true;
+      var currentBudget;
+      try { currentBudget = budget ? budgetValue(budget.value) : state.confirmed && state.confirmed.pmax; } catch (_) { currentBudget = null; }
+      if (!state.confirmed || (clean(input.value) === state.confirmed.q && !clean(detail.value) && state.draftSector === state.confirmed.st &&
+          (!goal || clean(goal.value) === state.confirmedGoal) && currentBudget === state.confirmed.pmax)) return true;
       announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla.');
       return false;
     }
@@ -262,24 +318,30 @@
         chip.setAttribute('aria-label', 'Rimuovi ' + entry[1]); chips.appendChild(chip);
       });
     }
-    function remember(b) { if (b) { state.history.push(copy(b)); if (state.history.length > MAX_HISTORY) state.history.shift(); } }
-    function accept(b, record) {
-      if (state.request && same(state.request.brief, b)) return;
-      if (record && !same(state.confirmed, b)) remember(state.confirmed);
+    function remember(b) { if (b) { state.history.push({ brief: copy(b), goal: state.confirmedGoal }); if (state.history.length > MAX_HISTORY) state.history.shift(); } }
+    function accept(b, record, nextGoal) {
+      var purpose = typeof nextGoal === 'string' ? nextGoal : state.confirmedGoal;
+      if (state.request && same(state.request.brief, b) && purpose === state.confirmedGoal) return;
+      if (record && (!same(state.confirmed, b) || purpose !== state.confirmedGoal)) remember(state.confirmed);
+      state.confirmedGoal = purpose;
       state.confirmed = copy(b); state.unknown = ''; newQuery.hidden = true; command.value = '';
       syncFields(b); summaryView();
       if (!b.q) { invalidate('editing'); announce('Indica il prodotto da cercare.'); return; }
       search(b);
     }
     function resetGuide() {
-      remember(state.confirmed); state.confirmed = null; state.unknown = '';
+      remember(state.confirmed); state.confirmed = null; state.confirmedGoal = ''; state.unknown = '';
       state.handoffSectorPending = false; handoffMessage('');
       syncFields(blank()); command.value = ''; newQuery.hidden = true;
       invalidate('idle'); summaryView(); announce('La guida è pronta per una nuova ricerca.'); input.focus();
     }
     function undoGuide() {
       if (!state.history.length) { announce('Non ci sono modifiche da annullare.'); return; }
-      accept(state.history.pop(), false);
+      if (!state.confirmed && (clean(input.value) || clean(detail.value) || (goal && clean(goal.value)) || (budget && clean(budget.value)) || state.draftSector)) {
+        announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla oppure “Ricomincia” per scartare la bozza.'); return;
+      }
+      if (!canRefineConfirmed()) return;
+      var previous = state.history.pop(); accept(previous.brief, false, previous.goal);
     }
     function prepareSearch() {
       if (state.handoffSectorPending) {
@@ -288,13 +350,28 @@
         if (choice) choice.focus();
         return;
       }
+      if (goal && clean(goal.value).length > MAX_GOAL) {
+        invalidate('editing'); goal.setAttribute('aria-invalid', 'true');
+        announce('Descrivi l’obiettivo in massimo 160 caratteri.'); goal.focus(); return;
+      }
+      if (goal) goal.removeAttribute('aria-invalid');
+      var maximum;
+      try { maximum = budget ? budgetValue(budget.value) : null; }
+      catch (_) {
+        invalidate('editing'); budget.setAttribute('aria-invalid', 'true');
+        announce('Indica un budget maggiore di zero, senza separatori delle migliaia, ad esempio 500,50. Lascia vuoto per non fissare un limite.'); budget.focus(); return;
+      }
+      if (budget) budget.removeAttribute('aria-invalid');
       try {
         var b = copy(state.confirmed || blank());
         b.q = queryText(input.value, detail.value); b.st = state.draftSector;
+        if (maximum !== null) b.pmax = maximum;
         input.removeAttribute('aria-invalid'); detail.removeAttribute('aria-invalid');
-        accept(b, true);
+        accept(b, true, goal ? clean(goal.value) : '');
       } catch (_) {
-        invalidate('editing'); announce('Scrivi almeno 2 caratteri. Prodotto e dettaglio possono contenere al massimo 80 caratteri in tutto.');
+        invalidate('editing'); announce(goal && clean(goal.value) && !clean(input.value) ?
+          'Per chiarire l’obiettivo, indica un prodotto, una marca o un codice da cercare. Puoi anche esplorare il catalogo o contattare il negozio.' :
+          'Scrivi almeno 2 caratteri. Prodotto e dettaglio possono contenere al massimo 80 caratteri in tutto.');
         input.setAttribute('aria-invalid', 'true'); detail.setAttribute('aria-invalid', 'true');
         input.focus();
       }
@@ -334,8 +411,11 @@
       article.appendChild(node('p', item.price, 'ks-guide-price'));
       article.appendChild(node('p', stock(item), 'ks-guide-stock'));
       if (item.offer || item.refurbished) article.appendChild(node('p', [item.offer ? 'Offerta applicabile' : '', item.refurbished ? 'Ricondizionato' : ''].filter(Boolean).join(' · '), 'ks-guide-badge'));
-      article.appendChild(node('p', 'Perché compare: ' + reason(item, state.confirmed), 'ks-guide-reason'));
-      article.appendChild(link('Vedi prodotto', item.url, 'ks-guide-product-cta'));
+      var proof = evidence(item, state.confirmed);
+      article.appendChild(node('p', proof.matched.length && !proof.unverified.length ? 'Termini presenti nei dati' : 'Corrispondenza da verificare', 'ks-guide-match'));
+      article.appendChild(node('p', reason(item, state.confirmed), 'ks-guide-reason ks-guide-evidence'));
+      if (proof.unverified.length) article.appendChild(node('p', 'Non verificati nei dati mostrati: ' + proof.unverified.join(', ') + '.', 'ks-guide-unverified'));
+      article.appendChild(link(item.availability > 0 ? 'Vai alla scheda e acquista' : 'Scopri questo prodotto', item.url, 'ks-guide-product-cta'));
       var label = node('label', undefined, 'ks-guide-check'), check = doc.createElement('input');
       check.type = 'checkbox'; check.setAttribute('data-ks-guide-compare-key', item.key);
       check.addEventListener('change', function () {
@@ -353,6 +433,13 @@
       if (items.length < 2) { comparison.appendChild(node('p', 'Seleziona ancora un prodotto per confrontare i dati.')); return; }
       comparison.appendChild(node('h3', 'Differenze a colpo d’occhio'));
       comparison.appendChild(node('p', 'Solo i prodotti della selezione corrente. ' + state.result.label, 'ks-guide-hint'));
+      var insight = decision(items), lowest = items.filter(function (item) { return insight.lowest.indexOf(item.key) >= 0; });
+      var overview = node('div', undefined, 'ks-guide-decision-summary');
+      overview.appendChild(node('p', 'Prezzo visualizzato più basso fra questi ' + items.length + ' prodotti: ' +
+        lowest.map(function (item) { return item.title; }).join(' · ') + ' (' + lowest[0].price + ').' + (lowest.length > 1 ? ' Più prodotti hanno lo stesso prezzo visualizzato.' : '')));
+      overview.appendChild(node('p', insight.differences.length ? 'Dati che differiscono: ' + insight.differences.join(', ').toLocaleLowerCase('it-IT') + '.' : 'I dati commerciali confrontabili non mostrano differenze.'));
+      overview.appendChild(node('p', 'Il prezzo minimo riguarda solo questo confronto. Un dato mancante non prova una differenza del prodotto; idoneità e compatibilità restano da verificare nella scheda.'));
+      comparison.appendChild(overview);
       var grid = node('div', undefined, 'ks-guide-compare-grid');
       grid.setAttribute('role', 'region'); grid.setAttribute('aria-label', 'Confronto prodotti, scorri orizzontalmente se necessario'); grid.tabIndex = 0;
       grid.style.setProperty('--ks-guide-columns', String(items.length));
@@ -361,13 +448,23 @@
       items.forEach(function (item) {
         var column = node('th', undefined, 'ks-guide-compare-item'); column.scope = 'col';
         var title = node('h4'); title.appendChild(link(item.title, item.url, 'ks-guide-product-link')); column.appendChild(title);
+        column.appendChild(link('Scopri questo prodotto', item.url, 'ks-guide-product-cta'));
+        var remove = button('Rimuovi dal confronto', function () {
+          var check = Array.from(root.querySelectorAll('[data-ks-guide-compare-key]')).find(function (control) { return control.getAttribute('data-ks-guide-compare-key') === item.key; });
+          (check || prepare).focus(); if (check) check.checked = false;
+          state.selected = state.selected.filter(function (key) { return key !== item.key; }); renderCompare();
+          announce('Prodotto rimosso dal confronto.');
+        });
+        remove.setAttribute('aria-label', 'Rimuovi dal confronto ' + item.title); column.appendChild(remove);
         titles.appendChild(column);
       });
       [['Prezzo', function (item) { return item.price; }], ['Disponibilità', stock],
         ['Marca', function (item) { return item.brand; }], ['Categoria', function (item) { return item.category; }],
         ['Codice', function (item) { return item.code; }], ['Condizione', function (item) { return item.refurbished ? 'Ricondizionato' : ''; }],
-        ['Offerta', function (item) { return item.offer ? 'Applicabile' : 'Non indicata'; }]].forEach(function (field) {
-          var row = node('tr'), label = node('th', field[0]); label.scope = 'row'; row.appendChild(label);
+        ['Offerta', function (item) { return item.offer ? 'Applicabile' : 'Non indicata'; }],
+        ['Corrispondenze verificate', function (item) { return reason(item, state.confirmed); }],
+        ['Da verificare', function (item) { var missing = evidence(item, state.confirmed).unverified; return missing.length ? missing.join(', ') : 'Idoneità all’obiettivo e caratteristiche nella scheda'; }]].forEach(function (field) {
+          var row = node('tr', undefined, insight.differences.indexOf(field[0]) >= 0 ? 'ks-guide-difference' : ''), label = node('th', field[0]); label.scope = 'row'; row.appendChild(label);
           items.forEach(function (item) { row.appendChild(node('td', field[1](item) || 'Dato non disponibile')); });
           data.appendChild(row);
         });
@@ -378,11 +475,14 @@
         state.selected = []; root.querySelectorAll('[data-ks-guide-compare-key]').forEach(function (check) { check.checked = false; }); renderCompare();
         announce('Confronto svuotato. Puoi selezionare altri prodotti.');
       }));
+      comparison.appendChild(button('Correggi una preferenza', function () {
+        invalidate('editing'); (budget || command).focus(); announce('Modifica il brief e premi “Mostra i prodotti”. Il confronto verrà ricostruito con la nuova selezione.');
+      }));
       announce('Confronto aggiornato: ' + items.length + ' prodotti.');
     }
     function nextQuestion(container) {
       var b = state.confirmed, question = node('div', undefined, 'ks-guide-question'), message, action;
-      if (b.pmax === '0') { message = 'Vuoi indicare un prezzo massimo?'; action = function () { command.value = 'massimo '; command.focus(); }; }
+      if (b.pmax === '0') { message = 'Vuoi indicare un prezzo massimo per restringere la selezione?'; action = function () { if (budget) budget.focus(); else { command.value = 'massimo '; command.focus(); } }; }
       else if (!b.st && departments.size > 1) { message = 'Vuoi scegliere un reparto?'; action = function () { var choice = choices.find(function (x) { return !x.disabled && Number(x.getAttribute('data-ks-guide-sector')) > 0; }); if (choice) choice.focus(); }; }
       else if (!b.disponibile) { message = 'Vuoi limitarti ai prodotti disponibili?'; action = function () { command.focus(); runCommand('solo disponibili'); }; }
       else return;
@@ -394,6 +494,13 @@
       results.appendChild(node('h3', data.items.length ? 'Una selezione per la tua ricerca' : 'Nessun risultato in questa selezione'));
       results.appendChild(node('p', data.items.length + ' risultati restituiti, fino a 6. Non è il totale del catalogo.', 'ks-guide-hint'));
       results.appendChild(node('p', data.label, 'ks-guide-fiscal'));
+      var filters = [];
+      if (b.st) filters.push('reparto ' + departments.get(b.st));
+      if (b.pmax !== '0') filters.push('massimo ' + b.pmax.replace('.', ',') + ' €');
+      if (b.disponibile) filters.push('solo disponibili');
+      if (filters.length) results.appendChild(node('p', 'Filtri applicati: ' + filters.join(' · ') + '.', 'ks-guide-evidence'));
+      if (state.confirmedGoal) results.appendChild(node('p', 'L’idoneità al tuo obiettivo non è verificata dalla ricerca.', 'ks-guide-unverified'));
+      results.appendChild(node('p', 'Le corrispondenze sono testuali. Caratteristiche, compatibilità e idoneità all’uso vanno verificate nella scheda o con il negozio.', 'ks-guide-hint'));
       if (data.items.length) {
         var grid = node('div', undefined, 'ks-guide-grid');
         data.items.forEach(function (item) { grid.appendChild(productCard(item)); });
@@ -455,6 +562,7 @@
           code === 'http-400' ? 'La richiesta non è valida. Controlla prodotto e preferenze.' :
           code === 'http-429' ? 'Troppe richieste. Attendi prima di riprovare.' :
           code === 'http-503' ? 'Il servizio è temporaneamente non disponibile.' :
+          code === 'criteria' ? 'La risposta contiene prodotti fuori dai vincoli confermati. La selezione non è stata mostrata: riprova o continua nel catalogo.' :
           code === 'timeout' ? 'La richiesta sta impiegando troppo tempo. Puoi riprovare.' :
           'Non è stato possibile verificare la selezione. Controlla la connessione o riprova.';
         recover(message, invalid);
@@ -470,7 +578,7 @@
           if (state.handoffSectorPending) { state.handoffSectorPending = false; handoffMessage('Reparto scelto. Controlla la bozza e premi “Mostra i prodotti”.'); }
           state.draftSector = Number(choice.getAttribute('data-ks-guide-sector'));
           choices.forEach(function (other) { other.setAttribute('aria-pressed', other === choice ? 'true' : 'false'); });
-          invalidate('editing'); announce('Reparto modificato. Premi “Mostra i prodotti” per confermare.');
+          invalidate('editing'); reviewDraft(); announce('Reparto modificato. Premi “Mostra i prodotti” per confermare.');
         });
       });
       prepare.addEventListener('click', prepareSearch); reset.addEventListener('click', resetGuide); undo.addEventListener('click', undoGuide);
@@ -481,13 +589,14 @@
         if (!canRefineConfirmed()) return;
         var b = blank(); b.q = state.unknown; prepare.focus(); accept(b, true);
       });
-      [input, detail, command].forEach(function (field) {
+      [input, detail, command, goal, budget].filter(Boolean).forEach(function (field) {
         field.addEventListener('input', function () {
           invalidate('editing'); state.unknown = ''; newQuery.hidden = true;
+          field.removeAttribute('aria-invalid'); reviewDraft();
           announce(field === command ? 'Preferenza in modifica. Premi “Applica preferenza” per confermare.' : 'Richiesta in modifica. Premi “Mostra i prodotti” per confermare.');
         });
         field.addEventListener('keydown', function (event) {
-          if (event.key === 'Enter') {
+          if (event.key === 'Enter' && field !== goal) {
             event.preventDefault();
             if (!event.isComposing && event.keyCode !== 229) { if (field === command) runCommand(command.value); else prepareSearch(); }
           }
@@ -497,7 +606,7 @@
       win.addEventListener('pageshow', function (event) { if (event.persisted) contextInvalid(); });
       win.addEventListener('blur', contextInvalid);
       doc.addEventListener('visibilitychange', function () { if (doc.hidden) contextInvalid(); });
-      phase('idle'); summaryView();
+      phase('idle'); summaryView(); reviewDraft();
       instances.add(root); root.setAttribute('data-ks-guide-bound', '1');
       fields.hidden = false; fields.disabled = false; output.hidden = false;
       var fallback = find('.ks-guide-fallback-departments'); if (fallback) fallback.hidden = true;
@@ -524,5 +633,6 @@
     }
   }
   return { init: init, parseCommand: parseCommand, queryText: queryText, blank: blank, urls: urls,
-    requestURL: requestURL, catalogURL: catalogURL, validate: validate, reason: reason, catalogHandoff: catalogHandoff };
+    requestURL: requestURL, catalogURL: catalogURL, validate: validate, reason: reason, evidence: evidence, decision: decision,
+    budgetValue: budgetValue, catalogHandoff: catalogHandoff };
 }));

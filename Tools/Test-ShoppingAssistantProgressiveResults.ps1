@@ -3,10 +3,12 @@ param(
     [Parameter(Mandatory=$true)][string]$PlaywrightModulePath,
     [Parameter(Mandatory=$true)][string]$BrowserExecutable,
     [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
-    [switch]$CatalogHandoffOnly
+    [switch]$CatalogHandoffOnly,
+    [switch]$DecisionJourneyOnly
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
+if($CatalogHandoffOnly -and $DecisionJourneyOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
 $root=Split-Path -Parent $PSScriptRoot
 $output=[IO.Path]::GetFullPath($EvidenceDirectory)
@@ -90,6 +92,8 @@ End Class
 $node=(Get-Command node -CommandType Application -ErrorAction Stop).Source
 if($CatalogHandoffOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --catalog-handoff-only
+}elseif($DecisionJourneyOnly){
+    & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --decision-journey-only
 }else{
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload
 }
