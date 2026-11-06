@@ -4,7 +4,9 @@
 
 Il motore legge un pool autorizzato dal contesto commerciale e costruisce un dizionario soltanto per la richiesta. Non e una nuova anagrafica, non modifica il database e non certifica attributi assenti. Il dump storico non attesta il catalogo corrente; i casi Tech/Food delle prove sono sintetici.
 
-La policy `ks-attributes-1c.1` e un mapping scritto e versionato nel codice, non un'approvazione automatica di ogni etichetta scoperta. ID stabili derivano da scope catalogo, famiglia tassonomica reale, etichetta esatta e unita. Nessun ID commerciale o segreto viene comunicato al browser. La famiglia non deriva da una descrizione o da un nome merceologico.
+La policy `ks-attributes-1c.2` e un mapping scritto e versionato nel codice, non un'approvazione automatica di ogni etichetta scoperta. ID stabili derivano da scope catalogo, famiglia tassonomica reale, etichetta esatta e unita. Nessun identificativo di accesso o segreto viene comunicato al browser. La famiglia non deriva da una descrizione o da un nome merceologico.
+
+REV1: solo HTML semantico bilanciato e senza attributi puo certificare le coppie. `hidden`, style, ARIA, classi di visibilita non verificabile, contenitori opachi e markup incompleto non sono un modo di fornire specifiche operative. Strong/em ed entita come `&nbsp;` restano ammessi quando non ambigui. Nei contesti con famiglie diverse la guida richiede prima una selezione tassonomica; un requisito divenuto non valutabile resta dichiarato e rimovibile, senza riusare vecchi fatti. Nessun costo per pagina, consumo reale o risparmio viene calcolato o dedotto dal testo.
 
 | Fonte/etichetta esatta | Tipo e operatori | Regola CURRENT |
 | --- | --- | --- |

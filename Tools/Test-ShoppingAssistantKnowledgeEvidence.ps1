@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][string]$EvidenceDirectory)
+param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$Rev1Baseline)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
@@ -272,8 +272,11 @@ $endpointCases=@'
     Private Function AdvisorPayload(query As String, sector As Integer, count As Integer,
                                     Optional company As Integer = 1, Optional list As Integer = 1,
                                     Optional authenticated As Boolean = False, Optional variantId As Integer = -1,
-                                    Optional multiSource As Boolean = False) As Dictionary(Of String, Object)
-        Dim ctx = Context(company, list, authenticated, query)
+                                    Optional multiSource As Boolean = False, Optional changeRows As Action(Of DataTable) = Nothing) As Dictionary(Of String, Object)
+        Dim transport = HttpUtility.ParseQueryString(query)
+        Dim receiptHeader As String = transport("receipts")
+        transport.Remove("receipts")
+        Dim ctx = Context(company, list, authenticated, transport.ToString(), receiptHeader)
         ctx.Session("TC") = 1
         If authenticated Then account = AccountRow(company, list + 3)
         Dim support = MakeSupport(ctx)
@@ -286,6 +289,7 @@ $endpointCases=@'
                 row("DescrizioneLunga") = row("DescrizioneHTML")
             End If
         Next
+        If changeRows IsNot Nothing Then changeRows(products)
         Dim page = Endpoint(support)
         Dim request = Invoke(page, "ReadGuided2FiltersCore", AdvisorTree())
         Dim result = DirectCast(Invoke(page, "BuildGuided2Result", request), Dictionary(Of String, Object))
@@ -415,13 +419,199 @@ $endpointCases=@'
                        Invoke(page, "BuildGuided2Result", request)
                    End Sub, "advisor forged attribute/operator/priority rejected")
         Next
+        RunQualityRevision(outputDirectory, samples, baseQuery, initial)
         Dim output As New System.Web.Script.Serialization.JavaScriptSerializer With {.MaxJsonLength = 4194304}
         File.WriteAllText(Path.Combine(outputDirectory, "server-advisor-payloads.json"), output.Serialize(New With {.fixtures = samples}), New System.Text.UTF8Encoding(False))
     End Sub
 
 '@
+$rev1Cases=@'
+    Private Class AdvisorWorker
+        Inherits System.Web.Hosting.SimpleWorkerRequest
+        Private ReadOnly _company As Integer
+        Private ReadOnly _receiptHeader As String
+        Public Sub New(company As Integer, query As String, receiptHeader As String)
+            MyBase.New("/", "C:\synthetic-advisor\", "search_suggest.aspx", query, New StringWriter())
+            _company = company : _receiptHeader = receiptHeader
+        End Sub
+        Public Overrides Function GetServerName() As String
+            Return "tenant" & _company & ".invalid"
+        End Function
+        Public Overrides Function GetLocalPort() As Integer
+            Return 443
+        End Function
+        Public Overrides Function IsSecure() As Boolean
+            Return True
+        End Function
+        Public Overrides Function GetUnknownRequestHeaders() As String()()
+            Return New String()() {New String() {"X-KeepStore-Advisor-Criteria", _receiptHeader}}
+        End Function
+        Public Overrides Function GetUnknownRequestHeader(name As String) As String
+            Return If(name.Equals("X-KeepStore-Advisor-Criteria", StringComparison.OrdinalIgnoreCase), _receiptHeader, Nothing)
+        End Function
+    End Class
+
+    Private Function ReceiptQuery(payload As Dictionary(Of String, Object), attributeId As String) As String
+        Dim meta = DirectCast(payload("guided"), Dictionary(Of String, Object))
+        Dim definition = DirectCast(meta("attributes"), List(Of Dictionary(Of String, Object))).Single(Function(a) CStr(a("id")) = attributeId)
+        Return "&receipts=" & HttpUtility.UrlEncode(New System.Web.Script.Serialization.JavaScriptSerializer().Serialize(New Object() {New With {.attributeId = attributeId, .receipt = CStr(definition("receipt"))}}))
+    End Function
+
+    Private Sub AdvisorRejectStatus(query As String, status As Integer)
+        Try
+            AdvisorPayload(query, 7, 0)
+        Catch ex As Exception
+            Dim failure = TryCast(ex.GetBaseException(), SearchSuggestCommercialException)
+            Assert(failure IsNot Nothing AndAlso failure.Status = status, "REV1-C exact status " & status & " distinguishes scope from forgery")
+            If status = 409 Then Assert(failure.Code = "criteria_scope_changed", "REV1-C authenticated previous scope requires explicit reconfirmation")
+            Return
+        End Try
+        Throw New Exception("REV1_EXPECTED_STATUS")
+    End Sub
+
+    Private Sub RunQualityRevision(outputDirectory As String, samples As List(Of Object), baseQuery As String, initial As Dictionary(Of String, Object))
+        Dim firstAssertion As Integer = passed
+        Dim good As String = PairHtml("Memoria installata", "16 GB")
+        Dim hidden As String() = {good.Replace("<table>", "<table hidden>"), good.Replace("<tr>", "<tr style='display:none'>"), good.Replace("<td>", "<td aria-hidden='true'>"), good.Replace("16 GB", "<span style='display:none'>16 GB</span>"), good.Replace("<table>", "<table class='unknown-visibility'>"),
+            good.Replace("<td>", "<td class='spec'>"), good.Replace("<table>", "<div hidden><table>") & "</div>", "<div>" & good & "</div>", good.Replace("16 GB", "<strong hidden>16 GB</strong>"), good.Replace("16 GB", "<strong>16 GB"), good.Replace("<tr>", "<tr aria-hidden='false'>"), good.Replace("<td>", "<td id='opaque-css'>"), good & "<span", good & "<!--", good.Replace("<table>", "<table/>")}
+        Dim falseHard As Integer = 0
+        For index As Integer = 0 To hidden.Length - 1
+            Dim corpus = KeepStoreShoppingKnowledge.Build(KnowledgeRows(good, hidden(index)), "catalog-A")
+            Dim attribute = corpus.Attributes.Single()
+            Dim found = KnowledgeDecision(corpus, Criterion(attribute, "16")).Products.Any(Function(p) p.ProductKey = "2:-1")
+            If found Then falseHard += 1
+            Assert(Not found AndAlso Not corpus.Products(1).Values.Values.Any(Function(v) v.EvidenceStatus = "known"), "REV1-A hidden opaque malformed source not known/hard " & index)
+            Assert(Not corpus.Products(1).FreeTextEvidence.Any(Function(e) e.SourceField = "DescrizioneHTML"), "REV1-A opaque source not exposed as snippet " & index)
+        Next
+        Dim semantic = KeepStoreShoppingKnowledge.Build(KnowledgeRows("<table><tr><th><strong>Memoria installata</strong></th><td><em>16&nbsp;GB</em></td></tr></table>"), "catalog-A")
+        Assert(KnowledgeDecision(semantic, Criterion(semantic.Attributes.Single(), "16")).Products.Count = 1, "REV1-A balanced semantic strong em nbsp remain positive")
+        Dim mixedRows = KnowledgeRows(good, PairHtml("Memoria installata", "32 GB"), "", "")
+        mixedRows.Rows(2)("SettoriId") = 8 : mixedRows.Rows(3)("SettoriId") = 8
+        Dim mixedCorpus = KeepStoreShoppingKnowledge.Build(mixedRows, "catalog-A")
+        Assert(mixedCorpus.MixedFamilies AndAlso KnowledgeDecision(mixedCorpus).Question Is Nothing, "REV1-B no cross-sector general technical question at50percent coverage")
+        mixedRows.Rows(2)("SettoriId") = 7 : mixedRows.Rows(3)("SettoriId") = 7 : mixedRows.Rows(2)("CategorieId") = 15 : mixedRows.Rows(3)("CategorieId") = 15
+        Assert(KnowledgeDecision(KeepStoreShoppingKnowledge.Build(mixedRows, "catalog-A")).Question Is Nothing, "REV1-B distinct families within same sector no technical question")
+
+        Dim memory As String = AdvisorAttribute(initial, "Memoria installata")
+        Dim hardJson As String = AdvisorCriteria(memory, "gte", "16", "hard")
+        Dim hard As String = "&criteria=" & HttpUtility.UrlEncode(hardJson)
+        Dim receipt As String = ReceiptQuery(initial, memory)
+        Dim emptyQuery As String = baseQuery & "&pmax=1" & hard & receipt
+        Dim empty = AdvisorPayload(emptyQuery, 7, 0)
+        Dim emptyMeta = DirectCast(empty("guided"), Dictionary(Of String, Object))
+        Dim unavailable = DirectCast(emptyMeta("attributes"), List(Of Dictionary(Of String, Object))).Single()
+        Assert(CInt(empty("total")) = 0 AndAlso Not CBool(unavailable("available")) AndAlso Not CBool(unavailable("canHardFilter")), "REV1-C authenticated prior criterion empty pool succeeds not400 no old authority")
+        Assert(CStr(unavailable("label")) = "Memoria installata" AndAlso DirectCast(unavailable("observedValues"), List(Of String)).Count = 0, "REV1-C recoverable label but no old observed values")
+        samples.Add(New With {.name = "rev1-budget-empty", .queryString = emptyQuery, .response = empty})
+        Dim unavailableQuery As String = baseQuery & "&disponibile=1" & hard & receipt
+        Dim noDefinition = AdvisorPayload(unavailableQuery, 7, 20, changeRows:=Sub(rows)
+            For Each row As DataRow In rows.Rows
+                row("DescrizioneHTML") = ""
+            Next
+        End Sub)
+        Assert(CInt(noDefinition("total")) = 0, "REV1-C hard missing definition after availability cannot admit any product")
+        samples.Add(New With {.name = "rev1-availability-missing", .queryString = unavailableQuery, .response = noDefinition})
+        Dim softQuery As String = baseQuery & "&disponibile=1&criteria=" & HttpUtility.UrlEncode(AdvisorCriteria(memory, "gte", "16", "soft")) & receipt
+        Dim soft = AdvisorPayload(softQuery, 7, 20, changeRows:=Sub(rows)
+            For Each row As DataRow In rows.Rows
+                row("DescrizioneHTML") = ""
+            Next
+        End Sub)
+        Assert(DirectCast(soft("suggestions"), List(Of Dictionary(Of String, Object))).All(Function(p) CStr(p("match")) = "partial" AndAlso CStr(DirectCast(p("evaluations"), List(Of Dictionary(Of String, Object)))(0)("status")) = "UNKNOWN"), "REV1-C soft unavailable explicitly unknown not complete")
+        samples.Add(New With {.name = "rev1-soft-unknown", .queryString = softQuery, .response = soft})
+        Dim removedQuery As String = baseQuery & "&pmax=1"
+        Dim removed = AdvisorPayload(removedQuery, 7, 0)
+        samples.Add(New With {.name = "rev1-empty-removed", .queryString = removedQuery, .response = removed})
+        Dim availabilityRemovedQuery As String = baseQuery & "&disponibile=1"
+        Dim availabilityRemoved = AdvisorPayload(availabilityRemovedQuery, 7, 20, changeRows:=Sub(rows)
+            For Each row As DataRow In rows.Rows
+                row("DescrizioneHTML") = ""
+            Next
+        End Sub)
+        samples.Add(New With {.name = "rev1-availability-removed", .queryString = availabilityRemovedQuery, .response = availabilityRemoved})
+        Dim recovered = AdvisorPayload(baseQuery & hard & receipt, 7, 20)
+        Assert(CInt(recovered("total")) > 0, "REV1-C widening filter re-evaluates CURRENT facts")
+        Dim colour As String = AdvisorAttribute(initial, "Colore del prodotto")
+        Dim colourReceipt As String = ReceiptQuery(initial, colour)
+        Dim noOldValue = AdvisorPayload(baseQuery & "&criteria=" & HttpUtility.UrlEncode(AdvisorCriteria(colour, "eq", "nero", "hard")) & colourReceipt, 7, 20, changeRows:=Sub(rows)
+            For Each row As DataRow In rows.Rows
+                row("DescrizioneHTML") = PairHtml("Colore del prodotto", "bianco")
+            Next
+        End Sub)
+        Assert(CInt(noOldValue("total")) = 0, "REV1-C known previous text value no longer observed is violated not400")
+        For Each attackQuery In {emptyQuery.Replace(receipt, ""), emptyQuery.Replace("q=scelta", "q=altro"), emptyQuery.Replace("st=7", "st=8"), emptyQuery.Replace(memory, "a_000000000000000000000000"), emptyQuery.Replace("receipts=", "receipts=X"), baseQuery & "&criteria=" & HttpUtility.UrlEncode(AdvisorCriteria(colour, "eq", "falso", "hard")) & colourReceipt}
+            Reject(Sub() AdvisorPayload(attackQuery, 7, 0), "REV1-C unknown tampered or changed scope requires new confirmation")
+        Next
+        Reject(Sub() AdvisorPayload(emptyQuery, 7, 0, 2, 10), "REV1-C receipt cannot cross tenant/list")
+        AdvisorRejectStatus(emptyQuery.Replace("q=scelta", "q=altro"), 409)
+        AdvisorRejectStatus(emptyQuery.Replace("st=7", "st=8"), 409)
+        AdvisorRejectStatus(emptyQuery.Replace(receipt, ""), 400)
+        AdvisorRejectStatus(emptyQuery.Replace("receipts=", "receipts=X"), 400)
+        Assert(KeepStoreShoppingDecisionPolicy.ParseReceipts(Nothing).Count = 0, "REV1-C receipt header optional keeps existing guided2 requests")
+        KnowledgeReject(Sub() KeepStoreShoppingDecisionPolicy.ParseReceipts(New String("x"c, 12289)), "REV1-C bounded receipt header")
+
+        Dim mixedQuery As String = "mode=guided2&q=scelta&limit=6"
+        Dim mixed = AdvisorPayload(mixedQuery, 7, 20, changeRows:=Sub(rows)
+            For index As Integer = 10 To rows.Rows.Count - 1
+                rows.Rows(index)("SettoriId") = 8 : rows.Rows(index)("CategorieId") = 801
+                rows.Rows(index)("DescrizioneHTML") = PairHtml("Volume", If(index Mod 2 = 0, "500 ml", "1000 ml"))
+            Next
+        End Sub)
+        Dim mixedMeta = DirectCast(mixed("guided"), Dictionary(Of String, Object))
+        Assert(CBool(mixedMeta("taxonomyRequired")) AndAlso mixedMeta("question") Is Nothing, "REV1-B mixed endpoint requires existing taxonomy controls first")
+        Assert(DirectCast(mixedMeta("attributes"), List(Of Dictionary(Of String, Object))).All(Function(a) Not CBool(a("canAsk")) AndAlso Not CBool(a("canHardFilter")) AndAlso CStr(a("receipt")) = ""), "REV1-B no general filters or grants on mixed pool")
+        Dim mixedDefinitions = DirectCast(mixedMeta("attributes"), List(Of Dictionary(Of String, Object)))
+        For Each product In DirectCast(mixed("suggestions"), List(Of Dictionary(Of String, Object)))
+            Assert(DirectCast(product("values"), List(Of Dictionary(Of String, Object))).All(Function(v) CStr(mixedDefinitions.Single(Function(a) CStr(a("id")) = CStr(v("attributeId")))("scope")) = CStr(product("family"))), "REV1-B every fact remains in exact product family")
+        Next
+        samples.Add(New With {.name = "rev1-mixed", .queryString = mixedQuery, .response = mixed})
+        Dim oldFamily = AdvisorPayload(mixedQuery, 7, 20)
+        Dim otherFamilyQuery As String = mixedQuery & "&disponibile=1&criteria=" & HttpUtility.UrlEncode(AdvisorCriteria(AdvisorAttribute(oldFamily, "Memoria installata"), "gte", "16", "soft")) & ReceiptQuery(oldFamily, AdvisorAttribute(oldFamily, "Memoria installata"))
+        Dim otherFamily = AdvisorPayload(otherFamilyQuery, 8, 20)
+        Assert(CBool(DirectCast(otherFamily("guided"), Dictionary(Of String, Object))("taxonomyRequired")) AndAlso CInt(otherFamily("total")) = 0, "REV1-B previous family criterion cannot become general preference on other family")
+        samples.Add(New With {.name = "rev1-other-family", .queryString = otherFamilyQuery, .response = otherFamily})
+        Dim hiddenPayload = AdvisorPayload(baseQuery, 7, 20, changeRows:=Sub(rows)
+            For Each row As DataRow In rows.Rows
+                row("DescrizioneHTML") = good.Replace("<table>", "<table hidden>")
+            Next
+        End Sub)
+        Assert(DirectCast(hiddenPayload("guided"), Dictionary(Of String, Object))("question") Is Nothing, "REV1-A hidden-only specification cannot generate endpoint question")
+        samples.Add(New With {.name = "rev1-hidden", .queryString = baseQuery, .response = hiddenPayload})
+        Dim economics = KeepStoreShoppingKnowledge.Build(KnowledgeRows(PairHtml("Costo per pagina", "0,01 EUR") & PairHtml("Risparmio energetico", "20%") & PairHtml("Consumo reale", "10 kWh")), "catalog-A")
+        Assert(economics.Attributes.All(Function(a) Not a.CanAsk AndAlso Not a.CanHardFilter AndAlso a.Risk = "unapproved"), "REV1 zero economic extrapolations or new authorized economic formulas")
+        Dim serializer As New System.Web.Script.Serialization.JavaScriptSerializer()
+        File.WriteAllText(Path.Combine(outputDirectory, "rev1-quality.json"), serializer.Serialize(New With {.assertions = passed - firstAssertion, .hiddenCounterexamples = hidden.Length, .falseHardPositive = falseHard, .semanticPositive = 1, .mixedFamilyQuestion = False, .retainedCriterionRecognition = "MachineKey authenticated, same context, no commercial authority", .databaseConnections = 0}), New System.Text.UTF8Encoding(False))
+    End Sub
+
+    Private Sub RunQualityBaseline(outputDirectory As String)
+        Dim good As String = PairHtml("Memoria installata", "16 GB")
+        Dim hidden As String() = {good.Replace("<table>", "<table hidden>"), good.Replace("<tr>", "<tr style='display:none'>"), good.Replace("<td>", "<td aria-hidden='true'>"), good.Replace("16 GB", "<span style='display:none'>16 GB</span>"), good.Replace("<table>", "<table class='unknown-visibility'>")}
+        Dim falseHard As Integer = 0
+        For Each html As String In hidden
+            Dim sample = KeepStoreShoppingKnowledge.Build(KnowledgeRows(good, html), "catalog-A")
+            If KnowledgeDecision(sample, Criterion(sample.Attributes.Single(), "16")).Products.Any(Function(p) p.ProductKey = "2:-1") Then falseHard += 1
+        Next
+        Dim mixed = KnowledgeRows(good, PairHtml("Memoria installata", "32 GB"), "", "")
+        mixed.Rows(2)("SettoriId") = 8 : mixed.Rows(3)("SettoriId") = 8
+        Dim generalTechnicalQuestion As Boolean = KnowledgeDecision(KeepStoreShoppingKnowledge.Build(mixed, "catalog-A")).Question IsNot Nothing
+        Dim original = KeepStoreShoppingKnowledge.Build(KnowledgeRows(good), "catalog-A")
+        Dim ordinaryEmptyRejected As Boolean = False
+        Try
+            KnowledgeDecision(KeepStoreShoppingKnowledge.Build(KnowledgeRows(), "catalog-A"), Criterion(original.Attributes.Single(), "16"))
+        Catch ex As ArgumentException
+            ordinaryEmptyRejected = True
+        End Try
+        Assert(falseHard = hidden.Length, "REV1-A baseline hidden or opaque HTML incorrectly passes hard")
+        Assert(generalTechnicalQuestion, "REV1-B baseline mixed family incorrectly asks technical question")
+        Assert(ordinaryEmptyRejected, "REV1-C baseline valid criterion disappears and becomes invalid_criteria")
+        Dim serializer As New System.Web.Script.Serialization.JavaScriptSerializer()
+        File.WriteAllText(Path.Combine(outputDirectory, "rev1-baseline.json"), serializer.Serialize(New With {.candidate = "7f3c29d194d21429fa09cffb1c7265b62c763f9a", .hiddenFalseHard = falseHard, .mixedFamilyQuestion = generalTechnicalQuestion, .emptyPoolArgumentExceptionMappedTo400 = ordinaryEmptyRejected, .databaseConnections = 0}), New System.Text.UTF8Encoding(False))
+    End Sub
+'@
 $baselineScript=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Test-SearchSuggestCommercialContext.ps1'))
 $harness=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'SearchSuggestCommercialContextHarness.vb'))
+$harness=$harness.Replace('Optional ByVal queryString As String = "") As HttpContext', 'Optional ByVal queryString As String = "", Optional receiptHeader As String = Nothing) As HttpContext')
+$harness=[regex]::Replace($harness,'Dim ctx As New HttpContext\(New HttpRequest\("", "https://tenant" & company & "\.invalid/search_suggest\.aspx", queryString\),\s*New HttpResponse\(New StringWriter\(\)\)\)', 'Dim ctx As HttpContext = If(receiptHeader Is Nothing, New HttpContext(New HttpRequest("", "https://tenant" & company & ".invalid/search_suggest.aspx", queryString), New HttpResponse(New StringWriter())), New HttpContext(New AdvisorWorker(company, queryString, receiptHeader)))')
 $caller=[regex]::Match($baselineScript,"(?s)\`$callerScript=@'\r?\n(.*?)\r?\n'@").Groups[1].Value
 $masterShell=[regex]::Match($baselineScript,"(?s)\`$masterFixture=@'\r?\n(.*?)\r?\n'@").Groups[1].Value
 if(-not $caller -or -not $masterShell){throw 'UNCHANGED_HARNESS_FIXTURES_REQUIRED'}
@@ -429,7 +619,8 @@ $masterSource=[IO.File]::ReadAllText((Join-Path $root 'Page.master.vb'))
 $masterMethod=[regex]::Match($masterSource,'(?ms)^    Public Sub ApplyAuthenticatedPriceDisplayState\(.*?^    End Sub').Value
 if(-not $masterMethod){throw 'MASTER_FISCAL_METHOD_REQUIRED'}
 $harness=$harness.Replace('RunGuided(If(args.Length > 1, args(1), String.Empty))','RunGuided(If(args.Length > 1, args(1), String.Empty))'+[Environment]::NewLine+'                RunKnowledge(args(2))'+[Environment]::NewLine+'                RunAdvisorEndpoint(args(2))')
-$harness=[regex]::Replace($harness,'(?m)^End Module\s*$',($knowledgeCases+[Environment]::NewLine+$endpointCases+[Environment]::NewLine+'End Module'))
+$harness=[regex]::Replace($harness,'(?m)^End Module\s*$',($knowledgeCases+[Environment]::NewLine+$endpointCases+[Environment]::NewLine+$rev1Cases+[Environment]::NewLine+'End Module'))
+if($Rev1Baseline){$harness=$harness.Replace('Dim candidate As Boolean =', 'RunQualityBaseline(args(2))'+[Environment]::NewLine+'            Return'+[Environment]::NewLine+'            Dim candidate As Boolean =')}
 try {
     $harnessPath=Join-Path $work 'AdvisorHarness.vb'
     [IO.File]::WriteAllText($harnessPath,$harness,$utf8)

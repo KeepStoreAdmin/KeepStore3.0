@@ -142,7 +142,8 @@
         meta.selectionScope !== 'bounded-catalog-candidates' || typeof meta.exhaustive !== 'boolean' ||
         !Number.isSafeInteger(meta.analyzedCount) || meta.analyzedCount < 0 || meta.analyzedCount > 96 ||
         !Number.isSafeInteger(meta.eligibleCount) || meta.eligibleCount < 0 || meta.eligibleCount > meta.analyzedCount || typeof meta.knowledgeLimited!=='boolean' || meta.knowledgeLimited&&meta.exhaustive) throw new Error('payload');
-    keys(meta,['version','policyVersion','scope','selectionScope','exhaustive','poolLimit','knowledgeLimited','analyzedCount','eligibleCount','returnedCount','selectionLimited','limit','displayLabel','summary','criteria','attributes','question','actions']);
+    keys(meta,['version','policyVersion','scope','selectionScope','exhaustive','poolLimit','knowledgeLimited','taxonomyRequired','analyzedCount','eligibleCount','returnedCount','selectionLimited','limit','displayLabel','summary','criteria','attributes','question','actions']);
+    if(typeof meta.taxonomyRequired!=='boolean'||meta.taxonomyRequired&&(meta.question!==null||criteria.length&&payload.suggestions.length))throw new Error('payload');
     keys(meta.criteria,['q','st','ct','tp','pmin','pmax','disponibile','ordinamento','attributes','skipped']);
     text(meta.scope, 200, false); text(meta.policyVersion, 80, false); text(meta.summary, 1000, true);
     if (Object.keys(b).some(function (key) { return meta.criteria[key] !== b[key]; }) || meta.criteria.ct !== 0 || meta.criteria.tp !== 0) throw new Error('payload');
@@ -165,6 +166,8 @@
           !Array.isArray(a.operators) || a.operators.length > 3 || a.operators.some(function (op) { return ['eq','gte','lte'].indexOf(op) < 0; }) ||
           !Array.isArray(a.observedValues) || a.observedValues.length > 16) throw new Error('payload');
       text(a.id,200,false);text(a.label,100,false);text(a.type,40,false);text(a.unit,30,true);text(a.scope,200,false);text(a.origin,100,false);text(a.risk,40,false);
+      if(typeof a.available!=='boolean'||!a.available&&(a.canAsk||a.canHardFilter||a.coverage!==0||a.observedValues.length)||meta.taxonomyRequired&&(a.canAsk||a.canHardFilter))throw new Error('payload');
+      text(a.receipt,1024,true);if(a.receipt&&!/^[A-Za-z0-9_-]+$/.test(a.receipt))throw new Error('payload');
       a.observedValues.forEach(function (v) { text(v,120,false); }); definitions.set(a.id,a);
     });
     if (meta.question !== null) {
@@ -186,9 +189,10 @@
     var result=validate(old,b,paths);
     result.items.forEach(function(item,i){
       var source=payload.suggestions[i];
-      if(source.productKey!==item.key || !Array.isArray(source.values)||source.values.length>32||!Array.isArray(source.evaluations)||source.evaluations.length>8||['complete','partial','unconstrained'].indexOf(source.match)<0)throw new Error('payload');
+      if(source.productKey!==item.key || typeof source.family!=='string'||source.family.length>54||!/^\d+\/\d+\/\d+\/\d+\/\d+$/.test(source.family)||!Array.isArray(source.values)||source.values.length>32||!Array.isArray(source.evaluations)||source.evaluations.length>8||['complete','partial','unconstrained'].indexOf(source.match)<0)throw new Error('payload');
       var ids=new Set();source.values.forEach(function(v){
         if(!object(v)||!definitions.has(v.attributeId)||ids.has(v.attributeId)||['known','missing','ambiguous','conflicting'].indexOf(v.evidenceStatus)<0)throw new Error('payload');
+        if(definitions.get(v.attributeId).scope!==source.family||!definitions.get(v.attributeId).available&&v.evidenceStatus==='known')throw new Error('payload');
         ids.add(v.attributeId);if(v.value!==null)text(v.value,120,false);text(v.sourceField,80,true);text(v.evidenceRef,200,true);text(v.evidenceText,180,true);
         if(v.sourceField && v.sourceField.split(',').some(function(field){return ['Descrizione1','Descrizione2','DescrizioneLunga','DescrizioneHTML','MarcheDescrizione','Codice','Ean','SettoriDescrizione','CategorieDescrizione'].indexOf(field)<0;}))throw new Error('payload');
         if(v.evidenceStatus==='known' && (v.value===null||!v.evidenceRef||!v.sourceField))throw new Error('payload');
@@ -203,7 +207,7 @@
       if(!Array.isArray(source.textEvidence)||source.textEvidence.length>3)throw new Error('payload');source.textEvidence.forEach(function(e){keys(e,['text','sourceField','evidenceRef']);text(e.text,180,false);text(e.evidenceRef,200,false);if(['Descrizione1','Descrizione2','DescrizioneLunga','DescrizioneHTML'].indexOf(e.sourceField)<0)throw new Error('payload');});
       item.facts=source.values;item.evaluations=source.evaluations;item.match=source.match;item.advisorReason=text(source.reason,1000,true);item.textEvidence=source.textEvidence;
     });
-    if(meta.eligibleCount<result.items.length)throw new Error('payload');
+    if(meta.eligibleCount<result.items.length||!meta.taxonomyRequired&&new Set(payload.suggestions.map(function(p){return p.family;})).size>1||meta.question&&payload.suggestions.some(function(p){return p.family!==definitions.get(meta.question.attributeId).scope;}))throw new Error('payload');
     result.advisor=meta;return result;
   }
   function text(value, max, optional) {
@@ -357,7 +361,7 @@
     });
     var state = { phase: 'idle', confirmed: null, confirmedGoal: '', draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
     var skippedQuestions = [], proposedNeed = null, needPatch = null;
-    var advisor = { enabled:false, criteria:[], skipped:[], attributes:[], draft:false, confirmedCriteria:[], confirmedSkipped:[] };
+    var advisor = { enabled:false, criteria:[], skipped:[], attributes:[], receipts:{}, confirmedReceipts:{}, draft:false, confirmedCriteria:[], confirmedSkipped:[] };
     var advisorPanel=find('[data-ks-advisor-panel]'), advisorControls=find('[data-ks-advisor-controls]'),
       advisorCriteria=find('[data-ks-advisor-criteria]'), advisorAttribute=find('#ksAdvisorAttribute'), advisorOperator=find('#ksAdvisorOperator'),
       advisorValue=find('#ksAdvisorValue'), advisorPriority=find('#ksAdvisorPriority'),advisorNumber=find('#ksAdvisorNumber');
@@ -390,14 +394,17 @@
     }
     function renderAdvisor(data){
       advisor.attributes=data.attributes;advisor.draft=false;
-      if(advisorControls){advisorControls.disabled=false;advisorAttribute.replaceChildren();advisorOption(advisorAttribute,'','Scegli una caratteristica');
+      data.attributes.forEach(function(a){if(a.receipt&&!advisor.criteria.some(function(c){return c.attributeId===a.id;}))advisor.receipts[a.id]=a.receipt;});
+      if(advisorControls){advisorControls.disabled=data.taxonomyRequired;advisorAttribute.replaceChildren();advisorOption(advisorAttribute,'','Scegli una caratteristica');
         data.attributes.filter(function(a){return a.canAsk||a.canHardFilter;}).forEach(function(a){advisorOption(advisorAttribute,a.id,a.label+(a.unit?' ('+a.unit+')':''));});advisorInputs();}
       renderAdvisorCriteria();
       results.appendChild(node('p',data.summary||'Selezione analizzata nel contesto corrente.','ks-guide-hint'));
+      if(data.taxonomyRequired){var choose=button('Scegli il reparto nei controlli della guida',function(){var choice=choices.find(function(x){return !x.disabled&&!x.hidden&&Number(x.getAttribute('data-ks-guide-sector'))>0;});(choice||input).focus();});choose.setAttribute('data-ks-advisor-taxonomy','');results.appendChild(choose);}
       results.appendChild(node('p',(data.exhaustive?'Analisi completa dei candidati del contesto dichiarato.':data.knowledgeLimited?'Alcune descrizioni superano i limiti di analisi: le caratteristiche non sono tutte verificabili.':'Analisi limitata ai primi 96 candidati: altri prodotti potrebbero essere pertinenti.')+' Analizzati: '+data.analyzedCount+'. Ammissibili nella selezione: '+data.eligibleCount+'.','ks-guide-hint'));
       if(data.question){var q=data.question,block=node('div',undefined,'ks-guide-question');block.appendChild(node('h3',q.label));
         q.options.forEach(function(option){var choice=button(option.label,function(){
           if(!canRefineConfirmed())return;command.focus();var attribute=advisor.attributes.find(function(a){return a.id===q.attributeId;});
+          advisor.receipts[q.attributeId]=attribute.receipt;
           advisor.criteria=advisor.criteria.filter(function(c){return c.attributeId!==q.attributeId;}).concat([{attributeId:q.attributeId,operator:q.operator,value:option.value,priority:'soft'}]);accept(copy(state.confirmed),true);
         });choice.setAttribute('data-ks-advisor-option',option.value);choice.setAttribute('data-ks-advisor-attribute',q.attributeId);block.appendChild(choice);});
         [['allowSkip','Salta','skip'],['allowIndifferent','Indifferente','indifferent'],['allowUnknown','Non lo so','unknown']].forEach(function(kind){if(q[kind[0]]){var skip=button(kind[1],function(){
@@ -496,13 +503,13 @@
         chip.setAttribute('aria-label', 'Rimuovi ' + entry[1]); chips.appendChild(chip);
       });
     }
-    function remember(b) { if (b) { state.history.push({ brief: copy(b), goal: state.confirmedGoal, advisor:advisor.enabled?{criteria:JSON.parse(JSON.stringify(advisor.confirmedCriteria)),skipped:advisor.confirmedSkipped.slice()}:null }); if (state.history.length > MAX_HISTORY) state.history.shift(); } }
+    function remember(b) { if (b) { state.history.push({ brief: copy(b), goal: state.confirmedGoal, advisor:advisor.enabled?{criteria:JSON.parse(JSON.stringify(advisor.confirmedCriteria)),skipped:advisor.confirmedSkipped.slice(),receipts:Object.assign({},advisor.confirmedReceipts)}:null }); if (state.history.length > MAX_HISTORY) state.history.shift(); } }
     function accept(b, record, nextGoal, restoreAdvisor) {
       var purpose = typeof nextGoal === 'string' ? nextGoal : state.confirmedGoal;
       if (state.request && same(state.request.brief, b) && purpose === state.confirmedGoal && (!advisor.enabled||state.request.advisorSignature===advisorSignature())) return;
       if (record && (!same(state.confirmed, b) || purpose !== state.confirmedGoal || advisor.enabled&&advisorSignature()!==JSON.stringify([advisor.confirmedCriteria,advisor.confirmedSkipped]))) remember(state.confirmed);
-      if(advisor.enabled&&!restoreAdvisor&&state.confirmed&&(b.q!==state.confirmed.q||b.st!==state.confirmed.st)){advisor.criteria=[];advisor.skipped=[];clearAdvisorInputs();renderAdvisorCriteria();}
-      if(advisor.enabled){advisor.confirmedCriteria=JSON.parse(JSON.stringify(advisor.criteria));advisor.confirmedSkipped=advisor.skipped.slice();}
+      if(advisor.enabled&&!restoreAdvisor&&state.confirmed&&(b.q!==state.confirmed.q||b.st!==state.confirmed.st)){advisor.criteria=[];advisor.skipped=[];advisor.receipts={};clearAdvisorInputs();renderAdvisorCriteria();}
+      if(advisor.enabled){advisor.confirmedCriteria=JSON.parse(JSON.stringify(advisor.criteria));advisor.confirmedSkipped=advisor.skipped.slice();advisor.confirmedReceipts=Object.assign({},advisor.receipts);}
       if (!same(state.confirmed, b) || purpose !== state.confirmedGoal) skippedQuestions = [];
       state.confirmedGoal = purpose;
       needPatch = null;
@@ -512,7 +519,7 @@
       search(b);
     }
     function resetGuide() {
-      advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.draft=false;renderAdvisorCriteria();if(advisorControls)advisorControls.disabled=true;
+      advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.receipts={};advisor.confirmedReceipts={};advisor.draft=false;renderAdvisorCriteria();if(advisorControls)advisorControls.disabled=true;
       clearAdvisorInputs();
       needPatch = null; proposedNeed = null; skippedQuestions = [];
       var proposedView = find('[data-ks-guide-interpretation]'); if (proposedView) proposedView.replaceChildren();
@@ -528,7 +535,7 @@
         announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla oppure “Ricomincia” per scartare la bozza.'); return;
       }
       if (!canRefineConfirmed()) return;
-      var previous = state.history.pop();if(advisor.enabled){advisor.criteria=previous.advisor?previous.advisor.criteria:[];advisor.skipped=previous.advisor?previous.advisor.skipped:[];} accept(previous.brief, false, previous.goal, true);
+      var previous = state.history.pop();if(advisor.enabled){advisor.criteria=previous.advisor?previous.advisor.criteria:[];advisor.skipped=previous.advisor?previous.advisor.skipped:[];advisor.receipts=previous.advisor?Object.assign({},previous.advisor.receipts):{};} accept(previous.brief, false, previous.goal, true);
     }
     function prepareSearch() {
       if(advisor.enabled&&advisor.draft){announce('Usa Conferma criterio per applicare il requisito in bozza, oppure scegli la voce vuota per scartarlo.');return;}
@@ -736,9 +743,12 @@
       }
       results.appendChild(link('Continua nel catalogo con queste preferenze', data.catalog));
     }
-    function recover(message, invalid) {
+    function recover(message, invalid, criterionScopeChanged) {
       invalidate(invalid ? 'context-invalid' : 'error'); announce(message);
       if (state.confirmed && (state.confirmed.q || advisor.enabled&&state.confirmed.st>0)) {
+        if(criterionScopeChanged){var reconfirm=button('Conferma la ricerca senza le caratteristiche del contesto precedente',function(){
+          if(!canRefineConfirmed())return;prepare.focus();advisor.criteria=[];advisor.skipped=[];advisor.receipts={};renderAdvisorCriteria();accept(copy(state.confirmed),true);
+        });reconfirm.setAttribute('data-ks-advisor-reconfirm','');recovery.appendChild(reconfirm);}
         recovery.appendChild(button(invalid ? 'Aggiorna la selezione' : 'Riprova', function () {
           if (!canRefineConfirmed()) return;
           prepare.focus(); accept(copy(state.confirmed), false);
@@ -753,15 +763,17 @@
       invalidate('loading'); root.setAttribute('aria-busy', 'true');
       prepare.setAttribute('aria-disabled', 'true'); announce('Caricamento della selezione in corso.');
       var generation = state.generation, controller = new win.AbortController();
-      var snapshot=advisor.enabled?{criteria:JSON.parse(JSON.stringify(advisor.criteria)),skipped:advisor.skipped.slice()}:null;
+      var snapshot=advisor.enabled?{criteria:JSON.parse(JSON.stringify(advisor.criteria)),skipped:advisor.skipped.slice(),receipts:advisor.criteria.filter(function(c){return !!advisor.receipts[c.attributeId];}).map(function(c){return {attributeId:c.attributeId,receipt:advisor.receipts[c.attributeId]};})}:null;
       var request = { brief: copy(b), controller: controller, timer: null, advisorSignature:advisorSignature() }; state.request = request;
       try {
         var timeout = new win.Promise(function (_, reject) {
           request.timer = win.setTimeout(function () { controller.abort(); reject(new Error('timeout')); }, 8000);
         });
         var operation = (async function () {
+          var headers={Accept:'application/json'};
+          if(snapshot&&snapshot.receipts.length)headers['X-KeepStore-Advisor-Criteria']=JSON.stringify(snapshot.receipts);
           var response = await win.fetch(snapshot?requestAdvisorURL(b,paths,snapshot.criteria,snapshot.skipped):requestURL(b, paths), { method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
-            headers: { Accept: 'application/json' }, signal: controller.signal });
+            headers: headers, signal: controller.signal });
           if (!response.ok) throw new Error('http-' + response.status);
           if (!/^application\/json(?:;|$)/i.test(response.headers.get('content-type') || '') ||
               Number(response.headers.get('content-length')) > (snapshot?196608:MAX_BODY)) throw new Error('payload');
@@ -775,15 +787,15 @@
         renderResult(); announce(result.items.length ? 'Selezione aggiornata: ' + result.items.length + ' prodotti.' : 'La ricerca non ha restituito risultati con queste preferenze.');
       } catch (error) {
         if (generation !== state.generation || state.request !== request) return;
-        var code = error.message, invalid = code === 'http-403' || code === 'http-421';
-        var message = invalid ? 'Contesto commerciale non disponibile. Aggiorna la selezione o continua nel catalogo.' :
+        var code = error.message, criterionScopeChanged=!!snapshot&&code==='http-409',invalid = code === 'http-403' || code === 'http-421'||criterionScopeChanged;
+        var message = criterionScopeChanged ? 'Il contesto delle caratteristiche è cambiato. Conferma una nuova selezione; i requisiti precedenti non vengono rimossi automaticamente.' : invalid ? 'Contesto commerciale non disponibile. Aggiorna la selezione o continua nel catalogo.' :
           code === 'http-400' ? 'La richiesta non è valida. Controlla prodotto e preferenze.' :
           code === 'http-429' ? 'Troppe richieste. Attendi prima di riprovare.' :
           code === 'http-503' ? 'Il servizio è temporaneamente non disponibile.' :
           code === 'criteria' ? 'La risposta contiene prodotti fuori dai vincoli confermati. La selezione non è stata mostrata: riprova o continua nel catalogo.' :
           code === 'timeout' ? 'La richiesta sta impiegando troppo tempo. Puoi riprovare.' :
           'Non è stato possibile verificare la selezione. Controlla la connessione o riprova.';
-        recover(message, invalid);
+        recover(message, invalid, criterionScopeChanged);
       } finally {
         win.clearTimeout(request.timer);
         if (state.request === request) { state.request = null; root.removeAttribute('aria-busy'); prepare.removeAttribute('aria-disabled'); }
@@ -805,7 +817,7 @@
           if(!a||a.operators.indexOf(advisorOperator.value)<0||(a.type==='number'?!/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,6})?$/.test(value)||Number(value)>1000000000:a.observedValues.indexOf(value)<0)||advisorPriority.value==='hard'&&!a.canHardFilter){announce('Scegli un criterio consentito. Per i numeri usa da 0 a un miliardo e al massimo sei decimali, senza separatori delle migliaia.');return;}
           var draft=advisor.draft;advisor.draft=false;if(!canRefineConfirmed()){advisor.draft=draft;return;}
           var next=advisor.criteria.filter(function(c){return c.attributeId!==a.id;});if(next.length>=8){advisor.draft=draft;announce('Puoi confermare al massimo otto criteri.');return;}
-          next.push({attributeId:a.id,operator:advisorOperator.value,value:value,priority:advisorPriority.value});command.focus();advisor.criteria=next;accept(copy(state.confirmed),true);
+          next.push({attributeId:a.id,operator:advisorOperator.value,value:value,priority:advisorPriority.value});advisor.receipts[a.id]=a.receipt;command.focus();advisor.criteria=next;accept(copy(state.confirmed),true);
         });
         if(advisorNumber){advisorNumber.addEventListener('input',function(){advisor.draft=!!advisorAttribute.value;invalidate('editing');});advisorNumber.addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();if(!event.isComposing&&event.keyCode!==229&&add)add.click();}});}
       }

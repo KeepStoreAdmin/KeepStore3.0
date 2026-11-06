@@ -8,6 +8,7 @@ const mediaOnly = process.argv.includes('--rev2-media-only');
 const handoffOnly = process.argv.includes('--catalog-handoff-only');
 const decisionOnly = process.argv.includes('--decision-journey-only');
 const advisorOnly = process.argv.includes('--advisor-only');
+const advisorQualityOnly = process.argv.includes('--advisor-quality-rev1-only');
 const advisorBaselineOnly = process.argv.includes('--advisor-baseline-visual-only');
 const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly;
 const decisionBase = advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
@@ -55,7 +56,7 @@ function advisorSpec(raw) {
   const u = new URL(raw.includes('://') ? raw : 'https://tenant1.invalid/search_suggest.aspx?' + raw.replace(/^\?/,''));
   const p=u.searchParams;
   const brief=briefFrom(u.href);brief.q=brief.q||'';
-  return {brief,criteria:JSON.parse(p.get('criteria')||'[]'),skipped:JSON.parse(p.get('skipped')||'[]')};
+  return {brief,criteria:JSON.parse(p.get('criteria')||'[]'),skipped:JSON.parse(p.get('skipped')||'[]'),receipts:JSON.parse(p.get('receipts')||'[]')};
 }
 function advisorSignature(raw) {
   const s=advisorSpec(raw);
@@ -162,7 +163,7 @@ let browser;
 async function fixture(options={}) {
   const directory=options.directory||'/', kind=options.kind||'Tech', host=options.scenario>=2?'tenant2.invalid':'tenant1.invalid';
   const context=await browser.newContext({viewport:{width:options.width||390,height:1000},hasTouch:(options.width||390)<=430,serviceWorkers:'block',javaScriptEnabled:options.js!==false,reducedMotion:'reduce'});
-  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[], transport=[], payloadBytes=[];
+  const page=await context.newPage(), requests=[], receiptHeaders=[],pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[], transport=[], payloadBytes=[];
   const config={...options};
   page.on('pageerror',e=>pageErrors.push(e.message));
   await page.addInitScript(({ignoreAbort,fastTimeout,initFailure})=>{
@@ -208,6 +209,7 @@ async function fixture(options={}) {
       }
       if(url.pathname===directory+'search_suggest.aspx'){
         requests.push(req.url());
+        const receiptHeader=req.headers()['x-keepstore-advisor-criteria'];receiptHeaders.push(receiptHeader?JSON.parse(receiptHeader):[]);
         const current={...config};
         if(current.delay)await new Promise(resolve=>setTimeout(resolve,current.delay));
         if(current.offline){await route.abort('internetdisconnected');return;}
@@ -232,10 +234,10 @@ async function fixture(options={}) {
   const wait=async value=>{await page.waitForFunction(v=>document.getElementById('KsLocalAiSearch130').getAttribute('data-ks-guide-state')===v,value,{timeout:6000});};
   const submit=async(q='SKU120')=>{await page.locator('#ksGuideQuery').fill(q);await page.locator('[data-ks-guide-prepare]').click();await wait(config.empty?'empty':config.status===403||config.status===421?'context-invalid':config.status||config.raw||config.html||config.offline?'error':'results');};
   const refine=async cmd=>{await page.locator('#ksGuideCommand').fill(cmd);await page.locator('[data-ks-guide-apply]').click();await wait('results');};
-  const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode',...(options.advisor?['criteria','skipped']:[])].includes(k))));record('no external request attempted',transport.every(x=>x.origin==='https://'+host));record('no mutative HTTP attempted',transport.every(x=>x.method==='GET'));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
+  const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode',...(options.advisor?['criteria','skipped','receipts']:[])].includes(k))));record('no external request attempted',transport.every(x=>x.origin==='https://'+host));record('no mutative HTTP attempted',transport.every(x=>x.method==='GET'));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
   const screenshot=async(name,selector='#KsLocalAiSearch130')=>{const file=path.join(evidence,name+'.png');await page.locator(selector).screenshot({path:file,animations:'disabled'});journal.resources.push(file);report.screenshots.push(file);};
   const close=async()=>{await context.close();journal.contextsClosed++;};
-  return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,transport,payloadBytes,state,wait,submit,refine,privacy,screenshot,close};
+  return {context,page,config,requests,receiptHeaders,pageErrors,blocked,apiErrors,mediaRequests,transport,payloadBytes,state,wait,submit,refine,privacy,screenshot,close};
 }
 async function run() {
   if(process.argv.includes('--need-to-choice-only')){
@@ -1058,6 +1060,7 @@ async function advisorRegressions() {
     (report.advisorRuns ||= []).push({name,requests:f.requests.length,payloadBytes:f.payloadBytes,...await f.page.evaluate(()=>({render:window.__fixtureRender,guideHeight:document.getElementById('KsLocalAiSearch130').getBoundingClientRect().height,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth}))});
     record('all fixture requests resolved '+name,f.apiErrors.length===0);await f.privacy();
   };
+  if(!advisorQualityOnly){
   for(const [kind,row] of [['Tech',initialTech],['Food',initialFood]])for(const width of report.viewports){
     const f=await fixture({advisor:true,kind,width,advisorScenario:row.name});
     try{
@@ -1237,6 +1240,60 @@ async function advisorRegressions() {
     const f=await fixture({advisor:true,width:390,...options});
     try{record('no JS/module/init retains catalog fallback '+JSON.stringify(options),await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).isVisible()&&f.requests.length===0&&await f.page.locator('[data-ks-guide-fields]').evaluate(x=>x.disabled&&x.hidden));await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).click();record('fallback catalog navigation works '+JSON.stringify(options),new URL(f.page.url()).pathname==='/articoli.aspx');}finally{await f.close();}
   }
+  }
+  // REV1: actual compiled endpoint fixtures; GET responses are intercepted.
+  // Receipt cryptography is exercised in VB; routing does not pretend to be IIS.
+  const hiddenRow=valid.find(x=>x.name==='rev1-hidden');
+  const hidden=await fixture({advisor:true,width:390,advisorScenario:hiddenRow.name});
+  try{await activate(hidden,initialTech);record('REV1-A hidden HTML creates no technical fact/question',await hidden.page.locator('[data-ks-advisor-option]').count()===0&&!(await hidden.page.locator('[data-ks-guide-results]').innerText()).includes('Memoria installata'));await sample(hidden,'REV1 hidden');}finally{await hidden.close();}
+  for(const width of [390,1365]){
+    const mixedRow=valid.find(x=>x.name==='rev1-mixed'),f=await fixture({advisor:true,width,advisorScenario:mixedRow.name});
+    try{
+      await f.page.locator('[data-ks-guide-mode="guided2"]').click();await f.page.locator('#ksGuideQuery').fill('scelta');await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      const mixedState=await f.page.evaluate(()=>({questions:document.querySelectorAll('[data-ks-advisor-option]').length,disabled:document.querySelector('[data-ks-advisor-controls]').disabled}));
+      record('REV1-B mixed pool has no technical question '+width+' '+JSON.stringify(mixedState),mixedState.questions===0&&mixedState.disabled);
+      const count=f.requests.length;await f.page.locator('[data-ks-advisor-taxonomy]').press('Enter');
+      record('REV1-B taxonomy action focuses existing control no fetch '+width,f.requests.length===count&&await f.page.evaluate(()=>document.activeElement.matches('[data-ks-guide-sector]')));
+      f.config.advisorScenario=initialFood.name;await f.page.locator('[data-ks-guide-sector="8"]').press('Enter');
+      record('REV1-B taxonomy choice is draft until confirmed '+width,f.requests.length===count&&await f.page.locator('.ks-guide-card').count()===0);
+      await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+        record('REV1-B chosen family has own question and no old filters '+width,(await f.page.locator('[data-ks-guide-results]').innerText()).includes(initialFood.response.guided.question.label)&&advisorSpec(f.requests.at(-1)).criteria.length===0&&f.receiptHeaders.at(-1).length===0);
+      await f.screenshot('rev1-taxonomy-'+width);await sample(f,'REV1 mixed to scoped '+width);
+    }finally{await f.close();}
+  }
+  const missingCriterion=advisorSpec(valid.find(x=>x.name==='rev1-budget-empty').queryString).criteria[0];
+  for(const [name,commandText] of [['rev1-budget-empty','massimo 1 euro'],['rev1-availability-missing','solo disponibili']]){
+    for(const width of [390,1365]){
+      const f=await fixture({advisor:true,width});
+      try{
+        await activate(f,initialTech);await addCriterion(f,missingCriterion);
+        record('REV1-C confirmed criterion sends application receipt only in header '+name+width,f.receiptHeaders.at(-1).length===1&&f.receiptHeaders.at(-1)[0].attributeId===missingCriterion.attributeId&&!new URL(f.requests.at(-1)).searchParams.has('receipts'));
+        f.config.advisorScenario=name;await f.page.locator('#ksGuideCommand').fill(commandText);await f.page.locator('[data-ks-guide-apply]').press('Enter');await f.wait('empty');
+        record('REV1-C valid unavailable criterion yields normal empty not error '+name+width,(await f.state())==='empty'&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1&&(await f.page.locator('[data-ks-guide-results]').innerText()).includes('non è valutabile'));
+        record('REV1-C no selectable old definition or product '+name+width,await f.page.locator('.ks-guide-card').count()===0&&await f.page.locator('#ksAdvisorAttribute option[value="'+missingCriterion.attributeId+'"]').count()===0);
+        const sent=advisorSpec(f.requests.at(-1));record('REV1-C filters retain criterion and receipt '+name+width,sent.criteria.length===1&&f.receiptHeaders.at(-1).length===1);
+        await f.screenshot(name+'-'+width);
+        const before=f.requests.length;f.config.advisorScenario=name==='rev1-budget-empty'?'rev1-empty-removed':'rev1-availability-removed';
+        await f.page.locator('[data-ks-advisor-criteria] button').press('Enter');await f.wait(name==='rev1-budget-empty'?'empty':'results');
+        record('REV1-C explicit chip removal clears only selected constraint '+name+width,f.requests.length===before+1&&advisorSpec(f.requests.at(-1)).criteria.length===0&&f.receiptHeaders.at(-1).length===0&&advisorSpec(f.requests.at(-1)).brief.pmax===sent.brief.pmax&&advisorSpec(f.requests.at(-1)).brief.disponibile===sent.brief.disponibile);
+        record('REV1-C chip removal keeps visible logical focus '+name+width,await f.page.evaluate(()=>document.activeElement!==document.body));
+        await sample(f,'REV1 recovery '+name+width);
+      }finally{await f.close();}
+    }
+  }
+  for(const [name,mutate] of [['cross-family source',p=>p.suggestions[0].family='8/801/8001/0/0'],['unavailable known fact',p=>p.guided.attributes.find(a=>a.id===p.suggestions[0].values[0].attributeId).available=false],['opaque receipt shape',p=>p.guided.attributes[0].receipt='<script>']]){
+    const p=clone(initialTech.response);mutate(p);assert.throws(()=>api.validateAdvisor(p,s.brief,paths,s.criteria,s.skipped));record('REV1 browser rejects '+name);
+  }
+  const changedScope=await fixture({advisor:true,width:390});
+  try{
+    await activate(changedScope,initialTech);await addCriterion(changedScope,missingCriterion);changedScope.config.status=409;
+    await changedScope.page.locator('#ksGuideCommand').fill('solo disponibili');await changedScope.page.locator('[data-ks-guide-apply]').press('Enter');await changedScope.wait('context-invalid');
+    record('REV1-C changed scope preserves requirement until explicit reconfirmation',advisorSpec(changedScope.requests.at(-1)).criteria.length===1&&await changedScope.page.locator('[data-ks-advisor-reconfirm]').isVisible());
+    const before=changedScope.requests.length;changedScope.config.status=0;changedScope.config.advisorScenario='rev1-availability-removed';
+    await changedScope.page.locator('[data-ks-advisor-reconfirm]').press('Enter');await changedScope.wait('results');
+    record('REV1-C reconfirmation is exactly one fresh request without previous-scope grant',changedScope.requests.length===before+1&&advisorSpec(changedScope.requests.at(-1)).criteria.length===0&&changedScope.receiptHeaders.at(-1).length===0);
+    await sample(changedScope,'REV1 changed scope confirmation');
+  }finally{await changedScope.close();}
   report.limitations.push('BFCache checked by persisted lifecycle event, not actual browser history cache restoration; no assistive technology or physical device certification');
 }
 (async()=>{

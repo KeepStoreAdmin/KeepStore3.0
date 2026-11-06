@@ -5,7 +5,12 @@ Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Linq
+Imports System.IO
+Imports System.Text
+Imports System.Security.Cryptography
 Imports System.Text.RegularExpressions
+Imports System.Web
+Imports System.Web.Security
 Imports System.Web.Script.Serialization
 
 Public NotInheritable Class ShoppingCriterion
@@ -13,6 +18,13 @@ Public NotInheritable Class ShoppingCriterion
     Public Property [Operator] As String
     Public Property Value As String
     Public Property Priority As String
+End Class
+
+Public NotInheritable Class ShoppingCriterionScopeException
+    Inherits ArgumentException
+    Public Sub New()
+        MyBase.New("criteria_scope_changed")
+    End Sub
 End Class
 
 Public NotInheritable Class ShoppingCriterionEvaluation
@@ -35,11 +47,12 @@ Public NotInheritable Class ShoppingDecisionResult
     Public Property Products As New List(Of ShoppingProductDecision)
     Public Property Question As Dictionary(Of String, Object)
     Public Property Actions As New List(Of Dictionary(Of String, Object))
+    Public Property TaxonomyRequired As Boolean
 End Class
 
 ' Pure, request-local decision layer. It never queries or constructs an offer.
 Public NotInheritable Class KeepStoreShoppingDecisionPolicy
-    Public Const PolicyVersion As String = "advisor-decision-1c.1"
+    Public Const PolicyVersion As String = "advisor-decision-1c.2"
     Public Const MaxCriteria As Integer = 8
     Public Const MaxSkipped As Integer = 24
     Public Const MaxCriteriaJsonChars As Integer = 4096
@@ -74,6 +87,78 @@ Public NotInheritable Class KeepStoreShoppingDecisionPolicy
         Return result
     End Function
 
+    Public Shared Function ParseReceipts(raw As String) As Dictionary(Of String, String)
+        Dim entries = New BoundedJson(If(raw, "[]"), 12288).ReadObjects(MaxCriteria)
+        Dim result As New Dictionary(Of String, String)(StringComparer.Ordinal)
+        For Each entry In entries
+            If entry.Count <> 2 OrElse Not entry.ContainsKey("attributeId") OrElse Not entry.ContainsKey("receipt") Then Invalid()
+            Dim id As String = entry("attributeId"), receipt As String = entry("receipt")
+            If Not ValidId(id) OrElse result.ContainsKey(id) OrElse receipt.Length = 0 OrElse receipt.Length > 1024 OrElse
+                Not Regex.IsMatch(receipt, "^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant) Then Invalid()
+            result.Add(id, receipt)
+        Next
+        Return result
+    End Function
+
+    ' An opaque, application-authenticated receipt recognizes a previously
+    ' allowed criterion in this exact commercial/taxonomy/query scope. It is
+    ' never a product fact, price, availability, or authority to admit a product.
+    Public Shared Function IssueReceipt(definition As ShoppingAttributeDefinition, context As String) As String
+        If definition.Risk <> "low" OrElse Not definition.Available OrElse String.IsNullOrEmpty(context) Then Return String.Empty
+        Using stream As New MemoryStream()
+            Using writer As New BinaryWriter(stream, Encoding.UTF8, True)
+                writer.Write(context)
+                writer.Write(definition.Scope) : writer.Write(definition.Label) : writer.Write(definition.Unit)
+                Dim values = If(definition.Type = "text", definition.ObservedValues, New List(Of String)())
+                writer.Write(CByte(values.Count))
+                For Each value In values
+                    writer.Write(ValueDigest(value))
+                Next
+            End Using
+            Return Convert.ToBase64String(MachineKey.Protect(stream.ToArray(), "KeepStoreShoppingCriterion", KeepStoreShoppingKnowledge.CurrentPolicyVersion, definition.Id)).TrimEnd("="c).Replace("+", "-").Replace("/", "_")
+        End Using
+    End Function
+
+    Private Shared Function ValueDigest(value As String) As Byte()
+        Using hash As SHA256 = SHA256.Create()
+            Return hash.ComputeHash(Encoding.UTF8.GetBytes(value)).Take(16).ToArray()
+        End Using
+    End Function
+
+    Private Shared Function ReadReceipt(receipt As String, criterion As ShoppingCriterion, context As String, catalogScope As String) As ShoppingAttributeDefinition
+        Try
+            If String.IsNullOrEmpty(context) OrElse receipt.Length > 1024 Then Invalid()
+            Dim encoded As String = receipt.Replace("-", "+").Replace("_", "/")
+            encoded = encoded.PadRight(encoded.Length + ((4 - encoded.Length Mod 4) Mod 4), "="c)
+            Dim bytes = MachineKey.Unprotect(Convert.FromBase64String(encoded), "KeepStoreShoppingCriterion", KeepStoreShoppingKnowledge.CurrentPolicyVersion, criterion.AttributeId)
+            If bytes Is Nothing OrElse bytes.Length > 640 Then Invalid()
+            Using reader As New BinaryReader(New MemoryStream(bytes), Encoding.UTF8)
+                If reader.ReadString() <> context Then Throw New ShoppingCriterionScopeException()
+                Dim definition = KeepStoreShoppingKnowledge.RestoreCriterionDefinition(reader.ReadString(), reader.ReadString(), reader.ReadString(), catalogScope)
+                If definition.Id <> criterion.AttributeId Then Invalid()
+                Dim count As Integer = reader.ReadByte(), matchingValue As Boolean = False
+                If count > 16 Then Invalid()
+                Dim expected = ValueDigest(criterion.Value)
+                For index As Integer = 1 To count
+                    Dim digest = reader.ReadBytes(16)
+                    If digest.Length <> 16 Then Invalid()
+                    If digest.SequenceEqual(expected) Then matchingValue = True
+                Next
+                If reader.BaseStream.Position <> reader.BaseStream.Length Then Invalid()
+                If definition.Type = "text" Then
+                    If Not matchingValue Then Invalid()
+                    definition.ObservedValues.Add(criterion.Value)
+                End If
+                ValidateCriterion(criterion, definition)
+                Return definition
+            End Using
+        Catch ex As ShoppingCriterionScopeException
+            Throw
+        Catch ex As Exception When TypeOf ex Is ArgumentException OrElse TypeOf ex Is CryptographicException OrElse TypeOf ex Is FormatException OrElse TypeOf ex Is IOException OrElse TypeOf ex Is HttpException
+            Throw New ArgumentException("invalid_criteria")
+        End Try
+    End Function
+
     Private Shared Function ValidId(value As String) As Boolean
         Return value IsNot Nothing AndAlso Regex.IsMatch(value, "^a_[a-f0-9]{24}$", RegexOptions.CultureInvariant)
     End Function
@@ -84,17 +169,46 @@ Public NotInheritable Class KeepStoreShoppingDecisionPolicy
 
     Public Shared Function Decide(corpus As ShoppingKnowledgeCorpus, criteria As IList(Of ShoppingCriterion),
                                   skipped As ISet(Of String), explicitSort As Boolean,
-                                  exactProductKeys As ISet(Of String)) As ShoppingDecisionResult
+                                  exactProductKeys As ISet(Of String), Optional receipts As IDictionary(Of String, String) = Nothing,
+                                  Optional receiptContext As String = Nothing) As ShoppingDecisionResult
         If corpus Is Nothing OrElse criteria Is Nothing OrElse criteria.Count > MaxCriteria OrElse corpus.Products.Count > 96 Then Invalid()
         Dim definitions As New Dictionary(Of String, ShoppingAttributeDefinition)(StringComparer.Ordinal)
         For Each definition As ShoppingAttributeDefinition In corpus.Attributes
             definitions.Add(definition.Id, definition)
         Next
         Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
+        If receipts Is Nothing Then receipts = New Dictionary(Of String, String)(StringComparer.Ordinal)
+        If receipts.Count > MaxCriteria OrElse receipts.Keys.Any(Function(id) Not criteria.Any(Function(c) c IsNot Nothing AndAlso c.AttributeId = id)) Then Invalid()
         For Each criterion As ShoppingCriterion In criteria
             Dim definition As ShoppingAttributeDefinition = Nothing
-            If criterion Is Nothing OrElse Not seen.Add(criterion.AttributeId) OrElse Not definitions.TryGetValue(criterion.AttributeId, definition) Then Invalid()
-            ValidateCriterion(criterion, definition)
+            If criterion Is Nothing OrElse Not seen.Add(criterion.AttributeId) Then Invalid()
+            Dim prior As ShoppingAttributeDefinition = Nothing
+            If receipts.ContainsKey(criterion.AttributeId) Then prior = ReadReceipt(receipts(criterion.AttributeId), criterion, receiptContext, corpus.CatalogScope)
+            If Not definitions.TryGetValue(criterion.AttributeId, definition) Then
+                If prior Is Nothing Then Invalid()
+                definition = prior
+                definition.Available = False : definition.CanAsk = False : definition.CanHardFilter = False
+                definition.ObservedValues.Clear() : definition.Coverage = 0D
+                ' Retained metadata occupies the same bounded dictionary; it
+                ' grants no old facts and cannot create a new selectable filter.
+                If corpus.Attributes.Count >= KeepStoreShoppingKnowledge.MaxAttributes Then
+                    Dim removable = corpus.Attributes.Last(Function(a) Not criteria.Any(Function(c) c.AttributeId = a.Id))
+                    corpus.Attributes.Remove(removable) : definitions.Remove(removable.Id)
+                    For Each product In corpus.Products
+                        product.Values.Remove(removable.Id)
+                    Next
+                End If
+                corpus.Attributes.Add(definition) : definitions.Add(definition.Id, definition)
+            Else
+                Try
+                    ValidateCriterion(criterion, definition)
+                Catch ex As ArgumentException
+                    If prior Is Nothing Then Throw
+                    ' Only recognition of a previously allowed value survives;
+                    ' evaluations below still use exclusively CURRENT facts.
+                End Try
+            End If
+            If corpus.MixedFamilies AndAlso prior Is Nothing Then Invalid()
         Next
         ' A valid skipped ID from a preceding pool may disappear after a filter.
         ' It grants no fact/filter authority and must not make recovery impossible.
@@ -104,7 +218,9 @@ Public NotInheritable Class KeepStoreShoppingDecisionPolicy
             If Not ValidId(value) Then Invalid()
         Next
 
-        Dim result As New ShoppingDecisionResult()
+        Dim result As New ShoppingDecisionResult With {.TaxonomyRequired = corpus.MixedFamilies OrElse
+            (corpus.Products.Count > 0 AndAlso criteria.Any(Function(c) corpus.Products.All(Function(p) p.FamilyId <> definitions(c.AttributeId).Scope)))}
+        If result.TaxonomyRequired AndAlso criteria.Count > 0 Then Return result
         Dim rejected As New List(Of ShoppingProductDecision)
         For index As Integer = 0 To corpus.Products.Count - 1
             Dim facts As ShoppingProductFacts = corpus.Products(index)
@@ -150,7 +266,7 @@ Public NotInheritable Class KeepStoreShoppingDecisionPolicy
         If definition.Type = "number" Then
             Dim number As Decimal
             If Not Regex.IsMatch(criterion.Value, "^[0-9]+(?:\.[0-9]+)?$", RegexOptions.CultureInvariant) OrElse
-                Not Decimal.TryParse(criterion.Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, number) Then Invalid()
+                Not Decimal.TryParse(criterion.Value, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, number) OrElse number > 1000000000D Then Invalid()
         ElseIf definition.Type = "boolean" Then
             If criterion.Value <> "true" AndAlso criterion.Value <> "false" Then Invalid()
         ElseIf definition.Type = "text" Then
@@ -182,7 +298,7 @@ Public NotInheritable Class KeepStoreShoppingDecisionPolicy
 
     Private Shared Function SelectQuestion(corpus As ShoppingKnowledgeCorpus, candidates As IList(Of ShoppingProductDecision),
                                            answered As ISet(Of String), skipped As ISet(Of String)) As Dictionary(Of String, Object)
-        If candidates.Count < 2 Then Return Nothing
+        If candidates.Count < 2 OrElse corpus.MixedFamilies Then Return Nothing
         Dim best As ShoppingAttributeDefinition = Nothing
         Dim bestScore As Double = -1
         Dim bestCounts As SortedDictionary(Of String, Integer) = Nothing

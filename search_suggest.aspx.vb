@@ -91,6 +91,7 @@ Partial Public Class search_suggest
         Public Property Limit As Integer
         Public Property Criteria As List(Of ShoppingCriterion)
         Public Property Skipped As HashSet(Of String)
+        Public Property Receipts As Dictionary(Of String, String)
     End Class
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
@@ -211,7 +212,8 @@ Partial Public Class search_suggest
         Try
             Return New Guided2Request With {.Query = query, .Filters = filters, .Limit = ReadGuidedLimit(),
                 .Criteria = KeepStoreShoppingDecisionPolicy.ParseCriteria(Request.QueryString("criteria")),
-                .Skipped = KeepStoreShoppingDecisionPolicy.ParseSkipped(Request.QueryString("skipped"))}
+                .Skipped = KeepStoreShoppingDecisionPolicy.ParseSkipped(Request.QueryString("skipped")),
+                .Receipts = KeepStoreShoppingDecisionPolicy.ParseReceipts(Request.Headers("X-KeepStore-Advisor-Criteria"))}
         Catch ex As ArgumentException
             Throw New SearchSuggestCommercialException("invalid_criteria", 400)
         End Try
@@ -289,7 +291,9 @@ Partial Public Class search_suggest
         Dim exact As New HashSet(Of String)(mapped.Where(Function(item) item.MatchKind = "exact-code" OrElse item.MatchKind = "exact-ean").Select(Function(item) Guided2Key(item)), StringComparer.Ordinal)
         Dim decision As ShoppingDecisionResult
         Try
-            decision = KeepStoreShoppingDecisionPolicy.Decide(corpus, request.Criteria, request.Skipped, filters.Sort.Length > 0, exact)
+            decision = KeepStoreShoppingDecisionPolicy.Decide(corpus, request.Criteria, request.Skipped, filters.Sort.Length > 0, exact, request.Receipts, scope & "|" & query)
+        Catch ex As ShoppingCriterionScopeException
+            Throw New SearchSuggestCommercialException("criteria_scope_changed", 409)
         Catch ex As ArgumentException
             Throw New SearchSuggestCommercialException("invalid_criteria", 400)
         End Try
@@ -303,6 +307,7 @@ Partial Public Class search_suggest
                 product(field) = Guided2Text(Convert.ToString(product(field), CultureInfo.InvariantCulture), 180)
             Next
             product("productKey") = candidate.ProductKey
+            product("family") = candidate.Facts.FamilyId
             product("textEvidence") = candidate.Facts.FreeTextEvidence.Where(Function(evidence) evidence.SourceField <> "Descrizione1").Take(3).Select(Function(evidence) New Dictionary(Of String, Object) From {
                 {"text", evidence.Text}, {"sourceField", evidence.SourceField}, {"evidenceRef", evidence.EvidenceRef}}).ToList()
             product("values") = candidate.Facts.Values.OrderBy(Function(entry) entry.Key, StringComparer.Ordinal).Select(Function(entry) New Dictionary(Of String, Object) From {
@@ -318,9 +323,11 @@ Partial Public Class search_suggest
         Dim summary As String = If(products.Count = 0,
             If(truncated, "Nessun candidato conforme nei 96 analizzati. La ricerca nella selezione è incompleta.", "Nessun candidato conforme nella selezione corrispondente ai termini e filtri confermati."),
             "Risultati valutati sui dati documentati nella selezione; i dati mancanti non confermano un requisito.")
+        If decision.TaxonomyRequired Then summary = "La selezione comprende famiglie diverse o non coincide con la famiglia del criterio. Scegli prima il reparto dai controlli della guida e conferma la ricerca; nessuna domanda sulle caratteristiche è applicata a famiglie diverse."
+        If Not decision.TaxonomyRequired AndAlso corpus.Attributes.Any(Function(a) Not a.Available) Then summary = "Un criterio confermato non è valutabile nel pool corrente. Non conferma caratteristiche di altri prodotti: modifica i filtri oppure rimuovilo esplicitamente."
         Dim metadata As New Dictionary(Of String, Object) From {
             {"version", 2}, {"policyVersion", KeepStoreShoppingKnowledge.CurrentPolicyVersion & "/" & KeepStoreShoppingDecisionPolicy.PolicyVersion},
-            {"scope", scope}, {"selectionScope", "bounded-catalog-candidates"}, {"exhaustive", Not truncated AndAlso Not corpus.ProcessingLimited}, {"poolLimit", 96}, {"knowledgeLimited", corpus.ProcessingLimited},
+            {"scope", scope}, {"selectionScope", "bounded-catalog-candidates"}, {"exhaustive", Not truncated AndAlso Not corpus.ProcessingLimited}, {"poolLimit", 96}, {"knowledgeLimited", corpus.ProcessingLimited}, {"taxonomyRequired", decision.TaxonomyRequired},
             {"analyzedCount", corpus.Products.Count}, {"eligibleCount", decision.Products.Count}, {"returnedCount", products.Count}, {"selectionLimited", True},
             {"limit", request.Limit}, {"displayLabel", _commercial.PriceContext.DisplayLabel}, {"summary", summary},
             {"criteria", New Dictionary(Of String, Object) From {
@@ -331,8 +338,9 @@ Partial Public Class search_suggest
                 {"skipped", request.Skipped.OrderBy(Function(value) value, StringComparer.Ordinal).ToArray()}}},
             {"attributes", corpus.Attributes.Select(Function(definition) New Dictionary(Of String, Object) From {
                 {"id", definition.Id}, {"label", definition.Label}, {"type", definition.Type}, {"unit", definition.Unit}, {"scope", definition.Scope},
-                {"operators", definition.Operators}, {"origin", definition.Origin}, {"canAsk", definition.CanAsk}, {"canHardFilter", definition.CanHardFilter},
-                {"risk", definition.Risk}, {"coverage", definition.Coverage}, {"observedValues", definition.ObservedValues}}).ToList()},
+                {"operators", definition.Operators}, {"origin", definition.Origin}, {"canAsk", definition.CanAsk AndAlso Not decision.TaxonomyRequired}, {"canHardFilter", definition.CanHardFilter AndAlso Not decision.TaxonomyRequired},
+                {"risk", definition.Risk}, {"coverage", definition.Coverage}, {"observedValues", definition.ObservedValues}, {"available", definition.Available},
+                {"receipt", If(decision.TaxonomyRequired, String.Empty, If(Not definition.Available, request.Receipts(definition.Id), KeepStoreShoppingDecisionPolicy.IssueReceipt(definition, scope & "|" & query)))}}).ToList()},
             {"question", decision.Question}, {"actions", decision.Actions}}
         Dim result As New Dictionary(Of String, Object) From {
             {"query", query}, {"recent", False}, {"mode", "guided2"}, {"suggestions", products}, {"total", products.Count},

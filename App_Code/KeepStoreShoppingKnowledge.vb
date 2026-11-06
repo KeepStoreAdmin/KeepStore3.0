@@ -26,6 +26,7 @@ Public NotInheritable Class ShoppingAttributeDefinition
     Public Property Risk As String
     Public Property Coverage As Decimal
     Public Property ObservedValues As New List(Of String)()
+    Public Property Available As Boolean = True
 End Class
 
 Public NotInheritable Class ShoppingAttributeValue
@@ -61,10 +62,15 @@ Public NotInheritable Class ShoppingKnowledgeCorpus
     Public Property Products As New List(Of ShoppingProductFacts)()
     Public Property Attributes As New List(Of ShoppingAttributeDefinition)()
     Public Property ProcessingLimited As Boolean
+    Public ReadOnly Property MixedFamilies As Boolean
+        Get
+            Return Products.Select(Function(product) product.FamilyId).Distinct(StringComparer.Ordinal).Take(2).Count() > 1
+        End Get
+    End Property
 End Class
 
 Public NotInheritable Class KeepStoreShoppingKnowledge
-    Public Const CurrentPolicyVersion As String = "ks-attributes-1c.1"
+    Public Const CurrentPolicyVersion As String = "ks-attributes-1c.2"
     Public Const MaxProducts As Integer = 96
     Public Const MaxTextChars As Integer = 16384
     Public Const MaxAttributes As Integer = 32
@@ -114,6 +120,7 @@ Public NotInheritable Class KeepStoreShoppingKnowledge
                 End If
                 If source.Length = 0 Then Continue For
                 Try
+                    ValidateVisibleMarkup(source)
                     Dim plain As String = PlainText(source)
                     If plain.Length > 0 Then product.FreeTextEvidence.Add(New ShoppingTextEvidence With {
                         .Text = Clip(plain, MaxEvidenceChars), .SourceField = field,
@@ -360,6 +367,54 @@ Public NotInheritable Class KeepStoreShoppingKnowledge
             If Not Rx("^</?(?:b|strong|i|em|span|small|sub|sup|br)\b[^>]*>$").IsMatch(tag.Value) Then Return String.Empty
         Next
         Return PlainText(source)
+    End Function
+
+    ' This is deliberately not a browser/CSS evaluator. Unknown attributes,
+    ' visibility classes, containers and malformed markup cannot certify facts.
+    ' Only balanced, attribute-free structural/semantic markup is admitted.
+    Private Shared Sub ValidateVisibleMarkup(source As String)
+        Dim clean As String = Rx("<!--.*?-->").Replace(source, String.Empty)
+        If clean.Contains("<!--") OrElse clean.Contains("-->") Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+        Dim stack As New Stack(Of String)()
+        Dim tokens As MatchCollection = Rx("<[^>]*>").Matches(clean)
+        If tokens.Count > 512 Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+        Dim previous As Integer = 0
+        For Each token As Match In tokens
+            Dim gap As String = clean.Substring(previous, token.Index - previous)
+            If gap.Contains("<") OrElse gap.Contains(">") Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+            previous = token.Index + token.Length
+            Dim tag As Match = Rx("^<(\/?)([a-z][a-z0-9]*)(\s*)(/?)>$").Match(token.Value)
+            If Not tag.Success Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+            Dim name As String = tag.Groups(2).Value.ToLowerInvariant()
+            If Not {"table", "tbody", "thead", "tfoot", "tr", "th", "td", "dl", "dt", "dd", "p", "b", "strong", "i", "em", "small", "sub", "sup", "br"}.Contains(name, StringComparer.Ordinal) Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+            Dim closing As Boolean = tag.Groups(1).Length > 0
+            If name = "br" AndAlso Not closing Then Continue For
+            If tag.Groups(4).Length > 0 Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+            If closing Then
+                If stack.Count = 0 OrElse stack.Pop() <> name Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+            Else
+                If stack.Count >= 16 Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+                Dim parent As String = If(stack.Count = 0, String.Empty, stack.Peek())
+                If (name = "table" OrElse name = "dl") AndAlso stack.Count <> 0 Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+                If {"tbody", "thead", "tfoot"}.Contains(name) AndAlso parent <> "table" Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+                If name = "tr" AndAlso Not {"table", "tbody", "thead", "tfoot"}.Contains(parent) Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+                If {"td", "th"}.Contains(name) AndAlso parent <> "tr" Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+                If {"dt", "dd"}.Contains(name) AndAlso parent <> "dl" Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+                stack.Push(name)
+            End If
+        Next
+        Dim tail As String = clean.Substring(previous)
+        If stack.Count <> 0 OrElse tail.Contains("<") OrElse tail.Contains(">") Then Throw New FormatException("OPAQUE_ATTRIBUTE_MARKUP")
+    End Sub
+
+    ' Called only after an authenticated continuation receipt has been opened.
+    ' It reconstructs CURRENT policy, never old product values or offers.
+    Public Shared Function RestoreCriterionDefinition(family As String, label As String, unit As String, catalogScope As String) As ShoppingAttributeDefinition
+        If family Is Nothing OrElse Not Rx("^[0-9]+/[0-9]+/[0-9]+/[0-9]+/[0-9]+$").IsMatch(family) OrElse family.Length > 54 OrElse
+            label Is Nothing OrElse label.Length > MaxLabelChars OrElse unit Is Nothing OrElse unit.Length > 8 Then Throw New ArgumentException("invalid_criteria")
+        Dim item As ShoppingAttributeDefinition = CreateDefinition(New Pair With {.Label = label, .Text = "1 " & unit, .Field = If(label = "Marca", "MarcheDescrizione", "DescrizioneHTML")}, family, catalogScope)
+        If item.Risk <> "low" OrElse item.Unit <> unit Then Throw New ArgumentException("invalid_criteria")
+        Return item
     End Function
 
     Private Shared Function PlainText(ByVal value As String) As String
