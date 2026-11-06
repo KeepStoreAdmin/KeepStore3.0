@@ -6,6 +6,7 @@ Imports System.Data.Common
 Imports System.Globalization
 Imports System.IO
 Imports System.Linq
+Imports System.Security.Cryptography
 Imports System.Text
 Imports System.Text.RegularExpressions
 Imports System.Web
@@ -84,6 +85,14 @@ Partial Public Class search_suggest
         Public Property Count As Integer
     End Class
 
+    Private Class Guided2Request
+        Public Property Query As String
+        Public Property Filters As SearchFilters
+        Public Property Limit As Integer
+        Public Property Criteria As List(Of ShoppingCriterion)
+        Public Property Skipped As HashSet(Of String)
+    End Class
+
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         Response.Clear()
         Response.Charset = "utf-8"
@@ -100,6 +109,12 @@ Partial Public Class search_suggest
             If String.Equals(Request.Headers("Sec-Fetch-Site"), "cross-site", StringComparison.OrdinalIgnoreCase) Then
                 Throw New SearchSuggestCommercialException("forbidden", 403)
             End If
+            If IsGuided2Request() Then
+                Dim request As Guided2Request = ReadGuided2Filters()
+                _commercial = New SearchSuggestCommercialSupport(Context)
+                payload = BuildGuided2Result(request)
+                payload("ok") = True
+            Else
             _commercial = New SearchSuggestCommercialSupport(Context)
             Dim filters As SearchFilters = ReadFilters()
             Dim guided As Boolean = filters.Mode = "guided"
@@ -122,6 +137,7 @@ Partial Public Class search_suggest
             For Each kvp As KeyValuePair(Of String, Object) In result
                 payload(kvp.Key) = kvp.Value
             Next
+            End If
         Catch ex As SearchSuggestCommercialException
             Response.StatusCode = ex.Status
             payload("ok") = False
@@ -141,6 +157,240 @@ Partial Public Class search_suggest
         Response.Write(serializer.Serialize(payload))
         If Context.ApplicationInstance IsNot Nothing Then Context.ApplicationInstance.CompleteRequest()
     End Sub
+
+    Private Function IsGuided2Request() As Boolean
+        Dim modes As String() = Request.QueryString.GetValues("mode")
+        Return modes IsNot Nothing AndAlso modes.Any(Function(value) String.Equals(value, "guided2", StringComparison.OrdinalIgnoreCase))
+    End Function
+
+    Private Function ReadGuided2Filters() As Guided2Request
+        Return ReadGuided2FiltersCore(Nothing)
+    End Function
+
+    Private Function ReadGuided2FiltersCore(taxonomyTree As IList(Of CatalogMenuSector)) As Guided2Request
+        Dim allowed As New HashSet(Of String)(StringComparer.Ordinal) From {
+            "q", "st", "ct", "tp", "pmin", "pmax", "disponibile", "ordinamento", "limit", "mode", "criteria", "skipped"}
+        For Each key As String In Request.QueryString.AllKeys
+            If key Is Nothing OrElse Not allowed.Contains(key) OrElse Request.QueryString.GetValues(key).Length <> 1 Then
+                Throw New SearchSuggestCommercialException("invalid_filters", 400)
+            End If
+        Next
+        If Request.QueryString("mode") <> "guided2" Then Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        Dim rawQuery As String = If(Request.QueryString("q"), String.Empty)
+        If rawQuery.Length > 256 Then Throw New SearchSuggestCommercialException("invalid_query", 400)
+        Dim query As String
+        Try
+            query = Regex.Replace(rawQuery.Normalize(NormalizationForm.FormC), "[\x00-\x1f\x7f\s]+", " ").Trim()
+        Catch ex As ArgumentException
+            Throw New SearchSuggestCommercialException("invalid_query", 400)
+        End Try
+        If query.Length > 80 OrElse query.Length = 1 Then Throw New SearchSuggestCommercialException("invalid_query", 400)
+        Dim filters As New SearchFilters With {.Mode = "guided2", .SettoreId = ReadGuided2Id("st"), .CategoriaId = ReadGuided2Id("ct"), .TipologiaId = ReadGuided2Id("tp")}
+        If filters.SettoreId > 0 OrElse filters.CategoriaId > 0 OrElse filters.TipologiaId > 0 Then
+            Dim tipology As String = If(filters.TipologiaId > 0, filters.TipologiaId.ToString(CultureInfo.InvariantCulture), String.Empty)
+            Dim taxonomy As CatalogTaxonomyContext = If(taxonomyTree Is Nothing,
+                CatalogTaxonomyResolver.Resolve(filters.SettoreId, filters.CategoriaId, tipology),
+                CatalogTaxonomyResolver.Resolve(taxonomyTree, filters.SettoreId, filters.CategoriaId, tipology))
+            If taxonomy Is Nothing OrElse Not taxonomy.IsCoherent OrElse
+                (filters.SettoreId > 0 AndAlso taxonomy.SectorId <> filters.SettoreId) OrElse
+                (filters.CategoriaId > 0 AndAlso taxonomy.CategoryId <> filters.CategoriaId) OrElse
+                (filters.TipologiaId > 0 AndAlso taxonomy.TipologyId <> filters.TipologiaId) Then
+                Throw New SearchSuggestCommercialException("invalid_taxonomy", 400)
+            End If
+        ElseIf query.Length = 0 Then
+            Throw New SearchSuggestCommercialException("taxonomy_required", 400)
+        End If
+        Dim minimum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmin")
+        Dim maximum As String = ReadAliasedFilter(AddressOf NormalizePriceFilter, "pmax")
+        filters.MinPrice = If(minimum.Length = 0, 0D, Decimal.Parse(minimum, CultureInfo.InvariantCulture))
+        filters.MaxPrice = If(maximum.Length = 0, 0D, Decimal.Parse(maximum, CultureInfo.InvariantCulture))
+        If filters.MinPrice > 0D AndAlso filters.MaxPrice > 0D AndAlso filters.MinPrice > filters.MaxPrice Then Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        filters.Sort = If(Request.QueryString("ordinamento"), String.Empty)
+        If filters.Sort <> String.Empty AndAlso filters.Sort <> "p_basso" Then Throw New SearchSuggestCommercialException("invalid_filters", 400)
+        filters.SoloDisponibili = ReadAliasedFilter(AddressOf NormalizeAvailabilityFilter, "disponibile") = "1"
+        Try
+            Return New Guided2Request With {.Query = query, .Filters = filters, .Limit = ReadGuidedLimit(),
+                .Criteria = KeepStoreShoppingDecisionPolicy.ParseCriteria(Request.QueryString("criteria")),
+                .Skipped = KeepStoreShoppingDecisionPolicy.ParseSkipped(Request.QueryString("skipped"))}
+        Catch ex As ArgumentException
+            Throw New SearchSuggestCommercialException("invalid_criteria", 400)
+        End Try
+    End Function
+
+    Private Function ReadGuided2Id(key As String) As Integer
+        Dim raw As String = Request.QueryString(key)
+        If raw Is Nothing Then Return 0
+        Dim value As Integer
+        If Not Regex.IsMatch(raw, "^[1-9][0-9]{0,9}$", RegexOptions.CultureInvariant) OrElse
+            Not Integer.TryParse(raw, NumberStyles.None, CultureInfo.InvariantCulture, value) Then Throw New SearchSuggestCommercialException("invalid_taxonomy", 400)
+        Return value
+    End Function
+
+    Private Function BuildGuided2Result(request As Guided2Request) As Dictionary(Of String, Object)
+        Dim filters As SearchFilters = request.Filters
+        Dim query As String = request.Query
+        Dim intent As New QueryIntent With {.Original = query, .SearchText = query, .Tokens = ExtractTokens(query), .IntentName = "guided2", .Summary = String.Empty}
+        Dim tokens As List(Of String) = ExpandSearchTokens(intent.Tokens, query)
+        Dim parameters As New List(Of SearchSuggestParameter)
+        Dim sql As New StringBuilder()
+        If query.Length > 0 Then
+            Dim normalized As String = query.ToLowerInvariant()
+            Dim likeQuery As String = EscapeLikeValue(normalized)
+            parameters.Add(New SearchSuggestParameter("@qExact", normalized))
+            parameters.Add(New SearchSuggestParameter("@qPrefix", likeQuery & "%"))
+            parameters.Add(New SearchSuggestParameter("@qContains", "%" & likeQuery & "%"))
+            parameters.Add(New SearchSuggestParameter("@qWord", "% " & likeQuery & "%"))
+            For index As Integer = 0 To tokens.Count - 1
+                Dim suffix As String = index.ToString(CultureInfo.InvariantCulture)
+                Dim token As String = EscapeLikeValue(tokens(index))
+                parameters.Add(New SearchSuggestParameter("@t" & suffix, tokens(index)))
+                parameters.Add(New SearchSuggestParameter("@tc" & suffix, "%" & token & "%"))
+                parameters.Add(New SearchSuggestParameter("@tp" & suffix, token & "%"))
+                parameters.Add(New SearchSuggestParameter("@tw" & suffix, "% " & token & "%"))
+            Next
+            AppendSelect(sql, True, BuildScoreExpression(tokens, intent))
+        Else
+            AppendSelect(sql, False)
+            sql.Append(", 0 AS RankScore, 0 AS ExactMatches ")
+        End If
+        ' Additional projection is exclusive to v2. No shared resolver/schema change.
+        sql.Append(", v.SettoriId, v.CategorieId, v.TipologieId, v.GruppiId, v.SottoGruppiId, v.MarcheId ")
+        sql.Append(_commercial.CatalogFrom())
+        If query.Length > 0 Then
+            sql.Append(" AND (")
+            sql.Append("LOWER(COALESCE(v.Codice,'')) = @qExact OR LOWER(COALESCE(v.Ean,'')) = @qExact OR LOWER(COALESCE(v.Descrizione1,'')) = @qExact OR ")
+            sql.Append("LOWER(COALESCE(v.Codice,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Ean,'')) LIKE @qPrefix OR LOWER(COALESCE(v.Descrizione1,'')) LIKE @qPrefix OR ")
+            sql.Append("LOWER(CONCAT(' ', COALESCE(v.Codice,''))) LIKE @qWord OR LOWER(CONCAT(' ', COALESCE(v.Ean,''))) LIKE @qWord OR LOWER(CONCAT(' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
+            sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.Descrizione1,''))) LIKE @qWord OR ")
+            sql.Append("LOWER(COALESCE(v.Descrizione1,'')) LIKE @qContains OR LOWER(COALESCE(v.Descrizione2,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneLunga,'')) LIKE @qContains OR LOWER(COALESCE(v.DescrizioneHTML,'')) LIKE @qContains OR ")
+            sql.Append("LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.SettoriDescrizione,''), ' ', COALESCE(v.CategorieDescrizione,''), ' ', COALESCE(v.TipologieDescrizione,''), ' ', COALESCE(v.GruppiDescrizione,''), ' ', COALESCE(v.SottogruppiDescrizione,''))) LIKE @qContains ")
+            For index As Integer = 0 To tokens.Count - 1
+                For Each field As String In New String() {"Codice", "Ean", "Descrizione1", "Descrizione2", "DescrizioneLunga", "DescrizioneHTML"}
+                    sql.Append(" OR LOWER(COALESCE(v.").Append(field).Append(",'')) LIKE @tc").Append(index.ToString(CultureInfo.InvariantCulture))
+                Next
+                sql.Append(" OR LOWER(CONCAT(' ', COALESCE(v.MarcheDescrizione,''), ' ', COALESCE(v.SettoriDescrizione,''), ' ', COALESCE(v.CategorieDescrizione,''), ' ', COALESCE(v.TipologieDescrizione,''), ' ', COALESCE(v.GruppiDescrizione,''), ' ', COALESCE(v.SottogruppiDescrizione,''))) LIKE @tc").Append(index.ToString(CultureInfo.InvariantCulture))
+            Next
+            sql.Append(")")
+        End If
+        AppendFilterClauses(sql, parameters, filters, "v")
+        sql.Append(BuildOrderBy(filters)).Append(" LIMIT 97")
+        Dim table As DataTable = ExecuteQuery(sql.ToString(), parameters)
+        ' Existing batch verification precedes ALL extraction and decisions, sentinel included.
+        If table.Rows.Count > 97 Then Throw New SearchSuggestCommercialException("advisor_pool_unavailable", 503)
+        Dim mapped As List(Of SuggestItem) = MapGuided2Suggestions(table, query, intent)
+        Dim truncated As Boolean = table.Rows.Count > 96
+        Dim rows As DataTable = table.Clone()
+        For Each row As DataRow In table.Rows.Cast(Of DataRow)().Take(96)
+            rows.ImportRow(row)
+        Next
+        mapped = mapped.Take(96).ToList()
+        Dim scope As String = Guided2Scope(filters)
+        Dim corpus As ShoppingKnowledgeCorpus = KeepStoreShoppingKnowledge.Build(rows, scope)
+        Dim exact As New HashSet(Of String)(mapped.Where(Function(item) item.MatchKind = "exact-code" OrElse item.MatchKind = "exact-ean").Select(Function(item) Guided2Key(item)), StringComparer.Ordinal)
+        Dim decision As ShoppingDecisionResult
+        Try
+            decision = KeepStoreShoppingDecisionPolicy.Decide(corpus, request.Criteria, request.Skipped, filters.Sort.Length > 0, exact)
+        Catch ex As ArgumentException
+            Throw New SearchSuggestCommercialException("invalid_criteria", 400)
+        End Try
+        Dim items As Dictionary(Of String, SuggestItem) = mapped.ToDictionary(Function(item) Guided2Key(item), StringComparer.Ordinal)
+        Dim products As New List(Of Dictionary(Of String, Object))
+        For Each candidate As ShoppingProductDecision In decision.Products.Take(request.Limit)
+            Dim item As SuggestItem = items(candidate.ProductKey)
+            Dim product As Dictionary(Of String, Object) = SerializeItem(item)
+            product("description") = String.Empty
+            For Each field As String In New String() {"title", "code", "ean", "brand", "category", "department"}
+                product(field) = Guided2Text(Convert.ToString(product(field), CultureInfo.InvariantCulture), 180)
+            Next
+            product("productKey") = candidate.ProductKey
+            product("textEvidence") = candidate.Facts.FreeTextEvidence.Where(Function(evidence) evidence.SourceField <> "Descrizione1").Take(3).Select(Function(evidence) New Dictionary(Of String, Object) From {
+                {"text", evidence.Text}, {"sourceField", evidence.SourceField}, {"evidenceRef", evidence.EvidenceRef}}).ToList()
+            product("values") = candidate.Facts.Values.OrderBy(Function(entry) entry.Key, StringComparer.Ordinal).Select(Function(entry) New Dictionary(Of String, Object) From {
+                {"attributeId", entry.Key}, {"value", If(entry.Value.EvidenceStatus = "known", entry.Value.Value, Nothing)},
+                {"evidenceStatus", entry.Value.EvidenceStatus}, {"sourceField", entry.Value.SourceField},
+                {"evidenceRef", entry.Value.EvidenceRef}, {"evidenceText", entry.Value.EvidenceText}}).ToList()
+            product("evaluations") = candidate.Evaluations.Select(Function(evaluation) New Dictionary(Of String, Object) From {
+                {"attributeId", evaluation.AttributeId}, {"priority", evaluation.Priority}, {"status", evaluation.Status}, {"evidenceRef", evaluation.EvidenceRef}}).ToList()
+            product("match") = candidate.Match
+            product("reason") = If(candidate.Match = "complete", "Rispetta tutti i criteri verificati", If(candidate.Match = "partial", "Requisiti rigidi rispettati; preferenze e dati mancanti indicati separatamente.", "Candidato nella selezione del catalogo; verifica le caratteristiche documentate."))
+            products.Add(product)
+        Next
+        Dim summary As String = If(products.Count = 0,
+            If(truncated, "Nessun candidato conforme nei 96 analizzati. La ricerca nella selezione è incompleta.", "Nessun candidato conforme nella selezione corrispondente ai termini e filtri confermati."),
+            "Risultati valutati sui dati documentati nella selezione; i dati mancanti non confermano un requisito.")
+        Dim metadata As New Dictionary(Of String, Object) From {
+            {"version", 2}, {"policyVersion", KeepStoreShoppingKnowledge.CurrentPolicyVersion & "/" & KeepStoreShoppingDecisionPolicy.PolicyVersion},
+            {"scope", scope}, {"selectionScope", "bounded-catalog-candidates"}, {"exhaustive", Not truncated AndAlso Not corpus.ProcessingLimited}, {"poolLimit", 96}, {"knowledgeLimited", corpus.ProcessingLimited},
+            {"analyzedCount", corpus.Products.Count}, {"eligibleCount", decision.Products.Count}, {"returnedCount", products.Count}, {"selectionLimited", True},
+            {"limit", request.Limit}, {"displayLabel", _commercial.PriceContext.DisplayLabel}, {"summary", summary},
+            {"criteria", New Dictionary(Of String, Object) From {
+                {"q", query}, {"st", filters.SettoreId}, {"ct", filters.CategoriaId}, {"tp", filters.TipologiaId},
+                {"pmin", filters.MinPrice.ToString("0.############################", CultureInfo.InvariantCulture)}, {"pmax", filters.MaxPrice.ToString("0.############################", CultureInfo.InvariantCulture)},
+                {"disponibile", filters.SoloDisponibili}, {"ordinamento", filters.Sort},
+                {"attributes", request.Criteria.Select(Function(criterion) New Dictionary(Of String, Object) From {{"attributeId", criterion.AttributeId}, {"operator", criterion.Operator}, {"value", criterion.Value}, {"priority", criterion.Priority}}).ToList()},
+                {"skipped", request.Skipped.OrderBy(Function(value) value, StringComparer.Ordinal).ToArray()}}},
+            {"attributes", corpus.Attributes.Select(Function(definition) New Dictionary(Of String, Object) From {
+                {"id", definition.Id}, {"label", definition.Label}, {"type", definition.Type}, {"unit", definition.Unit}, {"scope", definition.Scope},
+                {"operators", definition.Operators}, {"origin", definition.Origin}, {"canAsk", definition.CanAsk}, {"canHardFilter", definition.CanHardFilter},
+                {"risk", definition.Risk}, {"coverage", definition.Coverage}, {"observedValues", definition.ObservedValues}}).ToList()},
+            {"question", decision.Question}, {"actions", decision.Actions}}
+        Dim result As New Dictionary(Of String, Object) From {
+            {"query", query}, {"recent", False}, {"mode", "guided2"}, {"suggestions", products}, {"total", products.Count},
+            {"guided", metadata}, {"catalogUrl", BuildCatalogUrl(query, filters)}}
+        ' Hard bound includes the envelope; raw descriptions and the internal pool never leave.
+        If Encoding.UTF8.GetByteCount(New JavaScriptSerializer().Serialize(result)) > 131056 Then Throw New SearchSuggestCommercialException("advisor_payload_unavailable", 503)
+        Return result
+    End Function
+
+    Private Function Guided2Scope(filters As SearchFilters) As String
+        Dim value As String = String.Join("|", New String() {_commercial.Eligibility.DatabaseScopeKey,
+            _commercial.PriceContext.CompanyId.ToString(CultureInfo.InvariantCulture), _commercial.PriceContext.PriceListId.ToString(CultureInfo.InvariantCulture),
+            _commercial.PriceContext.IsAuthenticated.ToString(), _commercial.PriceContext.IsVatExcluded.ToString(),
+            filters.SettoreId.ToString(CultureInfo.InvariantCulture), filters.CategoriaId.ToString(CultureInfo.InvariantCulture), filters.TipologiaId.ToString(CultureInfo.InvariantCulture)})
+        Using hash As SHA256 = SHA256.Create()
+            Return "scope_" & BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(value))).Replace("-", String.Empty).ToLowerInvariant().Substring(0, 24)
+        End Using
+    End Function
+
+    Private Function MapGuided2Suggestions(table As DataTable, query As String, intent As QueryIntent) As List(Of SuggestItem)
+        ' Verify the same commercial columns through the established mapper, but
+        ' avoid its legacy full-description regex before the bounded fact parser.
+        Dim displayRows As DataTable = table.Copy()
+        For Each row As DataRow In displayRows.Rows
+            For Each field As String In New String() {"Descrizione2", "DescrizioneLunga", "DescrizioneHTML"}
+                row(field) = String.Empty
+            Next
+            For Each field As String In New String() {"Codice", "Ean", "Descrizione1", "MarcheDescrizione", "CategorieDescrizione", "TipologieDescrizione", "SettoriDescrizione"}
+                row(field) = Guided2Text(Convert.ToString(row(field), CultureInfo.InvariantCulture), 180)
+            Next
+        Next
+        Dim mapped As List(Of SuggestItem) = MapSuggestions(displayRows, query, intent)
+        For index As Integer = 0 To mapped.Count - 1
+            Dim row As DataRow = table.Rows(index)
+            ' Display sanitization must never manufacture an exact identifier.
+            mapped(index).MatchKind = DetectMatchKind(Guided2MatchValue(row("Codice")), Guided2MatchValue(row("Ean")),
+                Guided2MatchValue(row("Descrizione1")), Guided2MatchValue(row("MarcheDescrizione")), query)
+        Next
+        Return mapped
+    End Function
+
+    Private Shared Function Guided2MatchValue(raw As Object) As String
+        Dim value As String = Convert.ToString(raw, CultureInfo.InvariantCulture)
+        Return If(value.Length > 4096, String.Empty, value)
+    End Function
+
+    Private Shared Function Guided2Key(item As SuggestItem) As String
+        Return item.Id.ToString(CultureInfo.InvariantCulture) & ":" & item.TcId
+    End Function
+
+    Private Shared Function Guided2Text(raw As String, maximum As Integer) As String
+        Dim value As String = If(raw, String.Empty)
+        If value.Length > 4096 Then value = value.Substring(0, 4096)
+        value = HttpUtility.HtmlDecode(value)
+        value = Regex.Replace(value, "<[^>]*>", " ", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50))
+        value = Regex.Replace(value, "[\x00-\x1f\x7f\s]+", " ").Trim()
+        Return If(value.Length > maximum, value.Substring(0, maximum), value)
+    End Function
 
     Private Function BuildRecentResult(ByVal recentIds As List(Of Integer), ByVal filters As SearchFilters, ByVal limit As Integer) As Dictionary(Of String, Object)
         Dim output As New Dictionary(Of String, Object)()

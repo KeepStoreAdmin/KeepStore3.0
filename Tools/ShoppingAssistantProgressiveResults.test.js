@@ -7,13 +7,19 @@ const regressionsOnly = process.argv.includes('--rev1-regressions-only');
 const mediaOnly = process.argv.includes('--rev2-media-only');
 const handoffOnly = process.argv.includes('--catalog-handoff-only');
 const decisionOnly = process.argv.includes('--decision-journey-only');
-const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only');
-const decisionBase = 'bb89975eaed397b2ac35b3de058c6627e459173b';
+const advisorOnly = process.argv.includes('--advisor-only');
+const advisorBaselineOnly = process.argv.includes('--advisor-baseline-visual-only');
+const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly;
+const decisionBase = advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
 function baselineSource(file) { return cp.execFileSync('git',['show',decisionBase+':'+file],{cwd:root,encoding:'utf8'}); }
 function sourceApi(source) { const sandbox={module:{exports:{}},URL,URLSearchParams};require('node:vm').runInNewContext(source,sandbox);return sandbox.module.exports; }
 const api = baselineVisualOnly ? sourceApi(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js')) : require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
 const serverEvidence = JSON.parse(fs.readFileSync(serverPath, 'utf8').replace(/^\uFEFF/,''));
+const advisorFixturePath = process.argv.includes('--advisor-fixtures') ? process.argv[process.argv.indexOf('--advisor-fixtures') + 1] : '';
+const advisorEvidence = advisorOnly && advisorFixturePath ? JSON.parse(fs.readFileSync(advisorFixturePath,'utf8').replace(/^\uFEFF/,'')) : null;
+const advisorServer = advisorEvidence ? advisorEvidence.fixtures : [];
+if(advisorOnly && (!Array.isArray(advisorServer) || !advisorServer.length)) throw new Error('REAL_VB_ADVISOR_FIXTURES_REQUIRED');
 // Handoff exercises transport/UI, not commercial pricing: this response is explicitly synthetic.
 const server = handoffOnly ? [{scenario:'synthetic-handoff-only', expectedList:'not-resolved', payload:{
   ok:true, mode:'guided', recent:false, query:'SKU120', total:1, catalogUrl:'articoli.aspx?q=SKU120',
@@ -22,7 +28,7 @@ const server = handoffOnly ? [{scenario:'synthetic-handoff-only', expectedList:'
 }}] : serverEvidence;
 const playwright = require(playwrightModule);
 const report = { assertions: 0, checks: [], viewports: mediaOnly ? [390,1365] : [360,390,430,768,1024,1365], renderMs: [], screenshots: [],
-  suite: baselineVisualOnly ? 'Immutable decision baseline visuals only' : decisionOnly ? 'Decision journey delta only' : handoffOnly ? 'Catalog handoff delta only' : mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including decision journey', startedUtc: new Date().toISOString(),
+  suite: advisorOnly ? 'Catalog-driven advisor v2 delta only' : baselineVisualOnly ? 'Immutable decision baseline visuals only' : decisionOnly ? 'Decision journey delta only' : handoffOnly ? 'Catalog handoff delta only' : mediaOnly ? 'REV2 media only' : regressionsOnly ? 'REV1 regression reproduction' : 'Full client suite including decision journey', startedUtc: new Date().toISOString(),
   serverFixtures: server.map(x => ({scenario:x.scenario, expectedList:x.expectedList})), network: 'intercepted; no upstream continuation',
   limitations: ['synthetic HTML rendering, no ASP.NET request execution', 'no MySQL/IIS/login/production/TTFB/INP certification',
     'tenant/list provenance and variant ownership are checked by the real-source VB harness with synthetic I/O; the browser cannot authenticate arbitrary plausible price or stock values'] };
@@ -35,10 +41,33 @@ report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.j
   .map(file=>({file,sha256:sha256(read(file))}));
 if(baselineVisualOnly)report.baselineRef=decisionBase;
 report.serverPayloadSha256 = sha256(fs.readFileSync(serverPath));
+report.sourceBytes = {guide:Buffer.byteLength(read('Public/assets/keepstore/js/ks-shopping-guide.js')),markup:Buffer.byteLength(read('Default.aspx'))};
+if(advisorOnly){
+  report.advisorFixtureProvenance={path:advisorFixturePath,sha256:sha256(fs.readFileSync(advisorFixturePath)),fixtureNames:advisorServer.map(x=>x.name),source:'actual VB endpoint builder with synthetic I/O; see companion PowerShell harness'};
+  report.baselineSourceBytes={ref:decisionBase,guide:Buffer.byteLength(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js')),markup:Buffer.byteLength(baselineSource('Default.aspx'))};
+}
 function artifact(name, data) { const file=path.join(evidence,name); fs.writeFileSync(file,data); if(!journal.resources.includes(file))journal.resources.push(file); return file; }
 function briefFrom(url) {
   const p = new URL(url).searchParams;
   return {q:p.get('q'),st:Number(p.get('st')||0),pmin:p.get('pmin')||'0',pmax:p.get('pmax')||'0',disponibile:p.get('disponibile')==='1',ordinamento:p.get('ordinamento')||''};
+}
+function advisorSpec(raw) {
+  const u = new URL(raw.includes('://') ? raw : 'https://tenant1.invalid/search_suggest.aspx?' + raw.replace(/^\?/,''));
+  const p=u.searchParams;
+  const brief=briefFrom(u.href);brief.q=brief.q||'';
+  return {brief,criteria:JSON.parse(p.get('criteria')||'[]'),skipped:JSON.parse(p.get('skipped')||'[]')};
+}
+function advisorSignature(raw) {
+  const s=advisorSpec(raw);
+  return JSON.stringify({brief:s.brief,criteria:s.criteria.map(c=>({attributeId:c.attributeId,operator:c.operator,value:c.value,priority:c.priority})),skipped:[...s.skipped].sort()});
+}
+function advisorPayload(url, config) {
+  const matching=advisorServer.filter(x=>advisorSignature(x.queryString)===advisorSignature(url));
+  const row=config.advisorScenario ? matching.find(x=>x.name===config.advisorScenario) : matching[0];
+  if(!row)throw new Error('NO_REAL_VB_FIXTURE_FOR_REQUEST '+new URL(url).search);
+  const response=clone(row.response);
+  if(config.mutate)config.mutate(response);
+  return response;
 }
 function payload(url, options = {}) {
   const base = new URL('./',url), paths = api.urls(base.href, new URL('search_suggest.aspx',base).href), b=briefFrom(url);
@@ -80,7 +109,7 @@ function html(directory,kind,mode) {
     (mode==='missing'?'':'<script src="'+directory+'Public/assets/keepstore/js/ks-shopping-guide.js"></script>')+
     '<script src="'+directory+'Public/assets/keepstore/js/home-default.js"></script></body></html>';
 }
-if(!mediaOnly&&!handoffOnly&&!baselineVisualOnly){
+if(!mediaOnly&&!handoffOnly&&!baselineVisualOnly&&!advisorOnly){
 const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
 for(const raw of ['iPhone 15','SSD 1 TB','olio da 1 litro','8000000000120','SKU-500'])record('product is not command '+raw,api.parseCommand(raw).kind==='unknown');
 for(const raw of ['massimo 1.000 euro','massimo 1,000 euro','fino a 1e3 euro','massimo -5 euro','massimo 0 euro'])record('ambiguous amount clarified '+raw,api.parseCommand(raw).kind==='clarify');
@@ -133,7 +162,7 @@ let browser;
 async function fixture(options={}) {
   const directory=options.directory||'/', kind=options.kind||'Tech', host=options.scenario>=2?'tenant2.invalid':'tenant1.invalid';
   const context=await browser.newContext({viewport:{width:options.width||390,height:1000},hasTouch:(options.width||390)<=430,serviceWorkers:'block',javaScriptEnabled:options.js!==false,reducedMotion:'reduce'});
-  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[], transport=[];
+  const page=await context.newPage(), requests=[], pageErrors=[], blocked=[], apiErrors=[], mediaRequests=[], transport=[], payloadBytes=[];
   const config={...options};
   page.on('pageerror',e=>pageErrors.push(e.message));
   await page.addInitScript(({ignoreAbort,fastTimeout,initFailure})=>{
@@ -183,7 +212,9 @@ async function fixture(options={}) {
         if(current.delay)await new Promise(resolve=>setTimeout(resolve,current.delay));
         if(current.offline){await route.abort('internetdisconnected');return;}
         if(current.html){await route.fulfill({contentType:'text/html',body:'<html>synthetic unavailable</html>'});return;}
-        let response=payload(req.url(),{...current,food:kind==='Food'});
+        if(options.advisor&&current.status===403){await route.fulfill({status:403,contentType:'application/json',body:'{"ok":false,"error":"synthetic_context_unavailable"}'});return;}
+        let response=options.advisor && url.searchParams.get('mode')==='guided2' ? advisorPayload(req.url(),current) : payload(req.url(),{...current,food:kind==='Food'});
+        payloadBytes.push({request:Buffer.byteLength(req.url()),response:Buffer.byteLength(current.raw||JSON.stringify(response))});
         await route.fulfill({status:current.status||200,contentType:'application/json',body:current.raw||JSON.stringify(response)});return;
       }
       if(url.pathname===directory+'articoli.aspx'&&options.catalogFirst){
@@ -201,10 +232,10 @@ async function fixture(options={}) {
   const wait=async value=>{await page.waitForFunction(v=>document.getElementById('KsLocalAiSearch130').getAttribute('data-ks-guide-state')===v,value,{timeout:6000});};
   const submit=async(q='SKU120')=>{await page.locator('#ksGuideQuery').fill(q);await page.locator('[data-ks-guide-prepare]').click();await wait(config.empty?'empty':config.status===403||config.status===421?'context-invalid':config.status||config.raw||config.html||config.offline?'error':'results');};
   const refine=async cmd=>{await page.locator('#ksGuideCommand').fill(cmd);await page.locator('[data-ks-guide-apply]').click();await wait('results');};
-  const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode'].includes(k))));record('no external request attempted',transport.every(x=>x.origin==='https://'+host));record('no mutative HTTP attempted',transport.every(x=>x.method==='GET'));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
+  const privacy=async()=>{const p=await page.evaluate(()=>window.__privacy);record('memory-only privacy '+kind+' '+options.width,p.storage+p.cookies+p.beacons+p.logs+p.submits===0);record('fetch session/no-store policy',p.fetch.every(x=>x.credentials==='same-origin'&&x.cache==='no-store'));record('network contains only brief allowlist',p.fetch.every(x=>Array.from(new URL(x.url).searchParams.keys()).every(k=>['q','st','pmin','pmax','disponibile','ordinamento','limit','mode',...(options.advisor?['criteria','skipped']:[])].includes(k))));record('no external request attempted',transport.every(x=>x.origin==='https://'+host));record('no mutative HTTP attempted',transport.every(x=>x.method==='GET'));record('no application page error',pageErrors.length===0);record('HOME recent render hook preserved',p.recent>0);};
   const screenshot=async(name,selector='#KsLocalAiSearch130')=>{const file=path.join(evidence,name+'.png');await page.locator(selector).screenshot({path:file,animations:'disabled'});journal.resources.push(file);report.screenshots.push(file);};
   const close=async()=>{await context.close();journal.contextsClosed++;};
-  return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,transport,state,wait,submit,refine,privacy,screenshot,close};
+  return {context,page,config,requests,pageErrors,blocked,apiErrors,mediaRequests,transport,payloadBytes,state,wait,submit,refine,privacy,screenshot,close};
 }
 async function run() {
   if(process.argv.includes('--need-to-choice-only')){
@@ -214,6 +245,7 @@ async function run() {
   }
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(advisorOnly){await advisorRegressions();report.status='PASS';return;}
   if(baselineVisualOnly){
     report.viewports=[390,1365];
     for(const width of report.viewports){const f=await fixture({width});try{await f.submit();await f.page.locator('[data-ks-guide-compare-key]').nth(0).check();await f.page.locator('[data-ks-guide-compare-key]').nth(1).check();await f.screenshot('baseline-Tech-'+width+'-workspace');await f.privacy();}finally{await f.close();}}
@@ -958,6 +990,254 @@ async function catalogHandoffRegressions() {
   }
   const safe=await fixture({search:'?guide=catalog-v1&guide_q='+encodeURIComponent('<img src=x>')});
   try{record('import is text, never markup',await safe.page.locator('#ksGuideQuery').inputValue()==='<img src=x>'&&await safe.page.locator('[data-ks-guide-fields] img').count()===0&&safe.requests.length===0);await safe.privacy();}finally{await safe.close();}
+}
+async function advisorRegressions() {
+  record('explicit advisor API available',typeof api.validateAdvisor==='function'&&typeof api.requestAdvisorURL==='function');
+  const paths=api.urls('https://tenant1.invalid/','/search_suggest.aspx');
+  const valid=advisorServer.filter(x=>x.response&&x.response.ok===true);
+  record('actual endpoint fixtures include both synthetic scopes',valid.some(x=>advisorSpec(x.queryString).brief.st===7)&&valid.some(x=>advisorSpec(x.queryString).brief.st===8));
+  report.advisorPayloads=[];
+  for(const row of valid){
+    const s=advisorSpec(row.queryString), result=api.validateAdvisor(row.response,s.brief,paths,s.criteria,s.skipped);
+    record('actual VB endpoint response accepted '+row.name,result.items.length===row.response.suggestions.length);
+    record('hard requirements never unknown/violated '+row.name,row.response.suggestions.every(p=>p.evaluations.every(e=>e.priority!=='hard'||e.status==='SATISFIED')));
+    report.advisorPayloads.push({name:row.name,requestBytes:Buffer.byteLength(row.queryString),responseBytes:Buffer.byteLength(JSON.stringify(row.response)),returned:result.items.length,criteria:s.criteria,question:row.response.guided.question&&row.response.guided.question.attributeId,scope:row.response.guided.selectionScope,exhaustive:row.response.guided.exhaustive});
+  }
+  const multisource=valid.find(x=>x.response.suggestions.some(p=>p.values.some(v=>v.evidenceStatus==='known'&&v.sourceField.length>40)));
+  record('real four-field provenance accepted within80chars',!!multisource&&multisource.response.suggestions.some(p=>p.values.some(v=>v.evidenceStatus==='known'&&v.sourceField.split(',').length===4&&v.sourceField.length<=80)));
+  const initialFor=st=>valid.find(x=>{const s=advisorSpec(x.queryString);return s.brief.st===st&&s.brief.q==='scelta'&&s.criteria.length===0&&s.skipped.length===0&&x.response.suggestions.length>1&&x.response.guided.question;});
+  const initialTech=initialFor(7),initialFood=initialFor(8);
+  record('both sectors have actual useful initial question',!!initialTech&&!!initialFood);
+  record('same query different scope selects different attribute',initialTech.response.guided.question.attributeId!==initialFood.response.guided.question.attributeId);
+  const s=advisorSpec(initialTech.queryString);
+  const invalid=[
+    ['wrong protocol version',p=>p.guided.version=1],
+    ['wrong scoped criteria',p=>p.guided.criteria.st=99],
+    ['unknown question attribute',p=>p.guided.question.attributeId='not-authorized'],
+    ['unobserved question option',p=>p.guided.question.options[0].value='not-observed'],
+    ['commercial metadata injection',p=>p.guided.tenant=1],
+    ['oversized product array',p=>p.suggestions=Array.from({length:7},()=>clone(p.suggestions[0]))],
+    ['cross-origin product URL',p=>p.suggestions[0].url='https://outside.invalid/articolo.aspx?id=1&TCId=1'],
+    ['invalid variant identity',p=>p.suggestions[0].TCId=-2],
+    ['unbounded title',p=>p.suggestions[0].title='x'.repeat(501)],
+    ['unbounded attribute dictionary',p=>p.guided.attributes=Array.from({length:100},()=>clone(p.guided.attributes[0]))]
+  ];
+  for(const [name,mutate] of invalid){const p=clone(initialTech.response);mutate(p);assert.throws(()=>api.validateAdvisor(p,s.brief,paths,s.criteria,s.skipped));record('advisor rejects '+name);}
+  const hardEvidence=valid.find(x=>advisorSpec(x.queryString).criteria.some(c=>c.priority==='hard')&&x.response.suggestions.length>0);
+  record('actual hard evidence fixture present',!!hardEvidence);
+  const hs=advisorSpec(hardEvidence.queryString);
+  for(const [name,mutate] of [
+    ['hard unknown evaluation',p=>p.suggestions[0].evaluations.find(e=>e.priority==='hard').status='UNKNOWN'],
+    ['evaluation evidence mismatch',p=>p.suggestions[0].evaluations.find(e=>e.priority==='hard').evidenceRef='unrelated-proof'],
+    ['missing hard fact',p=>{const e=p.suggestions[0].evaluations.find(x=>x.priority==='hard');p.suggestions[0].values=p.suggestions[0].values.filter(v=>v.attributeId!==e.attributeId);}]
+  ]){const p=clone(hardEvidence.response);mutate(p);assert.throws(()=>api.validateAdvisor(p,hs.brief,paths,hs.criteria,hs.skipped));record('advisor rejects '+name);}
+  const wire=api.requestAdvisorURL(s.brief,paths,[],[]);
+  record('explicit isolated mode in request',new URL(wire).searchParams.get('mode')==='guided2');
+  record('request contains no client commercial authority',!/[?&](?:owner|tenant|listino|iva|azienda|login|dictionary)=/i.test(wire));
+  const activate=async(f,row,send=true)=>{
+    const spec=advisorSpec(row.queryString);
+    await f.page.locator('[data-ks-guide-mode="guided2"]').click();
+    await f.page.locator('#ksGuideQuery').fill(spec.brief.q);
+    await f.page.locator('[data-ks-guide-sector="'+spec.brief.st+'"]').click();
+    if(send){await f.page.locator('[data-ks-guide-prepare]').click();await f.wait(row.response.suggestions.length?'results':'empty');}
+  };
+  const settle=async(f)=>{await f.page.waitForFunction(()=>['results','empty','error','context-invalid'].includes(document.getElementById('KsLocalAiSearch130').getAttribute('data-ks-guide-state')),{},{timeout:6000});};
+  const addCriterion=async(f,c)=>{
+    const requestsBefore=f.requests.length;
+    const details=f.page.locator('[data-ks-advisor-panel] details');
+    if(!await details.evaluate(x=>x.open))await details.locator('summary').press('Enter');
+    await f.page.locator('#ksAdvisorAttribute').selectOption(c.attributeId);
+    await f.page.locator('#ksAdvisorOperator').selectOption(c.operator);
+    if(await f.page.locator('#ksAdvisorNumber').isVisible())await f.page.locator('#ksAdvisorNumber').fill(c.value);
+    else await f.page.locator('#ksAdvisorValue').selectOption(c.value);
+    await f.page.locator('#ksAdvisorPriority').selectOption(c.priority);
+    record('typed criterion draft never searches',f.requests.length===requestsBefore);
+    await f.page.locator('[data-ks-advisor-add]').press('Enter');await settle(f);
+  };
+  const sample=async(f,name)=>{
+    (report.advisorRuns ||= []).push({name,requests:f.requests.length,payloadBytes:f.payloadBytes,...await f.page.evaluate(()=>({render:window.__fixtureRender,guideHeight:document.getElementById('KsLocalAiSearch130').getBoundingClientRect().height,scrollWidth:document.documentElement.scrollWidth,viewport:innerWidth}))});
+    record('all fixture requests resolved '+name,f.apiErrors.length===0);await f.privacy();
+  };
+  for(const [kind,row] of [['Tech',initialTech],['Food',initialFood]])for(const width of report.viewports){
+    const f=await fixture({advisor:true,kind,width,advisorScenario:row.name});
+    try{
+      record('v1 remains default '+kind+width,await f.page.locator('[data-ks-guide-mode="guided"]').getAttribute('aria-pressed')==='true');
+      await activate(f,row,false);
+      record('mode, typing and scope never search '+kind+width,f.requests.length===0);
+      await f.page.locator('#ksGuideGoal').fill('Obiettivo locale senza dati personali');
+      await (width<=430?f.page.locator('[data-ks-guide-prepare]').tap():f.page.locator('[data-ks-guide-prepare]').press('Enter'));
+      await f.wait('results');
+      record('one confirmed request '+kind+width,f.requests.length===1);
+      record('free objective remains local '+kind+width,!decodeURIComponent(f.requests[0]).includes('Obiettivo'));
+      record('real shortlist count '+kind+width,await f.page.locator('.ks-guide-card').count()===row.response.suggestions.length);
+      record('one useful question '+kind+width,await f.page.locator('[data-ks-advisor-option]').count()===row.response.guided.question.options.length);
+      record('live status semantics '+kind+width,await f.page.locator('[data-ks-guide-status]').getAttribute('role')==='status'&&await f.page.locator('[data-ks-guide-status]').getAttribute('aria-live')==='polite');
+      record('page never horizontally overflows '+kind+width,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      record('no markup from product data '+kind+width,await f.page.locator('[data-ks-guide-results] script,[data-ks-guide-results] iframe,[data-ks-guide-results] [onerror]').count()===0);
+      const targetMetrics=await f.page.locator('[data-ks-guide-mode], [data-ks-advisor-option], [data-ks-guide-prepare]').evaluateAll(es=>es.filter(e=>e.getBoundingClientRect().height>0).map(e=>({text:e.textContent.trim(),height:e.getBoundingClientRect().height,width:e.getBoundingClientRect().width})));
+      record('primary and question touch targets at least 44px '+kind+width,targetMetrics.every(m=>m.height>=44&&m.width>=44));
+      await f.screenshot('advisor-'+kind+'-'+width);
+      if([390,1365].includes(width))await f.screenshot('advisor-'+kind+'-'+width+'-results','[data-ks-guide-results]');
+      await sample(f,kind+' '+width);
+    }finally{await f.close();}
+  }
+  const hardOrSoft=valid.filter(x=>{const a=advisorSpec(x.queryString);return a.brief.st===7&&a.brief.q==='scelta'&&a.criteria.length===1&&a.skipped.length===0;});
+  record('real hard and soft confirmation fixtures present',hardOrSoft.some(x=>advisorSpec(x.queryString).criteria[0].priority==='hard')&&hardOrSoft.some(x=>advisorSpec(x.queryString).criteria[0].priority==='soft'));
+  for(const priority of ['hard','soft']){
+    const row=hardOrSoft.find(x=>advisorSpec(x.queryString).criteria[0].priority===priority),f=await fixture({advisor:true,width:390});
+    try{
+      await activate(f,initialTech);const count=f.requests.length;
+      const criterion=advisorSpec(row.queryString).criteria[0];
+      if(priority==='soft'){await f.page.locator('[data-ks-advisor-option="'+criterion.value+'"]').press('Enter');await settle(f);}
+      else await addCriterion(f,criterion);
+      record('explicit '+priority+' confirms exactly one request',f.requests.length===count+1);
+      record('confirmed typed '+priority+' retained',advisorSpec(f.requests.at(-1)).criteria[0].priority===priority);
+      record('dynamic action retains logical keyboard focus '+priority,await f.page.evaluate(()=>document.activeElement!==document.body));
+      record('hard or soft exact server shortlist '+priority,await f.page.locator('.ks-guide-card').count()===row.response.suggestions.length);
+      await f.screenshot('advisor-Tech-'+priority);await sample(f,priority);
+    }finally{await f.close();}
+  }
+  const manualHard=advisorSpec(hardOrSoft.find(x=>advisorSpec(x.queryString).criteria[0].priority==='hard').queryString).criteria[0];
+  for(const change of ['query','sector-chip']){
+    const f=await fixture({advisor:true,width:390});
+    try{
+      await activate(f,initialTech);await addCriterion(f,manualHard);f.config.status=403;
+      if(change==='query'){await f.page.locator('#ksGuideQuery').fill('altra scelta');record('new query explicitly confirms removal of old requirements',(await f.page.locator('[data-ks-guide-prepare]').innerText()).includes('senza i requisiti precedenti'));await f.page.locator('[data-ks-guide-prepare]').click();}
+      else await f.page.locator('[data-ks-guide-chips] button').filter({hasText:/^Reparto:/}).click();
+      await f.wait('context-invalid');
+      const sent=advisorSpec(f.requests.at(-1));
+      record(change+' clears previous criteria and skips before sending',sent.criteria.length===0&&sent.skipped.length===0&&(change==='query'?sent.brief.q==='altra scelta':sent.brief.st===0));
+      f.config.status=0;await f.page.locator('[data-ks-guide-undo]').press('Enter');await f.wait('results');
+      const restored=advisorSpec(f.requests.at(-1));
+      record(change+' undo restores scoped criteria with a fresh request',f.requests.length===4&&restored.brief.q==='scelta'&&restored.brief.st===7&&JSON.stringify(restored.criteria)===JSON.stringify([manualHard]));
+      await sample(f,change+' request-only403 and undo');
+    }finally{await f.close();}
+  }
+  const softAfterHard=await fixture({advisor:true,width:390});
+  try{
+    await activate(softAfterHard,initialTech);await addCriterion(softAfterHard,manualHard);
+    const question=softAfterHard.page.locator('[data-ks-advisor-option]').first(),id=await question.getAttribute('data-ks-advisor-attribute');
+    record('manual priority remains hard for targeted question probe',await softAfterHard.page.locator('#ksAdvisorPriority').inputValue()==='hard');
+    softAfterHard.config.status=403;await question.press('Enter');await softAfterHard.wait('context-invalid');
+    const criteria=advisorSpec(softAfterHard.requests.at(-1)).criteria;
+    record('preference question never inherits hidden manual hard priority',criteria.find(c=>c.attributeId===id).priority==='soft'&&criteria.find(c=>c.attributeId===manualHard.attributeId).priority==='hard');
+    await sample(softAfterHard,'question always soft request-only403');
+  }finally{await softAfterHard.close();}
+  const skippedRow=valid.find(x=>{const a=advisorSpec(x.queryString);return a.brief.st===7&&a.brief.q==='scelta'&&a.criteria.length===0&&a.skipped.includes(initialTech.response.guided.question.attributeId);});
+  record('actual skipped question fixture present',!!skippedRow);
+  for(const action of ['skip','indifferent','unknown']){
+    const f=await fixture({advisor:true,width:390});
+    try{
+      await activate(f,initialTech);const before=f.requests.length;
+      await f.page.locator('[data-ks-advisor-'+action+']').press('Enter');await settle(f);
+      record(action+' triggers one explicit recalculation',f.requests.length===before+1);
+      record(action+' suppresses old question in same context',await f.page.locator('[data-ks-advisor-option][data-ks-advisor-attribute="'+initialTech.response.guided.question.attributeId+'"]').count()===0);
+      record(action+' retains logical keyboard focus',await f.page.evaluate(()=>document.activeElement!==document.body));
+      await sample(f,action);
+    }finally{await f.close();}
+  }
+  for(const name of ['tech-hard-empty','tech-truncated-empty']){
+    const row=valid.find(x=>x.name===name),f=await fixture({advisor:true,width:390});
+    record('actual empty/relaxation endpoint fixture '+name,!!row&&row.response.suggestions.length===0&&row.response.guided.actions.length>0);
+    try{
+      await activate(f,initialTech);f.config.advisorScenario=name;
+      if(name==='tech-hard-empty'){
+        const c=advisorSpec(row.queryString).criteria[0],before=f.requests.length;
+        await f.page.locator('[data-ks-advisor-panel] details summary').press('Enter');
+        await f.page.locator('#ksAdvisorAttribute').selectOption(c.attributeId);
+        for(const invalid of ['1e3','-1','1000000001','3.1234567']){
+          await f.page.locator('#ksAdvisorNumber').fill(invalid);await f.page.locator('[data-ks-advisor-add]').click();
+          record('invalid numeric threshold stays local '+invalid,f.requests.length===before&&await f.page.locator('#ksAdvisorNumber').inputValue()===invalid);
+        }
+      }
+      await addCriterion(f,advisorSpec(row.queryString).criteria[0]);
+      record('empty hard constraints never suggest products '+name,await f.page.locator('.ks-guide-card').count()===0);
+      record('server reason visible '+name,(await f.page.locator('[data-ks-guide-results]').innerText()).includes(row.response.guided.summary));
+      if(name==='tech-truncated-empty')record('truncated scope explicitly incomplete',(await f.page.locator('[data-ks-guide-results]').innerText()).includes('incompleta'));
+      const before=f.requests.length;await f.page.waitForTimeout(80);
+      record('relaxation never automatic '+name,f.requests.length===before);
+      await f.screenshot('advisor-'+name);f.config.advisorScenario=initialTech.name;
+      await f.page.locator('[data-ks-advisor-relax]').first().press('Enter');await f.wait('results');
+      record('explicit relaxation removes only confirmed criterion '+name,f.requests.length===before+1&&advisorSpec(f.requests.at(-1)).criteria.length===0);
+      await sample(f,name+' explicit numeric threshold');
+    }finally{await f.close();}
+  }
+  const taxonomyRow=valid.find(x=>x.name==='taxonomy-only'),taxonomy=await fixture({advisor:true,width:390});
+  try{
+    record('actual taxonomy-only fixture present',!!taxonomyRow);
+    await taxonomy.page.locator('[data-ks-guide-mode="guided2"]').click();await taxonomy.page.locator('[data-ks-guide-prepare]').click();
+    record('empty query without explicit scope does not fetch',taxonomy.requests.length===0);
+    await activate(taxonomy,taxonomyRow);
+    record('empty query with explicit taxonomy makes one scoped request',taxonomy.requests.length===1&&advisorSpec(taxonomy.requests[0]).brief.q===''&&advisorSpec(taxonomy.requests[0]).brief.st===7);
+    await sample(taxonomy,'empty query explicit scope');
+  }finally{await taxonomy.close();}
+  const singleton=await fixture({advisor:true,width:390,advisorScenario:'tech-singleton'});
+  try{await activate(singleton,initialTech);record('singleton never asks unnecessary question',await singleton.page.locator('.ks-guide-card').count()===1&&await singleton.page.locator('[data-ks-advisor-option]').count()===0);await sample(singleton,'singleton');}finally{await singleton.close();}
+  const comparison=await fixture({advisor:true,width:390});
+  try{
+    await activate(comparison,initialTech);
+    const sources=comparison.page.locator('.ks-guide-card details').first();
+    record('product evidence uses closed native disclosure',await sources.count()===1&&!await sources.evaluate(x=>x.open));
+    await sources.locator('summary').press('Enter');
+    record('keyboard reveals actual source excerpts',await sources.evaluate(x=>x.open)&&(await sources.innerText()).includes(initialTech.response.suggestions[0].values.find(x=>x.evidenceStatus==='known').evidenceText));
+    await sources.locator('summary').press('Enter');
+    await comparison.page.locator('[data-ks-guide-compare-key]').nth(0).check();await comparison.page.locator('[data-ks-guide-compare-key]').nth(1).check();
+    record('advisor retains two-product comparison',await comparison.page.locator('[data-ks-guide-comparison] table').count()===1&&await comparison.page.locator('[data-ks-guide-compare-key]:checked').count()===2);
+    record('comparison includes typed technical attribute',(await comparison.page.locator('[data-ks-guide-comparison]').innerText()).includes(initialTech.response.guided.attributes.find(a=>a.type==='number').label));
+    record('comparison remains contained at mobile width',await comparison.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await comparison.screenshot('advisor-Tech-comparison','[data-ks-guide-comparison]');await sample(comparison,'typed comparison');
+    await comparison.page.getByRole('link',{name:'Vai alla scheda e acquista',exact:true}).first().press('Enter');
+    record('explicit PDP navigation preserves real variant identity',comparison.page.url()===new URL(initialTech.response.suggestions[0].url,'https://tenant1.invalid/').href);
+  }finally{await comparison.close();}
+  const isolated=await fixture({advisor:true,width:390,directory:'/shop/',scenario:2,advisorScenario:'commercial-2-anon'});
+  try{
+    await activate(isolated,initialTech);
+    record('second synthetic context stays in its virtual directory',new URL(isolated.requests[0]).host==='tenant2.invalid'&&new URL(isolated.requests[0]).pathname==='/shop/search_suggest.aspx');
+    record('second context uses its exact server response',await isolated.page.locator('.ks-guide-card').count()===valid.find(x=>x.name==='commercial-2-anon').response.suggestions.length);
+    await sample(isolated,'second context virtual directory');
+  }finally{await isolated.close();}
+  const scope=await fixture({advisor:true,width:390});
+  try{
+    await activate(scope,initialTech);
+    await addCriterion(scope,advisorSpec(hardOrSoft.find(x=>advisorSpec(x.queryString).criteria[0].priority==='hard').queryString).criteria[0]);
+    const before=scope.requests.length,oldQuestion=initialTech.response.guided.question.attributeId;
+    await scope.page.locator('[data-ks-guide-sector="8"]').tap();
+    record('scope change clears old cards without request',scope.requests.length===before&&await scope.page.locator('.ks-guide-card').count()===0);
+    record('scope change clears dictionary and questions',await scope.page.locator('[data-ks-advisor-option]').count()===0&&await scope.page.locator('#ksAdvisorAttribute option[value="'+oldQuestion+'"]').count()===0);
+    record('scope change clears confirmed typed criteria',await scope.page.locator('[data-ks-advisor-criteria] button').count()===0);
+    await scope.page.locator('[data-ks-guide-prepare]').tap();await scope.wait('results');
+    record('new scope gets food question',await scope.page.locator('[data-ks-guide-results]').innerText().then(x=>x.includes(initialFood.response.guided.question.label)));
+    record('new scope never sends previous typed criteria',advisorSpec(scope.requests.at(-1)).criteria.length===0&&advisorSpec(scope.requests.at(-1)).skipped.length===0);
+    await scope.page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+    record('BFCache event invalidates stale commercial evidence',await scope.page.locator('.ks-guide-card').count()===0&&scope.requests.length===before+1);
+    await sample(scope,'scope and simulated BFCache event');
+  }finally{await scope.close();}
+  const pending=await fixture({advisor:true,width:390,delay:350,ignoreAbort:true});
+  try{
+    await activate(pending,initialTech,false);await pending.page.locator('[data-ks-guide-prepare]').click();
+    await pending.page.waitForFunction(()=>window.__privacy.fetch.length===1);
+    await pending.page.locator('#ksGuideQuery').fill('bozza nuova');
+    await pending.page.waitForTimeout(450);
+    record('late response cannot replace draft',await pending.page.locator('#ksGuideQuery').inputValue()==='bozza nuova'&&await pending.page.locator('.ks-guide-card').count()===0);
+    record('pending edit aborts transport generation',await pending.page.evaluate(()=>window.__privacy.aborts>0));
+    await sample(pending,'late response and draft');
+  }finally{await pending.close();}
+  for(const fault of [{status:403},{raw:'{"ok":true,"mode":"guided2"}'},{mutate:p=>p.guided.version=9}]){
+    const f=await fixture({advisor:true,width:390,...fault});
+    try{await activate(f,initialTech,false);await f.page.locator('[data-ks-guide-prepare]').click();await f.wait(fault.status?'context-invalid':'error');record('fault clears recommendations '+JSON.stringify(fault),await f.page.locator('.ks-guide-card').count()===0);await sample(f,'fault '+(fault.status||'schema'));}finally{await f.close();}
+  }
+  const v1=await fixture({advisor:true,width:390});
+  try{
+    await activate(v1,initialTech);await v1.page.locator('[data-ks-guide-mode="guided"]').press('Enter');
+    record('mode switch clears v2 facts',await v1.page.locator('.ks-guide-card').count()===0&&await v1.page.locator('[data-ks-advisor-panel]').isHidden());
+    await v1.submit();record('v1 still sends original mode and limit',new URL(v1.requests.at(-1)).searchParams.get('mode')==='guided'&&new URL(v1.requests.at(-1)).searchParams.get('limit')==='6');
+    record('v1 keeps result behavior',await v1.page.locator('.ks-guide-card').count()===3);await sample(v1,'v1 mode compatibility');
+  }finally{await v1.close();}
+  for(const options of [{js:false},{mode:'missing'},{mode:'failure'}]){
+    const f=await fixture({advisor:true,width:390,...options});
+    try{record('no JS/module/init retains catalog fallback '+JSON.stringify(options),await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).isVisible()&&f.requests.length===0&&await f.page.locator('[data-ks-guide-fields]').evaluate(x=>x.disabled&&x.hidden));await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).click();record('fallback catalog navigation works '+JSON.stringify(options),new URL(f.page.url()).pathname==='/articoli.aspx');}finally{await f.close();}
+  }
+  report.limitations.push('BFCache checked by persisted lifecycle event, not actual browser history cache restoration; no assistive technology or physical device certification');
 }
 (async()=>{
   try{await run();console.log('SHOPPING_PROGRESSIVE_ASSERTIONS='+report.assertions+'; BROWSER='+report.browser);}

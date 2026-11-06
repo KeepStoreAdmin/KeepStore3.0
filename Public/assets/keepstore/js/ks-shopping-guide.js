@@ -127,6 +127,85 @@
     target.searchParams.set('limit', String(MAX_RESULTS));
     return target.href;
   }
+  function requestAdvisorURL(b, paths, criteria, skipped) {
+    var target = new URL(requestURL(b, paths));
+    target.searchParams.set('mode', 'guided2');
+    target.searchParams.set('criteria', JSON.stringify(criteria));
+    target.searchParams.set('skipped', JSON.stringify(skipped));
+    return target.href;
+  }
+  function validateAdvisor(payload, b, paths, criteria, skipped) {
+    var meta = payload && payload.guided;
+    if (!object(payload) || payload.mode !== 'guided2' || !object(meta) || meta.version !== 2 ||
+        !object(meta.criteria) || !Array.isArray(meta.attributes) || meta.attributes.length > 32 ||
+        !Array.isArray(meta.actions) || meta.actions.length > 8 || meta.poolLimit !== 96 ||
+        meta.selectionScope !== 'bounded-catalog-candidates' || typeof meta.exhaustive !== 'boolean' ||
+        !Number.isSafeInteger(meta.analyzedCount) || meta.analyzedCount < 0 || meta.analyzedCount > 96 ||
+        !Number.isSafeInteger(meta.eligibleCount) || meta.eligibleCount < 0 || meta.eligibleCount > meta.analyzedCount || typeof meta.knowledgeLimited!=='boolean' || meta.knowledgeLimited&&meta.exhaustive) throw new Error('payload');
+    keys(meta,['version','policyVersion','scope','selectionScope','exhaustive','poolLimit','knowledgeLimited','analyzedCount','eligibleCount','returnedCount','selectionLimited','limit','displayLabel','summary','criteria','attributes','question','actions']);
+    keys(meta.criteria,['q','st','ct','tp','pmin','pmax','disponibile','ordinamento','attributes','skipped']);
+    text(meta.scope, 200, false); text(meta.policyVersion, 80, false); text(meta.summary, 1000, true);
+    if (Object.keys(b).some(function (key) { return meta.criteria[key] !== b[key]; }) || meta.criteria.ct !== 0 || meta.criteria.tp !== 0) throw new Error('payload');
+    function signature(list) {
+      if (!Array.isArray(list) || list.length > 8) throw new Error('payload');
+      return list.map(function (c) {
+        keys(c, ['attributeId', 'operator', 'value', 'priority']);
+        text(c.attributeId, 200, false); text(c.value, 120, false);
+        if (['eq','gte','lte'].indexOf(c.operator) < 0 || ['hard','soft'].indexOf(c.priority) < 0) throw new Error('payload');
+        return JSON.stringify([c.attributeId,c.operator,c.value,c.priority]);
+      }).sort().join('|');
+    }
+    if (signature(meta.criteria.attributes) !== signature(criteria) || !Array.isArray(meta.criteria.skipped) ||
+        meta.criteria.skipped.length > 24 || meta.criteria.skipped.some(function (id) { return typeof id !== 'string'; }) ||
+        meta.criteria.skipped.slice().sort().join('|') !== skipped.slice().sort().join('|')) throw new Error('payload');
+    var definitions = new Map();
+    meta.attributes.forEach(function (a) {
+      if (!object(a) || definitions.has(a.id) || typeof a.canAsk !== 'boolean' || typeof a.canHardFilter !== 'boolean' ||
+          typeof a.coverage !== 'number' || !Number.isFinite(a.coverage) || a.coverage < 0 || a.coverage > 1 ||
+          !Array.isArray(a.operators) || a.operators.length > 3 || a.operators.some(function (op) { return ['eq','gte','lte'].indexOf(op) < 0; }) ||
+          !Array.isArray(a.observedValues) || a.observedValues.length > 16) throw new Error('payload');
+      text(a.id,200,false);text(a.label,100,false);text(a.type,40,false);text(a.unit,30,true);text(a.scope,200,false);text(a.origin,100,false);text(a.risk,40,false);
+      a.observedValues.forEach(function (v) { text(v,120,false); }); definitions.set(a.id,a);
+    });
+    if (meta.question !== null) {
+      var q=meta.question, definition=object(q)&&definitions.get(q.attributeId);
+      if (!definition || !definition.canAsk || typeof q.allowSkip !== 'boolean' || typeof q.allowIndifferent !== 'boolean' ||
+          typeof q.allowUnknown !== 'boolean' || q.operator !== 'eq' || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 16) throw new Error('payload');
+      text(q.id,200,false);text(q.label,300,false);
+      text(q.reason,500,true);
+      var seenOptions=new Set();q.options.forEach(function (o) { if(!object(o)||seenOptions.has(o.value)||definition.observedValues.indexOf(o.value)<0)throw new Error('payload');text(o.value,120,false);text(o.label,180,false);seenOptions.add(o.value); });
+    }
+    meta.actions.forEach(function (a) {
+      if (!object(a) || a.kind!=='relax' || a.requiresConfirmation!==true || !Array.isArray(a.attributeIds) || !a.attributeIds.length ||
+          a.attributeIds.length>8 || a.attributeIds.some(function(id){return !criteria.some(function(c){return c.attributeId===id;});}))throw new Error('payload');
+      text(a.id,200,false);text(a.label,300,false);
+      text(a.reason,500,true);
+    });
+    // Reuse the unchanged v1 commercial URL, identity, price and stock guards.
+    var old = Object.assign({},payload,{mode:'guided',guided:{version:1,criteria:b,displayLabel:meta.displayLabel,returnedCount:meta.returnedCount,selectionLimited:true,limit:6}});
+    var result=validate(old,b,paths);
+    result.items.forEach(function(item,i){
+      var source=payload.suggestions[i];
+      if(source.productKey!==item.key || !Array.isArray(source.values)||source.values.length>32||!Array.isArray(source.evaluations)||source.evaluations.length>8||['complete','partial','unconstrained'].indexOf(source.match)<0)throw new Error('payload');
+      var ids=new Set();source.values.forEach(function(v){
+        if(!object(v)||!definitions.has(v.attributeId)||ids.has(v.attributeId)||['known','missing','ambiguous','conflicting'].indexOf(v.evidenceStatus)<0)throw new Error('payload');
+        ids.add(v.attributeId);if(v.value!==null)text(v.value,120,false);text(v.sourceField,80,true);text(v.evidenceRef,200,true);text(v.evidenceText,180,true);
+        if(v.sourceField && v.sourceField.split(',').some(function(field){return ['Descrizione1','Descrizione2','DescrizioneLunga','DescrizioneHTML','MarcheDescrizione','Codice','Ean','SettoriDescrizione','CategorieDescrizione'].indexOf(field)<0;}))throw new Error('payload');
+        if(v.evidenceStatus==='known' && (v.value===null||!v.evidenceRef||!v.sourceField))throw new Error('payload');
+      });
+      var evaluated=new Set();source.evaluations.forEach(function(e){
+        var requested=criteria.find(function(c){return c.attributeId===e.attributeId;});
+        if(!requested||!definitions.has(e.attributeId)||evaluated.has(e.attributeId)||e.priority!==requested.priority||['SATISFIED','VIOLATED','UNKNOWN'].indexOf(e.status)<0||e.priority==='hard'&&e.status!=='SATISFIED')throw new Error('payload');
+        evaluated.add(e.attributeId);text(e.evidenceRef,200,true);
+        var fact=source.values.find(function(v){return v.attributeId===e.attributeId;});if(e.status!=='UNKNOWN'&&(!fact||fact.evidenceStatus!=='known'||e.evidenceRef!==fact.evidenceRef))throw new Error('payload');
+      });
+      if(evaluated.size!==criteria.length || source.match==='complete'&&(!criteria.length||source.evaluations.some(function(e){return e.status!=='SATISFIED';})) || source.match==='unconstrained'&&criteria.length)throw new Error('payload');
+      if(!Array.isArray(source.textEvidence)||source.textEvidence.length>3)throw new Error('payload');source.textEvidence.forEach(function(e){keys(e,['text','sourceField','evidenceRef']);text(e.text,180,false);text(e.evidenceRef,200,false);if(['Descrizione1','Descrizione2','DescrizioneLunga','DescrizioneHTML'].indexOf(e.sourceField)<0)throw new Error('payload');});
+      item.facts=source.values;item.evaluations=source.evaluations;item.match=source.match;item.advisorReason=text(source.reason,1000,true);item.textEvidence=source.textEvidence;
+    });
+    if(meta.eligibleCount<result.items.length)throw new Error('payload');
+    result.advisor=meta;return result;
+  }
   function text(value, max, optional) {
     if (optional && (value === null || typeof value === 'undefined')) return '';
     if (typeof value !== 'string' || value.length > max || (!optional && !value.trim())) throw new Error('payload');
@@ -278,6 +357,57 @@
     });
     var state = { phase: 'idle', confirmed: null, confirmedGoal: '', draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
     var skippedQuestions = [], proposedNeed = null, needPatch = null;
+    var advisor = { enabled:false, criteria:[], skipped:[], attributes:[], draft:false, confirmedCriteria:[], confirmedSkipped:[] };
+    var advisorPanel=find('[data-ks-advisor-panel]'), advisorControls=find('[data-ks-advisor-controls]'),
+      advisorCriteria=find('[data-ks-advisor-criteria]'), advisorAttribute=find('#ksAdvisorAttribute'), advisorOperator=find('#ksAdvisorOperator'),
+      advisorValue=find('#ksAdvisorValue'), advisorPriority=find('#ksAdvisorPriority'),advisorNumber=find('#ksAdvisorNumber');
+    function advisorSignature(){return JSON.stringify([advisor.criteria,advisor.skipped]);}
+    function advisorOption(select,value,label){var option=node('option',label);option.value=value;select.appendChild(option);return option;}
+    function clearAdvisorInputs(){
+      advisor.attributes=[];advisor.draft=false;if(advisorAttribute){advisorAttribute.replaceChildren();advisorOption(advisorAttribute,'','Scegli una caratteristica');advisorOperator.replaceChildren();advisorValue.replaceChildren();}
+      if(advisorNumber){advisorNumber.value='';advisorNumber.hidden=true;var label=find('label[for="ksAdvisorNumber"]');if(label)label.hidden=true;}if(advisorControls)advisorControls.disabled=true;
+    }
+    function advisorInputs(){
+      if(!advisorAttribute)return;
+      advisorOperator.replaceChildren();advisorValue.replaceChildren();
+      var a=advisor.attributes.find(function(x){return x.id===advisorAttribute.value;});
+      var numeric=!!a&&a.type==='number';if(advisorNumber){advisorNumber.hidden=!numeric;var numberLabel=find('label[for="ksAdvisorNumber"]');numberLabel.hidden=!numeric;numberLabel.textContent='Valore numerico richiesto'+(a&&a.unit?' ('+a.unit+')':'');}
+      advisorValue.hidden=numeric;var valueLabel=find('label[for="ksAdvisorValue"]');if(valueLabel)valueLabel.hidden=numeric;
+      if(!a)return;
+      a.operators.forEach(function(op){advisorOption(advisorOperator,op,{eq:'Uguale a',gte:'Almeno',lte:'Al massimo'}[op]);});
+      a.observedValues.forEach(function(value){advisorOption(advisorValue,value,value+(a.unit?' '+a.unit:''));});
+      if(advisorNumber)advisorNumber.value=numeric&&a.observedValues.length?a.observedValues[0]:'';
+      advisorPriority.querySelector('[value="hard"]').disabled=!a.canHardFilter;
+      if(!a.canHardFilter)advisorPriority.value='soft';
+    }
+    function renderAdvisorCriteria(){
+      if(!advisorCriteria)return;advisorCriteria.replaceChildren();
+      advisor.criteria.forEach(function(c){var a=advisor.attributes.find(function(x){return x.id===c.attributeId;});
+        var control=button((c.priority==='hard'?'Obbligatorio: ':'Preferenza: ')+(a?a.label:'Caratteristica')+' '+{eq:'=',gte:'≥',lte:'≤'}[c.operator]+' '+c.value+(a&&a.unit?' '+a.unit:'')+' ×',function(){
+          if(!canRefineConfirmed())return;prepare.focus();advisor.criteria=advisor.criteria.filter(function(x){return x!==c;});accept(copy(state.confirmed),true);
+        },'ks-guide-chip');control.setAttribute('aria-label','Rimuovi criterio '+(a?a.label:c.attributeId));advisorCriteria.appendChild(control);
+      });
+    }
+    function renderAdvisor(data){
+      advisor.attributes=data.attributes;advisor.draft=false;
+      if(advisorControls){advisorControls.disabled=false;advisorAttribute.replaceChildren();advisorOption(advisorAttribute,'','Scegli una caratteristica');
+        data.attributes.filter(function(a){return a.canAsk||a.canHardFilter;}).forEach(function(a){advisorOption(advisorAttribute,a.id,a.label+(a.unit?' ('+a.unit+')':''));});advisorInputs();}
+      renderAdvisorCriteria();
+      results.appendChild(node('p',data.summary||'Selezione analizzata nel contesto corrente.','ks-guide-hint'));
+      results.appendChild(node('p',(data.exhaustive?'Analisi completa dei candidati del contesto dichiarato.':data.knowledgeLimited?'Alcune descrizioni superano i limiti di analisi: le caratteristiche non sono tutte verificabili.':'Analisi limitata ai primi 96 candidati: altri prodotti potrebbero essere pertinenti.')+' Analizzati: '+data.analyzedCount+'. Ammissibili nella selezione: '+data.eligibleCount+'.','ks-guide-hint'));
+      if(data.question){var q=data.question,block=node('div',undefined,'ks-guide-question');block.appendChild(node('h3',q.label));
+        q.options.forEach(function(option){var choice=button(option.label,function(){
+          if(!canRefineConfirmed())return;command.focus();var attribute=advisor.attributes.find(function(a){return a.id===q.attributeId;});
+          advisor.criteria=advisor.criteria.filter(function(c){return c.attributeId!==q.attributeId;}).concat([{attributeId:q.attributeId,operator:q.operator,value:option.value,priority:'soft'}]);accept(copy(state.confirmed),true);
+        });choice.setAttribute('data-ks-advisor-option',option.value);choice.setAttribute('data-ks-advisor-attribute',q.attributeId);block.appendChild(choice);});
+        [['allowSkip','Salta','skip'],['allowIndifferent','Indifferente','indifferent'],['allowUnknown','Non lo so','unknown']].forEach(function(kind){if(q[kind[0]]){var skip=button(kind[1],function(){
+          if(!canRefineConfirmed())return;command.focus();advisor.skipped=Array.from(new Set(advisor.skipped.concat([q.attributeId])));accept(copy(state.confirmed),false);
+        });skip.setAttribute('data-ks-advisor-'+kind[2],'');block.appendChild(skip);}});results.appendChild(block);
+      }
+      data.actions.forEach(function(action){var control=button('Confermo: '+action.label,function(){
+        if(!canRefineConfirmed())return;prepare.focus();advisor.criteria=advisor.criteria.filter(function(c){return action.attributeIds.indexOf(c.attributeId)<0;});accept(copy(state.confirmed),true);
+      });control.setAttribute('data-ks-advisor-relax',action.id);recovery.appendChild(control);});
+    }
     var handoffNotice = find('[data-ks-guide-handoff]');
     function handoffMessage(message) { if (handoffNotice) { handoffNotice.textContent = message; handoffNotice.hidden = !message; } }
     function node(tag, label, className) {
@@ -302,10 +432,14 @@
       results.replaceChildren(); comparison.replaceChildren(); recovery.replaceChildren();
       root.removeAttribute('aria-busy'); prepare.removeAttribute('aria-disabled');
       phase(next);
+      if(advisorControls && advisor.enabled && ['loading','context-invalid','error'].indexOf(next)>=0)advisorControls.disabled=true;
+      if(advisor.enabled && next==='context-invalid')clearAdvisorInputs();
     }
     function reviewDraft() {
       if (!draftReview) return;
       var query = clean(input.value + ' ' + detail.value), purpose = goal ? clean(goal.value) : '', maximum = budget ? clean(budget.value) : '';
+      var scopeReset=advisor.enabled&&advisor.criteria.length&&state.confirmed&&query!==state.confirmed.q;
+      prepare.textContent=scopeReset?'Conferma nuova ricerca senza i requisiti precedenti':'Mostra i prodotti';
       var confirmed = !pendingNeedChange() && state.confirmed && clean(input.value) === state.confirmed.q && !clean(detail.value) &&
         purpose === state.confirmedGoal && state.draftSector === state.confirmed.st;
       try { confirmed = confirmed && (!budget || budgetValue(maximum) === state.confirmed.pmax); } catch (_) { confirmed = false; }
@@ -314,6 +448,7 @@
         node('p', purpose ? 'Obiettivo: ' + purpose : 'Obiettivo facoltativo: puoi iniziare da un prodotto o un codice.'),
         node('p', query ? 'Parole da cercare: ' + query : 'Indica il prodotto, la marca o il codice: non deduciamo prodotti dall’obiettivo.'),
         node('p', 'Reparto: ' + (departments.get(state.draftSector) || 'Da scegliere') + ' · ' + (maximum ? 'Budget massimo: ' + maximum + ' €' : 'Nessun limite di prezzo')));
+      if(scopeReset)draftReview.appendChild(node('p','La nuova ricerca non riutilizzerà le caratteristiche precedenti. Conferma esplicitamente oppure ripristina le parole della ricerca corrente.'));
     }
     function syncFields(b) {
       input.value = b.q; detail.value = ''; state.draftSector = b.st;
@@ -323,6 +458,7 @@
       reviewDraft();
     }
     function canRefineConfirmed() {
+      if(advisor.enabled&&advisor.draft){announce('Conferma il criterio sulle caratteristiche oppure seleziona la voce vuota per scartare la bozza.');return false;}
       if (pendingNeedChange()) { announce('La proposta contiene criteri da confermare. Premi “Mostra i prodotti” prima di applicare altre preferenze.'); return false; }
       // syncFields stores the confirmed query in the product field and clears detail.
       // Even redistributing the same words between those fields is an unconfirmed edit.
@@ -338,7 +474,7 @@
     }
     function summaryView() {
       var b = state.confirmed;
-      summary.hidden = !b || !b.q; idle.hidden = !summary.hidden;
+      summary.hidden = !b || (!b.q && !(advisor.enabled&&b.st>0)); idle.hidden = !summary.hidden;
       refine.hidden = summary.hidden; refine.disabled = summary.hidden;
       undo.disabled = !state.history.length;
       chips.replaceChildren();
@@ -360,23 +496,28 @@
         chip.setAttribute('aria-label', 'Rimuovi ' + entry[1]); chips.appendChild(chip);
       });
     }
-    function remember(b) { if (b) { state.history.push({ brief: copy(b), goal: state.confirmedGoal }); if (state.history.length > MAX_HISTORY) state.history.shift(); } }
-    function accept(b, record, nextGoal) {
+    function remember(b) { if (b) { state.history.push({ brief: copy(b), goal: state.confirmedGoal, advisor:advisor.enabled?{criteria:JSON.parse(JSON.stringify(advisor.confirmedCriteria)),skipped:advisor.confirmedSkipped.slice()}:null }); if (state.history.length > MAX_HISTORY) state.history.shift(); } }
+    function accept(b, record, nextGoal, restoreAdvisor) {
       var purpose = typeof nextGoal === 'string' ? nextGoal : state.confirmedGoal;
-      if (state.request && same(state.request.brief, b) && purpose === state.confirmedGoal) return;
-      if (record && (!same(state.confirmed, b) || purpose !== state.confirmedGoal)) remember(state.confirmed);
+      if (state.request && same(state.request.brief, b) && purpose === state.confirmedGoal && (!advisor.enabled||state.request.advisorSignature===advisorSignature())) return;
+      if (record && (!same(state.confirmed, b) || purpose !== state.confirmedGoal || advisor.enabled&&advisorSignature()!==JSON.stringify([advisor.confirmedCriteria,advisor.confirmedSkipped]))) remember(state.confirmed);
+      if(advisor.enabled&&!restoreAdvisor&&state.confirmed&&(b.q!==state.confirmed.q||b.st!==state.confirmed.st)){advisor.criteria=[];advisor.skipped=[];clearAdvisorInputs();renderAdvisorCriteria();}
+      if(advisor.enabled){advisor.confirmedCriteria=JSON.parse(JSON.stringify(advisor.criteria));advisor.confirmedSkipped=advisor.skipped.slice();}
       if (!same(state.confirmed, b) || purpose !== state.confirmedGoal) skippedQuestions = [];
       state.confirmedGoal = purpose;
       needPatch = null;
       state.confirmed = copy(b); state.unknown = ''; newQuery.hidden = true; command.value = '';
       syncFields(b); summaryView();
-      if (!b.q) { invalidate('editing'); announce('Indica il prodotto da cercare.'); return; }
+      if (!b.q && !(advisor.enabled&&b.st>0)) { invalidate('editing'); announce('Indica il prodotto da cercare.'); return; }
       search(b);
     }
     function resetGuide() {
+      advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.draft=false;renderAdvisorCriteria();if(advisorControls)advisorControls.disabled=true;
+      clearAdvisorInputs();
       needPatch = null; proposedNeed = null; skippedQuestions = [];
       var proposedView = find('[data-ks-guide-interpretation]'); if (proposedView) proposedView.replaceChildren();
       remember(state.confirmed); state.confirmed = null; state.confirmedGoal = ''; state.unknown = '';
+      advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
       state.handoffSectorPending = false; handoffMessage('');
       syncFields(blank()); command.value = ''; newQuery.hidden = true;
       invalidate('idle'); summaryView(); announce('La guida è pronta per una nuova ricerca.'); input.focus();
@@ -387,9 +528,10 @@
         announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla oppure “Ricomincia” per scartare la bozza.'); return;
       }
       if (!canRefineConfirmed()) return;
-      var previous = state.history.pop(); accept(previous.brief, false, previous.goal);
+      var previous = state.history.pop();if(advisor.enabled){advisor.criteria=previous.advisor?previous.advisor.criteria:[];advisor.skipped=previous.advisor?previous.advisor.skipped:[];} accept(previous.brief, false, previous.goal, true);
     }
     function prepareSearch() {
+      if(advisor.enabled&&advisor.draft){announce('Usa Conferma criterio per applicare il requisito in bozza, oppure scegli la voce vuota per scartarlo.');return;}
       if (state.handoffSectorPending) {
         announce('Il reparto importato non è disponibile. Scegli un reparto proposto oppure “Tutti i reparti”, poi conferma la ricerca.');
         var choice = choices.find(function (item) { return !item.disabled && !item.hidden; });
@@ -411,7 +553,7 @@
       try {
         var b = copy(state.confirmed || blank());
         if (needPatch) b = Object.assign(b, needPatch);
-        b.q = queryText(input.value, detail.value); b.st = state.draftSector;
+        b.q = advisor.enabled&&!clean(input.value)&&!clean(detail.value)&&state.draftSector>0?'':queryText(input.value, detail.value); b.st = state.draftSector;
         if (maximum !== null) b.pmax = maximum;
         input.removeAttribute('aria-invalid'); detail.removeAttribute('aria-invalid');
         accept(b, true, goal ? clean(goal.value) : '');
@@ -434,6 +576,7 @@
       invalidate('editing');
       if (parsed.kind === 'unknown') {
         state.unknown = parsed.text; newQuery.hidden = false;
+        newQuery.textContent=advisor.enabled&&advisor.criteria.length?'Usa il testo come nuova ricerca senza i requisiti precedenti':'Usa il testo come nuova ricerca';
         announce('Preferenza non riconosciuta. Puoi usare questo testo come nuova ricerca, solo confermando il pulsante.');
       } else announce(parsed.message);
     }
@@ -458,6 +601,19 @@
       article.appendChild(node('p', item.price, 'ks-guide-price'));
       article.appendChild(node('p', stock(item), 'ks-guide-stock'));
       if (item.offer || item.refurbished) article.appendChild(node('p', [item.offer ? 'Offerta applicabile' : '', item.refurbished ? 'Ricondizionato' : ''].filter(Boolean).join(' · '), 'ks-guide-badge'));
+      if(state.result.advisor){
+        article.appendChild(node('p',item.match==='complete'?'Rispetta tutti i criteri verificati':item.match==='partial'?'Requisiti obbligatori rispettati; preferenze da valutare':'Candidato senza requisiti sulle caratteristiche','ks-guide-match'));
+        if(item.advisorReason)article.appendChild(node('p',item.advisorReason,'ks-guide-reason'));
+        var sourceDetails=node('details'),sourceSummary=node('summary','Caratteristiche e fonti','ks-guide-edit');sourceDetails.appendChild(sourceSummary);
+        item.facts.filter(function(f){var a=advisor.attributes.find(function(x){return x.id===f.attributeId;});return a&&(a.canAsk||a.canHardFilter)&&f.evidenceStatus==='known';}).slice(0,3).forEach(function(f){var a=advisor.attributes.find(function(x){return x.id===f.attributeId;});article.appendChild(node('p',a.label+': '+f.value+(a.unit?' '+a.unit:''),'ks-guide-evidence'));});
+        var facts=node('dl',undefined,'ks-advisor-facts');
+        item.facts.forEach(function(f){var a=advisor.attributes.find(function(x){return x.id===f.attributeId;});if(!a)return;
+          facts.appendChild(node('dt',a.label));var value=f.evidenceStatus==='known'?f.value+(a.unit?' '+a.unit:''):{missing:'Dato non disponibile',ambiguous:'Dato ambiguo',conflicting:'Fonti discordanti'}[f.evidenceStatus];facts.appendChild(node('dd',value));
+          if(f.evidenceText)facts.appendChild(node('dd',f.sourceField.split(',').map(function(field){return {'Descrizione1':'Titolo','Descrizione2':'Descrizione breve','DescrizioneLunga':'Descrizione lunga','DescrizioneHTML':'Scheda descrittiva','MarcheDescrizione':'Marca nel catalogo','Codice':'Codice','Ean':'EAN','SettoriDescrizione':'Reparto','CategorieDescrizione':'Categoria'}[field]||field;}).join(', ')+': «'+f.evidenceText+'»'));
+        });sourceDetails.appendChild(facts);
+        item.evaluations.forEach(function(e){var a=advisor.attributes.find(function(x){return x.id===e.attributeId;});article.appendChild(node('p',(a?a.label:'Criterio')+': '+{SATISFIED:'rispettato',VIOLATED:'non rispettato',UNKNOWN:'non verificabile'}[e.status]+(e.priority==='hard'?' (obbligatorio)':' (preferenza)'),'ks-guide-evidence'));});
+        (item.textEvidence||[]).forEach(function(e){sourceDetails.appendChild(node('p','Nella '+({Descrizione2:'descrizione breve',DescrizioneLunga:'descrizione lunga',DescrizioneHTML:'scheda descrittiva',Descrizione1:'descrizione del prodotto'}[e.sourceField])+' viene indicato: «'+e.text+'». Corrispondenza testuale, non certificazione di idoneità.','ks-guide-evidence'));});article.appendChild(sourceDetails);
+      } else {
       var proof = evidence(item, state.confirmed);
       article.appendChild(node('p', proof.matched.length && !proof.unverified.length ? 'Termini presenti nei dati' : 'Corrispondenza da verificare', 'ks-guide-match'));
       article.appendChild(node('p', reason(item, state.confirmed), 'ks-guide-reason ks-guide-evidence'));
@@ -467,6 +623,7 @@
       if (state.confirmed.ordinamento === 'p_basso' && decision(state.result.items).lowest.indexOf(item.key) >= 0) article.appendChild(node('p', 'Da approfondire se la priorità è il prezzo: minimo fra i candidati restituiti, non dell’intero catalogo.', 'ks-guide-evidence'));
       var requirements = interpretNeed(state.confirmedGoal).limits;
       if (requirements.length) article.appendChild(node('p', requirements.join(' '), 'ks-guide-unverified'));
+      }
       article.appendChild(link(item.availability > 0 ? 'Vai alla scheda e acquista' : 'Scopri questo prodotto', item.url, 'ks-guide-product-cta'));
       var label = node('label', undefined, 'ks-guide-check'), check = doc.createElement('input');
       check.type = 'checkbox'; check.setAttribute('data-ks-guide-compare-key', item.key);
@@ -486,6 +643,9 @@
       comparison.appendChild(node('h3', 'Differenze a colpo d’occhio'));
       comparison.appendChild(node('p', 'Solo i prodotti della selezione corrente. ' + state.result.label, 'ks-guide-hint'));
       var insight = decision(items), lowest = items.filter(function (item) { return insight.lowest.indexOf(item.key) >= 0; });
+      var comparedAttributes=state.result.advisor?advisor.attributes.filter(function(a){return advisor.criteria.some(function(c){return c.attributeId===a.id;})||items.some(function(item){return item.facts.some(function(f){return f.attributeId===a.id&&f.evidenceStatus==='known';});})&&(a.canAsk||a.canHardFilter);}).sort(function(a,b){return Number(advisor.criteria.some(function(c){return c.attributeId===b.id;}))-Number(advisor.criteria.some(function(c){return c.attributeId===a.id;}));}).slice(0,8):[];
+      function comparedFact(item,a){var f=item.facts.find(function(value){return value.attributeId===a.id;});return !f||f.evidenceStatus==='missing'?'Dato non disponibile':f.evidenceStatus!=='known'?'Dato non verificabile':f.value+(a.unit?' '+a.unit:'');}
+      comparedAttributes.forEach(function(a){if(new Set(items.map(function(item){return comparedFact(item,a);})).size>1)insight.differences.push(a.label);});
       var overview = node('div', undefined, 'ks-guide-decision-summary');
       overview.appendChild(node('p', 'Prezzo visualizzato più basso fra questi ' + items.length + ' prodotti: ' +
         lowest.map(function (item) { return item.title; }).join(' · ') + ' (' + lowest[0].price + ').' + (lowest.length > 1 ? ' Più prodotti hanno lo stesso prezzo visualizzato.' : '')));
@@ -510,12 +670,14 @@
         remove.setAttribute('aria-label', 'Rimuovi dal confronto ' + item.title); column.appendChild(remove);
         titles.appendChild(column);
       });
-      [['Prezzo', function (item) { return item.price; }], ['Disponibilità', stock],
+      var compareFields=[['Prezzo', function (item) { return item.price; }], ['Disponibilità', stock],
         ['Marca', function (item) { return item.brand; }], ['Categoria', function (item) { return item.category; }],
         ['Codice', function (item) { return item.code; }], ['Condizione', function (item) { return item.refurbished ? 'Ricondizionato' : ''; }],
         ['Offerta', function (item) { return item.offer ? 'Applicabile' : 'Non indicata'; }],
         ['Corrispondenze verificate', function (item) { return reason(item, state.confirmed); }],
-        ['Da verificare', function (item) { var missing = evidence(item, state.confirmed).unverified; return missing.length ? missing.join(', ') : 'Idoneità all’obiettivo e caratteristiche nella scheda'; }]].forEach(function (field) {
+        ['Da verificare', function (item) { var missing = evidence(item, state.confirmed).unverified; return missing.length ? missing.join(', ') : 'Idoneità all’obiettivo e caratteristiche nella scheda'; }]];
+      if(state.result.advisor){compareFields=compareFields.slice(0,7).concat(comparedAttributes.map(function(a){return [a.label,function(item){return comparedFact(item,a);}];}));comparison.appendChild(node('p','Confronto delle caratteristiche documentate: fino a otto, con priorità ai criteri confermati. Le fonti complete sono nelle card.','ks-guide-hint'));}
+      compareFields.forEach(function (field) {
           var row = node('tr', undefined, insight.differences.indexOf(field[0]) >= 0 ? 'ks-guide-difference' : ''), label = node('th', field[0]); label.scope = 'row'; row.appendChild(label);
           items.forEach(function (item) { row.appendChild(node('td', field[1](item) || 'Dato non disponibile')); });
           data.appendChild(row);
@@ -533,6 +695,7 @@
       announce('Confronto aggiornato: ' + items.length + ' prodotti.');
     }
     function nextQuestion(container) {
+      if(advisor.enabled)return;
       var b = state.confirmed, proposal = chooseQuestion(state.result.items, b, skippedQuestions);
       if (!proposal) return;
       var question = node('div', undefined, 'ks-guide-question');
@@ -544,6 +707,7 @@
     }
     function renderResult() {
       var data = state.result, b = state.confirmed;
+      if(data.advisor){renderAdvisor(data.advisor);results.appendChild(node('h3',data.items.length?'Candidati autorizzati':'Nessun conforme nella selezione analizzata'));results.appendChild(node('p',data.label,'ks-guide-fiscal'));if(data.items.length){var cards=node('div',undefined,'ks-guide-grid');data.items.forEach(function(item){cards.appendChild(productCard(item));});results.appendChild(cards);}results.appendChild(link('Esplora il catalogo con i filtri commerciali',data.catalog));return;}
       results.appendChild(node('h3', data.items.length ? 'Una selezione per la tua ricerca' : 'Nessun risultato in questa selezione'));
       results.appendChild(node('p', data.items.length + ' risultati restituiti, fino a 6. Non è il totale del catalogo.', 'ks-guide-hint'));
       results.appendChild(node('p', data.label, 'ks-guide-fiscal'));
@@ -574,7 +738,7 @@
     }
     function recover(message, invalid) {
       invalidate(invalid ? 'context-invalid' : 'error'); announce(message);
-      if (state.confirmed && state.confirmed.q) {
+      if (state.confirmed && (state.confirmed.q || advisor.enabled&&state.confirmed.st>0)) {
         recovery.appendChild(button(invalid ? 'Aggiorna la selezione' : 'Riprova', function () {
           if (!canRefineConfirmed()) return;
           prepare.focus(); accept(copy(state.confirmed), false);
@@ -589,20 +753,21 @@
       invalidate('loading'); root.setAttribute('aria-busy', 'true');
       prepare.setAttribute('aria-disabled', 'true'); announce('Caricamento della selezione in corso.');
       var generation = state.generation, controller = new win.AbortController();
-      var request = { brief: copy(b), controller: controller, timer: null }; state.request = request;
+      var snapshot=advisor.enabled?{criteria:JSON.parse(JSON.stringify(advisor.criteria)),skipped:advisor.skipped.slice()}:null;
+      var request = { brief: copy(b), controller: controller, timer: null, advisorSignature:advisorSignature() }; state.request = request;
       try {
         var timeout = new win.Promise(function (_, reject) {
           request.timer = win.setTimeout(function () { controller.abort(); reject(new Error('timeout')); }, 8000);
         });
         var operation = (async function () {
-          var response = await win.fetch(requestURL(b, paths), { method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+          var response = await win.fetch(snapshot?requestAdvisorURL(b,paths,snapshot.criteria,snapshot.skipped):requestURL(b, paths), { method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
             headers: { Accept: 'application/json' }, signal: controller.signal });
           if (!response.ok) throw new Error('http-' + response.status);
           if (!/^application\/json(?:;|$)/i.test(response.headers.get('content-type') || '') ||
-              Number(response.headers.get('content-length')) > MAX_BODY) throw new Error('payload');
+              Number(response.headers.get('content-length')) > (snapshot?196608:MAX_BODY)) throw new Error('payload');
           var raw = await response.text();
-          if (raw.length > MAX_BODY) throw new Error('payload');
-          return validate(JSON.parse(raw), b, paths);
+          if (raw.length > (snapshot?196608:MAX_BODY)) throw new Error('payload');
+          return snapshot?validateAdvisor(JSON.parse(raw),b,paths,snapshot.criteria,snapshot.skipped):validate(JSON.parse(raw), b, paths);
         }());
         var result = await win.Promise.race([operation, timeout]);
         if (generation !== state.generation || state.request !== request) return;
@@ -625,6 +790,25 @@
       }
     }
     try {
+      root.querySelectorAll('[data-ks-guide-mode]').forEach(function(control){control.addEventListener('click',function(){
+        var enabled=control.getAttribute('data-ks-guide-mode')==='guided2';if(enabled===advisor.enabled)return;
+        invalidate('editing');advisor.enabled=enabled;advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.draft=false;advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
+        state.confirmed=null;state.history=[];state.confirmedGoal='';needPatch=null;summaryView();renderAdvisorCriteria();clearAdvisorInputs();if(advisorPanel)advisorPanel.hidden=!enabled;
+        root.querySelectorAll('[data-ks-guide-mode]').forEach(function(x){x.setAttribute('aria-pressed',x===control?'true':'false');});
+        announce(enabled?'Scelta per caratteristiche attiva. Conferma la ricerca o scegli un reparto; nessuna richiesta è stata inviata.':'Ricerca guidata attiva. Conferma di nuovo i criteri per vedere una selezione aggiornata.');
+      });});
+      if(advisorAttribute){advisorAttribute.addEventListener('change',function(){advisorInputs();advisor.draft=!!advisorAttribute.value;invalidate('editing');announce(advisor.draft?'Caratteristica in bozza: scegli valore e importanza, poi Conferma criterio.':'Bozza scartata. Conferma la ricerca per aggiornare la selezione.');});
+        [advisorOperator,advisorValue,advisorPriority].forEach(function(control){control.addEventListener('change',function(){advisor.draft=!!advisorAttribute.value;invalidate('editing');});});
+        var add=find('[data-ks-advisor-add]');if(add)add.addEventListener('click',function(){
+          var a=advisor.attributes.find(function(x){return x.id===advisorAttribute.value;});
+          var value=a&&a.type==='number'&&advisorNumber?clean(advisorNumber.value).replace(',','.'):advisorValue.value;
+          if(!a||a.operators.indexOf(advisorOperator.value)<0||(a.type==='number'?!/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,6})?$/.test(value)||Number(value)>1000000000:a.observedValues.indexOf(value)<0)||advisorPriority.value==='hard'&&!a.canHardFilter){announce('Scegli un criterio consentito. Per i numeri usa da 0 a un miliardo e al massimo sei decimali, senza separatori delle migliaia.');return;}
+          var draft=advisor.draft;advisor.draft=false;if(!canRefineConfirmed()){advisor.draft=draft;return;}
+          var next=advisor.criteria.filter(function(c){return c.attributeId!==a.id;});if(next.length>=8){advisor.draft=draft;announce('Puoi confermare al massimo otto criteri.');return;}
+          next.push({attributeId:a.id,operator:advisorOperator.value,value:value,priority:advisorPriority.value});command.focus();advisor.criteria=next;accept(copy(state.confirmed),true);
+        });
+        if(advisorNumber){advisorNumber.addEventListener('input',function(){advisor.draft=!!advisorAttribute.value;invalidate('editing');});advisorNumber.addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();if(!event.isComposing&&event.keyCode!==229&&add)add.click();}});}
+      }
       var understand = find('[data-ks-guide-understand]'), interpretation = find('[data-ks-guide-interpretation]');
       if (understand && interpretation && goal) understand.addEventListener('click', function () {
         invalidate('editing'); proposedNeed = interpretNeed(goal.value); interpretation.replaceChildren();
@@ -665,6 +849,7 @@
         choice.addEventListener('click', function () {
           if (state.handoffSectorPending) { state.handoffSectorPending = false; handoffMessage('Reparto scelto. Controlla la bozza e premi “Mostra i prodotti”.'); }
           state.draftSector = Number(choice.getAttribute('data-ks-guide-sector'));
+          if(advisor.enabled){advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.draft=false;renderAdvisorCriteria();clearAdvisorInputs();}
           choices.forEach(function (other) { other.setAttribute('aria-pressed', other === choice ? 'true' : 'false'); });
           invalidate('editing'); reviewDraft(); announce('Reparto modificato. Premi “Mostra i prodotti” per confermare.');
         });
@@ -723,5 +908,6 @@
   }
   return { init: init, parseCommand: parseCommand, queryText: queryText, blank: blank, urls: urls,
     requestURL: requestURL, catalogURL: catalogURL, validate: validate, reason: reason, evidence: evidence, decision: decision,
-    budgetValue: budgetValue, interpretNeed: interpretNeed, chooseQuestion: chooseQuestion, catalogHandoff: catalogHandoff };
+    budgetValue: budgetValue, interpretNeed: interpretNeed, chooseQuestion: chooseQuestion, catalogHandoff: catalogHandoff,
+    requestAdvisorURL:requestAdvisorURL,validateAdvisor:validateAdvisor };
 }));
