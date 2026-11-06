@@ -306,7 +306,7 @@
     function reviewDraft() {
       if (!draftReview) return;
       var query = clean(input.value + ' ' + detail.value), purpose = goal ? clean(goal.value) : '', maximum = budget ? clean(budget.value) : '';
-      var confirmed = state.confirmed && clean(input.value) === state.confirmed.q && !clean(detail.value) &&
+      var confirmed = !pendingNeedChange() && state.confirmed && clean(input.value) === state.confirmed.q && !clean(detail.value) &&
         purpose === state.confirmedGoal && state.draftSector === state.confirmed.st;
       try { confirmed = confirmed && (!budget || budgetValue(maximum) === state.confirmed.pmax); } catch (_) { confirmed = false; }
       draftReview.setAttribute('aria-label', confirmed ? 'Brief confermato' : 'Brief da confermare');
@@ -323,6 +323,7 @@
       reviewDraft();
     }
     function canRefineConfirmed() {
+      if (pendingNeedChange()) { announce('La proposta contiene criteri da confermare. Premi “Mostra i prodotti” prima di applicare altre preferenze.'); return false; }
       // syncFields stores the confirmed query in the product field and clears detail.
       // Even redistributing the same words between those fields is an unconfirmed edit.
       var currentBudget;
@@ -331,6 +332,9 @@
           (!goal || clean(goal.value) === state.confirmedGoal) && currentBudget === state.confirmed.pmax)) return true;
       announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla.');
       return false;
+    }
+    function pendingNeedChange() {
+      return needPatch && (!state.confirmed || Object.keys(needPatch).some(function (key) { return needPatch[key] !== state.confirmed[key]; }));
     }
     function summaryView() {
       var b = state.confirmed;
@@ -640,7 +644,7 @@
             if (max && currentMaximum && currentMaximum !== max) { announce('Il budget del bisogno e quello nel campo sono diversi. Correggi uno dei due prima di confermare.'); budget.focus(); return; }
             input.value = proposedNeed.query; detail.value = '';
             needPatch = copy(proposedNeed.patch);
-            if (max && budget) budget.value = max.replace('.', ',');
+            if (max && budget) budget.value = max === '0' ? '' : max.replace('.', ',');
             // Non-price criteria are shown for a second, explicit commercial confirmation.
             interpretation.appendChild(node('p', 'Controlla il brief e premi Mostra i prodotti.'));
             reviewDraft(); prepare.focus();

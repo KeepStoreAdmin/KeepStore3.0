@@ -208,6 +208,7 @@ async function fixture(options={}) {
 }
 async function run() {
   if(process.argv.includes('--need-to-choice-only')){
+    report.suite='Need-to-choice delta only';
     browser=await playwright.chromium.launch({executablePath:chrome,headless:true});report.browser=await browser.version();
     await needToChoiceRegressions(); report.status='PASS';return;
   }
@@ -461,6 +462,25 @@ async function needToChoiceRegressions() {
       await f.privacy();
     }finally{await f.close();}
   }
+  const pending=await fixture();try{
+    await pending.page.locator('#ksGuideGoal').fill('Cerco SSD; solo disponibili');
+    await pending.page.locator('[data-ks-guide-understand]').click();await pending.page.getByRole('button',{name:'Usa questa proposta nel brief',exact:true}).click();
+    await pending.page.locator('[data-ks-guide-prepare]').click();await pending.wait('results');
+    await pending.page.getByRole('button',{name:'Rimuovi Solo disponibili',exact:true}).click();await pending.wait('results');
+    await pending.page.locator('[data-ks-guide-understand]').click();await pending.page.getByRole('button',{name:'Usa questa proposta nel brief',exact:true}).click();
+    const n=pending.requests.length;
+    record('reproposed criterion remains a draft',await pending.page.locator('[data-ks-guide-draft-review]').getAttribute('aria-label')==='Brief da confermare');
+    await pending.page.locator('[data-ks-guide-command="prima i meno costosi"]').click();
+    record('unconfirmed proposed criteria cannot be overwritten',pending.requests.length===n);
+    await pending.page.locator('[data-ks-guide-prepare]').click();await pending.wait('results');
+    record('reproposed criterion applies only on confirmation',pending.requests.length===n+1&&new URL(pending.requests.at(-1)).searchParams.get('disponibile')==='1');
+    await pending.page.locator('#ksGuideGoal').fill('Cerco SSD; senza limite di prezzo');
+    await pending.page.locator('[data-ks-guide-understand]').click();await pending.page.getByRole('button',{name:'Usa questa proposta nel brief',exact:true}).click();
+    record('unlimited proposal leaves a valid empty budget',await pending.page.locator('#ksGuideBudget').inputValue()==='');
+    await pending.page.locator('[data-ks-guide-prepare]').click();await pending.wait('results');
+    record('unlimited proposal confirms without a price filter',!new URL(pending.requests.at(-1)).searchParams.has('pmax'));
+    await pending.privacy();
+  }finally{await pending.close();}
 }
 async function decisionRegressions() {
   const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
