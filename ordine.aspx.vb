@@ -1059,10 +1059,14 @@ CheckoutFailureRecoveryService.TracePhase(
                 claimCreated = True
 
                 If Not isLegacyCouponFlow Then
-                    Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
-                    If listino <= 0 Then listino = 1
-                    Dim priceRevalidation As CartPriceRevalidationResult = CartPriceRevalidationHelper.RevalidateCurrentCart(
-                        HttpContext.Current, conn, trns, Convert.ToInt32(LoginId), String.Empty, listino, True, True, Nothing)
+                    Dim priceContext As StorefrontPriceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+                    Dim priceRevalidation As CartPriceRevalidationResult = Nothing
+                    If priceContext IsNot Nothing AndAlso priceContext.PriceListId > 0 AndAlso
+                       priceContext.CompanyId = orderIdentity.CompanyId AndAlso priceContext.IsAuthenticated AndAlso
+                       priceContext.PriceListId = orderIdentity.PriceListId Then
+                        priceRevalidation = CartPriceRevalidationHelper.RevalidateCurrentCart(
+                            HttpContext.Current, conn, trns, Convert.ToInt32(LoginId), String.Empty, priceContext.PriceListId, True, True, Nothing)
+                    End If
                     If priceRevalidation Is Nothing OrElse priceRevalidation.HasBlockingError Then
                         If priceRevalidation Is Nothing Then
                             priceRevalidation = New CartPriceRevalidationResult() With {

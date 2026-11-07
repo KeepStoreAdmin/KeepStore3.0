@@ -6542,6 +6542,9 @@ End Sub
     Dim lblOfferta As Label = TryCast(e.Item.FindControl("lblOfferta"), Label)
     If lblOfferta Is Nothing Then Exit Sub
     lblOfferta.Visible = False
+    Dim priceContext As StorefrontPriceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+    If priceContext Is Nothing OrElse priceContext.PriceListId <= 0 OrElse
+       priceContext.CompanyId <> GetSessionInt("AziendaID", 0) Then Exit Sub
 
     Dim articleId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "ID"), 0)
     Dim tcId As Integer = SafeInt(DataBinder.Eval(e.Item.DataItem, "TCid"), -1)
@@ -6551,9 +6554,9 @@ End Sub
     If Not TryReadDatabaseDecimal(DataBinder.Eval(e.Item.DataItem, "Prezzo"), baseNet) OrElse
        Not TryReadDatabaseDecimal(DataBinder.Eval(e.Item.DataItem, "PrezzoIvato"), baseGross) OrElse
        baseNet <= 0D OrElse baseGross <= 0D Then Exit Sub
-    Dim listino As Integer = GetSessionInt("Listino", GetSessionInt("listino", 1))
     Dim eligibilityContext As ProductPromotionEligibilityContext =
-        ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, listino)
+        ProductPromotionEligibilityResolver.CreateContext(HttpContext.Current, priceContext.CompanyId, priceContext.PriceListId, 0)
+    If eligibilityContext Is Nothing OrElse eligibilityContext.IsAuthenticated <> priceContext.IsAuthenticated Then Exit Sub
     Dim model As ProductPromotionDisplayModel = ProductPromotionDisplayHelper.BuildForProduct(
         ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
         articleId,
