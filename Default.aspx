@@ -27,7 +27,7 @@
         #KsLocalAiSearch130 { padding: 12px 0; margin: 0; scroll-margin-top: 24px; }
         #KsLocalAiSearch130 .ks-ai130-shell { display: block; padding: 18px; border: 1px solid #dce2e8; border-top: 3px solid var(--primary-2, #b32119); border-radius: 14px; background: #fff; box-shadow: 0 6px 24px rgba(24,39,56,.06); }
         #KsLocalAiSearch130 h2 { font-size: clamp(24px, 2.2vw, 30px); line-height: 1.2; margin: 0 0 6px; letter-spacing: -.02em; color: var(--main, #24313f); }
-        #KsLocalAiSearch130 #ksGuideIntro { margin: 0 0 12px; color: #475569; font-size: 14px; line-height: 20px; }
+        #KsLocalAiSearch130 #ksGuideIntro { display: block; margin: 0 0 10px; color: #475569; font-size: 14px; line-height: 18px; font-weight: 400; }
         #KsLocalAiSearch130 [data-ks-guide-fields] { margin: 0; }
         #KsLocalAiSearch130 .ks-guide-entry-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: start; }
         #KsLocalAiSearch130 .ks-guide-entry-row input { height: 48px; border-color: #a4afbc; border-radius: 8px; padding: 10px; }
@@ -44,6 +44,10 @@
         #KsLocalAiSearch130[data-ks-guide-bound] [data-ks-guide-idle] { display: none; }
         #KsLocalAiSearch130 .ks-guide-mode-review { padding: 12px; border-left: 3px solid var(--primary-2, #b32119); background: #f8fafc; }
         #KsLocalAiSearch130 .ks-guide-mode-review button { margin: 6px 8px 0 0; }
+        #KsLocalAiSearch130 .ks-guide-criteria-summary { margin-top: 8px; padding: 10px; border: 1px solid #d4dce5; border-radius: 8px; background: #f8fafc; }
+        #KsLocalAiSearch130 .ks-guide-criteria-summary h3 { margin: 0 0 6px; font-size: 14px; line-height: 20px; font-weight: 600; }
+        #KsLocalAiSearch130 [data-ks-advisor-criteria] { display: flex; flex-wrap: wrap; gap: 6px; }
+        #KsLocalAiSearch130 [data-ks-advisor-criteria] .ks-guide-chip { margin: 0; min-height: 44px; max-width: 100%; overflow-wrap: anywhere; }
         #KsLocalAiSearch130 .ks-guide-output { margin-top: 12px; }
         #KsLocalAiSearch130[data-ks-guide-state="idle"] .ks-guide-output { margin-top: 0; }
         #KsLocalAiSearch130[data-ks-guide-state="idle"] .ks-guide-status:not(:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -318,23 +322,20 @@
             <div class="ks-ai130-shell">
                 <div class="ks-ai130-brain">
                     <h2 id="ksGuideTitle">Non sai quale scegliere?</h2>
-                    <p id="ksGuideIntro">Trova una selezione da confrontare nel negozio.</p>
+                    <label id="ksGuideIntro" for="ksGuideQuery">Quale prodotto vuoi confrontare? Ti aiutiamo a scegliere tra i risultati del catalogo.</label>
                     <fieldset class="ks-guide-fields" data-ks-guide-fields hidden disabled>
                         <legend class="visually-hidden">Guida alla scelta dei prodotti</legend>
                         <div class="ks-guide-entry-row">
-                            <label for="ksGuideQuery" class="visually-hidden">Quale prodotto, marca o codice cerchi?</label>
-                            <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Prodotto, marca o codice" aria-describedby="ksGuideLimit ksGuideHandoff" />
+                            <input id="ksGuideQuery" type="search" maxlength="80" autocomplete="off" placeholder="Tipo di prodotto o marca" aria-describedby="ksGuideLimit ksGuideHandoff" />
                             <button type="button" class="ks-guide-primary" data-ks-guide-prepare>Aiutami a scegliere</button>
                         </div>
                         <p id="ksGuideHandoff" class="ks-guide-hint" data-ks-guide-handoff hidden></p>
                         <div class="ks-guide-toolbar">
                             <button type="button" class="ks-guide-path" data-ks-guide-mode="guided2" aria-pressed="false">Scegli per caratteristiche</button>
+                            <button type="button" class="ks-guide-path" data-ks-guide-mode="guided" aria-pressed="true" hidden>Torna alla ricerca guidata</button>
                             <details class="ks-guide-advanced" data-ks-guide-advanced>
                                 <summary data-ks-guide-settings-summary>Preferenze</summary>
                                 <div class="ks-guide-advanced-body">
-                                    <div class="ks-guide-choices" role="group" aria-label="Percorso della guida">
-                                        <button type="button" data-ks-guide-mode="guided" aria-pressed="true">Ricerca guidata</button>
-                                    </div>
                         <label for="ksGuideGoal">Quale esigenza vuoi risolvere? <span>(facoltativo)</span></label>
                         <textarea id="ksGuideGoal" rows="2" maxlength="160" autocomplete="off" placeholder="Descrivi il tuo obiettivo, senza dati personali" aria-describedby="ksGuideGoalHelp"></textarea>
                         <p id="ksGuideGoalHelp" class="ks-guide-hint">Puoi iniziare con «Cerco …» e aggiungere preferenze separate da punto e virgola, come «solo disponibili» o «prima i meno costosi». La proposta richiede la tua conferma.</p>
@@ -364,6 +365,10 @@
                                     <div data-ks-guide-advanced-extra></div>
                                 </div>
                             </details>
+                        </div>
+                        <div class="ks-guide-criteria-summary" data-ks-advisor-summary hidden role="region" aria-labelledby="ksGuideCriteriaTitle">
+                            <h3 id="ksGuideCriteriaTitle">I tuoi criteri</h3>
+                            <div data-ks-advisor-criteria aria-label="Requisiti confermati"></div>
                         </div>
                         <div data-ks-guide-mode-review class="ks-guide-mode-review" hidden aria-live="polite"></div>
                     </fieldset>
@@ -400,7 +405,6 @@
                     <a href="<%= ResolveUrl("~/articoli.aspx") %>" class="ks-guide-catalog-fallback">Esplora tutto il catalogo</a>
                     <div data-ks-advisor-panel hidden>
                         <p class="ks-guide-hint">Conferma la ricerca o scegli un reparto per scoprire le caratteristiche utilizzabili. I requisiti obbligatori richiedono dati noti: un dato mancante non vale come conferma.</p>
-                        <div data-ks-advisor-criteria aria-label="Requisiti confermati"></div>
                         <details>
                             <summary class="ks-guide-edit">Imposta un requisito o una preferenza</summary>
                             <fieldset class="ks-guide-fields" data-ks-advisor-controls disabled>
@@ -795,6 +799,6 @@
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20261022-home-vetrina-1a"></script>
-    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261107-assistant-ux1d" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261107-assistant-ux1e" %>"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261021-progressive1a" %>"></script>
 </asp:Content>

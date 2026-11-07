@@ -394,10 +394,12 @@
     }
     function renderAdvisorCriteria(){
       if(!advisorCriteria)return;advisorCriteria.replaceChildren();
-      advisor.criteria.forEach(function(c){var a=advisor.attributes.find(function(x){return x.id===c.attributeId;});
-        var control=button((c.priority==='hard'?'Obbligatorio: ':'Preferenza: ')+(a?a.label:'Caratteristica')+' '+{eq:'=',gte:'≥',lte:'≤'}[c.operator]+' '+c.value+(a&&a.unit?' '+a.unit:'')+' ×',function(){
+      var criteriaSummary=find('[data-ks-advisor-summary]');if(criteriaSummary)criteriaSummary.hidden=advisor.criteria.length===0;
+      advisor.criteria.slice().sort(function(a,b){return Number(b.priority==='hard')-Number(a.priority==='hard');}).forEach(function(c){var a=advisor.attributes.find(function(x){return x.id===c.attributeId;});
+        var caption=(c.priority==='hard'?'Indispensabile: ':'Preferenza: ')+(a?a.label:'Caratteristica')+' '+{eq:'=',gte:'≥',lte:'≤'}[c.operator]+' '+c.value+(a&&a.unit?' '+a.unit:'');
+        var control=button(caption+' ×',function(){
           if(!canRefineConfirmed())return;focusOn(prepare);advisor.criteria=advisor.criteria.filter(function(x){return x!==c;});accept(copy(state.confirmed),true);
-        },'ks-guide-chip');control.setAttribute('aria-label','Rimuovi criterio '+(a?a.label:c.attributeId));advisorCriteria.appendChild(control);
+        },'ks-guide-chip');control.setAttribute('aria-label','Rimuovi criterio '+caption);advisorCriteria.appendChild(control);
       });
     }
     function renderAdvisor(data){
@@ -532,7 +534,7 @@
       state.confirmedGoal = purpose;
       needPatch = null;
       state.confirmed = copy(b); state.unknown = ''; newQuery.hidden = true; command.value = '';
-      syncFields(b); summaryView();
+      syncFields(b); summaryView(); renderAdvisorCriteria();
       if (!b.q && !(advisor.enabled&&b.st>0)) { invalidate('editing'); announce('Indica il prodotto da cercare.'); return; }
       search(b);
     }
@@ -841,12 +843,14 @@
       }
     }
     try {
+      function syncModeControls(){root.querySelectorAll('[data-ks-guide-mode]').forEach(function(control){var active=(control.getAttribute('data-ks-guide-mode')==='guided2')===advisor.enabled;control.hidden=active;control.setAttribute('aria-pressed',active?'true':'false');});}
+      syncModeControls();
       function activateMode(enabled,control){
         state.history.forEach(function(h){h.advisor=null;});
         invalidate('editing');advisor.enabled=enabled;advisor.criteria=[];advisor.skipped=[];advisor.receipts={};advisor.confirmedReceipts={};advisor.attributes=[];advisor.draft=false;advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
         summaryView();renderAdvisorCriteria();clearAdvisorInputs();if(advisorPanel)advisorPanel.hidden=true;
         if(modeReview){modeReview.hidden=true;modeReview.replaceChildren();}
-        root.querySelectorAll('[data-ks-guide-mode]').forEach(function(x){x.setAttribute('aria-pressed',x===control?'true':'false');});reviewDraft();
+        syncModeControls();reviewDraft();focusOn(input);
         announce(enabled?'Scelta per caratteristiche attiva. Ricerca e filtri mantenuti: conferma per una nuova selezione.':'Ricerca guidata attiva. Ricerca e filtri mantenuti: conferma per una nuova selezione.');
       }
       root.querySelectorAll('[data-ks-guide-mode]').forEach(function(control){control.addEventListener('click',function(){
@@ -854,7 +858,7 @@
         if(advisor.enabled&&(advisor.criteria.length||advisor.draft)&&modeReview){
           modeReview.hidden=false;modeReview.replaceChildren(node('p','Vuoi passare alla ricerca guidata? I criteri sulle caratteristiche saranno rimossi solo dopo conferma. Ricerca, reparto e filtri commerciali restano invariati.'));
           var confirm=button('Conferma cambio e rimuovi i criteri sulle caratteristiche',function(){activateMode(enabled,control);focusOn(prepare);});confirm.setAttribute('data-ks-guide-confirm-mode','');
-          var cancel=button('Mantieni modalità e criteri',function(){modeReview.hidden=true;modeReview.replaceChildren();focusOn(find('[data-ks-guide-mode][aria-pressed="true"]'));});cancel.setAttribute('data-ks-guide-cancel-mode','');modeReview.append(confirm,cancel);focusOn(confirm);return;
+          var cancel=button('Mantieni modalità e criteri',function(){modeReview.hidden=true;modeReview.replaceChildren();focusOn(find('[data-ks-guide-mode]:not([hidden])')||input);});cancel.setAttribute('data-ks-guide-cancel-mode','');modeReview.append(confirm,cancel);focusOn(confirm);return;
         }
         activateMode(enabled,control);
       });});

@@ -11,11 +11,12 @@ const advisorOnly = process.argv.includes('--advisor-only');
 const advisorQualityOnly = process.argv.includes('--advisor-quality-rev1-only');
 const taxonomyRev2Only = process.argv.includes('--taxonomy-rev2-only');
 const ux1dHistoryOnly = process.argv.includes('--ux-1d-history-only');
-const ux1dOnly = process.argv.includes('--ux-1d-only') || ux1dHistoryOnly;
+const ux1eOnly = process.argv.includes('--ux-1e-only');
+const ux1dOnly = process.argv.includes('--ux-1d-only') || ux1dHistoryOnly || ux1eOnly;
 const ux1dBaseline = process.argv.includes('--ux-1d-baseline');
 const advisorBaselineOnly = process.argv.includes('--advisor-baseline-visual-only');
 const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly || ux1dBaseline;
-const decisionBase = ux1dOnly||ux1dBaseline ? '5839dffdafa4d083cbb243c083a61fae09b4ad9f' : advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
+const decisionBase = ux1eOnly ? '7b89d411e01b246c42d47ac782d86439ff283646' : ux1dOnly||ux1dBaseline ? '5839dffdafa4d083cbb243c083a61fae09b4ad9f' : advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
 fs.mkdirSync(evidence,{recursive:true});
 function baselineSource(file) { return cp.execFileSync('git',['show',decisionBase+':'+file],{cwd:root,encoding:'utf8'}); }
@@ -76,7 +77,7 @@ function advisorPayload(url, config) {
     const response=clone(original.response),paths=api.urls(new URL('./',url).href,new URL(url).pathname);
     Object.assign(response.guided.criteria,spec.brief,{attributes:spec.criteria,skipped:spec.skipped});
     response.catalogUrl=api.catalogURL(spec.brief,paths).href;response.guided.question=null;response.guided.actions=[];
-    if(spec.criteria.length>1){response.suggestions=[];response.total=0;response.guided.returnedCount=0;response.guided.eligibleCount=0;}
+    if(spec.criteria.length>1||config.emptyAttributeSequence&&spec.criteria.length){response.suggestions=[];response.total=0;response.guided.returnedCount=0;response.guided.eligibleCount=0;}
     return response;
   }
   const matching=advisorServer.filter(x=>advisorSignature(x.queryString)===advisorSignature(url));
@@ -270,6 +271,7 @@ async function run() {
   }
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(ux1eOnly){await ux1eRegressions();await ux1dHistoryRegression();report.suite='UX1E focused acceptance plus impacted Undo REV1';report.viewports=[360,390,430,768,1365];report.status='PASS';return;}
   if(ux1dHistoryOnly){await ux1dHistoryRegression();report.status='PASS';return;}
   if(ux1dOnly||ux1dBaseline){await ux1dRegressions();report.status='PASS';return;}
   if(advisorOnly){if(taxonomyRev2Only)await taxonomyRev2Regressions();else await advisorRegressions();report.status='PASS';return;}
@@ -1017,6 +1019,55 @@ async function catalogHandoffRegressions() {
   }
   const safe=await fixture({search:'?guide=catalog-v1&guide_q='+encodeURIComponent('<img src=x>')});
   try{record('import is text, never markup',await safe.page.locator('#ksGuideQuery').inputValue()==='<img src=x>'&&await safe.page.locator('[data-ks-guide-fields] img').count()===0&&safe.requests.length===0);await safe.privacy();}finally{await safe.close();}
+}
+async function ux1eRegressions() {
+  report.uxMeasurements=[];
+  const label='Quale prodotto vuoi confrontare? Ti aiutiamo a scegliere tra i risultati del catalogo.';
+  const settings=async f=>{const d=f.page.locator('[data-ks-guide-advanced]');if(!await d.evaluate(x=>x.open))await d.locator(':scope > summary').press('Enter');};
+  const compact=async f=>f.page.evaluate(()=>{const root=document.getElementById('KsLocalAiSearch130');return {height:root.getBoundingClientRect().height,overflow:document.documentElement.scrollWidth-innerWidth};});
+  for(const file of ['Page.master','Default.aspx.vb','search_suggest.aspx.vb','App_Code/KeepStoreShoppingKnowledge.vb','App_Code/KeepStoreShoppingDecisionPolicy.vb'])record('UX1E unchanged authority '+file,read(file).replace(/\r\n/g,'\n')===baselineSource(file).replace(/\r\n/g,'\n'));
+  for(const kind of ['Tech','Food'])for(const width of [360,390,430,768,1365]){
+    const f=await fixture({width,kind,scenario:kind==='Food'?2:0,advisor:true});
+    try{
+      await f.page.evaluate(()=>document.fonts.ready);const m=await compact(f);report.uxMeasurements.push({kind,width,...m});
+      record('UX1E idle height at390 '+kind+width,width!==390||m.height<=240);record('UX1E idle overflow '+kind+width,m.overflow<=0);
+      record('UX1E one visible label names main field '+kind+width,await f.page.getByRole('searchbox',{name:label,exact:true}).count()===1&&await f.page.locator('label[for="ksGuideQuery"]').count()===1&&await f.page.locator('#ksGuideIntro').isVisible()&&await f.page.locator('#ksGuideQuery').getAttribute('placeholder')==='Tipo di prodotto o marca');
+      record('UX1E single inactive-mode action at startup '+kind+width,await f.page.locator('[data-ks-guide-mode]:visible').count()===1&&await f.page.locator('[data-ks-guide-mode="guided"]').getAttribute('hidden')!==null&&await f.page.locator('[data-ks-guide-mode="guided"]').getAttribute('aria-pressed')==='true');
+      record('UX1E empty summary entirely hidden '+kind+width,!await f.page.locator('[data-ks-advisor-summary]').isVisible()&&await f.page.locator('[data-ks-advisor-criteria]').count()===1);
+      record('UX1E label field CTA do not overlap '+kind+width,await f.page.evaluate(()=>{const l=document.getElementById('ksGuideIntro').getBoundingClientRect(),q=document.getElementById('ksGuideQuery').getBoundingClientRect(),b=document.querySelector('[data-ks-guide-prepare]').getBoundingClientRect(),separate=(a,c)=>a.bottom<=c.top||a.right<=c.left||c.bottom<=a.top||c.right<=a.left;return separate(l,q)&&separate(l,b)&&q.right<=b.left&&q.height>=44&&b.height>=44;}));
+      if(width===390||width===1365)await f.screenshot('idle-'+kind+'-'+width);
+      await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');
+      record('UX1E guided2 visible return and stable focus '+kind+width,await f.page.getByRole('button',{name:'Torna alla ricerca guidata',exact:true}).isVisible()&&await f.page.locator('[data-ks-guide-mode]:visible').count()===1&&await f.page.locator('#ksGuideQuery').evaluate(x=>document.activeElement===x));
+      await f.page.locator('#ksGuideQuery').press('Tab');await f.page.locator('[data-ks-guide-prepare]').press('Tab');record('UX1E tab skips hidden active mode '+kind+width,await f.page.locator('[data-ks-guide-mode="guided"]').evaluate(x=>document.activeElement===x&&getComputedStyle(x).outlineStyle!=='none'));
+      await f.page.locator('[data-ks-guide-mode="guided"]').press('Enter');record('UX1E return guided has visible focus and no fetch '+kind+width,f.requests.length===0&&await f.page.locator('#ksGuideQuery').evaluate(x=>document.activeElement===x)&&await f.page.getByRole('button',{name:'Scegli per caratteristiche',exact:true}).isVisible());
+      if(width===390){await f.submit();record('UX1E v1 first three with validated fiscal data '+kind,await f.page.locator('.ks-guide-card:visible').count()===3&&await f.page.locator('.ks-guide-fiscal').isVisible());}
+      await f.privacy();record('UX1E fixture requests resolved '+kind+width,f.apiErrors.length===0);
+    }finally{await f.close();}
+  }
+  const hardRow=advisorServer.find(x=>x.name==='tech-hard'),hard=advisorSpec(hardRow.queryString).criteria[0],definition=hardRow.response.guided.attributes.find(a=>a.id!==hard.attributeId&&a.type!=='number'&&a.canAsk&&a.observedValues.length),soft={attributeId:definition.id,operator:'eq',value:definition.observedValues[0],priority:'soft'};
+  for(const width of [390,1365]){
+    const f=await fixture({advisor:true,width,historyFixture:true,emptyAttributeSequence:true});
+    const add=async c=>{await settings(f);const d=f.page.locator('[data-ks-advisor-panel] details');if(!await d.evaluate(x=>x.open))await d.locator('summary').press('Enter');await f.page.locator('#ksAdvisorAttribute').selectOption(c.attributeId);await f.page.locator('#ksAdvisorOperator').selectOption(c.operator);await f.page.locator(c===hard?'#ksAdvisorNumber':'#ksAdvisorValue')[c===hard?'fill':'selectOption'](c.value);await f.page.locator('#ksAdvisorPriority').selectOption(c.priority);await f.page.locator('[data-ks-advisor-add]').press('Enter');};
+    try{
+      await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');await f.page.locator('#ksGuideQuery').fill('scelta');await settings(f);await f.page.locator('[data-ks-guide-sector="7"]').press('Enter');await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      f.config.delay=500;await add(soft);record('UX1E criterion immediately visible while pending '+width,await f.state()==='loading'&&await f.page.locator('[data-ks-advisor-summary]').isVisible()&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);await f.wait('empty');
+      await add(hard);record('UX1E summary external and hard sorted before soft '+width,await f.page.locator('[data-ks-advisor-summary]').evaluate(el=>!el.closest('details'))&&(await f.page.locator('[data-ks-advisor-criteria] button').allTextContents())[0].startsWith('Indispensabile:')&&(await f.page.locator('[data-ks-advisor-criteria] button').allTextContents())[1].startsWith('Preferenza:'));await f.wait('empty');f.config.delay=0;
+      record('UX1E closed Preferences retains unique visible criteria '+width,!await f.page.locator('[data-ks-guide-advanced]').evaluate(x=>x.open)&&await f.page.getByRole('heading',{name:'I tuoi criteri',exact:true}).isVisible()&&await f.page.locator('[data-ks-advisor-criteria]').count()===1);
+      record('UX1E sorting is presentation-only and accessible '+width,JSON.stringify(advisorSpec(f.requests.at(-1)).criteria)===JSON.stringify([soft,hard])&&await f.page.getByRole('button',{name:/^Rimuovi criterio Indispensabile:/}).count()===1);await f.screenshot('criteria-'+width);
+      const before=f.requests.length;f.config.delay=500;await f.page.locator('[data-ks-advisor-criteria] button').first().press('Enter');record('UX1E removal updates summary while pending '+width,await f.state()==='loading'&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);await f.wait('empty');f.config.delay=0;
+      record('UX1E one removal one request with other criterion intact '+width,f.requests.length===before+1&&JSON.stringify(advisorSpec(f.requests.at(-1)).criteria)===JSON.stringify([soft]));
+      await settings(f);await f.page.locator('[data-ks-guide-undo]').press('Enter');await f.wait('empty');record('UX1E explicit same-mode Undo restores visible ordered criteria '+width,await f.page.locator('[data-ks-advisor-criteria] button').count()===2&&(await f.page.locator('[data-ks-advisor-criteria] button').first().innerText()).startsWith('Indispensabile:'));
+      await f.page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await f.wait('context-invalid');record('UX1E BFCache preserves visible constraints without fetch '+width,await f.page.locator('[data-ks-advisor-summary]').isVisible()&&await f.page.locator('[data-ks-advisor-criteria] button').count()===2);await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('empty');
+      f.config.status=503;await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('error');record('UX1E error keeps criteria visible and fallback reachable '+width,await f.page.locator('[data-ks-advisor-summary]').isVisible()&&await f.page.locator('[data-ks-guide-recovery] a').isVisible());f.config.status=0;
+      const count=f.requests.length;await f.page.locator('[data-ks-guide-mode="guided"]').press('Enter');await f.page.locator('[data-ks-guide-cancel-mode]').press('Enter');record('UX1E cancel retains requirements and visible return focus '+width,f.requests.length===count&&await f.page.locator('[data-ks-advisor-criteria] button').count()===2&&await f.page.locator('[data-ks-guide-mode="guided"]').evaluate(x=>document.activeElement===x&&x.checkVisibility()));
+      await f.page.locator('[data-ks-guide-mode="guided"]').press('Enter');await f.page.locator('[data-ks-guide-confirm-mode]').press('Enter');record('UX1E explicit exit clears summary without hidden focus or fetch '+width,f.requests.length===count&&!await f.page.locator('[data-ks-advisor-summary]').isVisible()&&await f.page.locator('[data-ks-guide-prepare]').evaluate(x=>document.activeElement===x&&x.checkVisibility()));
+      await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');await settings(f);await f.page.locator('[data-ks-guide-undo]').press('Enter');await f.wait('results');record('UX1E mode history cannot reactivate removed criteria '+width,advisorSpec(f.requests.at(-1)).criteria.length===0&&f.receiptHeaders.at(-1).length===0&&!await f.page.locator('[data-ks-advisor-summary]').isVisible());
+      await add(soft);await f.wait('empty');await settings(f);await f.page.locator('[data-ks-guide-reset]').press('Enter');record('UX1E reset hides whole summary '+width,!await f.page.locator('[data-ks-advisor-summary]').isVisible()&&await f.page.locator('[data-ks-advisor-criteria] button').count()===0);
+      record('UX1E expanded layout overflow '+width,(await compact(f)).overflow<=0);await f.privacy();record('UX1E criterion sequence local requests resolved '+width,f.apiErrors.length===0);
+    }finally{await f.close();}
+  }
+  for(const options of [{js:false},{mode:'missing'},{mode:'failure'}]){const f=await fixture({width:390,...options});try{record('UX1E no-JS/init failure native fallback '+JSON.stringify(options),await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).isVisible()&&f.requests.length===0);}finally{await f.close();}}
+  for(const status of [403,500]){const f=await fixture({width:390,status});try{await f.submit();record('UX1E HTTP fallback and visible mode action '+status,await f.page.locator('[data-ks-guide-recovery] a').isVisible()&&await f.page.locator('.ks-guide-card').count()===0&&await f.page.locator('[data-ks-guide-mode]:visible').count()===1);await f.privacy();}finally{await f.close();}}
 }
 async function ux1dHistoryRegression() {
   report.suite='UX1D REV1 mode/history differential only';report.viewports=[390,1365];

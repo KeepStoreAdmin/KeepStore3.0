@@ -7,6 +7,7 @@ param(
     [switch]$DecisionJourneyOnly,
     [switch]$NeedToChoiceOnly,
     [switch]$Ux1DOnly,
+    [switch]$Ux1EOnly,
     [string]$GuidedFixturePath,
     [string]$AdvisorFixturePath
 )
@@ -15,6 +16,7 @@ $ErrorActionPreference='Stop'
 if($CatalogHandoffOnly -and $DecisionJourneyOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($NeedToChoiceOnly -and ($CatalogHandoffOnly -or $DecisionJourneyOnly)){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($Ux1DOnly -and ($NeedToChoiceOnly -or $CatalogHandoffOnly -or $DecisionJourneyOnly)){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
+if($Ux1EOnly -and ($Ux1DOnly -or $NeedToChoiceOnly -or $CatalogHandoffOnly -or $DecisionJourneyOnly)){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
 $root=Split-Path -Parent $PSScriptRoot
 $output=[IO.Path]::GetFullPath($EvidenceDirectory)
@@ -24,7 +26,7 @@ if(-not (Test-Path -LiteralPath $PlaywrightModulePath) -or -not (Test-Path -Lite
 [void][IO.Directory]::CreateDirectory($output)
 $payload=Join-Path $output 'server-payloads.json'
 $serverLog=Join-Path $output 'server-tests.log'
-if($Ux1DOnly){
+if($Ux1DOnly -or $Ux1EOnly){
     # Reuse attested real-VB payloads with synthetic I/O. UX changes do not require
     # recompiling the unchanged commercial endpoint suite or contacting IIS/MySQL.
     foreach($fixturePath in @($GuidedFixturePath,$AdvisorFixturePath)){
@@ -105,7 +107,9 @@ End Class
     if(-not (Select-String -LiteralPath $serverLog -Pattern '^SEARCH_SUGGEST_SYNTHETIC_SUITE=PASS$' -Quiet)){throw 'COMMERCIAL_CONTRACT_SUITE_FAILED'}
 }
 $node=(Get-Command node -CommandType Application -ErrorAction Stop).Source
-if($Ux1DOnly){
+if($Ux1EOnly){
+    & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --ux-1e-only --advisor-fixtures ([IO.Path]::GetFullPath($AdvisorFixturePath))
+}elseif($Ux1DOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --ux-1d-only --advisor-fixtures ([IO.Path]::GetFullPath($AdvisorFixturePath))
 }elseif($NeedToChoiceOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --need-to-choice-only
