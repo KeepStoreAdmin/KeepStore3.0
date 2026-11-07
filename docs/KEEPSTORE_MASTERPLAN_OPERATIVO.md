@@ -1,5 +1,9 @@
 # KeepStore Masterplan Operativo
 
+## DOCS-COORDINATION-CLAUDE-1A — 2026-11-07
+
+Decisione PO: coordinamento a tre ChatGPT – Claude – Codex in cinque fasi (PROPOSTA, REVISIONE, DECISIONE, ESECUZIONE, REVIEW), registrato in `AGENTS.md`; nuovo `CLAUDE.md` con la sola direttiva `@AGENTS.md`. Mandato [DECISIONE ChatGPT] del 07/11, profilo ECONOMY, docs-only, base `a551d75a4d124ac9898633f09d44bf7b92a42909`; eseguito da Claude su assegnazione esplicita del PO dopo l'installazione dell'app Claude su GitHub (Codex non coinvolto, nessuna working copy Windows toccata). Manifest4: `AGENTS.md`, `CLAUDE.md`, `docs/KEEPSTORE_START_HERE.md`, questo Masterplan. Corretta la frase storica "PR #419 resta DRAFT" (MERGED/CLOSED 07/11, HEAD `a551d75a`); checkpoint START_HERE riallineato. Nessun runtime, precompile, test browser, DB, ACL o server: verifiche limitate a manifest, `git diff --check`, scansione segreti del diff e riferimenti. Revisione Claude del mandato KS-C01 accolta: prossimo task `KS-C01-LISTINO-AUTHORITY-1A` NON AVVIATO; G2 idempotenza carrello Session/InProc differito (decisione DB), G3 varianti/IVA speciale/SQL runtime gate LAB, G4 backlog, G5 coupon STANDBY. Finding `amazon.aspx` (azioni GET senza autorizzazione visibile) e `diagnostic.aspx` (token letterale) registrati per task di sicurezza dedicato; `test.aspx` non dimostrato attivo (markup senza CodeFile). Esposizione sul server da verificare in sola lettura, senza richieste che attivino import/export.
+
 ## F01-1C REV2 — continuita tassonomica, 2026-11-07
 
 Stessa PR #419, ripresa dal nuovo HEAD `d56481e01dc9545853cf6498d802235e7082b4e0` nel worktree isolato. Applicata l'autorizzazione permanente AGENTS e la sola eccezione ACL storica tipizzata: baseline REV1 originale conservata, confronto pre/post leggero53/52/4, nessun ripristino ACL o nuovo forense. Stable/main non coinvolti.

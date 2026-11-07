@@ -10,9 +10,21 @@ Il Product Owner autorizza **a tempo indeterminato, fino a revoca o modifica esp
 
 **Regola di preservazione efficiente:** considera queste sole tre ACE gia' inventariate un *delta ambientale autorizzato* nel confronto con la baseline REV1, senza cancellare, aggiornare o sostituire tale baseline. Usa i SID/ACE esatti del rapporto locale quando accessibile; non estendere la deroga ad ACE diverse, nuovi percorsi o permessi ulteriori. Conserva una comparazione pre/post **leggera** dello stato effettivo del task e i controlli di hash/owner/metadati, inventario 53/52/4, staging e ref Git. Una nuova variazione indotta dal task va corretta o circoscritta; un'anomalia significativa non documentata va segnalata **una sola volta con evidenza precisa**, senza avviare cicli ripetuti di audit né interrompere automaticamente lavoro isolato che non coinvolga la risorsa. Nessun ripristino indiscriminato tramite `icacls /reset`, `takeown` o modifica delle ACL dei parent.
 
-**Limiti invariati:** la standing authorization non autorizza a toccare `main`, force/rebase/reset, bypass dei controlli commerciali, operazioni fuori task, modifiche globali alla sicurezza del computer, merge/deploy non autorizzati o interventi su server, LAB, IIS, MySQL operativo, Aruba, pagamenti, email. PR #419 resta DRAFT fino a review; Task08 NON AVVIATO. Per modifiche necessarie ai file del task nessun audit generale ACL aggiuntivo; se il PC Windows non e' accessibile dagli strumenti di questa sessione, non simulare accesso o modifiche locali.
+**Limiti invariati:** la standing authorization non autorizza a toccare `main`, force/rebase/reset, bypass dei controlli commerciali, operazioni fuori task, modifiche globali alla sicurezza del computer, merge/deploy non autorizzati o interventi su server, LAB, IIS, MySQL operativo, Aruba, pagamenti, email. PR #419 MERGED/CLOSED il 2026-11-07, HEAD `a551d75a4d124ac9898633f09d44bf7b92a42909` (frase storica "DRAFT fino a review" superata); Task08 NON AVVIATO. Per modifiche necessarie ai file del task nessun audit generale ACL aggiuntivo; se il PC Windows non e' accessibile dagli strumenti di questa sessione, non simulare accesso o modifiche locali.
 
 **Eccezione manifest esplicita PO:** `AGENTS.md` e' aggiunto al manifest cumulativo della PR #419 esclusivamente per registrare questa nuova decisione permanente; non consente altri ampliamenti di scope.
+
+## Coordinamento ChatGPT – Claude – Codex — decisione PO 2026-11-07 (PERMANENTE)
+
+Germano non e' un programmatore e trasferisce i messaggi fra gli assistenti. Ogni task segue cinque fasi, con etichetta in testa al messaggio:
+
+1. **[PROPOSTA ChatGPT]** — ragionamento, gate A/B/C/D e bozza del prompt esecutivo. Germano la incolla a Claude.
+2. **[REVISIONE Claude]** — verifica indipendente su Git/codice reali; restituisce il prompt migliorato e separa `ESEGUE CLAUDE` (attivita' cloud/read-only: analisi, elenco gap con file e riga, review di diff/PR, bozze di manuali e prompt) da `ESEGUE CODEX` (tutto cio' che richiede Windows: PowerShell, precompile 4.8, IIS/browser locali). Germano la incolla a ChatGPT.
+3. **[DECISIONE ChatGPT]** — accetta o contesta punto per punto con motivazione breve ed emette il prompt finale. **Al massimo un secondo confronto** ChatGPT–Claude; se resta un disaccordo sostanziale ciascuno espone la propria posizione in poche righe e **decide Germano**.
+4. **ESECUZIONE / [RISULTATO Codex]** — **un solo esecutore per working copy/branch**: vietati due esecutori simultanei. Codex e' l'unico esecutore Windows; le operazioni Git/GitHub del task (branch, commit, push, PR DRAFT) le svolge l'esecutore assegnato, normalmente Codex, oppure Claude quando il PO gli assegna esplicitamente un task cloud/docs (es. `DOCS-COORDINATION-CLAUDE-1A`).
+5. **REVIEW / [REVIEW Claude]** — review indipendenti di ChatGPT e Claude sul diff pubblicato, registrate nella PR con attribuzione corretta; i revisori non presentano le prove sintetiche dell'esecutore come test rieseguiti. **Esito A solo senza blocker in entrambe le review**; una verifica SOURCE non equivale a certificazione IIS/MySQL/produzione. Merge FF soltanto con autorizzazione PO.
+
+Le autorizzazioni restano per singolo task; questo coordinamento non sblocca server, LAB, IIS, MySQL operativo, Aruba, deploy, pagamenti, e-mail o funzioni in STANDBY. `CLAUDE.md` nella radice contiene soltanto `@AGENTS.md`: questo file resta la fonte unica delle regole per tutti gli assistenti.
 
 ## KS-RIPRENDI — contratto di bootstrap
 
@@ -93,7 +105,8 @@ Questa modalita e obbligatoria per i task runtime KeepStore salvo deroga esplici
 
 - **Germano** decide priorita, perimetro e risultato commerciale e concede le autorizzazioni finali richieste. Non esegue operazioni Git/GitHub.
 - **ChatGPT** coordina: definisce requisito, profilo, manifest, test e stop; controlla il diff, valuta report/finding, assegna A/B/E e autorizza l'avanzamento.
-- **Codex** investiga e implementa l'autorizzato; esegue branch, test e smoke automatizzabili, commit, push, apertura/aggiornamento PR, merge autorizzato, sincronizzazione e verifiche finali. Non decide ampliamenti, manifest o merge.
+- **Codex** investiga e implementa l'autorizzato; esegue branch, test e smoke automatizzabili, commit, push, apertura/aggiornamento PR, merge autorizzato, sincronizzazione e verifiche finali. Non decide ampliamenti, manifest o merge. E' l'unico esecutore sul PC Windows.
+- **Claude** (dal 2026-11-07) e' revisore indipendente di prompt e PR ed esegue attivita' cloud/read-only; svolge operazioni Git/GitHub solo nei task cloud/docs che il PO gli assegna esplicitamente. Non decide merge e non lavora mai sulla stessa working copy/branch di un altro esecutore. Coordinamento nella sezione dedicata sopra.
 
 ## Gerarchia delle fonti
 
