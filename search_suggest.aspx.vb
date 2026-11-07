@@ -323,7 +323,9 @@ Partial Public Class search_suggest
         Dim summary As String = If(products.Count = 0,
             If(truncated, "Nessun candidato conforme nei 96 analizzati. La ricerca nella selezione è incompleta.", "Nessun candidato conforme nella selezione corrispondente ai termini e filtri confermati."),
             "Risultati valutati sui dati documentati nella selezione; i dati mancanti non confermano un requisito.")
-        If decision.TaxonomyRequired Then summary = "La selezione comprende famiglie diverse o non coincide con la famiglia del criterio. Scegli prima il reparto dai controlli della guida e conferma la ricerca; nessuna domanda sulle caratteristiche è applicata a famiglie diverse."
+        If decision.TaxonomyRequired Then summary = If(filters.SettoreId > 0,
+            "Nel reparto selezionato restano famiglie diverse o la famiglia del criterio non coincide. Precisa la ricerca oppure scegli una categoria nel catalogo; le domande sulle caratteristiche restano sospese.",
+            "La selezione comprende famiglie diverse o non coincide con la famiglia del criterio. Scegli un reparto, precisa la ricerca oppure continua nel catalogo; nessuna domanda sulle caratteristiche è applicata a famiglie diverse.")
         If Not decision.TaxonomyRequired AndAlso corpus.Attributes.Any(Function(a) Not a.Available) Then summary = "Un criterio confermato non è valutabile nel pool corrente. Non conferma caratteristiche di altri prodotti: modifica i filtri oppure rimuovilo esplicitamente."
         Dim metadata As New Dictionary(Of String, Object) From {
             {"version", 2}, {"policyVersion", KeepStoreShoppingKnowledge.CurrentPolicyVersion & "/" & KeepStoreShoppingDecisionPolicy.PolicyVersion},

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$Rev1Baseline)
+param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$Rev1Baseline, [switch]$Rev2Only)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
@@ -426,6 +426,36 @@ $endpointCases=@'
 
 '@
 $rev1Cases=@'
+    Private Sub RunTaxonomyContinuity(outputDirectory As String)
+        relationalRows = Nothing : invalidProjection = 0 : offers.Clear()
+        batchStatus = ProductPromotionEligibilityLoadStatus.Success
+        Dim samples As New List(Of Object)
+        For Each company As Integer In {1, 2}
+            For Each field As String In {"CategorieId", "TipologieId", "GruppiId", "SottoGruppiId", "homogeneous"}
+                Dim query As String = "mode=guided2&q=scelta&st=7&limit=6"
+                If field = "homogeneous" Then query = query.Replace("q=scelta", "q=scelta%20precisa")
+                Dim result = AdvisorPayload(query, 7, 20, company, If(company = 1, 1, 10), changeRows:=Sub(rows)
+                    If field <> "homogeneous" Then
+                        For index As Integer = 10 To rows.Rows.Count - 1
+                            rows.Rows(index)(field) = CInt(rows.Rows(index)(field)) + 1
+                        Next
+                    End If
+                End Sub)
+                Dim meta = DirectCast(result("guided"), Dictionary(Of String, Object))
+                Assert(CBool(meta("taxonomyRequired")) = (field <> "homogeneous"), "REV2 exact family differentiation " & field & " company" & company)
+                Assert(CInt(DirectCast(meta("criteria"), Dictionary(Of String, Object))("st")) = 7 AndAlso CInt(result("total")) = 6, "REV2 existing sector and shortlist preserved")
+                If field = "homogeneous" Then
+                    Assert(meta("question") IsNot Nothing, "REV2 homogeneous question preserved")
+                Else
+                    Assert(meta("question") Is Nothing AndAlso DirectCast(meta("attributes"), List(Of Dictionary(Of String, Object))).All(Function(a) Not CBool(a("canAsk")) AndAlso Not CBool(a("canHardFilter"))), "REV2 no general technical question on mixed families")
+                    Assert(CStr(meta("summary")).Contains("Precisa la ricerca") AndAlso Not CStr(meta("summary")).Contains("Scegli prima il reparto"), "REV2 no repeated selected-sector instruction")
+                End If
+                samples.Add(New With {.name = "rev2-" & company & "-" & field, .queryString = query, .response = result})
+            Next
+        Next
+        File.WriteAllText(Path.Combine(outputDirectory, "server-advisor-payloads.json"), New System.Web.Script.Serialization.JavaScriptSerializer With {.MaxJsonLength = 4194304}.Serialize(New With {.fixtures = samples}), New System.Text.UTF8Encoding(False))
+    End Sub
+
     Private Class AdvisorWorker
         Inherits System.Web.Hosting.SimpleWorkerRequest
         Private ReadOnly _company As Integer
@@ -621,6 +651,7 @@ if(-not $masterMethod){throw 'MASTER_FISCAL_METHOD_REQUIRED'}
 $harness=$harness.Replace('RunGuided(If(args.Length > 1, args(1), String.Empty))','RunGuided(If(args.Length > 1, args(1), String.Empty))'+[Environment]::NewLine+'                RunKnowledge(args(2))'+[Environment]::NewLine+'                RunAdvisorEndpoint(args(2))')
 $harness=[regex]::Replace($harness,'(?m)^End Module\s*$',($knowledgeCases+[Environment]::NewLine+$endpointCases+[Environment]::NewLine+$rev1Cases+[Environment]::NewLine+'End Module'))
 if($Rev1Baseline){$harness=$harness.Replace('Dim candidate As Boolean =', 'RunQualityBaseline(args(2))'+[Environment]::NewLine+'            Return'+[Environment]::NewLine+'            Dim candidate As Boolean =')}
+if($Rev2Only){$harness=$harness.Replace('Dim candidate As Boolean =', 'RunTaxonomyContinuity(args(2))'+[Environment]::NewLine+'            Return'+[Environment]::NewLine+'            Dim candidate As Boolean =')}
 try {
     $harnessPath=Join-Path $work 'AdvisorHarness.vb'
     [IO.File]::WriteAllText($harnessPath,$harness,$utf8)

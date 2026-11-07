@@ -1,5 +1,13 @@
 # KeepStore Masterplan Operativo
 
+## F01-1C REV2 — continuita tassonomica, 2026-11-07
+
+Stessa PR #419, ripresa dal nuovo HEAD `d56481e01dc9545853cf6498d802235e7082b4e0` nel worktree isolato. Applicata l'autorizzazione permanente AGENTS e la sola eccezione ACL storica tipizzata: baseline REV1 originale conservata, confronto pre/post leggero53/52/4, nessun ripristino ACL o nuovo forense. Stable/main non coinvolti.
+
+P2 corretto: il recupero di `taxonomyRequired` non ripropone il settore gia selezionato. La scelta reparto resta disponibile solo senza settore confermato; in tutti i contesti misti compaiono modifica esplicita delle parole (focus al campo esistente, nessuna richiesta automatica) e uscita verso il catalogo canonico restituito dal server. Nessuna categoria/tipologia/gruppo/sottogruppo inventata e nessun filtro non supportato. Conferma, criteri, ricevute e autorita commerciali invariati; pool omogeneo senza nuove azioni. Cache-buster aggiornato, nessun CSS nuovo. Design Gate proporzionato: riuso dei controlli KeepStore/ONSUS e dei pattern di focus/recupero gia verificati in REV1, nessuna nuova pretesa UX o conversione misurata.
+
+Manifest REV2 minimo7: `search_suggest.aspx.vb`, `Public/assets/keepstore/js/ks-shopping-guide.js`, `Default.aspx`, due test esistenti, Roadmap e Masterplan.78 controlli compilati VB PASS con10 payload effettivi: categorie, tipologie, gruppi e sottogruppi differenti nello stesso settore, piu pool omogeneo, per aziende/listini1/1 e2/10 sintetici.603 controlli Chrome PASS,40 contesti chiusi,360/390/430/1365: assenza di loop, focus/tastiera, target44, nessun overflow, query affinata solo dopo conferma e navigazione catalogo con settore preservato. SQL catturato2 letture per fixture come prima; nessun accesso MySQL. Helper conoscenza/policy/MachineKey e protocollo v1 non modificati:946 VB e637 Chrome REV1 riusati per le parti non impattate, non rieseguiti/sommati. Precompile safe4.8, diff-check, secret guard e CI sul candidato nel rapporto finale TEMP `KeepStoreAdvisor1CRev2-20261107`. SOURCE/fixture, non IIS/MySQL/LAB/produzione. Nessun merge; prossimo gate review indipendente della stessa PR, Task08 NON AVVIATO. **CONSEGNA SERVER SOSPESA**.
+
 ## F01-1C REV1 QUALITY & NON-REGRESSION — 2026-11-06
 
 Ripresa della stessa PR #419, candidato iniziale `7f3c29d194d21429fa09cffb1c7265b62c763f9a`, stable `21dee2e4` invariata. Tre difetti riprodotti con VB compilato e I/O sintetico: cinque fonti HTML nascoste/opache ammesse hard; domanda tecnica su pool con famiglie diverse; definizione scomparsa dopo un filtro trasformata in `invalid_criteria`/400. Evidenza baseline in `%TEMP%/KeepStoreAdvisor1CRev1-20261106-39cf8b21/baseline/rev1-baseline.json`; nessun IIS/MySQL.

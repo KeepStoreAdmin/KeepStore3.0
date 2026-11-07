@@ -399,7 +399,12 @@
         data.attributes.filter(function(a){return a.canAsk||a.canHardFilter;}).forEach(function(a){advisorOption(advisorAttribute,a.id,a.label+(a.unit?' ('+a.unit+')':''));});advisorInputs();}
       renderAdvisorCriteria();
       results.appendChild(node('p',data.summary||'Selezione analizzata nel contesto corrente.','ks-guide-hint'));
-      if(data.taxonomyRequired){var choose=button('Scegli il reparto nei controlli della guida',function(){var choice=choices.find(function(x){return !x.disabled&&!x.hidden&&Number(x.getAttribute('data-ks-guide-sector'))>0;});(choice||input).focus();});choose.setAttribute('data-ks-advisor-taxonomy','');results.appendChild(choose);}
+      if(data.taxonomyRequired){
+        if(!state.confirmed.st){var choose=button('Scegli il reparto nei controlli della guida',function(){var choice=choices.find(function(x){return !x.disabled&&!x.hidden&&Number(x.getAttribute('data-ks-guide-sector'))>0;});(choice||input).focus();});choose.setAttribute('data-ks-advisor-taxonomy','');results.appendChild(choose);}
+        var editQuery=button('Modifica la ricerca'+(state.confirmed.st?' nel reparto selezionato':''),function(){input.focus();input.select();invalidate('editing');reviewDraft();announce('Precisa le parole della ricerca, poi conferma. Nessun criterio viene rimosso automaticamente.');});
+        editQuery.setAttribute('data-ks-advisor-edit-query','');results.appendChild(editQuery);
+        var browse=link('Scegli una categoria nel catalogo',state.result.catalog,'ks-guide-catalog-fallback');browse.setAttribute('data-ks-advisor-taxonomy-catalog','');results.appendChild(browse);
+      }
       results.appendChild(node('p',(data.exhaustive?'Analisi completa dei candidati del contesto dichiarato.':data.knowledgeLimited?'Alcune descrizioni superano i limiti di analisi: le caratteristiche non sono tutte verificabili.':'Analisi limitata ai primi 96 candidati: altri prodotti potrebbero essere pertinenti.')+' Analizzati: '+data.analyzedCount+'. Ammissibili nella selezione: '+data.eligibleCount+'.','ks-guide-hint'));
       if(data.question){var q=data.question,block=node('div',undefined,'ks-guide-question');block.appendChild(node('h3',q.label));
         q.options.forEach(function(option){var choice=button(option.label,function(){

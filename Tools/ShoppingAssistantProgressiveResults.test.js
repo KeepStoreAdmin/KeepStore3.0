@@ -9,6 +9,7 @@ const handoffOnly = process.argv.includes('--catalog-handoff-only');
 const decisionOnly = process.argv.includes('--decision-journey-only');
 const advisorOnly = process.argv.includes('--advisor-only');
 const advisorQualityOnly = process.argv.includes('--advisor-quality-rev1-only');
+const taxonomyRev2Only = process.argv.includes('--taxonomy-rev2-only');
 const advisorBaselineOnly = process.argv.includes('--advisor-baseline-visual-only');
 const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly;
 const decisionBase = advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
@@ -247,7 +248,7 @@ async function run() {
   }
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
-  if(advisorOnly){await advisorRegressions();report.status='PASS';return;}
+  if(advisorOnly){if(taxonomyRev2Only)await taxonomyRev2Regressions();else await advisorRegressions();report.status='PASS';return;}
   if(baselineVisualOnly){
     report.viewports=[390,1365];
     for(const width of report.viewports){const f=await fixture({width});try{await f.submit();await f.page.locator('[data-ks-guide-compare-key]').nth(0).check();await f.page.locator('[data-ks-guide-compare-key]').nth(1).check();await f.screenshot('baseline-Tech-'+width+'-workspace');await f.privacy();}finally{await f.close();}}
@@ -992,6 +993,42 @@ async function catalogHandoffRegressions() {
   }
   const safe=await fixture({search:'?guide=catalog-v1&guide_q='+encodeURIComponent('<img src=x>')});
   try{record('import is text, never markup',await safe.page.locator('#ksGuideQuery').inputValue()==='<img src=x>'&&await safe.page.locator('[data-ks-guide-fields] img').count()===0&&safe.requests.length===0);await safe.privacy();}finally{await safe.close();}
+}
+async function taxonomyRev2Regressions() {
+  report.suite='REV2 taxonomy continuity delta';report.viewports=[360,390,430,1365];
+  const paths=api.urls('https://tenant1.invalid/','/search_suggest.aspx');
+  for(const row of advisorServer){const s=advisorSpec(row.queryString);record('REV2 real VB response '+row.name,api.validateAdvisor(row.response,s.brief,paths,s.criteria,s.skipped).items.length===6);}
+  for(const row of advisorServer)for(const width of report.viewports){
+    const company2=row.name.startsWith('rev2-2-'),f=await fixture({advisor:true,width,scenario:company2?2:0,advisorScenario:row.name});
+    try{
+      await f.page.locator('[data-ks-guide-mode="guided2"]').click();await f.page.locator('#ksGuideQuery').fill(advisorSpec(row.queryString).brief.q);await f.page.locator('[data-ks-guide-sector="7"]').click();
+      await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      const mixed=row.response.guided.taxonomyRequired;
+      record('REV2 exact family state '+row.name+width,(await f.page.locator('[data-ks-advisor-option]').count()>0)===!mixed);
+      record('REV2 no selected-sector loop '+row.name+width,await f.page.locator('[data-ks-advisor-taxonomy]').count()===0);
+      record('REV2 no overflow '+row.name+width,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      if(mixed){
+        const browse=f.page.locator('[data-ks-advisor-taxonomy-catalog]');
+        record('REV2 catalog uses exact server URL '+row.name+width,await browse.getAttribute('href')===new URL(row.response.catalogUrl,'https://'+(company2?'tenant2.invalid':'tenant1.invalid')+'/').href);
+        const target=await f.page.locator('[data-ks-advisor-edit-query]').boundingBox();record('REV2 recovery touch target '+row.name+width,target.height>=44&&target.width>=44);
+        const before=f.requests.length;
+        await f.page.locator('[data-ks-advisor-edit-query]').press('Enter');
+        record('REV2 edit focus and no implicit fetch '+row.name+width,f.requests.length===before&&await f.page.locator('#ksGuideQuery').evaluate(x=>document.activeElement===x));
+        record('REV2 sector preserved in edit '+row.name+width,await f.page.locator('[data-ks-guide-sector="7"]').getAttribute('aria-pressed')==='true');
+        f.config.advisorScenario='rev2-'+(company2?'2':'1')+'-homogeneous';
+        await f.page.locator('#ksGuideQuery').fill('scelta precisa');
+        await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+        record('REV2 homogeneous recovery restores own question '+row.name+width,await f.page.locator('[data-ks-advisor-option]').count()>0);
+        // Request the mixed fixture once more to exercise the real catalog exit.
+        f.config.advisorScenario=row.name;await f.page.locator('#ksGuideQuery').fill('scelta');await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+        if(width===390)await f.screenshot(row.name+'-'+width);
+        await f.privacy();
+        await f.page.locator('[data-ks-advisor-taxonomy-catalog]').press('Enter');
+        record('REV2 catalog exit navigates without commercial mutation '+row.name+width,new URL(f.page.url()).pathname==='/articoli.aspx'&&new URL(f.page.url()).searchParams.get('st')==='7');
+      }
+      if(!mixed)await f.privacy();
+    }finally{await f.close();}
+  }
 }
 async function advisorRegressions() {
   record('explicit advisor API available',typeof api.validateAdvisor==='function'&&typeof api.requestAdvisorURL==='function');
