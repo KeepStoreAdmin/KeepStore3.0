@@ -19,9 +19,9 @@ Il Product Owner autorizza **a tempo indeterminato, fino a revoca o modifica esp
 Germano non e' un programmatore e trasferisce i messaggi fra gli assistenti. Ogni task segue cinque fasi, con etichetta in testa al messaggio:
 
 1. **[PROPOSTA ChatGPT]** — ragionamento, gate A/B/C/D e bozza del prompt esecutivo. Germano la incolla a Claude.
-2. **[REVISIONE Claude]** — verifica indipendente su Git/codice reali; restituisce il prompt migliorato e separa `ESEGUE CLAUDE` (attivita' cloud/read-only: analisi, elenco gap con file e riga, review di diff/PR, bozze di manuali e prompt) da `ESEGUE CODEX` (tutto cio' che richiede Windows: PowerShell, precompile 4.8, IIS/browser locali). Germano la incolla a ChatGPT.
+2. **[REVISIONE Claude]** — verifica indipendente su Git/codice reali; restituisce il prompt migliorato e separa `ESEGUE CLAUDE` (attivita' cloud/read-only: analisi, elenco gap con file e riga, review di diff/PR, bozze di manuali e prompt) da `ESEGUE CODEX` (tutto cio' che richiede Windows: PowerShell, precompile 4.8, IIS/browser locali). Claude resta il revisore indipendente ordinario; l'esecuzione Windows tramite Claude Code e' ammessa solo come eccezione esplicitamente autorizzata dal PO (vedi punto 4). Germano la incolla a ChatGPT.
 3. **[DECISIONE ChatGPT]** — accetta o contesta punto per punto con motivazione breve ed emette il prompt finale. **Al massimo un secondo confronto** ChatGPT–Claude; se resta un disaccordo sostanziale ciascuno espone la propria posizione in poche righe e **decide Germano**.
-4. **ESECUZIONE / [RISULTATO Codex]** — **un solo esecutore per working copy/branch**: vietati due esecutori simultanei. Codex e' l'unico esecutore Windows; le operazioni Git/GitHub del task (branch, commit, push, PR DRAFT) le svolge l'esecutore assegnato, normalmente Codex, oppure Claude quando il PO gli assegna esplicitamente un task cloud/docs (es. `DOCS-COORDINATION-CLAUDE-1A`).
+4. **ESECUZIONE / [RISULTATO Codex]** — **un solo esecutore per working copy/branch**: vietati due esecutori simultanei. Codex e' l'esecutore Windows ordinario. Claude Code puo' eseguire attivita' sul PC Windows soltanto quando e' incaricato espressamente dal Product Owner e dispone di accesso effettivo al filesystem. E' consentito un solo esecutore attivo per working copy/branch. Le operazioni Git/GitHub del task (branch, commit, push, PR DRAFT) le svolge l'esecutore assegnato, normalmente Codex, oppure Claude quando il PO gli assegna esplicitamente un task cloud/docs (es. `DOCS-COORDINATION-CLAUDE-1A`).
 5. **REVIEW / [REVIEW Claude]** — review indipendenti di ChatGPT e Claude sul diff pubblicato, registrate nella PR con attribuzione corretta; i revisori non presentano le prove sintetiche dell'esecutore come test rieseguiti. **Esito A solo senza blocker in entrambe le review**; una verifica SOURCE non equivale a certificazione IIS/MySQL/produzione. Merge FF soltanto con autorizzazione PO.
 
 Le autorizzazioni restano per singolo task; questo coordinamento non sblocca server, LAB, IIS, MySQL operativo, Aruba, deploy, pagamenti, e-mail o funzioni in STANDBY. `CLAUDE.md` nella radice contiene soltanto `@AGENTS.md`: questo file resta la fonte unica delle regole per tutti gli assistenti.
@@ -128,8 +128,8 @@ Se il percorso non è quello atteso oppure il repository remoto non corrisponde 
 Prima della sincronizzazione:
 
 1. Identificare le modifiche locali non committate.
-2. Preservare i 53 file protetti e le quattro cancellazioni tracked secondo l'inventario storico.
-3. Preservare i 52 file untracked inventariati e gli ulteriori contenuti locali legittimi.
+2. Preservare l'inventario storico protetto **53/52/4** (53 protetti, 52 untracked, quattro cancellazioni tracked) secondo il rapporto locale: e' la notazione dell'inventario da preservare, non tre gruppi necessariamente disgiunti da sommare.
+3. Preservare gli untracked inventariati e gli ulteriori contenuti locali legittimi.
 4. Conservare configurazioni operative, immagini, credenziali, upload e dati non versionati.
 5. Predisporre una copia di sicurezza verificabile dei soli elementi a rischio di modifica, collocata fuori dal percorso di lavoro.
 6. Registrare i percorsi coinvolti e, quando pertinente, le impronte dei file da preservare.
@@ -282,8 +282,8 @@ Questa procedura è permanente e deve essere applicata in modo automatico dagli 
 
 - **Germano** decide priorita, perimetro e risultato commerciale e concede le autorizzazioni finali richieste. Non esegue operazioni Git/GitHub.
 - **ChatGPT** coordina: definisce requisito, profilo, manifest, test e stop; controlla il diff, valuta report/finding, assegna A/B/E e autorizza l'avanzamento.
-- **Codex** investiga e implementa l'autorizzato; esegue branch, test e smoke automatizzabili, commit, push, apertura/aggiornamento PR, merge autorizzato, sincronizzazione e verifiche finali. Non decide ampliamenti, manifest o merge. E' l'unico esecutore sul PC Windows.
-- **Claude** (dal 2026-11-07) e' revisore indipendente di prompt e PR ed esegue attivita' cloud/read-only; svolge operazioni Git/GitHub solo nei task cloud/docs che il PO gli assegna esplicitamente. Non decide merge e non lavora mai sulla stessa working copy/branch di un altro esecutore. Coordinamento nella sezione dedicata sopra.
+- **Codex** investiga e implementa l'autorizzato; esegue branch, test e smoke automatizzabili, commit, push, apertura/aggiornamento PR, merge autorizzato, sincronizzazione e verifiche finali. Non decide ampliamenti, manifest o merge. E' l'esecutore Windows ordinario.
+- **Claude** (dal 2026-11-07) e' revisore indipendente ordinario di prompt e PR ed esegue attivita' cloud/read-only; svolge operazioni Git/GitHub solo nei task cloud/docs che il PO gli assegna esplicitamente; tramite Claude Code puo' essere esecutore Windows soltanto su incarico esplicito del PO e con accesso effettivo al filesystem. Un solo esecutore sulla stessa working copy/branch; nessuna autorizzazione implicita a merge, deploy, database o server. Non decide merge e non lavora mai sulla stessa working copy/branch di un altro esecutore. Coordinamento nella sezione dedicata sopra.
 
 ## Gerarchia delle fonti
 
