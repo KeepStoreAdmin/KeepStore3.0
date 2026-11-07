@@ -225,7 +225,9 @@ Nessun esito A può essere attribuito sulla sola base di una dichiarazione non v
 
 #### FASE G — Report finale obbligatorio
 
-Al termine dell'operazione, Claude Code o Codex deve produrre un rapporto sintetico, preferibilmente entro 12 righe, contenente:
+Esecutore: **Codex e' l'esecutore Windows ordinario**; Claude Code puo' eseguire la procedura e redigerne il rapporto soltanto quando il PO lo incarica espressamente e dispone di accesso reale al filesystem Windows. Un solo esecutore attivo per working copy/branch.
+
+Al termine dell'operazione, l'esecutore che ha operato realmente sul filesystem deve produrre un rapporto sintetico, preferibilmente entro 12 righe, contenente:
 
 STATO COPIA LOCALE CANONICA
 
@@ -249,7 +251,7 @@ Il Product Owner deve poter identificare senza ambiguità quali file sono stati 
 
 Ogni nuovo micro-task deve partire dallo stato ufficiale corrente di `frontend-rebuild`.
 Prima di implementare modifiche sul percorso canonico, l'esecutore deve verificarne l'allineamento. Se non è allineato, deve prima eseguire la presente procedura, purché ciò sia compatibile con le autorizzazioni e le protezioni vigenti.
-Durante lo sviluppo possono essere utilizzati branch o worktree dedicati per isolare le modifiche.
+Prevale LOCAL-FIRST: il lavoro runtime ordinario avviene nella working copy canonica `C:\KeepStoreWeb\KeepStore3.0` su un branch `task/<nome-task>` dedicato; worktree esterni o cloni alternativi solo con deroga esplicita del PO, senza un secondo esecutore.
 Dopo il merge autorizzato, l'aggiornamento deve raggiungere anche `C:\KeepStoreWeb\KeepStore3.0`.
 Non devono rimanere note operative che dichiarano genericamente «sincronizzazione da fare» dopo che l'allineamento è stato realmente completato e verificato.
 Le note storiche devono essere conservate; le note di stato correnti devono essere aggiornate.
