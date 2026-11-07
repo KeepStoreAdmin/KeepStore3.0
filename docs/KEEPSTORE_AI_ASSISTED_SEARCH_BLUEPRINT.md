@@ -1,5 +1,17 @@
 # KeepStore AI Assisted Commerce Search Blueprint
 
+## Shopping Assistant UX 1D — candidato SOURCE, 2026-11-07
+
+Base `5839dffdafa4d083cbb243c083a61fae09b4ad9f`. Un solo nodo `KsLocalAiSearch130`, dopo Hero e prima dell'introduzione/categorie HOME; ingresso header esistente invariato. Titolo «Non sai quale scegliere?», campo principale subito visibile e conferma «Aiutami a scegliere». «Scegli per caratteristiche» attiva il percorso gia esistente. Reparti, budget, obiettivo, bozza, reset, undo e criteri confermati sono raccolti in una disclosure nativa «Preferenze»; l'apertura non richiede rete. Nessuna promessa di comprensione universale: restano grammatica finita, conferma esplicita e limiti documentati.
+
+Il pannello avanzato conserva tutti i controlli e apre automaticamente i propri antenati quando un'azione deve portarvi il focus. La sola area di fallback viene spostata una volta nel pannello dopo inizializzazione riuscita; senza JavaScript o con modulo indisponibile restano catalogo e contatto navigabili. Gli avvisi di importazione dal catalogo sono visibili accanto al campo anche con Preferenze chiuse. Nessun launcher, form, campo ricerca o listener header duplicato.
+
+Shortlist: il server restituisce ancora massimo6 elementi; il client mostra i primi3 nello stesso ordine. «Mostra altri N prodotti» rivela gli altri, senza richiesta, ranking o ricalcolo commerciale, e conserva il confronto quando si ricompatta. guided2 presenta prima i risultati, poi l'unica domanda pertinente; conteggi/limiti dell'analisi e fonti complete rimangono in disclosure. Il confronto resta massimo3: differenze prima, tabella completa accessibile tramite disclosure nativa. Dati mancanti e corrispondenze testuali non diventano fatti verificati.
+
+Il cambio modalita mantiene ricerca, reparto, filtri e bozza comune. Uscire da guided2 con requisiti o un criterio in bozza richiede una conferma esplicita della rimozione; annullare mantiene modalita e criteri. Una nuova selezione richiede comunque un'azione esplicita. Nessun fetch su apertura, focus, digitazione, disclosure o semplice cambio modalita; contesto/BFCache invalidano le vecchie card. Payload guided/guided2, ricevute MachineKey, endpoint e autorita server immutati; nessuna query, libreria o persistenza nuova.
+
+Stile limitato al blocco esistente in `Default.aspx`, con token ONSUS del tenant; nessun CSS/header globale modificato. Il cache-buster del modulo viene aggiornato nella medesima pagina. Prove differenziali e misure Chrome, Design Gate e limiti nel [checkpoint UX1D del Masterplan](KEEPSTORE_MASTERPLAN_OPERATIVO.md#ks-f01-shopping-assistant-ux-1d--2026-11-07). Contratto candidato: review indipendenti ChatGPT/Claude e integrazione separate; KS-F01 resta PARZIALE, P95 IIS/produzione NON CERTIFICATE. Server, LAB e Task08 sospesi.
+
 ## Catalog-driven Advisor 1C — contratto candidato 2026-11-06
 
 **REV1 prevalente, PR #419:** policy `ks-attributes-1c.2` / `advisor-decision-1c.2`. L'estrazione ammette solo strutture bilanciate con tag semantici consentiti e senza attributi: non calcola CSS e non rende operativo HTML nascosto, classi/style/ARIA non verificabili, contenitori o markup incompleto. Nessuna esecuzione/esposizione del markup originale. Fatti ed evidenze restano scoped alla famiglia esatta; pool misto -> `taxonomyRequired=true`, nessuna domanda/caratteristica generale, scelta esplicita nei controlli tassonomici esistenti. Il catalogo rimane disponibile quando il reparto non basta a distinguere le famiglie.

@@ -5,12 +5,16 @@ param(
     [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
     [switch]$CatalogHandoffOnly,
     [switch]$DecisionJourneyOnly,
-    [switch]$NeedToChoiceOnly
+    [switch]$NeedToChoiceOnly,
+    [switch]$Ux1DOnly,
+    [string]$GuidedFixturePath,
+    [string]$AdvisorFixturePath
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if($CatalogHandoffOnly -and $DecisionJourneyOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($NeedToChoiceOnly -and ($CatalogHandoffOnly -or $DecisionJourneyOnly)){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
+if($Ux1DOnly -and ($NeedToChoiceOnly -or $CatalogHandoffOnly -or $DecisionJourneyOnly)){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
 if($PSVersionTable.PSEdition -ne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5){throw 'WINDOWS_POWERSHELL_51_REQUIRED'}
 $root=Split-Path -Parent $PSScriptRoot
 $output=[IO.Path]::GetFullPath($EvidenceDirectory)
@@ -20,7 +24,14 @@ if(-not (Test-Path -LiteralPath $PlaywrightModulePath) -or -not (Test-Path -Lite
 [void][IO.Directory]::CreateDirectory($output)
 $payload=Join-Path $output 'server-payloads.json'
 $serverLog=Join-Path $output 'server-tests.log'
-if($NeedToChoiceOnly){
+if($Ux1DOnly){
+    # Reuse attested real-VB payloads with synthetic I/O. UX changes do not require
+    # recompiling the unchanged commercial endpoint suite or contacting IIS/MySQL.
+    foreach($fixturePath in @($GuidedFixturePath,$AdvisorFixturePath)){
+        if([string]::IsNullOrWhiteSpace($fixturePath) -or -not (Test-Path -LiteralPath $fixturePath -PathType Leaf)){throw 'ATTESTED_VB_FIXTURE_PATHS_REQUIRED'}
+    }
+    $payload=[IO.Path]::GetFullPath($GuidedFixturePath)
+}elseif($NeedToChoiceOnly){
     if(-not (Test-Path -LiteralPath $payload -PathType Leaf)){throw 'ATTESTED_EXISTING_GUIDED_PAYLOAD_REQUIRED'}
 }elseif($CatalogHandoffOnly){
     # Compile the actual URL builder; System.Web performs real query decoding and URL encoding.
@@ -94,7 +105,9 @@ End Class
     if(-not (Select-String -LiteralPath $serverLog -Pattern '^SEARCH_SUGGEST_SYNTHETIC_SUITE=PASS$' -Quiet)){throw 'COMMERCIAL_CONTRACT_SUITE_FAILED'}
 }
 $node=(Get-Command node -CommandType Application -ErrorAction Stop).Source
-if($NeedToChoiceOnly){
+if($Ux1DOnly){
+    & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --ux-1d-only --advisor-fixtures ([IO.Path]::GetFullPath($AdvisorFixturePath))
+}elseif($NeedToChoiceOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --need-to-choice-only
 }elseif($CatalogHandoffOnly){
     & $node (Join-Path $PSScriptRoot 'ShoppingAssistantProgressiveResults.test.js') $root $PlaywrightModulePath $BrowserExecutable $output $payload --catalog-handoff-only

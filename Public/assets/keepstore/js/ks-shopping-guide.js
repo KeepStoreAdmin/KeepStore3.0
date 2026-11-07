@@ -338,6 +338,14 @@
       newQuery = find('[data-ks-guide-new-query]'), output = find('[data-ks-guide-output]'), status = find('[data-ks-guide-status]'),
       recovery = find('[data-ks-guide-recovery]'), results = find('[data-ks-guide-results]'), comparison = find('[data-ks-guide-comparison]');
     var goal = find('#ksGuideGoal'), budget = find('#ksGuideBudget'), draftReview = find('[data-ks-guide-draft-review]');
+    var advanced=find('[data-ks-guide-advanced]'), advancedExtra=find('[data-ks-guide-advanced-extra]'), settingsSummary=find('[data-ks-guide-settings-summary]'), modeReview=find('[data-ks-guide-mode-review]');
+    function focusOn(element) {
+      var target=element||prepare;
+      for(var parent=target.parentElement;parent&&parent!==root;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+      if(!target.getClientRects().length)target=prepare;
+      target.focus();
+    }
+    function collapseAdvanced(){if(advanced&&advanced.open){if(advanced.contains(doc.activeElement))focusOn(prepare);advanced.open=false;}}
     if (![fields, input, detail, prepare, reset, undo, summary, idle, chips, refine, command, apply, newQuery, output, status, recovery, results, comparison].every(Boolean) ||
         !win.fetch || !win.AbortController || !win.URL || !win.Promise) return;
     var paths;
@@ -359,7 +367,7 @@
         button.setAttribute('data-ks-guide-sector', String(id));
       } catch (_) { button.disabled = true; button.hidden = true; }
     });
-    var state = { phase: 'idle', confirmed: null, confirmedGoal: '', draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false };
+    var state = { phase: 'idle', confirmed: null, confirmedGoal: '', draftSector: 0, history: [], request: null, result: null, selected: [], generation: 0, unknown: '', handoffSectorPending: false, visibleCount:3 };
     var skippedQuestions = [], proposedNeed = null, needPatch = null;
     var advisor = { enabled:false, criteria:[], skipped:[], attributes:[], receipts:{}, confirmedReceipts:{}, draft:false, confirmedCriteria:[], confirmedSkipped:[] };
     var advisorPanel=find('[data-ks-advisor-panel]'), advisorControls=find('[data-ks-advisor-controls]'),
@@ -388,37 +396,41 @@
       if(!advisorCriteria)return;advisorCriteria.replaceChildren();
       advisor.criteria.forEach(function(c){var a=advisor.attributes.find(function(x){return x.id===c.attributeId;});
         var control=button((c.priority==='hard'?'Obbligatorio: ':'Preferenza: ')+(a?a.label:'Caratteristica')+' '+{eq:'=',gte:'≥',lte:'≤'}[c.operator]+' '+c.value+(a&&a.unit?' '+a.unit:'')+' ×',function(){
-          if(!canRefineConfirmed())return;prepare.focus();advisor.criteria=advisor.criteria.filter(function(x){return x!==c;});accept(copy(state.confirmed),true);
+          if(!canRefineConfirmed())return;focusOn(prepare);advisor.criteria=advisor.criteria.filter(function(x){return x!==c;});accept(copy(state.confirmed),true);
         },'ks-guide-chip');control.setAttribute('aria-label','Rimuovi criterio '+(a?a.label:c.attributeId));advisorCriteria.appendChild(control);
       });
     }
     function renderAdvisor(data){
+      var presentation=doc.createDocumentFragment();
+      if(advisorPanel)advisorPanel.hidden=false;
       advisor.attributes=data.attributes;advisor.draft=false;
       data.attributes.forEach(function(a){if(a.receipt&&!advisor.criteria.some(function(c){return c.attributeId===a.id;}))advisor.receipts[a.id]=a.receipt;});
       if(advisorControls){advisorControls.disabled=data.taxonomyRequired;advisorAttribute.replaceChildren();advisorOption(advisorAttribute,'','Scegli una caratteristica');
         data.attributes.filter(function(a){return a.canAsk||a.canHardFilter;}).forEach(function(a){advisorOption(advisorAttribute,a.id,a.label+(a.unit?' ('+a.unit+')':''));});advisorInputs();}
       renderAdvisorCriteria();
-      results.appendChild(node('p',data.summary||'Selezione analizzata nel contesto corrente.','ks-guide-hint'));
+      var analysis=node('details'),analysisSummary=node('summary','Come è stata costruita la selezione','ks-guide-edit');analysis.appendChild(analysisSummary);
+      analysis.appendChild(node('p',data.summary||'Selezione analizzata nel contesto corrente.','ks-guide-hint'));
       if(data.taxonomyRequired){
-        if(!state.confirmed.st){var choose=button('Scegli il reparto nei controlli della guida',function(){var choice=choices.find(function(x){return !x.disabled&&!x.hidden&&Number(x.getAttribute('data-ks-guide-sector'))>0;});(choice||input).focus();});choose.setAttribute('data-ks-advisor-taxonomy','');results.appendChild(choose);}
-        var editQuery=button('Modifica la ricerca'+(state.confirmed.st?' nel reparto selezionato':''),function(){input.focus();input.select();invalidate('editing');reviewDraft();announce('Precisa le parole della ricerca, poi conferma. Nessun criterio viene rimosso automaticamente.');});
-        editQuery.setAttribute('data-ks-advisor-edit-query','');results.appendChild(editQuery);
-        var browse=link('Scegli una categoria nel catalogo',state.result.catalog,'ks-guide-catalog-fallback');browse.setAttribute('data-ks-advisor-taxonomy-catalog','');results.appendChild(browse);
+        if(!state.confirmed.st){var choose=button('Scegli il reparto nei controlli della guida',function(){var choice=choices.find(function(x){return !x.disabled&&!x.hidden&&Number(x.getAttribute('data-ks-guide-sector'))>0;});focusOn(choice||input);});choose.setAttribute('data-ks-advisor-taxonomy','');presentation.appendChild(choose);}
+        var editQuery=button('Modifica la ricerca'+(state.confirmed.st?' nel reparto selezionato':''),function(){focusOn(input);input.select();invalidate('editing');reviewDraft();announce('Precisa le parole della ricerca, poi conferma. Nessun criterio viene rimosso automaticamente.');});
+        editQuery.setAttribute('data-ks-advisor-edit-query','');presentation.appendChild(editQuery);
+        var browse=link('Scegli una categoria nel catalogo',state.result.catalog,'ks-guide-catalog-fallback');browse.setAttribute('data-ks-advisor-taxonomy-catalog','');presentation.appendChild(browse);
       }
-      results.appendChild(node('p',(data.exhaustive?'Analisi completa dei candidati del contesto dichiarato.':data.knowledgeLimited?'Alcune descrizioni superano i limiti di analisi: le caratteristiche non sono tutte verificabili.':'Analisi limitata ai primi 96 candidati: altri prodotti potrebbero essere pertinenti.')+' Analizzati: '+data.analyzedCount+'. Ammissibili nella selezione: '+data.eligibleCount+'.','ks-guide-hint'));
+      analysis.appendChild(node('p',(data.exhaustive?'Analisi completa dei candidati del contesto dichiarato.':data.knowledgeLimited?'Alcune descrizioni superano i limiti di analisi: le caratteristiche non sono tutte verificabili.':'Analisi limitata ai primi 96 candidati: altri prodotti potrebbero essere pertinenti.')+' Analizzati: '+data.analyzedCount+'. Ammissibili nella selezione: '+data.eligibleCount+'.','ks-guide-hint'));presentation.appendChild(analysis);
       if(data.question){var q=data.question,block=node('div',undefined,'ks-guide-question');block.appendChild(node('h3',q.label));
         q.options.forEach(function(option){var choice=button(option.label,function(){
-          if(!canRefineConfirmed())return;command.focus();var attribute=advisor.attributes.find(function(a){return a.id===q.attributeId;});
+          if(!canRefineConfirmed())return;focusOn(command);var attribute=advisor.attributes.find(function(a){return a.id===q.attributeId;});
           advisor.receipts[q.attributeId]=attribute.receipt;
           advisor.criteria=advisor.criteria.filter(function(c){return c.attributeId!==q.attributeId;}).concat([{attributeId:q.attributeId,operator:q.operator,value:option.value,priority:'soft'}]);accept(copy(state.confirmed),true);
         });choice.setAttribute('data-ks-advisor-option',option.value);choice.setAttribute('data-ks-advisor-attribute',q.attributeId);block.appendChild(choice);});
         [['allowSkip','Salta','skip'],['allowIndifferent','Indifferente','indifferent'],['allowUnknown','Non lo so','unknown']].forEach(function(kind){if(q[kind[0]]){var skip=button(kind[1],function(){
-          if(!canRefineConfirmed())return;command.focus();advisor.skipped=Array.from(new Set(advisor.skipped.concat([q.attributeId])));accept(copy(state.confirmed),false);
-        });skip.setAttribute('data-ks-advisor-'+kind[2],'');block.appendChild(skip);}});results.appendChild(block);
+          if(!canRefineConfirmed())return;focusOn(command);advisor.skipped=Array.from(new Set(advisor.skipped.concat([q.attributeId])));accept(copy(state.confirmed),false);
+        });skip.setAttribute('data-ks-advisor-'+kind[2],'');block.appendChild(skip);}});presentation.appendChild(block);
       }
       data.actions.forEach(function(action){var control=button('Confermo: '+action.label,function(){
-        if(!canRefineConfirmed())return;prepare.focus();advisor.criteria=advisor.criteria.filter(function(c){return action.attributeIds.indexOf(c.attributeId)<0;});accept(copy(state.confirmed),true);
+        if(!canRefineConfirmed())return;focusOn(prepare);advisor.criteria=advisor.criteria.filter(function(c){return action.attributeIds.indexOf(c.attributeId)<0;});accept(copy(state.confirmed),true);
       });control.setAttribute('data-ks-advisor-relax',action.id);recovery.appendChild(control);});
+      return presentation;
     }
     var handoffNotice = find('[data-ks-guide-handoff]');
     function handoffMessage(message) { if (handoffNotice) { handoffNotice.textContent = message; handoffNotice.hidden = !message; } }
@@ -451,7 +463,7 @@
       if (!draftReview) return;
       var query = clean(input.value + ' ' + detail.value), purpose = goal ? clean(goal.value) : '', maximum = budget ? clean(budget.value) : '';
       var scopeReset=advisor.enabled&&advisor.criteria.length&&state.confirmed&&query!==state.confirmed.q;
-      prepare.textContent=scopeReset?'Conferma nuova ricerca senza i requisiti precedenti':'Mostra i prodotti';
+      prepare.textContent=scopeReset?'Conferma nuova ricerca senza i requisiti precedenti':'Aiutami a scegliere';
       var confirmed = !pendingNeedChange() && state.confirmed && clean(input.value) === state.confirmed.q && !clean(detail.value) &&
         purpose === state.confirmedGoal && state.draftSector === state.confirmed.st;
       try { confirmed = confirmed && (!budget || budgetValue(maximum) === state.confirmed.pmax); } catch (_) { confirmed = false; }
@@ -471,14 +483,14 @@
     }
     function canRefineConfirmed() {
       if(advisor.enabled&&advisor.draft){announce('Conferma il criterio sulle caratteristiche oppure seleziona la voce vuota per scartare la bozza.');return false;}
-      if (pendingNeedChange()) { announce('La proposta contiene criteri da confermare. Premi “Mostra i prodotti” prima di applicare altre preferenze.'); return false; }
+      if (pendingNeedChange()) { announce('La proposta contiene criteri da confermare. Premi “Aiutami a scegliere” prima di applicare altre preferenze.'); return false; }
       // syncFields stores the confirmed query in the product field and clears detail.
       // Even redistributing the same words between those fields is an unconfirmed edit.
       var currentBudget;
       try { currentBudget = budget ? budgetValue(budget.value) : state.confirmed && state.confirmed.pmax; } catch (_) { currentBudget = null; }
       if (!state.confirmed || (clean(input.value) === state.confirmed.q && !clean(detail.value) && state.draftSector === state.confirmed.st &&
           (!goal || clean(goal.value) === state.confirmedGoal) && currentBudget === state.confirmed.pmax)) return true;
-      announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla.');
+      announce('La richiesta è in modifica. Premi “Aiutami a scegliere” per confermarla.');
       return false;
     }
     function pendingNeedChange() {
@@ -486,6 +498,7 @@
     }
     function summaryView() {
       var b = state.confirmed;
+      if(settingsSummary){settingsSummary.textContent=b?'Criteri · '+(b.q||departments.get(b.st)):'Preferenze';settingsSummary.title=b?'Modifica criteri per '+(b.q||departments.get(b.st)):'Reparto, budget, obiettivo e controlli avanzati';}
       summary.hidden = !b || (!b.q && !(advisor.enabled&&b.st>0)); idle.hidden = !summary.hidden;
       refine.hidden = summary.hidden; refine.disabled = summary.hidden;
       undo.disabled = !state.history.length;
@@ -501,7 +514,7 @@
           if (!canRefineConfirmed()) return;
           var next = copy(state.confirmed); next[entry[0]] = blank()[entry[0]];
           if (entry[0] === 'pmax') next.pmin = '0';
-          if (!next.q) input.focus(); else prepare.focus();
+          if (!next.q) focusOn(input); else focusOn(prepare);
           accept(next, true);
           announce('Preferenza rimossa: ' + entry[1] + (next.q ? '. Caricamento della selezione.' : '. Indica il prodotto da cercare.'));
         }, 'ks-guide-chip');
@@ -532,12 +545,12 @@
       advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
       state.handoffSectorPending = false; handoffMessage('');
       syncFields(blank()); command.value = ''; newQuery.hidden = true;
-      invalidate('idle'); summaryView(); announce('La guida è pronta per una nuova ricerca.'); input.focus();
+      invalidate('idle'); summaryView(); announce('La guida è pronta per una nuova ricerca.'); focusOn(input);collapseAdvanced();if(modeReview){modeReview.hidden=true;modeReview.replaceChildren();}
     }
     function undoGuide() {
       if (!state.history.length) { announce('Non ci sono modifiche da annullare.'); return; }
       if (!state.confirmed && (clean(input.value) || clean(detail.value) || (goal && clean(goal.value)) || (budget && clean(budget.value)) || state.draftSector)) {
-        announce('La richiesta è in modifica. Premi “Mostra i prodotti” per confermarla oppure “Ricomincia” per scartare la bozza.'); return;
+        announce('La richiesta è in modifica. Premi “Aiutami a scegliere” per confermarla oppure “Ricomincia” per scartare la bozza.'); return;
       }
       if (!canRefineConfirmed()) return;
       var previous = state.history.pop();if(advisor.enabled){advisor.criteria=previous.advisor?previous.advisor.criteria:[];advisor.skipped=previous.advisor?previous.advisor.skipped:[];advisor.receipts=previous.advisor?Object.assign({},previous.advisor.receipts):{};} accept(previous.brief, false, previous.goal, true);
@@ -547,19 +560,19 @@
       if (state.handoffSectorPending) {
         announce('Il reparto importato non è disponibile. Scegli un reparto proposto oppure “Tutti i reparti”, poi conferma la ricerca.');
         var choice = choices.find(function (item) { return !item.disabled && !item.hidden; });
-        if (choice) choice.focus();
+        if (choice) focusOn(choice);
         return;
       }
       if (goal && clean(goal.value).length > MAX_GOAL) {
         invalidate('editing'); goal.setAttribute('aria-invalid', 'true');
-        announce('Descrivi l’obiettivo in massimo 160 caratteri.'); goal.focus(); return;
+        announce('Descrivi l’obiettivo in massimo 160 caratteri.'); focusOn(goal); return;
       }
       if (goal) goal.removeAttribute('aria-invalid');
       var maximum;
       try { maximum = budget ? budgetValue(budget.value) : null; }
       catch (_) {
         invalidate('editing'); budget.setAttribute('aria-invalid', 'true');
-        announce('Indica un budget maggiore di zero, senza separatori delle migliaia, ad esempio 500,50. Lascia vuoto per non fissare un limite.'); budget.focus(); return;
+        announce('Indica un budget maggiore di zero, senza separatori delle migliaia, ad esempio 500,50. Lascia vuoto per non fissare un limite.'); focusOn(budget); return;
       }
       if (budget) budget.removeAttribute('aria-invalid');
       try {
@@ -574,7 +587,7 @@
           'Per chiarire l’obiettivo, indica un prodotto, una marca o un codice da cercare. Puoi anche esplorare il catalogo o contattare il negozio.' :
           'Scrivi almeno 2 caratteri. Prodotto e dettaglio possono contenere al massimo 80 caratteri in tutto.');
         input.setAttribute('aria-invalid', 'true'); detail.setAttribute('aria-invalid', 'true');
-        input.focus();
+        focusOn(input);
       }
     }
     function runCommand(raw) {
@@ -617,7 +630,6 @@
         article.appendChild(node('p',item.match==='complete'?'Rispetta tutti i criteri verificati':item.match==='partial'?'Requisiti obbligatori rispettati; preferenze da valutare':'Candidato senza requisiti sulle caratteristiche','ks-guide-match'));
         if(item.advisorReason)article.appendChild(node('p',item.advisorReason,'ks-guide-reason'));
         var sourceDetails=node('details'),sourceSummary=node('summary','Caratteristiche e fonti','ks-guide-edit');sourceDetails.appendChild(sourceSummary);
-        item.facts.filter(function(f){var a=advisor.attributes.find(function(x){return x.id===f.attributeId;});return a&&(a.canAsk||a.canHardFilter)&&f.evidenceStatus==='known';}).slice(0,3).forEach(function(f){var a=advisor.attributes.find(function(x){return x.id===f.attributeId;});article.appendChild(node('p',a.label+': '+f.value+(a.unit?' '+a.unit:''),'ks-guide-evidence'));});
         var facts=node('dl',undefined,'ks-advisor-facts');
         item.facts.forEach(function(f){var a=advisor.attributes.find(function(x){return x.id===f.attributeId;});if(!a)return;
           facts.appendChild(node('dt',a.label));var value=f.evidenceStatus==='known'?f.value+(a.unit?' '+a.unit:''):{missing:'Dato non disponibile',ambiguous:'Dato ambiguo',conflicting:'Fonti discordanti'}[f.evidenceStatus];facts.appendChild(node('dd',value));
@@ -628,13 +640,15 @@
       } else {
       var proof = evidence(item, state.confirmed);
       article.appendChild(node('p', proof.matched.length && !proof.unverified.length ? 'Termini presenti nei dati' : 'Corrispondenza da verificare', 'ks-guide-match'));
-      article.appendChild(node('p', reason(item, state.confirmed), 'ks-guide-reason ks-guide-evidence'));
-      if (proof.unverified.length) article.appendChild(node('p', 'Non verificati nei dati mostrati: ' + proof.unverified.join(', ') + '.', 'ks-guide-unverified'));
-      if (state.confirmed.pmax !== '0') article.appendChild(node('p', 'Rispetta il massimo confermato di ' + state.confirmed.pmax.replace('.', ',') + ' € nel contesto IVA indicato.', 'ks-guide-evidence'));
-      if (state.confirmed.disponibile) article.appendChild(node('p', 'Rispetta il filtro disponibilità. Non è una promessa di consegna o prenotazione.', 'ks-guide-evidence'));
-      if (state.confirmed.ordinamento === 'p_basso' && decision(state.result.items).lowest.indexOf(item.key) >= 0) article.appendChild(node('p', 'Da approfondire se la priorità è il prezzo: minimo fra i candidati restituiti, non dell’intero catalogo.', 'ks-guide-evidence'));
+      var information=node('details'), informationSummary=node('summary','Criteri e informazioni da verificare','ks-guide-edit');information.appendChild(informationSummary);
+      information.appendChild(node('p', reason(item, state.confirmed), 'ks-guide-reason ks-guide-evidence'));
+      if (proof.unverified.length){article.appendChild(node('p','Caratteristiche da verificare','ks-guide-unverified'));information.appendChild(node('p', 'Non verificati nei dati mostrati: ' + proof.unverified.join(', ') + '.', 'ks-guide-unverified'));}
+      if (state.confirmed.pmax !== '0') information.appendChild(node('p', 'Rispetta il massimo confermato di ' + state.confirmed.pmax.replace('.', ',') + ' € nel contesto IVA indicato.', 'ks-guide-evidence'));
+      if (state.confirmed.disponibile) information.appendChild(node('p', 'Rispetta il filtro disponibilità. Non è una promessa di consegna o prenotazione.', 'ks-guide-evidence'));
+      if (state.confirmed.ordinamento === 'p_basso' && decision(state.result.items).lowest.indexOf(item.key) >= 0) information.appendChild(node('p', 'Da approfondire se la priorità è il prezzo: minimo fra i candidati restituiti, non dell’intero catalogo.', 'ks-guide-evidence'));
       var requirements = interpretNeed(state.confirmedGoal).limits;
-      if (requirements.length) article.appendChild(node('p', requirements.join(' '), 'ks-guide-unverified'));
+      if (requirements.length) information.appendChild(node('p', requirements.join(' '), 'ks-guide-unverified'));
+      article.appendChild(information);
       }
       article.appendChild(link(item.availability > 0 ? 'Vai alla scheda e acquista' : 'Scopri questo prodotto', item.url, 'ks-guide-product-cta'));
       var label = node('label', undefined, 'ks-guide-check'), check = doc.createElement('input');
@@ -663,7 +677,6 @@
         lowest.map(function (item) { return item.title; }).join(' · ') + ' (' + lowest[0].price + ').' + (lowest.length > 1 ? ' Più prodotti hanno lo stesso prezzo visualizzato.' : '')));
       overview.appendChild(node('p', insight.differences.length ? 'Dati che differiscono: ' + insight.differences.join(', ').toLocaleLowerCase('it-IT') + '.' : 'I dati commerciali confrontabili non mostrano differenze.'));
       overview.appendChild(node('p', 'Il prezzo minimo riguarda solo questo confronto. Un dato mancante non prova una differenza del prodotto; idoneità e compatibilità restano da verificare nella scheda.'));
-      comparison.appendChild(overview);
       var grid = node('div', undefined, 'ks-guide-compare-grid');
       grid.setAttribute('role', 'region'); grid.setAttribute('aria-label', 'Confronto prodotti, scorri orizzontalmente se necessario'); grid.tabIndex = 0;
       grid.style.setProperty('--ks-guide-columns', String(items.length));
@@ -675,7 +688,7 @@
         column.appendChild(link('Scopri questo prodotto', item.url, 'ks-guide-product-cta'));
         var remove = button('Rimuovi dal confronto', function () {
           var check = Array.from(root.querySelectorAll('[data-ks-guide-compare-key]')).find(function (control) { return control.getAttribute('data-ks-guide-compare-key') === item.key; });
-          (check || prepare).focus(); if (check) check.checked = false;
+          focusOn(check&&!check.closest('[hidden]')?check:prepare); if (check) check.checked = false;
           state.selected = state.selected.filter(function (key) { return key !== item.key; }); renderCompare();
           announce('Prodotto rimosso dal confronto.');
         });
@@ -694,15 +707,25 @@
           items.forEach(function (item) { row.appendChild(node('td', field[1](item) || 'Dato non disponibile')); });
           data.appendChild(row);
         });
+      var differences=node('div',undefined,'ks-guide-compare-differences');
+      differences.appendChild(node('h4','Prima le differenze'));
+      var names=node('ol',undefined,'ks-guide-compare-names');items.forEach(function(item){var name=node('li');name.appendChild(link(item.title,item.url,'ks-guide-product-link'));names.appendChild(name);});differences.appendChild(names);
+      var differenceFields=compareFields.filter(function(field){var values=items.map(function(item){return field[1](item)||'Dato non disponibile';});return new Set(values).size>1;});
+      differenceFields.slice(0,3).forEach(function(field){
+        var block=node('div');block.appendChild(node('strong',field[0]));items.forEach(function(item,index){block.appendChild(node('p','Prodotto '+(index+1)+': '+(field[1](item)||'Dato non disponibile')));});differences.appendChild(block);
+      });
+      if(!differenceFields.length)differences.appendChild(node('p','Nessuna differenza verificabile nei dati confrontabili.'));
+      if(differenceFields.length>3)differences.appendChild(node('p','Altre differenze disponibili nella tabella completa.'));
+      comparison.appendChild(differences);
       head.appendChild(titles); table.append(head, data); grid.appendChild(table);
-      comparison.appendChild(grid);
+      var complete=node('details',undefined,'ks-guide-compare-details'), completeSummary=node('summary','Tabella completa del confronto','ks-guide-edit');complete.append(completeSummary,overview,grid);comparison.appendChild(complete);
       comparison.appendChild(button('Svuota confronto', function () {
-        (find('[data-ks-guide-compare-key]') || prepare).focus();
+        focusOn(find('[data-ks-guide-compare-key]') || prepare);
         state.selected = []; root.querySelectorAll('[data-ks-guide-compare-key]').forEach(function (check) { check.checked = false; }); renderCompare();
         announce('Confronto svuotato. Puoi selezionare altri prodotti.');
       }));
       comparison.appendChild(button('Correggi una preferenza', function () {
-        invalidate('editing'); (budget || command).focus(); announce('Modifica il brief e premi “Mostra i prodotti”. Il confronto verrà ricostruito con la nuova selezione.');
+        invalidate('editing'); focusOn(budget || command); announce('Modifica il brief e premi “Aiutami a scegliere”. Il confronto verrà ricostruito con la nuova selezione.');
       }));
       announce('Confronto aggiornato: ' + items.length + ' prodotti.');
     }
@@ -713,13 +736,23 @@
       var question = node('div', undefined, 'ks-guide-question');
       question.append(node('p', proposal.message), node('p', 'La domanda riguarda soltanto i candidati attuali, non l’intero catalogo.', 'ks-guide-hint'), button('Scegli questa preferenza', function () {
         if (!canRefineConfirmed()) return;
-        command.focus(); accept(Object.assign(copy(b), proposal.patch), true);
-      }), button('Salta', function () { skippedQuestions.push(proposal.key); command.focus(); question.remove(); nextQuestion(container); }));
+        focusOn(command); accept(Object.assign(copy(b), proposal.patch), true);
+      }), button('Salta', function () { skippedQuestions.push(proposal.key); focusOn(command); question.remove(); nextQuestion(container); }));
       container.appendChild(question);
+    }
+    function renderShortlist(data,container) {
+      var grid=node('div',undefined,'ks-guide-grid');grid.id='ksGuideVisibleProducts';
+      data.items.forEach(function(item,index){var card=productCard(item);card.hidden=index>=state.visibleCount;grid.appendChild(card);});container.appendChild(grid);
+      if(data.items.length>3){var more=button('Mostra altri '+(data.items.length-3)+' prodotti',function(){
+        var expanded=state.visibleCount>3;state.visibleCount=expanded?3:6;
+        Array.from(grid.children).forEach(function(card,index){card.hidden=index>=state.visibleCount;});
+        more.textContent=expanded?'Mostra altri '+(data.items.length-3)+' prodotti':'Mostra meno prodotti';more.setAttribute('aria-expanded',expanded?'false':'true');
+        announce('Visibili '+Math.min(state.visibleCount,data.items.length)+' prodotti della stessa selezione.');
+      });more.setAttribute('data-ks-guide-show-more','');more.setAttribute('aria-expanded','false');more.setAttribute('aria-controls',grid.id);container.appendChild(more);}
     }
     function renderResult() {
       var data = state.result, b = state.confirmed;
-      if(data.advisor){renderAdvisor(data.advisor);results.appendChild(node('h3',data.items.length?'Candidati autorizzati':'Nessun conforme nella selezione analizzata'));results.appendChild(node('p',data.label,'ks-guide-fiscal'));if(data.items.length){var cards=node('div',undefined,'ks-guide-grid');data.items.forEach(function(item){cards.appendChild(productCard(item));});results.appendChild(cards);}results.appendChild(link('Esplora il catalogo con i filtri commerciali',data.catalog));return;}
+      if(data.advisor){var guidance=renderAdvisor(data.advisor);results.appendChild(node('h3',data.items.length?'La tua selezione':'Nessun conforme nella selezione analizzata'));results.appendChild(node('p',data.label,'ks-guide-fiscal'));if(data.items.length)renderShortlist(data,results);results.appendChild(guidance);results.appendChild(link('Esplora il catalogo con i filtri commerciali',data.catalog));return;}
       results.appendChild(node('h3', data.items.length ? 'Una selezione per la tua ricerca' : 'Nessun risultato in questa selezione'));
       results.appendChild(node('p', data.items.length + ' risultati restituiti, fino a 6. Non è il totale del catalogo.', 'ks-guide-hint'));
       results.appendChild(node('p', data.label, 'ks-guide-fiscal'));
@@ -731,9 +764,7 @@
       if (state.confirmedGoal) results.appendChild(node('p', 'L’idoneità al tuo obiettivo non è verificata dalla ricerca.', 'ks-guide-unverified'));
       results.appendChild(node('p', 'Le corrispondenze sono testuali. Caratteristiche, compatibilità e idoneità all’uso vanno verificate nella scheda o con il negozio.', 'ks-guide-hint'));
       if (data.items.length) {
-        var grid = node('div', undefined, 'ks-guide-grid');
-        data.items.forEach(function (item) { grid.appendChild(productCard(item)); });
-        results.appendChild(grid); nextQuestion(results);
+        renderShortlist(data,results);nextQuestion(results);
       } else {
         var patch, message;
         if (b.disponibile) { patch = { disponibile: false }; message = 'Includi anche i non disponibili; gli altri criteri restano uguali.'; }
@@ -742,9 +773,9 @@
         if (patch) {
           recovery.append(node('p', message), button('Applica questa modifica', function () {
             if (!canRefineConfirmed()) return;
-            prepare.focus(); accept(Object.assign(copy(b), patch), true);
+            focusOn(prepare); accept(Object.assign(copy(b), patch), true);
           }));
-        } else recovery.appendChild(button('Modifica le parole della ricerca', function () { input.focus(); }));
+        } else recovery.appendChild(button('Modifica le parole della ricerca', function () { focusOn(input); }));
       }
       results.appendChild(link('Continua nel catalogo con queste preferenze', data.catalog));
     }
@@ -752,11 +783,11 @@
       invalidate(invalid ? 'context-invalid' : 'error'); announce(message);
       if (state.confirmed && (state.confirmed.q || advisor.enabled&&state.confirmed.st>0)) {
         if(criterionScopeChanged){var reconfirm=button('Conferma la ricerca senza le caratteristiche del contesto precedente',function(){
-          if(!canRefineConfirmed())return;prepare.focus();advisor.criteria=[];advisor.skipped=[];advisor.receipts={};renderAdvisorCriteria();accept(copy(state.confirmed),true);
+          if(!canRefineConfirmed())return;focusOn(prepare);advisor.criteria=[];advisor.skipped=[];advisor.receipts={};renderAdvisorCriteria();accept(copy(state.confirmed),true);
         });reconfirm.setAttribute('data-ks-advisor-reconfirm','');recovery.appendChild(reconfirm);}
         recovery.appendChild(button(invalid ? 'Aggiorna la selezione' : 'Riprova', function () {
           if (!canRefineConfirmed()) return;
-          prepare.focus(); accept(copy(state.confirmed), false);
+          focusOn(prepare); accept(copy(state.confirmed), false);
         }));
         recovery.appendChild(link('Continua nel catalogo', catalogURL(state.confirmed, paths).href, 'ks-guide-catalog-fallback'));
       }
@@ -765,6 +796,7 @@
       if (state.result || state.request) recover('Il contesto del negozio potrebbe essere cambiato. Aggiorna esplicitamente la selezione per vedere prezzi e disponibilità.', true);
     }
     async function search(b) {
+      collapseAdvanced();state.visibleCount=3;
       invalidate('loading'); root.setAttribute('aria-busy', 'true');
       prepare.setAttribute('aria-disabled', 'true'); announce('Caricamento della selezione in corso.');
       var generation = state.generation, controller = new win.AbortController();
@@ -807,12 +839,21 @@
       }
     }
     try {
+      function activateMode(enabled,control){
+        invalidate('editing');advisor.enabled=enabled;advisor.criteria=[];advisor.skipped=[];advisor.receipts={};advisor.confirmedReceipts={};advisor.attributes=[];advisor.draft=false;advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
+        summaryView();renderAdvisorCriteria();clearAdvisorInputs();if(advisorPanel)advisorPanel.hidden=true;
+        if(modeReview){modeReview.hidden=true;modeReview.replaceChildren();}
+        root.querySelectorAll('[data-ks-guide-mode]').forEach(function(x){x.setAttribute('aria-pressed',x===control?'true':'false');});reviewDraft();
+        announce(enabled?'Scelta per caratteristiche attiva. Ricerca e filtri mantenuti: conferma per una nuova selezione.':'Ricerca guidata attiva. Ricerca e filtri mantenuti: conferma per una nuova selezione.');
+      }
       root.querySelectorAll('[data-ks-guide-mode]').forEach(function(control){control.addEventListener('click',function(){
         var enabled=control.getAttribute('data-ks-guide-mode')==='guided2';if(enabled===advisor.enabled)return;
-        invalidate('editing');advisor.enabled=enabled;advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.draft=false;advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
-        state.confirmed=null;state.history=[];state.confirmedGoal='';needPatch=null;summaryView();renderAdvisorCriteria();clearAdvisorInputs();if(advisorPanel)advisorPanel.hidden=!enabled;
-        root.querySelectorAll('[data-ks-guide-mode]').forEach(function(x){x.setAttribute('aria-pressed',x===control?'true':'false');});
-        announce(enabled?'Scelta per caratteristiche attiva. Conferma la ricerca o scegli un reparto; nessuna richiesta è stata inviata.':'Ricerca guidata attiva. Conferma di nuovo i criteri per vedere una selezione aggiornata.');
+        if(advisor.enabled&&(advisor.criteria.length||advisor.draft)&&modeReview){
+          modeReview.hidden=false;modeReview.replaceChildren(node('p','Vuoi passare alla ricerca guidata? I criteri sulle caratteristiche saranno rimossi solo dopo conferma. Ricerca, reparto e filtri commerciali restano invariati.'));
+          var confirm=button('Conferma cambio e rimuovi i criteri sulle caratteristiche',function(){activateMode(enabled,control);focusOn(prepare);});confirm.setAttribute('data-ks-guide-confirm-mode','');
+          var cancel=button('Mantieni modalità e criteri',function(){modeReview.hidden=true;modeReview.replaceChildren();focusOn(find('[data-ks-guide-mode][aria-pressed="true"]'));});cancel.setAttribute('data-ks-guide-cancel-mode','');modeReview.append(confirm,cancel);focusOn(confirm);return;
+        }
+        activateMode(enabled,control);
       });});
       if(advisorAttribute){advisorAttribute.addEventListener('change',function(){advisorInputs();advisor.draft=!!advisorAttribute.value;invalidate('editing');announce(advisor.draft?'Caratteristica in bozza: scegli valore e importanza, poi Conferma criterio.':'Bozza scartata. Conferma la ricerca per aggiornare la selezione.');});
         [advisorOperator,advisorValue,advisorPriority].forEach(function(control){control.addEventListener('change',function(){advisor.draft=!!advisorAttribute.value;invalidate('editing');});});
@@ -822,7 +863,7 @@
           if(!a||a.operators.indexOf(advisorOperator.value)<0||(a.type==='number'?!/^(?:0|[1-9][0-9]{0,9})(?:\.[0-9]{1,6})?$/.test(value)||Number(value)>1000000000:a.observedValues.indexOf(value)<0)||advisorPriority.value==='hard'&&!a.canHardFilter){announce('Scegli un criterio consentito. Per i numeri usa da 0 a un miliardo e al massimo sei decimali, senza separatori delle migliaia.');return;}
           var draft=advisor.draft;advisor.draft=false;if(!canRefineConfirmed()){advisor.draft=draft;return;}
           var next=advisor.criteria.filter(function(c){return c.attributeId!==a.id;});if(next.length>=8){advisor.draft=draft;announce('Puoi confermare al massimo otto criteri.');return;}
-          next.push({attributeId:a.id,operator:advisorOperator.value,value:value,priority:advisorPriority.value});advisor.receipts[a.id]=a.receipt;command.focus();advisor.criteria=next;accept(copy(state.confirmed),true);
+          next.push({attributeId:a.id,operator:advisorOperator.value,value:value,priority:advisorPriority.value});advisor.receipts[a.id]=a.receipt;focusOn(command);advisor.criteria=next;accept(copy(state.confirmed),true);
         });
         if(advisorNumber){advisorNumber.addEventListener('input',function(){advisor.draft=!!advisorAttribute.value;invalidate('editing');});advisorNumber.addEventListener('keydown',function(event){if(event.key==='Enter'){event.preventDefault();if(!event.isComposing&&event.keyCode!==229&&add)add.click();}});}
       }
@@ -841,14 +882,14 @@
           interpretation.appendChild(button(proposedNeed.limits.length ? 'Continua sui soli criteri supportati' : 'Usa questa proposta nel brief', function () {
             if (clean(goal.value) !== proposedNeed.source) { announce('Il bisogno è cambiato. Rileggilo prima di confermare la proposta.'); return; }
             var max = proposedNeed.patch.pmax;
-            var currentMaximum; try { currentMaximum = budget && clean(budget.value) ? budgetValue(budget.value) : null; } catch (_) { announce('Correggi il budget nel campo prima di usare la proposta.'); budget.focus(); return; }
-            if (max && currentMaximum && currentMaximum !== max) { announce('Il budget del bisogno e quello nel campo sono diversi. Correggi uno dei due prima di confermare.'); budget.focus(); return; }
+            var currentMaximum; try { currentMaximum = budget && clean(budget.value) ? budgetValue(budget.value) : null; } catch (_) { announce('Correggi il budget nel campo prima di usare la proposta.'); focusOn(budget); return; }
+            if (max && currentMaximum && currentMaximum !== max) { announce('Il budget del bisogno e quello nel campo sono diversi. Correggi uno dei due prima di confermare.'); focusOn(budget); return; }
             input.value = proposedNeed.query; detail.value = '';
             needPatch = copy(proposedNeed.patch);
             if (max && budget) budget.value = max === '0' ? '' : max.replace('.', ',');
             // Non-price criteria are shown for a second, explicit commercial confirmation.
-            interpretation.appendChild(node('p', 'Controlla il brief e premi Mostra i prodotti.'));
-            reviewDraft(); prepare.focus();
+            interpretation.appendChild(node('p', 'Controlla il brief e premi Aiutami a scegliere.'));
+            reviewDraft(); focusOn(prepare);
           }));
         } else {
           interpretation.appendChild(node('p', 'Quale famiglia di prodotti intendi? Scegli un reparto reale oppure precisa con «Cerco …». Nessun prodotto è stato dedotto.'));
@@ -856,7 +897,7 @@
             interpretation.appendChild(button(clean(choice.textContent), function () {
               choice.click(); var name = clean(choice.textContent);
               if (name.length <= MAX_TEXT) { input.value = name; detail.value = ''; reviewDraft(); }
-              input.focus(); announce('Famiglia scelta dalla tassonomia del negozio. Controlla le parole proposte e conferma con Mostra i prodotti.');
+              focusOn(input); announce('Famiglia scelta dalla tassonomia del negozio. Controlla le parole proposte e conferma con Aiutami a scegliere.');
             }));
           });
         }
@@ -864,11 +905,11 @@
       choices.forEach(function (choice) {
         if (choice.disabled) return;
         choice.addEventListener('click', function () {
-          if (state.handoffSectorPending) { state.handoffSectorPending = false; handoffMessage('Reparto scelto. Controlla la bozza e premi “Mostra i prodotti”.'); }
+          if (state.handoffSectorPending) { state.handoffSectorPending = false; handoffMessage('Reparto scelto. Controlla la bozza e premi “Aiutami a scegliere”.'); }
           state.draftSector = Number(choice.getAttribute('data-ks-guide-sector'));
           if(advisor.enabled){advisor.criteria=[];advisor.skipped=[];advisor.attributes=[];advisor.draft=false;renderAdvisorCriteria();clearAdvisorInputs();}
           choices.forEach(function (other) { other.setAttribute('aria-pressed', other === choice ? 'true' : 'false'); });
-          invalidate('editing'); reviewDraft(); announce('Reparto modificato. Premi “Mostra i prodotti” per confermare.');
+          invalidate('editing'); reviewDraft(); announce('Reparto modificato. Premi “Aiutami a scegliere” per confermare.');
         });
       });
       prepare.addEventListener('click', prepareSearch); reset.addEventListener('click', resetGuide); undo.addEventListener('click', undoGuide);
@@ -877,14 +918,14 @@
       newQuery.addEventListener('click', function () {
         if (!state.unknown || state.unknown.length < 2) return;
         if (!canRefineConfirmed()) return;
-        var b = blank(); b.q = state.unknown; prepare.focus(); accept(b, true);
+        var b = blank(); b.q = state.unknown; focusOn(prepare); accept(b, true);
       });
       [input, detail, command, goal, budget].filter(Boolean).forEach(function (field) {
         field.addEventListener('input', function () {
           if (field === goal) needPatch = null;
           invalidate('editing'); state.unknown = ''; newQuery.hidden = true;
           field.removeAttribute('aria-invalid'); reviewDraft();
-          announce(field === command ? 'Preferenza in modifica. Premi “Applica preferenza” per confermare.' : 'Richiesta in modifica. Premi “Mostra i prodotti” per confermare.');
+          announce(field === command ? 'Preferenza in modifica. Premi “Applica preferenza” per confermare.' : 'Richiesta in modifica. Premi “Aiutami a scegliere” per confermare.');
         });
         field.addEventListener('keydown', function (event) {
           if (event.key === 'Enter' && field !== goal) {
@@ -899,7 +940,8 @@
       doc.addEventListener('visibilitychange', function () { if (doc.hidden) contextInvalid(); });
       phase('idle'); summaryView(); reviewDraft();
       instances.add(root); root.setAttribute('data-ks-guide-bound', '1');
-      fields.hidden = false; fields.disabled = false; output.hidden = false;
+      fields.hidden = false; fields.disabled = false; output.hidden = true;
+      var nextPanel=find('.ks-guide-next');if(advancedExtra&&nextPanel)advancedExtra.appendChild(nextPanel);
       var fallback = find('.ks-guide-fallback-departments'); if (fallback) fallback.hidden = true;
       var handoff = catalogHandoff(win.location.search, departments);
       if (handoff.kind === 'invalid') {
@@ -909,16 +951,17 @@
         syncFields(draft); phase('editing'); state.handoffSectorPending = handoff.sectorUnavailable;
         if (handoff.sectorUnavailable) choices.forEach(function (choice) { choice.setAttribute('aria-pressed', 'false'); });
         handoffMessage(handoff.sectorUnavailable ?
-          'Il reparto del catalogo non è disponibile nella guida. Scegli un reparto proposto oppure “Tutti i reparti”, poi premi “Mostra i prodotti”.' :
-          'Ricerca importata dal catalogo come bozza. Controllala e premi “Mostra i prodotti” per confermarla.');
+          'Il reparto del catalogo non è disponibile nella guida. Scegli un reparto proposto oppure “Tutti i reparti”, poi premi “Aiutami a scegliere”.' :
+          'Ricerca importata dal catalogo come bozza. Controllala e premi “Aiutami a scegliere” per confermarla.');
         if (handoff.sectorUnavailable && handoffNotice && !choices.some(function (choice) { return !choice.disabled && !choice.hidden; })) {
           handoffNotice.appendChild(button('Usa tutti i reparti', function () {
-            state.handoffSectorPending = false; state.draftSector = 0; prepare.focus();
-            handoffMessage('Hai scelto tutti i reparti. Controlla la bozza e premi “Mostra i prodotti”.');
+            state.handoffSectorPending = false; state.draftSector = 0; focusOn(prepare);
+            handoffMessage('Hai scelto tutti i reparti. Controlla la bozza e premi “Aiutami a scegliere”.');
           }));
         }
       }
     } catch (_) {
+      if(nextPanel&&advancedExtra&&nextPanel.parentElement===advancedExtra)root.querySelector('.ks-ai130-shell').appendChild(nextPanel);
       fields.hidden = true; fields.disabled = true; refine.hidden = true; refine.disabled = true;
       output.hidden = true; summary.hidden = true; idle.hidden = false;
     }

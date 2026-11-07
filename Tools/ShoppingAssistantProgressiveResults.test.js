@@ -10,16 +10,19 @@ const decisionOnly = process.argv.includes('--decision-journey-only');
 const advisorOnly = process.argv.includes('--advisor-only');
 const advisorQualityOnly = process.argv.includes('--advisor-quality-rev1-only');
 const taxonomyRev2Only = process.argv.includes('--taxonomy-rev2-only');
+const ux1dOnly = process.argv.includes('--ux-1d-only');
+const ux1dBaseline = process.argv.includes('--ux-1d-baseline');
 const advisorBaselineOnly = process.argv.includes('--advisor-baseline-visual-only');
-const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly;
-const decisionBase = advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
+const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly || ux1dBaseline;
+const decisionBase = ux1dOnly||ux1dBaseline ? '5839dffdafa4d083cbb243c083a61fae09b4ad9f' : advisorBaselineOnly || advisorOnly ? '21dee2e4fa3ec89d0d5c2cc643b7b19409bde963' : 'bb89975eaed397b2ac35b3de058c6627e459173b';
 if (!root || !playwrightModule || !chrome || !evidence || !serverPath) throw new Error('EXPLICIT_FIXTURE_PATHS_REQUIRED');
+fs.mkdirSync(evidence,{recursive:true});
 function baselineSource(file) { return cp.execFileSync('git',['show',decisionBase+':'+file],{cwd:root,encoding:'utf8'}); }
 function sourceApi(source) { const sandbox={module:{exports:{}},URL,URLSearchParams};require('node:vm').runInNewContext(source,sandbox);return sandbox.module.exports; }
 const api = baselineVisualOnly ? sourceApi(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js')) : require(path.join(root, 'Public/assets/keepstore/js/ks-shopping-guide.js'));
 const serverEvidence = JSON.parse(fs.readFileSync(serverPath, 'utf8').replace(/^\uFEFF/,''));
 const advisorFixturePath = process.argv.includes('--advisor-fixtures') ? process.argv[process.argv.indexOf('--advisor-fixtures') + 1] : '';
-const advisorEvidence = advisorOnly && advisorFixturePath ? JSON.parse(fs.readFileSync(advisorFixturePath,'utf8').replace(/^\uFEFF/,'')) : null;
+const advisorEvidence = (advisorOnly||ux1dOnly) && advisorFixturePath ? JSON.parse(fs.readFileSync(advisorFixturePath,'utf8').replace(/^\uFEFF/,'')) : null;
 const advisorServer = advisorEvidence ? advisorEvidence.fixtures : [];
 if(advisorOnly && (!Array.isArray(advisorServer) || !advisorServer.length)) throw new Error('REAL_VB_ADVISOR_FIXTURES_REQUIRED');
 // Handoff exercises transport/UI, not commercial pricing: this response is explicitly synthetic.
@@ -44,7 +47,7 @@ report.sources = ['Default.aspx','Public/assets/keepstore/js/ks-shopping-guide.j
 if(baselineVisualOnly)report.baselineRef=decisionBase;
 report.serverPayloadSha256 = sha256(fs.readFileSync(serverPath));
 report.sourceBytes = {guide:Buffer.byteLength(read('Public/assets/keepstore/js/ks-shopping-guide.js')),markup:Buffer.byteLength(read('Default.aspx'))};
-if(advisorOnly){
+if(advisorOnly||ux1dOnly){
   report.advisorFixtureProvenance={path:advisorFixturePath,sha256:sha256(fs.readFileSync(advisorFixturePath)),fixtureNames:advisorServer.map(x=>x.name),source:'actual VB endpoint builder with synthetic I/O; see companion PowerShell harness'};
   report.baselineSourceBytes={ref:decisionBase,guide:Buffer.byteLength(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js')),markup:Buffer.byteLength(baselineSource('Default.aspx'))};
 }
@@ -90,7 +93,7 @@ function payload(url, options = {}) {
 const moduleSource=read('Public/assets/keepstore/js/ks-shopping-guide.js');
 const homeSource=read('Public/assets/keepstore/js/home-default.js');
 const markup=read('Default.aspx');
-const guidemarkup=markup.slice(markup.indexOf('    <section id="KsLocalAiSearch130"'),markup.indexOf('    <asp:Panel ID="HomePriceDisplayNote"'));
+const guidemarkup=(/<section id="KsLocalAiSearch130"[\s\S]*?<\/section>/.exec(markup)||[''])[0];
 const decisionStyle=(/<style\b[^>]*id="ksShoppingDecisionStyles"[^>]*>[\s\S]*?<\/style>/.exec(markup)||[''])[0];
 record('real section isolated',guidemarkup.includes('data-ks-guide-results')&&!guidemarkup.includes('HomePriceDisplayNote'));
 const styles=['bootstrap.min.css','keepstore.css','keepstore-overrides.css','styles.css','theme-overrides.css'];
@@ -105,13 +108,15 @@ function html(directory,kind,mode) {
   if(mode==='no-departments')block=block.replace(/<asp:Panel ID="HomeAiExamplesPanel"[\s\S]*?<\/asp:Panel>/,'');
   block=block.replace(/<asp:Panel[^>]*CssClass="([^"]*)"[^>]*>/g,'<div class="$1">').replace(/<\/asp:Panel>/g,'</div>');
   assert.ok(!block.includes('<%')&&!block.includes('<asp:'));
+  const presentation=ux1dOnly||ux1dBaseline;
   return '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fixture '+kind+'</title>'+
     styles.map(n=>'<link rel="stylesheet" href="'+directory+'Public/assets/keepstore/css/'+n+'">').join('')+decisionStyle+
-    '</head><body class="ks-page-home"><form id="form1"><header class="container"><a class="ks-guide-entry" href="#KsLocalAiSearch130">Guida agli acquisti</a></header><main>'+block+'</main></form>'+
+    (presentation?'<style>body{--primary-2:'+(food?'#17613e':'#b32119')+';}#HomeHeroSection{min-height:220px;padding:32px;background:#f5f5f5}#HomeMainCategoriesSection{min-height:240px;padding:24px}</style>':'')+
+    '</head><body class="ks-page-home"><form id="form1"><header class="container"><a class="ks-guide-entry" href="#KsLocalAiSearch130">Guida agli acquisti</a></header><main>'+(presentation?'<section id="HomeHeroSection"><h1>Negozio '+kind+' sintetico</h1><p>Hero di presentazione, non banner operativo.</p></section>':'')+block+(presentation?'<section id="HomeMainCategoriesSection"><h2>Esplora i reparti</h2></section>':'')+'</main></form>'+
     (mode==='missing'?'':'<script src="'+directory+'Public/assets/keepstore/js/ks-shopping-guide.js"></script>')+
     '<script src="'+directory+'Public/assets/keepstore/js/home-default.js"></script></body></html>';
 }
-if(!mediaOnly&&!handoffOnly&&!baselineVisualOnly&&!advisorOnly){
+if(!mediaOnly&&!handoffOnly&&!baselineVisualOnly&&!advisorOnly&&!ux1dOnly){
 const paths=api.urls('https://tenant1.invalid/store/','/store/search_suggest.aspx');
 for(const raw of ['iPhone 15','SSD 1 TB','olio da 1 litro','8000000000120','SKU-500'])record('product is not command '+raw,api.parseCommand(raw).kind==='unknown');
 for(const raw of ['massimo 1.000 euro','massimo 1,000 euro','fino a 1e3 euro','massimo -5 euro','massimo 0 euro'])record('ambiguous amount clarified '+raw,api.parseCommand(raw).kind==='clarify');
@@ -168,6 +173,7 @@ async function fixture(options={}) {
   const config={...options};
   page.on('pageerror',e=>pageErrors.push(e.message));
   await page.addInitScript(({ignoreAbort,fastTimeout,initFailure})=>{
+    window.__uxLayout=[];try{new PerformanceObserver(list=>list.getEntries().forEach(entry=>{if(!entry.hadRecentInput)window.__uxLayout.push(entry.value);})).observe({type:'layout-shift',buffered:true});}catch(_){}
     window.__privacy={storage:0,cookies:0,beacons:0,logs:0,fetch:[],aborts:0,recent:0,submits:0};
     for(const name of ['getItem','setItem','removeItem','clear'])Storage.prototype[name]=function(){window.__privacy.storage++;throw new Error('STORAGE_FORBIDDEN');};
     Object.defineProperty(document,'cookie',{configurable:true,get(){window.__privacy.cookies++;throw new Error('COOKIE_READ_FORBIDDEN');},set(){window.__privacy.cookies++;throw new Error('COOKIE_WRITE_FORBIDDEN');}});
@@ -207,6 +213,10 @@ async function fixture(options={}) {
       const assetKey=url.pathname.slice((directory+'Public/assets/keepstore/').length);
       if(url.pathname.startsWith(directory+'Public/assets/keepstore/')&&assets.has(assetKey)){
         await route.fulfill({contentType:assetKey.endsWith('.js')?'application/javascript; charset=utf-8':'text/css; charset=utf-8',body:assets.get(assetKey)});return;
+      }
+      if((ux1dOnly||ux1dBaseline)&&req.resourceType()==='font'&&url.pathname.startsWith(directory+'Public/assets/keepstore/')){
+        const font=path.resolve(root,'Public/assets/keepstore',url.pathname.slice((directory+'Public/assets/keepstore/').length));
+        if(font.startsWith(path.resolve(root,'Public/assets/keepstore')+path.sep)&&/\.(woff2?|ttf|otf)$/i.test(font)&&fs.existsSync(font)){await route.fulfill({contentType:font.endsWith('.woff2')?'font/woff2':'font/woff',body:fs.readFileSync(font)});return;}
       }
       if(url.pathname===directory+'search_suggest.aspx'){
         requests.push(req.url());
@@ -248,6 +258,7 @@ async function run() {
   }
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(ux1dOnly||ux1dBaseline){await ux1dRegressions();report.status='PASS';return;}
   if(advisorOnly){if(taxonomyRev2Only)await taxonomyRev2Regressions();else await advisorRegressions();report.status='PASS';return;}
   if(baselineVisualOnly){
     report.viewports=[390,1365];
@@ -283,7 +294,7 @@ async function run() {
       record('undo fresh request '+kind+width,f.requests.length===before+1&&!new URL(f.requests.at(-1)).searchParams.has('ordinamento'));
       await f.page.locator('[data-ks-guide-compare-key]').nth(0).check();await f.page.locator('[data-ks-guide-compare-key]').nth(1).check();
       record('compare two current items '+kind+width,await f.page.locator('.ks-guide-compare-item').count()===2);
-      await f.page.locator('[data-ks-guide-compare-key]').nth(2).check();
+      await f.page.locator('[data-ks-guide-compare-key]').nth(2).click();
       record('compare three with missing data '+kind+width,await f.page.locator('.ks-guide-compare-item').count()===3&&(await f.page.locator('[data-ks-guide-comparison]').innerText()).includes('Dato non disponibile'));
       record('comparison row/column semantics '+kind+width,await f.page.locator('.ks-guide-compare-grid tbody th[scope="row"]').count()>=7&&await f.page.locator('.ks-guide-compare-item[scope="col"]').count()===3);
       if(width>=768){const tops=await f.page.locator('.ks-guide-price').evaluateAll(items=>items.map(e=>e.getBoundingClientRect().top));record('card price rows align '+kind+width,Math.abs(tops[0]-tops[1])<1);}
@@ -993,6 +1004,125 @@ async function catalogHandoffRegressions() {
   }
   const safe=await fixture({search:'?guide=catalog-v1&guide_q='+encodeURIComponent('<img src=x>')});
   try{record('import is text, never markup',await safe.page.locator('#ksGuideQuery').inputValue()==='<img src=x>'&&await safe.page.locator('[data-ks-guide-fields] img').count()===0&&safe.requests.length===0);await safe.privacy();}finally{await safe.close();}
+}
+async function ux1dRegressions() {
+  report.suite=ux1dBaseline?'UX1D immutable baseline':'UX1D progressive presentation and impacted regressions';
+  report.viewports=[360,390,430,768,1365];report.uxMeasurements=[];
+  const openSettings=async f=>{const d=f.page.locator('[data-ks-guide-advanced]');if(await d.count()&&!await d.evaluate(x=>x.open))await d.locator(':scope > summary').press('Enter');};
+  const finish=async f=>{await f.privacy();record('UX no unresolved fixture request',f.apiErrors.length===0);};
+  const metrics=async f=>f.page.evaluate(()=>{const root=document.getElementById('KsLocalAiSearch130'),q=document.getElementById('ksGuideQuery'),primary=root.querySelector('[data-ks-guide-prepare]');return {height:root.getBoundingClientRect().height,overflow:document.documentElement.scrollWidth-innerWidth,visibleInputs:Array.from(root.querySelectorAll('input,textarea')).filter(e=>e.checkVisibility()).length,queryVisible:q.checkVisibility(),ctaHeight:primary.getBoundingClientRect().height,cls:window.__uxLayout.reduce((a,b)=>a+b,0),color:getComputedStyle(primary).backgroundColor};});
+  if(!ux1dBaseline){
+    record('UX hero-guide-categories source order',markup.indexOf('id="HomeHeroSection"')<markup.indexOf('id="KsLocalAiSearch130"')&&markup.indexOf('id="KsLocalAiSearch130"')<markup.indexOf('id="HomeMainCategoriesSection"'));
+    record('UX exactly one guide root in source',(markup.match(/id="KsLocalAiSearch130"/g)||[]).length===1);
+    const original=baselineSource('Default.aspx'), ids=s=>[...s.matchAll(/<asp:[^>]+\bID="([^"]+)"/g)].map(x=>x[1]).sort();
+    record('UX WebForms control manifest preserved',JSON.stringify(ids(original))===JSON.stringify(ids(markup)));
+    for(const id of ['HomeHeroSection','HomeMainCategoriesSection','HomeDirectCategoriesSection']){
+      const section=s=>{const start=s.indexOf('<section id="'+id+'"');return s.slice(start,s.indexOf('</section>',start)+10).replace(/\r\n/g,'\n');};record('UX existing section byte preserved '+id,section(original)===section(markup));
+    }
+    const baseApi=sourceApi(baselineSource('Public/assets/keepstore/js/ks-shopping-guide.js'));
+    for(const name of ['parseCommand','queryText','requestURL','requestAdvisorURL','validate','validateAdvisor','reason','evidence','decision','interpretNeed','chooseQuestion','catalogHandoff'])record('UX unchanged authority/helper '+name,api[name].toString().replace(/\r\n/g,'\n')===baseApi[name].toString().replace(/\r\n/g,'\n'));
+    for(const file of ['search_suggest.aspx','search_suggest.aspx.vb','Default.aspx.vb','Page.master','App_Code/KeepStoreShoppingKnowledge.vb','App_Code/KeepStoreShoppingDecisionPolicy.vb'])record('UX unchanged server/header contract '+file,read(file).replace(/\r\n/g,'\n')===baselineSource(file).replace(/\r\n/g,'\n'));
+  }
+  for(const kind of ['Tech','Food'])for(const width of report.viewports){
+    const f=await fixture({width,kind,advisor:true,count:6});
+    try{
+      await f.page.evaluate(()=>document.fonts.ready);const measured=await metrics(f);report.uxMeasurements.push({kind,width,stage:'rest',...measured});
+      await f.screenshot((ux1dBaseline?'before':'after')+'-'+kind+'-'+width);
+      record('UX startup no fetch '+kind+width,f.requests.length===0);
+      if(ux1dBaseline)continue;
+      record('UX primary field immediately visible '+kind+width,measured.queryVisible&&measured.visibleInputs===1);
+      record('UX initial height budget '+kind+width,width!==390||measured.height<=240);
+      record('UX no page overflow '+kind+width,measured.overflow<=0);
+      record('UX exact initial title and CTA '+kind+width,(await f.page.locator('#ksGuideTitle').innerText())==='Non sai quale scegliere?'&&(await f.page.locator('[data-ks-guide-prepare]').innerText())==='Aiutami a scegliere');
+      record('UX primary touch height '+kind+width,measured.ctaHeight>=44);
+      const touch=await f.page.locator('[data-ks-guide-mode="guided2"]').boundingBox();record('UX secondary touch target '+kind+width,touch.height>=44&&touch.width>=44);
+      await f.page.locator('.ks-guide-entry').press('Enter');record('UX existing header entry targets single guide '+kind+width,f.requests.length===0&&new URL(f.page.url()).hash==='#KsLocalAiSearch130');
+      await f.page.locator('#ksGuideQuery').focus();await f.page.locator('#ksGuideQuery').fill('SKU120');record('UX focus and typing no request '+kind+width,f.requests.length===0);
+      await f.page.locator('#ksGuideQuery').press('Tab');record('UX primary keyboard order and visible focus '+kind+width,await f.page.locator('[data-ks-guide-prepare]').evaluate(x=>document.activeElement===x&&getComputedStyle(x).outlineStyle!=='none'&&parseFloat(getComputedStyle(x).outlineWidth)>=2));
+      await openSettings(f);await f.page.locator('#ksGuideBudget').fill('500,50');await f.page.locator('[data-ks-guide-sector="7"]').press('Enter');
+      record('UX progressive controls not automatic '+kind+width,f.requests.length===0);
+      await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      record('UX result request keeps protocol/filters '+kind+width,new URL(f.requests[0]).searchParams.get('mode')==='guided'&&new URL(f.requests[0]).searchParams.get('pmax')==='500.5'&&new URL(f.requests[0]).searchParams.get('st')==='7');
+      record('UX closed settings and immediate shortlist '+kind+width,!await f.page.locator('[data-ks-guide-advanced]').evaluate(x=>x.open)&&await f.page.locator('.ks-guide-card:visible').count()===3&&await f.page.locator('.ks-guide-card').count()===6);
+      record('UX one clarification maximum '+kind+width,await f.page.locator('.ks-guide-question').count()<=1);
+      const keys=await f.page.locator('[data-ks-guide-compare-key]').evaluateAll(es=>es.map(e=>e.getAttribute('data-ks-guide-compare-key'))),count=f.requests.length;
+      await f.page.locator('[data-ks-guide-show-more]').press('Enter');
+      record('UX show six no query or ranking change '+kind+width,f.requests.length===count&&await f.page.locator('.ks-guide-card:visible').count()===6&&JSON.stringify(keys)===JSON.stringify(await f.page.locator('[data-ks-guide-compare-key]').evaluateAll(es=>es.map(e=>e.getAttribute('data-ks-guide-compare-key')))));
+      for(const i of [0,1,3])await f.page.locator('[data-ks-guide-compare-key]').nth(i).check();
+      await f.page.locator('[data-ks-guide-compare-key]').nth(2).click();
+      record('UX compare max three '+kind+width,await f.page.locator('[data-ks-guide-compare-key]:checked').count()===3);
+      record('UX differences before accessible full table '+kind+width,await f.page.locator('.ks-guide-compare-differences').isVisible()&&!await f.page.locator('.ks-guide-compare-details').evaluate(x=>x.open)&&await f.page.locator('.ks-guide-compare-details table').count()===1);
+      await f.page.locator('.ks-guide-compare-details > summary').press('Enter');record('UX full table keyboard accessible '+kind+width,await f.page.locator('.ks-guide-compare-details table').isVisible()&&await f.page.locator('.ks-guide-compare-details tbody tr').count()>=9);
+      record('UX expanded comparison has local scrolling only '+kind+width,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await f.page.locator('[data-ks-guide-show-more]').press('Enter');record('UX collapse preserves selection '+kind+width,await f.page.locator('.ks-guide-card:visible').count()===3&&await f.page.locator('[data-ks-guide-compare-key]:checked').count()===3);
+      await f.page.locator('[data-ks-guide-comparison] button[aria-label^="Rimuovi dal confronto"]').last().press('Enter');
+      record('UX hidden-card removal has stable focus '+kind+width,await f.page.evaluate(()=>document.activeElement!==document.body));
+      record('UX price/stock/PDP guards preserved '+kind+width,await f.page.locator('.ks-guide-card .ks-guide-price').first().innerText()===payload(f.requests[0],{count:6,food:kind==='Food'}).suggestions[0].price&&await f.page.locator('.ks-guide-card .ks-guide-product-cta').first().getAttribute('href')===new URL(payload(f.requests[0],{count:6}).suggestions[0].url,f.requests[0]).href);
+      if(width===390||width===1365)await f.screenshot('selection-'+kind+'-'+width);
+      await openSettings(f);await f.page.locator('#ksGuideCommand').fill('solo disponibili');await f.page.locator('[data-ks-guide-apply]').press('Enter');await f.wait('results');
+      record('UX refinement explicit '+kind+width,new URL(f.requests.at(-1)).searchParams.get('disponibile')==='1');
+      await openSettings(f);await f.page.locator('[data-ks-guide-undo]').press('Enter');await f.wait('results');record('UX undo fresh authoritative request '+kind+width,!new URL(f.requests.at(-1)).searchParams.has('disponibile'));
+      await f.page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));await f.wait('context-invalid');record('UX BFCache invalidates cards '+kind+width,await f.page.locator('.ks-guide-card').count()===0);
+      await openSettings(f);await f.page.locator('[data-ks-guide-reset]').press('Enter');record('UX reset restores compact input '+kind+width,(await metrics(f)).visibleInputs===1&&await f.page.locator('#ksGuideQuery').inputValue()==='');
+      await finish(f);
+    }finally{await f.close();}
+  }
+  if(ux1dBaseline)return;
+  const real=advisorServer.filter(x=>x.response&&x.response.ok),tech=real.find(x=>x.name==='tech-initial'),food=real.find(x=>x.name==='food-initial');
+  if(!tech||!food)throw Error('UX1D_ATTESTED_GUIDED2_FIXTURES_REQUIRED');
+  const paths=api.urls('https://tenant1.invalid/','/search_suggest.aspx');
+  for(const row of real){const s=advisorSpec(row.queryString);record('UX retained real v2 payload validation '+row.name,api.validateAdvisor(row.response,s.brief,paths,s.criteria,s.skipped).items.length===row.response.suggestions.length);}
+  for(const row of [tech,food]){
+    const f=await fixture({advisor:true,width:390,advisorScenario:row.name});
+    try{
+      await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');await f.page.locator('#ksGuideQuery').fill(advisorSpec(row.queryString).brief.q);
+      await openSettings(f);await f.page.locator('[data-ks-guide-sector="'+advisorSpec(row.queryString).brief.st+'"]').press('Enter');
+      record('UX v2 explicit mode no fetch '+row.name,f.requests.length===0);await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      record('UX v2 authorized first three '+row.name,await f.page.locator('.ks-guide-card:visible').count()===3&&await f.page.locator('[data-ks-advisor-option]').count()===row.response.guided.question.options.length);
+      record('UX v2 results precede technical analysis and question '+row.name,await f.page.locator('[data-ks-guide-results]').evaluate(el=>{const card=el.querySelector('.ks-guide-grid'),question=el.querySelector('.ks-guide-question');return !!card&&(!question||!!(card.compareDocumentPosition(question)&Node.DOCUMENT_POSITION_FOLLOWING));}));
+      const details=f.page.locator('.ks-guide-card details').first();record('UX evidence retained in disclosure '+row.name,!await details.evaluate(x=>x.open));await details.locator('summary').press('Enter');record('UX evidence keyboard accessible '+row.name,await details.locator('dl').isVisible());
+      record('UX all documented technical facts remain in disclosure '+row.name,await details.locator('dl dt').count()===row.response.suggestions[0].values.length);
+      record('UX disclosed technical facts do not overflow '+row.name,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await f.screenshot('attributes-'+row.name+'-390');
+      await finish(f);
+    }finally{await f.close();}
+  }
+  const f=await fixture({advisor:true,width:390});
+  try{
+    await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');await f.page.locator('#ksGuideQuery').fill('scelta');await openSettings(f);await f.page.locator('[data-ks-guide-sector="7"]').press('Enter');await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+    const hard=real.find(x=>x.name==='tech-hard'),criterion=advisorSpec(hard.queryString).criteria[0];await openSettings(f);
+    const controls=f.page.locator('[data-ks-advisor-panel] details');await controls.locator('summary').press('Enter');await f.page.locator('#ksAdvisorAttribute').selectOption(criterion.attributeId);await f.page.locator('#ksAdvisorOperator').selectOption(criterion.operator);await f.page.locator('#ksAdvisorNumber').fill(criterion.value);await f.page.locator('#ksAdvisorPriority').selectOption('hard');await f.page.locator('[data-ks-advisor-add]').press('Enter');await f.wait('results');
+    const before=f.requests.length;await openSettings(f);await f.page.locator('[data-ks-guide-mode="guided"]').press('Enter');
+    record('UX switching mode never silently removes hard requirement',f.requests.length===before&&await f.page.locator('[data-ks-guide-mode="guided2"]').getAttribute('aria-pressed')==='true'&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);
+    await f.page.locator('[data-ks-guide-cancel-mode]').press('Enter');record('UX cancel preserves mode and criteria',f.requests.length===before&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);
+    await openSettings(f);await f.page.locator('[data-ks-guide-mode="guided"]').press('Enter');await f.page.locator('[data-ks-guide-confirm-mode]').press('Enter');
+    record('UX explicit mode confirmation keeps common brief without fetch',f.requests.length===before&&await f.page.locator('#ksGuideQuery').inputValue()==='scelta'&&await f.page.locator('[data-ks-guide-mode="guided"]').getAttribute('aria-pressed')==='true');
+    await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');record('UX mode change retains sector contract',new URL(f.requests.at(-1)).searchParams.get('st')==='7'&&new URL(f.requests.at(-1)).searchParams.get('mode')==='guided');
+    await finish(f);
+  }finally{await f.close();}
+  for(const [scenario,name] of ['commercial-1-anon','commercial-1-auth','commercial-2-anon','commercial-2-auth'].entries()){
+    const row=real.find(x=>x.name===name),directory=scenario>=2?'/shop/':'/',scoped=await fixture({advisor:true,width:390,scenario,advisorScenario:name,directory});
+    try{
+      await scoped.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');await scoped.page.locator('#ksGuideQuery').fill('scelta');await openSettings(scoped);await scoped.page.locator('[data-ks-guide-sector="7"]').press('Enter');await scoped.page.locator('[data-ks-guide-prepare]').press('Enter');await scoped.wait('results');
+      record('UX exact synthetic tenant/account price and display label '+name,await scoped.page.locator('.ks-guide-card .ks-guide-price').first().innerText()===row.response.suggestions[0].price&&await scoped.page.locator('.ks-guide-fiscal').innerText()===row.response.guided.displayLabel);
+      record('UX exact synthetic identity/PDP and virtual directory '+name,await scoped.page.locator('.ks-guide-card .ks-guide-product-cta').first().getAttribute('href')===new URL(row.response.suggestions[0].url,scoped.requests[0]).href&&new URL(scoped.requests[0]).pathname===directory+'search_suggest.aspx');
+      await finish(scoped);
+    }finally{await scoped.close();}
+  }
+  for(const options of [{js:false},{mode:'missing'},{mode:'failure'}]){
+    const f=await fixture({width:390,...options});try{record('UX no-JS/init failure catalog fallback '+JSON.stringify(options),f.requests.length===0&&await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).isVisible());await f.page.getByRole('link',{name:'Esplora tutto il catalogo',exact:true}).press('Enter');record('UX no-JS navigation works',new URL(f.page.url()).pathname==='/articoli.aspx');}finally{await f.close();}
+  }
+  for(const status of [403,500,503]){
+    const f=await fixture({width:390,status});try{await f.submit();record('UX HTTP recovery retains fallback '+status,await f.page.locator('.ks-guide-card').count()===0&&await f.page.locator('[data-ks-guide-recovery] a').isVisible());await finish(f);}finally{await f.close();}
+  }
+  const imported=await fixture({width:390,search:'?guide=catalog-v1&guide_q=SKU120&guide_st=7'});
+  try{record('UX handoff stays draft and visible',imported.requests.length===0&&await imported.page.locator('#ksGuideQuery').inputValue()==='SKU120'&&await imported.page.locator('#ksGuideQuery').isVisible());await imported.page.locator('[data-ks-guide-prepare]').press('Enter');await imported.wait('results');await finish(imported);}finally{await imported.close();}
+  const unavailable=await fixture({width:390,search:'?guide=catalog-v1&guide_q=SKU120&guide_st=99'});
+  try{
+    record('UX unavailable imported sector warning visible immediately',await unavailable.page.locator('[data-ks-guide-handoff]').isVisible()&&unavailable.requests.length===0);
+    await unavailable.page.locator('[data-ks-guide-prepare]').press('Enter');record('UX unavailable sector requires explicit choice',unavailable.requests.length===0&&await unavailable.page.locator('[data-ks-guide-advanced]').evaluate(x=>x.open));await finish(unavailable);
+  }finally{await unavailable.close();}
+  report.limitations.push('Hero/category are presentation boundaries, not actual WebForms banner data; CLS is local synthetic unexpected layout shift, not field Core Web Vitals; no screen reader/device certification');
 }
 async function taxonomyRev2Regressions() {
   report.suite='REV2 taxonomy continuity delta';report.viewports=[360,390,430,1365];
