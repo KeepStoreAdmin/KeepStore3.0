@@ -10,7 +10,8 @@ const decisionOnly = process.argv.includes('--decision-journey-only');
 const advisorOnly = process.argv.includes('--advisor-only');
 const advisorQualityOnly = process.argv.includes('--advisor-quality-rev1-only');
 const taxonomyRev2Only = process.argv.includes('--taxonomy-rev2-only');
-const ux1dOnly = process.argv.includes('--ux-1d-only');
+const ux1dHistoryOnly = process.argv.includes('--ux-1d-history-only');
+const ux1dOnly = process.argv.includes('--ux-1d-only') || ux1dHistoryOnly;
 const ux1dBaseline = process.argv.includes('--ux-1d-baseline');
 const advisorBaselineOnly = process.argv.includes('--advisor-baseline-visual-only');
 const baselineVisualOnly = process.argv.includes('--decision-baseline-visual-only') || advisorBaselineOnly || ux1dBaseline;
@@ -67,6 +68,17 @@ function advisorSignature(raw) {
   return JSON.stringify({brief:s.brief,criteria:s.criteria.map(c=>({attributeId:c.attributeId,operator:c.operator,value:c.value,priority:c.priority})),skipped:[...s.skipped].sort()});
 }
 function advisorPayload(url, config) {
+  if(config.historyFixture){
+    // Presentation-only sequence: reuse attested definitions/positive rows and an
+    // explicit empty response for two criteria. This does not certify server ranking.
+    const spec=advisorSpec(url),original=advisorServer.find(x=>x.name===(spec.criteria.length?'tech-hard':'tech-initial'));
+    if(!original)throw new Error('HISTORY_ATTESTED_DEFINITIONS_REQUIRED');
+    const response=clone(original.response),paths=api.urls(new URL('./',url).href,new URL(url).pathname);
+    Object.assign(response.guided.criteria,spec.brief,{attributes:spec.criteria,skipped:spec.skipped});
+    response.catalogUrl=api.catalogURL(spec.brief,paths).href;response.guided.question=null;response.guided.actions=[];
+    if(spec.criteria.length>1){response.suggestions=[];response.total=0;response.guided.returnedCount=0;response.guided.eligibleCount=0;}
+    return response;
+  }
   const matching=advisorServer.filter(x=>advisorSignature(x.queryString)===advisorSignature(url));
   const row=config.advisorScenario ? matching.find(x=>x.name===config.advisorScenario) : matching[0];
   if(!row)throw new Error('NO_REAL_VB_FIXTURE_FOR_REQUEST '+new URL(url).search);
@@ -258,6 +270,7 @@ async function run() {
   }
   browser=await playwright.chromium.launch({executablePath:chrome,headless:!handoffOnly,args:['--disable-background-networking','--disable-component-update','--no-first-run']});
   report.browser=await browser.version();
+  if(ux1dHistoryOnly){await ux1dHistoryRegression();report.status='PASS';return;}
   if(ux1dOnly||ux1dBaseline){await ux1dRegressions();report.status='PASS';return;}
   if(advisorOnly){if(taxonomyRev2Only)await taxonomyRev2Regressions();else await advisorRegressions();report.status='PASS';return;}
   if(baselineVisualOnly){
@@ -1004,6 +1017,45 @@ async function catalogHandoffRegressions() {
   }
   const safe=await fixture({search:'?guide=catalog-v1&guide_q='+encodeURIComponent('<img src=x>')});
   try{record('import is text, never markup',await safe.page.locator('#ksGuideQuery').inputValue()==='<img src=x>'&&await safe.page.locator('[data-ks-guide-fields] img').count()===0&&safe.requests.length===0);await safe.privacy();}finally{await safe.close();}
+}
+async function ux1dHistoryRegression() {
+  report.suite='UX1D REV1 mode/history differential only';report.viewports=[390,1365];
+  report.revisionBase='eed223c1af1a93501c726e22bc63f4b1d19cac9d';
+  report.limitations.push('History sequence uses attested VB definitions and positive rows plus a synthetic empty response for two criteria; no new server/ranking certification.');
+  const hardRow=advisorServer.find(x=>x.name==='tech-hard'),hard=advisorSpec(hardRow.queryString).criteria[0];
+  const second=hardRow.response.guided.attributes.find(a=>a.id!==hard.attributeId&&a.type!=='number'&&a.canAsk&&a.observedValues.length);
+  record('history fixtures have hard and independent second attribute',!!second);
+  for(const width of report.viewports){
+    const f=await fixture({advisor:true,width,historyFixture:true});
+    const settings=async()=>{const d=f.page.locator('[data-ks-guide-advanced]');if(!await d.evaluate(x=>x.open))await d.locator(':scope > summary').press('Enter');};
+    const add=async c=>{await settings();const d=f.page.locator('[data-ks-advisor-panel] details');if(!await d.evaluate(x=>x.open))await d.locator('summary').press('Enter');await f.page.locator('#ksAdvisorAttribute').selectOption(c.attributeId);await f.page.locator('#ksAdvisorOperator').selectOption(c.operator);await f.page.locator(c===hard?'#ksAdvisorNumber':'#ksAdvisorValue')[c===hard?'fill':'selectOption'](c.value);await f.page.locator('#ksAdvisorPriority').selectOption(c.priority);await f.page.locator('[data-ks-advisor-add]').press('Enter');await f.wait(c===hard?'results':'empty');};
+    try{
+      await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');await f.page.locator('#ksGuideQuery').fill('scelta');await settings();await f.page.locator('[data-ks-guide-sector="7"]').press('Enter');await f.page.locator('#ksGuideBudget').fill('500');await f.page.locator('[data-ks-guide-prepare]').press('Enter');await f.wait('results');
+      await add(hard);record('history first hard confirmed '+width,advisorSpec(f.requests.at(-1)).criteria.length===1&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);
+      // A common commercial refinement creates a distinct snapshot that Undo must keep.
+      await settings();await f.page.locator('#ksGuideCommand').fill('solo disponibili');await f.page.locator('[data-ks-guide-apply]').press('Enter');await f.wait('results');
+      await add({attributeId:second.id,operator:'eq',value:second.observedValues[0],priority:'soft'});
+      record('history second criterion and receipts actually sent '+width,advisorSpec(f.requests.at(-1)).criteria.length===2&&f.receiptHeaders.at(-1).length===2&&await f.page.locator('[data-ks-advisor-criteria] button').count()===2);
+      const prior=f.requests.length;await settings();await f.page.locator('[data-ks-guide-mode="guided"]').press('Enter');await f.page.locator('[data-ks-guide-confirm-mode]').press('Enter');await f.page.locator('[data-ks-guide-mode="guided2"]').press('Enter');
+      record('history two mode changes do not fetch '+width,f.requests.length===prior);
+      await settings();await f.page.locator('[data-ks-guide-undo]').press('Enter');await f.wait('results');
+      const sent=advisorSpec(f.requests.at(-1));
+      record('history Undo never reactivates old requirements '+width,sent.criteria.length===0&&sent.skipped.length===0);
+      record('history Undo sends no previous receipt '+width,f.receiptHeaders.at(-1).length===0&&!new URL(f.requests.at(-1)).searchParams.has('receipts'));
+      record('history Undo has no hidden criteria or evaluations '+width,await f.page.locator('[data-ks-advisor-criteria] button').count()===0&&!await f.page.locator('[data-ks-guide-results]').innerText().then(t=>t.includes('(obbligatorio)')));
+      record('history first Undo preserves query/sector/budget/availability '+width,sent.brief.q==='scelta'&&sent.brief.st===7&&sent.brief.pmax==='500'&&sent.brief.disponibile);
+      await settings();await f.page.locator('[data-ks-guide-undo]').press('Enter');await f.wait('results');const common=advisorSpec(f.requests.at(-1));
+      record('history next Undo restores common commercial filter '+width,common.criteria.length===0&&f.receiptHeaders.at(-1).length===0&&common.brief.q==='scelta'&&common.brief.st===7&&common.brief.pmax==='500'&&!common.brief.disponibile);
+      record('history next Undo UI stays synchronized '+width,await f.page.locator('[data-ks-advisor-criteria] button').count()===0&&await f.page.locator('#ksGuideBudget').inputValue()==='500'&&await f.page.locator('[data-ks-guide-sector="7"]').getAttribute('aria-pressed')==='true');
+      // Same-mode Undo must synchronize chips immediately, before delayed I/O returns.
+      await add(hard);await add({attributeId:second.id,operator:'eq',value:second.observedValues[0],priority:'soft'});f.config.delay=500;
+      await settings();await f.page.locator('[data-ks-guide-undo]').press('Enter');
+      record('history same-mode Undo updates criteria while response pending '+width,await f.state()==='loading'&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);
+      await f.wait('results');f.config.delay=0;
+      record('history same-mode Undo retains only its authorized hard '+width,advisorSpec(f.requests.at(-1)).criteria.length===1&&advisorSpec(f.requests.at(-1)).criteria[0].attributeId===hard.attributeId&&await f.page.locator('[data-ks-advisor-criteria] button').count()===1);
+      record('history no page overflow '+width,await f.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await f.screenshot('history-after-undo-'+width);await f.privacy();record('history all local requests resolved '+width,f.apiErrors.length===0);
+    }finally{await f.close();}
+  }
 }
 async function ux1dRegressions() {
   report.suite=ux1dBaseline?'UX1D immutable baseline':'UX1D progressive presentation and impacted regressions';

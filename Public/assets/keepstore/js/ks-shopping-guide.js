@@ -553,7 +553,9 @@
         announce('La richiesta è in modifica. Premi “Aiutami a scegliere” per confermarla oppure “Ricomincia” per scartare la bozza.'); return;
       }
       if (!canRefineConfirmed()) return;
-      var previous = state.history.pop();if(advisor.enabled){advisor.criteria=previous.advisor?previous.advisor.criteria:[];advisor.skipped=previous.advisor?previous.advisor.skipped:[];advisor.receipts=previous.advisor?Object.assign({},previous.advisor.receipts):{};} accept(previous.brief, false, previous.goal, true);
+      var previous = state.history.pop();if(advisor.enabled){advisor.criteria=previous.advisor?previous.advisor.criteria:[];advisor.skipped=previous.advisor?previous.advisor.skipped:[];advisor.receipts=previous.advisor?Object.assign({},previous.advisor.receipts):{};}
+      renderAdvisorCriteria();
+      accept(previous.brief, false, previous.goal, true);
     }
     function prepareSearch() {
       if(advisor.enabled&&advisor.draft){announce('Usa Conferma criterio per applicare il requisito in bozza, oppure scegli la voce vuota per scartarlo.');return;}
@@ -840,6 +842,7 @@
     }
     try {
       function activateMode(enabled,control){
+        state.history.forEach(function(h){h.advisor=null;});
         invalidate('editing');advisor.enabled=enabled;advisor.criteria=[];advisor.skipped=[];advisor.receipts={};advisor.confirmedReceipts={};advisor.attributes=[];advisor.draft=false;advisor.confirmedCriteria=[];advisor.confirmedSkipped=[];
         summaryView();renderAdvisorCriteria();clearAdvisorInputs();if(advisorPanel)advisorPanel.hidden=true;
         if(modeReview){modeReview.hidden=true;modeReview.replaceChildren();}
