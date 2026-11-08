@@ -196,11 +196,11 @@
                                     <p class="facet-title title-sidebar fw-semibold">Varianti</p>
                                     <div class="box-fieldset-item">
                                         <fieldset class="fieldset-item d-block">
-                                            <label class="body-text-3 mb-1">Taglia</label>
+                                            <asp:Label runat="server" AssociatedControlID="Drop_Filtra_Taglia" CssClass="body-text-3 mb-1" Text="Taglia" />
                                             <asp:DropDownList ID="Drop_Filtra_Taglia" runat="server" data-ks-batch-key="taglia" data-ks-batch-value="server-options" CssClass="form-select" AutoPostBack="true" />
                                         </fieldset>
                                         <fieldset class="fieldset-item d-block">
-                                            <label class="body-text-3 mb-1">Colore</label>
+                                            <asp:Label runat="server" AssociatedControlID="Drop_Filtra_Colore" CssClass="body-text-3 mb-1" Text="Colore" />
                                             <asp:DropDownList ID="Drop_Filtra_Colore" runat="server" data-ks-batch-key="colore" data-ks-batch-value="server-options" CssClass="form-select" AutoPostBack="true" />
                                         </fieldset>
                                     </div>
@@ -213,7 +213,8 @@
                                 <button type="button" class="tf-btn" data-ks-batch-apply>Applica filtri</button>
                                 <button type="button" class="tf-btn" data-ks-batch-cancel>Annulla</button>
                             </div>
-                            <p id="ksBatchPriceHint" data-ks-batch-price-hint hidden role="status">Applica o annulla le selezioni prima di modificare il prezzo.</p>
+                            <p id="ksBatchPriceHint" data-ks-batch-price-hint hidden>Applica o annulla le selezioni prima di modificare il prezzo.</p>
+                            <div id="ksBatchStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
                             <a class="tf-btn btn-reset w-100" href="<%= Server.HtmlEncode(ClearCatalogFiltersUrl) %>">
                                 <span class="caption text-white">Reset filtri</span>
                             </a>

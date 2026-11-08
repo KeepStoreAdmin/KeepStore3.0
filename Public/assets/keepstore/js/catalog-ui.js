@@ -405,6 +405,7 @@
     var applyBatch = panel.querySelector('[data-ks-batch-apply]');
     var price = panel.querySelector('.ks-catalog-price-apply');
     var priceHint = panel.querySelector('[data-ks-batch-price-hint]');
+    var batchStatus = panel.querySelector('#ksBatchStatus');
     var keys = ['mr', 'tp', 'gr', 'sg', 'inpromo', 'ricondizionato', 'disponibile', 'taglia', 'colore'];
     var multi = ['mr', 'tp', 'gr', 'sg'];
     function signature(value, key) {
@@ -438,6 +439,7 @@
         else price.setAttribute('aria-describedby', batch.priceDescription);
       }
       if (priceHint) priceHint.hidden = !dirty();
+      if (batchStatus) batchStatus.textContent = count + ' opzioni selezionate.' + (dirty() ? ' Applica o annulla le selezioni prima di modificare il prezzo.' : '');
     }
     function startBatch() {
       if (!batchBar || !applyBatch) return;
@@ -482,6 +484,7 @@
         if (batch.priceDescription === null) price.removeAttribute('aria-describedby'); else price.setAttribute('aria-describedby', batch.priceDescription);
       }
       if (priceHint) priceHint.hidden = true;
+      if (batchStatus) batchStatus.textContent = '';
       batchBar.hidden = true; batch = null;
     }
     function batchControl(target) {

@@ -10,10 +10,25 @@ if (!evidence) throw Error('KS_EVIDENCE required outside repository');
 fs.mkdirSync(evidence, {recursive:true});
 let checks = 0;
 function check(value, label) { assert(value, label); checks++; }
+const markup = fs.readFileSync(path.join(root, 'articoli.aspx'), 'utf8');
+for (const id of ['Drop_Filtra_Taglia', 'Drop_Filtra_Colore']) {
+ check(new RegExp('<asp:Label\\b[^>]*AssociatedControlID="'+id+'"[^>]*>').test(markup), 'WebForms label '+id);
+}
+check((markup.match(/id="ksBatchStatus"/g)||[]).length===1, 'unique status id');
+check(/id="ksBatchStatus"[^>]*class="visually-hidden"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/.test(markup), 'persistent polite atomic status');
+check(!/id="ksBatchPriceHint"[^>]*(?:role="status"|aria-live)/.test(markup), 'price hint not a second live region');
+const cp = require('child_process');
+const plan = fs.readFileSync(path.join(root, 'docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md'), 'utf8');
+const oldPlan = cp.execFileSync('git', ['show','85cb83c20c0a5689ce1d7d8d7d11e096888e9254:docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md'],{encoding:'utf8',maxBuffer:4*1024*1024});
+const normalize = s=>s.replace(/\r\n/g,'\n').trim();
+const newSectionEnd = plan.indexOf('\n## ', plan.indexOf('KS-CATALOG-MOBILE-FILTER-BATCH-1A'));
+check(newSectionEnd>0 && normalize(plan.slice(newSectionEnd))===normalize(oldPlan.slice(oldPlan.indexOf('\n## '))), 'historical Masterplan exact baseline');
+check(plan.includes('462/462 controlli PASS') && !plan.includes('462/476 controlli PASS'), 'historical count restored');
 const initial = '/store/articoli.aspx?q=caff%C3%A8%20%26%20t%C3%A8&st=2&ct=3&tp=8&inpromo=1&pid=9&pg=3&page=2&p=4&rimuovi=mr&ordine=p_alto&righe=24';
 function html() {
  return `<!doctype html><meta charset="utf-8"><style>${css}
  body{margin:0}#ksCatalogFiltersPanel{background:white;padding:12px;box-sizing:border-box;width:min(100%,360px)}
+ .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
  #ksCatalogFiltersPanel a{display:block;padding:12px}#overlay-filter.show{display:block}
  @media(max-width:1199.98px){#ksCatalogFiltersPanel:not(.show){display:none}}
  </style><form id="form1"><main id="ksCatalogPage"><button type="button" id="filterShop">Filtri</button>
@@ -22,8 +37,9 @@ function html() {
  <a id="deals" href="?inpromo=" aria-label="Offerte attivo" data-ks-batch-key="inpromo" data-ks-batch-value="1"><span>Offerte</span><small>Attivo</small></a>
  <a id="refurb" href="?ricondizionato=1" data-ks-batch-key="ricondizionato" data-ks-batch-value="1">Ricondizionati</a>
  <span data-ks-batch-key="disponibile" data-ks-batch-value="1"><input id="available" type="checkbox" onclick="window.posts++"><label for="available">Disponibili</label></span>
- ${['taglia','colore'].map(k=>`<select id="${k}" data-ks-batch-key="${k}" onchange="window.posts++"><option value="0">Tutti</option><option value="17">Opzione</option></select>`).join('')}
- <button class="ks-catalog-price-apply" type="button">Prezzo</button><p id="ksBatchPriceHint" data-ks-batch-price-hint hidden role="status">Applica o annulla prima del prezzo</p>
+ ${['taglia','colore'].map(k=>`<label for="${k}">${k}</label><select id="${k}" data-ks-batch-key="${k}" onchange="window.posts++"><option value="0">Tutti</option><option value="17">Opzione</option></select>`).join('')}
+ <button class="ks-catalog-price-apply" type="button">Prezzo</button><p id="ksBatchPriceHint" data-ks-batch-price-hint hidden>Applica o annulla prima del prezzo</p>
+ <div id="ksBatchStatus" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
  <div data-ks-batch-actions hidden class="ks-filter-batch-actions"><button type="button" class="tf-btn" data-ks-batch-apply>Applica</button><button type="button" class="tf-btn" data-ks-batch-cancel>Annulla</button></div>
  <a id="reset" href="/store/articoli.aspx?st=2">Reset filtri</a></div></main></form><div id="overlay-filter"></div>`;
 }
@@ -41,6 +57,9 @@ function html() {
    check(await page.evaluate(()=>window.posts)===2,'desktop native handlers');
   } else {
    await page.locator('#filterShop').click();
+   check(await page.locator('#ksBatchStatus').textContent()==='2 opzioni selezionate.', 'initial count announcement');
+   check((await page.locator('#ksBatchStatus').boundingBox()).height===1, 'status visually hidden without display none');
+   check(await page.locator('#ksCatalogFiltersPanel [role="status"]').count()===1,'one panel live region');
    check(await page.locator('.close-filter').evaluate(n=>n===document.activeElement),'initial focus');
    await page.locator('.close-filter').press('Shift+Tab');
    check(await page.locator('#reset').evaluate(n=>n===document.activeElement),'focus trap');
@@ -48,6 +67,7 @@ function html() {
    await page.locator('#available').check();await page.locator('#taglia').selectOption('17');await page.locator('#colore').selectOption('17');await page.locator('#refurb').click();
    check(requests.length===0 && await page.evaluate(()=>window.posts)===0,'selection no I/O/postback');
    check(await page.locator('.ks-catalog-price-apply').isDisabled(),'price pending disabled');
+   check(await page.locator('#ksBatchStatus').textContent()==='9 opzioni selezionate. Applica o annulla le selezioni prima di modificare il prezzo.', 'count and price announcement');
    check(await page.locator('#mr7').getAttribute('aria-checked')==='true','aria selection');
    check(await page.locator('[data-ks-batch-apply]').innerText()==='Applica filtri (9)','active option count');
    check((await page.locator('[data-ks-batch-apply]').boundingBox()).height>=44,'touch size');
@@ -64,6 +84,7 @@ function html() {
     await page.locator('[data-ks-batch-actions]').waitFor({state:'hidden'});
     check(await page.locator('[data-ks-batch-actions]').isHidden() && !await page.locator('#available').isChecked(),'discard '+close);
     check(!await page.locator('.ks-catalog-price-apply').isDisabled(),'price restored '+close);
+    check(await page.locator('#ksBatchStatus').count()===1 && await page.locator('#ksBatchStatus').textContent()==='', 'status retained and cleared '+close);
     check(await page.locator('#available').getAttribute('onclick')==='window.posts++','handler restored '+close);
     if(close!=='breakpoint') check(await page.locator('#filterShop').evaluate(n=>n===document.activeElement),'return focus '+close);
     await page.setViewportSize({width,height:950});
@@ -74,6 +95,7 @@ function html() {
    check(!new URL(page.url()).searchParams.has('pid') && !new URL(page.url()).searchParams.has('inpromo'),'deals clears pid');
    await load();await page.locator('#filterShop').click();await page.locator('#mr1').click();await page.locator('#mr1').click();
    check(!await page.locator('.ks-catalog-price-apply').isDisabled(),'reverted selection enables price');
+   check(await page.locator('#ksBatchStatus').textContent()==='2 opzioni selezionate.', 'warning removed after reverting');
    await page.locator('[data-ks-batch-apply]').click();check(requests.length===0,'unchanged closes without GET');
    await page.locator('#filterShop').click();await page.locator('#mr1').click();await page.evaluate(()=>document.getElementById('overlay-filter').click());
    check(await page.locator('[data-ks-batch-actions]').isHidden(),'overlay discard');
@@ -87,6 +109,7 @@ function html() {
  const context=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:950}}),page=await context.newPage();
  await page.route('**/*',r=>r.fulfill({contentType:'text/html',body:html()}));await page.goto('https://tenant.fixture/store/articoli.aspx');
  check(await page.locator('[data-ks-batch-actions]').isHidden(),'no JS batch hidden');
+ check(await page.locator('#ksBatchStatus').count()===1 && await page.locator('#ksBatchStatus').textContent()==='', 'no JS empty persistent status');
  check(await page.locator('#mr1').getAttribute('href')==='?mr=1','no JS native URL');await context.close();
  fs.writeFileSync(path.join(evidence,'result.json'),JSON.stringify({result:'PASS SOURCE Chrome presentation fixture',checks,viewports:[390,430,1365],iis:'NOT EXECUTED',mysql:'NOT EXECUTED'},null,2));console.log('PASS '+checks);
  } finally { await browser.close(); }
