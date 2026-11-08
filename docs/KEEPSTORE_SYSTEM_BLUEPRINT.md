@@ -1,5 +1,15 @@
 # KeepStore System Blueprint
 
+## Checkout G6 — profilo commerciale verificato e draft v5, 2026-11-08
+
+La validazione autenticata di `Page.master.vb` applica listino e valori fiscali del reader `vlogin` gia verificato anche alle sessioni ordinarie; conserva controllo owner/tenant, idratazione legacy, normalizzazione e riuso del marker nella medesima richiesta. Nessuna lettura aggiuntiva del profilo o modifica ai provider commerciali.
+
+`CheckoutDraftState` interno v5 include `CommercialProfileFingerprint` nella firma complessiva, nella copia e nei controlli strutturali. La primitiva di fingerprint esistente serializza in modo deterministico/invariante CompanyId, PriceListId, DisplayMode, ExemptionId, VatOverride normalizzato (NULL distinto da0) e ReverseChargeEnabled del `StorefrontPriceDisplayContextProvider.GetCurrent` autenticato e coerente con l'identita checkout. La descrizione dell'esenzione non e inclusa: aggiornamenti del solo testo non invalidano il draft. Nessuna formula fiscale nuova. Il token browser MachineKey conserva il formato opaco esistente `v4`, distinto dalla versione del draft server-side.
+
+Il carrello non sigilla un draft senza un profilo valido. `TryReadSelectionForRetry` rifiuta profilo corrente mancante/diverso, oltre a draft v4, fingerprint mancante o alterato. Nell'ordine il confronto segue `TryRead` e `ValidateAuthoritativeSelections`, precede ripristino fiscale in Session e claim/transazione: un mismatch usa il retirement/flash/dispatcher `CartChanged` esistente, ritorna alla revisione del carrello e consente un nuovo request id. Nessun effetto documento/email/gateway prima del gate; rivalidazione listino in transazione #423 invariata. I retry non riapplicano silenziosamente selezioni accettate con un profilo precedente.
+
+[Prove e limiti SOURCE](KEEPSTORE_MASTERPLAN_OPERATIVO.md#ks-c01-g6--commercial-profile-consistency-2026-11-08): normalizzazione e controllo reali con I/O isolato, non attestazione IIS/MySQL o protezione contro cambiamenti gestionali successivi alla lettura della richiesta. Nessun cambiamento a schema/SP, configurazioni, gateway, persistenza Session/InProc o reinvio email; G2/G3/G4/G5 restano separati. PR DRAFT, nessun merge/deploy autorizzato. **CONSEGNA SERVER SOSPESA.**
+
 ## Comandi nativi checkout mobile — candidato 2026-11-06
 
 `MOBILE-SHOPPING-CHECKOUT-EXCELLENCE-1A`, base `a64eb4f76ca68ece3f26e87aefc295ef6075cff3`: le due azioni riga `LB_Aggiorna`, `btAggiorna`, `btContinua`, `btnVaiConfermaOrdine`, `btnModificaCheckout` e `btInviaOrdine` diventano Button WebForms con UseSubmitBehavior=true. ID/naming container, Click/CommandName, CausesValidation, ValidationGroup e OnClientClick restano quelli esistenti. Senza JavaScript il browser invia il nome del submitter; WebForms inoltra allo stesso handler, senza nuovo endpoint o __EVENTTARGET costruito dal client. Consenso e validatori checkoutSubmit rimangono autorevoli sul server. Entrambi i comandi riga Aggiorna delegano gia all'aggiornamento globale di tutti i repeater.

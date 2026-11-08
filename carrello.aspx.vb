@@ -402,6 +402,12 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
     Using connection As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
         connection.Open()
         If Not OrderStorefrontContext.VerifyAccount(connection, Nothing, identity) Then Return False
+        Dim commercialProfileFingerprint As String = CheckoutDraftService.ComputeCommercialProfileFingerprint(
+            StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current), identity)
+        If String.IsNullOrEmpty(commercialProfileFingerprint) Then
+            failureReason = CheckoutFailureReason.CartChanged
+            Return False
+        End If
         CheckoutFailureRecoveryService.TracePhase(
             HttpContext.Current, normalizedRequestId, "VerifyAccount", "passed", Nothing,
             "not-claimed", "none", "VerifyAccount")
@@ -508,6 +514,7 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
             .CouponFingerprint = couponFingerprint,
             .CartFingerprint = cartFingerprint,
             .OptionsFingerprint = optionsFingerprint,
+            .CommercialProfileFingerprint = commercialProfileFingerprint,
             .PayloadFingerprint = payloadFingerprint,
             .RequestId = normalizedRequestId,
             .Subtotal = subtotal,

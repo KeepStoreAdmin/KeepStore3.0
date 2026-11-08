@@ -897,6 +897,15 @@ CheckoutFailureRecoveryService.TracePhase(
                     Exit Sub
                 End If
 
+                Dim currentCommercialProfile As String = CheckoutDraftService.ComputeCommercialProfileFingerprint(
+                    StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current), orderIdentity)
+                If String.IsNullOrEmpty(currentCommercialProfile) OrElse
+                   Not String.Equals(currentCommercialProfile, checkoutDraft.CommercialProfileFingerprint, StringComparison.Ordinal) Then
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.CartChanged, "ValidateCommercialProfile")
+                    Exit Sub
+                End If
+
                 TipoDoc = checkoutDraft.TipoDocumentiId
                 Documento = If(TipoDoc = 2, "Preventivo", "Ordine")
                 Pagamento = checkoutDraft.PaymentMethodId

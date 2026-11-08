@@ -334,14 +334,11 @@ Partial Class PageMaster
                                     Me.Session("UtentiId") = persistedUserId
                                     Me.Session("UtentiID") = persistedUserId
                                     Me.Session("UtentiTipoId") = reader("utentitipoid")
-                                    Me.Session("Listino") = persistedPriceListId
-                                    Me.Session("listino") = persistedPriceListId
-                                    ApplyAuthenticatedPriceDisplayState(reader("IvaTipo"), reader("IdEsenzioneIva"),
-                                        reader("ValoreEsenzioneIva"), reader("DescrizioneEsenzioneIva"), reader("AbilitatoIvaReverseCharge"))
-                                Else
-                                    ApplyAuthenticatedPriceDisplayState(Session("IvaTipo"), Session("IdEsenzioneIva"),
-                                        Session("Iva_Utente"), Session("DescrizioneEsenzioneIva"), Session("AbilitatoIvaReverseCharge"))
                                 End If
+                                Me.Session("Listino") = persistedPriceListId
+                                Me.Session("listino") = persistedPriceListId
+                                ApplyAuthenticatedPriceDisplayState(reader("IvaTipo"), reader("IdEsenzioneIva"),
+                                    reader("ValoreEsenzioneIva"), reader("DescrizioneEsenzioneIva"), reader("AbilitatoIvaReverseCharge"))
                                 requestScope = CurrentAuthenticatedScopeKey(companyId)
                                 If requestScope <> String.Empty AndAlso HttpContext.Current IsNot Nothing Then
                                     HttpContext.Current.Items(AuthenticatedScopeRequestKey) = requestScope

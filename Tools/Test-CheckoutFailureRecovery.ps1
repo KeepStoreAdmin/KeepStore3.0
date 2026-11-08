@@ -2,6 +2,8 @@
 param(
     [string]$RepositoryRoot,
     [switch]$ListinoAuthorityOnly,
+    [switch]$CommercialProfileOnly,
+    [switch]$AllowCommercialProfileDelta,
     [string]$EvidenceDirectory,
     [string]$BaselineRef = '161b8d517082dd4e458f8f9d7974332c8475bb53'
 )
@@ -11,6 +13,345 @@ Set-StrictMode -Version Latest
 
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Split-Path -Parent $PSScriptRoot
+}
+
+if($CommercialProfileOnly){
+    if($ListinoAuthorityOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
+    if(!$EvidenceDirectory -or $BaselineRef -cnotmatch '^[0-9a-f]{40}$'){throw 'G6_EXPLICIT_BASE_AND_EVIDENCE_REQUIRED'}
+    $evidence=[IO.Path]::GetFullPath($EvidenceDirectory)
+    if(!$evidence.StartsWith([IO.Path]::GetTempPath(),[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $evidence)){throw 'NEW_TEMP_EVIDENCE_DIRECTORY_REQUIRED'}
+    [void][IO.Directory]::CreateDirectory($evidence)
+    $utf8=New-Object Text.UTF8Encoding($false)
+    function G6Source([string]$file){[IO.File]::ReadAllText((Join-Path $RepositoryRoot $file))}
+    function G6Original([string]$file){$s=(& git -C $RepositoryRoot show ($BaselineRef+':'+$file)) -join "`n";if($LASTEXITCODE){throw 'G6_BASELINE_UNAVAILABLE'};return $s}
+    function G6Method([string]$source,[string]$name){$m=[regex]::Match($source,'(?ms)^\s*(?:Public|Private|Protected) (?:Shared )?(?:Function|Sub) '+$name+'\b.*?^\s*End (?:Function|Sub)');if(!$m.Success){throw ('G6_METHOD_MISSING '+$name)};return $m.Value}
+    function G6Check([string]$name,[bool]$value){if(!$value){throw ('G6_SOURCE_FAILED '+$name)};Write-Output ('PASS SOURCE '+$name)}
+    $master=G6Source 'Page.master.vb';$order=G6Source 'ordine.aspx.vb';$cart=G6Source 'carrello.aspx.vb';$durable=G6Source 'App_Code/OrderDurableIdempotencyService.vb';$dispatcher=G6Source 'App_Code/CheckoutTerminalOutcomeDispatcher.vb'
+    $capture=G6Method $cart 'TryCaptureAuthoritativeCheckoutDraft'
+    $captureGuard=[regex]::Match($capture,'(?ms)^        Dim commercialProfileFingerprint As String.*?^        End If').Value
+    $orderGuard=[regex]::Match($order,'(?ms)^                Dim currentCommercialProfile As String.*?^                End If').Value
+    G6Check 'guard exists before fiscal restore and transaction' ($orderGuard.Length -gt 0 -and $order.IndexOf($orderGuard) -gt $order.IndexOf('If Not CheckoutDraftService.ValidateAuthoritativeSelections(') -and $order.IndexOf($orderGuard) -lt $order.IndexOf('Session("AbilitatoIvaReverseCharge") = checkoutDraft.ReverseChargeVat') -and $order.IndexOf($orderGuard) -lt $order.IndexOf('trns = conn.BeginTransaction('))
+    G6Check 'capture validates profile before seal and binds same field' ($captureGuard.Length -gt 0 -and $capture.IndexOf($captureGuard) -lt $capture.IndexOf('CheckoutDraftService.Seal(') -and $capture.Contains('.CommercialProfileFingerprint = commercialProfileFingerprint'))
+    $identitySource=G6Source 'App_Code/OrderStorefrontContext.vb'
+    $identityClass=[regex]::Match($identitySource,'(?ms)^Public NotInheritable Class OrderStorefrontIdentity.*?^End Class').Value
+    $factory=G6Method (G6Source 'Tools/CheckoutDraftTelemetryHarness.vb') 'ValidDraft'
+    $durableMethods=@('CreateRequestId','ComputePayloadFingerprint','NormalizeFingerprintValue','TryNormalizeRequestId','TryNormalizePayloadFingerprint','IsFingerprintValid')|ForEach-Object {G6Method $durable $_}
+    $masterMethods=@('EnsureAuthenticatedStorefrontScope','ApplyAuthenticatedPriceDisplayState','CurrentAuthenticatedScopeKey','CurrentLoginIdSafe','RequirePriceDisplayTenant','TenantCarrierVatDefault','RestoreAnonymousPriceDisplayState','ClearStorefrontAuthenticationState','RejectStorefrontAuthentication')|ForEach-Object {G6Method $master $_}
+    $masterCode=($masterMethods -join "`n").Replace('MySqlConnection','ProfileAuthConnection').Replace('MySqlCommand','ProfileAuthCommand').Replace('MySqlDataReader','ProfileAuthReader')
+    $oldMaster=G6Original 'Page.master.vb'
+    G6Check 'only authenticated hydration changes in master' (($master.Replace((G6Method $master 'EnsureAuthenticatedStorefrontScope'),'') -replace '\r\n',"`n").Trim() -ceq ($oldMaster.Replace((G6Method $oldMaster 'EnsureAuthenticatedStorefrontScope'),'') -replace '\r\n',"`n").Trim())
+    $baselineMaster=(G6Method $oldMaster 'EnsureAuthenticatedStorefrontScope').Replace('EnsureAuthenticatedStorefrontScope','EnsureBaselineAuthenticatedScope').Replace('MySqlConnection','ProfileAuthConnection').Replace('MySqlCommand','ProfileAuthCommand').Replace('MySqlDataReader','ProfileAuthReader')
+    foreach($methodName in @('ApplyAuthenticatedPriceDisplayState','CurrentAuthenticatedScopeKey','CurrentLoginIdSafe','RequirePriceDisplayTenant','TenantCarrierVatDefault','RestoreAnonymousPriceDisplayState','ClearStorefrontAuthenticationState','RejectStorefrontAuthentication')){
+        G6Check ('unchanged master authority '+$methodName) (((G6Method $master $methodName) -replace '\r\n',"`n") -ceq ((G6Method $oldMaster $methodName) -replace '\r\n',"`n"))
+    }
+    foreach($file in @('App_Code/StorefrontPriceDisplayContextProvider.vb','App_Code/OrderStorefrontContext.vb','App_Code/CartPriceRevalidationHelper.vb','App_Code/OrderDurableIdempotencyService.vb','App_Code/CheckoutFailureRecoveryService.vb','App_Code/CheckoutTerminalOutcomeDispatcher.vb')){
+        G6Check ('unchanged authority '+$file) (((G6Source $file) -replace '\r\n',"`n").Trim() -ceq ((G6Original $file) -replace '\r\n',"`n").Trim())
+    }
+    $template=@'
+Imports System
+Imports System.Collections.Generic
+Imports System.Globalization
+Imports System.Text
+Imports System.Security.Cryptography
+Imports System.Web
+Imports System.Web.SessionState
+Imports System.Web.UI
+Imports System.Configuration
+Imports MySql.Data.MySqlClient
+IDENTITY_CLASS
+Public Class CheckoutAddressSnapshot
+End Class
+Public Module CheckoutAddressService
+ Public Function TryResolve(c As MySqlConnection,t As MySqlTransaction,i As OrderStorefrontIdentity,a As Integer,ByRef r As CheckoutAddressSnapshot) As Boolean
+  Throw New InvalidOperationException("UNEXPECTED_ADDRESS_IO")
+ End Function
+End Module
+Public Class OrderDurableIdempotencyService
+DURABLE_METHODS
+End Class
+Public Module ProfileIo
+ Public Row As Dictionary(Of String,Object), Bag As SessionStateItemCollection, Queries As Integer, CarrierReads As Integer, Writes As Integer, FiscalRestores As Integer
+ Public Sub NewRequest(company As Integer)
+  Dim context As New HttpContext(New HttpRequest("","https://profile-fixture.invalid/ordine.aspx",""),New HttpResponse(New System.IO.StringWriter))
+  SessionStateUtility.AddHttpSessionStateToContext(context,New HttpSessionStateContainer("synthetic",Bag,New HttpStaticObjectsCollection,20,False,HttpCookieMode.UseCookies,SessionStateMode.InProc,False))
+  HttpContext.Current=context:Queries=0:CarrierReads=0:Writes=0:FiscalRestores=0
+  StorefrontPriceDisplayContextProvider.SetTenantDefaults(context,company,If(company=1,1,10),2)
+ End Sub
+ Public Sub Configure(company As Integer,Optional legacy As Boolean=False)
+  Bag=New SessionStateItemCollection:NewRequest(company)
+  Row=New Dictionary(Of String,Object) From {{"id",42},{"AziendeID",company},{"listino",If(company=1,4,13)},{"utentiid",101},{"utentitipoid",3},{"IvaTipo",2},{"IdEsenzioneIva",7},{"ValoreEsenzioneIva",10D},{"DescrizioneEsenzioneIva","sintetica"},{"AbilitatoIvaReverseCharge",0}}
+  Dim s=HttpContext.Current.Session:s("AziendaID")=company:s("LoginId")=42:s("UtentiId")=If(legacy,0,101):s("AuthenticatedAziendaID")=If(legacy,0,company):s("Listino")=99:s("IvaTipo")=1:s("IdEsenzioneIva")=2:s("Iva_Utente")=5D:s("AbilitatoIvaReverseCharge")=1
+ End Sub
+ Public Function Identity(company As Integer) As OrderStorefrontIdentity
+  Return New OrderStorefrontIdentity With {.DatabaseScopeKey="source-profile-fixture",.CompanyId=company,.LoginId=42,.UtentiId=101,.PriceListId=CInt(HttpContext.Current.Session("Listino"))}
+ End Function
+End Module
+Public Class ProfileAuthConnection
+ Implements IDisposable
+ Public Sub New(value As String)
+ End Sub
+ Public Sub Open()
+ End Sub
+ Public Sub Dispose() Implements IDisposable.Dispose
+ End Sub
+End Class
+Public Class ProfileParameters
+ Public Values As New Dictionary(Of String,Object)
+ Public Sub AddWithValue(key As String,value As Object)
+  Values(key)=value
+ End Sub
+End Class
+Public Class ProfileAuthCommand
+ Implements IDisposable
+ Public Parameters As New ProfileParameters
+ Public Sub New(sql As String,c As ProfileAuthConnection)
+  If Not sql.Contains("FROM vlogin") OrElse Not sql.Contains("Abilitato=1 AND UtentiAbilitato=1") Then Throw New InvalidOperationException("UNEXPECTED_AUTH_QUERY")
+ End Sub
+ Public Function ExecuteReader() As ProfileAuthReader
+  ProfileIo.Queries+=1:Return New ProfileAuthReader With {.Parameters=Parameters}
+ End Function
+ Public Sub Dispose() Implements IDisposable.Dispose
+ End Sub
+End Class
+Public Class ProfileAuthReader
+ Implements IDisposable
+ Public Parameters As ProfileParameters
+ Private consumed As Boolean
+ Public Function Read() As Boolean
+  If consumed Then Return False
+  consumed=True:Return CInt(ProfileIo.Row("id"))=CInt(Parameters.Values("@loginId")) AndAlso CInt(ProfileIo.Row("AziendeID"))=CInt(Parameters.Values("@companyId"))
+ End Function
+ Default Public ReadOnly Property Item(key As String) As Object
+  Get
+   Return ProfileIo.Row(key)
+  End Get
+ End Property
+ Public Sub Dispose() Implements IDisposable.Dispose
+ End Sub
+End Class
+Public Module LoginAccessAuditRecorder
+ Public Sub ClearAuthenticationMarker(context As HttpContext)
+ End Sub
+End Module
+Public Module KeepStoreLog
+ Public Sub [Error](scope As String,message As String,failure As Exception,context As HttpContext)
+ End Sub
+End Module
+Public Module StorefrontSeoTenantContext
+ Public Function ConfiguredDatabaseScopeKey() As String
+  Return "source-profile-fixture"
+ End Function
+End Module
+Public Module CheckoutDurableTelemetry
+ Public Sub Write(context As HttpContext,request As String,phase As String,outcome As String,failure As Exception,idempotency As String,transaction As String,checkpoint As String)
+ End Sub
+End Module
+Public Enum CheckoutTerminalOutcome
+ENUM_VALUES
+End Enum
+Public Class CheckoutTerminalOutcomeDispatcher
+ Public Shared Function Dispatch(context As HttpContext,outcome As CheckoutTerminalOutcome,Optional token As String="") As Boolean
+  If context.Items("KeepStore:CheckoutTerminalOutcome") IsNot Nothing Then Return False
+  context.Items("KeepStore:CheckoutTerminalOutcome")=outcome.ToString():context.Response.StatusCode=303:context.Response.RedirectLocation=ResolveTarget(outcome,token):Return True
+ End Function
+DISPATCH_TARGET
+End Class
+Public Class MasterProfileFixture
+ Private Const AuthenticatedScopeRequestKey As String="KeepStore.Authentication.ValidatedScope"
+ Private _priceDisplayCompanyId As Integer,_priceDisplayDefaultListId As Integer,_storefrontAuthenticationRevoked As Boolean
+ Private _priceDisplayTenantMode As StorefrontVatDisplayMode=StorefrontVatDisplayMode.VatIncluded
+ Private _priceDisplayCarrierVat As Nullable(Of Decimal)
+ Public ReadOnly Property Session As HttpSessionState
+  Get
+   Return HttpContext.Current.Session
+  End Get
+ End Property
+ Public Sub New(company As Integer)
+  _priceDisplayCompanyId=company:_priceDisplayDefaultListId=If(company=1,1,10)
+ End Sub
+ Private Function IvaVettoreDefault(company As Integer) As Decimal
+  ProfileIo.CarrierReads+=1:Return 22D
+ End Function
+ Public Sub Validate()
+  EnsureAuthenticatedStorefrontScope(_priceDisplayCompanyId,_priceDisplayDefaultListId)
+ End Sub
+ Public Sub ValidateBaseline()
+  EnsureBaselineAuthenticatedScope(_priceDisplayCompanyId,_priceDisplayDefaultListId)
+ End Sub
+MASTER_METHODS
+BASELINE_MASTER_METHOD
+End Class
+Public Class CartProfileFixture
+ Private Const CHECKOUT_REQUEST_VIEWSTATE_KEY As String="CheckoutRequestId"
+ Public ViewState As New StateBag, Captured As String
+ENSURE_REQUEST
+ Public Function NextRequest(oldRequest As String) As String
+  ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY)=oldRequest:EnsureCheckoutRequestId():Return Convert.ToString(ViewState(CHECKOUT_REQUEST_VIEWSTATE_KEY))
+ End Function
+ Public Function Capture(identity As OrderStorefrontIdentity) As Boolean
+  Dim failureReason As CheckoutFailureReason=CheckoutFailureReason.CartInvalid
+CAPTURE_GUARD
+  Captured=commercialProfileFingerprint:Return True
+ End Function
+End Class
+Public Class OrderProfileFixture
+ Public Sub Execute(checkoutDraft As CheckoutDraftState,orderIdentity As OrderStorefrontIdentity,checkoutRequestId As String)
+ORDER_GUARD
+  HttpContext.Current.Session("AbilitatoIvaReverseCharge")=checkoutDraft.ReverseChargeVat
+  HttpContext.Current.Session("Iva_Vettori")=checkoutDraft.CarrierVat
+  ProfileIo.FiscalRestores+=1:ProfileIo.Writes+=1
+ End Sub
+ Private Sub ShowDurableCheckoutTechnicalFailure()
+  HttpContext.Current.Items("source-failure-rendered")=True
+ End Sub
+ORDER_DISPATCH
+End Class
+Public Module CommercialProfileCases
+ Private passed As Integer
+ Private Sub ValidateMaster(company As Integer)
+  Dim master As New MasterProfileFixture(company):master.Validate()
+ End Sub
+ Private Sub ExecuteOrder(draft As CheckoutDraftState,owner As OrderStorefrontIdentity,request As String)
+  Dim page As New OrderProfileFixture:page.Execute(draft,owner,request)
+ End Sub
+ Private Sub Check(name As String,ok As Boolean)
+  If Not ok Then Throw New InvalidOperationException("G6_FAILED "+name)
+  passed+=1:Console.WriteLine("PASS "+name)
+ End Sub
+ Private Function Hash64(value As String) As String
+  Return OrderDurableIdempotencyService.ComputePayloadFingerprint(value)
+ End Function
+VALID_DRAFT_FACTORY
+ Private Function NewDraft(owner As OrderStorefrontIdentity,request As String) As CheckoutDraftState
+  Dim draft=ValidDraft(owner,request,72)
+  Dim cart As New CartProfileFixture
+  If Not cart.Capture(owner) Then Return Nothing
+  draft.CommercialProfileFingerprint=cart.Captured:Return CheckoutDraftService.Seal(draft)
+ End Function
+ Private Sub Initial(company As Integer,ByRef draft As CheckoutDraftState,ByRef owner As OrderStorefrontIdentity)
+  ProfileIo.Configure(company):Dim master As New MasterProfileFixture(company):master.Validate():owner=ProfileIo.Identity(company)
+  draft=NewDraft(owner,Guid.NewGuid().ToString("N")):CheckoutDraftService.Store(HttpContext.Current,draft)
+ End Sub
+ Public Sub Main()
+  For Each company As Integer In New Integer(){1,2}
+   ProfileIo.Configure(company):Dim baseline As New MasterProfileFixture(company):baseline.ValidateBaseline()
+   Check("baseline stale normal profile reproduced "+company.ToString(),CInt(HttpContext.Current.Session("Listino"))=99 AndAlso CInt(HttpContext.Current.Session("Iva_Utente"))=5 AndAlso CInt(HttpContext.Current.Session("AbilitatoIvaReverseCharge"))=1 AndAlso ProfileIo.Queries=1)
+   For Each legacy As Boolean In New Boolean(){False,True}
+    ProfileIo.Configure(company,legacy):Dim master As New MasterProfileFixture(company):master.Validate()
+    Dim s=HttpContext.Current.Session
+    Check("T3 verified list and both aliases "+company.ToString()+legacy.ToString(),CInt(s("Listino"))=If(company=1,4,13) AndAlso CInt(s("listino"))=CInt(s("Listino")))
+    Check("T3 normalized fiscal state",CInt(s("IvaTipo"))=2 AndAlso CInt(s("IdEsenzioneIva"))=7 AndAlso CDec(s("Iva_Utente"))=10D AndAlso CInt(s("AbilitatoIvaReverseCharge"))=0)
+    Check("T3 owner unchanged or legacy hydrated",CInt(s("LoginId"))=42 AndAlso CInt(s("UtentiId"))=101 AndAlso CInt(s("AuthenticatedAziendaID"))=company)
+    Check("T3 one existing query",ProfileIo.Queries=1):master.Validate():Check("T3 same request reuses validated result",ProfileIo.Queries=1)
+   Next
+   ProfileIo.Configure(company):ProfileIo.Row("IdEsenzioneIva")=-1:Dim noExemption As New MasterProfileFixture(company):noExemption.Validate()
+   Check("T3 existing carrier default read without override",CDec(HttpContext.Current.Session("Iva_Utente"))=-1D AndAlso CDec(HttpContext.Current.Session("Iva_Vettori"))=22D AndAlso ProfileIo.Queries=1 AndAlso ProfileIo.CarrierReads=1)
+   noExemption.Validate():Check("T3 same request caches carrier default",ProfileIo.Queries=1 AndAlso ProfileIo.CarrierReads=1)
+   For Each change As String In New String(){"list","mode","exemption","vat","rc","remove-override"}
+    Dim draft As CheckoutDraftState=Nothing,owner As OrderStorefrontIdentity=Nothing:Initial(company,draft,owner)
+    Select Case change
+     Case "list":ProfileIo.Row("listino")=17
+     Case "mode":ProfileIo.Row("IvaTipo")=1
+     Case "exemption":ProfileIo.Row("IdEsenzioneIva")=8
+     Case "vat":ProfileIo.Row("ValoreEsenzioneIva")=0D
+     Case "rc":ProfileIo.Row("AbilitatoIvaReverseCharge")=1
+     Case "remove-override":ProfileIo.Row("IdEsenzioneIva")=-1:ProfileIo.Row("ValoreEsenzioneIva")=DBNull.Value
+    End Select
+    ProfileIo.NewRequest(company):ValidateMaster(company):owner=ProfileIo.Identity(company)
+    Dim read As CheckoutDraftState=Nothing
+    Check("T1 sealed draft remains readable for final comparison "+change+company.ToString(),CheckoutDraftService.TryRead(HttpContext.Current,owner,draft.RequestId,draft.Fingerprint,read))
+    Check("T1 stale retry rejected "+change,Not CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current,owner,read) AndAlso read Is Nothing)
+    ExecuteOrder(draft,owner,draft.RequestId)
+    Check("T1 stopped before fiscal restore and side effects "+change,ProfileIo.Writes=0 AndAlso ProfileIo.FiscalRestores=0)
+    Check("T1 real retirement and existing cart target "+change,CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current,draft.RequestId) AndAlso HttpContext.Current.Response.RedirectLocation="carrello.aspx?checkoutfailed=1#pnlCheckoutSubmitError")
+    Dim flash As CheckoutFailureFlash=Nothing:Check("T1 CartChanged recovery",CheckoutFailureRecoveryService.TryConsumeFailure(HttpContext.Current,flash) AndAlso flash.Reason=CheckoutFailureReason.CartChanged)
+    Dim request=New CartProfileFixture().NextRequest(draft.RequestId):Check("T1 retired token rotates",request<>draft.RequestId AndAlso Not CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current,request))
+    Dim fresh=NewDraft(owner,request):CheckoutDraftService.Store(HttpContext.Current,fresh):Check("T1 new checkout can resume",CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current,owner,read) AndAlso read.RequestId=request)
+    Check("T1 no added profile queries",ProfileIo.Queries=1)
+    Check("T1 existing carrier normalization read",ProfileIo.CarrierReads=If(change="remove-override",1,0))
+   Next
+   Dim original As CheckoutDraftState=Nothing,identity As OrderStorefrontIdentity=Nothing:Initial(company,original,identity)
+   Dim cloned As CheckoutDraftState=Nothing:Check("T2 copy retains profile",CheckoutDraftService.TryRead(HttpContext.Current,identity,original.RequestId,original.Fingerprint,cloned) AndAlso cloned.CommercialProfileFingerprint=original.CommercialProfileFingerprint)
+   ProfileIo.NewRequest(company):ValidateMaster(company):identity=ProfileIo.Identity(company)
+   Check("T2 unchanged profile retry",CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current,identity,cloned))
+   ExecuteOrder(original,identity,original.RequestId):Check("T2 unchanged profile passes final gate",ProfileIo.FiscalRestores=1 AndAlso ProfileIo.Writes=1 AndAlso Not CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current,original.RequestId))
+   For Each fault As String In New String(){"v4","missing","empty","altered","malformed","uppercase"}
+    Initial(company,original,identity):CheckoutDraftService.TryRead(HttpContext.Current,identity,original.RequestId,original.Fingerprint,cloned)
+    Select Case fault
+     Case "v4":cloned.Version=4
+     Case "missing":cloned.CommercialProfileFingerprint=Nothing:CheckoutDraftService.Seal(cloned)
+     Case "empty":cloned.CommercialProfileFingerprint="":CheckoutDraftService.Seal(cloned)
+     Case "altered":cloned.CommercialProfileFingerprint=New String("a"c,64)
+     Case "malformed":cloned.CommercialProfileFingerprint="invalid":CheckoutDraftService.Seal(cloned)
+     Case "uppercase":cloned.CommercialProfileFingerprint=cloned.CommercialProfileFingerprint.ToUpperInvariant():CheckoutDraftService.Seal(cloned)
+    End Select
+    HttpContext.Current.Session("KeepStore:CheckoutDraft:Current")=cloned
+    Dim result As CheckoutDraftState=Nothing
+    Check("T4 invalid draft read false "+fault,Not CheckoutDraftService.TryRead(HttpContext.Current,identity,original.RequestId,"",result) AndAlso result Is Nothing)
+    Check("T4 invalid draft retry false "+fault,Not CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current,identity,result) AndAlso result Is Nothing)
+   Next
+   Initial(company,original,identity):HttpContext.Current.Items.Remove("KeepStore.PriceDisplay.ValidatedTenant"):StorefrontPriceDisplayContextProvider.Invalidate(HttpContext.Current)
+   Check("T4 unavailable profile prevents capture",Not New CartProfileFixture().Capture(identity))
+   Check("T4 unavailable profile prevents retry",Not CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current,identity,cloned))
+   ExecuteOrder(original,identity,original.RequestId):Check("T4 unavailable profile stops order",ProfileIo.Writes=0 AndAlso ProfileIo.FiscalRestores=0 AndAlso CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current,original.RequestId))
+   Initial(company,original,identity):ProfileIo.Row("DescrizioneEsenzioneIva")="solo descrizione cambiata":ProfileIo.NewRequest(company):ValidateMaster(company)
+   Check("description deliberately excluded",CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current,identity,cloned))
+  Next
+  Dim d As CheckoutDraftState=Nothing,i As OrderStorefrontIdentity=Nothing:Initial(1,d,i)
+  Dim originalCulture=CultureInfo.CurrentCulture
+  For Each name As String In New String(){"it-IT","en-US","fr-FR"}
+   Threading.Thread.CurrentThread.CurrentCulture=CultureInfo.GetCultureInfo(name)
+   Check("invariant culture "+name,CheckoutDraftService.ComputeCommercialProfileFingerprint(StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current),i)=d.CommercialProfileFingerprint)
+  Next
+  Threading.Thread.CurrentThread.CurrentCulture=originalCulture
+  Dim profile=StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
+  Check("normalized equivalent decimal scale",CheckoutDraftService.ComputeCommercialProfileFingerprint(New StorefrontPriceDisplayContext(1,i.PriceListId,True,profile.DisplayMode,10.00D,7,"different text",False),i)=d.CommercialProfileFingerprint)
+  Dim zero=CheckoutDraftService.ComputeCommercialProfileFingerprint(New StorefrontPriceDisplayContext(1,i.PriceListId,True,profile.DisplayMode,0D,7,"",False),i)
+  Dim absent=CheckoutDraftService.ComputeCommercialProfileFingerprint(New StorefrontPriceDisplayContext(1,i.PriceListId,True,profile.DisplayMode,Nothing,7,"",False),i)
+  Check("zero override distinct from absent",zero<>absent)
+  Check("missing identity rejected",CheckoutDraftService.ComputeCommercialProfileFingerprint(profile,Nothing)="")
+  Dim other As New OrderStorefrontIdentity With {.DatabaseScopeKey=i.DatabaseScopeKey,.CompanyId=2,.LoginId=i.LoginId,.UtentiId=i.UtentiId,.PriceListId=i.PriceListId}
+  Check("profile company mismatch rejected",CheckoutDraftService.ComputeCommercialProfileFingerprint(profile,other)="")
+  other.CompanyId=1:other.PriceListId=99
+  Check("profile list mismatch rejected",CheckoutDraftService.ComputeCommercialProfileFingerprint(profile,other)="")
+  Check("anonymous profile rejected",CheckoutDraftService.ComputeCommercialProfileFingerprint(New StorefrontPriceDisplayContext(1,i.PriceListId,False,profile.DisplayMode,Nothing,-1,"",False),i)="")
+  For Each fault As String In New String(){"owner","tenant","list"}
+   ProfileIo.Configure(1)
+   Select Case fault
+    Case "owner":ProfileIo.Row("utentiid")=999
+    Case "tenant":ProfileIo.Row("AziendeID")=2
+    Case "list":ProfileIo.Row("listino")=0
+   End Select
+   Dim denied As Boolean=False
+   Try
+    ValidateMaster(1)
+   Catch ex As HttpException
+    denied=ex.GetHttpCode()=403
+   End Try
+   Check("T3 invalid verified scope rejected "+fault,denied AndAlso CInt(If(HttpContext.Current.Session("LoginId"),0))=0)
+  Next
+  Console.WriteLine("G6_COMMERCIAL_PROFILE_PASS="+passed.ToString())
+ End Sub
+End Module
+'@
+    $template=$template.Replace('IDENTITY_CLASS',$identityClass).Replace('DURABLE_METHODS',($durableMethods -join "`n")).Replace('MASTER_METHODS',$masterCode).Replace('BASELINE_MASTER_METHOD',$baselineMaster).Replace('ENSURE_REQUEST',(G6Method $cart 'EnsureCheckoutRequestId')).Replace('CAPTURE_GUARD',$captureGuard).Replace('ORDER_GUARD',$orderGuard).Replace('ORDER_DISPATCH',(G6Method $order 'DispatchDurableCheckoutFailure')).Replace('DISPATCH_TARGET',(G6Method $dispatcher 'ResolveTarget')).Replace('ENUM_VALUES',([regex]::Match($dispatcher,'(?s)Public Enum CheckoutTerminalOutcome(.*?)End Enum').Groups[1].Value)).Replace('VALID_DRAFT_FACTORY',$factory)
+    $vb=Join-Path $evidence 'CommercialProfile.vb';$exe=Join-Path $evidence 'CommercialProfile.exe';[IO.File]::WriteAllText($vb,$template,$utf8)
+    $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe';$mysql=Join-Path $RepositoryRoot 'Bin/MySql.Data.dll'
+    $shared=@('CheckoutDraftService.vb','CheckoutFailureRecoveryService.vb','StorefrontPriceDisplayContext.vb','StorefrontPriceDisplayContextProvider.vb','StorefrontCommercialIsolationPolicy.vb')|ForEach-Object{Join-Path $RepositoryRoot ('App_Code/'+$_)}
+    $compiled=@(& $compiler /nologo /target:exe /main:CommercialProfileCases ("/out:"+$exe) ("/r:"+$mysql) /r:System.dll,System.Core.dll,System.Web.dll,System.Data.dll,System.Configuration.dll $vb $shared 2>&1)
+    [IO.File]::WriteAllLines((Join-Path $evidence 'compile.log'),[string[]]$compiled,$utf8);if($LASTEXITCODE){throw 'G6_COMPILE_FAILED'}
+    Copy-Item -LiteralPath $mysql -Destination (Join-Path $evidence 'MySql.Data.dll')
+    [IO.File]::WriteAllText(($exe+'.config'),'<configuration><connectionStrings><add name="EntropicConnectionString" connectionString="KS-DBCFG-FIXTURE-profile" /></connectionStrings></configuration>',$utf8)
+    $start=New-Object Diagnostics.ProcessStartInfo
+    $start.FileName=$exe;$start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+    $process=[Diagnostics.Process]::Start($start)
+    try{$stdout=$process.StandardOutput.ReadToEndAsync();$stderr=$process.StandardError.ReadToEndAsync();$process.WaitForExit();$status=$process.ExitCode;$output=@(($stdout.Result+"`n"+$stderr.Result) -split '\r?\n')}finally{$process.Dispose()}
+    [IO.File]::WriteAllLines((Join-Path $evidence 'cases.log'),[string[]]$output,$utf8)
+    if($status -ne 0 -or !($output -match '^G6_COMMERCIAL_PROFILE_PASS=')){throw 'G6_CASES_FAILED'}
+    $count=@($output|Where-Object{$_ -match '^PASS '}).Count
+    [IO.File]::WriteAllText((Join-Path $evidence 'report.json'),(@{Result='PASS SOURCE';Checks=$count;Base=$BaselineRef;RealSource='master scope/hydration/normalization, draft service v5, profile capture/final gate, request rotation, recovery retirement and dispatcher target';Io='vlogin and carrier default read fixtures; SQL selections not executed; transaction/gateway/email/document not executed; HTTP completion and telemetry isolated';NoAdditionalProfileQueries='one existing vlogin read; same-request marker reused; existing optional carrier VAT lookup counted and cached separately';DescriptionExcluded=$true}|ConvertTo-Json -Depth 5),$utf8)
+    Write-Output ('G6_COMMERCIAL_PROFILE_PASS checks='+$count)
+    exit 0
 }
 
 if($ListinoAuthorityOnly){
@@ -31,7 +372,36 @@ if($ListinoAuthorityOnly){
     function Flat([string]$s){return ($s -replace '\r\n',"`n").Trim()}
     $order=Source 'ordine.aspx.vb';$cart=Source 'carrello.aspx.vb';$oldOrder=Original 'ordine.aspx.vb';$oldCart=Original 'carrello.aspx.vb'
     $block=OrderBlock $order;$oldBlock=OrderBlock $oldOrder;$handler=Method $cart 'rPromo_ItemDataBound';$oldHandler=Method $oldCart 'rPromo_ItemDataBound'
-    if((Flat $order.Replace($block,'')) -cne (Flat $oldOrder.Replace($oldBlock,'')) -or (Flat $cart.Replace($handler,'')) -cne (Flat $oldCart.Replace($oldHandler,''))){throw 'RUNTIME_SCOPE_EXPANDED'}
+    $scopeOrder=$order.Replace($block,'');$scopeCart=$cart.Replace($handler,'')
+    if($AllowCommercialProfileDelta){
+        # G6 is exercised separately above. Remove only its exact additive guards
+        # when asserting that the G1 revalidation and badge remain unchanged.
+        if($BaselineRef -cne '14f2ef440cac25d54b5ec2dc1aba79adc5f51442'){throw 'G6_EXACT_BASE_REQUIRED'}
+        $expectedOrder=@'
+                Dim currentCommercialProfile As String = CheckoutDraftService.ComputeCommercialProfileFingerprint(
+                    StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current), orderIdentity)
+                If String.IsNullOrEmpty(currentCommercialProfile) OrElse
+                   Not String.Equals(currentCommercialProfile, checkoutDraft.CommercialProfileFingerprint, StringComparison.Ordinal) Then
+                    DispatchDurableCheckoutFailure(
+                        checkoutRequestId, CheckoutFailureReason.CartChanged, "ValidateCommercialProfile")
+                    Exit Sub
+                End If
+'@
+        $expectedCapture=@'
+        Dim commercialProfileFingerprint As String = CheckoutDraftService.ComputeCommercialProfileFingerprint(
+            StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current), identity)
+        If String.IsNullOrEmpty(commercialProfileFingerprint) Then
+            failureReason = CheckoutFailureReason.CartChanged
+            Return False
+        End If
+'@
+        $scopeOrder=$scopeOrder.Replace("`r`n","`n");$scopeCart=$scopeCart.Replace("`r`n","`n")
+        $expectedOrder=$expectedOrder.Replace("`r`n","`n");$expectedCapture=$expectedCapture.Replace("`r`n","`n")
+        if(!$scopeOrder.Contains($expectedOrder) -or !$scopeCart.Contains($expectedCapture)){throw 'G6_EXACT_GUARDS_REQUIRED'}
+        $scopeOrder=$scopeOrder.Replace($expectedOrder+"`n`n",'')
+        $scopeCart=$scopeCart.Replace($expectedCapture+"`n",'').Replace('            .CommercialProfileFingerprint = commercialProfileFingerprint,'+"`n",'')
+    }
+    if((Flat $scopeOrder) -cne (Flat $oldOrder.Replace($oldBlock,'')) -or (Flat $scopeCart) -cne (Flat $oldCart.Replace($oldHandler,''))){throw 'RUNTIME_SCOPE_EXPANDED'}
     foreach($file in @('Page.master','App_Code/StorefrontPriceDisplayContextProvider.vb','App_Code/StorefrontPriceDisplayContext.vb','App_Code/StorefrontCommercialIsolationPolicy.vb','App_Code/OrderStorefrontContext.vb','App_Code/CartPriceRevalidationHelper.vb','App_Code/OrderDurableIdempotencyService.vb','App_Code/CheckoutFailureRecoveryService.vb','App_Code/CheckoutTerminalOutcomeDispatcher.vb','App_Code/ProductPromotionEligibilityResolver.vb','App_Code/ProductPromotionDisplayHelper.vb')){
         if((Flat (Source $file)) -cne (Flat (Original $file))){throw ('AUTHORITY_CHANGED '+$file)}
     }
@@ -259,10 +629,12 @@ End Module
         [IO.File]::WriteAllText(($exe+'.config'),'<configuration><connectionStrings><add name="EntropicConnectionString" connectionString="KS-DBCFG-FIXTURE-listino" /></connectionStrings></configuration>',$utf8)
         $output=@(& $exe 2>&1|ForEach-Object{$_.ToString()});$code=$LASTEXITCODE
         [IO.File]::WriteAllLines((Join-Path $evidence ($variant+'.log')),[string[]]$output,$utf8)
-        if(($variant -eq 'candidate' -and $code -ne 0) -or ($variant -eq 'baseline' -and ($code -ne 1 -or !($output -match '^FAIL invalid-list/.*/no-revalidation')))){throw ('LISTINO_EXECUTION_FAILED '+$variant)}
+        $fixedBaseline=$oldBlock.Contains('StorefrontPriceDisplayContextProvider.GetCurrent(')
+        if(($variant -eq 'candidate' -or $fixedBaseline) -and $code -ne 0){throw ('LISTINO_EXECUTION_FAILED '+$variant)}
+        if($variant -eq 'baseline' -and !$fixedBaseline -and ($code -ne 1 -or !($output -match '^FAIL invalid-list/.*/no-revalidation'))){throw ('LISTINO_BASELINE_COUNTEREXAMPLE_MISSING '+$variant)}
         $results+=@{Variant=$variant;Passes=@($output|Where-Object{$_ -match '^PASS '}).Count;Failures=@($output|Where-Object{$_ -match '^FAIL '}).Count}
     }
-    [IO.File]::WriteAllText((Join-Path $evidence 'report.json'),(@{Result='PASS SOURCE';Base=$BaselineRef;Variants=$results;RealSource='provider/context/policy, page methods and revalidation block, price feedback, recovery retirement, promo display helper; dispatcher target';Io='transaction, durable database write, resolver data and HTTP completion replaced; no IIS/MySQL/gateway/email; post-gate effects are counters';Scope='two runtime targets only; unchanged authorities checked'}|ConvertTo-Json -Depth 6),$utf8)
+    [IO.File]::WriteAllText((Join-Path $evidence 'report.json'),(@{Result='PASS SOURCE';Base=$BaselineRef;Variants=$results;RealSource='provider/context/policy, page methods and revalidation block, price feedback, recovery retirement, promo display helper; dispatcher target';Io='transaction, durable database write, resolver data and HTTP completion replaced; no IIS/MySQL/gateway/email; post-gate effects are counters';Scope='two G1 targets; exact G6 additions allowed only by explicit switch and exact base; unchanged authorities checked'}|ConvertTo-Json -Depth 6),$utf8)
     $results|ForEach-Object{Write-Output ('LISTINO_AUTHORITY '+$_.Variant+' passes='+$_.Passes+' failures='+$_.Failures)}
     exit 0
 }
@@ -417,12 +789,13 @@ Assert-Source (
 ) '13_POSTCOMMIT_FIRST_AND_FAILED_REQUESTS_RETIRED_DURABLY'
 
 Assert-Source (
-    $order.Contains('If Vettore <= 0 Then') -and
+    # Zero is the existing missing-method sentinel; negative pickup IDs remain valid.
+    $order.Contains('If Vettore = 0 Then') -and
     $order.Contains('CheckoutFailureReason.ShippingMethodMissing') -and
     $order.Contains('If Pagamento <= 0 Then') -and
     $order.Contains('CheckoutFailureReason.PaymentMethodMissing') -and
     $order.IndexOf('Dim completedBeforeWork As OrderDurableIdempotencyRecord', [StringComparison]::Ordinal) -lt
-        $order.IndexOf('If Vettore <= 0 Then', [StringComparison]::Ordinal)
+        $order.IndexOf('If Vettore = 0 Then', [StringComparison]::Ordinal)
 ) '14_ORDER_SIDE_SELECTIONS_FAIL_SPECIFIC_BEFORE_CLAIM'
 
 Assert-Source (

@@ -37,6 +37,7 @@ Public NotInheritable Class CheckoutDraftState
     Public Property CouponFingerprint As String
     Public Property CartFingerprint As String
     Public Property OptionsFingerprint As String
+    Public Property CommercialProfileFingerprint As String
     Public Property PayloadFingerprint As String
     Public Property RequestId As String
     Public Property Subtotal As Decimal
@@ -54,15 +55,32 @@ End Class
 ''' Server-side authoritative checkout draft. The browser receives only the
 ''' existing opaque MachineKey token; addresses, notes and coupon values never
 ''' enter the query string. A draft is bound to database/company/login/user,
-''' request id, cart/options fingerprints, version and expiry.
+''' request id, cart/options and accepted commercial profile fingerprints,
+''' version and expiry.
 ''' </summary>
 Public NotInheritable Class CheckoutDraftService
-    Public Const CurrentVersion As Integer = 4
+    Public Const CurrentVersion As Integer = 5
     Public Shared ReadOnly Lifetime As TimeSpan = TimeSpan.FromMinutes(30)
     Private Const SessionKey As String = "KeepStore:CheckoutDraft:Current"
 
     Private Sub New()
     End Sub
+
+    Public Shared Function ComputeCommercialProfileFingerprint(ByVal profile As StorefrontPriceDisplayContext,
+                                                                ByVal identity As OrderStorefrontIdentity) As String
+        If profile Is Nothing OrElse Not profile.IsAuthenticated OrElse
+           profile.CompanyId <= 0 OrElse profile.PriceListId <= 0 OrElse
+           identity Is Nothing OrElse Not identity.IsComplete OrElse
+           profile.CompanyId <> identity.CompanyId OrElse profile.PriceListId <> identity.PriceListId Then Return String.Empty
+        Return OrderDurableIdempotencyService.ComputePayloadFingerprint(
+            "checkout-commercial-profile-v1",
+            profile.CompanyId.ToString(CultureInfo.InvariantCulture),
+            profile.PriceListId.ToString(CultureInfo.InvariantCulture),
+            CInt(profile.DisplayMode).ToString(CultureInfo.InvariantCulture),
+            profile.ExemptionId.ToString(CultureInfo.InvariantCulture),
+            If(profile.VatOverride.HasValue, "value:" & profile.VatOverride.GetValueOrDefault().ToString("G29", CultureInfo.InvariantCulture), "none"),
+            If(profile.ReverseChargeEnabled, "1", "0"))
+    End Function
 
     Public Shared Function Seal(ByVal draft As CheckoutDraftState) As CheckoutDraftState
         If draft Is Nothing Then Throw New ArgumentNullException("draft")
@@ -101,6 +119,10 @@ Public NotInheritable Class CheckoutDraftService
         If context Is Nothing OrElse context.Session Is Nothing Then Return False
         Dim stored As CheckoutDraftState = TryCast(context.Session(SessionKey), CheckoutDraftState)
         If Not IsStructurallyValid(stored, identity, String.Empty, String.Empty) Then Return False
+        Dim currentProfile As String = ComputeCommercialProfileFingerprint(
+            StorefrontPriceDisplayContextProvider.GetCurrent(context), identity)
+        If String.IsNullOrEmpty(currentProfile) OrElse
+           Not String.Equals(currentProfile, stored.CommercialProfileFingerprint, StringComparison.Ordinal) Then Return False
         result = CloneDraft(stored)
         Return True
     End Function
@@ -120,7 +142,7 @@ Public NotInheritable Class CheckoutDraftService
             draft.InsuranceSelected, draft.Notes, draft.CouponCode,
             draft.CouponDescription, draft.CouponTaxableTotal, draft.CouponVatId,
             draft.CouponVatValue, draft.CouponRounding, draft.ReverseChargeVat, draft.CarrierVat,
-            draft.CouponFingerprint, draft.CartFingerprint, draft.OptionsFingerprint,
+            draft.CouponFingerprint, draft.CartFingerprint, draft.OptionsFingerprint, draft.CommercialProfileFingerprint,
             draft.PayloadFingerprint, draft.RequestId, draft.Subtotal, draft.Vat,
             draft.ShippingCost, draft.InsuranceCost, draft.PaymentCost, draft.Discount,
             draft.DiscountVat, draft.Total)
@@ -189,6 +211,9 @@ Public NotInheritable Class CheckoutDraftService
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(draft.OptionsFingerprint, normalized) Then Return False
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(draft.PayloadFingerprint, normalized) Then Return False
         If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(draft.CouponFingerprint, normalized) Then Return False
+        If String.IsNullOrEmpty(draft.CommercialProfileFingerprint) OrElse
+           Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(draft.CommercialProfileFingerprint, normalized) OrElse
+           Not String.Equals(normalized, draft.CommercialProfileFingerprint, StringComparison.Ordinal) Then Return False
         If identity IsNot Nothing Then
             If Not identity.IsComplete OrElse
                Not String.Equals(draft.DatabaseScopeKey, identity.DatabaseScopeKey, StringComparison.Ordinal) OrElse
@@ -234,6 +259,7 @@ Public NotInheritable Class CheckoutDraftService
             .CouponFingerprint = source.CouponFingerprint,
             .CartFingerprint = source.CartFingerprint,
             .OptionsFingerprint = source.OptionsFingerprint,
+            .CommercialProfileFingerprint = source.CommercialProfileFingerprint,
             .PayloadFingerprint = source.PayloadFingerprint,
             .RequestId = source.RequestId,
             .Subtotal = source.Subtotal,
