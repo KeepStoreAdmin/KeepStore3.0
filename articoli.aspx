@@ -10,7 +10,7 @@
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261015-mobile-excellence1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261108-mobile-filter-batch1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261108-catalog-search-context-1a" />
     <style>
         #ksCatalogPage .ks-catalog-guide-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px 14px; max-width: 100%; white-space: normal; text-align: center; }
@@ -116,7 +116,7 @@
                                         <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("mr", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("mr", Container.DataItem) %>' data-ks-batch-key="mr" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("mr", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -136,7 +136,7 @@
                                         <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("tp", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("tp", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("tp", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("tp", Container.DataItem) %>' data-ks-batch-key="tp" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("tp", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -157,7 +157,7 @@
                                         <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>' data-ks-batch-key="gr" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("gr", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -173,7 +173,7 @@
                                         <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>' data-ks-batch-key="sg" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("sg", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -187,7 +187,7 @@
                                     <p class="facet-title title-sidebar fw-semibold">Disponibilita</p>
                                     <div class="box-fieldset-item">
                                         <fieldset class="fieldset-item ks-filter-checkbox">
-                                            <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo disponibili" AutoPostBack="true" />
+                                            <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo disponibili" data-ks-batch-key="disponibile" data-ks-batch-value="1" AutoPostBack="true" />
                                         </fieldset>
                                     </div>
                                 </div>
@@ -197,18 +197,23 @@
                                     <div class="box-fieldset-item">
                                         <fieldset class="fieldset-item d-block">
                                             <label class="body-text-3 mb-1">Taglia</label>
-                                            <asp:DropDownList ID="Drop_Filtra_Taglia" runat="server" CssClass="form-select" AutoPostBack="true" />
+                                            <asp:DropDownList ID="Drop_Filtra_Taglia" runat="server" data-ks-batch-key="taglia" data-ks-batch-value="server-options" CssClass="form-select" AutoPostBack="true" />
                                         </fieldset>
                                         <fieldset class="fieldset-item d-block">
                                             <label class="body-text-3 mb-1">Colore</label>
-                                            <asp:DropDownList ID="Drop_Filtra_Colore" runat="server" CssClass="form-select" AutoPostBack="true" />
+                                            <asp:DropDownList ID="Drop_Filtra_Colore" runat="server" data-ks-batch-key="colore" data-ks-batch-value="server-options" CssClass="form-select" AutoPostBack="true" />
                                         </fieldset>
                                     </div>
                                 </asp:Panel>
                             </asp:Panel>
                         </div>
 
-                        <div class="canvas-bottom d-flex d-xl-none">
+                        <div class="canvas-bottom d-flex d-xl-none ks-filter-footer">
+                            <div data-ks-batch-actions hidden class="ks-filter-batch-actions">
+                                <button type="button" class="tf-btn" data-ks-batch-apply>Applica filtri</button>
+                                <button type="button" class="tf-btn" data-ks-batch-cancel>Annulla</button>
+                            </div>
+                            <p id="ksBatchPriceHint" data-ks-batch-price-hint hidden role="status">Applica o annulla le selezioni prima di modificare il prezzo.</p>
                             <a class="tf-btn btn-reset w-100" href="<%= Server.HtmlEncode(ClearCatalogFiltersUrl) %>">
                                 <span class="caption text-white">Reset filtri</span>
                             </a>
@@ -609,7 +614,7 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261015-mobile-excellence1a-rev1"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261108-mobile-filter-batch1a"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>

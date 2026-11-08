@@ -2644,12 +2644,16 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     Private Sub BindActiveFilters()
         Dim refurbishedActive As Boolean = ResolveCatalogRefurbishedActive()
         lnkCatalogRefurbished.HRef = HttpUtility.HtmlAttributeEncode(ThemeManager.CatalogResultsUrl(BuildCatalogRefurbishedToggleUrl(GetSafeReturnUrl(), refurbishedActive)))
+        lnkCatalogRefurbished.Attributes("data-ks-batch-key") = "ricondizionato"
+        lnkCatalogRefurbished.Attributes("data-ks-batch-value") = "1"
         lnkCatalogRefurbished.Attributes("class") = "ks-filter-option link py-3" & If(refurbishedActive, " active", String.Empty)
         lnkCatalogRefurbished.Attributes("aria-label") = If(refurbishedActive, "Solo ricondizionati: attivo. Rimuovi il filtro", "Solo ricondizionati: attiva il filtro")
         catalogRefurbishedState.Visible = refurbishedActive
 
         Dim dealsActive As Boolean = ResolvePromotionCatalogActive()
         lnkCatalogDeals.HRef = HttpUtility.HtmlAttributeEncode(ThemeManager.CatalogResultsUrl(BuildCatalogDealsToggleUrl(GetSafeReturnUrl(), dealsActive)))
+        lnkCatalogDeals.Attributes("data-ks-batch-key") = "inpromo"
+        lnkCatalogDeals.Attributes("data-ks-batch-value") = "1"
         lnkCatalogDeals.Attributes("class") = "ks-filter-option link py-3" & If(dealsActive, " active", String.Empty)
         lnkCatalogDeals.Attributes("aria-label") = If(dealsActive, "Solo offerte: attivo. Rimuovi il filtro offerte", "Solo offerte: attiva il filtro offerte")
         catalogDealsState.Visible = dealsActive

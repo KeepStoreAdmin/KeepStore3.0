@@ -289,3 +289,14 @@ body.ks-offcanvas-open .ks-filter-panel{ transform:translateX(0); }
   .ks-active-filters-actions{ flex-direction:row; align-items:center; justify-content:space-between; min-width:0; }
   .ks-active-filters-meta{ text-align:left; }
 }
+
+/* Native links remain the no-JS fallback. */
+.ks-filter-batch-actions[hidden], #ksBatchPriceHint[hidden] { display:none !important; }
+.ks-filter-batch-actions { display:flex; gap:8px; width:100%; }
+.ks-filter-batch-actions .tf-btn { min-height:44px; flex:1; white-space:normal; }
+.ks-filter-batch-actions button:focus-visible { outline:3px solid currentColor; outline-offset:2px; }
+@media(max-width:1199.98px) {
+  .ks-filter-footer { flex-direction:column; gap:8px; }
+  #ksCatalogFiltersPanel [data-ks-batch-key] { min-height:44px; }
+  #ksBatchPriceHint { font-size:13px; margin:0; }
+}

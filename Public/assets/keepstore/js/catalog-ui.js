@@ -400,6 +400,115 @@
     var media = window.matchMedia('(max-width: 1199.98px)');
     var opened = false;
     var background = [];
+    var batch = null;
+    var batchBar = panel.querySelector('[data-ks-batch-actions]');
+    var applyBatch = panel.querySelector('[data-ks-batch-apply]');
+    var price = panel.querySelector('.ks-catalog-price-apply');
+    var priceHint = panel.querySelector('[data-ks-batch-price-hint]');
+    var keys = ['mr', 'tp', 'gr', 'sg', 'inpromo', 'ricondizionato', 'disponibile', 'taglia', 'colore'];
+    var multi = ['mr', 'tp', 'gr', 'sg'];
+    function signature(value, key) {
+      if ((key === 'taglia' || key === 'colore') && value === '0|0') return '';
+      return multi.indexOf(key) < 0 ? value : value.split('|').filter(Boolean).sort().join('|');
+    }
+    function changed(key) { return signature(batch.values[key], key) !== signature(batch.initial[key], key); }
+    function dirty() { return keys.some(changed); }
+    function paintBatch() {
+      var count = 0;
+      keys.forEach(function (key) { count += multi.indexOf(key) >= 0 ? batch.values[key].split('|').filter(Boolean).length : (signature(batch.values[key], key) ? 1 : 0); });
+      applyBatch.textContent = 'Applica filtri (' + count + ')';
+      batch.nodes.forEach(function (item) {
+        var node = item.node, key = node.getAttribute('data-ks-batch-key');
+        if (node.tagName === 'A') {
+          var value = node.getAttribute('data-ks-batch-value');
+          var selected = multi.indexOf(key) >= 0 ? batch.values[key].split('|').indexOf(value) >= 0 : batch.values[key] === value;
+          node.classList.toggle('active', selected);
+          node.setAttribute('role', 'checkbox'); node.setAttribute('aria-checked', String(selected));
+          if (key === 'inpromo' || key === 'ricondizionato') {
+            var label = node.querySelector('span'), badge = node.querySelector('small');
+            if (label) node.setAttribute('aria-label', label.textContent.trim());
+            if (badge) badge.hidden = !selected;
+          }
+        }
+      });
+      if (price) {
+        price.disabled = batch.priceDisabled || dirty();
+        if (dirty()) price.setAttribute('aria-describedby', (batch.priceDescription || '') + ' ksBatchPriceHint');
+        else if (batch.priceDescription === null) price.removeAttribute('aria-describedby');
+        else price.setAttribute('aria-describedby', batch.priceDescription);
+      }
+      if (priceHint) priceHint.hidden = !dirty();
+    }
+    function startBatch() {
+      if (!batchBar || !applyBatch) return;
+      var params = new URL(window.location.href).searchParams;
+      batch = { initial: {}, values: {}, nodes: [], priceDisabled: price && price.disabled, priceDescription: price ? price.getAttribute('aria-describedby') : null };
+      keys.forEach(function (key) { batch.initial[key] = batch.values[key] = params.get(key) || ''; });
+      panel.querySelectorAll('[data-ks-batch-key]').forEach(function (node) {
+        if (keys.indexOf(node.getAttribute('data-ks-batch-key')) < 0) return;
+        var wrapper = node;
+        if (node.tagName === 'SPAN' && node.querySelector('input[type="checkbox"]')) {
+          node = node.querySelector('input[type="checkbox"]');
+          node.setAttribute('data-ks-batch-key', wrapper.getAttribute('data-ks-batch-key'));
+          node.setAttribute('data-ks-batch-value', wrapper.getAttribute('data-ks-batch-value'));
+        }
+        var item = { node: node, cls: node.getAttribute('class'), role: node.getAttribute('role'), aria: node.getAttribute('aria-checked'), checked: node.checked, selected: node.selectedIndex, onclick: node.onclick, onchange: node.onchange, clickAttr: node.getAttribute('onclick'), changeAttr: node.getAttribute('onchange') };
+        batch.nodes.push(item);
+        item.label = node.getAttribute('aria-label');
+        item.badge = node.tagName === 'A' && node.querySelector('small');
+        item.badgeHidden = item.badge && item.badge.hidden;
+        item.generatedMetadata = wrapper !== node;
+        // WebForms inline AutoPostBack is suspended only on these batch controls.
+        node.removeAttribute('onclick'); node.removeAttribute('onchange'); node.onclick = null; node.onchange = null;
+      });
+      batchBar.hidden = false;
+      paintBatch();
+    }
+    function stopBatch() {
+      if (!batch) return;
+      batch.nodes.forEach(function (item) {
+        var node = item.node;
+        [['class', item.cls], ['role', item.role], ['aria-checked', item.aria], ['aria-label', item.label], ['onclick', item.clickAttr], ['onchange', item.changeAttr]].forEach(function (pair) {
+          if (pair[1] === null) node.removeAttribute(pair[0]); else node.setAttribute(pair[0], pair[1]);
+        });
+        node.onclick = item.onclick; node.onchange = item.onchange;
+        if (item.badge) item.badge.hidden = item.badgeHidden;
+        if (typeof item.checked === 'boolean') node.checked = item.checked;
+        if (typeof item.selected === 'number') node.selectedIndex = item.selected;
+        if (item.generatedMetadata) { node.removeAttribute('data-ks-batch-key'); node.removeAttribute('data-ks-batch-value'); }
+      });
+      if (price) {
+        price.disabled = batch.priceDisabled;
+        if (batch.priceDescription === null) price.removeAttribute('aria-describedby'); else price.setAttribute('aria-describedby', batch.priceDescription);
+      }
+      if (priceHint) priceHint.hidden = true;
+      batchBar.hidden = true; batch = null;
+    }
+    function batchControl(target) {
+      var node = target.closest('[data-ks-batch-key]');
+      return batch && opened && media.matches && node && batch.nodes.some(function (item) { return item.node === node; }) ? node : null;
+    }
+    function batchChange(ev) {
+      var node = batchControl(ev.target);
+      if (!node) return;
+      ev.stopImmediatePropagation();
+      var key = node.getAttribute('data-ks-batch-key');
+      if (node.tagName === 'SELECT') batch.values[key] = node.selectedIndex > 0 ? node.selectedIndex + '|' + node.value : '';
+      else if (node.type === 'checkbox') batch.values[key] = node.checked ? node.getAttribute('data-ks-batch-value') : '';
+      paintBatch();
+    }
+    function submitBatch() {
+      if (!dirty()) { close(); return; }
+      var url = new URL(window.location.href);
+      keys.forEach(function (key) {
+        if (!changed(key)) return;
+        if (batch.values[key]) url.searchParams.set(key, batch.values[key]); else url.searchParams.delete(key);
+      });
+      if (changed('inpromo') && !batch.values.inpromo) url.searchParams.delete('pid');
+      ['pg', 'page', 'p', 'rimuovi'].forEach(function (key) { url.searchParams.delete(key); });
+      url.hash = 'ksCatalogResults';
+      window.location.assign(url.pathname + url.search + url.hash);
+    }
     panel.setAttribute('data-ks-filter-dialog', '1');
     overlay.setAttribute('data-ks-filter-backdrop', '1');
 
@@ -429,6 +538,7 @@
 
     function close(restoreFocus) {
       var wasOpen = opened;
+      stopBatch();
       opened = false;
       panel.classList.remove('show');
       overlay.classList.remove('show');
@@ -482,6 +592,7 @@
       document.body.classList.add('ks-catalog-filters-open');
       trigger.setAttribute('aria-expanded', 'true');
       opened = true;
+      startBatch();
       isolateBackground();
       (focusable()[0] || panel).focus();
       // Some pointer/assistive input sequences finalize focus after the click.
@@ -492,6 +603,26 @@
 
     // Capture owns only presentation clicks; legacy theme toggles never run twice.
     function click(ev) {
+      if (batch && opened && media.matches && panel.contains(ev.target)) {
+        if (ev.target.closest('[data-ks-batch-apply]')) { ev.preventDefault(); ev.stopImmediatePropagation(); submitBatch(); return; }
+        if (ev.target.closest('[data-ks-batch-cancel]')) { ev.preventDefault(); ev.stopImmediatePropagation(); close(); return; }
+        var node = batchControl(ev.target);
+        if (node) {
+          ev.stopImmediatePropagation();
+          if (node.tagName === 'A') {
+            ev.preventDefault();
+            var key = node.getAttribute('data-ks-batch-key'), value = node.getAttribute('data-ks-batch-value');
+            if (!value) return;
+            if (multi.indexOf(key) >= 0) {
+              var values = batch.values[key].split('|').filter(Boolean), index = values.indexOf(value);
+              if (index < 0) values.push(value); else values.splice(index, 1);
+              batch.values[key] = values.join('|');
+            } else batch.values[key] = batch.values[key] === value ? '' : value;
+            paintBatch();
+          }
+          return;
+        }
+      }
       var isTrigger = trigger.contains(ev.target);
       var isClose = panel.contains(ev.target) && ev.target.closest('.close-filter');
       if (media.matches && (isTrigger || isClose || ev.target === overlay)) {
@@ -503,6 +634,9 @@
     }
     function keydown(ev) {
       if (!opened) return;
+      var node = batchControl(ev.target);
+      if (node && node.tagName === 'A' && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); ev.stopImmediatePropagation(); node.click(); return; }
+      if (node && node.type === 'checkbox' && ev.key === 'Enter') { ev.preventDefault(); ev.stopImmediatePropagation(); node.click(); return; }
       if (ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); close(); }
       else if (ev.key === 'Tab') {
         var items = focusable();
@@ -523,6 +657,7 @@
     function otherOverlay() { if (opened) close(false); }
     panel.addEventListener('transitionend', afterTransition);
     document.addEventListener('click', click, true);
+    document.addEventListener('change', batchChange, true);
     document.addEventListener('keydown', keydown, true);
     document.addEventListener('focusin', focusin);
     document.addEventListener('show.bs.offcanvas', otherOverlay);
@@ -533,6 +668,7 @@
       close(false);
       panel.removeEventListener('transitionend', afterTransition);
       document.removeEventListener('click', click, true);
+      document.removeEventListener('change', batchChange, true);
       document.removeEventListener('keydown', keydown, true);
       document.removeEventListener('focusin', focusin);
       document.removeEventListener('show.bs.offcanvas', otherOverlay);
