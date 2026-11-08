@@ -461,7 +461,14 @@ Public Module ThemeManager
 
         Dim newQuery As String = qs.ToString()
         Dim url As String = If(String.IsNullOrEmpty(newQuery), path, path & "?" & newQuery)
-        Return HtmlAttr(url)
+        Return HtmlAttr(CatalogResultsUrl(url))
+    End Function
+
+    Public Function CatalogResultsUrl(ByVal url As String) As String
+        If String.IsNullOrEmpty(url) OrElse url = "#" Then Return url
+        Dim hashIndex As Integer = url.IndexOf("#"c)
+        If hashIndex >= 0 Then url = url.Substring(0, hashIndex)
+        Return url & "#ksCatalogResults"
     End Function
 
     Private Function SafeCurrentPathAndQuery() As String

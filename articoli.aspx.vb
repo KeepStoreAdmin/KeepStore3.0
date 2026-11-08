@@ -249,7 +249,7 @@ Partial Class Articoli
             newUrl = changeUrlGetParam(newUrl, "sg", filters.Item("sg"))
         End If
 
-        If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) Then RedirectIfChanged(newUrl)
+        If Not (mrAreEquals And tpAreEquals And grAreEquals And sgAreEquals) Then RedirectIfChanged(ThemeManager.CatalogResultsUrl(newUrl))
     End Sub
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
@@ -277,7 +277,7 @@ Partial Class Articoli
         If Not String.IsNullOrEmpty(Request.QueryString("rimuovi")) Then
             Dim filtersToRemove As String = Request.QueryString("rimuovi")
             Dim cleanFilterUrl As String = RemoveActiveFilterFromUrl(GetSafeReturnUrl(), filtersToRemove)
-            RedirectIfChanged(cleanFilterUrl)
+            RedirectIfChanged(ThemeManager.CatalogResultsUrl(cleanFilterUrl))
         End If
 
         
@@ -494,6 +494,8 @@ Partial Class Articoli
         Dim parts As New List(Of String)()
         If sectorId > 0 Then parts.Add("st=" & HttpUtility.UrlEncode(sectorId.ToString()))
         If categoryId > 0 Then parts.Add("ct=" & HttpUtility.UrlEncode(categoryId.ToString()))
+        Dim search As String = Convert.ToString(Request.QueryString("q"))
+        If Not String.IsNullOrWhiteSpace(search) Then parts.Add("q=" & HttpUtility.UrlEncode(search))
         If String.Equals(Convert.ToString(Request.QueryString("inpromo")), "1", StringComparison.Ordinal) Then
             parts.Add("inpromo=1")
             Dim campaignId As Integer = 0
@@ -2249,13 +2251,13 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         End If
 
         Dim newUrl As String = changeUrlGetParam(GetSafeReturnUrl(), parName, parValue)
-        RedirectIfChanged(newUrl)
+        RedirectIfChanged(ThemeManager.CatalogResultsUrl(newUrl))
     End Sub
 
     Protected Sub Drop_Ordinamento_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Ordinamento.SelectedIndexChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Ordinamento, "ordinamento")
-        RedirectIfChanged(newUrl)
+        RedirectIfChanged(ThemeManager.CatalogResultsUrl(newUrl))
     End Sub
 
     Protected Sub Drop_Righe_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Righe.SelectedIndexChanged
@@ -2267,19 +2269,19 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     Protected Sub Drop_Filtra_Taglia_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Taglia.SelectedIndexChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Filtra_Taglia, "taglia")
-        RedirectIfChanged(newUrl)
+        RedirectIfChanged(ThemeManager.CatalogResultsUrl(newUrl))
     End Sub
 
     Protected Sub Drop_Filtra_Colore_SelectedIndexChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles Drop_Filtra_Colore.SelectedIndexChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromDropDownList(GetSafeReturnUrl(), Drop_Filtra_Colore, "colore")
-        RedirectIfChanged(newUrl)
+        RedirectIfChanged(ThemeManager.CatalogResultsUrl(newUrl))
     End Sub
 
     Protected Sub CheckBox_Disponibile_CheckedChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles CheckBox_Disponibile.CheckedChanged
         Session("Articoli_PageIndex") = 0
         Dim newUrl As String = changeUrlDependingFromCheckBox(GetSafeReturnUrl(), CheckBox_Disponibile, "disponibile", "1", "")
-        RedirectIfChanged(newUrl)
+        RedirectIfChanged(ThemeManager.CatalogResultsUrl(newUrl))
     End Sub
     Sub changeCheckBoxDependingFromUrl(ByVal checkBox As CheckBox, ByVal parName As String, ByVal parValueIfChecked As String)
         If Request.QueryString(parName) = parValueIfChecked Then
@@ -2437,7 +2439,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         ElseIf TryNormalizeCatalogPriceRange(minValues(0), maxValues(0), minimum, maximum, errorText) Then
             txtCatalogPriceMin.Text = minimum
             txtCatalogPriceMax.Text = maximum
-            RedirectIfChanged(BuildCatalogPriceRangeUrl(minimum, maximum))
+            RedirectIfChanged(ThemeManager.CatalogResultsUrl(BuildCatalogPriceRangeUrl(minimum, maximum)))
             Return
         End If
 
@@ -2630,7 +2632,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     Protected Sub rptActiveFilters_ItemCommand(ByVal source As Object, ByVal e As RepeaterCommandEventArgs)
         If String.Equals(e.CommandName, "remove", StringComparison.OrdinalIgnoreCase) Then
             Session("Articoli_PageIndex") = 0
-            RedirectIfChanged(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), Convert.ToString(e.CommandArgument)))
+            RedirectIfChanged(ThemeManager.CatalogResultsUrl(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), Convert.ToString(e.CommandArgument))))
         End If
     End Sub
 
@@ -2641,13 +2643,13 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
 
     Private Sub BindActiveFilters()
         Dim refurbishedActive As Boolean = ResolveCatalogRefurbishedActive()
-        lnkCatalogRefurbished.HRef = HttpUtility.HtmlAttributeEncode(BuildCatalogRefurbishedToggleUrl(GetSafeReturnUrl(), refurbishedActive))
+        lnkCatalogRefurbished.HRef = HttpUtility.HtmlAttributeEncode(ThemeManager.CatalogResultsUrl(BuildCatalogRefurbishedToggleUrl(GetSafeReturnUrl(), refurbishedActive)))
         lnkCatalogRefurbished.Attributes("class") = "ks-filter-option link py-3" & If(refurbishedActive, " active", String.Empty)
         lnkCatalogRefurbished.Attributes("aria-label") = If(refurbishedActive, "Solo ricondizionati: attivo. Rimuovi il filtro", "Solo ricondizionati: attiva il filtro")
         catalogRefurbishedState.Visible = refurbishedActive
 
         Dim dealsActive As Boolean = ResolvePromotionCatalogActive()
-        lnkCatalogDeals.HRef = HttpUtility.HtmlAttributeEncode(BuildCatalogDealsToggleUrl(GetSafeReturnUrl(), dealsActive))
+        lnkCatalogDeals.HRef = HttpUtility.HtmlAttributeEncode(ThemeManager.CatalogResultsUrl(BuildCatalogDealsToggleUrl(GetSafeReturnUrl(), dealsActive)))
         lnkCatalogDeals.Attributes("class") = "ks-filter-option link py-3" & If(dealsActive, " active", String.Empty)
         lnkCatalogDeals.Attributes("aria-label") = If(dealsActive, "Solo offerte: attivo. Rimuovi il filtro offerte", "Solo offerte: attiva il filtro offerte")
         catalogDealsState.Visible = dealsActive
@@ -2711,7 +2713,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         Dim item As New ActiveFilterItem()
         item.Key = key
         item.Label = ThemeManager.CompactText(label, 70)
-        item.RemoveUrl = RemoveActiveFilterFromUrl(GetSafeReturnUrl(), key)
+        item.RemoveUrl = ThemeManager.CatalogResultsUrl(RemoveActiveFilterFromUrl(GetSafeReturnUrl(), key))
         list.Add(item)
     End Sub
 

@@ -3,6 +3,9 @@
    - Pure CSS: safe for WebForms
 */
 
+/* Native filter navigation lands below the fixed header; no layout change. */
+#ksCatalogResults { scroll-margin-top: 150px; }
+
 .ks-qty-wrap{
   display:flex;
   align-items:stretch;
