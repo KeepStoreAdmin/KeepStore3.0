@@ -1143,14 +1143,14 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             "select `varticolibase`.`MarcheId` AS `MarcheId`,`Marche`.`Descrizione` AS `Descrizione`," &
             "`Marche`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `Marche` on(`varticolibase`.`MarcheId` = `Marche`.`id`) " &
-            Regex.Replace(strWhere2, " AND varticolibase.MarcheId in \(([^\)])+\) ", String.Empty) &
+            Regex.Replace(strWhere2, " AND varticolibase.MarcheId in \(([^\)])+\) ", String.Empty, RegexOptions.IgnoreCase) &
             " group by `varticolibase`.`MarcheId`, `Marche`.`Descrizione`, `Marche`.`Ordinamento` order by `Marche`.`Ordinamento`, `Marche`.`Descrizione`"
 
         Me.sdsTipologie.SelectCommand =
             "select `varticolibase`.`TipologieId` AS `TipologieId`,`tipologie`.`Descrizione` AS `Descrizione`," &
             "`tipologie`.`Ordinamento` AS `Ordinamento`,count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `tipologie` on(`varticolibase`.`TipologieId` = `tipologie`.`id`) " &
-            Regex.Replace(strWhere2, " AND varticolibase.TipologieId in \(([^\)])+\) ", String.Empty) &
+            Regex.Replace(strWhere2, " AND varticolibase.TipologieId in \(([^\)])+\) ", String.Empty, RegexOptions.IgnoreCase) &
             " group by `varticolibase`.`TipologieId`, `tipologie`.`Descrizione`, `tipologie`.`Ordinamento` order by `tipologie`.`Ordinamento`, `tipologie`.`Descrizione`"
 
         Me.sdsGruppo.SelectCommand =
@@ -1158,7 +1158,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             "`Gruppi`.`Descrizione` AS `Descrizione`,MIN(`Gruppi`.`Ordinamento`) AS `Ordinamento`," &
             "count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `Gruppi` on(`varticolibase`.`GruppiId` = `Gruppi`.`id`) " &
-            Regex.Replace(strWhere2, " AND varticolibase.GruppiId in \(([^\)])+\) ", String.Empty) &
+            Regex.Replace(strWhere2, " AND varticolibase.GruppiId in \(([^\)])+\) ", String.Empty, RegexOptions.IgnoreCase) &
             " group by `Gruppi`.`Descrizione` order by MIN(`Gruppi`.`Ordinamento`), `Gruppi`.`Descrizione`"
 
         Me.sdsSottogruppo.SelectCommand =
@@ -1166,7 +1166,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             "`SottoGruppi`.`Descrizione` AS `Descrizione`,`SottoGruppi`.`Ordinamento` AS `Ordinamento`," &
             "count(DISTINCT `varticolibase`.`id`) AS `Numero`" &
             " from `varticolibase` join `SottoGruppi` on(`varticolibase`.`SottoGruppiId` = `SottoGruppi`.`id`) " &
-            Regex.Replace(strWhere2, " AND varticolibase.SottogruppiId in \(([^\)])+\) ", String.Empty) &
+            Regex.Replace(strWhere2, " AND varticolibase.SottogruppiId in \(([^\)])+\) ", String.Empty, RegexOptions.IgnoreCase) &
             " group by `varticolibase`.`SottoGruppiId`, `SottoGruppi`.`Descrizione`, `SottoGruppi`.`Ordinamento` order by `SottoGruppi`.`Ordinamento`, `SottoGruppi`.`Descrizione`"
 
 
