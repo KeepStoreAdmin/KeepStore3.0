@@ -36,6 +36,7 @@
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261109-mobile-search-rev2" %>" />
+    <noscript><style>#preload{display:none!important}</style></noscript>
 </head>
 
 <body id="PageBody" runat="server">
