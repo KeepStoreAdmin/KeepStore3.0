@@ -10,7 +10,7 @@ function sub(source,start){const a=source.indexOf(start),b=source.indexOf('\n   
 const dispatch=sub(server,'    Private Sub DispatchNativeMobileSearch()').replace('        If Not String.Equals(Request.HttpMethod','        TraceEvent("NATIVE_DISPATCH")\n        If Not String.Equals(Request.HttpMethod').replace('        Response.Redirect(target, True)','        TraceEvent("NATIVE_REDIRECT")\n        Response.Redirect(target, True)');
 const wiring=sub(masterServer,'    Private Sub WireHeaderEvents()');
 const cerca=masterServer.slice(masterServer.indexOf('    Public Sub Cerca()'),masterServer.indexOf("    ' IVA VETTORE DEFAULT")).replace('    Private Sub Cerca(ByVal preferMobile As Boolean)','    Private Sub Cerca(ByVal preferMobile As Boolean)\n        TraceEvent("SEARCH_DISPATCH")').replace('    Protected Sub tbCercaMobile_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)','    Protected Sub tbCercaMobile_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs)\n        TraceEvent("MOBILE_TEXT_CHANGED")');
-const click=sub(masterServer,'    Protected Sub btnSearch_ServerClick(');
+const click=sub(masterServer,'    Protected Sub btnSearch_ServerClick(').replace('        Try','        TraceEvent("SEARCH_BUTTON_" & DirectCast(sender, Control).ID)\n        Try');
 const tenants={taikun:{company:1,sector:11,category:111,other:12,title:'Taikun Tech',product:123},webaffare:{company:2,sector:22,category:222,other:23,title:'Webaffare Food',product:456}};
 const scope=t=>`articoli.aspx?st=${t.sector}&ct=${t.category}`;
 const tenantScope=(t,value)=>assert.equal(value,scope(t),'Tenant scope mismatch');
@@ -92,6 +92,10 @@ Protected Sub FixtureLoad(sender As Object,e As EventArgs) Handles Me.Load
    ddl.SelectedIndex=2
   Next
   tbCercaMobile.Text="lampada"
+  If Request.QueryString("desktopProbe")="1" Then
+   tbCercaMobile.Text="mobile sentinel"
+   product_cat_mobile.SelectedValue="articoli.aspx?st=" & other
+  End If
   mvLogin.SetActiveView(vwLoginOff)
   imgLogo.ImageUrl="/fixture-logo.svg":imgLogo.AlternateText=title
   imgLogoMobile.ImageUrl="/fixture-logo.svg":imgLogoMobile.AlternateText=title
@@ -150,7 +154,7 @@ End Sub</script><main data-page="${page}">Fixture ${page}</main></asp:Content>`)
 write('render.ps1',`param([string]$FixtureRoot)
 $ErrorActionPreference='Stop';Add-Type -AssemblyName System.Web;Add-Type -Path (Join-Path $FixtureRoot 'bin/Gate.dll')
 $gate=[System.Web.Hosting.ApplicationHost]::CreateApplicationHost([GateHost], '/', ($FixtureRoot+'\\'))
-$results=@();$redirects=@();$controls=@()
+$results=@();$redirects=@();$controls=@();$desktopPosts=@();$desktopNoJs=@()
 foreach($tenant in @('taikun','webaffare')){
  $r=$gate.Run('articoli.aspx',('tenant='+$tenant),'GET','')
  if($r[0] -ne '200'){[IO.File]::WriteAllText((Join-Path $FixtureRoot 'compile-failure.html'),$r[2]);throw 'FRAMEWORK_RENDER_FAILED'}
@@ -186,10 +190,41 @@ foreach($tenant in @('taikun','webaffare')){
   $getEvents=@([IO.File]::ReadAllLines((Join-Path $FixtureRoot 'events.txt'))|Select-Object -Skip $before|ForEach-Object{$_.ToString()})
   $redirects+=@{tenant=$tenant;case=$case.name;status=$get[0];location=$get[1];events=$getEvents}
  }
+ # Desktop event and field names come from the real System.Web rendering, never a reconstructed redirect.
+ $desktopGet=$gate.Run('articoli.aspx',('tenant='+$tenant+'&desktopProbe=1'),'GET','')
+ if($desktopGet[0] -ne '200'){throw 'DESKTOP_RENDER_FAILED'}
+ $html=$desktopGet[2]
+ $desktopText=[regex]::Match($html,'<input[^>]*name="([^"]*\\$tbCerca)"').Groups[1].Value
+ $desktopScope=[regex]::Match($html,'<select[^>]*name="([^"]*\\$product_cat)"').Groups[1].Value
+ $desktopButton=[regex]::Match($html,'<button[^>]*id="btnSearch"[^>]*>|<button[^>]*onclick="[^"]*"[^>]*id="btnSearch"[^>]*>').Value
+ $eventTarget=[regex]::Match($desktopButton,"__doPostBack\\('([^']+)',''\\)").Groups[1].Value
+ if(!$desktopText -or !$desktopScope -or !$eventTarget){throw 'DESKTOP_CONTROL_NAMES_MISSING'}
+ $desktopBody=@()
+ foreach($field in [regex]::Matches($html,'<input[^>]*type="hidden"[^>]*>')){
+  $n=[Web.HttpUtility]::HtmlDecode([regex]::Match($field.Value,'name="([^"]+)"').Groups[1].Value)
+  $v=[Web.HttpUtility]::HtmlDecode([regex]::Match($field.Value,'value="([^"]*)"').Groups[1].Value)
+  if($n -and $n -notin @('ksms','__EVENTTARGET')){$desktopBody+=([Web.HttpUtility]::UrlEncode($n)+'='+[Web.HttpUtility]::UrlEncode($v))}
+ }
+ $desktopQuery='desktop '+$tenant+' & luce'
+ $desktopBody+=([Web.HttpUtility]::UrlEncode($desktopText)+'='+[Web.HttpUtility]::UrlEncode($desktopQuery))
+ $desktopBody+=([Web.HttpUtility]::UrlEncode($desktopScope)+'='+[Web.HttpUtility]::UrlEncode(('articoli.aspx?st='+$sid+'&ct='+$cid)))
+ $desktopPayload=($desktopBody -join '&')+'&__EVENTTARGET='+[Web.HttpUtility]::UrlEncode($eventTarget)
+ if($desktopPayload -match 'unrelated|tbCercaMobile|product_cat_mobile|ksms='){throw 'DESKTOP_POST_CONTAINS_FOREIGN_FIELDS'}
+ $before=@([IO.File]::ReadAllLines((Join-Path $FixtureRoot 'events.txt'))).Count
+ $desktop=$gate.Run('articoli.aspx',('tenant='+$tenant+'&desktopProbe=1'),'POST',$desktopPayload)
+ $desktopEvents=@([IO.File]::ReadAllLines((Join-Path $FixtureRoot 'events.txt'))|Select-Object -Skip $before|ForEach-Object{$_.ToString()})
+ $desktopPosts+=@{tenant=$tenant;status=$desktop[0];location=$desktop[1];events=$desktopEvents;eventTarget=$eventTarget;textName=$desktopText;scopeName=$desktopScope;viewState=($desktopPayload -match '__VIEWSTATE=');eventValidation=($desktopPayload -match '__EVENTVALIDATION=')}
+ # Observed legacy no-JS limitation: native button has no submitted name; __doPostBack cannot set the event target.
+ $before=@([IO.File]::ReadAllLines((Join-Path $FixtureRoot 'events.txt'))).Count
+ $noJs=$gate.Run('articoli.aspx',('tenant='+$tenant+'&desktopProbe=1'),'POST',(($desktopBody -join '&')+'&__EVENTTARGET='))
+ $noJsEvents=@([IO.File]::ReadAllLines((Join-Path $FixtureRoot 'events.txt'))|Select-Object -Skip $before|ForEach-Object{$_.ToString()})
+ $desktopNoJs+=@{tenant=$tenant;status=$noJs[0];location=$noJs[1];events=$noJsEvents;limitation='Without __doPostBack the unnamed desktop button supplies no server event; no search redirect observed'}
 }
 [IO.File]::WriteAllText((Join-Path $FixtureRoot 'postbacks.json'),(ConvertTo-Json -Depth 6 -InputObject $results))
 [IO.File]::WriteAllText((Join-Path $FixtureRoot 'redirects.json'),(ConvertTo-Json -Depth 6 -InputObject $redirects))
 [IO.File]::WriteAllText((Join-Path $FixtureRoot 'controls.json'),(ConvertTo-Json -Depth 6 -InputObject $controls))
+[IO.File]::WriteAllText((Join-Path $FixtureRoot 'desktop-postbacks.json'),(ConvertTo-Json -Depth 6 -InputObject $desktopPosts))
+[IO.File]::WriteAllText((Join-Path $FixtureRoot 'desktop-nojs.json'),(ConvertTo-Json -Depth 6 -InputObject $desktopNoJs))
 `);
 const framework=path.join(process.env.WINDIR,'Microsoft.NET/Framework64/v4.0.30319');
 cp.execFileSync(path.join(framework,'vbc.exe'),['/nologo','/target:library','/out:'+path.join(work,'bin/Gate.dll'),'/reference:System.Web.dll',path.join(work,'Gate.vb')],{windowsHide:true,stdio:"inherit"});
@@ -200,6 +235,10 @@ const controls=JSON.parse(fs.readFileSync(path.join(work,'controls.json'),'utf8'
 controls.forEach(p=>{assert(p.events.includes('MOBILE_TEXT_CHANGED'));assert(p.events.includes('SEARCH_DISPATCH'));assert(p.location);});
 const redirects=JSON.parse(fs.readFileSync(path.join(work,'redirects.json'),'utf8'));
 redirects.forEach(r=>{assert.equal(r.status,'302');assert(r.events.includes('NATIVE_REDIRECT'));assert(!r.events.includes('PAGE_LOAD_COMPLETE'));const u=new URL(r.location,'http://fixture');const t=tenants[r.tenant];assert.equal(u.pathname,'/articoli.aspx');assert(!u.searchParams.has('ksms'));if(['own-scope','encoded'].includes(r.case)){assert.equal(u.searchParams.get('st'),String(t.sector));assert.equal(u.searchParams.get('ct'),String(t.category));}else assert(!u.searchParams.has('st'));assert.equal(u.searchParams.get('q'),r.case==='empty'?null:r.case==='encoded'?'A&B + luce':'lampada');});
+const desktopPosts=JSON.parse(fs.readFileSync(path.join(work,'desktop-postbacks.json'),'utf8'));
+desktopPosts.forEach(p=>{assert.equal(p.status,'302',JSON.stringify(p));assert(p.viewState&&p.eventValidation);assert(p.events.includes('SEARCH_BUTTON_btnSearch'));assert(p.events.includes('SEARCH_DISPATCH'));for(const forbidden of ['MOBILE_TEXT_CHANGED','NATIVE_DISPATCH','NATIVE_REDIRECT','UNRELATED_CLICK'])assert(!p.events.includes(forbidden),forbidden);const u=new URL(p.location,'http://fixture'),t=tenants[p.tenant];assert.equal(u.pathname,'/articoli.aspx');assert.equal(u.searchParams.get('st'),String(t.sector));assert.equal(u.searchParams.get('ct'),String(t.category));assert.equal(u.searchParams.get('q'),'desktop '+p.tenant+' & luce');assert.deepEqual(Array.from(u.searchParams.keys()).sort(),['ct','q','st']);});
+const desktopNoJs=JSON.parse(fs.readFileSync(path.join(work,'desktop-nojs.json'),'utf8'));
+desktopNoJs.forEach(p=>{assert.equal(p.status,'200');assert.equal(p.location,'');assert(p.events.includes('PAGE_LOAD_COMPLETE'));for(const forbidden of ['SEARCH_BUTTON_btnSearch','SEARCH_DISPATCH','MOBILE_TEXT_CHANGED','NATIVE_DISPATCH','UNRELATED_CLICK'])assert(!p.events.includes(forbidden),forbidden);});
 // Mutation oracle: substituting another tenant's expected scope must fail this test, not pass silently.
 for(const key of Object.keys(tenants))assert.throws(()=>tenantScope(tenants[key],scope(tenants[key==='taikun'?'webaffare':'taikun'])));
 (async()=>{let browser;const checks=[],navigation=[],limits=['IIS application/master and database not exercised','Tenant binding/logo/menu data are synthetic, real candidate header markup is compiled unchanged','Browser native GET destination is simulated; local System.Web unrelated POST events are executed'];function check(n,v){assert(v,n);checks.push(n);}
@@ -228,5 +267,35 @@ if(js&&action==='cross-tenant')continue; // Scope membership is a server check; 
 const origin=`http://${key}.localhost:${port}`,ctx=await browser.newContext({javaScriptEnabled:js,viewport:{width:390,height:950}}),p=await ctx.newPage(),nav=[];p.on('request',r=>{if(r.isNavigationRequest()&&new URL(r.url()).pathname!='/fixture')nav.push(r.url());});p.setDefaultTimeout(7000);await p.goto(origin+'/fixture',{waitUntil:'load',timeout:10000});const input=p.locator('#tbCercaMobile');await input.fill('lampada');if(action==='scope-only')await p.selectOption('#product_cat_mobile',`articoli.aspx?st=${t.other}`);if(action==='cross-tenant'){const other=tenants[key==='taikun'?'webaffare':'taikun'];await p.locator('#product_cat_mobile').evaluate((e,v)=>e.add(new Option('wrong tenant',v)),scope(other));await p.selectOption('#product_cat_mobile',scope(other));}
 await Promise.all([p.waitForURL(u=>u.pathname!='/fixture'),action==='enter'?input.press('Enter'):p.locator('#btnSearchMobile').click()]);const final=new URL(p.url());check('one intent',nav.length===(js?1:2));check('query',final.searchParams.get('q')==='lampada');if(action==='cross-tenant')check('cross-tenant rejected',!final.searchParams.has('st'));else check('tenant destination',final.searchParams.get('st')===String(action==='scope-only'?t.other:t.sector));navigation.push({tenant:key,js,action,final:final.pathname+final.search});await ctx.close();}
 for(const [key,t]of Object.entries(tenants))for(const activation of ['click','keyboard']){const ctx=await browser.newContext({viewport:{width:390,height:950}}),p=await ctx.newPage();const origin=`http://${key}.localhost:${port}`;p.setDefaultTimeout(7000);await p.goto(origin+'/fixture',{waitUntil:'load',timeout:10000});const input=p.locator('#tbCercaMobile');await input.fill('lampada');await input.press('a');const option=p.locator('#ksSearchSuggestMobile .ks-suggest-item');await option.waitFor();const box=await option.boundingBox();check('suggest within viewport',box.x>=0&&box.x+box.width<=390);if(activation==='keyboard'){await input.press('ArrowDown');await input.press('Enter');}else await option.click();await p.waitForURL('**/articolo.aspx?id='+t.product);check('tenant PDP target',new URL(p.url()).searchParams.get('id')===String(t.product));await ctx.close();}
-const report={result:'PASS QA SOURCE/LOCAL WEBFORMS/CHROME FIXTURE',checks:checks.length,tenants,postbacks:posts,instrumentationControls:controls,serverRedirects:redirects,navigation,headerSource:'Full candidate ASCX compiled; only directive replaced with inline fixture bindings',levels:{A:'Synthetic tenant scopes/logo and Node redirect/suggest simulations',B:'Actual Framework4.8 ApplicationHost, ViewState-bearing unrelated POST, copied master handlers wired and event traces',C:'Chrome on rendered full candidate header + candidate CSS/JS/Bootstrap',D:'IIS NOT EXERCISED'},limits,artifacts:work};write('qa-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+const desktopNavigation=[],desktopSuggestions=[];
+async function desktopFixture(key,width){
+ const origin=`http://${key}.localhost:${port}`,ctx=await browser.newContext({javaScriptEnabled:true,viewport:{width,height:950}}),p=await ctx.newPage();
+ p.setDefaultTimeout(7000);await p.goto(origin+'/fixture',{waitUntil:'load',timeout:10000});
+ const t=tenants[key];await p.locator('#tbCercaMobile').evaluate(e=>{e.value='MOBILE SENTINEL';});
+ await p.locator('#product_cat_mobile').evaluate((e,value)=>{e.value=value;},`articoli.aspx?st=${t.other}`);
+ await p.locator('[data-ks-search-form="desktop"] select').selectOption(scope(t));
+ check('desktop/mobile control scopes differ',await p.locator('#product_cat_mobile').inputValue()!==scope(t));
+ return {ctx,p};
+}
+for(const [key,t]of Object.entries(tenants))for(const width of [768,1024,1365])for(const activation of ['click','enter']){
+ const {ctx,p}=await desktopFixture(key,width),nav=[];p.on('request',r=>{if(r.isNavigationRequest())nav.push(r.url());});
+ const query='desktop '+key+' luce',input=p.locator('#tbCerca');await input.fill(query);
+ await Promise.all([p.waitForURL(u=>u.pathname==='/articoli.aspx'),activation==='enter'?input.press('Enter'):p.locator('#btnSearch').click()]);
+ const final=new URL(p.url());check('desktop one navigation',nav.length===1);check('desktop catalog target',final.pathname==='/articoli.aspx');
+ check('desktop scope',final.searchParams.get('st')===String(t.sector)&&final.searchParams.get('ct')===String(t.category));
+ check('desktop query, not mobile sentinel',final.searchParams.get('q')===query);
+ check('desktop clean URL',Array.from(final.searchParams.keys()).sort().join(',')==='ct,q,st');
+ desktopNavigation.push({tenant:key,width,activation,requests:nav.length,final:final.pathname+final.search});await ctx.close();
+}
+for(const [key,t]of Object.entries(tenants))for(const activation of ['click','keyboard']){
+ const {ctx,p}=await desktopFixture(key,1365),requests=[];p.on('request',r=>{if(new URL(r.url()).pathname==='/search_suggest.aspx')requests.push(new URL(r.url()));});
+ const input=p.locator('#tbCerca'),query='desktop '+key;await input.fill(query);await input.press('a');
+ const option=p.locator('#ksSearchSuggestDesktop .ks-suggest-item');await option.waitFor();
+ const request=requests[requests.length-1];check('desktop suggest scope/query',!!request&&request.searchParams.get('q')===query+'a'&&request.searchParams.get('st')===String(t.sector)&&request.searchParams.get('ct')===String(t.category));
+ if(activation==='keyboard'){await input.press('ArrowDown');await input.press('Enter');}else await option.click();
+ await p.waitForURL('**/articolo.aspx?id='+t.product);check('desktop suggest tenant PDP',new URL(p.url()).searchParams.get('id')===String(t.product));
+ desktopSuggestions.push({tenant:key,width:1365,activation,product:t.product});await ctx.close();
+}
+limits.push('Legacy desktop without JS: rendered unnamed button depends on __doPostBack; local POST without event target completes with no search redirect; not a functional PASS or an IIS result');
+const report={result:'PASS QA SOURCE/LOCAL WEBFORMS/CHROME FIXTURE',checks:checks.length,tenants,postbacks:posts,instrumentationControls:controls,serverRedirects:redirects,desktopPostbacks:desktopPosts,desktopNoJs,desktopNavigation,desktopSuggestions,navigation,headerSource:'Full candidate ASCX compiled; only directive replaced with inline fixture bindings',levels:{A:'Synthetic tenant scopes/logo and Node redirect/suggest simulations',B:'Actual Framework4.8 ApplicationHost, ViewState-bearing POSTs, copied master handlers wired and event traces, real desktop redirect',C:'Chrome on rendered full candidate header + candidate CSS/JS/Bootstrap',D:'IIS NOT EXERCISED'},limits,artifacts:work};write('qa-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }finally{if(browser)await browser.close();await new Promise(r=>http.close(r));}})().catch(e=>{console.error(e);console.error('ARTIFACTS='+work);process.exitCode=1;});
