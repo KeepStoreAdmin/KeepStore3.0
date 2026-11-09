@@ -1,6 +1,5 @@
 /* Native search scope: retain the header shell and browser interaction. */
-.ks-header-ui .ks-search-shell .ks-search-category-select,
-#mobileMenu .ks-search-shell .ks-search-category-select {
+.ks-header-ui .ks-search-shell .ks-search-category-select {
   display: block !important;
   appearance: auto;
   box-sizing: border-box;
@@ -17,8 +16,7 @@
   cursor: pointer;
 }
 
-.ks-header-ui .ks-search-shell .ks-search-category-select:focus-visible,
-#mobileMenu .ks-search-shell .ks-search-category-select:focus-visible {
+.ks-header-ui .ks-search-shell .ks-search-category-select:focus-visible {
   outline: 2px solid var(--primary-2, #D80027);
   outline-offset: 2px;
 }
@@ -40,40 +38,66 @@
   max-width: none;
 }
 
-#mobileMenu .ks-search-shell {
+.ks-header-ui .ks-mobile-search-area {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+.ks-header-ui .ks-mobile-search-area {
+  display: block;
+  padding-bottom: 12px;
+}
+
+.ks-header-ui .ks-mobile-search-area .ks-search-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 44px;
   gap: 8px;
   padding: 10px;
   border-radius: 14px;
+  overflow: visible;
 }
 
-#mobileMenu .ks-search-shell .select-category {
+.ks-header-ui .ks-mobile-search-area .ks-search-shell .select-category {
   grid-column: 1 / -1;
   min-width: 0;
   width: 100%;
+  max-width: none;
 }
 
-#mobileMenu .ks-search-shell .ks-search-category-select {
+.ks-header-ui .ks-mobile-search-area .ks-search-shell .ks-search-category-select {
   padding: 10px;
   background-color: var(--gray-5, #f5f5f5);
 }
 
-#mobileMenu .ks-search-shell .br-line {
+.ks-header-ui .ks-mobile-search-area .ks-search-shell .br-line {
   display: none !important;
 }
 
-#mobileMenu .ks-search-shell fieldset {
+.ks-header-ui .ks-mobile-search-area .ks-search-shell fieldset {
   grid-column: 1;
   min-width: 0;
   max-width: none;
 }
 
-#mobileMenu .ks-search-shell .btn-submit-form {
+.ks-header-ui .ks-mobile-search-area .ks-search-shell .btn-submit-form {
   position: static;
   grid-column: 2;
   width: 44px;
   height: 44px;
+}
+
+.ks-header-ui .ks-mobile-search-area .ks-search-shell input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 16px;
+}
+
+.ks-header-ui .ks-mobile-search-area .btn-submit-form:focus-visible,
+.ks-header-ui .ks-mobile-search-area input:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: 2px;
+}
 }
 
 /* KeepStore home storefront */

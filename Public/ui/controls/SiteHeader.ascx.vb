@@ -38,7 +38,42 @@ Partial Class SiteHeader
 
         If Not IsPostBack Then
             BindHeaderData()
+            DispatchNativeMobileSearch()
         End If
+    End Sub
+
+    Private Sub DispatchNativeMobileSearch()
+        If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) OrElse
+            Request.QueryString("ksms") <> "1" OrElse
+            Not String.Equals(Request.AppRelativeCurrentExecutionFilePath, "~/articoli.aspx", StringComparison.OrdinalIgnoreCase) Then Return
+
+        Dim selectedScope As String = Convert.ToString(Request.QueryString(product_cat_mobile.UniqueID))
+        Dim target As String = ResolveUrl("~/articoli.aspx")
+        Dim item As ListItem = product_cat_mobile.Items.FindByValue(selectedScope)
+        If item IsNot Nothing AndAlso Not String.IsNullOrEmpty(item.Value) Then
+            Dim candidate As String = item.Value
+            Dim parsed As Uri = Nothing
+            Dim path As String = candidate.Split("?"c)(0)
+            If Not candidate.Contains("\") AndAlso Not candidate.Contains("#") AndAlso
+                Not candidate.Contains("%") AndAlso Not candidate.Contains(":") AndAlso
+                Uri.TryCreate(candidate, UriKind.Relative, parsed) AndAlso
+                (String.Equals(path, "articoli.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+                 String.Equals(path, "~/articoli.aspx", StringComparison.OrdinalIgnoreCase) OrElse
+                 String.Equals(path, ResolveUrl("~/articoli.aspx"), StringComparison.OrdinalIgnoreCase)) Then
+                Dim queryIndex As Integer = candidate.IndexOf("?"c)
+                Dim scopeQuery = HttpUtility.ParseQueryString(If(queryIndex >= 0, candidate.Substring(queryIndex + 1), String.Empty))
+                scopeQuery.Remove("q")
+                scopeQuery.Remove("ksms")
+                Dim scopeSuffix As String = scopeQuery.ToString()
+                If scopeSuffix.Length > 0 Then target &= "?" & scopeSuffix
+            End If
+        End If
+
+        Dim text As String = Convert.ToString(Request.QueryString(tbCercaMobile.UniqueID)).Trim()
+        If text.Length > 80 Then text = text.Substring(0, 80)
+        If text.Length > 0 Then target &= If(target.Contains("?"), "&", "?") & "q=" & HttpUtility.UrlEncode(text)
+        ' End the page lifecycle before catalog LoadComplete, not only the HTTP pipeline.
+        Response.Redirect(target, True)
     End Sub
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreRender

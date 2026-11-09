@@ -1,5 +1,15 @@
 # KeepStore Masterplan Operativo
 
+## 2026-11-09 — KS-MOBILE-SEARCH-REACHABILITY-1A REV2 — candidato SOURCE / review richiesta
+
+Mandato PO REV2, baseline `d870fb2e9a95d5b53464c6f2eb8c5f6436291f3a`. Ricerca mobile unica spostata nell'header sotto logo/icone e sopra Guida, visibile sotto768px; ricerca desktop e menu laterale preservati. I controlli WebForms esistenti appartengono via attributo `form` al nuovo GET nativo `ksMobileSearchForm`, fratello esterno di `form1`; pulsante mobile HTML senza postback server. Nessuna duplicazione, nuovo listener o modifica del motore di ricerca.
+
+Gate preliminare isolato PASS: rendering effettivo System.Web Framework4.8 preserva ID/UniqueID/name e form association; Chrome JS/no-JS invia una sola intenzione, GET senza ViewState. Pipeline ASP.NET ospitata in ApplicationHost temporaneo, senza IIS/config operative: il dispatch in Load dopo binding usa `Response.Redirect(..., True)` e termina prima di LoadComplete; CompleteRequest da solo non e usato come prova. Il gestore legge i UniqueID, accetta solo GET catalogo con ksms=1, ambito presente negli Items tenant e percorso catalogo relativo validato; fallback generale per manomissioni, Trim/max80/UrlEncode, URL finale senza ksms o nomi tecnici.
+
+Test dedicato `Tools/Test-MobileSearchReachability.cjs`: server VB estratto dal codice reale, controlli renderizzati, matrice Chrome JS/no-JS e due contesti tenant sintetici, testo nuovo/invariato, click/Enter, solo ambito, vuoto, esterno e postback estraneo; CSS reali a360/390/430/768/1024/1365, target44 e controllo overflow. Suggerimenti con risposte sintetiche, senza dati commerciali. Precompile safe4.8 PASS,358 sorgenti e zero config operative copiate. I risultati dettagliati del test finale e CI sono nel rapporto di consegna; fixture e pipeline isolate NON certificano rendering master completo, IIS/MySQL, Home/catalogo/PDP/carrello reali o tenant operativi. Nessun accesso DB operativo o riconfigurazione IIS.
+
+Manifest tassativo6: Page.master, SiteHeader.ascx/vb, theme-overrides.css, test dedicato e questo checkpoint. Inventario53/52/4 protetto e main preservati; quattro cancellazioni tracked storiche escluse dallo staging. Un solo branch/commit e PR DRAFT per review indipendenti ChatGPT/Claude sullo stesso SHA; nessun merge, sincronizzazione post-merge o deploy. **CONSEGNA SERVER SOSPESA.**
+
 ## 2026-11-08 — KS-CATALOG-MOBILE-FILTER-BATCH-1A — PR DRAFT — review in corso — gate IIS aperto
 
 Baseline `85cb83c2`. Il pannello ONSUS esistente mantiene focus, Escape, overlay e breakpoint; durante apertura mobile conserva un batch temporaneo per mr/tp/gr/sg, offerte, ricondizionati, disponibilita, taglia/colore. Una sola navigazione GET applica le differenze, conserva ricerca/tassonomia/ordinamento/righe e contesto pid se offerte invariato, elimina paginazione/rimuovi e usa #ksCatalogResults. Annulla/X/Escape/overlay/desktop scartano il batch e ripristinano handler e controlli. Prezzo resta server-side, disabilitato e spiegato soltanto durante modifiche pendenti. Reset e fallback desktop/no-JS conservati. Nessuna query o autorita commerciale modificata.

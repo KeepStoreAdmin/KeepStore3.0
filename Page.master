@@ -35,7 +35,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261105-hero-mobile1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261109-mobile-search-rev2" %>" />
 </head>
 
 <body id="PageBody" runat="server">
@@ -470,6 +470,9 @@
 
 <form id="ksNativeCartForm" method="post" action="<%= ResolveUrl("~/cart_add.aspx") %>">
     <asp:Literal ID="litNativeCartSecurityFields" runat="server" />
+</form>
+<form id="ksMobileSearchForm" method="get" action="<%= ResolveUrl("~/articoli.aspx") %>">
+    <input type="hidden" name="ksms" value="1" />
 </form>
 </body>
 </html>

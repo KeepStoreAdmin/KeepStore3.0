@@ -129,6 +129,24 @@
         </div>
     </div>
 
+    <div class="ks-mobile-search-area">
+        <div class="container">
+            <div class="form-search-product style-3 ks-search-shell" data-ks-search-form="mobile">
+                <div class="select-category">
+                    <asp:Label runat="server" AssociatedControlID="product_cat_mobile" CssClass="visually-hidden" Text="Ambito di ricerca" />
+                    <asp:DropDownList ID="product_cat_mobile" runat="server" ClientIDMode="Static" CssClass="dropdown_product_cat ks-search-category-select" form="ksMobileSearchForm" />
+                </div>
+                <span class="br-line type-vertical bg-line d-none d-sm-block"></span>
+                <fieldset>
+                    <asp:TextBox ID="tbCercaMobile" runat="server" ClientIDMode="Static" placeholder="Cerca prodotti, codici o EAN/GTIN" AutoCompleteType="Disabled" form="ksMobileSearchForm" />
+                </fieldset>
+                <button id="btnSearchMobile" type="submit" form="ksMobileSearchForm" class="btn-submit-form" aria-label="Cerca">
+                    <i class="icon-search" aria-hidden="true"></i>
+                </button>
+                <div class="ks-search-suggest" id="ksSearchSuggestMobile" aria-live="polite"></div>
+            </div>
+        </div>
+    </div>
     <div class="ks-guide-mobile-entry d-xl-none">
         <div class="container"><a href="Default.aspx#KsLocalAiSearch130" class="ks-guide-entry">Guida agli acquisti <span aria-hidden="true">&#8594;</span></a></div>
     </div>
@@ -201,22 +219,6 @@
         </a>
     </div>
     <div class="mb-canvas-content">
-        <div class="ks-mobile-search-area">
-                <div class="form-search-product style-3 ks-search-shell" data-ks-search-form="mobile">
-                    <div class="select-category">
-                        <asp:Label runat="server" AssociatedControlID="product_cat_mobile" CssClass="visually-hidden" Text="Ambito di ricerca" />
-                        <asp:DropDownList ID="product_cat_mobile" runat="server" ClientIDMode="Static" CssClass="dropdown_product_cat ks-search-category-select" />
-                    </div>
-                    <span class="br-line type-vertical bg-line d-none d-sm-block"></span>
-                    <fieldset>
-                        <asp:TextBox ID="tbCercaMobile" runat="server" ClientIDMode="Static" placeholder="Cerca prodotti, codici o EAN/GTIN" AutoCompleteType="Disabled" />
-                    </fieldset>
-                    <button id="btnSearchMobile" runat="server" ClientIDMode="Static" type="submit" class="btn-submit-form" aria-label="Cerca">
-                        <i class="icon-search"></i>
-                    </button>
-                    <div class="ks-search-suggest" id="ksSearchSuggestMobile" aria-live="polite"></div>
-                </div>
-        </div>
         <div class="ks-mobile-catalog-toolbar" hidden>
             <button type="button" class="ks-mobile-catalog-back" aria-label="Torna ai settori" hidden><span aria-hidden="true">&#8592;</span> Indietro</button>
             <h6 class="ks-mobile-catalog-title" tabindex="-1" aria-live="polite">Catalogo</h6>
