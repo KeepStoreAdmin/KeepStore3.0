@@ -6,7 +6,8 @@ param(
     [switch]$CommercialProfileOnly,
     [switch]$AllowCommercialProfileDelta,
     [string]$EvidenceDirectory,
-    [string]$BaselineRef = '161b8d517082dd4e458f8f9d7974332c8475bb53'
+    [string]$BaselineRef = '161b8d517082dd4e458f8f9d7974332c8475bb53',
+    [switch]$ReplayOutcomeOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -15,6 +16,389 @@ Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 }
+
+if($ReplayOutcomeOnly){
+    if($OrderRecoveryNavigationOnly -or $ListinoAuthorityOnly -or $CommercialProfileOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
+    if($PSVersionTable.PSEdition -ne 'Desktop'){throw 'REPLAY_FRAMEWORK_POWERSHELL_REQUIRED'}
+    if(!$EvidenceDirectory -or !$PSBoundParameters.ContainsKey('BaselineRef') -or $BaselineRef -cnotmatch '^[0-9a-f]{40}$'){throw 'REPLAY_EXPLICIT_BASE_AND_EVIDENCE_REQUIRED'}
+    $evidence=[IO.Path]::GetFullPath($EvidenceDirectory)
+    if(!$evidence.StartsWith([IO.Path]::GetTempPath(),[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $evidence)){throw 'NEW_TEMP_EVIDENCE_DIRECTORY_REQUIRED'}
+    [void][IO.Directory]::CreateDirectory($evidence)
+    $utf8=New-Object Text.UTF8Encoding($false)
+    Add-Type -AssemblyName System.Web,System.Web.Extensions
+    $checks=New-Object 'Collections.Generic.List[object]'
+    function ReplayCheck([string]$name,[bool]$ok){$checks.Add([pscustomobject]@{name=$name;pass=$ok});if(!$ok){throw ('REPLAY_ASSERT '+$name)}}
+    function ReplaySource([string]$file){[IO.File]::ReadAllText((Join-Path $RepositoryRoot $file))}
+    function ReplayBase([string]$file){$s=(& git -C $RepositoryRoot show ($BaselineRef+':'+$file)) -join [char]10;if($LASTEXITCODE){throw 'REPLAY_BASE_MISSING'};return $s}
+    function ReplayNorm([string]$s){$s.Replace(([string][char]13+[char]10),[string][char]10).TrimEnd([char[]]@(13,10))}
+    function ReplayMethod([string]$s,[string]$name){
+        $m=[regex]::Match($s,'(?ms)^[ \t]*(?:Public|Private|Protected) (?:Shared )?(?:Sub|Function) '+[regex]::Escape($name)+'\b.*?^[ \t]*End (?:Sub|Function)')
+        if(!$m.Success){throw ('REPLAY_METHOD_MISSING '+$name)};return $m.Value
+    }
+    function ReplayReconcile([string]$s){
+        $a=$s.IndexOf('                If completedBeforeWork IsNot Nothing Then')
+        $b=$s.IndexOf('                If CheckoutFailureRecoveryService.IsRetiredRequest',$a)
+        if($a-lt0 -or $b-lt$a){throw 'REPLAY_RECONCILE_BLOCK_MISSING'};return $s.Substring($a,$b-$a)
+    }
+    function ReplayPanel([string]$s){$m=[regex]::Match($s,'(?s)<asp:Panel\b(?=[^>]*ID="pnlCartRecovery")[^>]*>.*?</asp:Panel>');if(!$m.Success){throw 'REPLAY_PANEL_MISSING'};return $m.Value}
+    $oldOrder=ReplayNorm (ReplayBase 'ordine.aspx.vb');$order=ReplayNorm (ReplaySource 'ordine.aspx.vb')
+    $oldCart=ReplayNorm (ReplayBase 'carrello.aspx.vb');$cart=ReplayNorm (ReplaySource 'carrello.aspx.vb')
+    $oldMarkup=ReplayNorm (ReplayBase 'carrello.aspx');$markup=ReplayNorm (ReplaySource 'carrello.aspx')
+    $nl=[string][char]10
+    $newHelper=ReplayMethod $order 'ReturnToCartAfterCompletedReplay'
+    ReplayCheck 'only completed-before-work communication changes in order source' ($order.Replace($newHelper+$nl+$nl,'').Replace('ReturnToCartAfterCompletedReplay(checkoutRequestId)','ReturnToCartAfterPayloadMismatch(checkoutRequestId)') -ceq $oldOrder)
+    ReplayCheck 'only eligible completed replay callsite changes' ((ReplayReconcile $order).Replace('ReturnToCartAfterCompletedReplay(checkoutRequestId)','ReturnToCartAfterPayloadMismatch(checkoutRequestId)') -ceq (ReplayReconcile $oldOrder))
+    ReplayCheck 'shared payload mismatch helper unchanged' ((ReplayMethod $order 'ReturnToCartAfterPayloadMismatch') -ceq (ReplayMethod $oldOrder 'ReturnToCartAfterPayloadMismatch'))
+    ReplayCheck 'no price revalidation keys in new helper' ($newHelper -notmatch 'SessionMessageKey|SessionChangedKey')
+    ReplayCheck 'cart outside flash method unchanged' ($cart.Replace((ReplayMethod $cart 'ShowCartRecoveryMessage'),'') -ceq $oldCart.Replace((ReplayMethod $oldCart 'ShowCartRecoveryMessage'),''))
+    $linkLine='                <asp:HyperLink ID="lnkCartRecoveryOrders" runat="server" Visible="false" NavigateUrl="~/documenti.aspx?t=4" CssClass="tf-btn btn-gray mt-2" Text="I miei ordini" />'
+    ReplayCheck 'only hidden native link added to markup' ($markup.Replace($linkLine+$nl,'') -ceq $oldMarkup)
+    foreach($file in @('App_Code/CheckoutFailureRecoveryService.vb','App_Code/CheckoutTerminalOutcomeDispatcher.vb','App_Code/OrderDurableIdempotencyService.vb','App_Code/OrderConfirmationTokenService.vb','documenti.aspx','documenti.aspx.vb')){
+        ReplayCheck ($file+' unchanged') ((ReplayNorm (ReplaySource $file)) -ceq (ReplayNorm (ReplayBase $file)))
+    }
+    $durable=ReplaySource 'App_Code/OrderDurableIdempotencyService.vb'
+    $identity=([regex]::Match((ReplaySource 'App_Code/OrderStorefrontContext.vb'),'(?ms)^Public NotInheritable Class OrderStorefrontIdentity.*?^End Class')).Value
+    $types=([regex]::Match($durable,'(?ms)^Public Enum OrderDurableClaimStatus.*?^End Class')).Value
+    $normalizers=@('TryNormalizeRequestId','TryNormalizePayloadFingerprint','IsFingerprintValid','RejectedRecord')|ForEach-Object{ReplayMethod $durable $_}
+    $readCompleted=(ReplayMethod $durable 'TryReadCompleted').Replace('MySqlConnection','FixtureConnection')
+    $dispatcher=ReplaySource 'App_Code/CheckoutTerminalOutcomeDispatcher.vb'
+    # Real HttpResponse 303/RedirectLocation; only IIS-only Headers and
+    # CompleteRequest transport boundaries are isolated in this source test.
+    $dispatcher=[regex]::Replace($dispatcher,'(?m)^Imports [^\r\n]*\r?\n','').Replace('response.Headers("Location") = target','context.Items("Fixture:Location") = target').Replace('context.ApplicationInstance.CompleteRequest()','context.Items("Fixture:CompleteRequest") = True')
+    $recovery=[regex]::Replace((ReplaySource 'App_Code/CheckoutFailureRecoveryService.vb'),'(?m)^Imports [^\r\n]*\r?\n','')
+    $priceConstants=([regex]::Matches((ReplaySource 'App_Code/CartPriceRevalidationHelper.vb'),'(?m)^[ \t]*Public Const Session(?:Message|Changed)Key As String = "[^"]+"')|ForEach-Object{$_.Value}) -join $nl
+    ReplayCheck 'real price flash constants extracted' ($priceConstants.Contains('SessionMessageKey') -and $priceConstants.Contains('SessionChangedKey'))
+    $codeKey=[regex]::Match($cart,'Private Const CartRecoveryCodeKey As String = "([^"]+)"').Groups[1].Value
+    $timeKey=[regex]::Match($cart,'Private Const CartRecoveryCreatedUtcKey As String = "([^"]+)"').Groups[1].Value
+    ReplayCheck 'producer and consumer share exact flash keys' ($newHelper.Contains('Session("'+$codeKey+'")') -and $newHelper.Contains('Session("'+$timeKey+'")'))
+    $orderClasses=@();$cartClasses=@()
+    foreach($version in @('Baseline','Candidate')){
+        $o=if($version-eq'Baseline'){$oldOrder}else{$order}
+        $c=if($version-eq'Baseline'){$oldCart}else{$cart}
+        $m=if($version-eq'Baseline'){$oldMarkup}else{$markup}
+        $helpers=@('GetQueryString','TryValidateCheckoutToken','ReturnToCartAfterPayloadMismatch','ReturnToCartWithReviewMessage','RedirectToOrderConfirmation','DispatchDurableCheckoutFailure','ShowDurableCheckoutTechnicalFailure')
+        if($version-eq'Candidate'){$helpers+='ReturnToCartAfterCompletedReplay'}
+        $methods=($helpers|ForEach-Object{ReplayMethod $o $_}) -join $nl
+        $constants=([regex]::Matches($o,'(?m)^Private (?:Shared ReadOnly|Const) CHECKOUT_TOKEN_(?:PURPOSE|QS_KEY|MAX_AGE)[^\r\n]*')|ForEach-Object{$_.Value}) -join $nl
+        $orderClasses+=@"
+Public Class ${version}OrderProbe
+    Inherits Page
+    Public Panel1 As New Panel()
+    Public Panel2 As New Panel()
+    Public Continued As Boolean
+    Public TokenRejected As Boolean
+    Public Sub New()
+        Dim bind As Reflection.MethodInfo = GetType(Page).GetMethod("SetIntrinsics",Reflection.BindingFlags.Instance Or Reflection.BindingFlags.NonPublic,Nothing,New Type(){GetType(HttpContext)},Nothing)
+        bind.Invoke(Me,New Object(){HttpContext.Current})
+    End Sub
+$constants
+$methods
+    Public Sub Observe(ByVal connection As FixtureConnection, ByVal forceLegacy As Boolean, ByVal orderIdentity As OrderStorefrontIdentity)
+        Dim checkoutRequestId As String = Nothing, checkoutPayloadFingerprint As String = Nothing, draft As String = Nothing
+        Dim isLegacyCheckoutToken As Boolean = False
+        If Not TryValidateCheckoutToken(orderIdentity,checkoutRequestId,checkoutPayloadFingerprint,draft,isLegacyCheckoutToken) Then
+            TokenRejected = True
+            Return
+        End If
+        ' Fixture legacy classification exercises the real guard; the unchanged
+        ' current v4 validator is separately executed on valid/invalid tokens.
+        If forceLegacy Then isLegacyCheckoutToken = True
+        Dim completedBeforeWork As OrderDurableIdempotencyRecord = OrderDurableIdempotencyService.TryReadCompleted(connection,checkoutRequestId,orderIdentity.LoginId,orderIdentity.CompanyId)
+$(ReplayReconcile $o)
+        Continued = True
+    End Sub
+End Class
+"@
+        $encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((ReplayPanel $m)))
+        $cartClasses+=@"
+Public Class ${version}CartProbe
+    Inherits ReplayCartPage
+    Private Const CartRecoveryCodeKey As String = "$codeKey"
+    Private Const CartRecoveryCreatedUtcKey As String = "$timeKey"
+    Public Sub New()
+        MyBase.New("$encoded")
+    End Sub
+$(ReplayMethod $c 'ShowCartRecoveryMessage')
+$(ReplayMethod $c 'ShowCartPriceRevalidationMessage')
+    Public Overrides Sub ShowFlash()
+        ShowCartPriceRevalidationMessage()
+        ShowCartRecoveryMessage()
+    End Sub
+End Class
+"@
+    }
+    $harness=@"
+Imports System
+Imports System.IO
+Imports System.Text
+Imports System.Globalization
+Imports System.Collections.Generic
+Imports System.Web
+Imports System.Web.UI
+Imports System.Web.UI.WebControls
+Imports System.Web.Hosting
+Imports System.Web.SessionState
+Imports System.Web.Script.Serialization
+Imports System.Security.Cryptography
+$identity
+$types
+Public Class FixtureConnection
+    Public Record As OrderDurableIdempotencyRecord
+    Public Reads As Integer
+End Class
+Public Class OrderDurableIdempotencyService
+$($normalizers -join $nl)
+$readCompleted
+    Private Shared Function LoadRecord(ByVal c As FixtureConnection, ByVal tx As Object, ByVal id As String, ByVal locked As Boolean) As OrderDurableIdempotencyRecord
+        c.Reads += 1
+        Return c.Record
+    End Function
+End Class
+Public Class CartPriceRevalidationHelper
+$priceConstants
+End Class
+Public Class CheckoutDurableTelemetry
+    Public Shared Sub Write(ByVal c As HttpContext, ByVal id As String, ByVal phase As String, ByVal outcome As String, ByVal errorValue As Exception, ByVal idem As String, ByVal tx As String, ByVal checkpoint As String)
+        c.Items("Fixture:Trace") = phase & "/" & outcome
+    End Sub
+End Class
+Public Class OrderConfirmationTokenService
+    Public Shared Function CreateToken(ByVal id As String, ByVal identity As OrderStorefrontIdentity) As String
+        Return "opaque-confirmation-fixture"
+    End Function
+End Class
+$dispatcher
+$recovery
+$($orderClasses -join $nl)
+Public MustInherit Class ReplayCartPage
+    Inherits Page
+    Public pnlCartRecovery As Panel
+    Public litCartRecoveryTitle As Literal
+    Public litCartRecoveryMessage As Literal
+    Public lnkCartRecoveryOrders As HyperLink
+    Public pnlCartPriceRevalidation As New Panel With {.Visible=False}
+    Public litCartPriceRevalidation As New Literal
+    Public Sub New(ByVal encoded As String)
+        AppRelativeVirtualPath = "~/carrello.aspx"
+        Dim parsed As Control = ParseControl(Encoding.UTF8.GetString(Convert.FromBase64String(encoded)))
+        Controls.Add(parsed)
+        pnlCartRecovery = DirectCast(parsed.FindControl("pnlCartRecovery"),Panel)
+        litCartRecoveryTitle = DirectCast(pnlCartRecovery.FindControl("litCartRecoveryTitle"),Literal)
+        litCartRecoveryMessage = DirectCast(pnlCartRecovery.FindControl("litCartRecoveryMessage"),Literal)
+        lnkCartRecoveryOrders = TryCast(pnlCartRecovery.FindControl("lnkCartRecoveryOrders"),HyperLink)
+    End Sub
+    Public MustOverride Sub ShowFlash()
+    Public Function Html() As String
+        Dim s As New StringWriter()
+        pnlCartRecovery.RenderControl(New HtmlTextWriter(s))
+        Return s.ToString()
+    End Function
+End Class
+$($cartClasses -join $nl)
+Public Class ReplayWorker
+    Inherits SimpleWorkerRequest
+    Private ReadOnly Tenant As String
+    Public Sub New(ByVal tenantName As String,ByVal query As String)
+        MyBase.New("ordine.aspx",query,New StringWriter())
+        Tenant=tenantName
+    End Sub
+    Public Overrides Function GetServerName() As String
+        Return Tenant & ".fixture.invalid"
+    End Function
+End Class
+Public Class ReplayCasesHost
+    Inherits MarshalByRefObject
+    Private Const RequestId As String="00112233445566778899aabbccddeeff"
+    Private Const CodeKey As String="$codeKey"
+    Private Const TimeKey As String="$timeKey"
+    Private Sub ContextFor(ByVal tenant As String,ByVal query As String,ByVal items As SessionStateItemCollection)
+        Dim c As New HttpContext(New ReplayWorker(tenant,query))
+        SessionStateUtility.AddHttpSessionStateToContext(c,New HttpSessionStateContainer("fixture",items,New HttpStaticObjectsCollection(),20,True,HttpCookieMode.UseCookies,SessionStateMode.InProc,False))
+        HttpContext.Current=c
+    End Sub
+    Private Function Token(ByVal identity As OrderStorefrontIdentity,ByVal expired As Boolean) As String
+        Dim ticks As Long=DateTime.UtcNow.AddMinutes(If(expired,-31,0)).Ticks
+        Dim text As String=String.Join("|",New String(){"v4",RequestId,identity.DatabaseScopeKey,identity.CompanyId.ToString(CultureInfo.InvariantCulture),identity.LoginId.ToString(CultureInfo.InvariantCulture),ticks.ToString(CultureInfo.InvariantCulture),New String("a"c,64),New String("c"c,64)})
+        Return Convert.ToBase64String(System.Web.Security.MachineKey.Protect(Encoding.UTF8.GetBytes(text),"KeepStore.OrderCheckout.Idempotency.V1")).TrimEnd("="c).Replace("+"c,"-"c).Replace("/"c,"_"c)
+    End Function
+    Private Function Cart(ByVal candidate As Boolean) As ReplayCartPage
+        Return If(candidate,CType(New CandidateCartProbe(),ReplayCartPage),New BaselineCartProbe())
+    End Function
+    Public Function Run() As String
+        Dim result As New List(Of Object)()
+        For Each tenant As String In New String(){"taikun","webaffare"}
+            Dim company As Integer=If(tenant="taikun",1,2)
+            Dim identity As New OrderStorefrontIdentity With {.DatabaseScopeKey=New String("d"c,64),.CompanyId=company,.LoginId=10+company,.UtentiId=20+company,.PriceListId=If(company=1,1,10)}
+            For Each candidate As Boolean In New Boolean(){False,True}
+                For Each scenario As String In New String(){"modern_match","legacy","mismatch","retry_match","retry_mismatch","collision","invalid_document","invalid_memory","new_request","tampered_token","expired_token","wrong_token_user","wrong_token_tenant","wrong_row_user","wrong_row_tenant"}
+                    Dim items As New SessionStateItemCollection()
+                    ContextFor(tenant,"",items)
+                    Dim sealedToken As String=Token(identity,scenario="expired_token")
+                    If scenario="tampered_token" Then sealedToken="invalid-token"
+                    Dim active As New OrderStorefrontIdentity With {.DatabaseScopeKey=identity.DatabaseScopeKey,.CompanyId=identity.CompanyId,.LoginId=identity.LoginId,.UtentiId=identity.UtentiId,.PriceListId=identity.PriceListId}
+                    If scenario="wrong_token_user" Then active.LoginId += 100
+                    If scenario="wrong_token_tenant" Then active.CompanyId += 100
+                    Dim record As New OrderDurableIdempotencyRecord With {.Status=OrderDurableClaimStatus.CompletedReplay,.LoginId=identity.LoginId,.AziendaId=identity.CompanyId,.DocumentiId=7,.DocumentoMemorizzato=9,.PayloadFingerprint=New String("a"c,64)}
+                    If scenario.StartsWith("retry_",StringComparison.Ordinal) Then record.Status=OrderDurableClaimStatus.RetryRequired
+                    If scenario="mismatch" OrElse scenario="retry_mismatch" Then record.PayloadFingerprint=New String("b"c,64)
+                    If scenario="collision" Then record.Status=OrderDurableClaimStatus.Rejected
+                    If scenario="invalid_document" Then record.DocumentiId=0
+                    If scenario="invalid_memory" Then record.DocumentoMemorizzato=0
+                    If scenario="new_request" Then record=Nothing
+                    If scenario="wrong_row_user" Then record.LoginId += 100
+                    If scenario="wrong_row_tenant" Then record.AziendaId += 100
+                    ContextFor(tenant,"t=" & HttpUtility.UrlEncode(sealedToken),items)
+                    Dim connection As New FixtureConnection With {.Record=record}
+                    Dim invalid As Boolean,continued As Boolean
+                    If candidate Then
+                        Dim probe As New CandidateOrderProbe()
+                        probe.Observe(connection,scenario="legacy",active)
+                        invalid=probe.TokenRejected : continued=probe.Continued : probe.Dispose()
+                    Else
+                        Dim probe As New BaselineOrderProbe()
+                        probe.Observe(connection,scenario="legacy",active)
+                        invalid=probe.TokenRejected : continued=probe.Continued : probe.Dispose()
+                    End If
+                    Dim row As New Dictionary(Of String,Object) From {{"tenant",tenant},{"app",HostingEnvironment.ApplicationVirtualPath},{"candidate",candidate},{"scenario",scenario},{"status",HttpContext.Current.Response.StatusCode},{"location",HttpContext.Current.Response.RedirectLocation},{"outcome",HttpContext.Current.Items("KeepStore:CheckoutTerminalOutcome")},{"tokenRejected",invalid},{"continued",continued},{"retired",CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current,RequestId)},{"flash",Convert.ToString(items(CodeKey))},{"timestamp",Convert.ToString(items(TimeKey))},{"priceFlash",Convert.ToString(items(CartPriceRevalidationHelper.SessionMessageKey))},{"priceChanged",items(CartPriceRevalidationHelper.SessionChangedKey)},{"readCount",connection.Reads}}
+                    ContextFor(tenant,"",items)
+                    Dim view As ReplayCartPage=Cart(candidate)
+                    view.ShowFlash()
+                    row("html")=view.Html() : row("pricePanel")=view.pnlCartPriceRevalidation.Visible
+                    row("link")=view.lnkCartRecoveryOrders IsNot Nothing AndAlso view.lnkCartRecoveryOrders.Visible
+                    row("linkUrl")=If(view.lnkCartRecoveryOrders Is Nothing,Nothing,view.lnkCartRecoveryOrders.NavigateUrl)
+                    row("keysConsumed")=items(CodeKey) Is Nothing AndAlso items(TimeKey) Is Nothing
+                    view.Dispose()
+                    Dim again As ReplayCartPage=Cart(candidate)
+                    again.ShowFlash() : row("secondHtml")=again.Html() : again.Dispose()
+                    result.Add(row)
+                Next
+                For Each scenario As String In New String(){"fresh","expired_flash","future_flash","malformed_time","hostile_code","old_cart_updated","old_failed","old_processing"}
+                    Dim items As New SessionStateItemCollection()
+                    items(CodeKey)=If(scenario="hostile_code","<img src=x onerror=alert(1)>",If(scenario="old_cart_updated","cart_updated",If(scenario="old_failed","mutation_failed",If(scenario="old_processing","mutation_processing","order_already_registered"))))
+                    items(TimeKey)=If(scenario="malformed_time","not-a-date",DateTime.UtcNow.AddMinutes(If(scenario="expired_flash",-6,If(scenario="future_flash",1,0))).ToString("o",CultureInfo.InvariantCulture))
+                    ContextFor(tenant,"",items)
+                    Dim view As ReplayCartPage=Cart(candidate)
+                    If view.lnkCartRecoveryOrders IsNot Nothing Then view.lnkCartRecoveryOrders.Visible=True
+                    view.ShowFlash()
+                    result.Add(New With {.tenant=tenant,.app=HostingEnvironment.ApplicationVirtualPath,.candidate=candidate,.scenario=scenario,.html=view.Html(),.link=(view.lnkCartRecoveryOrders IsNot Nothing AndAlso view.lnkCartRecoveryOrders.Visible),.keysConsumed=(items(CodeKey) Is Nothing AndAlso items(TimeKey) Is Nothing)})
+                    view.Dispose()
+                Next
+            Next
+        Next
+        Return New JavaScriptSerializer().Serialize(result)
+    End Function
+    Public Overrides Function InitializeLifetimeService() As Object
+        Return Nothing
+    End Function
+End Class
+"@
+    $vb=Join-Path $evidence 'ReplayDelta.vb';$dll=Join-Path $evidence 'ReplayDelta.dll'
+    [IO.File]::WriteAllText($vb,$harness,$utf8)
+    & (Join-Path $env:windir 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe') /nologo /target:library /optionstrict+ /optionexplicit+ ("/out:"+$dll) /r:System.dll,System.Core.dll,System.Web.dll,System.Web.Extensions.dll $vb
+    if($LASTEXITCODE){throw 'REPLAY_COMPILE_FAILED'}
+    Add-Type -Path $dll
+    $rows=@()
+    foreach($app in @('/','/qa-shop')){
+        $appRoot=Join-Path $evidence $(if($app-eq'/'){'root-app'}else{'virtual-app'})
+        [void][IO.Directory]::CreateDirectory((Join-Path $appRoot 'bin'));[void][IO.Directory]::CreateDirectory((Join-Path $appRoot 'cache'))
+        Copy-Item -LiteralPath $dll -Destination (Join-Path $appRoot 'bin\ReplayDelta.dll')
+        $cache=[Security.SecurityElement]::Escape((Join-Path $appRoot 'cache'))
+        [IO.File]::WriteAllText((Join-Path $appRoot 'web.config'),('<configuration><connectionStrings><clear/></connectionStrings><system.web><compilation targetFramework="4.8" tempDirectory="'+$cache+'"/><httpRuntime targetFramework="4.8"/></system.web></configuration>'),$utf8)
+        $gate=[System.Web.Hosting.ApplicationHost]::CreateApplicationHost([ReplayCasesHost],$app,($appRoot+'\'))
+        $parsed=$gate.Run()|ConvertFrom-Json;$rows+=$parsed
+    }
+    [IO.File]::WriteAllText((Join-Path $evidence 'cases.json'),($rows|ConvertTo-Json -Depth 6),$utf8)
+    $expectedCopy="Questa richiesta d'ordine risulta gi"+[char]224+" registrata: non inviarla di nuovo. Prima di un nuovo ordine controlla I miei ordini."
+    foreach($r in $rows|Where-Object {$_.candidate}){
+        $name=$r.tenant+' '+$r.app+' '+$r.scenario
+        $old=@($rows|Where-Object {!$_.candidate -and $_.tenant-eq$r.tenant -and $_.app-eq$r.app -and $_.scenario-eq$r.scenario})[0]
+        if($r.scenario-in@('legacy','mismatch')){
+            ReplayCheck ($name+' baseline defect reproduced') ($old.priceFlash.Contains("conferma nuovamente l'ordine"))
+            ReplayCheck ($name+' retirement and CartReview303 unchanged') ($r.retired -and $r.status-eq303 -and $r.location-eq'carrello.aspx' -and $r.outcome-eq'CartReview')
+            ReplayCheck ($name+' exact new session flash') ($r.flash-ceq'order_already_registered' -and $r.timestamp-match'Z$')
+            ReplayCheck ($name+' no price warning channel') (!$r.priceFlash -and $null-eq$r.priceChanged -and !$r.pricePanel)
+            ReplayCheck ($name+' warning and safe history link') ($r.html.Contains('ks-cart-recovery--warning') -and $r.html.Contains('role="status"') -and $r.html.Contains('aria-live="polite"') -and $r.link -and $r.linkUrl-ceq($r.app.TrimEnd('/')+'/documenti.aspx?t=4'))
+            ReplayCheck ($name+' new copy no resend instruction') (([Web.HttpUtility]::HtmlDecode($r.html)).Contains($expectedCopy) -and !$r.html.Contains('conferma nuovamente') -and !$r.html.Contains('opaque-confirmation-fixture'))
+            ReplayCheck ($name+' one-shot flash') ($r.keysConsumed -and $r.secondHtml.Contains('hidden="hidden"') -and $r.secondHtml-notmatch'<a\b')
+        }elseif($r.scenario-in@('fresh','expired_flash','future_flash','malformed_time','hostile_code','old_cart_updated','old_failed','old_processing')){
+            ReplayCheck ($name+' keys consumed') $r.keysConsumed
+            if($r.scenario-eq'fresh'){
+                ReplayCheck ($name+' safe active link') ($r.link -and $r.html-notmatch'<script|onerror|onclick|javascript:')
+            }else{
+                ReplayCheck ($name+' no stale history link') (!$r.link -and $r.html-notmatch'<a\b')
+                ReplayCheck ($name+' previous flash behavior unchanged') (($r.html -replace '>\s+<','><') -ceq ($old.html -replace '>\s+<','><'))
+            }
+        }else{
+            ReplayCheck ($name+' routing preserved') ($r.status-eq$old.status -and $r.location-ceq$old.location -and $r.outcome-ceq$old.outcome -and $r.retired-eq$old.retired -and $r.tokenRejected-eq$old.tokenRejected -and $r.continued-eq$old.continued)
+            ReplayCheck ($name+' previous price/message channels unchanged') ($r.priceFlash-ceq$old.priceFlash -and $r.priceChanged-eq$old.priceChanged -and $r.pricePanel-eq$old.pricePanel)
+            ReplayCheck ($name+' no false registered flash or history link') (!$r.flash -and !$r.link -and $r.html-notmatch'<a\b')
+            if($r.scenario-eq'modern_match'){ReplayCheck ($name+' positive confirmation retained') ($r.outcome-eq'OrderConfirmation' -and $r.status-eq303)}
+            if($r.scenario-match'token'){ReplayCheck ($name+' real token validator rejects before record lookup') ($r.tokenRejected -and $r.readCount-eq0)}
+        }
+    }
+    [IO.File]::WriteAllText((Join-Path $evidence 'source-server-checks.json'),($checks|ConvertTo-Json -Depth 4),$utf8)
+    $browser=@'
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const [root,dir]=process.argv.slice(2);
+const req=createRequire(path.join(path.dirname(process.execPath),'../node_modules/entry.cjs'));
+const {chromium}=req('playwright');
+const all=JSON.parse(await fs.readFile(path.join(dir,'cases.json'),'utf8'));
+const cases=all.filter(r=>r.candidate&&['legacy','mismatch'].includes(r.scenario)&&((r.tenant==='taikun'&&r.app==='/')||(r.tenant==='webaffare'&&r.app==='/qa-shop')));
+const css=['fonts/font.css','icons/icomoon/style.css','css/bootstrap.min.css','css/keepstore.css','css/keepstore-overrides.css','css/ks-ui.css','css/styles.css','css/cart-ui.css','css/theme-overrides.css'];
+const checks=[],metrics=[],navigations=[],blocked=[];
+function check(name,ok){checks.push({name,pass:!!ok});if(!ok)throw Error(name)}
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+try{
+ for(const width of [360,390,430,1365])for(const row of cases){
+  const context=await browser.newContext({viewport:{width,height:844},javaScriptEnabled:false,offline:true,serviceWorkers:'block'});
+  const page=await context.newPage(),origin='https://'+row.tenant+'.fixture.invalid',nav=[];
+  const body='<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+css.map(p=>'<link rel="stylesheet" href="/Public/assets/keepstore/'+p+'">').join('')+'</head><body><main class="ks-cart-page"><div class="container">'+row.html+'</div></main></body></html>';
+  await context.route('**/*',async route=>{
+   const r=route.request(),u=new URL(r.url());
+   if(u.origin!==origin||r.method()!=='GET'){blocked.push(u.pathname);return route.abort()}
+   if(u.pathname==='/fixture')return route.fulfill({contentType:'text/html',body});
+   if(u.pathname===row.linkUrl.split('?')[0]){nav.push({url:u.pathname+u.search,method:r.method()});navigations.push({tenant:row.tenant,width,...nav.at(-1)});return route.fulfill({contentType:'text/html',body:'<title>History fixture, no real data</title>'})}
+   const file=path.resolve(root,'.'+u.pathname),allow=path.resolve(root,'Public/assets/keepstore')+path.sep;
+   if(!file.toLowerCase().startsWith(allow.toLowerCase())){blocked.push(u.pathname);return route.abort()}
+   try{return route.fulfill({body:await fs.readFile(file),contentType:u.pathname.endsWith('.css')?'text/css':'application/octet-stream'})}catch{blocked.push(u.pathname);return route.abort()}
+  });
+  try{
+   const name=row.tenant+' '+width+' '+row.scenario;
+   await page.goto(origin+'/fixture',{waitUntil:'load'});await page.evaluate(()=>document.fonts.ready);
+   const panel=page.locator('#pnlCartRecovery'),link=page.getByRole('link',{name:'I miei ordini',exact:true});
+   check(name+' warning visible',await panel.isVisible());
+   check(name+' warning status polite',await panel.getAttribute('role')==='status'&&await panel.getAttribute('aria-live')==='polite');
+   check(name+' no overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const box=await link.boundingBox();check(name+' touch target44',!!box&&box.width>=44&&box.height>=44);
+   check(name+' no resend/paid claims',(await panel.innerText()).includes("non inviarla di nuovo")&&!(await panel.innerText()).includes('pagamento riuscito'));
+   await page.mouse.move(0,0);await page.waitForTimeout(350);
+   const normal=await link.evaluate(e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,color:s.color,outline:s.outlineStyle}});
+   await panel.focus();await page.keyboard.press('Tab');await page.waitForTimeout(350);
+   check(name+' keyboard focus',await link.evaluate(e=>e===document.activeElement));
+   const focused=await link.evaluate(e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,color:s.color,outline:s.outlineStyle}});
+   check(name+' visible focus',normal.bg!==focused.bg||normal.color!==focused.color||!['none','hidden'].includes(focused.outline));
+   metrics.push({name,width,target:box,normal,focused});
+   if(row.scenario==='legacy')await page.screenshot({path:path.join(dir,row.tenant+'-'+width+'.png'),fullPage:true});
+   await Promise.all([page.waitForURL(origin+row.linkUrl),page.keyboard.press('Enter')]);
+   check(name+' one native GET via Enter',nav.length===1&&nav[0].method==='GET'&&nav[0].url===row.linkUrl);
+   await page.goto(origin+'/fixture',{waitUntil:'load'});await link.click();await page.waitForURL(origin+row.linkUrl);
+   check(name+' one native GET via click',nav.length===2&&nav.every(x=>x.method==='GET'&&x.url===row.linkUrl));
+  }finally{await context.close()}
+ }
+ check('no external or POST requests',blocked.length===0);
+ await fs.writeFile(path.join(dir,'browser.json'),JSON.stringify({result:'PASS CHROME FIXTURE ONLY',checks,metrics,navigations,blocked,limits:['IIS/SQL/real checkout not executed','DB row lookup, telemetry, receipt token factory and IIS-only transport boundaries isolated','Legacy classification injected into real source guard; v4 validation tested separately','History GET intercepted, no authenticated history loaded']},null,2));
+ console.log('REPLAY_BROWSER_PASS checks='+checks.length+' cases='+metrics.length+' GET='+navigations.length);
+}finally{await browser.close()}
+'@
+    [IO.File]::WriteAllText((Join-Path $evidence 'browser.mjs'),$browser,$utf8)
+    & node (Join-Path $evidence 'browser.mjs') $RepositoryRoot $evidence
+    if($LASTEXITCODE){throw 'REPLAY_BROWSER_FAILED'}
+    Write-Output ('REPLAY_SOURCE_SERVER_PASS checks='+$checks.Count+' cases='+$rows.Count+' evidence='+$evidence)
+    return
+}
+
 
 if($OrderRecoveryNavigationOnly){
     if($ListinoAuthorityOnly -or $CommercialProfileOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}

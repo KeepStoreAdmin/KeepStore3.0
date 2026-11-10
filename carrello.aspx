@@ -89,6 +89,7 @@
             <asp:Panel ID="pnlCartRecovery" runat="server" ClientIDMode="Static" CssClass="ks-alert ks-cart-recovery" hidden="hidden" role="status" aria-live="polite" aria-labelledby="ksCartRecoveryTitle" tabindex="-1" data-ks-cart-recovery="true">
                 <strong id="ksCartRecoveryTitle" data-ks-cart-recovery-title><asp:Literal ID="litCartRecoveryTitle" runat="server" /></strong>
                 <p data-ks-cart-recovery-message><asp:Literal ID="litCartRecoveryMessage" runat="server" /></p>
+                <asp:HyperLink ID="lnkCartRecoveryOrders" runat="server" Visible="false" NavigateUrl="~/documenti.aspx?t=4" CssClass="tf-btn btn-gray mt-2" Text="I miei ordini" />
             </asp:Panel>
 
             <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">

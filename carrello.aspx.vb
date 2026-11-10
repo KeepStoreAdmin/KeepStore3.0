@@ -1413,6 +1413,7 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
     End Sub
 
     Private Sub ShowCartRecoveryMessage()
+        If lnkCartRecoveryOrders IsNot Nothing Then lnkCartRecoveryOrders.Visible = False
         If Session Is Nothing Then Return
 
         Dim code As String = Convert.ToString(Session(CartRecoveryCodeKey))
@@ -1430,6 +1431,8 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         Dim title As String = ""
         Dim message As String = ""
         Select Case code
+            Case "order_already_registered"
+                severity = "warning" : title = "Ordine già registrato" : message = "Questa richiesta d'ordine risulta già registrata: non inviarla di nuovo. Prima di un nuovo ordine controlla I miei ordini."
             Case "cart_updated"
                 severity = "info" : title = "Carrello aggiornato" : message = "Le modifiche sono state salvate."
             Case "remove_ok"
@@ -1457,6 +1460,10 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         pnlCartRecovery.Attributes.Remove("hidden")
         pnlCartRecovery.Attributes("role") = If(severity = "error", "alert", "status")
         pnlCartRecovery.Attributes("aria-live") = If(severity = "error", "assertive", "polite")
+        If String.Equals(code, "order_already_registered", StringComparison.Ordinal) AndAlso lnkCartRecoveryOrders IsNot Nothing Then
+            lnkCartRecoveryOrders.NavigateUrl = ResolveUrl("~/documenti.aspx?t=4")
+            lnkCartRecoveryOrders.Visible = True
+        End If
         If severity = "error" Then
             ScriptManager.RegisterStartupScript(Me, Me.GetType(), "focusCartRecovery",
                 "setTimeout(function(){var e=document.getElementById('pnlCartRecovery');if(e){e.focus();}},0);", True)

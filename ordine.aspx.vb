@@ -205,6 +205,13 @@ Private Sub ReturnToCartAfterPayloadMismatch(ByVal requestId As String)
         "Il carrello è cambiato rispetto alla richiesta precedente. Rivedi articoli e quantità e conferma nuovamente l'ordine.")
 End Sub
 
+Private Sub ReturnToCartAfterCompletedReplay(ByVal requestId As String)
+    CheckoutFailureRecoveryService.RetireRequest(HttpContext.Current, requestId)
+    Session("ks_cart_recovery_code") = "order_already_registered"
+    Session("ks_cart_recovery_created_utc") = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+    CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.CartReview)
+End Sub
+
 Private Sub ReturnToCartWithReviewMessage(ByVal message As String)
     Session(CartPriceRevalidationHelper.SessionMessageKey) = If(
         String.IsNullOrWhiteSpace(message),
@@ -857,7 +864,7 @@ CheckoutFailureRecoveryService.TracePhase(
                                 HttpContext.Current, checkoutRequestId, "11-state-reconciliation", "completed")
                             RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
                         Else
-                            ReturnToCartAfterPayloadMismatch(checkoutRequestId)
+                            ReturnToCartAfterCompletedReplay(checkoutRequestId)
                         End If
                         Exit Sub
                     End If
