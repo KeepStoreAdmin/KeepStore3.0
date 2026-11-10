@@ -1,5 +1,13 @@
 # KeepStore Masterplan Operativo
 
+## KS-C01-ORDER-RECOVERY-NAVIGATION-1A — 10/11/2026 — candidato SOURCE ONLY
+
+Base `c1e3be33047f010d499b668b018492af7f2c34a1`, esecuzione LOCAL-FIRST. Nei soli `ShowCompletedOrderReceiptUnavailable` e `ShowIndeterminateOrderOutcome` aggiunta l'anchor nativa **I miei ordini** dentro `ks-order-actions`, con classi ricevuta esistenti e URL `HttpUtility.HtmlAttributeEncode(ResolveUrl("~/documenti.aspx?t=4"))`. Panel1 nascosto, Panel2 visibile; testi (incluso **Non ripetere l'invio**), ruoli live, focus, dispatcher, token e replay #431 invariati. Nessun redirect automatico o modifica al pannello del guasto tecnico.
+
+Test differenziale esistente `Tools/Test-CheckoutFailureRecovery.ps1 -OrderRecoveryNavigationOnly` con `-BaselineRef` esplicito: **75 controlli SOURCE/System.Web PASS**, 16 render baseline/candidato dei due metodi VB reali, tenant sintetici Taikun/Webaffare alla radice e sotto virtual directory. **153 controlli Chrome PASS**, 16 scenari a 360/390/430/1365, JavaScript disabilitato, tastiera/focus, nessun overflow e target minimo **50px**; **32 GET nativi** click/Invio intercettati e soddisfatti dalla fixture, nessun POST o richiesta esterna. Precompile safe Framework4.8 **PASS**, 358 file, zero configurazioni operative copiate. Confronto invariato fuori dai due metodi; `ordine.aspx` e storico immutati. Guard storico anonimo verso `accessonegato.aspx` e filtri congiunti utente/azienda verificati SOURCE; evidenze storiche ACCOUNT-ORDER-HISTORY-LAB riusate come contesto, non rieseguite sul codice corrente.
+
+Manifest esclusivo: `ordine.aspx.vb`, test indicato, questo Masterplan. Fixture dichiarata: nessuna autenticazione, pagina storico reale, MySQL online/LAB, IIS, ordine, email o gateway esercitati. KS-C01 resta PARZIALE. PR DRAFT da sottoporre alle due review indipendenti ChatGPT/Claude sul medesimo SHA, CI richiesta PASS e autorizzazione PO prima di eventuale FF-only e sync A–I. Nessun merge/deploy; **CONSEGNA SERVER SOSPESA**.
+
 ## KS-A02-CATALOG-VARIANT-FACET-ALTERNATIVES-1A — 10/11/2026 — candidato SOURCE ONLY
 
 Base verificata `103c4840bae2964fc1d0c0d1c1dad0089da9c407`; mandato PO limitato alle alternative Taglia/Colore. **Gate prima della patch: A e B RIPRODOTTI** con logica SOURCE baseline e SQL dei menu realmente valutato: selezione S o Rosso autolimita il proprio menu; variante con anagrafica ma senza riga commerciale nel listino viene proposta dall'EXISTS per solo articolo. Fixture sintetica con coppie `(ArticoliId,TagliaId,ColoreId)` uniche, verificate durante l'esecuzione; non riusata la coppia duplicata articolo102 della #432. Evidenze pre-patch TEMP `KeepStoreVariantAlternatives-20261110/gate2/{gate,lifecycle}.json`.

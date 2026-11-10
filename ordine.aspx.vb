@@ -525,6 +525,10 @@ End Sub
             "<div class=""ks-alert ks-alert-warning""><div style=""font-weight:700; margin-bottom:6px;"">" &
             "Ordine già registrato.</div><div>La ricevuta non è temporaneamente disponibile. " &
             "Controlla la sezione I miei ordini oppure contatta l'assistenza.</div></div>"))
+        Me.Panel2.Controls.Add(New LiteralControl(
+            "<div class=""ks-order-actions""><a class=""tf-btn ks-order-btn-secondary"" href=""" &
+            HttpUtility.HtmlAttributeEncode(ResolveUrl("~/documenti.aspx?t=4")) &
+            """>I miei ordini</a></div>"))
         Me.Panel2.Visible = True
     End Sub
 
@@ -536,6 +540,10 @@ End Sub
             "Esito dell'ordine in verifica.</div><div>Non ripetere l'invio. Aggiorna questa pagina: " &
             "se l'ordine è stato registrato verrà mostrata la ricevuta; in caso contrario controlla " &
             "la sezione I miei ordini o contatta l'assistenza.</div></div>"))
+        Me.Panel2.Controls.Add(New LiteralControl(
+            "<div class=""ks-order-actions""><a class=""tf-btn ks-order-btn-secondary"" href=""" &
+            HttpUtility.HtmlAttributeEncode(ResolveUrl("~/documenti.aspx?t=4")) &
+            """>I miei ordini</a></div>"))
         Me.Panel2.Visible = True
     End Sub
 

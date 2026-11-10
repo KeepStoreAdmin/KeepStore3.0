@@ -2,6 +2,7 @@
 param(
     [string]$RepositoryRoot,
     [switch]$ListinoAuthorityOnly,
+    [switch]$OrderRecoveryNavigationOnly,
     [switch]$CommercialProfileOnly,
     [switch]$AllowCommercialProfileDelta,
     [string]$EvidenceDirectory,
@@ -14,6 +15,243 @@ Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
     $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 }
+
+if($OrderRecoveryNavigationOnly){
+    if($ListinoAuthorityOnly -or $CommercialProfileOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
+    if(!$EvidenceDirectory -or $BaselineRef -cnotmatch '^[0-9a-f]{40}$'){throw 'RECOVERY_NAVIGATION_BASE_AND_EVIDENCE_REQUIRED'}
+    if($PSVersionTable.PSEdition -ne 'Desktop'){throw 'RECOVERY_NAVIGATION_REQUIRES_FRAMEWORK_POWERSHELL'}
+    $evidence=[IO.Path]::GetFullPath($EvidenceDirectory)
+    if(!$evidence.StartsWith([IO.Path]::GetTempPath(),[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $evidence)){throw 'NEW_TEMP_EVIDENCE_DIRECTORY_REQUIRED'}
+    [void][IO.Directory]::CreateDirectory($evidence)
+    $utf8=New-Object Text.UTF8Encoding($false)
+    Add-Type -AssemblyName System.Web,System.Web.Extensions
+    $checks=New-Object 'Collections.Generic.List[object]'
+    function RecoveryCheck([string]$name,[bool]$pass){$checks.Add([pscustomobject]@{name=$name;pass=$pass});if(!$pass){throw ('RECOVERY_NAVIGATION_FAILED '+$name)}}
+    function RecoverySource([string]$file){[IO.File]::ReadAllText((Join-Path $RepositoryRoot $file))}
+    function RecoveryBase([string]$file){$v=(& git -C $RepositoryRoot show ($BaselineRef+':'+$file)) -join [char]10;if($LASTEXITCODE){throw 'RECOVERY_NAVIGATION_BASE_UNAVAILABLE'};return $v}
+    function RecoveryMethod([string]$s,[string]$name){$m=[regex]::Match($s,'(?ms)^    Private Sub '+$name+'\(\).*?^    End Sub');if(!$m.Success){throw ('RECOVERY_METHOD_MISSING '+$name)};return $m.Value}
+    function RecoveryNormalize([string]$s){$s.Replace(([string][char]13+[char]10),[string][char]10).TrimEnd([char[]]@(13,10))}
+    $order=RecoveryNormalize (RecoverySource 'ordine.aspx.vb');$baseline=RecoveryNormalize (RecoveryBase 'ordine.aspx.vb')
+    $names=@('ShowCompletedOrderReceiptUnavailable','ShowIndeterminateOrderOutcome')
+    $baseMethods=@();$candidateMethods=@();$withoutBase=$baseline;$withoutCandidate=$order
+    $addition=@'
+        Me.Panel2.Controls.Add(New LiteralControl(
+            "<div class=""ks-order-actions""><a class=""tf-btn ks-order-btn-secondary"" href=""" &
+            HttpUtility.HtmlAttributeEncode(ResolveUrl("~/documenti.aspx?t=4")) &
+            """>I miei ordini</a></div>"))
+'@
+    $addition=RecoveryNormalize $addition
+    foreach($name in $names){
+        $old=RecoveryMethod $baseline $name;$new=RecoveryMethod $order $name
+        RecoveryCheck ($name+' only native navigation addition') ($new.Replace($addition+[char]10,'') -ceq $old)
+        $baseMethods+=$old;$candidateMethods+=$new
+        $withoutBase=$withoutBase.Replace($old,'');$withoutCandidate=$withoutCandidate.Replace($new,'')
+    }
+    RecoveryCheck 'all source outside two methods identical' ($withoutBase -ceq $withoutCandidate)
+    foreach($file in @('ordine.aspx','documenti.aspx','documenti.aspx.vb')){
+        RecoveryCheck ($file+' unchanged') ((RecoveryNormalize (RecoverySource $file)) -ceq (RecoveryNormalize (RecoveryBase $file)))
+    }
+    $history=RecoverySource 'documenti.aspx.vb';$historyMarkup=RecoverySource 'documenti.aspx'
+    RecoveryCheck 'anonymous history guard redirects before document loading' ($history -match '(?s)If Session\("LoginId"\) Is Nothing.*?Response.Redirect\("accessonegato.aspx", True\).*?Exit Sub')
+    RecoveryCheck 'history complete owner/company identity guard' ($history -match '(?s)If CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then\s+Response.Redirect\("accessonegato.aspx", True\)')
+    RecoveryCheck 'history markup owner AND company predicates' ($historyMarkup -match '\(\x60vdocumenti\x60\.\x60UtentiId\x60 = \?UtentiId\) AND \(\x60vdocumenti\x60\.\x60AziendeId\x60 = \?AziendaId\)')
+    RecoveryCheck 'history dynamic SQL owner AND company predicates' ($history -match '\x60vdocumenti\x60\.\x60UtentiId\x60=' -and $history -match 'AND \(\x60vdocumenti\x60\.\x60AziendeId\x60=' -and $history.Contains('CurrentOrderIdentity.UtentiId') -and $history.Contains('CurrentOrderIdentity.CompanyId'))
+    $markup=RecoverySource 'ordine.aspx'
+    $panel=[regex]::Match($markup,'<asp:Panel\b[^>]*ID="Panel2"[^>]*>').Value
+    RecoveryCheck 'real Panel2 alert live role and focus attributes preserved' ($panel.Contains('role="alert"') -and $panel.Contains('aria-live="assertive"') -and $panel.Contains('tabindex="-1"'))
+    $harness=@"
+Imports System
+Imports System.IO
+Imports System.Collections.Generic
+Imports System.Web
+Imports System.Web.UI
+Imports System.Web.UI.WebControls
+Imports System.Web.Hosting
+Imports System.Web.Script.Serialization
+Public Class NavigationWorker
+    Inherits SimpleWorkerRequest
+    Private ReadOnly TenantHost As String
+    Public Sub New(ByVal tenant As String)
+        MyBase.New("ordine.aspx", "", New StringWriter())
+        TenantHost = tenant & ".fixture.invalid"
+    End Sub
+    Public Overrides Function GetServerName() As String
+        Return TenantHost
+    End Function
+End Class
+Public MustInherit Class RecoveryPage
+    Inherits Page
+    Public Panel1 As New Panel()
+    Public Panel2 As New Panel()
+    Public Sub New()
+        AppRelativeVirtualPath = "~/ordine.aspx"
+        Panel1.ID = "Panel1"
+        Panel1.Controls.Add(New LiteralControl("HIDDEN_RECEIPT_SENTINEL"))
+        Panel2.ID = "Panel2"
+        Panel2.ClientIDMode = ClientIDMode.Static
+        Panel2.Visible = False
+        Panel2.Attributes("role") = "alert"
+        Panel2.Attributes("aria-live") = "assertive"
+        Panel2.Attributes("tabindex") = "-1"
+        Panel2.Controls.Add(New LiteralControl("STALE_NOTICE_SENTINEL"))
+        Controls.Add(Panel1)
+        Controls.Add(Panel2)
+    End Sub
+    Public MustOverride Sub ShowOutcome(ByVal method As String)
+End Class
+Public Class BaselineRecoveryPage
+    Inherits RecoveryPage
+$($baseMethods -join [Environment]::NewLine)
+    Public Overrides Sub ShowOutcome(ByVal method As String)
+        If method = "ShowCompletedOrderReceiptUnavailable" Then
+            ShowCompletedOrderReceiptUnavailable()
+        Else
+            ShowIndeterminateOrderOutcome()
+        End If
+    End Sub
+End Class
+Public Class CandidateRecoveryPage
+    Inherits RecoveryPage
+$($candidateMethods -join [Environment]::NewLine)
+    Public Overrides Sub ShowOutcome(ByVal method As String)
+        If method = "ShowCompletedOrderReceiptUnavailable" Then
+            ShowCompletedOrderReceiptUnavailable()
+        Else
+            ShowIndeterminateOrderOutcome()
+        End If
+    End Sub
+End Class
+Public Class RecoveryNavigationHost
+    Inherits MarshalByRefObject
+    Public Function RenderAll() As String
+        Dim fixtures As New List(Of Object)()
+        For Each tenant As String In New String() {"taikun", "webaffare"}
+            For Each method As String In New String() {"ShowCompletedOrderReceiptUnavailable", "ShowIndeterminateOrderOutcome"}
+                For Each version As String In New String() {"baseline", "candidate"}
+                    HttpContext.Current = New HttpContext(New NavigationWorker(tenant))
+                    Dim page As RecoveryPage = If(version = "baseline", CType(New BaselineRecoveryPage(), RecoveryPage), New CandidateRecoveryPage())
+                    page.ShowOutcome(method)
+                    Dim output As New StringWriter()
+                    Dim writer As New HtmlTextWriter(output)
+                    page.Panel1.RenderControl(writer)
+                    page.Panel2.RenderControl(writer)
+                    fixtures.Add(New With {.Tenant=tenant, .Method=method, .Version=version, .AppPath=HostingEnvironment.ApplicationVirtualPath, .ExpectedUrl=page.ResolveUrl("~/documenti.aspx?t=4"), .Panel1Visible=page.Panel1.Visible, .Panel2Visible=page.Panel2.Visible, .Html=output.ToString()})
+                    page.Dispose()
+                    HttpContext.Current = Nothing
+                Next
+            Next
+        Next
+        Return New JavaScriptSerializer().Serialize(fixtures)
+    End Function
+    Public Overrides Function InitializeLifetimeService() As Object
+        Return Nothing
+    End Function
+End Class
+"@
+    $vb=Join-Path $evidence 'RecoveryNavigationHarness.vb';$dll=Join-Path $evidence 'RecoveryNavigationHarness.dll'
+    [IO.File]::WriteAllText($vb,$harness,$utf8)
+    $framework=Join-Path $env:windir 'Microsoft.NET\Framework64\v4.0.30319'
+    & (Join-Path $framework 'vbc.exe') /nologo /target:library /optionstrict+ /optionexplicit+ /out:$dll /reference:System.dll,System.Core.dll,System.Web.dll,System.Web.Extensions.dll $vb
+    if($LASTEXITCODE){throw 'RECOVERY_NAVIGATION_COMPILE_FAILED'}
+    Add-Type -Path $dll
+    $fixtures=@()
+    foreach($app in @('/', '/qa-shop')){
+        $appRoot=Join-Path $evidence $(if($app -eq '/'){'root-app'}else{'virtual-app'})
+        [void][IO.Directory]::CreateDirectory((Join-Path $appRoot 'bin'))
+        [void][IO.Directory]::CreateDirectory((Join-Path $appRoot 'cache'))
+        Copy-Item -LiteralPath $dll -Destination (Join-Path $appRoot 'bin\RecoveryNavigationHarness.dll')
+        $cache=[System.Security.SecurityElement]::Escape((Join-Path $appRoot 'cache'))
+        [IO.File]::WriteAllText((Join-Path $appRoot 'web.config'),('<configuration><connectionStrings><clear/></connectionStrings><system.web><compilation targetFramework="4.8" tempDirectory="'+$cache+'"/><httpRuntime targetFramework="4.8"/></system.web></configuration>'),$utf8)
+        $hostGate=[System.Web.Hosting.ApplicationHost]::CreateApplicationHost([RecoveryNavigationHost],$app,($appRoot+'\'))
+        $rendered=$hostGate.RenderAll()|ConvertFrom-Json
+        $fixtures+=$rendered
+    }
+    foreach($f in $fixtures){
+        $label=$f.Tenant+' '+$f.AppPath+' '+$f.Method+' '+$f.Version
+        RecoveryCheck ($label+' Panel1 hidden and Panel2 visible') (!$f.Panel1Visible -and $f.Panel2Visible)
+        RecoveryCheck ($label+' only Panel2 rendered without stale receipt') (!$f.Html.Contains('HIDDEN_RECEIPT_SENTINEL') -and !$f.Html.Contains('STALE_NOTICE_SENTINEL') -and $f.Html.Contains('id="Panel2"'))
+        if($f.Version -eq 'candidate'){
+            $expected=$f.AppPath.TrimEnd('/')+'/documenti.aspx?t=4'
+            RecoveryCheck ($label+' application-relative canonical URL') ($f.ExpectedUrl -ceq $expected -and $f.Html.Contains('href="'+$expected+'"'))
+            RecoveryCheck ($label+' one native same-context action') (([regex]::Matches($f.Html,'<a\b')).Count -eq 1 -and $f.Html -match '<div class="ks-order-actions"><a class="tf-btn ks-order-btn-secondary" href="[^"]+">I miei ordini</a></div>' -and $f.Html -notmatch 'onclick|__doPostBack|javascript:|target=|formaction=|documentId=')
+            $old=@($fixtures|Where-Object {$_.Tenant -eq $f.Tenant -and $_.AppPath -eq $f.AppPath -and $_.Method -eq $f.Method -and $_.Version -eq 'baseline'})[0]
+            RecoveryCheck ($label+' all previous rendered content preserved') (([regex]::Replace($f.Html,'<div class="ks-order-actions">.*?</div>','')) -ceq $old.Html)
+        }else{
+            RecoveryCheck ($label+' baseline has no accessible recovery link') ($f.Html -notmatch '<a\b')
+        }
+    }
+    [IO.File]::WriteAllText((Join-Path $evidence 'fixtures.json'),($fixtures|ConvertTo-Json -Depth 6),$utf8)
+    [IO.File]::WriteAllText((Join-Path $evidence 'source-server-checks.json'),($checks|ConvertTo-Json -Depth 5),$utf8)
+    $browser=@'
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const [root,dir]=process.argv.slice(2);
+const req=createRequire(path.join(path.dirname(process.execPath),'../node_modules/entry.cjs'));
+const {chromium}=req('playwright');
+const all=JSON.parse(await fs.readFile(path.join(dir,'fixtures.json'),'utf8'));
+const cases=all.filter(f=>f.Version==='candidate'&&((f.Tenant==='taikun'&&f.AppPath==='/')||(f.Tenant==='webaffare'&&f.AppPath==='/qa-shop')));
+const style=(await fs.readFile(path.join(root,'ordine.aspx'),'utf8')).match(/<style\b[^>]*>([\s\S]*?)<\/style>/i)[1];
+const css=['fonts/font.css','icons/icomoon/style.css','css/bootstrap.min.css','css/keepstore.css','css/keepstore-overrides.css','css/ks-ui.css','css/styles.css','css/cart-ui.css','css/theme-overrides.css'];
+const checks=[],metrics=[],requests=[],blocked=[];
+function check(name,pass){checks.push({name,pass:!!pass});if(!pass)throw Error(name)}
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+try{
+ for(const width of [360,390,430,1365])for(const f of cases){
+  const context=await browser.newContext({viewport:{width,height:844},javaScriptEnabled:false,offline:true,serviceWorkers:'block'});
+  const page=await context.newPage(),origin='https://'+f.Tenant+'.fixture.invalid',nav=[];
+  const html='<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+css.map(p=>'<link rel="stylesheet" href="/Public/assets/keepstore/'+p+'">').join('')+'<style>'+style+'</style></head><body><section class="tf-sp-2 ks-order-receipt-page"><div class="container"><div class="ks-order-receipt-shell">'+f.Html+'</div></div></section></body></html>';
+  await context.route('**/*',async route=>{
+   const r=route.request(),u=new URL(r.url());
+   if(u.origin!==origin||r.method()!=='GET'){blocked.push(u.pathname);return route.abort()}
+   if(u.pathname==='/fixture')return route.fulfill({contentType:'text/html',body:html});
+   if(u.pathname===f.ExpectedUrl.split('?')[0]){
+    nav.push({method:r.method(),url:u.pathname+u.search});requests.push({tenant:f.Tenant,width,...nav.at(-1)});
+    return route.fulfill({contentType:'text/html',body:'<!doctype html><title>Destinazione fixture, storico reale NON esercitato</title>'});
+   }
+   const file=path.resolve(root,'.'+u.pathname),allow=path.resolve(root,'Public/assets/keepstore')+path.sep;
+   if(!file.toLowerCase().startsWith(allow.toLowerCase())){blocked.push(u.pathname);return route.abort()}
+   try{return route.fulfill({body:await fs.readFile(file),contentType:u.pathname.endsWith('.css')?'text/css':'application/octet-stream'})}catch{blocked.push(u.pathname);return route.abort()}
+  });
+  try{
+   const name=f.Tenant+' '+width+' '+f.Method;
+   await page.goto(origin+'/fixture',{waitUntil:'load'});await page.evaluate(()=>document.fonts.ready);
+   check(name+' Panel1 absent',await page.locator('#Panel1').count()===0);
+   const link=page.locator('#Panel2 .ks-order-actions a');
+   check(name+' native link visible',await link.isVisible());
+   check(name+' exact URL',await link.getAttribute('href')===f.ExpectedUrl);
+   const box=await link.boundingBox();
+   check(name+' touch at least44x44',!!box&&box.width>=44&&box.height>=44);
+   check(name+' no horizontal overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await page.mouse.move(0,0);await page.waitForTimeout(220);
+   const normal=await link.evaluate(e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,border:s.borderColor,outline:s.outlineStyle}});
+   await page.locator('#Panel2').focus();await page.keyboard.press('Tab');
+   check(name+' keyboard reaches native anchor',await link.evaluate(e=>e===document.activeElement));
+   await page.waitForTimeout(220);
+   const focused=await link.evaluate(e=>{const s=getComputedStyle(e);return {bg:s.backgroundColor,border:s.borderColor,outline:s.outlineStyle}});
+   check(name+' visible focus feedback',focused.bg!==normal.bg||focused.border!==normal.border||!['none','hidden'].includes(focused.outline));
+   metrics.push({name,width,target:box,normal,focused});
+   if(f.Method==='ShowIndeterminateOrderOutcome')check(name+' warning preserved',(await page.locator('#Panel2').innerText()).includes("Non ripetere l'invio"));
+   if((f.Tenant==='taikun'&&f.Method==='ShowCompletedOrderReceiptUnavailable')||(f.Tenant==='webaffare'&&f.Method==='ShowIndeterminateOrderOutcome'))await page.screenshot({path:path.join(dir,f.Tenant+'-'+width+'.png'),fullPage:true});
+   await Promise.all([page.waitForURL(origin+f.ExpectedUrl),page.keyboard.press('Enter')]);
+   check(name+' Enter produces one GET',nav.length===1&&nav[0].method==='GET'&&nav[0].url===f.ExpectedUrl);
+   await page.goto(origin+'/fixture',{waitUntil:'load'});await link.click();
+   await page.waitForURL(origin+f.ExpectedUrl);
+   check(name+' click produces one GET',nav.length===2&&nav.every(r=>r.method==='GET'&&r.url===f.ExpectedUrl));
+  }finally{await context.close()}
+ }
+ check('all unexpected/outbound/POST requests blocked and absent',blocked.length===0);
+ await fs.writeFile(path.join(dir,'browser.json'),JSON.stringify({result:'PASS CHROME FIXTURE ONLY',checks,metrics,requests,blocked,limits:['IIS/DB/authentication/real tenants not exercised','Destination GET intercepted and fulfilled as fixture; no real history loaded','Actual extracted VB methods rendered through isolated System.Web; full Master Page not exercised']},null,2));
+ console.log('RECOVERY_NAVIGATION_BROWSER_PASS checks='+checks.length+' cases='+metrics.length+' nativeGET='+requests.length);
+}finally{await browser.close()}
+'@
+    $js=Join-Path $evidence 'browser.mjs';[IO.File]::WriteAllText($js,$browser,$utf8)
+    & node $js $RepositoryRoot $evidence
+    if($LASTEXITCODE){throw 'RECOVERY_NAVIGATION_BROWSER_FAILED'}
+    Write-Output ('RECOVERY_NAVIGATION_SOURCE_SERVER_PASS checks='+$checks.Count+' fixtures='+$fixtures.Count+' evidence='+$evidence)
+    return
+}
+
 
 if($CommercialProfileOnly){
     if($ListinoAuthorityOnly){throw 'ONE_FOCUSED_SUITE_AT_A_TIME'}
