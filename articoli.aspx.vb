@@ -45,6 +45,8 @@ Partial Class Articoli
     Private Const DefaultCatalogPageSize As Integer = 12
     Private catalogSideFiltersDeferred As Boolean = False
     Private catalogSideFiltersBound As Boolean = False
+    Private catalogTagliaCandidateSql As String = String.Empty
+    Private catalogColoreCandidateSql As String = String.Empty
     Private catalogPagerSettingsApplying As Boolean = False
 
     Private Class ActiveFilterItem
@@ -526,12 +528,10 @@ Partial Class Articoli
 
     'FILTRI TAGLIA COLORE AGGIUNTI DA ANGELO IL 15/12/2017
     'INIZIO
-    Public Sub showFilters(ByVal conn As MySqlConnection, ByVal articoliFiltrati As String)
+    Public Sub showFilters(ByVal conn As MySqlConnection, ByVal tagliaCandidates As String, ByVal coloreCandidates As String)
         If IsTcEnabled() Then
             Try
             filtritagliaecolore.Visible = True
-            Dim TagliaIndex As Integer
-            Dim ColoreIndex As Integer
             Dim TagliaValue As String = String.Empty
             Dim ColoreValue As String = String.Empty
 
@@ -540,11 +540,9 @@ Partial Class Articoli
                 If Not IsValidIndexAndValue(rawTaglia) Then rawTaglia = ""
                 Dim tagliaIndexAndValue As String() = If(String.IsNullOrEmpty(rawTaglia), New String() {}, rawTaglia.Split("|"c))
                 If tagliaIndexAndValue.Length >= 2 Then
-                    TagliaIndex = CInt(tagliaIndexAndValue(0).ToString)
                     TagliaValue = tagliaIndexAndValue(1)
                 End If
             Else
-                TagliaIndex = Drop_Filtra_Taglia.SelectedIndex
                 TagliaValue = Drop_Filtra_Taglia.SelectedValue
             End If
 
@@ -553,16 +551,14 @@ Partial Class Articoli
                 If Not IsValidIndexAndValue(rawColore) Then rawColore = ""
                 Dim coloreIndexAndValue As String() = If(String.IsNullOrEmpty(rawColore), New String() {}, rawColore.Split("|"c))
                 If coloreIndexAndValue.Length >= 2 Then
-                    ColoreIndex = CInt(coloreIndexAndValue(0).ToString)
                     ColoreValue = coloreIndexAndValue(1)
                 End If
             Else
-                ColoreIndex = Drop_Filtra_Colore.SelectedIndex
                 ColoreValue = Drop_Filtra_Colore.SelectedValue
             End If
 
-            PopulateFilterTCDropdownlist(conn, "taglie", "tagliaid", "coloreid", ColoreIndex, TagliaValue, ColoreValue, Drop_Filtra_Taglia, "Tutte", articoliFiltrati)
-            PopulateFilterTCDropdownlist(conn, "colori", "coloreid", "tagliaid", TagliaIndex, ColoreValue, TagliaValue, Drop_Filtra_Colore, "Tutti", articoliFiltrati)
+            PopulateFilterTCDropdownlist(conn, "taglie", TagliaValue, Drop_Filtra_Taglia, "Tutte", tagliaCandidates)
+            PopulateFilterTCDropdownlist(conn, "colori", ColoreValue, Drop_Filtra_Colore, "Tutti", coloreCandidates)
             filtritagliaecolore.Visible = (Drop_Filtra_Taglia.Items.Count > 1 OrElse Drop_Filtra_Colore.Items.Count > 1)
             Catch
                 Drop_Filtra_Taglia.Items.Clear()
@@ -576,11 +572,7 @@ Partial Class Articoli
 
     Public Sub PopulateFilterTCDropdownlist(ByVal conn As MySqlConnection,
                                             ByVal tableName As String,
-                                            ByVal idColumnName As String,
-                                            ByVal otherIdColumnName As String,
-                                            ByVal otherDropdownlistIndex As Integer,
                                             ByVal dropdownlistValue As String,
-                                            ByVal otherDropdownlistValue As String,
                                             ByVal list As DropDownList,
                                             ByVal allValueString As String,
                                             ByVal articoliFiltrati As String)
@@ -602,19 +594,10 @@ Partial Class Articoli
         End If
 
         Dim sqlString As String
-        sqlString = "SELECT DISTINCT tc_ref.id, tc_ref.descrizione FROM " & safeTable & " tc_ref WHERE COALESCE(tc_ref.abilitato,1)=1" &
-                    " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc." & idColumnName & "=tc_ref.id"
-        Dim otherIdParam As Integer = 0
-Dim useOtherParam As Boolean = False
-If otherDropdownlistIndex > 0 Then
-    If Integer.TryParse(otherDropdownlistValue, otherIdParam) AndAlso otherIdParam > 0 Then
-        useOtherParam = True
-        sqlString = sqlString & " AND atc." & otherIdColumnName & " = ?OtherId"
-    End If
-End If
-sqlString = sqlString & " AND atc.ArticoliId IN (SELECT id FROM (" & articoliFiltrati & ") AS articoliFiltrati))"
-sqlString = sqlString & " ORDER BY tc_ref.id"
-
+        Dim candidateColumn As String = If(safeTable = "taglie", "CatalogTagliaId", "CatalogColoreId")
+        sqlString = "SELECT DISTINCT tc_ref.id, tc_ref.descrizione FROM " & safeTable & " tc_ref" &
+                    " INNER JOIN (" & articoliFiltrati & ") tc_candidates ON tc_candidates." & candidateColumn & "=tc_ref.id" &
+                    " WHERE COALESCE(tc_ref.abilitato,1)=1 ORDER BY tc_ref.id"
         ' The nested listing SELECT uses the same named parameters, including
         ' the decimal VAT override. Do not interpolate them into the TC facet.
         Using cmdDrop As New MySqlCommand(sqlString, conn)
@@ -624,7 +607,6 @@ sqlString = sqlString & " ORDER BY tc_ref.id"
                 Dim value As Object = values(parameter.Name)
                 cmdDrop.Parameters.AddWithValue("?" & parameter.Name, If(value, DBNull.Value))
             Next
-            If useOtherParam Then cmdDrop.Parameters.AddWithValue("?OtherId", otherIdParam)
             PopulateDropdownlist(conn, cmdDrop, list, "descrizione", "id")
         End Using
 
@@ -1129,6 +1111,22 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             Me.Title = Me.Title & " > " & lblRicerca.Text & userCerca
         End If
 
+        ' Basi alternative per richiesta: niente rank=1, ordine o paginazione.
+        If TC = 1 AndAlso catalogTagliaCandidateSql.Length = 0 AndAlso catalogColoreCandidateSql.Length = 0 Then
+            Dim withoutOwnPredicate As Func(Of String, Boolean, String) =
+                Function(predicate As String, active As Boolean) As String
+                    If Not active Then Return strWhere
+                    Dim index As Integer = strWhere.IndexOf(predicate, StringComparison.Ordinal)
+                    If index < 0 OrElse index <> strWhere.LastIndexOf(predicate, StringComparison.Ordinal) Then
+                        Throw New InvalidOperationException("Catalog variant candidate predicate mismatch.")
+                    End If
+                    Return strWhere.Remove(index, predicate.Length)
+                End Function
+            Dim tagliaWhere As String = withoutOwnPredicate(" AND tc_lookup.TagliaId=?TagliaId", sdsArticoli.SelectParameters("TagliaId") IsNot Nothing)
+            Dim coloreWhere As String = withoutOwnPredicate(" AND tc_lookup.ColoreId=?ColoreId", sdsArticoli.SelectParameters("ColoreId") IsNot Nothing)
+            catalogTagliaCandidateSql = strSelect & " WHERE Nlistino=?NListino " & tagliaWhere
+            catalogColoreCandidateSql = strSelect & " WHERE Nlistino=?NListino " & coloreWhere
+        End If
         Dim sortSql As String = String.Empty
 
         ' Ordinamento (whitelist)
@@ -1210,7 +1208,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             Dim conn As New MySqlConnection
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
-            showFilters(conn, sdsArticoli.SelectCommand)
+            showFilters(conn, catalogTagliaCandidateSql, catalogColoreCandidateSql)
             conn.Close()
         End If
 
@@ -1474,7 +1472,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         Try
             conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             conn.Open()
-            showFilters(conn, sdsArticoli.SelectCommand)
+            showFilters(conn, catalogTagliaCandidateSql, catalogColoreCandidateSql)
         Finally
             If conn.State = ConnectionState.Open Then conn.Close()
             conn.Dispose()
