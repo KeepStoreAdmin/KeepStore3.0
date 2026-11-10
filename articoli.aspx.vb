@@ -1080,18 +1080,44 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
 
         Dim TC As Integer = If(IsTcEnabled(), 1, 0)
         If TC = 1 Then
-            ' Filtro Taglia/Colore: applicato sia alla query principale (join già presente)
-            ' sia a strWhere2 (usato per i conteggi filtri laterali) tramite EXISTS su TCid.
-            If Drop_Filtra_Taglia.SelectedIndex > 0 Then
-                strWhere &= " AND tc_lookup.TagliaId=?TagliaId"
-                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.ArticoliId = vsuperarticoli.id AND atc.TagliaId=?TagliaId)"
-                Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("TagliaId", TypeCode.Int32, Drop_Filtra_Taglia.SelectedValue))
-            End If
-
-            If Drop_Filtra_Colore.SelectedIndex > 0 Then
-                strWhere &= " AND tc_lookup.ColoreId=?ColoreId"
-                strWhere2 &= " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.ArticoliId = vsuperarticoli.id AND atc.ColoreId=?ColoreId)"
-                Me.sdsArticoli.SelectParameters.Add(New System.Web.UI.WebControls.Parameter("ColoreId", TypeCode.Int32, Drop_Filtra_Colore.SelectedValue))
+            ' GET precede il binding dei menu: l'identita e il valore, non l'indice UI.
+            Dim readVariantId As Func(Of String, DropDownList, Integer) =
+                Function(key As String, control As DropDownList) As Integer
+                    Dim value As String = String.Empty
+                    If Me.IsPostBack Then
+                        value = control.SelectedValue
+                    Else
+                        Dim values As String() = Request.QueryString.GetValues(key)
+                        If values Is Nothing OrElse values.Length <> 1 OrElse values(0) Is Nothing OrElse values(0).Length > 40 Then Return 0
+                        Dim raw As String = QS(key, 40)
+                        If Not IsValidIndexAndValue(raw) Then Return 0
+                        Dim parts As String() = raw.Split("|"c)
+                        If parts.Length <> 2 Then Return 0
+                        value = parts(1)
+                    End If
+                    Dim id As Integer = 0
+                    If Not Integer.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, id) OrElse id <= 0 Then Return 0
+                    Return id
+                End Function
+            Dim tagliaId As Integer = readVariantId("taglia", Drop_Filtra_Taglia)
+            Dim coloreId As Integer = readVariantId("colore", Drop_Filtra_Colore)
+            If tagliaId > 0 OrElse coloreId > 0 Then
+                ' Il range dichiara gia questo aggregato uno-a-uno: mai duplicarlo.
+                If Not hasPriceRange Then
+                    quantityOneFacetJoin = " LEFT OUTER JOIN (SELECT ArticoliId, MIN(id) AS DefaultTCid FROM articoli_tagliecolori GROUP BY ArticoliId) atc_default ON atc_default.ArticoliId=vsuperarticoli.id "
+                End If
+                Dim variantPredicate As String = " AND EXISTS (SELECT 1 FROM articoli_tagliecolori atc WHERE atc.ArticoliId=vsuperarticoli.id AND atc.id=COALESCE(NULLIF(vsuperarticoli.TCid,0),atc_default.DefaultTCid)"
+                If tagliaId > 0 Then
+                    strWhere &= " AND tc_lookup.TagliaId=?TagliaId"
+                    variantPredicate &= " AND atc.TagliaId=?TagliaId"
+                    Me.sdsArticoli.SelectParameters.Add(New Parameter("TagliaId", TypeCode.Int32, tagliaId.ToString(CultureInfo.InvariantCulture)))
+                End If
+                If coloreId > 0 Then
+                    strWhere &= " AND tc_lookup.ColoreId=?ColoreId"
+                    variantPredicate &= " AND atc.ColoreId=?ColoreId"
+                    Me.sdsArticoli.SelectParameters.Add(New Parameter("ColoreId", TypeCode.Int32, coloreId.ToString(CultureInfo.InvariantCulture)))
+                End If
+                strWhere2 &= variantPredicate & ")"
             End If
         End If
         ' --- Ricerca potenziata marketplace ---
