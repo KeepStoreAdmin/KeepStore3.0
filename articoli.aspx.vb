@@ -890,7 +890,7 @@ End Sub
             "?ksRcEnabled", "?ksHasVatOverride", "?ksVatOverride")
 
         Dim strSelect As String =
-            "SELECT vsuperarticoli.id, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo," &
+            "SELECT vsuperarticoli.id, vsuperarticoli.DataCreazione AS CatalogCreatedDate, Codice, Ean, Descrizione1, Descrizione2, DescrizioneLunga, Prezzo," &
             " " & effectiveBaseGrossSql & " AS PrezzoIvato, vsuperarticoli.IdIvaRC, vsuperarticoli.ValoreIvaRC," &
             " vsuperarticoli.Img1, vsuperarticoli.Img2, vsuperarticoli.Img3, vsuperarticoli.Img4, extraImages.Img5, extraImages.Img6, MarcheDescrizione, Disponibilita, Giacenza, InOrdine, Impegnata, InOfferta," &
             " " & promotionTcSelect &
@@ -1143,9 +1143,9 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             Case "p_alto"
                 sortSql &= " ORDER BY CASE WHEN CatalogDisplayPrice>0 THEN 0 ELSE 1 END ASC, CatalogDisplayPrice DESC, (Giacenza-Impegnata) DESC, id ASC"
             Case "p_popolarita"
-                sortSql &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY visite DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC, id DESC"
             Case "p_recenti"
-                sortSql &= " ORDER BY id DESC, PrezzoPromo ASC, PrezzoPromoIvato ASC, PrezzoIvato ASC, Prezzo ASC, (Giacenza-Impegnata) DESC"
+                sortSql &= " ORDER BY (CatalogCreatedDate IS NULL OR CatalogCreatedDate > CURDATE()) ASC, CatalogCreatedDate DESC, id DESC"
             Case "p_codice"
                 sortSql &= " ORDER BY Codice ASC, (Giacenza-Impegnata) DESC"
             Case "p_descrizione"

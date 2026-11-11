@@ -288,8 +288,8 @@
                                         <asp:ListItem Value="P_alto" Text="Prezzo decrescente"></asp:ListItem>
                                         <asp:ListItem Value="P_offerta" Text="Offerte"></asp:ListItem>
                                         <asp:ListItem Value="P_disponibilita" Text="Disponibilita"></asp:ListItem>
-                                        <asp:ListItem Value="P_recenti" Text="Novita"></asp:ListItem>
-                                        <asp:ListItem Value="P_popolarita" Text="Popolarita"></asp:ListItem>
+                                        <asp:ListItem Value="P_recenti" Text="Inseriti di recente"></asp:ListItem>
+                                        <asp:ListItem Value="P_popolarita" Text="Più visualizzati"></asp:ListItem>
                                         <asp:ListItem Value="P_codice" Text="Codice"></asp:ListItem>
                                         <asp:ListItem Value="P_descrizione" Text="Nome"></asp:ListItem>
                                     </asp:DropDownList>
@@ -309,8 +309,8 @@
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_alto" data-ks-sort-icon="icon-money-bag"><i class="icon-money-bag" aria-hidden="true"></i><span>Prezzo decrescente</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_offerta" data-ks-sort-icon="icon-fire"><i class="icon-fire" aria-hidden="true"></i><span>Offerte</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_disponibilita" data-ks-sort-icon="icon-check"><i class="icon-check" aria-hidden="true"></i><span>Disponibilita</span></button>
-                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_recenti" data-ks-sort-icon="icon-clock"><i class="icon-clock" aria-hidden="true"></i><span>Novita</span></button>
-                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_popolarita" data-ks-sort-icon="icon-star"><i class="icon-star" aria-hidden="true"></i><span>Popolarita</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_recenti" data-ks-sort-icon="icon-clock"><i class="icon-clock" aria-hidden="true"></i><span>Inseriti di recente</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_popolarita" data-ks-sort-icon="icon-star"><i class="icon-star" aria-hidden="true"></i><span>Più visualizzati</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_codice" data-ks-sort-icon="icon-sort"><i class="icon-sort" aria-hidden="true"></i><span>Codice</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_descrizione" data-ks-sort-icon="icon-sort"><i class="icon-sort" aria-hidden="true"></i><span>Nome</span></button>
                                     </div>
