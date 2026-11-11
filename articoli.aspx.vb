@@ -365,10 +365,13 @@ Partial Class Articoli
     End Sub
 
     Private Sub BindCatalogCategoryNavigation()
-        If pnlCatalogCategoryNav Is Nothing OrElse litCatalogCategoryNav Is Nothing Then Exit Sub
+        If pnlCatalogCategoryNav Is Nothing OrElse litCatalogCategoryNav Is Nothing OrElse
+            pnlCatalogDepartmentsMobile Is Nothing OrElse litCatalogCategoryNavMobile Is Nothing Then Exit Sub
 
         pnlCatalogCategoryNav.Visible = False
+        pnlCatalogDepartmentsMobile.Visible = False
         litCatalogCategoryNav.Text = String.Empty
+        litCatalogCategoryNavMobile.Text = String.Empty
 
         Dim sectors As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
         If sectors Is Nothing OrElse sectors.Count = 0 Then Exit Sub
@@ -445,7 +448,9 @@ Partial Class Articoli
         navigationHtml.Append("</ul>")
 
         litCatalogCategoryNav.Text = navigationHtml.ToString()
+        litCatalogCategoryNavMobile.Text = litCatalogCategoryNav.Text
         pnlCatalogCategoryNav.Visible = True
+        pnlCatalogDepartmentsMobile.Visible = True
     End Sub
 
     Private Sub AppendCatalogNavItems(ByVal html As StringBuilder, ByVal items As List(Of String),

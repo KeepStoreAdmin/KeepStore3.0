@@ -33,6 +33,28 @@ body.ks-catalog-filters-open { overflow: hidden; }
   outline-offset: 2px;
 }
 @media (max-width: 1199.98px) {
+  #ksCatalogFiltersPanel .ks-catalog-category-nav { display: none; }
+  #ksCatalogPage .ks-catalog-departments-mobile { margin-bottom: 16px; }
+  #ksCatalogPage .ks-catalog-departments > summary {
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--gray-5, #e5e5e5);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #ksCatalogPage .ks-catalog-departments > summary:focus-visible,
+  #ksCatalogPage .ks-catalog-departments-mobile a:focus-visible {
+    outline: 3px solid var(--primary-2, #d80027);
+    outline-offset: 2px;
+  }
+  #ksCatalogPage .ks-catalog-departments > .ks-category-nav-list { margin-top: 8px; }
+  #ksCatalogPage .ks-catalog-departments-mobile .ks-category-nav-link,
+  #ksCatalogPage .ks-catalog-departments-mobile .ks-category-nav-sublink {
+    min-height: 44px;
+    padding: 8px 10px;
+    overflow-wrap: anywhere;
+  }
   #ksCatalogFiltersPanel[data-ks-filter-dialog="1"] {
     display: block;
     position: fixed;

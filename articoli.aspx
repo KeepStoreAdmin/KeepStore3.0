@@ -10,7 +10,7 @@
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261108-mobile-filter-batch1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261111-catalog-departments1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261108-catalog-search-context-1a" />
     <style>
         #ksCatalogPage .ks-catalog-guide-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px 14px; max-width: 100%; white-space: normal; text-align: center; }
@@ -60,54 +60,6 @@
                                 <h6 class="title fw-medium">Settori</h6>
                                 <asp:Literal ID="litCatalogCategoryNav" runat="server" />
                             </asp:Panel>
-
-                            <asp:Panel ID="pnlCatalogPriceFilter" runat="server" CssClass="widget-facet facet-price" DefaultButton="btnCatalogPriceApply">
-                                <p class="facet-title title-sidebar fw-semibold">Prezzo</p>
-                                <div class="box-price-product">
-                                    <div class="form-filter-price">
-                                        <div class="cols w-100">
-                                            <fieldset class="box-price-item">
-                                                <asp:Label runat="server" AssociatedControlID="txtCatalogPriceMin" Text="Prezzo minimo" />
-                                                <asp:TextBox ID="txtCatalogPriceMin" runat="server" ClientIDMode="Static" CssClass="ks-catalog-price-min price-input" MaxLength="64" inputmode="decimal" aria-describedby="ksCatalogPriceHint" />
-                                            </fieldset>
-                                            <span class="br-line" aria-hidden="true"></span>
-                                            <fieldset class="box-price-item">
-                                                <asp:Label runat="server" AssociatedControlID="txtCatalogPriceMax" Text="Prezzo massimo" />
-                                                <asp:TextBox ID="txtCatalogPriceMax" runat="server" ClientIDMode="Static" CssClass="ks-catalog-price-max price-input" MaxLength="64" inputmode="decimal" aria-describedby="ksCatalogPriceHint" />
-                                            </fieldset>
-                                        </div>
-                                        <asp:Button ID="btnCatalogPriceApply" runat="server" Text="Applica" CssClass="ks-catalog-price-apply" CausesValidation="false" OnClick="btnCatalogPriceApply_Click" />
-                                    </div>
-                                </div>
-                                <p id="ksCatalogPriceHint" class="ks-price-filter-hint">Puoi lasciare vuoto uno dei due limiti.</p>
-                                <asp:Panel ID="ksCatalogPriceError" runat="server" ClientIDMode="Static" CssClass="ks-price-filter-error" Visible="false" role="alert" tabindex="-1">
-                                    <asp:Literal ID="litCatalogPriceError" runat="server" Mode="Encode" />
-                                </asp:Panel>
-                            </asp:Panel>
-
-                            <div class="widget-facet facet-fieldset">
-                                <p class="facet-title title-sidebar fw-semibold">Offerte</p>
-                                <div class="box-fieldset-item">
-                                    <div class="fieldset-item">
-                                        <a ID="lnkCatalogDeals" runat="server" class="ks-filter-option link py-3">
-                                            <span>Solo offerte</span>
-                                            <small ID="catalogDealsState" runat="server" Visible="false">Attivo</small>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="widget-facet facet-fieldset">
-                                <p class="facet-title title-sidebar fw-semibold">Condizione</p>
-                                <div class="box-fieldset-item">
-                                    <div class="fieldset-item">
-                                        <a ID="lnkCatalogRefurbished" runat="server" class="ks-filter-option link py-3">
-                                            <span>Solo ricondizionati</span>
-                                            <small ID="catalogRefurbishedState" runat="server" Visible="false">Attivo</small>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
 
                             <asp:Panel ID="ksFilters" runat="server">
                                 <div id="facetMarche" runat="server" class="widget-facet facet-fieldset has-loadmore ks-brand-facet">
@@ -206,6 +158,54 @@
                                     </div>
                                 </asp:Panel>
                             </asp:Panel>
+
+                            <asp:Panel ID="pnlCatalogPriceFilter" runat="server" CssClass="widget-facet facet-price" DefaultButton="btnCatalogPriceApply">
+                                <p class="facet-title title-sidebar fw-semibold">Prezzo</p>
+                                <div class="box-price-product">
+                                    <div class="form-filter-price">
+                                        <div class="cols w-100">
+                                            <fieldset class="box-price-item">
+                                                <asp:Label runat="server" AssociatedControlID="txtCatalogPriceMin" Text="Prezzo minimo" />
+                                                <asp:TextBox ID="txtCatalogPriceMin" runat="server" ClientIDMode="Static" CssClass="ks-catalog-price-min price-input" MaxLength="64" inputmode="decimal" aria-describedby="ksCatalogPriceHint" />
+                                            </fieldset>
+                                            <span class="br-line" aria-hidden="true"></span>
+                                            <fieldset class="box-price-item">
+                                                <asp:Label runat="server" AssociatedControlID="txtCatalogPriceMax" Text="Prezzo massimo" />
+                                                <asp:TextBox ID="txtCatalogPriceMax" runat="server" ClientIDMode="Static" CssClass="ks-catalog-price-max price-input" MaxLength="64" inputmode="decimal" aria-describedby="ksCatalogPriceHint" />
+                                            </fieldset>
+                                        </div>
+                                        <asp:Button ID="btnCatalogPriceApply" runat="server" Text="Applica" CssClass="ks-catalog-price-apply" CausesValidation="false" OnClick="btnCatalogPriceApply_Click" />
+                                    </div>
+                                </div>
+                                <p id="ksCatalogPriceHint" class="ks-price-filter-hint">Puoi lasciare vuoto uno dei due limiti.</p>
+                                <asp:Panel ID="ksCatalogPriceError" runat="server" ClientIDMode="Static" CssClass="ks-price-filter-error" Visible="false" role="alert" tabindex="-1">
+                                    <asp:Literal ID="litCatalogPriceError" runat="server" Mode="Encode" />
+                                </asp:Panel>
+                            </asp:Panel>
+
+                            <div class="widget-facet facet-fieldset">
+                                <p class="facet-title title-sidebar fw-semibold">Offerte</p>
+                                <div class="box-fieldset-item">
+                                    <div class="fieldset-item">
+                                        <a ID="lnkCatalogDeals" runat="server" class="ks-filter-option link py-3">
+                                            <span>Solo offerte</span>
+                                            <small ID="catalogDealsState" runat="server" Visible="false">Attivo</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="widget-facet facet-fieldset">
+                                <p class="facet-title title-sidebar fw-semibold">Condizione</p>
+                                <div class="box-fieldset-item">
+                                    <div class="fieldset-item">
+                                        <a ID="lnkCatalogRefurbished" runat="server" class="ks-filter-option link py-3">
+                                            <span>Solo ricondizionati</span>
+                                            <small ID="catalogRefurbishedState" runat="server" Visible="false">Attivo</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="canvas-bottom d-flex d-xl-none ks-filter-footer">
@@ -224,6 +224,12 @@
 
                 <div class="content-area">
                     <p class="body-text-3 text-main-2 mb-2"><asp:Label ID="lblPrezzi" runat="server" /></p>
+                    <asp:Panel ID="pnlCatalogDepartmentsMobile" runat="server" Visible="false" CssClass="ks-catalog-category-nav ks-catalog-departments-mobile d-xl-none">
+                        <details class="ks-catalog-departments">
+                            <summary>Esplora i reparti</summary>
+                            <asp:Literal ID="litCatalogCategoryNavMobile" runat="server" />
+                        </details>
+                    </asp:Panel>
                     <div id="ksCatalogResults" class="tf-shop-control flex-wrap gap-10">
                         <div class="ks-shop-control-summary d-flex flex-wrap align-items-center gap-10">
                             <button id="filterShop" type="button" class="tf-btn-filter d-flex d-xl-none" aria-controls="ksCatalogFiltersPanel" aria-expanded="false" aria-haspopup="dialog">
@@ -615,7 +621,7 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261108-mobile-filter-batch1a"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261111-catalog-departments1a"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
