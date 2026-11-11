@@ -521,16 +521,10 @@ Private Sub ApplyGlobalSeoPolicy()
         Try
             Dim lblWish As Label = FindCtrl(Of Label)("lblWishlistCount")
 
-            Dim isLogged As Boolean = False
-            Dim loginIdVal As Integer = 0
-            If Not IsNothing(Session("LoginId")) AndAlso Integer.TryParse(Session("LoginId").ToString(), loginIdVal) AndAlso loginIdVal > 0 Then isLogged = True
-            If Not isLogged AndAlso Not IsNothing(Session("LoginID")) AndAlso Integer.TryParse(Session("LoginID").ToString(), loginIdVal) AndAlso loginIdVal > 0 Then isLogged = True
-
             If lblWish IsNot Nothing Then
-                Dim wishCount As Integer = 0
-                If isLogged AndAlso loginIdVal > 0 Then
-                    wishCount = GetWishlistCountForHeader(loginIdVal)
-                End If
+                ' wishlist.id_utente appartiene a utenti.Id (Session("UtentiId")), la stessa chiave di wishlist.aspx e
+                ' wishlist_add.aspx; login.id (Session("LoginId")) e un altro identificativo e serve solo come gate di accesso.
+                Dim wishCount As Integer = GetWishlistCountForHeader(ResolveWishlistOwnerId(Session("LoginId"), Session("UtentiId")))
                 lblWish.Text = wishCount.ToString()
                 lblWish.Visible = True
             End If
@@ -1089,8 +1083,22 @@ End Sub
 
 End Sub
 
-Private Function GetWishlistCountForHeader(ByVal loginId As Integer) As Integer
-    If loginId <= 0 Then
+' Proprietario della wishlist: richiede sessione autenticata (LoginId) e restituisce utenti.Id, mai login.id.
+' Valori assenti, non numerici o non positivi falliscono chiusi con 0, senza ripiegare su LoginId.
+Private Shared Function ResolveWishlistOwnerId(ByVal loginIdRaw As Object, ByVal utentiIdRaw As Object) As Integer
+    Dim loginId As Integer = 0
+    Dim utentiId As Integer = 0
+    If loginIdRaw Is Nothing OrElse Not Integer.TryParse(Convert.ToString(loginIdRaw), loginId) OrElse loginId <= 0 Then
+        Return 0
+    End If
+    If utentiIdRaw Is Nothing OrElse Not Integer.TryParse(Convert.ToString(utentiIdRaw), utentiId) OrElse utentiId <= 0 Then
+        Return 0
+    End If
+    Return utentiId
+End Function
+
+Private Function GetWishlistCountForHeader(ByVal ownerUtentiId As Integer) As Integer
+    If ownerUtentiId <= 0 Then
         Return 0
     End If
 
@@ -1098,7 +1106,7 @@ Private Function GetWishlistCountForHeader(ByVal loginId As Integer) As Integer
         Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
             conn.Open()
             Using cmd As New MySqlCommand("SELECT COUNT(*) FROM wishlist WHERE id_utente=@id", conn)
-                cmd.Parameters.AddWithValue("@id", loginId)
+                cmd.Parameters.AddWithValue("@id", ownerUtentiId)
                 Dim raw As Object = cmd.ExecuteScalar()
                 If raw Is Nothing OrElse raw Is DBNull.Value Then
                     Return 0
