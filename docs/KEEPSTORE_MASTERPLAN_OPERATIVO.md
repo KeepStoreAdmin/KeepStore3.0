@@ -1,5 +1,11 @@
 # KeepStore Masterplan Operativo
 
+## KS-T09-ENZO-MERCHANDISING-HANDOFF-1A — 11/11/2026 — candidato DOCS ONLY
+
+Base `a9bd163506f1ad77285bea36d9dbbd26b8a2a99a`, primo intervento Task09: [manuale operativo Enzo](KEEPSTORE_MERCHANDISING_ENZO.md), glossario e due wireframe ASCII TARGET non implementati (Anagrafica / Pubblicazione web; Verifica ecommerce). Call-site di BindHome distinti da GetFeaturedPool/GetMostViewedPool inutilizzati; sezioni editoriali legacy disabilitate, Img1 non requisito universale. Checklist separate per idoneita commerciale, eleggibilita del pool e presenza dopo ordinamento/limiti/dedup. DataCreazione gestionale DATE, conservazione ordinaria e rettifica/audit TARGET; stock netto, InOrdine e arrivi datati non equivalenti, nessuna promessa di consegna o metrica vendite esatta. Contratti non dimostrabili classificati DA VERIFICARE, UI desktop reale non certificata.
+
+Manifest esclusivo tre documenti: nuovo manuale, questo checkpoint e solo checkpoint Task09 in Roadmap. Verifiche documentali su link/riferimenti alla baseline, coerenza CURRENT/TARGET, diff-check e secret guard incrementale; CI sullo SHA candidato prima della consegna. Nessun test runtime, browser, precompile, SQL/DB, IIS/LAB o modifica gestionale; inventario53/52/4 e delta ACL storico preservati, stable/main invariati. Task09 PARZIALE; PR DRAFT per doppia review preventiva ChatGPT/Claude e autorizzazione PO prima di eventuale FF-only/sync A–I. Nessun merge/deploy o task successivo. **CONSEGNA SERVER SOSPESA.**
+
 ## KS-T08-CATALOG-SORT-SIGNALS-1A — 11/11/2026 — candidato SOURCE ONLY
 
 Mandato Task08 limitato a questo delta, base `d834312ae009a6dac199fff0bbdf3604c326248a`, LOCAL-FIRST. Solo `CaricaArticoli`: aggiunta `vsuperarticoli.DataCreazione AS CatalogCreatedDate`, alias univoco nella proiezione derivata; `p_recenti` ordina date non future/non NULL prima, data DESC e id DESC, senza escludere articoli. `p_popolarita` conserva visite e tutti i criteri precedenti, aggiungendo soltanto id DESC finale. Entrambe le rappresentazioni espongono **Inseriti di recente** e **Più visualizzati**, con valori tecnici, ID, markup/eventi e JS invariati. Wrapper/RowRank, `strSelect.Substring(7)`, WHERE, parametri, listino e candidate varianti #433 preservati.
