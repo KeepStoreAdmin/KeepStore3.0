@@ -20,13 +20,23 @@ Partial Class track_your_order
                 ' Normalizza: rimuovi eventuale #
                 rawN = rawN.TrimStart("#"c)
 
+                ' L'ordine si cerca solo nell'azienda della vetrina richiesta (host esatto url1/url2, come sitemap,
+                ' robots e carrello): nessun ripiego su altre aziende dello stesso database; host sconosciuto o
+                ' ambiguo = nessuna lettura.
+                Dim companyId As Integer = ResolveTrackingCompanyId(StorefrontSeoTenantContext.Resolve(Context))
+                If companyId <= 0 Then
+                    ShowMsg("Errore durante la ricerca dell'ordine. Riprova più tardi.")
+                    Return
+                End If
+
                 Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-                Dim sql As String = "SELECT vdocumenti.id," & vbCrLf & "vdocumenti.NDocumento," & vbCrLf & "vdocumenti.DataDocumento," & vbCrLf & "vdocumenti.TotaleDocumento," & vbCrLf & "vdocumenti.StatiDescrizione1," & vbCrLf & "vdocumenti.Tracking," & vbCrLf & "vettori.Link_Tracking," & vbCrLf & "pagamentitipo.Descrizione AS PagamentiTipoDescrizione" & vbCrLf & "FROM vdocumenti" & vbCrLf & "LEFT JOIN utenti ON vdocumenti.UtentiId = utenti.Id" & vbCrLf & "LEFT JOIN (SELECT id, Link_Tracking FROM vettori) AS vettori ON vdocumenti.VettoriId = vettori.id" & vbCrLf & "LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id" & vbCrLf & "WHERE vdocumenti.TipoDocumentiId = 4" & vbCrLf & "AND vdocumenti.NDocumento = @n" & vbCrLf & "AND LOWER(utenti.Email) = LOWER(@email)" & vbCrLf & "ORDER BY vdocumenti.ID DESC"
+                Dim sql As String = "SELECT vdocumenti.id," & vbCrLf & "vdocumenti.NDocumento," & vbCrLf & "vdocumenti.DataDocumento," & vbCrLf & "vdocumenti.TotaleDocumento," & vbCrLf & "vdocumenti.StatiDescrizione1," & vbCrLf & "vdocumenti.Tracking," & vbCrLf & "vettori.Link_Tracking," & vbCrLf & "pagamentitipo.Descrizione AS PagamentiTipoDescrizione" & vbCrLf & "FROM vdocumenti" & vbCrLf & "LEFT JOIN utenti ON vdocumenti.UtentiId = utenti.Id" & vbCrLf & "LEFT JOIN (SELECT id, Link_Tracking FROM vettori) AS vettori ON vdocumenti.VettoriId = vettori.id" & vbCrLf & "LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id" & vbCrLf & "WHERE vdocumenti.TipoDocumentiId = 4" & vbCrLf & "AND vdocumenti.AziendeId = @aziendaId" & vbCrLf & "AND utenti.AziendeId = @aziendaId" & vbCrLf & "AND vdocumenti.NDocumento = @n" & vbCrLf & "AND LOWER(utenti.Email) = LOWER(@email)" & vbCrLf & "ORDER BY vdocumenti.ID DESC"
 
                 Try
                     Using c As New MySqlConnection(cs)
                         Using cmd As New MySqlCommand(sql, c)
+                            cmd.Parameters.Add("@aziendaId", MySqlDbType.Int32).Value = companyId
                             cmd.Parameters.Add("@n", MySqlDbType.VarChar).Value = rawN
                             cmd.Parameters.Add("@email", MySqlDbType.VarChar).Value = email
                             c.Open()
@@ -79,6 +89,12 @@ Partial Class track_your_order
                     ShowMsg("Errore durante la ricerca dell'ordine. Riprova più tardi.")
                 End Try
             End Sub
+
+            ' Azienda della vetrina: solo l'identita risolta dall'host; Nothing o id non positivo = 0 (fail-closed).
+            Private Shared Function ResolveTrackingCompanyId(tenant As StorefrontSeoTenantIdentity) As Integer
+                If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then Return 0
+                Return tenant.CompanyId
+            End Function
 
             Private Sub ShowMsg(msg As String)
                 litMsg.Text = Server.HtmlEncode(msg)
