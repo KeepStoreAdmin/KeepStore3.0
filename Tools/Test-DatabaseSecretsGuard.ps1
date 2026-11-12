@@ -66,13 +66,19 @@ function Get-GuardPrivateIntroductions([string]$Root, [string]$Reference) {
 
 function Test-PrivatePublicationPath([string]$Path, [switch]$AllowApprovedSourceMigration) {
     $normalized = $Path.Replace('\','/')
-    # PO-authorized source-only exception for four named migration files.
+    # PO-authorized source-only exception for eight named migration files (two four-file sets:
+    # ORDER_VAT_ID_SEMANTICS_P1_1A and ORDER_DOCUMENT_NUMBER_OUT_P0B_1A, the latter under the PO's
+    # 2026-11-12 "Database autorevole" rule: numbering fixes are delivered as database migrations).
     # This never exempts content scanning or publication artifacts/dumps.
     $approvedVatMigrations = @(
         'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_preflight.sql',
         'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_forward.sql',
         'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_verify.sql',
-        'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_rollback.sql'
+        'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_rollback.sql',
+        'Database Taikun/Migrations/20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_preflight.sql',
+        'Database Taikun/Migrations/20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_forward.sql',
+        'Database Taikun/Migrations/20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_verify.sql',
+        'Database Taikun/Migrations/20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_rollback.sql'
     )
     if ($AllowApprovedSourceMigration -and $normalized -cin $approvedVatMigrations) { return $false }
     return $normalized -match '(?i)(?:^|/)(?:web(?:\.[^/]+)?\.config|\.env(?:\.[^/]+)?|[^/]+\.(?:pfx|p12|key|dpapi|bak|backup|sql|log))$' -or
@@ -148,12 +154,14 @@ function Invoke-GuardSelfTest {
     }
     if(Test-PrivatePublicationPath 'web.config.example'){throw 'SECRETS_GUARD_EXAMPLE_REJECTED'}
     $migrationChecks=0
-    foreach($suffix in @('preflight','forward','verify','rollback')){
-        $path='Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_'+$suffix+'.sql'
-        if(Test-PrivatePublicationPath $path -AllowApprovedSourceMigration){throw 'SECRETS_GUARD_APPROVED_SOURCE_REJECTED'}
-        if(-not (Test-PrivatePublicationPath $path)){throw 'SECRETS_GUARD_SQL_ARTIFACT_ACCEPTED'}
-        if(@(Find-SecretViolations ($connectionName+'='+$marker+';') $path $false).Count -eq 0){throw 'SECRETS_GUARD_APPROVED_SOURCE_SECRET_ACCEPTED'}
-        $migrationChecks+=3
+    foreach($migrationPrefix in @('20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_','20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_')){
+        foreach($suffix in @('preflight','forward','verify','rollback')){
+            $path='Database Taikun/Migrations/'+$migrationPrefix+$suffix+'.sql'
+            if(Test-PrivatePublicationPath $path -AllowApprovedSourceMigration){throw 'SECRETS_GUARD_APPROVED_SOURCE_REJECTED'}
+            if(-not (Test-PrivatePublicationPath $path)){throw 'SECRETS_GUARD_SQL_ARTIFACT_ACCEPTED'}
+            if(@(Find-SecretViolations ($connectionName+'='+$marker+';') $path $false).Count -eq 0){throw 'SECRETS_GUARD_APPROVED_SOURCE_SECRET_ACCEPTED'}
+            $migrationChecks+=3
+        }
     }
     if(-not (Test-PrivatePublicationPath 'Database Taikun/Migrations/other.sql' -AllowApprovedSourceMigration)){throw 'SECRETS_GUARD_OTHER_SQL_ACCEPTED'}
     Write-Output ('SECRETS_GUARD_SELFTEST_PASS checks='+($cases.Count+$privateCases.Count+2+$migrationChecks))

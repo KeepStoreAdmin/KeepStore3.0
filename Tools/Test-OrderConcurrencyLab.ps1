@@ -3,7 +3,10 @@ param(
     [string]$Runner,
     [string]$OnlyScenario,
     [int]$HoldSeconds = 10,
-    [int]$Rounds = 1
+    [int]$Rounds = 1,
+    # Nome della procedura sotto prova. Il default e la routine reale; un altro nome serve a provare una variante
+    # (per esempio una copia ombra creata dall'account del LAB) con gli stessi scenari, senza toccare la routine reale.
+    [ValidatePattern('^[A-Za-z0-9_]+$')][string]$Procedure = 'Carrello_Documento'
 )
 
 # KS-C01 prove di concorrenza a due sessioni sul LAB LOCALE (127.0.0.1:13317, schema sintetico), alla stessa isolazione
@@ -39,7 +42,9 @@ SET @ks_guard=IF(@ks_ok,'SELECT ''CONC_TARGET_LIGHT''','SELECT * FROM informatio
 PREPARE ks_g FROM @ks_guard;EXECUTE ks_g;DEALLOCATE PREPARE ks_g;
 '@
 
+function Use-Procedure([string]$sql) { return $sql.Replace('CALL Carrello_Documento(', 'CALL ' + $Procedure + '(') }
 function Run-Sql([string]$name, [string]$sql, [switch]$Write) {
+    $sql = Use-Procedure $sql
     $file = Join-Path $work ($name + '.sql')
     [IO.File]::WriteAllText($file, $sql, (New-Object Text.UTF8Encoding($false)))
     $argsList = @('-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-File', $Runner, '-SqlFile', $file)
@@ -48,6 +53,7 @@ function Run-Sql([string]$name, [string]$sql, [switch]$Write) {
     return @{ Code = $LASTEXITCODE; Lines = @($out) }
 }
 function Start-Session([string]$name, [string]$sql) {
+    $sql = Use-Procedure $sql
     $file = Join-Path $work ($name + '.sql')
     $outFile = Join-Path $work ($name + '.out')
     [IO.File]::WriteAllText($file, $sql, (New-Object Text.UTF8Encoding($false)))
@@ -127,24 +133,30 @@ START TRANSACTION;
 SET @addr=(SELECT UtentiIndirizziId FROM vlogin WHERE id=19832);
 INSERT INTO carrello(LoginId,ArticoliId,TCId,Codice,Descrizione1,Qnt,NListino,Prezzo,PrezzoIvato,IdIvaRC,ValoreIvaRC,DescrizioneIvaRC,idEsenzioneIva,ValoreEsenzioneIva,DescrizioneEsenzioneIva) VALUES(19832,1,-1,'KS-LAB-ARTICLE','KS CONC',1,1,10,12.2,-1,-1,'KS',-1,-1,'KS');
 CALL Carrello_Documento(19832,4,1,1,@addr,0,0,0,0,'KS CONC P0a',0,22,1,'','',0,1,22,@n_a);
-SET @id_a=(SELECT MAX(id) FROM documenti);
-SELECT 'P0A',JSON_OBJECT('out',@n_a,'stored',(SELECT NDocumento FROM documenti WHERE id=@id_a),'resolved',(SELECT COUNT(*) FROM documenti WHERE UtentiId=1 AND AziendeId=1 AND TipoDocumentiId=4 AND NDocumento=@n_a AND YEAR(DataDocumento)=YEAR(CURDATE())));
+SET @id_a=(SELECT MAX(id) FROM documenti WHERE NoteEsterne='KS CONC P0a');
+SELECT 'P0A',JSON_OBJECT('created',(SELECT COUNT(*) FROM documenti WHERE NoteEsterne='KS CONC P0a'),'out',@n_a,'stored',(SELECT NDocumento FROM documenti WHERE id=@id_a),'resolved',(SELECT COUNT(*) FROM documenti WHERE UtentiId=1 AND AziendeId=1 AND TipoDocumentiId=4 AND NDocumento=@n_a AND YEAR(DataDocumento)=YEAR(CURDATE())));
 ROLLBACK;
 START TRANSACTION;
 INSERT INTO documenti(TipoDocumentiId,DataDocumento,AziendeId,UtentiId) VALUES(1,CURDATE(),1,1);
 SET @neighbor=(SELECT NDocumento FROM documenti WHERE id=LAST_INSERT_ID());
+SET @max4=(SELECT COALESCE(MAX(NDocumento),0) FROM documenti WHERE TipoDocumentiId=4 AND YEAR(DataDocumento)=YEAR(CURDATE()));
 INSERT INTO carrello(LoginId,ArticoliId,TCId,Codice,Descrizione1,Qnt,NListino,Prezzo,PrezzoIvato,IdIvaRC,ValoreIvaRC,DescrizioneIvaRC,idEsenzioneIva,ValoreEsenzioneIva,DescrizioneEsenzioneIva) VALUES(19832,1,-1,'KS-LAB-ARTICLE','KS CONC',1,1,10,12.2,-1,-1,'KS',-1,-1,'KS');
 CALL Carrello_Documento(19832,4,1,1,@addr,0,0,0,0,'KS CONC P0b',0,22,1,'','',0,1,22,@n_b);
-SET @id_b=(SELECT MAX(id) FROM documenti WHERE TipoDocumentiId=4);
-SELECT 'P0B',JSON_OBJECT('neighborNumber',@neighbor,'out',@n_b,'stored',(SELECT NDocumento FROM documenti WHERE id=@id_b),'resolved',(SELECT COUNT(*) FROM documenti WHERE UtentiId=1 AND AziendeId=1 AND TipoDocumentiId=4 AND NDocumento=@n_b AND YEAR(DataDocumento)=YEAR(CURDATE())));
+SET @id_b=(SELECT MAX(id) FROM documenti WHERE NoteEsterne='KS CONC P0b');
+SELECT 'P0B',JSON_OBJECT('sharedCounter',(SELECT COUNT(DISTINCT ContatoreId)=1 AND COUNT(ContatoreId)=2 FROM tipodocumenti WHERE id IN(1,4)),'neighborAboveType4',@neighbor>@max4,'created',(SELECT COUNT(*) FROM documenti WHERE NoteEsterne='KS CONC P0b'),'neighborNumber',@neighbor,'out',@n_b,'stored',(SELECT NDocumento FROM documenti WHERE id=@id_b),'resolved',(SELECT COUNT(*) FROM documenti WHERE UtentiId=1 AND AziendeId=1 AND TipoDocumentiId=4 AND NDocumento=@n_b AND YEAR(DataDocumento)=YEAR(CURDATE())));
 ROLLBACK;
 '@
     $r = Run-Sql 'p0' $sql -Write
     $a = Read-Json $r.Lines 'P0A'; $b = Read-Json $r.Lines 'P0B'
     if (-not $a) { Add-Result 'P0a' 'esecuzione' 'FAIL' ('nessuna osservazione: ' + (Err-Of $r.Lines)) }
-    else { Add-Result 'P0a' 'numero OUT = numero memorizzato e ricerca applicativa trova 1 documento' $(if (([int]$a.out -eq [int]$a.stored) -and ([int]$a.resolved -eq 1)) { 'OK' } else { 'FAIL' }) ("out=$($a.out) stored=$($a.stored) resolved=$($a.resolved)") }
+    else { Add-Result 'P0a' 'numero OUT = numero memorizzato e ricerca applicativa trova 1 documento (documento identificato dalla nota, uno solo)' $(if (([int]$a.created -eq 1) -and ([int]$a.out -eq [int]$a.stored) -and ([int]$a.resolved -eq 1)) { 'OK' } else { 'FAIL' }) ("creati=$($a.created) out=$($a.out) stored=$($a.stored) resolved=$($a.resolved)") }
     if (-not $b) { Add-Result 'P0b' 'esecuzione' 'OSS' ('nessuna osservazione: ' + (Err-Of $r.Lines)) }
-    else { Add-Result 'P0b' 'contatore condiviso con altro tipo (tipo 1 e 4 nel LAB): numero OUT contro memorizzato (FAIL atteso = difetto candidato noto, vedi Masterplan KS-C01-LAB-ORDER-CONCURRENCY-1A)' $(if (([int]$b.out -eq [int]$b.stored) -and ([int]$b.resolved -eq 1)) { 'OK' } else { 'FAIL' }) ("documento vicino n.$($b.neighborNumber); out=$($b.out) stored=$($b.stored) ricerca applicativa=$($b.resolved) documento/i") }
+    else {
+        # Il caso e reale solo se i tipi 1 e 4 condividono il contatore, il documento vicino supera il massimo del tipo 4 e la CALL ha creato un solo documento.
+        $p0bReal = (([int]$b.sharedCounter -eq 1) -and ([int]$b.neighborAboveType4 -eq 1) -and ([int]$b.created -eq 1))
+        $p0bFixed = (([int]$b.out -eq [int]$b.stored) -and ([int]$b.resolved -eq 1))
+        Add-Result 'P0b' 'contatore condiviso con altro tipo (tipo 1 e 4 nel LAB): numero OUT contro memorizzato e ricerca applicativa (routine P1: FAIL = difetto P0b; con la migrazione ORDER_DOCUMENT_NUMBER_OUT_P0B_1A: OK)' $(if (-not $p0bReal) { 'OSS' } elseif ($p0bFixed) { 'OK' } else { 'FAIL' }) ("contatore condiviso=$($b.sharedCounter) vicino sopra tipo 4=$($b.neighborAboveType4) creati=$($b.created); documento vicino n.$($b.neighborNumber); out=$($b.out) stored=$($b.stored) ricerca applicativa=$($b.resolved) documento/i")
+    }
 }
 
 # ---------- Setup carrelli committati per gli scenari a due sessioni (rimossi a fine scenario) ----------

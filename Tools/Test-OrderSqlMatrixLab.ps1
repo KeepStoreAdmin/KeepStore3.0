@@ -3,7 +3,10 @@ param(
     [string]$Runner,
     [string]$ReportPath,
     [string]$OnlyCase,
-    [switch]$ListOnly
+    [switch]$ListOnly,
+    # Nome della procedura sotto prova. Il default e la routine reale; un altro nome serve a provare una variante
+    # (per esempio una copia ombra creata dall'account del LAB) con gli stessi casi, senza toccare la routine reale.
+    [ValidatePattern('^[A-Za-z0-9_]+$')][string]$Procedure = 'Carrello_Documento'
 )
 
 # KS-C01 matrice SQL ordine sul LAB LOCALE (127.0.0.1:13317, schema sintetico). Per ogni caso uno script separato:
@@ -195,7 +198,7 @@ function Invoke-Case($c) {
     $dir = Join-Path ([IO.Path]::GetTempPath()) ('ks-matrix-' + $PID)
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
     $file = Join-Path $dir ($c.Id + '.sql')
-    [IO.File]::WriteAllText($file, (Build-Sql $c), (New-Object Text.UTF8Encoding($false)))
+    [IO.File]::WriteAllText($file, (Build-Sql $c).Replace('CALL Carrello_Documento(', 'CALL ' + $Procedure + '('), (New-Object Text.UTF8Encoding($false)))
     $out = & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File $Runner -SqlFile $file -Write 2>&1 | ForEach-Object { "$_" }
     $code = $LASTEXITCODE
     Remove-Item -LiteralPath $file -Force
