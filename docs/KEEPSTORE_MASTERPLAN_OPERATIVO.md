@@ -1,5 +1,47 @@
 # KeepStore Masterplan Operativo
 
+## KS-C01-LAB-ORDER-SQL-MATRIX-1A — 12/11/2026 — LAB TEST + DOCS
+
+**Chiusura del task precedente:** `KS-GOV-LAB-SHOW-ROUTINE-1A` A circoscritto al LAB. [PR #448](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/448) MERGED/CLOSED il 2026-11-12T11:08:57Z con push FF-only del commit gia verificato `f64e08d4a57434e66a3e12692e4331c3f0f01087` (parent diretto `8ef6a160`, nessun merge commit); due check `keepstore-source-gates` SUCCESS sullo SHA esatto e CI della stable run 43206619338 SUCCESS; `main` invariato. Sincronizzazione Windows A–I: HEAD = origin, staging vuoto, impronta dell'inventario identica a prima del task.
+
+**Mandato del PO: «Matrice SQL ordine».** Gate pre-prompt: **A** mandato vigente, LAB autorizzato, Coupon/Groupon STANDBY non toccati; **B** KS-C01 P0, residuo registrato nel closeout G3 («altri tenant e regimi, indeterminati SQL»); **C** evidenza: la routine `Carrello_Documento` e ora leggibile (variante P1) e il closeout di ottobre dichiara non certificati regimi e aliquote ulteriori; **D** non duplicato: ottobre aveva 4 casi (22%, RC, esenzione, RC prima di esenzione) con un solo articolo e importi interi.
+
+**Revisione ChatGPT del piano di prova e del corpo della routine: eseguita** (Codex CLI con login ChatGPT, sandbox read-only, cartella isolata con piano, routine e viste, 103 secondi). Verdetto: APPROVA CON MODIFICHE; nessuna parte del piano e stata respinta. Accolti: attesi separati per ogni campo del piede, riga sconto a parte, nove casi in piu (buono positivo, snapshot NULL, id inesistente, listini misti, prenotazione parziale con seconda sessione, quantita negativa compensata, spedizione NULL, righe identiche, id IVA di listino diverso da quello dell'articolo), deviazione fino a un centesimo sempre da valutare, nessun DDL, stato riletto da seconda sessione. Non fatto: concorrenza su giacenza e numerazione, ispezione di trigger e `controllaArrotondamento`, cardinalita generale delle viste. Le ipotesi sull'oracolo commerciale e fiscale restano decisioni del PO e del referente fiscale.
+
+**Metodo.** `Tools/Test-OrderSqlMatrixLab.ps1` (nuovo) genera per ogni caso uno script separato: guardia (UUID, porta, schema, carrello vuoto, dizionario `iva` e `articoli_listini` attesi), `START TRANSACTION`, fixture sintetiche in DML (righe carrello, righe `iva`, `articoli.iva`, `articoli_listini.iva`), `CALL Carrello_Documento` reale, `SELECT` che osserva in JSON documento, righe, piede, giacenze e numero, `ROLLBACK` e rilettura del ripristino. L'oracolo e calcolato in PowerShell con `decimal` (arrotondamento half-away-from-zero) e **giudica** i valori osservati: OK entro 0,0005, DEV fino a 0,011, FAIL oltre, OSS per le osservazioni senza oracolo. Dopo ogni errore e a fine matrice una seconda sessione rilegge lo stato e lo confronta con la baseline.
+
+**Esito (seconda esecuzione): 49 casi, 700 controlli: 680 OK, 7 DEV, 0 FAIL, 13 OSS; stato finale del LAB uguale alla baseline** (5 documenti, ultimo id 166629, giacenze 6/1 impegnate, carrello vuoto, dizionario IVA e articoli intatti). La prima esecuzione ebbe 26 FAIL, tutti dovuti a errori miei nel banco e non alla routine: le aliquote sintetiche aggiornavano solo `articoli.iva` mentre l'id IVA della riga documento viene da `articoli_listini.iva`; l'ordine di `JSON_ARRAYAGG` non garantito, con la riga sconto confusa con le righe merce; una metrica di coerenza che contava due volte il buono e confrontava lordi non arrotondati; due righe di prova identiche. Corretti e rieseguiti, nulla nascosto.
+
+| Area | Casi | Esito |
+| --- | --- | --- |
+| Tenant | ordini completi per azienda 1/listino 1 e azienda 2/listino 10 | OK: azienda del documento dal login, listino dalla riga carrello, nessuna contaminazione |
+| Aliquote 22, 10, 5, 4% | A01–A07 | OK, salvo il mezzo centesimo (A05) |
+| Regimi RC, esenzione, precedenza, NULL, flag | B01–B09 | OK; `idEsenzioneIva` NULL ricade sull'aliquota ordinaria |
+| Composizione e arrotondamento | C01–C03, D01–D05 | OK o DEV di un centesimo, vedi sotto |
+| Costi e buono | E01, E03, E04, F01, F02 | OK; assicurazione OSS |
+| Giacenza e quantita | N01–N06, N08, N11 | OK: `ORDER_INVENTORY_UNAVAILABLE`, `_EMPTY_CART`, `_INVALID` (6 decimali, quantita zero, tipo documento senza Web); limite q9 su 9 disponibili ok; prenotazione parziale annullata, verificato da seconda sessione |
+
+**Deviazioni da valutare (7 controlli in 5 casi, tutte di un centesimo).** (1) *Mezzo centesimo in virgola mobile*: importi in `DOUBLE`; 9 × 0,115 = 1,035 viene arrotondato a 1,03 (decimale: 1,04) e 0,50 con aliquota 5% (IVA 0,025) a 0,02 (decimale 0,03): il totale puo differire di un centesimo da un calcolo decimale (D04, A05). (2) *Arrotondamento di documento contro righe*: il piede arrotonda sul totale merce e sull'IVA complessiva, la vista mostra lordi di riga non arrotondati; la somma dei lordi di riga arrotondati puo differire di un centesimo dal totale (C02, C03, D05, A05). Scegliere la politica (per riga o per riepilogo di aliquota) e una decisione del PO e del referente fiscale; non e un'accettazione automatica.
+
+**Osservazioni sulla fiducia riposta nei dati in ingresso** (nessuna e un difetto dell'applicazione dimostrato: il carrello e preparato dal codice ASP.NET, che scrive `-1` come sentinella e valida; sono lacune di difesa in profondita del database):
+- **B06, B10:** un `idEsenzioneIva` 0 o inesistente produce una riga con quell'id (assente dal dizionario) e IVA zero; il lordo di riga dalla vista e nullo.
+- **G03:** l'id IVA della riga viene da `articoli_listini.iva`, l'aliquota del piede da `articoli.iva`: se divergono il documento ha riga al 22% e IVA di piede al 10%.
+- **G01:** il piede usa lo snapshot del carrello (10,50), la vista righe il dizionario `iva` (10,00); con IVA modificata tra aggiunta e ordine i due divergono.
+- **G02, N13:** snapshot di esenzione NULL o costo di spedizione NULL creano un documento con IVA e totale NULL.
+- **N09:** riga con listino senza prezzo: riga documento senza id IVA ma IVA nel piede.
+- **N10:** tipo pagamento inesistente accettato.
+- **N12:** quantita negativa su una riga accettata se la somma per articolo e positiva.
+- **N14:** due righe carrello identiche non diventano ordine (`ERROR 1062` sull'indice unico `UniqueIDX`).
+- **C04:** con listini misti il listino di testata e quello della prima riga del cursore, senza ordinamento.
+- **E02:** l'assicurazione e tassata nel piede ma esclusa da `TotImponibile`.
+- **N07:** un login inesistente e fermato dal vincolo `NOT NULL` su `UtentiId` (buono).
+
+**Limiti.** Evidenza a livello database sul LAB; nessuna prova HTTP o browser; il LAB certifica soltanto il LAB. Non eseguiti: concorrenza (la numerazione e protetta dall'indice unico `DocUnivoco`, la giacenza dal `UPDATE` condizionato, ma non provati con due sessioni), trigger e `controllaArrotondamento` non ispezionati, costo pagamento senza IVA e IVA su spese per merce RC o esente (decisioni fiscali), prezzi lordi come fonte autorevole. I rollback hanno consumato valori di `auto_increment` (id documento successivi piu alti: non e un ripristino dei contatori). Self-review dello stesso agente.
+
+**Manifest esclusivo quattro file:** `Tools/Test-OrderSqlMatrixLab.ps1` (nuovo; solo LAB, guardia su UUID e fixture, solo DML in transazione), questo Masterplan, START_HERE e Roadmap. Nessun runtime applicativo. Inventario 53/52/4 con confronto leggero pre/post, `main` invariato. **CONSEGNA SERVER SOSPESA.**
+
+**Decisioni richieste al PO:** politica di arrotondamento (per riga o per riepilogo aliquota) e trattamento del mezzo centesimo; se aggiungere alla routine controlli di integrita sui dati in ingresso (snapshot NULL, id IVA non nel dizionario, quantita negative, tipo pagamento esistente) come task SQL con migrazione reversibile; fonte autorevole dei prezzi (netti o lordi). **Prossimo candidato (NON AVVIATO):** prova di concorrenza su numerazione e ultima unita di giacenza con due sessioni, oppure il residuo LOW del badge wishlist.
+
 ## KS-GOV-LAB-SHOW-ROUTINE-1A — 12/11/2026 — LAB + DOCS
 
 **Chiusura del task precedente:** `KS-C01-LAB-CART-OWNER-INDEXES-1A` A circoscritto al LAB. [PR #447](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/447) MERGED/CLOSED il 2026-11-12T10:39:52Z con push FF-only del commit gia verificato `8ef6a1607fe838dcad1d2e4d22f0d88f56399339` (parent diretto `df2c32f8`, nessun merge commit); due check `keepstore-source-gates` SUCCESS sullo SHA esatto e CI della stable run 43202350592 SUCCESS; `main` invariato. Sincronizzazione Windows A–I: HEAD = origin, staging vuoto, impronta dell'inventario identica a prima del task.
