@@ -377,6 +377,7 @@ Stack reale: ASP.NET WebForms, VB.NET, .NET Framework 4.x, MySQL, code-behind `.
 - Non introdurre C#, ASP.NET Core, Razor/MVC, Blazor, minimal API, controller rewrite, EF Core, migrations, nuova dependency injection, pipeline TypeScript/npm/Vite/Webpack o librerie senza audit e approvazione.
 - Non convertire WebForms o proporre rewrite non autorizzati. Tecnologia diversa indispensabile: B motivato.
 - Il server resta fonte di verita per sessione, login, carrello, prezzi, listini, IVA, promo, checkout e ordine; niente logica commerciale affidata o duplicata nel browser.
+- **Database autorevole (decisione PO 2026-11-12, PERMANENTE).** KeepStore e nato perche gestionale ed ecommerce web non applichino regole diverse: la logica di business e delegata al database (query, viste, trigger, routine). Esempio: il numero di un documento scritto dal web lo assegna il database (trigger di numerazione), mai il web. Le correzioni a numerazione, totali, IVA o giacenza si fanno al livello database (migrazione con rollback e verify, prova sul LAB) e il codice ASP.NET si limita a chiamare la routine e a leggere cio che il database ha assegnato; vietato duplicare o ricalcolare tali regole nel web, anche come workaround.
 
 ## MULTITENANT-BY-DESIGN
 
