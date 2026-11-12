@@ -1,5 +1,36 @@
 # KeepStore Masterplan Operativo
 
+## KS-C01-LAB-CART-OWNER-INDEXES-1A — 12/11/2026 — LAB DDL + DOCS
+
+**Chiusura del task precedente:** `KS-GOV-LAB-ADMIN-RECOVERY-1A` A. [PR #446](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/446) MERGED/CLOSED il 2026-11-12T10:28:18Z con push FF-only del commit gia verificato `df2c32f8b737b2cb8392e40be8647f386cd70f95` (parent diretto `ec584155`, nessun merge commit); due check `keepstore-source-gates` SUCCESS sullo SHA esatto e CI della stable run 43200655979 SUCCESS; `main` invariato. Sincronizzazione Windows A–I: HEAD = origin, staging vuoto, impronta dell'inventario identica a prima del task.
+
+**Richiesta del PO: «Gate KS-C01 LAB».** Gate pre-prompt: **A** mandato vigente (scelta del PO, LAB autorizzato; Coupon/Groupon STANDBY, G2 Session/InProc e G4 reinvio email non toccati); **B** KS-C01 e P0 della roadmap; **C** *DIFETTO RIPRODOTTO* sul LAB: le query owner-scoped reali di `CartOwnershipService` (`FORCE INDEX (IX_carrello_LoginId_ID)` e `(IX_carrello_SessionId_ID)`) falliscono con `ERROR 1176 Key doesn't exist in table 'carrello'`, perche la tabella `carrello` del LAB ha solo la chiave primaria; **D** non duplicato: il limite era registrato come aperto («assenti nella fixture, 1176 nei log») e mai chiuso. Il dump del 2026-09-20 contiene i due indici.
+
+**Conformita del LAB alle otto migrazioni del repository** (script `*_verify.sql` di sola lettura, sessione `READ ONLY`, senza `--force`, prima dell'intervento):
+
+| Migrazione | Esito sul LAB |
+| --- | --- |
+| 20260911 ORDER_INVENTORY_ATOMIC_RESERVATION | non eseguibile: i cinque script contengono `USE taikun` e `DATABASE()='taikun'` in chiaro (storico, in contrasto con MULTITENANT-BY-DESIGN); accesso negato allo schema `taikun` |
+| 20260914 ORDER_DURABLE_IDEMPOTENCY | 9/9 OK |
+| 20260920 MULTIPROVIDER_TENANT_EMAIL_TRANSPORT | 11/11 OK |
+| 20260922 PAYPAL_CHECKOUT_ORDERS_V2_LIVE | 8/8 OK, stato `READY_FOR_LIVE_CONFIGURATION` (profili e tenant configurati: 0) |
+| 20260923 PAYPAL_DB_DRIVEN_CREDENTIALS | `CredentialColumnsStatus` **STOP**: colonne non presenti sul LAB (LAB senza gateway) |
+| 20260925 SEO_DISCOVERY_CONFIG_SCHEMA | **STOP**: tabella `aziende_seo` assente; nessun riferimento nel codice ASPX/VB |
+| 20260929 PERSISTENT_ANONYMOUS_CART_REGISTRY | 13 OK e **1 STOP** (`SESSIONID_OWNER_INDEX`); dopo l'intervento 14/14 OK |
+| 20261027 ORDER_VAT_ID_SEMANTICS_P1 | non verificabile: l'account dedicato non vede la definizione della routine (`Create Procedure` e `ROUTINE_DEFINITION` NULL, manca `SHOW_ROUTINE`) e le attestazioni operatore dello script (backup della routine, checkout in quiescenza) non si impostano a vuoto. Letti: `Carrello_Documento` modificata il 2026-10-27, 19 parametri IN/OUT, `SQL_MODE` e charset attesi, `DEFINER` `root@localhost` |
+
+**Intervento sul LAB (DDL, mandato PO sul solo LAB).** Con guardia a inizio script (UUID attestato, schema LAB, `carrello` vuoto, indici assenti; guardia con `PREPARE` come negli script di verifica, perche un riferimento a tabella inesistente in un ramo non eseguito falliva comunque alla risoluzione): `ALTER TABLE carrello ADD KEY IX_carrello_LoginId_ID (LoginId, id), ADD KEY IX_carrello_SessionId_ID (SessionId, id), ALGORITHM=INPLACE, LOCK=NONE`, con le definizioni del dump. Nessun dato toccato (0 righe). **Rollback:** `ALTER TABLE carrello DROP KEY IX_carrello_LoginId_ID, DROP KEY IX_carrello_SessionId_ID` e, per lo stato precedente all'intero ciclo di recupero admin, la copia a freddo del datadir.
+
+**Prova dopo l'intervento.** Le due query reali di `CartOwnershipService` eseguono; `EXPLAIN` mostra `type=ref` sull'indice nominato in entrambe (`key_len` 5 e 203) invece della scansione dell'indice primario; il verify del registro anonimo e 14/14 OK. Un primo tentativo di guardia con sottoselect su tabella inesistente falli prima dell'`ALTER` senza modificare nulla (verificato).
+
+**Cosa sblocca e cosa no.** Rimosso il limite LAB documentato: le letture di proprieta del carrello non falliscono piu per indice mancante. **Non** e una ricertificazione della migrazione del carrello anonimo: richiede prove HTTP sul sito IIS del LAB, oggi non avviabile da questa sessione (servono privilegi elevati). Restano aperti la matrice SQL ordine per altri tenant e regimi, pagamento, contenuto fiscale dell'e-mail e produzione. Il LAB certifica soltanto il LAB.
+
+**Limiti.** Evidenza a livello database; nessun test HTTP o browser; gli `EXPLAIN` sono su tabella vuota (i piani confermano l'uso dell'indice, non le prestazioni). Il nome dello schema nei `GRANT` contiene underscore (carattere jolly per i nomi database): nel LAB non c'e altro schema utente che corrisponda. Rilievo fuori manifest, da trattare come task separato: i cinque script `20260911_*` contengono nomi database in chiaro; esistono `Tools/Install-CarrelloDocumento-MultiDatabase.ps1` e `Generate-CarrelloDocumentoDeployment.ps1`, ma non e verificato se li sostituiscano formalmente.
+
+**Manifest esclusivo cinque file:** `Tools/Invoke-KeepStoreLabSql.ps1` (nuovo: esegue SQL da file sul solo LAB locale, password solo in ambiente al processo figlio, `READ ONLY` di default), `AGENTS.md` (riferimento allo strumento), questo Masterplan, START_HERE e Roadmap. Nessun runtime applicativo. Inventario 53/52/4 con confronto leggero pre/post, `main` invariato. **CONSEGNA SERVER SOSPESA.**
+
+**Prossimo candidato (NON AVVIATO):** per proseguire sui gate G3 servono due decisioni del PO: `SHOW_ROUTINE` per l'account del LAB (metadato di sola lettura, richiede un altro ciclo admin) e l'avvio del sito IIS del LAB con privilegi elevati; senza di esse resta il residuo LOW del badge wishlist, solo sorgente.
+
 ## KS-GOV-LAB-ADMIN-RECOVERY-1A — 12/11/2026 — DOCS ONLY (LAB locale)
 
 **Chiusura del task precedente:** `KS-GOV-LAB-STARTUP-1A` A per l'avvio. [PR #445](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/445) MERGED/CLOSED il 2026-11-12T09:46:11Z con push FF-only del commit gia verificato `ec5841551b5023ab8f51ed4970aaa8aafaaaac1a` (parent diretto `bd6e8854`, nessun merge commit); due check `keepstore-source-gates` SUCCESS sullo SHA esatto e CI della stable run 43194392310 SUCCESS; `main` invariato. Sincronizzazione Windows A–I: HEAD = origin, staging vuoto, impronta dell'inventario identica a prima del task.
