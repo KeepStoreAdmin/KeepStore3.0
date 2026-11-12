@@ -1,5 +1,33 @@
 # KeepStore Masterplan Operativo
 
+## KS-GOV-LAB-ROUND-APPLY-1A — 12/11/2026 — CICLO ADMIN LAB + MIGRAZIONE DI ARROTONDAMENTO APPLICATA + DOCS
+
+**Chiusura del task precedente:** `ORDER-ROUNDING-HALF-UP-1A` A. [PR #455](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/455) MERGED il 2026-11-12T17:17:47Z con push FF-only del commit gia verificato `aa3005f50d7848340c4862d2b3c153561ffd4f0e` (parent `20de773c`, nessun merge commit); due check `keepstore-source-gates` SUCCESS sullo SHA esatto e CI della stable SUCCESS; sincronizzazione Windows A (inventario 53/52/4 identico, `main` invariato a `976e99f1`).
+
+**Mandato del PO: «Sì, ciclo LAB»**, risposta alla domanda se autorizzare un ciclo amministrativo per applicare la migrazione di arrotondamento alla routine reale: un solo ciclo, solo LAB locale. Gate: **A** mandato vigente, produzione e server fuori mandato; **B** limite dichiarato dal task precedente (l'account dedicato non puo sostituire la routine con `DEFINER` `root`); **C** `DIFETTO RIPRODOTTO` sulla routine reale (matrice: 11 DEV); **D** non duplicato. Revisione ChatGPT: non richiesta (ciclo LAB e documentazione; la migrazione era gia stata rivista).
+
+**Procedura (quella del terzo ciclo, `KS-GOV-LAB-P0B-APPLY-1A`).** Identita attestata (UUID `1167ebae-…`, processi `mysqld` del LAB con `mysqld-lab.ini`, listener 127.0.0.1:13317, zero connessioni stabilite), arresto forzato dei soli processi LAB, **quarta copia a freddo** `C:/Temp/KeepStoreLabAdminRecovery-20261112-6b45a349/data-backup-4` verificata (460 file, 247.895.020 byte, SHA-256 di `auto.cnf`, `ibdata1` e `mysql.ibd` uguali), un solo riavvio con `--init-file` contenente soltanto l'hash della password (circa 5 secondi al READY, file rimosso subito), account **temporaneo** `ks_claude_lab_ddl`@`127.0.0.1` con gli stessi privilegi minimi del ciclo precedente (`SELECT`, `CREATE ROUTINE`, `ALTER ROUTINE`, `EXECUTE` sullo schema LAB; `SYSTEM_USER`, `SET_USER_ID`, `CREATE USER`, `SHOW_ROUTINE` globali; `SELECT` su `mysql.procs_priv`; solo SSL, al massimo 2 connessioni), password casuale solo in `%APPDATA%/KeepStore/lab-13317-claude-ddl.clixml` (DPAPI CurrentUser, mai mostrata). Sonda prima del lavoro: creazione e `DROP` di una routine di prova con `DEFINER` `root@localhost` riusciti. Applicate le lezioni del ciclo precedente: copia di esecuzione normalizzata in LF dallo script, nessun driver fermato a meta, backup byte-esatto del corpo prima di ogni DDL (`C:/Temp/KeepStoreP0bLab-20261112`), attestazioni impostate solo se vere (zero connessioni stabilite, sito LAB 503).
+
+| Prova sulla routine reale (`DEFINER` root) | Esito |
+| --- | --- |
+| Preflight (stato P0b, hash `1383f81c…`) | `ORDER_ROUNDING_PREFLIGHT_A` |
+| Matrice SQL prima (62 casi) | 948 controlli: 916 OK, **11 DEV**, 0 FAIL, 21 OSS (uguale alla copia ombra) |
+| Forward, verify | `ORDER_ROUNDING_PREFLIGHT_A`, `ORDER_ROUNDING_VERIFY_A`; corpo da 11.322 a 12.060 caratteri, hash `9dc04290…`, `DEFINER` `root@localhost` conservato |
+| P0 dopo | P0a e P0b OK |
+| Matrice SQL dopo | 948 controlli: **929 OK, 0 DEV, 0 FAIL**, 19 OSS; stato finale uguale alla baseline |
+| Concorrenza P0–P8 dopo | 38 controlli: **37 OK, 0 FAIL, 1 OSS** (riepilogo P7: 8 round, 0 deadlock); stato finale uguale alla baseline |
+| Forward ripetuto sullo stato corretto | fermato dalla guardia (`KEEPSTORE_STOP_ROUNDING_MIGRATION_PRECONDITION`) prima del `DROP`; verify successivo OK, routine intatta |
+| Rollback, preflight, casi R | `…ROLLBACK_PRECONDITION_A`, `…ROLLBACK_VERIFY_A`, preflight OK; con il corpo P0b i casi R tornano a mostrare il difetto (8 DEV su 246 controlli) |
+| Secondo forward, verify, matrice finale, P0 finale | `…VERIFY_A`; matrice 62 casi: **929 OK, 0 DEV, 0 FAIL**; P0 OK |
+
+**Stato finale.** `Carrello_Documento`: `DEFINER` `root@localhost`, `SQL SECURITY DEFINER`, corpo con hash `9dc04290e8cdd4f377d462dca63bb063aa711dce389a547636733dc8441fd6ef` (12.060 caratteri, ultima modifica 2026-11-12 19:22:28): **migrazione di arrotondamento applicata alla routine reale del LAB**, sopra la P0b. `carrello_Documento2` intatta. Dati uguali alla baseline (5 documenti, ultimo id 166629, carrello vuoto, giacenze impegnate 6 e 1, `triggerstatus` vuota). L'account `ks_claude_lab_ddl` si e **eliminato da solo** (`DROP USER`, poi accesso negato 1045), file DPAPI cancellato; `ks_claude_lab` invariato (`SHOW_ROUTINE` globale, `ALL` sullo schema LAB). Il processo LAB corrente ha di nuovo `--init-file` nella riga di comando (file inesistente); quattro copie a freddo del datadir (`data-backup`, `-2`, `-3`, `-4`), da cancellare a decisione del PO.
+
+**Cosa dimostra e limiti.** Il LAB certifica soltanto il LAB. Dimostra, con il `DEFINER` originale, che la migrazione di arrotondamento si applica, si verifica, si annulla e si riapplica sulla routine reale e che la matrice commerciale (da 11 DEV a 0) e la concorrenza non regrediscono. **Non** dimostra: la produzione (non toccata: ne la migrazione P0b ne quella di arrotondamento vi sono state applicate); i grant specifici di routine di altri account (nel LAB non ne esistono); il percorso `CREATE` fallito dopo il `DROP` sulla routine reale (provato solo sulla copia ombra); la visualizzazione nel web, che ricalcola ancora IVA e totale (task separato); la riconciliazione con la coda `controllaArrotondamento` del gestionale (da confermare con Enzo e Vincenzo). Il corpo installato e la variante «pulita» del repository; il backup byte-esatto del corpo P0b (hash `1383f81c…`) e le copie a freddo lo conservano.
+
+**Prossimi passi (NON AVVIATI, richiedono decisione o mandato).** Task separato per la visualizzazione nel web (il carrello deve leggere totale e IVA dal database; le pagine di pagamento non devono riarrotondare); conferma di Enzo e Vincenzo sulla coda `controllaArrotondamento`; verifica in sola lettura dell'esposizione al difetto sul database online e applicazione alla produzione solo con mandati distinti. **CONSEGNA SERVER SOSPESA.**
+
+**Manifest (docs-only):** `AGENTS.md`, `docs/KEEPSTORE_START_HERE.md`, `docs/KEEPSTORE_PRODUCT_ROADMAP.md`, `docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md`. Nessun sorgente, nessun file da copiare sul server.
+
 ## ORDER-ROUNDING-HALF-UP-1A — 12/11/2026 — MIGRAZIONE DATABASE (SOURCE) + PROVA LAB + DOCS
 
 **Chiusura dei task precedenti:** l'analisi e il suo aggiornamento con i dati 2025+ sono integrati ([PR #453](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/453), [PR #454](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/454)) con push FF-only; stable `20de773c98f1106bab9e27d576d4ba063e284f49`, CI SUCCESS, sincronizzazione Windows A, `main` invariato a `976e99f1`.
