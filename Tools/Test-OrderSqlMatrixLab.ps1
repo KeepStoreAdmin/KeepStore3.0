@@ -6,7 +6,12 @@ param(
     [switch]$ListOnly,
     # Nome della procedura sotto prova. Il default e la routine reale; un altro nome serve a provare una variante
     # (per esempio una copia ombra creata dall'account del LAB) con gli stessi casi, senza toccare la routine reale.
-    [ValidatePattern('^[A-Za-z0-9_]+$')][string]$Procedure = 'Carrello_Documento'
+    [ValidatePattern('^[A-Za-z0-9_]+$')][string]$Procedure = 'Carrello_Documento',
+    # Se valorizzato, per ogni caso si chiama anche questa routine di sola lettura (Carrello_Totali) con gli stessi argomenti PRIMA dell'ordine
+    # e si pretende uguaglianza al centesimo (tolleranza 1e-6 per il rumore binario della colonna DOUBLE) con TotaleDocumento e TotMerce scritti nel piede (e NULL = NULL).
+    [ValidatePattern('^[A-Za-z0-9_]*$')][string]$TotaliProcedure = '',
+    # Percorso assoluto di un file in cui scrivere, per ogni caso con documento creato, i numeri del piede (confronto prima/dopo una migrazione).
+    [string]$FooterDump
 )
 
 # KS-C01 matrice SQL ordine sul LAB LOCALE (127.0.0.1:13317, schema sintetico). Per ogni caso uno script separato:
@@ -37,7 +42,7 @@ function Case([string]$Id, [string]$Title, [int]$T, $Rows, [hashtable]$O = @{}) 
         Rc = 0; ArticleIvaId = 1; ArticleRate = 22; Synth = @()
         Ship = 0; Ins = 0; Pay = 0; Round = 0; ShipVat = 22
         BDesc = ''; BCode = ''; BTot = 0; BIdIva = 1; BVal = 22
-        TipoDoc = 4; PayType = 1; Login = $null; Expect = 'ok'; SyncListiniIva = $true; Discord = $false
+        TipoDoc = 4; PayType = 1; Login = $null; Expect = 'ok'; SyncListiniIva = $true; Discord = $false; ExpectTotale = $null
     }
     foreach ($k in $O.Keys) { $c[$k] = $O[$k] }
     return $c
@@ -87,6 +92,9 @@ $cases.Add((Case 'R09' 'netto 1,035 al 22% con spedizione 3 (totale 4,9227 -> 4,
 $cases.Add((Case 'R10' 'precisione: netto 1,00409836 (otto decimali) al 22%: totale esatto 1,2249999992 -> 1,22' 1 @(Row -1 1 1.00409836)))
 $cases.Add((Case 'R11' 'precisione: spedizione 10000 con IVA vettore 1,23456% (totale esatto 10135,656 -> 10135,66)' 1 @(Row -1 1 10) @{ Ship = 10000; ShipVat = 1.23456 }))
 $cases.Add((Case 'R12' 'importo grande: 1234567,12345 netti al 22%' 1 @(Row -1 1 1234567.12345)))
+$cases.Add((Case 'R13' 'precisione: netto 1,2346 esente (quattro decimali): il valore pieno decide, atteso 1,23 e non 1,24' 1 @(Row -1 1 1.2346 -1 -1 702 0)))
+$cases.Add((Case 'R14' 'NULL con importo zero: netto 0 con aliquota di snapshot NULL (id 702): totale NULL come prima' 1 @(Row -1 1 0 -1 -1 702 $null) @{ Expect = 'observe' }))
+$cases.Add((Case 'R15' 'carrello vuoto con spedizione 5 e buono -1 (IVA 22): la routine di sola lettura da 4,88; l''ordine e rifiutato' 1 @() @{ Ship = 5; BDesc = 'KS BUONO V'; BCode = 'KSV'; BTot = -1; BIdIva = 1; BVal = 22; Expect = 'error:ORDER_INVENTORY_EMPTY_CART'; ExpectTotale = 4.88 }))
 # E - costi
 $cases.Add((Case 'E01' 'spedizione 5 e pagamento 1.65 (parita browser)' 1 @(Row -1 1 10) @{ Ship = 5; Pay = 1.65 }))
 $cases.Add((Case 'E02' 'assicurazione 2 e spedizione 5' 1 @(Row -1 1 10) @{ Ins = 2; Ship = 5 }))
@@ -157,7 +165,11 @@ SELECT 'OBS',JSON_OBJECT('docNumber',@doc_number,'docsDelta',(SELECT COUNT(*) FR
 ROLLBACK;
 SELECT 'RESTORED',JSON_OBJECT('docs',(SELECT COUNT(*) FROM documenti)=@b_docs,'res1',(SELECT Impegnata FROM articoli_giacenze WHERE ArticoliId=1 AND TCId=-1)=@b_r1,'res18',(SELECT Impegnata FROM articoli_giacenze WHERE ArticoliId=1 AND TCId=18)=@b_r18,'cart',(SELECT COUNT(*) FROM carrello)=0,'iva',(SELECT COUNT(*) FROM iva)=3,'artIva',(SELECT iva FROM articoli WHERE id=1)=1,'listIva',(SELECT COUNT(*) FROM articoli_listini WHERE ArticoliId=1 AND iva<>1)=0);
 '@
-    return ($head.Replace('__LOGIN__', [string]$login) + ($fx -join "`n") + "`n" + $call + "`n" + $obs)
+    $totCall = ''
+    if ($TotaliProcedure) {
+        $totCall = "CALL $TotaliProcedure($login,$(Num $c.Ins),$(Num $c.Ship),$(Num $c.Round),$(Num $c.Pay),$($c.Rc),$(Num $c.ShipVat),$(Num $c.BTot),$(Num $c.BVal),@t_merce,@t_iva,@t_tot);`nSELECT 'TOTALI',JSON_OBJECT('merce',@t_merce,'iva',@t_iva,'totale',@t_tot);`n"
+    }
+    return ($head.Replace('__LOGIN__', [string]$login) + ($fx -join "`n") + "`n" + $totCall + $call + "`n" + $obs)
 }
 
 function Get-Expected($c) {
@@ -218,6 +230,19 @@ function Same-State($a, $b) {
     return $true
 }
 
+# Fonte unica: i numeri che la routine di sola lettura da PRIMA dell'ordine devono coincidere, al centesimo, con quelli scritti nel piede.
+function Check-Totali($o, $totali, $res) {
+    if ($null -eq $totali) { $res.Add(@{ N = "$TotaliProcedure presente"; V = 'FAIL'; D = 'nessuna lettura della routine di sola lettura' }); return }
+    foreach ($pair in @(@('totale', $totali.totale, $o.foot.totale), @('totMerce', $totali.merce, $o.foot.totMerce))) {
+        $a = $pair[1]; $b = $pair[2]
+        # La routine restituisce DECIMAL(15,2) esatto; la colonna del piede e DOUBLE e il testo del server puo mostrare un solo ulp di rumore binario
+        # (5,81 letto come 5,8100000000000005). Due importi al centesimo diversi differiscono di almeno 0,01: la tolleranza 0,000001 non nasconde nulla.
+        $same = (($null -eq $a) -and ($null -eq $b)) -or (($null -ne $a) -and ($null -ne $b) -and ([Math]::Abs([decimal]$a - [decimal]$b) -le [decimal]0.000001))
+        $res.Add(@{ N = "$TotaliProcedure = piede ($($pair[0]))"; V = $(if ($same) { 'OK' } else { 'FAIL' }); D = ("routine di sola lettura={0}; piede={1}" -f $(if ($null -eq $a) { 'NULL' } else { ([decimal]$a).ToString($inv) }), $(if ($null -eq $b) { 'NULL' } else { ([decimal]$b).ToString($inv) })) })
+    }
+}
+$script:footLines = New-Object System.Collections.Generic.List[string]
+
 function Invoke-Case($c) {
     $dir = Join-Path ([IO.Path]::GetTempPath()) ('ks-matrix-' + $PID)
     if (-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
@@ -236,12 +261,19 @@ function Invoke-Case($c) {
         $post = Get-State
         $res.Add(@{ N = 'stato dopo errore (seconda sessione)'; V = $(if (Same-State $post $script:baseline) { 'OK' } else { 'FAIL' }); D = ($post | ConvertTo-Json -Compress) })
     }
+    $totLine = $text | Where-Object { $_ -match '^TOTALI\t\{' } | Select-Object -First 1
+    $totali = $null; if ($totLine) { $totali = ($totLine.Substring(7)) | ConvertFrom-Json }
     $o = $null; if ($obsLine) { $o = ($obsLine.Substring(4)) | ConvertFrom-Json }
     $restored = $null; if ($resLine) { $restored = ($resLine.Substring(9)) | ConvertFrom-Json }
     if ($c.Expect -like 'error:*') {
         $want = $c.Expect.Substring(6)
         if ($code -ne 0 -and $errLine -and $errLine.Contains($want)) { $res.Add(@{ N = 'errore atteso'; V = 'OK'; D = $want }) }
         else { $res.Add(@{ N = 'errore atteso'; V = 'FAIL'; D = ("atteso $want; exit=$code; " + $errLine + $(if ($o) { ' (documento creato)' } else { '' })) }) }
+        if ($TotaliProcedure -and ($null -ne $c.ExpectTotale)) {
+            # La routine di sola lettura gira PRIMA dell'ordine, quindi risponde anche quando l'ordine viene rifiutato (carrello vuoto).
+            if ($null -eq $totali) { $res.Add(@{ N = "$TotaliProcedure con carrello vuoto"; V = 'FAIL'; D = 'nessuna lettura' }) }
+            else { Judge "$TotaliProcedure totale con carrello vuoto" $totali.totale ([decimal]$c.ExpectTotale) $res }
+        }
         return @{ Case = $c; Res = $res; Obs = $o; Err = $errLine }
     }
     if (-not $o) {
@@ -250,9 +282,11 @@ function Invoke-Case($c) {
         return @{ Case = $c; Res = $res; Obs = $null; Err = $errLine }
     }
     $rows = @($o.rows)
+    if ($FooterDump -and $o.foot) { $script:footLines.Add(('{0}|totale={1}|totMerce={2}|totIva={3}|totImponibile={4}' -f $c.Id, $o.foot.totale, $o.foot.totMerce, $o.foot.totIva, $o.foot.totImponibile)) }
     if ($c.Expect -eq 'observe') {
         $res.Add(@{ N = 'esito'; V = 'OSS'; D = ("documento creato: azienda={0} utente={1} listino={2} righe={3} qnt=[{4}] importo=[{5}] iva=[{6}] gross=[{7}] impegno1={8} impegno18={9} | piede imponibile={10} merce={11} iva={12} totale={13}" -f `
             $o.doc.azienda, $o.doc.utente, $o.doc.listino, $rows.Count, (($rows | ForEach-Object { $_.qnt }) -join ','), (($rows | ForEach-Object { $_.importo }) -join ','), (($rows | ForEach-Object { $_.iva }) -join ','), (($rows | ForEach-Object { $_.gross }) -join ','), $o.res1, $o.res18, $o.foot.totImponibile, $o.foot.totMerce, $o.foot.totIva, $o.foot.totale) })
+        if ($TotaliProcedure) { Check-Totali $o $totali $res }
     } else {
         $e = Get-Expected $c
         $res.Add(@{ N = 'documenti creati'; V = $(if ($o.docsDelta -eq 1) { 'OK' } else { 'FAIL' }); D = "delta=$($o.docsDelta)" })
@@ -288,6 +322,7 @@ function Invoke-Case($c) {
         Judge 'TotMerce' $o.foot.totMerce $e.TotMerce $res
         JudgeStored3 'TotIva (somma grezza, 3 decimali)' $o.foot.totIva $e.TotIvaRaw $res
         Judge 'TotaleDocumento' $o.foot.totale $e.Totale $res
+        if ($TotaliProcedure) { Check-Totali $o $totali $res }
         $ti = [decimal]$o.foot.totImponibile
         if ($c.Ins -gt 0) {
             $res.Add(@{ N = 'TotImponibile con assicurazione'; V = $(if ([Math]::Abs($ti - $e.TotImponibile) -le 0.0005) { 'OSS' } else { 'DEV' }); D = ("TotImponibile={0}; imponibile+spedizione={1}; assicurazione={2} tassata nel TotIva ma {3} in TotImponibile" -f $ti.ToString($inv), $e.TotImponibile.ToString($inv), $c.Ins, $(if ([Math]::Abs($ti - $e.TotImponibile) -le 0.0005) { 'non inclusa' } else { 'inclusa' })) })
@@ -332,6 +367,11 @@ $final = Get-State
 'FINAL_STATE_EQUALS_BASELINE=' + (Same-State $final $script:baseline) + ' ' + ($final | ConvertTo-Json -Compress)
 $all = @($results | ForEach-Object { $_.Res } | ForEach-Object { $_ })
 'MATRIX_CASES=' + $results.Count + ' CHECKS=' + $all.Count + ' OK=' + @($all | Where-Object { $_.V -eq 'OK' }).Count + ' DEV=' + @($all | Where-Object { $_.V -eq 'DEV' }).Count + ' FAIL=' + @($all | Where-Object { $_.V -eq 'FAIL' }).Count + ' OSS=' + @($all | Where-Object { $_.V -eq 'OSS' }).Count
+if ($FooterDump) {
+    if (-not [IO.Path]::IsPathRooted($FooterDump)) { throw 'FOOTER_DUMP_MUST_BE_ABSOLUTE' }
+    [IO.File]::WriteAllText($FooterDump, (($script:footLines | Sort-Object) -join "`n") + "`n", (New-Object Text.UTF8Encoding($false)))
+    'FOOTER_DUMP=' + $script:footLines.Count + ' righe in ' + $FooterDump
+}
 if ($ReportPath) {
     $lines = foreach ($r in $results) { '## ' + $r.Case.Id + ' ' + $r.Case.Title; foreach ($x in $r.Res) { '- [' + $x.V + '] ' + $x.N + ': ' + $x.D }; '' }
     [IO.File]::WriteAllText($ReportPath, ($lines -join "`n"), (New-Object Text.UTF8Encoding($false)))

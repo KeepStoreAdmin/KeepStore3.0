@@ -66,9 +66,9 @@ function Get-GuardPrivateIntroductions([string]$Root, [string]$Reference) {
 
 function Test-PrivatePublicationPath([string]$Path, [switch]$AllowApprovedSourceMigration) {
     $normalized = $Path.Replace('\','/')
-    # PO-authorized source-only exception for twelve named migration files (three four-file sets:
-    # ORDER_VAT_ID_SEMANTICS_P1_1A, ORDER_DOCUMENT_NUMBER_OUT_P0B_1A and ORDER_ROUNDING_HALF_UP_1A, the latter two under the PO's
-    # 2026-11-12 "Database autorevole" rule: numbering and rounding fixes are delivered as database migrations).
+    # PO-authorized source-only exception for sixteen named migration files (four four-file sets:
+    # ORDER_VAT_ID_SEMANTICS_P1_1A, ORDER_DOCUMENT_NUMBER_OUT_P0B_1A, ORDER_ROUNDING_HALF_UP_1A and ORDER_TOTALS_DB_SOURCE_1A, the last three
+    # under the PO's 2026-11-12 "Database autorevole" rule: numbering, rounding and totals fixes are delivered as database migrations).
     # This never exempts content scanning or publication artifacts/dumps.
     $approvedVatMigrations = @(
         'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_preflight.sql',
@@ -82,7 +82,11 @@ function Test-PrivatePublicationPath([string]$Path, [switch]$AllowApprovedSource
         'Database Taikun/Migrations/20261112_ORDER_ROUNDING_HALF_UP_1A_preflight.sql',
         'Database Taikun/Migrations/20261112_ORDER_ROUNDING_HALF_UP_1A_forward.sql',
         'Database Taikun/Migrations/20261112_ORDER_ROUNDING_HALF_UP_1A_verify.sql',
-        'Database Taikun/Migrations/20261112_ORDER_ROUNDING_HALF_UP_1A_rollback.sql'
+        'Database Taikun/Migrations/20261112_ORDER_ROUNDING_HALF_UP_1A_rollback.sql',
+        'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_preflight.sql',
+        'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_forward.sql',
+        'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_verify.sql',
+        'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_rollback.sql'
     )
     if ($AllowApprovedSourceMigration -and $normalized -cin $approvedVatMigrations) { return $false }
     return $normalized -match '(?i)(?:^|/)(?:web(?:\.[^/]+)?\.config|\.env(?:\.[^/]+)?|[^/]+\.(?:pfx|p12|key|dpapi|bak|backup|sql|log))$' -or
@@ -158,7 +162,7 @@ function Invoke-GuardSelfTest {
     }
     if(Test-PrivatePublicationPath 'web.config.example'){throw 'SECRETS_GUARD_EXAMPLE_REJECTED'}
     $migrationChecks=0
-    foreach($migrationPrefix in @('20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_','20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_','20261112_ORDER_ROUNDING_HALF_UP_1A_')){
+    foreach($migrationPrefix in @('20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_','20261112_ORDER_DOCUMENT_NUMBER_OUT_P0B_1A_','20261112_ORDER_ROUNDING_HALF_UP_1A_','20261112_ORDER_TOTALS_DB_SOURCE_1A_')){
         foreach($suffix in @('preflight','forward','verify','rollback')){
             $path='Database Taikun/Migrations/'+$migrationPrefix+$suffix+'.sql'
             if(Test-PrivatePublicationPath $path -AllowApprovedSourceMigration){throw 'SECRETS_GUARD_APPROVED_SOURCE_REJECTED'}
