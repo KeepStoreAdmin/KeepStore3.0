@@ -74,6 +74,19 @@ $cases.Add((Case 'D02' 'netto 0.333 q3' 1 @(Row -1 3 0.333)))
 $cases.Add((Case 'D03' 'netto 1.15 q1' 1 @(Row -1 1 1.15)))
 $cases.Add((Case 'D04' 'netto 0.115 q9' 1 @(Row -1 9 0.115)))
 $cases.Add((Case 'D05' 'tre righe da 0.45 con quantita distinte' 1 @((Row -1 1 0.45), (Row 18 2 0.45), (Row -1 3 0.45))))
+# R - arrotondamento sul riepilogo (ORDER-ROUNDING-HALF-UP-1A): forme reali di ordini web 2025+ e pareggi
+$cases.Add((Case 'R01' 'forma reale 2025: 5,805 netti al 22% (totale reale 7,08)' 1 @(Row -1 1 5.805)))
+$cases.Add((Case 'R02' 'forma reale 2025: 30,73262 netti + spedizione 5,33 (totale reale 44,00)' 1 @(Row -1 1 30.73262) @{ Ship = 5.33 }))
+$cases.Add((Case 'R03' 'forma reale 2025: 6,556 netti + spedizione 4,10 (totale reale 13,00)' 1 @(Row -1 1 6.556) @{ Ship = 4.1 }))
+$cases.Add((Case 'R04' 'forma reale 2025: 20,484 netti + spedizione 6,56 + pagamento 1,50 (totale reale 34,49)' 1 @(Row -1 1 20.484) @{ Ship = 6.56; Pay = 1.5 }))
+$cases.Add((Case 'R05' 'pareggio esatto 0,125 senza IVA (esente): atteso 0,13' 1 @(Row -1 1 0.125 -1 -1 702 0)))
+$cases.Add((Case 'R06' 'pareggio esatto 0,625 senza IVA (esente): atteso 0,63' 1 @(Row -1 1 0.625 -1 -1 702 0)))
+$cases.Add((Case 'R07' 'aliquote miste: 10,25 al 22% e 10,25 al 10% (totale arrotondato una volta: 23,78)' 1 @((Row -1 1 10.25), (Row 18 1 10.25 -1 -1 9010 10)) @{ Synth = @(@{ Id = 9010; Rate = 10 }) }))
+$cases.Add((Case 'R08' 'buono -3,33 con IVA 22 (totale non piu oltre il centesimo)' 1 @(Row -1 2 10) @{ BDesc = 'KS BUONO R'; BCode = 'KSR'; BTot = -3.33; BIdIva = 1; BVal = 22 }))
+$cases.Add((Case 'R09' 'netto 1,035 al 22% con spedizione 3 (totale 4,9227 -> 4,92; totale merce 1,035 -> 1,04)' 1 @(Row -1 9 0.115) @{ Ship = 3 }))
+$cases.Add((Case 'R10' 'precisione: netto 1,00409836 (otto decimali) al 22%: totale esatto 1,2249999992 -> 1,22' 1 @(Row -1 1 1.00409836)))
+$cases.Add((Case 'R11' 'precisione: spedizione 10000 con IVA vettore 1,23456% (totale esatto 10135,656 -> 10135,66)' 1 @(Row -1 1 10) @{ Ship = 10000; ShipVat = 1.23456 }))
+$cases.Add((Case 'R12' 'importo grande: 1234567,12345 netti al 22%' 1 @(Row -1 1 1234567.12345)))
 # E - costi
 $cases.Add((Case 'E01' 'spedizione 5 e pagamento 1.65 (parita browser)' 1 @(Row -1 1 10) @{ Ship = 5; Pay = 1.65 }))
 $cases.Add((Case 'E02' 'assicurazione 2 e spedizione 5' 1 @(Row -1 1 10) @{ Ins = 2; Ship = 5 }))
@@ -101,6 +114,7 @@ $cases.Add((Case 'N11' 'prenotazione parziale: TC -1 riesce, TC 18 q10 fallisce'
 $cases.Add((Case 'N12' 'quantita negativa compensata da positiva sullo stesso TC' 1 @((Row -1 -1 10), (Row -1 2 10)) @{ Expect = 'observe' }))
 $cases.Add((Case 'N13' 'costo spedizione NULL' 1 @(Row -1 1 10) @{ Ship = $null; Expect = 'observe' }))
 $cases.Add((Case 'N14' 'due righe carrello identiche (indice unico UniqueIDX di documentirighe)' 1 @((Row -1 1 10), (Row -1 1 10)) @{ Expect = 'observe' }))
+$cases.Add((Case 'N15' 'costo pagamento NULL (parita di propagazione del NULL con la routine precedente)' 1 @(Row -1 1 10) @{ Pay = $null; Expect = 'observe' }))
 
 $selected = @($cases | Where-Object { (-not $OnlyCase) -or ($_.Id -match $OnlyCase) })
 if ($ListOnly) { foreach ($c in $selected) { '{0}  {1}  [{2}]' -f $c.Id, $c.Title, $c.Expect }; "cases=" + $selected.Count; return }
@@ -164,10 +178,20 @@ function Get-Expected($c) {
     }
     $vatRaw += ([decimal]$c.Ship * [decimal]$c.ShipVat / 100) + ([decimal]$c.Ins * [decimal]$c.ShipVat / 100)
     $b = [decimal]$c.BTot
-    $total = (Round2 $imp) + (Round2 $vatRaw) + [decimal]$c.Ship + [decimal]$c.Ins + [decimal]$c.Pay + [decimal]$c.Round + $b + ($b / 100 * [decimal]$c.BVal)
+    # Regola del PO (ORDER-ROUNDING-HALF-UP-1A): somma esatta di imponibile e IVA di tutte le aliquote, arrotondata UNA volta al centesimo
+    # (terza cifra 5-9 verso l'alto, half-away-from-zero sul valore decimale esatto). Confermata dai totali reali degli ordini web 2025+.
+    $total = Round2 ($imp + $vatRaw + [decimal]$c.Ship + [decimal]$c.Ins + [decimal]$c.Pay + [decimal]$c.Round + $b + ($b / 100 * [decimal]$c.BVal))
     return @{ Rows = $rows; TotMerce = (Round2 $imp); TotIvaRaw = $vatRaw; TotImponibile = $imp + [decimal]$c.Ship; Totale = $total; Res = $res; Company = $t.Company; Listino = $t.Listino; Imp = $imp }
 }
 
+# Sottototali memorizzati con la convenzione a 3 decimali (variabili DOUBLE(15,3) della routine, che arrotondano a ogni SET): invariati dalla
+# migrazione ORDER-ROUNDING-HALF-UP-1A. Fino a 0,0011 di scarto e la convenzione (OSS), oltre e uno scarto vero (DEV fino a 0,011, poi FAIL).
+function JudgeStored3([string]$name, $obs, [decimal]$exp, $res) {
+    if ($null -eq $obs) { $res.Add(@{ N = $name; V = 'FAIL'; D = "assente (atteso $exp)" }); return }
+    $d = [Math]::Abs([decimal]$obs - $exp)
+    $v = if ($d -le 0.0005) { 'OK' } elseif ($d -le 0.0011) { 'OSS' } elseif ($d -le 0.011) { 'DEV' } else { 'FAIL' }
+    $res.Add(@{ N = $name; V = $v; D = ("osservato {0} atteso {1}" -f ([decimal]$obs).ToString($inv), $exp.ToString($inv)) })
+}
 $script:findings = New-Object System.Collections.Generic.List[string]
 function Judge([string]$name, $obs, [decimal]$exp, $res) {
     if ($null -eq $obs) { $res.Add(@{ N = $name; V = 'FAIL'; D = "assente (atteso $exp)" }); return }
@@ -262,12 +286,12 @@ function Invoke-Case($c) {
             }
         }
         Judge 'TotMerce' $o.foot.totMerce $e.TotMerce $res
-        Judge 'TotIva (somma grezza)' $o.foot.totIva $e.TotIvaRaw $res
+        JudgeStored3 'TotIva (somma grezza, 3 decimali)' $o.foot.totIva $e.TotIvaRaw $res
         Judge 'TotaleDocumento' $o.foot.totale $e.Totale $res
         $ti = [decimal]$o.foot.totImponibile
         if ($c.Ins -gt 0) {
             $res.Add(@{ N = 'TotImponibile con assicurazione'; V = $(if ([Math]::Abs($ti - $e.TotImponibile) -le 0.0005) { 'OSS' } else { 'DEV' }); D = ("TotImponibile={0}; imponibile+spedizione={1}; assicurazione={2} tassata nel TotIva ma {3} in TotImponibile" -f $ti.ToString($inv), $e.TotImponibile.ToString($inv), $c.Ins, $(if ([Math]::Abs($ti - $e.TotImponibile) -le 0.0005) { 'non inclusa' } else { 'inclusa' })) })
-        } else { Judge 'TotImponibile' $ti $e.TotImponibile $res }
+        } else { JudgeStored3 'TotImponibile (3 decimali)' $ti $e.TotImponibile $res }
         # Coerenza con quanto il cliente vede: somma dei lordi di riga arrotondati al centesimo (vista) contro il totale merce+IVA del piede.
         $sumGrossRounded = [decimal]0; $grossMissing = $false
         foreach ($r in $matched) { if ($null -ne $r.gross) { $sumGrossRounded += (Round2 ([decimal]$r.gross)) } else { $grossMissing = $true } }
@@ -278,7 +302,9 @@ function Invoke-Case($c) {
             $res.Add(@{ N = 'coerenza piede vs lordi di riga'; V = 'OSS'; D = 'lordo di riga non calcolabile dalla vista (id IVA assente nel dizionario)' })
         } else {
             $cents = [Math]::Abs($footGoods - $sumGrossRounded)
-            $res.Add(@{ N = 'coerenza piede vs somma lordi di riga arrotondati'; V = $(if ($cents -le 0.0005) { 'OK' } elseif ($cents -le 0.011) { 'DEV' } else { 'FAIL' }); D = ("merce+IVA del piede={0}; somma lordi di riga arrotondati={1}; differenza={2}" -f $footGoods.ToString($inv), $sumGrossRounded.ToString($inv), $cents.ToString($inv)) })
+            # Decisione del PO: l'arrotondamento si applica sul riepilogo del documento, non per riga. Un centesimo di differenza fra il piede
+            # e la somma dei lordi di riga arrotondati e quindi una conseguenza attesa (OSS), non un difetto; oltre il centesimo e un FAIL.
+            $res.Add(@{ N = 'coerenza piede vs somma lordi di riga arrotondati (arrotondamento sul riepilogo)'; V = $(if ($cents -le 0.0005) { 'OK' } elseif ($cents -le 0.011) { 'OSS' } else { 'FAIL' }); D = ("merce+IVA del piede={0}; somma lordi di riga arrotondati={1}; differenza={2}" -f $footGoods.ToString($inv), $sumGrossRounded.ToString($inv), $cents.ToString($inv)) })
         }
         $res.Add(@{ N = 'impegno TC -1'; V = $(if ([Math]::Abs([decimal]$o.res1 - $e.Res[-1]) -le 0.0005) { 'OK' } else { 'FAIL' }); D = "delta=$($o.res1) atteso $($e.Res[-1])" })
         $res.Add(@{ N = 'impegno TC 18'; V = $(if ([Math]::Abs([decimal]$o.res18 - $e.Res[18]) -le 0.0005) { 'OK' } else { 'FAIL' }); D = "delta=$($o.res18) atteso $($e.Res[18])" })
