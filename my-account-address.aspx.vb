@@ -30,16 +30,14 @@ Partial Class my_account_address
     Private Sub BindAddressPage()
         ClearMessage()
 
-        Dim loginId As Integer = CurrentLoginId()
-        Dim utentiId As Integer = ResolveUtentiId(loginId)
-
-        If loginId <= 0 OrElse utentiId <= 0 Then
+        Dim scope As AccountAddressScope = CurrentAddressScope()
+        If scope Is Nothing Then
             Response.Redirect("accessonegato.aspx", True)
             Return
         End If
 
-        BindMainAddress(utentiId)
-        BindAlternativeAddresses(utentiId)
+        BindMainAddress(scope)
+        BindAlternativeAddresses(scope)
     End Sub
 
     Private Function CurrentLoginId() As Integer
@@ -49,62 +47,99 @@ Partial Class my_account_address
         Return value
     End Function
 
-    Private Function ResolveUtentiId(ByVal loginId As Integer) As Integer
-        Dim utentiId As Integer = 0
-
-        Integer.TryParse(Convert.ToString(Session("UtentiId")), utentiId)
-        If utentiId <= 0 Then Integer.TryParse(Convert.ToString(Session("UTENTIID")), utentiId)
-        If utentiId <= 0 Then Integer.TryParse(Convert.ToString(Session("UtentiID")), utentiId)
-        If utentiId > 0 Then Return utentiId
-
-        Using conn As New MySqlConnection(ConnString)
-            conn.Open()
-
-            Using cmd As New MySqlCommand("SELECT u.Id FROM vlogin v INNER JOIN utenti u ON v.utentiid = u.Id WHERE v.Id = @LoginId LIMIT 1", conn)
-                cmd.Parameters.AddWithValue("@LoginId", loginId)
-                Dim raw As Object = cmd.ExecuteScalar()
-                If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
-                    Integer.TryParse(Convert.ToString(raw), utentiId)
-                End If
-            End Using
-        End Using
-
-        If utentiId > 0 Then
-            Session("UtentiId") = utentiId
-            Session("UTENTIID") = utentiId
-            Session("UtentiID") = utentiId
-        End If
-
-        Return utentiId
+    Private Function SafeInt(ByVal value As Object) As Integer
+        Try
+            If value Is Nothing OrElse value Is DBNull.Value Then Return 0
+            Dim parsed As Integer = 0
+            If Integer.TryParse(Convert.ToString(value), parsed) Then Return parsed
+        Catch
+        End Try
+        Return 0
     End Function
 
-    Private Sub BindMainAddress(ByVal utentiId As Integer)
+    ' Proprietario degli indirizzi: solo lo scope gia validato dal master per questa richiesta (stesso contratto di
+    ' my-account-edit). Nessuna ricostruzione da vlogin e nessuna scrittura in sessione: scope assente = fail-closed.
+    Private Function CurrentAddressScope() As AccountAddressScope
+        If Context Is Nothing OrElse Context.Session Is Nothing Then Return Nothing
+        Dim loginId As Integer = CurrentLoginId()
+        Dim userId As Integer = SafeInt(Session("UtentiId"))
+        Dim companyId As Integer = SafeInt(Session("AuthenticatedAziendaID"))
+        Dim priceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveSessionPriceList(Session("Listino"), Session("listino"))
+        ' Consuma solo il risultato gia pubblicato dal master Init, senza altre risoluzioni.
+        Dim tenant As StorefrontSeoTenantIdentity = TryCast(Context.Items("KeepStore.StorefrontSeoTenant"), StorefrontSeoTenantIdentity)
+        If loginId <= 0 OrElse userId <= 0 OrElse companyId <= 0 OrElse priceListId <= 0 OrElse
+           companyId <> SafeInt(Session("AziendaID")) OrElse tenant Is Nothing OrElse tenant.CompanyId <> companyId Then Return Nothing
+        Dim databaseScope As String = StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey()
+        If String.IsNullOrEmpty(databaseScope) Then Return Nothing
+        ' Contratto esatto di PageMaster.CurrentAuthenticatedScopeKey, incluso proprietario e listino.
+        Dim marker As String = databaseScope & ":" & companyId.ToString() & ":" & loginId.ToString() & ":" &
+            userId.ToString() & ":" & companyId.ToString() & ":" & priceListId.ToString()
+        If Not String.Equals(TryCast(Context.Items("KeepStore.Authentication.ValidatedScope"), String), marker, StringComparison.Ordinal) Then Return Nothing
+        Return New AccountAddressScope() With {.LoginId = loginId, .UserId = userId, .CompanyId = companyId, .Marker = marker}
+    End Function
+
+    Private Function IsAddressScopeCurrent(ByVal expected As AccountAddressScope) As Boolean
+        If expected Is Nothing Then Return False
+        Dim current As AccountAddressScope = CurrentAddressScope()
+        Return current IsNot Nothing AndAlso String.Equals(current.Marker, expected.Marker, StringComparison.Ordinal)
+    End Function
+
+    Private Sub AddAddressScopeParameters(ByVal command As MySqlCommand, ByVal scope As AccountAddressScope)
+        command.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = scope.LoginId
+        command.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = scope.UserId
+        command.Parameters.Add("@AziendaId", MySqlDbType.Int32).Value = scope.CompanyId
+    End Sub
+
+    ' Prima istruzione di ogni transazione di scrittura: blocca login e proprietario e verifica la tupla
+    ' login + utente + azienda della vetrina; senza riga nessuna istruzione successiva viene eseguita.
+    Private Function LockAddressOwner(ByVal conn As MySqlConnection, ByVal tr As MySqlTransaction, ByVal scope As AccountAddressScope) As Boolean
+        If Not IsAddressScopeCurrent(scope) Then Return False
+        Using cmd As New MySqlCommand("SELECT 1 FROM login l INNER JOIN utenti u ON l.UtentiId = u.Id WHERE l.id = @LoginId AND u.Id = @UtentiId AND u.AziendeId = @AziendaId AND u.Abilitato = 1 AND l.Abilitato = 1 LIMIT 1 FOR UPDATE", conn, tr)
+            AddAddressScopeParameters(cmd, scope)
+            Dim raw As Object = cmd.ExecuteScalar()
+            Return raw IsNot Nothing AndAlso raw IsNot DBNull.Value
+        End Using
+    End Function
+
+    Private NotInheritable Class AccountAddressScope
+        Public LoginId As Integer
+        Public UserId As Integer
+        Public CompanyId As Integer
+        Public Marker As String
+    End Class
+
+    Private Sub BindMainAddress(ByVal scope As AccountAddressScope)
         Dim dt As New DataTable()
 
-        Using conn As New MySqlConnection(ConnString)
-            conn.Open()
+        If IsAddressScopeCurrent(scope) Then
+            Using conn As New MySqlConnection(ConnString)
+                conn.Open()
 
-            Dim sql As String =
-                "SELECT " &
-                "COALESCE(RagioneSociale,'') AS RagioneSociale, " &
-                "COALESCE(CognomeNome,'') AS CognomeNome, " &
-                "COALESCE(Email,'') AS Email, " &
-                "COALESCE(Indirizzo,'') AS Indirizzo, " &
-                "COALESCE(Cap,'') AS Cap, " &
-                "COALESCE(Citta,'') AS Citta, " &
-                "COALESCE(Provincia,'') AS Provincia, " &
-                "COALESCE(Nazione,'') AS Nazione, " &
-                "COALESCE(Telefono,'') AS Telefono, " &
-                "COALESCE(Cellulare,'') AS Cellulare " &
-                "FROM utenti WHERE Id = @UtentiId LIMIT 1"
+                ' Letture con tupla completa nello stesso statement: nessuna finestra tra verifica e lettura.
+                Dim sql As String =
+                    "SELECT " &
+                    "COALESCE(u.RagioneSociale,'') AS RagioneSociale, " &
+                    "COALESCE(u.CognomeNome,'') AS CognomeNome, " &
+                    "COALESCE(u.Email,'') AS Email, " &
+                    "COALESCE(u.Indirizzo,'') AS Indirizzo, " &
+                    "COALESCE(u.Cap,'') AS Cap, " &
+                    "COALESCE(u.Citta,'') AS Citta, " &
+                    "COALESCE(u.Provincia,'') AS Provincia, " &
+                    "COALESCE(u.Nazione,'') AS Nazione, " &
+                    "COALESCE(u.Telefono,'') AS Telefono, " &
+                    "COALESCE(u.Cellulare,'') AS Cellulare " &
+                    "FROM utenti u INNER JOIN login l ON l.UtentiId = u.Id " &
+                    "WHERE u.Id = @UtentiId AND l.id = @LoginId AND u.AziendeId = @AziendaId " &
+                    "AND u.Abilitato = 1 AND l.Abilitato = 1 LIMIT 1"
 
-            Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@UtentiId", utentiId)
-                Using da As New MySqlDataAdapter(cmd)
-                    da.Fill(dt)
+                Using cmd As New MySqlCommand(sql, conn)
+                    AddAddressScopeParameters(cmd, scope)
+                    Using da As New MySqlDataAdapter(cmd)
+                        da.Fill(dt)
+                    End Using
                 End Using
             End Using
-        End Using
+        End If
 
         If dt.Rows.Count = 0 Then
             pnlMainAddress.Visible = False
@@ -128,8 +163,8 @@ Partial Class my_account_address
         litMainMobile.Text = Server.HtmlEncode(SafeRowValue(row, "Cellulare", "-"))
     End Sub
 
-    Private Sub BindAlternativeAddresses(ByVal utentiId As Integer)
-        Dim dt As DataTable = LoadAlternativeAddresses(utentiId)
+    Private Sub BindAlternativeAddresses(ByVal scope As AccountAddressScope)
+        Dim dt As DataTable = LoadAlternativeAddresses(scope)
         Dim hasDefaultAlternative As Boolean = False
 
         For Each row As DataRow In dt.Rows
@@ -146,34 +181,39 @@ Partial Class my_account_address
         rptAlternativeAddresses.DataBind()
     End Sub
 
-    Private Function LoadAlternativeAddresses(ByVal utentiId As Integer) As DataTable
+    Private Function LoadAlternativeAddresses(ByVal scope As AccountAddressScope) As DataTable
         Dim dt As New DataTable()
+
+        If Not IsAddressScopeCurrent(scope) Then Return dt
 
         Using conn As New MySqlConnection(ConnString)
             conn.Open()
 
             Dim sql As String =
                 "SELECT " &
-                "Id, " &
-                "COALESCE(RagioneSocialeA,'') AS RagioneSocialeA, " &
-                "COALESCE(NomeA,'') AS NomeA, " &
-                "COALESCE(IndirizzoA,'') AS IndirizzoA, " &
-                "COALESCE(CapA,'') AS CapA, " &
-                "COALESCE(CittaA,'') AS CittaA, " &
-                "COALESCE(ProvinciaA,'') AS ProvinciaA, " &
-                "COALESCE(Zona,'') AS Zona, " &
-                "COALESCE(TelefonoA,'') AS TelefonoA, " &
-                "COALESCE(CellulareA,'') AS CellulareA, " &
-                "COALESCE(FaxA,'') AS FaxA, " &
-                "COALESCE(Note,'') AS Note, " &
-                "COALESCE(Predefinito,0) AS Predefinito, " &
-                "COALESCE(NazioneA,'') AS NazioneA " &
-                "FROM utentiindirizzi " &
-                "WHERE UtenteId = @UtentiId " &
-                "ORDER BY COALESCE(Predefinito,0) DESC, Id ASC"
+                "a.Id AS Id, " &
+                "COALESCE(a.RagioneSocialeA,'') AS RagioneSocialeA, " &
+                "COALESCE(a.NomeA,'') AS NomeA, " &
+                "COALESCE(a.IndirizzoA,'') AS IndirizzoA, " &
+                "COALESCE(a.CapA,'') AS CapA, " &
+                "COALESCE(a.CittaA,'') AS CittaA, " &
+                "COALESCE(a.ProvinciaA,'') AS ProvinciaA, " &
+                "COALESCE(a.Zona,'') AS Zona, " &
+                "COALESCE(a.TelefonoA,'') AS TelefonoA, " &
+                "COALESCE(a.CellulareA,'') AS CellulareA, " &
+                "COALESCE(a.FaxA,'') AS FaxA, " &
+                "COALESCE(a.Note,'') AS Note, " &
+                "COALESCE(a.Predefinito,0) AS Predefinito, " &
+                "COALESCE(a.NazioneA,'') AS NazioneA " &
+                "FROM utentiindirizzi a " &
+                "INNER JOIN utenti u ON u.Id = a.UtenteId " &
+                "INNER JOIN login l ON l.UtentiId = u.Id " &
+                "WHERE a.UtenteId = @UtentiId AND l.id = @LoginId AND u.AziendeId = @AziendaId " &
+                "AND u.Abilitato = 1 AND l.Abilitato = 1 " &
+                "ORDER BY COALESCE(a.Predefinito,0) DESC, a.Id ASC"
 
             Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                AddAddressScopeParameters(cmd, scope)
                 Using da As New MySqlDataAdapter(cmd)
                     da.Fill(dt)
                 End Using
@@ -187,34 +227,33 @@ Partial Class my_account_address
         Dim addressId As Integer = 0
         Integer.TryParse(Convert.ToString(e.CommandArgument), addressId)
 
-        Dim loginId As Integer = CurrentLoginId()
-        Dim utentiId As Integer = ResolveUtentiId(loginId)
+        Dim scope As AccountAddressScope = CurrentAddressScope()
 
         If String.Equals(e.CommandName, "EditAddress", StringComparison.OrdinalIgnoreCase) Then
-            If addressId <= 0 OrElse utentiId <= 0 Then
+            If addressId <= 0 OrElse scope Is Nothing Then
                 ShowMessage("Non e stato possibile aprire la sede richiesta.", False)
                 Return
             End If
 
-            ShowEditAddressForm(utentiId, addressId)
+            ShowEditAddressForm(scope, addressId)
             Return
         End If
 
         If Not String.Equals(e.CommandName, "SetDefault", StringComparison.OrdinalIgnoreCase) Then Return
 
-        If addressId <= 0 OrElse utentiId <= 0 Then
+        If addressId <= 0 OrElse scope Is Nothing Then
             ShowMessage("Non e stato possibile aggiornare la sede predefinita.", False)
-            BindAlternativeAddresses(utentiId)
+            If scope IsNot Nothing Then BindAlternativeAddresses(scope)
             Return
         End If
 
-        If SetDefaultAlternativeAddress(utentiId, addressId) Then
+        If SetDefaultAlternativeAddress(scope, addressId) Then
             ShowMessage("Sede predefinita aggiornata correttamente.", True)
         Else
             ShowMessage("Non e stato possibile aggiornare la sede predefinita.", False)
         End If
 
-        BindAlternativeAddresses(utentiId)
+        BindAlternativeAddresses(scope)
     End Sub
 
     Protected Sub btnShowAddAddress_Click(ByVal sender As Object, ByVal e As EventArgs)
@@ -226,16 +265,14 @@ Partial Class my_account_address
         ClearMessage()
         HideAddressForm()
 
-        Dim loginId As Integer = CurrentLoginId()
-        Dim utentiId As Integer = ResolveUtentiId(loginId)
-        If utentiId > 0 Then BindAlternativeAddresses(utentiId)
+        Dim scope As AccountAddressScope = CurrentAddressScope()
+        If scope IsNot Nothing Then BindAlternativeAddresses(scope)
     End Sub
 
     Protected Sub btnSaveAddress_Click(ByVal sender As Object, ByVal e As EventArgs)
-        Dim loginId As Integer = CurrentLoginId()
-        Dim utentiId As Integer = ResolveUtentiId(loginId)
+        Dim scope As AccountAddressScope = CurrentAddressScope()
 
-        If loginId <= 0 OrElse utentiId <= 0 Then
+        If scope Is Nothing Then
             Response.Redirect("accessonegato.aspx", True)
             Return
         End If
@@ -250,9 +287,9 @@ Partial Class my_account_address
             Return
         End If
 
-        If SaveAlternativeAddress(utentiId, addressId) Then
+        If SaveAlternativeAddress(scope, addressId) Then
             HideAddressForm()
-            BindAlternativeAddresses(utentiId)
+            BindAlternativeAddresses(scope)
             ShowMessage(If(addressId > 0, "Indirizzo aggiornato correttamente.", "Indirizzo aggiunto correttamente."), True)
         Else
             pnlAddressForm.Visible = True
@@ -261,15 +298,20 @@ Partial Class my_account_address
         End If
     End Sub
 
-    Private Function SetDefaultAlternativeAddress(ByVal utentiId As Integer, ByVal addressId As Integer) As Boolean
+    Private Function SetDefaultAlternativeAddress(ByVal scope As AccountAddressScope, ByVal addressId As Integer) As Boolean
         Using conn As New MySqlConnection(ConnString)
             conn.Open()
 
             Using tr As MySqlTransaction = conn.BeginTransaction()
                 Try
+                    If Not LockAddressOwner(conn, tr, scope) Then
+                        tr.Rollback()
+                        Return False
+                    End If
+
                     Using verifyCmd As New MySqlCommand("SELECT COUNT(*) FROM utentiindirizzi WHERE Id = @Id AND UtenteId = @UtentiId", conn, tr)
-                        verifyCmd.Parameters.AddWithValue("@Id", addressId)
-                        verifyCmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                        verifyCmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = addressId
+                        verifyCmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = scope.UserId
                         Dim existsCount As Integer = Convert.ToInt32(verifyCmd.ExecuteScalar())
                         If existsCount <= 0 Then
                             tr.Rollback()
@@ -278,18 +320,23 @@ Partial Class my_account_address
                     End Using
 
                     Using resetCmd As New MySqlCommand("UPDATE utentiindirizzi SET Predefinito = 0 WHERE UtenteId = @UtentiId", conn, tr)
-                        resetCmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                        resetCmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = scope.UserId
                         resetCmd.ExecuteNonQuery()
                     End Using
 
                     Using setCmd As New MySqlCommand("UPDATE utentiindirizzi SET Predefinito = 1 WHERE Id = @Id AND UtenteId = @UtentiId", conn, tr)
-                        setCmd.Parameters.AddWithValue("@Id", addressId)
-                        setCmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                        setCmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = addressId
+                        setCmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = scope.UserId
                         If setCmd.ExecuteNonQuery() <> 1 Then
                             tr.Rollback()
                             Return False
                         End If
                     End Using
+
+                    If Not IsAddressScopeCurrent(scope) Then
+                        tr.Rollback()
+                        Return False
+                    End If
 
                     tr.Commit()
                     Return True
@@ -312,8 +359,8 @@ Partial Class my_account_address
         pnlAddressForm.Visible = True
     End Sub
 
-    Private Sub ShowEditAddressForm(ByVal utentiId As Integer, ByVal addressId As Integer)
-        Dim row As DataRow = LoadAlternativeAddressById(utentiId, addressId)
+    Private Sub ShowEditAddressForm(ByVal scope As AccountAddressScope, ByVal addressId As Integer)
+        Dim row As DataRow = LoadAlternativeAddressById(scope, addressId)
         If row Is Nothing Then
             ShowMessage("Non e stato possibile aprire la sede richiesta.", False)
             Return
@@ -367,35 +414,40 @@ Partial Class my_account_address
         Return addressId
     End Function
 
-    Private Function LoadAlternativeAddressById(ByVal utentiId As Integer, ByVal addressId As Integer) As DataRow
+    Private Function LoadAlternativeAddressById(ByVal scope As AccountAddressScope, ByVal addressId As Integer) As DataRow
         Dim dt As New DataTable()
+
+        If Not IsAddressScopeCurrent(scope) Then Return Nothing
 
         Using conn As New MySqlConnection(ConnString)
             conn.Open()
 
             Dim sql As String =
                 "SELECT " &
-                "Id, " &
-                "COALESCE(RagioneSocialeA,'') AS RagioneSocialeA, " &
-                "COALESCE(NomeA,'') AS NomeA, " &
-                "COALESCE(IndirizzoA,'') AS IndirizzoA, " &
-                "COALESCE(CapA,'') AS CapA, " &
-                "COALESCE(CittaA,'') AS CittaA, " &
-                "COALESCE(ProvinciaA,'') AS ProvinciaA, " &
-                "COALESCE(Zona,'') AS Zona, " &
-                "COALESCE(TelefonoA,'') AS TelefonoA, " &
-                "COALESCE(CellulareA,'') AS CellulareA, " &
-                "COALESCE(FaxA,'') AS FaxA, " &
-                "COALESCE(Note,'') AS Note, " &
-                "COALESCE(Predefinito,0) AS Predefinito, " &
-                "COALESCE(NazioneA,'') AS NazioneA " &
-                "FROM utentiindirizzi " &
-                "WHERE Id = @Id AND UtenteId = @UtentiId " &
+                "a.Id AS Id, " &
+                "COALESCE(a.RagioneSocialeA,'') AS RagioneSocialeA, " &
+                "COALESCE(a.NomeA,'') AS NomeA, " &
+                "COALESCE(a.IndirizzoA,'') AS IndirizzoA, " &
+                "COALESCE(a.CapA,'') AS CapA, " &
+                "COALESCE(a.CittaA,'') AS CittaA, " &
+                "COALESCE(a.ProvinciaA,'') AS ProvinciaA, " &
+                "COALESCE(a.Zona,'') AS Zona, " &
+                "COALESCE(a.TelefonoA,'') AS TelefonoA, " &
+                "COALESCE(a.CellulareA,'') AS CellulareA, " &
+                "COALESCE(a.FaxA,'') AS FaxA, " &
+                "COALESCE(a.Note,'') AS Note, " &
+                "COALESCE(a.Predefinito,0) AS Predefinito, " &
+                "COALESCE(a.NazioneA,'') AS NazioneA " &
+                "FROM utentiindirizzi a " &
+                "INNER JOIN utenti u ON u.Id = a.UtenteId " &
+                "INNER JOIN login l ON l.UtentiId = u.Id " &
+                "WHERE a.Id = @Id AND a.UtenteId = @UtentiId AND l.id = @LoginId AND u.AziendeId = @AziendaId " &
+                "AND u.Abilitato = 1 AND l.Abilitato = 1 " &
                 "LIMIT 1"
 
             Using cmd As New MySqlCommand(sql, conn)
-                cmd.Parameters.AddWithValue("@Id", addressId)
-                cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+                cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = addressId
+                AddAddressScopeParameters(cmd, scope)
                 Using da As New MySqlDataAdapter(cmd)
                     da.Fill(dt)
                 End Using
@@ -427,12 +479,19 @@ Partial Class my_account_address
         Return errors
     End Function
 
-    Private Function SaveAlternativeAddress(ByVal utentiId As Integer, ByVal addressId As Integer) As Boolean
+    Private Function SaveAlternativeAddress(ByVal scope As AccountAddressScope, ByVal addressId As Integer) As Boolean
+        Dim utentiId As Integer = If(scope Is Nothing, 0, scope.UserId)
+
         Using conn As New MySqlConnection(ConnString)
             conn.Open()
 
             Using tr As MySqlTransaction = conn.BeginTransaction()
                 Try
+                    If Not LockAddressOwner(conn, tr, scope) Then
+                        tr.Rollback()
+                        Return False
+                    End If
+
                     If addressId > 0 AndAlso Not AddressBelongsToUser(conn, tr, utentiId, addressId) Then
                         tr.Rollback()
                         Return False
@@ -450,6 +509,11 @@ Partial Class my_account_address
                         InsertAlternativeAddress(conn, tr, utentiId, forceDefault)
                     End If
 
+                    If Not IsAddressScopeCurrent(scope) Then
+                        tr.Rollback()
+                        Return False
+                    End If
+
                     tr.Commit()
                     Return True
                 Catch
@@ -465,22 +529,22 @@ Partial Class my_account_address
 
     Private Function AddressBelongsToUser(ByVal conn As MySqlConnection, ByVal tr As MySqlTransaction, ByVal utentiId As Integer, ByVal addressId As Integer) As Boolean
         Using cmd As New MySqlCommand("SELECT COUNT(*) FROM utentiindirizzi WHERE Id = @Id AND UtenteId = @UtentiId", conn, tr)
-            cmd.Parameters.AddWithValue("@Id", addressId)
-            cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+            cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = addressId
+            cmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = utentiId
             Return Convert.ToInt32(cmd.ExecuteScalar()) > 0
         End Using
     End Function
 
     Private Function CountAlternativeAddresses(ByVal conn As MySqlConnection, ByVal tr As MySqlTransaction, ByVal utentiId As Integer) As Integer
         Using cmd As New MySqlCommand("SELECT COUNT(*) FROM utentiindirizzi WHERE UtenteId = @UtentiId", conn, tr)
-            cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+            cmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = utentiId
             Return Convert.ToInt32(cmd.ExecuteScalar())
         End Using
     End Function
 
     Private Sub ResetDefaultAddresses(ByVal conn As MySqlConnection, ByVal tr As MySqlTransaction, ByVal utentiId As Integer)
         Using cmd As New MySqlCommand("UPDATE utentiindirizzi SET Predefinito = 0 WHERE UtenteId = @UtentiId", conn, tr)
-            cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+            cmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = utentiId
             cmd.ExecuteNonQuery()
         End Using
     End Sub
@@ -519,13 +583,13 @@ Partial Class my_account_address
 
         Using cmd As New MySqlCommand(sql, conn, tr)
             AddAddressParameters(cmd, utentiId, setDefault, setDefault)
-            cmd.Parameters.AddWithValue("@Id", addressId)
+            cmd.Parameters.Add("@Id", MySqlDbType.Int32).Value = addressId
             If cmd.ExecuteNonQuery() <> 1 Then Throw New InvalidOperationException("Address update failed")
         End Using
     End Sub
 
     Private Sub AddAddressParameters(ByVal cmd As MySqlCommand, ByVal utentiId As Integer, ByVal setDefault As Boolean, ByVal includeDefault As Boolean)
-        cmd.Parameters.AddWithValue("@UtentiId", utentiId)
+        cmd.Parameters.Add("@UtentiId", MySqlDbType.Int32).Value = utentiId
         cmd.Parameters.AddWithValue("@RagioneSocialeA", CleanInput(tbRagioneSocialeA.Text))
         cmd.Parameters.AddWithValue("@NomeA", CleanInput(tbNomeA.Text))
         cmd.Parameters.AddWithValue("@IndirizzoA", CleanInput(tbIndirizzoA.Text))
