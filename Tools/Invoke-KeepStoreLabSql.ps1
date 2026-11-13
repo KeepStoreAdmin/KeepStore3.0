@@ -2,6 +2,8 @@
 param(
     [Parameter(Mandatory = $true)][string]$SqlFile,
     [switch]$Write,
+    # Keeps /* ... */ comments in the statements sent to the server (the mysql client strips them by default): needed to store a routine body exactly as written.
+    [switch]$KeepComments,
     [string]$CredentialFile = (Join-Path $env:APPDATA 'KeepStore\lab-13317-claude.clixml'),
     [string]$MysqlRoot = 'C:\Temp\KeepStoreRegOrderLab-20261025\mysql',
     [string]$Schema = 'keepstore_regorder_lab_20261025',
@@ -30,6 +32,7 @@ $prefix = if ($Write) { '' } else { "SET SESSION TRANSACTION READ ONLY;`n" }
 $info = New-Object Diagnostics.ProcessStartInfo
 $info.FileName = $client
 $info.Arguments = '--protocol=TCP --host=127.0.0.1 --port=' + $Port + ' --user=' + $user + ' --ssl-mode=VERIFY_CA --ssl-ca="' + $ca + '" --connect-timeout=8 --batch --default-character-set=utf8mb4 --database=' + $Schema
+if ($KeepComments) { $info.Arguments += ' --comments' }
 $info.UseShellExecute = $false
 $info.RedirectStandardInput = $true
 $info.RedirectStandardOutput = $true

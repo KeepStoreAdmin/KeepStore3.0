@@ -1,0 +1,3 @@
+# The rollback of ORDER_CHAIN_UNIVERSAL_1A embeds the historical Carrello_Documento body byte for byte: its SHA-256 is one of the known starting texts,
+# and the body carries trailing blanks that are part of the text. Only this path is exempt from the trailing-space check of git diff --check.
+Database?Taikun/Migrations/20261113_ORDER_CHAIN_UNIVERSAL_1A_rollback.sql whitespace=-trailing-space
