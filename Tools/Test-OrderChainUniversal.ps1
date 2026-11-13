@@ -4,7 +4,8 @@ param([string]$RepositoryRoot)
 # Behavioural proof on the local LAB (shadow routines Carrello_Documento_UniLab / Carrello_Totali_UniLab): preflight, forward, verify,
 # rollback from the final state and from the partial states (Carrello_Totali only, Carrello_Documento missing), forward again, refusal cases,
 # Tools/Test-OrderSqlMatrixLab.ps1 -Procedure -TotaliProcedure and -FooterDump (footers identical to the real LAB routine at the same code level).
-# This test also mutates the sources and requires every mutation to be caught.
+# Text comparisons use a canonical form (CRLF as LF, trailing blanks and empty lines ignored): SQLyog removes the empty lines of a script, so what it stores
+# differs from the file while the code is the same (proved on a real run). This test also mutates the sources and requires every mutation to be caught.
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 if (-not $RepositoryRoot) { $RepositoryRoot = Split-Path -Parent $PSScriptRoot }
@@ -32,12 +33,16 @@ function Get-Body([string]$Sql, [string]$Name) {
 $docFinalHash = '7095b84d5a4f7cf9287d6e581f46d09626fa6e0874fd924f5efe927b52880bad'
 $totFinalHash = '68bec9adc80468dc35c73f14ec829e1b958cbc67a1240ceb4752e28cd29e5abc'
 $docAtomicHash = '0cf106a48261adcf190a52ab76630076905a70aa8d1aee6116de1db3299df394'
+# canonical forms (see CanonPs): the target texts, as observed on the PO's database after a run through SQLyog, and the three accepted starting texts
+$canonDocFinal = '3c588f7d8966e208e9030d6d96c54f7ed865dfa6f6d022713f3d911ac5d87b0a'
+$canonTotFinal = '57937c7eb1b0438bf15ddc94601ccc53df630c7b82db68421919c0345fd13da0'
 $baseHashes = @(
-    '0cf106a48261adcf190a52ab76630076905a70aa8d1aee6116de1db3299df394',
-    '892f48de889a647d75770c2286bdc4ad2d4671790ef4e22f1cbb159996e9adc2',
-    '6d50508d402d4f35e5a8918825a5e6b66b5cfdcf5e4cf5fc41697b5535b6af23',
-    '1d1bfdbeb988f546968e5a5e9a56198dd6ccb1ad1d76de3139ea0f876c199519'
+    '9030ec6c06d33db5d0a5ce455ddb953d06ccd77e37ab43775ec4ce997494618a',
+    '351380c3c211ed7701747a95bbed0148cf03f995747ce4c18d3120a6c934a055',
+    'fdc6cb6f0200113382c4c40a882320eac55bff2c3699e0af5c8ca996dc4182d4'
 )
+$canonExpr = "REGEXP_REPLACE(REGEXP_REPLACE(CONVERT(REPLACE(ROUTINE_DEFINITION,CONCAT(CHAR(13),CHAR(10)),CHAR(10)) USING utf8mb4),CONCAT('[ ',CONVERT(CHAR(9) USING utf8mb4),']*',CONVERT(CHAR(10) USING utf8mb4)),CONVERT(CHAR(10) USING utf8mb4)),CONCAT(CONVERT(CHAR(10) USING utf8mb4),'+'),CONVERT(CHAR(10) USING utf8mb4))"
+function CanonPs([string]$text) { $text = $text.Replace("`r`n", "`n"); $text = [regex]::Replace($text, '[ \t]*\n', "`n"); [regex]::Replace($text, '\n+', "`n") }
 $attestations = @('@KeepStoreRoutineBackupVerified', '@KeepStoreCheckoutQuiesced', '@KeepStoreExpectedServerUuid', '@KeepStoreExpectedDatabase')
 
 # a combined guard variable must be computed (never a constant) and must list every component
@@ -67,6 +72,9 @@ function Get-Violations([hashtable]$F) {
         if ($t -match '(?m)^SET @ks_ck_\w+=\d+;') { $v.Add($k + ': guard variable assigned a constant') }
         if ($t -match "CHAR\(13\),''") { $v.Add($k + ': removes every CR instead of CRLF pairs') }
         if (-not $t.Contains('q.CHARACTER_SET_NAME IS NOT NULL')) { $v.Add($k + ': parameter charset check missing') }
+        if (-not $t.Contains('SET @ks_ck_version=IF(VERSION() NOT LIKE ''%MariaDB%'' AND CAST(')) { $v.Add($k + ': MySQL version guard missing') }
+        if (-not $t.Contains('SHA2(' + $canonExpr + ',256)')) { $v.Add($k + ': text gate does not use the canonical form') }
+        if ($t -match 'SHA2\(ROUTINE_DEFINITION') { $v.Add($k + ': raw text hash') }
     }
     # forward: probe + Carrello_Totali + Carrello_Documento + the instruction comment; rollback: probe + restored Carrello_Documento + the instruction comment
     $slots = @{ preflight = 0; forward = 4; verify = 0; rollback = 3 }
@@ -136,11 +144,11 @@ function Get-Violations([hashtable]$F) {
     }
     if ($F['forward'] -notmatch '(?m)^SET @ks_ck_totdef=IF\(\(SELECT COUNT\(\*\).*ROUTINE_NAME IN \(''Carrello_Totali''\).*BINARY DEFINER=BINARY @ks_chain_definer\)=1,1,0\);') { $v.Add('forward: Carrello_Totali definer not checked before the DROP') }
     # the combined variables must list every component
-    $pre = @('ks_ck_doc_text', 'ks_ck_doc_attr', 'ks_ck_doc_meta', 'ks_ck_doc_dbcoll', 'ks_ck_doc_sig', 'ks_ck_totali_absent', 'ks_ck_probe_absent', 'ks_ck_t_documenti', 'ks_ck_t_pie', 'ks_ck_t_vcarrello', 'ks_ck_t_engine')
+    $pre = @('ks_ck_doc_text', 'ks_ck_doc_attr', 'ks_ck_doc_meta', 'ks_ck_doc_dbcoll', 'ks_ck_doc_sig', 'ks_ck_totali_absent', 'ks_ck_probe_absent', 'ks_ck_t_documenti', 'ks_ck_t_pie', 'ks_ck_t_vcarrello', 'ks_ck_t_engine', 'ks_ck_version')
     Test-Lists $v 'preflight' $F['preflight'] 'ks_ck_overall' $pre
     Test-Lists $v 'forward' $F['forward'] 'ks_ck_overall' ($pre + 'ks_ck_attest')
     Test-Lists $v 'forward' $F['forward'] 'ks_ck_final' @('ks_ck_doc_all', 'ks_ck_tot_all', 'ks_ck_probe_absent', 'ks_ck_definer_same', 'ks_ck_meta_same', 'ks_ck_definer_orig')
-    Test-Lists $v 'verify' $F['verify'] 'ks_ck_overall' @('ks_ck_doc_all', 'ks_ck_tot_all', 'ks_ck_probe_absent', 'ks_ck_definer_same', 'ks_ck_meta_same', 'ks_ck_t_documenti', 'ks_ck_t_pie', 'ks_ck_t_vcarrello', 'ks_ck_t_engine')
+    Test-Lists $v 'verify' $F['verify'] 'ks_ck_overall' @('ks_ck_doc_all', 'ks_ck_tot_all', 'ks_ck_probe_absent', 'ks_ck_definer_same', 'ks_ck_meta_same', 'ks_ck_t_documenti', 'ks_ck_t_pie', 'ks_ck_t_vcarrello', 'ks_ck_t_engine', 'ks_ck_version')
     Test-Lists $v 'rollback' $F['rollback'] 'ks_ck_overall' @('ks_ck_tot_all', 'ks_ck_doc_state', 'ks_ck_same_ok', 'ks_ck_probe_absent', 'ks_ck_t_documenti', 'ks_ck_t_pie', 'ks_ck_t_vcarrello', 'ks_ck_t_engine', 'ks_ck_attest')
     Test-Lists $v 'rollback' $F['rollback'] 'ks_ck_final' @('ks_ck_doc_all', 'ks_ck_totali_absent', 'ks_ck_probe_absent', 'ks_ck_definer_orig')
     foreach ($pfx in @('doc', 'tot')) {
@@ -152,7 +160,7 @@ function Get-Violations([hashtable]$F) {
     $inList = ($baseHashes | ForEach-Object { "'" + $_ + "'" }) -join ','
     foreach ($k in @('preflight', 'forward', 'rollback')) { if (-not $F[$k].Contains('IN (' + $inList + ')')) { $v.Add($k + ': starting text list differs') } }
     foreach ($k in @('forward', 'verify')) {
-        if (-not ($F[$k].Contains($docFinalHash) -and $F[$k].Contains($totFinalHash))) { $v.Add($k + ': target text hashes missing') }
+        if (-not ($F[$k].Contains($canonDocFinal) -and $F[$k].Contains($canonTotFinal))) { $v.Add($k + ': target text hashes missing') }
     }
     $v.ToArray()
 }
@@ -172,19 +180,38 @@ Assert-Contract ((Get-Body $files['forward'] 'Carrello_Documento') -ceq (Get-Bod
 $atomicBody = Get-Body $atomicSql 'Carrello_Documento'
 Assert-Contract ((Get-Body $files['rollback'] 'Carrello_Documento') -ceq $atomicBody) 'restored body equals the atomic-reservation migration body'
 
-# the four accepted starting texts are all derived from that one source body (fixtures, not independent claims)
+# the three accepted starting texts are all derived from that one source body (fixtures, not independent claims)
 $noComments = [regex]::Replace($atomicBody, '/\*[\s\S]*?\*/', '')
 $derived = @(
-    (Get-Sha256 $atomicBody),
-    (Get-Sha256 ($atomicBody -replace "\n    END$", "`nEND")),
-    (Get-Sha256 $noComments),
-    (Get-Sha256 ((($noComments -split "`n") | ForEach-Object { $_.TrimEnd() }) -join "`n"))
+    (Get-Sha256 (CanonPs $atomicBody)),
+    (Get-Sha256 (CanonPs ($atomicBody -replace "\n    END$", "`nEND"))),
+    (Get-Sha256 (CanonPs $noComments))
 )
-for ($i = 0; $i -lt 4; $i++) { Assert-Contract ($derived[$i] -ceq $baseHashes[$i]) ('accepted starting text ' + $i + ' is derived from the atomic-reservation body') }
-# a CRLF copy of the installed text hashes like the LF one; a lone CR does not
-$crlf = $atomicBody.Replace("`n", "`r`n")
-Assert-Contract ((Get-Sha256 $crlf.Replace("`r`n", "`n")) -ceq $docAtomicHash) 'CRLF text normalizes to the LF hash'
-Assert-Contract ((Get-Sha256 $atomicBody.Replace('BUONOSCONTO', "BUONO`rSCONTO").Replace("`r`n", "`n")) -cne $docAtomicHash) 'a lone CR inside the text is not hidden by the normalization'
+for ($i = 0; $i -lt 3; $i++) { Assert-Contract ($derived[$i] -ceq $baseHashes[$i]) ('accepted starting text ' + $i + ' is derived from the atomic-reservation body') }
+# the exact texts the older chain accepted (comments removed; also trailing blanks trimmed) collapse into the third form
+Assert-Contract ((Get-Sha256 $noComments) -ceq '6d50508d402d4f35e5a8918825a5e6b66b5cfdcf5e4cf5fc41697b5535b6af23') 'the comments-removed atomic body is the exact text the older chain knew as 6d50508d'
+Assert-Contract ((Get-Sha256 (CanonPs ((($noComments -split "`n") | ForEach-Object { $_.TrimEnd() }) -join "`n"))) -ceq $baseHashes[2]) 'trailing blanks trimmed collapses into the comments-removed form'
+# what SQLyog does (empty lines removed, LF) and what a Windows editor does (CRLF) must not change the canonical hash
+$totalsBodyDoc = Get-Body $totalsSql 'Carrello_Documento'
+$totalsBodyTot = Get-Body $totalsSql 'Carrello_Totali'
+$noEmpty = { param($s) (($s -split "`n") | Where-Object { $_.Length -gt 0 }) -join "`n" }
+Assert-Contract ((Get-Sha256 (CanonPs $totalsBodyDoc)) -ceq $canonDocFinal) 'canonical hash of the standard final Carrello_Documento'
+Assert-Contract ((Get-Sha256 (CanonPs $totalsBodyTot)) -ceq $canonTotFinal) 'canonical hash of the standard final Carrello_Totali'
+Assert-Contract ((Get-Sha256 (CanonPs (& $noEmpty $totalsBodyDoc))) -ceq $canonDocFinal) 'Carrello_Documento without its empty lines (as SQLyog stores it) has the same canonical hash'
+Assert-Contract ((Get-Sha256 (CanonPs (& $noEmpty $totalsBodyTot))) -ceq $canonTotFinal) 'Carrello_Totali without its empty lines (as SQLyog stores it) has the same canonical hash'
+Assert-Contract ((Get-Sha256 (CanonPs (& $noEmpty $totalsBodyDoc).Replace("`n", "`r`n"))) -ceq $canonDocFinal) 'CRLF copy has the same canonical hash'
+Assert-Contract ((Get-Sha256 (CanonPs (& $noEmpty $atomicBody))) -ceq $baseHashes[0]) 'the atomic body without its empty lines has the same canonical hash'
+# what the canonical form must NOT hide: a lone CR, a change of code, an added token
+Assert-Contract ((Get-Sha256 (CanonPs $atomicBody.Replace('BUONOSCONTO', "BUONO`rSCONTO"))) -cne $baseHashes[0]) 'a lone CR inside the text is not hidden'
+Assert-Contract ((Get-Sha256 (CanonPs $atomicBody.Replace('SET totsconto=0;', 'SET totsconto=1;'))) -cne $baseHashes[0]) 'a change of code is not hidden'
+Assert-Contract ((Get-Sha256 (CanonPs $atomicBody.Replace('SET totsconto=0;', 'SET totsconto=0; SET x=1;'))) -cne $baseHashes[0]) 'an added statement is not hidden'
+Assert-Contract ((Get-Sha256 (CanonPs $atomicBody.Replace('SET totsconto=0;', "SET totsconto=0;`n`n   "))) -ceq $baseHashes[0]) 'an added empty line and trailing blanks are ignored (not code)'
+# the canonical form would equate two different multi-line string literals: no body may have one (every line closes its quotes)
+$badLines = @()
+foreach ($bodyText in @((Get-Body $totalsSql 'Carrello_Documento'), (Get-Body $totalsSql 'Carrello_Totali'), $atomicBody)) {
+    foreach ($line in ([regex]::Replace($bodyText, '/\*[\s\S]*?\*/', '') -split "`n")) { if ((([regex]::Matches($line, "'")).Count % 2) -ne 0) { $badLines += $line.Trim() } }
+}
+Assert-Contract ($badLines.Count -eq 0) ('no body has a string literal that spans lines' + $(if ($badLines.Count) { ': ' + ($badLines -join ' | ') } else { '' }))
 
 # the files are approved by name in the secret guard
 $guard = Read-Lf 'Tools/Test-DatabaseSecretsGuard.ps1'
@@ -214,11 +241,14 @@ $mutations = [ordered]@{
     'lowercase write statement in the verify' = { param($f) $f['verify'] = $f['verify'] + "update documenti set id=id;`n"; $f }
     'attestation dropped from forward'        = { param($f) $f['forward'] = $f['forward'].Replace('@KeepStoreCheckoutQuiesced', '@KeepStoreSomething'); $f }
     'extra definer slot in the preflight'     = { param($f) $f['preflight'] = $f['preflight'] + "-- __KEEPSTORE_ORIGINAL_DEFINER__`n"; $f }
-    'starting text list shortened'            = { param($f) $f['forward'] = $f['forward'].Replace("'1d1bfdbeb988f546968e5a5e9a56198dd6ccb1ad1d76de3139ea0f876c199519'", "'x'"); $f }
+    'starting text list shortened'            = { param($f) $f['forward'] = $f['forward'].Replace("'fdc6cb6f0200113382c4c40a882320eac55bff2c3699e0af5c8ca996dc4182d4'", "'x'"); $f }
     'charset restore removed'                 = { param($f) $f['rollback'] = $f['rollback'].Replace('SET SESSION character_set_client=@ks_chain_init_cs;', ''); $f }
     'group_concat_max_len not restored'       = { param($f) $f['forward'] = $f['forward'].Replace('SET SESSION group_concat_max_len=@ks_chain_init_gcml;', ''); $f }
     'rollback keeps Carrello_Totali'          = { param($f) $f['rollback'] = $f['rollback'].Replace('DROP PROCEDURE Carrello_Totali;', ''); $f }
     'every CR removed instead of CRLF'        = { param($f) $f['preflight'] = $f['preflight'].Replace('REPLACE(ROUTINE_DEFINITION,CONCAT(CHAR(13),CHAR(10)),CHAR(10))', "REPLACE(ROUTINE_DEFINITION,CHAR(13),'')"); $f }
+    'version guard dropped from the overall'  = { param($f) $f['forward'] = $f['forward'].Replace(' AND @ks_ck_version=1', ''); $f }
+    'raw text hash instead of the canonical form' = { param($f) $f['verify'] = $f['verify'].Replace('SHA2(' + $canonExpr + ',256)', 'SHA2(ROUTINE_DEFINITION,256)'); $f }
+    'canonical form weakened (blank collapse removed)' = { param($f) $f['forward'] = $f['forward'].Replace("CONCAT(CONVERT(CHAR(10) USING utf8mb4),'+')", "CONCAT(CONVERT(CHAR(10) USING utf8mb4),'{9}')"); $f }
     'parameter charset check removed'         = { param($f) $f['verify'] = $f['verify'].Replace('q.CHARACTER_SET_NAME IS NOT NULL', 'q.CHARACTER_SET_NAME IS NULL'); $f }
     'halt-on-error instruction removed'       = { param($f) $f['forward'] = $f['forward'].Replace('Halt Execution of Queries on Error', 'x'); $f }
 }
