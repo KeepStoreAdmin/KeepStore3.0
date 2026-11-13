@@ -69,6 +69,8 @@ function Test-PrivatePublicationPath([string]$Path, [switch]$AllowApprovedSource
     # PO-authorized source-only exception for sixteen named migration files (four four-file sets:
     # ORDER_VAT_ID_SEMANTICS_P1_1A, ORDER_DOCUMENT_NUMBER_OUT_P0B_1A, ORDER_ROUNDING_HALF_UP_1A and ORDER_TOTALS_DB_SOURCE_1A, the last three
     # under the PO's 2026-11-12 "Database autorevole" rule: numbering, rounding and totals fixes are delivered as database migrations).
+    # The two read-only routine scripts in Database Taikun/Diagnostics (ROUTINE_DIAGNOSTIC_READONLY_1A, ROUTINE_EXPORT_READONLY_1A) are approved the same way:
+    # standard text, no write statement, no customer data, run by the operator on the selected database.
     # This never exempts content scanning or publication artifacts/dumps.
     $approvedVatMigrations = @(
         'Database Taikun/Migrations/20261027_ORDER_VAT_ID_SEMANTICS_P1_1A_preflight.sql',
@@ -86,7 +88,9 @@ function Test-PrivatePublicationPath([string]$Path, [switch]$AllowApprovedSource
         'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_preflight.sql',
         'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_forward.sql',
         'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_verify.sql',
-        'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_rollback.sql'
+        'Database Taikun/Migrations/20261112_ORDER_TOTALS_DB_SOURCE_1A_rollback.sql',
+        'Database Taikun/Diagnostics/20261113_ROUTINE_DIAGNOSTIC_READONLY_1A.sql',
+        'Database Taikun/Diagnostics/20261113_ROUTINE_EXPORT_READONLY_1A.sql'
     )
     if ($AllowApprovedSourceMigration -and $normalized -cin $approvedVatMigrations) { return $false }
     return $normalized -match '(?i)(?:^|/)(?:web(?:\.[^/]+)?\.config|\.env(?:\.[^/]+)?|[^/]+\.(?:pfx|p12|key|dpapi|bak|backup|sql|log))$' -or
@@ -171,6 +175,14 @@ function Invoke-GuardSelfTest {
             $migrationChecks+=3
         }
     }
+    foreach($diagnosticName in @('20261113_ROUTINE_DIAGNOSTIC_READONLY_1A.sql','20261113_ROUTINE_EXPORT_READONLY_1A.sql')){
+        $path='Database Taikun/Diagnostics/'+$diagnosticName
+        if(Test-PrivatePublicationPath $path -AllowApprovedSourceMigration){throw 'SECRETS_GUARD_APPROVED_SOURCE_REJECTED'}
+        if(-not (Test-PrivatePublicationPath $path)){throw 'SECRETS_GUARD_SQL_ARTIFACT_ACCEPTED'}
+        if(@(Find-SecretViolations ($connectionName+'='+$marker+';') $path $false).Count -eq 0){throw 'SECRETS_GUARD_APPROVED_SOURCE_SECRET_ACCEPTED'}
+        $migrationChecks+=3
+    }
+    if(-not (Test-PrivatePublicationPath 'Database Taikun/Diagnostics/other.sql' -AllowApprovedSourceMigration)){throw 'SECRETS_GUARD_OTHER_SQL_ACCEPTED'}
     if(-not (Test-PrivatePublicationPath 'Database Taikun/Migrations/other.sql' -AllowApprovedSourceMigration)){throw 'SECRETS_GUARD_OTHER_SQL_ACCEPTED'}
     Write-Output ('SECRETS_GUARD_SELFTEST_PASS checks='+($cases.Count+$privateCases.Count+2+$migrationChecks))
 }
