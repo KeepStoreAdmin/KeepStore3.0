@@ -29,7 +29,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          filter: blob:none
+          # Nessun filtro parziale (blob:none): con il repository privato il fetch pigro dei blob
+          # mancanti servirebbe credenziali, che persist-credentials: false rimuove a fine checkout
+          # (git: "Cannot prompt because user interactivity has been disabled"). Con la storia
+          # completa i gate non hanno bisogno di rete ne di credenziali dopo il checkout.
           persist-credentials: false
       - name: Validate source gates
         env:
