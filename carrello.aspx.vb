@@ -21,6 +21,17 @@ Private Const CartRecoveryCodeKey As String = "ks_cart_recovery_code"
 Private Const CartRecoveryCreatedUtcKey As String = "ks_cart_recovery_created_utc"
 Private _cartHasItems As Boolean = True
 Private _cartReadUnavailable As Boolean
+' Totali del documento: letti SOLO dalla routine di database Carrello_Totali (fonte unica). Se la routine
+' non risponde (non installata, EXECUTE mancante, errore, riga incompleta) lo stato resta "non disponibile":
+' nessun ripiego sul calcolo del web e la bozza di checkout non viene sigillata.
+Private _cartTotalsUnavailable As Boolean
+Private Const CartTotalsPlaceholder As String = "n/d"
+
+Private Enum CartTotalsOutcome
+    NotApplicable = 0
+    Ok = 1
+    Unavailable = 2
+End Enum
 
 Private Class InventoryAvailabilityDisplayLine
     Public CommercialCode As String
@@ -295,6 +306,68 @@ Private Function GenerateCheckoutToken() As String
     Return b64
 End Function
 
+' Aliquota IVA del buono: la STESSA espressione che l'ordine riceve in Ordine_BuonoScontoValoreIva.
+' Usata per lo scorporo mostrato, per gli ingressi di Carrello_Totali e per la sessione dell'ordine.
+Private Function ResolveCouponVatValue() As Double
+    Return preleva_ValoreIva(GetSessionInt("Iva_Utente", -1))
+End Function
+
+' Stessa condizione che usa ordine.aspx.vb prima di chiamare Carrello_Documento (costi azzerati per il coupon-articolo).
+Private Function IsCouponArticleOrder() As Boolean
+    Return Session("Coupon_idArticolo") IsNot Nothing AndAlso GetSessionInt("Coupon_idArticolo", 0) > 0
+End Function
+
+' Legge merce, IVA e totale dalla routine Carrello_Totali con gli STESSI ingressi che l'ordine passera a
+' Carrello_Documento (etichette e sessione normalizzate come in StoreCheckoutOrderSession). Mai un valore
+' calcolato dal web: NotApplicable per il carrello anonimo (la routine e per LoginId), Unavailable per ogni guasto.
+Private Function TryReadDbTotals(ByVal includePayment As Boolean,
+                                 ByVal includeCoupon As Boolean,
+                                 ByVal includeRounding As Boolean,
+                                 ByRef result As CartTotalsResult) As CartTotalsOutcome
+    result = Nothing
+    Dim model As CartAuthoritativeReadModel = CartAuthoritativeReadModel.GetCurrent(HttpContext.Current)
+    If model Is Nothing OrElse Not model.IsAuthenticated OrElse model.LoginId <= 0 Then Return CartTotalsOutcome.NotApplicable
+    If Not model.LoadSucceeded Then Return CartTotalsOutcome.Unavailable
+
+    Dim couponTaxable As Decimal = 0D
+    Dim couponVatValue As Decimal = 0D
+    If includeCoupon Then
+        couponTaxable = ParseDecimalForDb(If(lblBuonoSconto Is Nothing, Nothing, lblBuonoSconto.Text), 0D)
+        If couponTaxable <> 0D Then couponVatValue = CDec(ResolveCouponVatValue())
+    End If
+
+    Dim input As CartTotalsInput = CartTotalsInput.ForOrder(
+        model.LoginId,
+        ParseDecimalForDb(If(lblSpeseAss Is Nothing, Nothing, lblSpeseAss.Text), 0D),
+        ParseDecimalForDb(If(lblSpeseSped Is Nothing, Nothing, lblSpeseSped.Text), 0D),
+        If(includePayment, ParseDecimalForDb(If(lblPagamento Is Nothing, Nothing, lblPagamento.Text), 0D), 0D),
+        If(includeRounding, ParseDecimalForDb(Session("Coupon_Arrotondamento"), 0D), 0D),
+        CInt(ParseDecimalForDb(Session("AbilitatoIvaReverseCharge"), 0D)),
+        ParseDecimalForDb(Session("Iva_Vettori"), 0D),
+        couponTaxable,
+        couponVatValue,
+        IsCouponArticleOrder())
+    If CartTotalsService.TryCompute(input, result, HttpContext.Current) Then Return CartTotalsOutcome.Ok
+    Return CartTotalsOutcome.Unavailable
+End Function
+
+' Imposta IVA e totale mostrati con i valori del database. Se non disponibili mostra un segnaposto (mai zero)
+' e segna lo stato: la bozza di checkout non si sigilla (TryCaptureAuthoritativeCheckoutDraft).
+Private Sub ApplyDbTotalsToLabels()
+    Dim totals As CartTotalsResult = Nothing
+    Select Case TryReadDbTotals(True, True, True, totals)
+        Case CartTotalsOutcome.Ok
+            lblIva.Text = FormatCurrencyIt(CDbl(totals.Iva))
+            lblTotale.Text = FormatCurrencyIt(CDbl(totals.Totale))
+            Session("Calcolo_Iva") = lblIva.Text
+        Case CartTotalsOutcome.Unavailable
+            _cartTotalsUnavailable = True
+            lblIva.Text = CartTotalsPlaceholder
+            lblTotale.Text = CartTotalsPlaceholder
+            Session("Calcolo_Iva") = Nothing
+    End Select
+End Sub
+
 Private Function BuildCheckoutPayloadFingerprint(ByVal connection As MySqlConnection,
                                                   ByVal transaction As MySqlTransaction,
                                                   ByVal identity As OrderStorefrontIdentity,
@@ -362,7 +435,7 @@ Private Sub StoreCheckoutOrderSession(ByVal tipoDocumento As Integer, ByVal docu
         Session("Ordine_TotaleBuonoSconto") = couponTaxable + couponVat
         Session("Ordine_TotaleBuonoScontoImponibile") = couponTaxable
         Session("Ordine_BuonoScontoIdIva") = preleva_IdIva(GetSessionInt("Iva_Utente", -1))
-        Session("Ordine_BuonoScontoValoreIva") = preleva_ValoreIva(GetSessionInt("Iva_Utente", -1))
+        Session("Ordine_BuonoScontoValoreIva") = ResolveCouponVatValue()
         Session("Ordine_CodiceBuonoSconto") = If(TB_BuonoSconto Is Nothing, "", TB_BuonoSconto.Text)
     Else
         Session("Ordine_DescrizioneBuonoSconto") = String.Empty
@@ -444,16 +517,44 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
             HttpContext.Current, normalizedRequestId, "ValidatePayment", "passed", Nothing,
             "not-claimed", "none", "ValidatePayment")
 
-        Dim subtotal As Decimal = ParseDecimalForDb(If(lblImponibile Is Nothing, Nothing, lblImponibile.Text), 0D)
-        Dim vat As Decimal = ParseDecimalForDb(If(lblIva Is Nothing, Nothing, lblIva.Text), 0D)
         Dim shippingCost As Decimal = ParseDecimalForDb(Session("Ordine_SpeseSped"), 0D)
         Dim insuranceCost As Decimal = ParseDecimalForDb(Session("Ordine_SpeseAss"), 0D)
         Dim paymentCost As Decimal = ParseDecimalForDb(Session("Ordine_SpesePag"), 0D)
         Dim discount As Decimal = ParseDecimalForDb(If(lblBuonoSconto Is Nothing, Nothing, lblBuonoSconto.Text), 0D)
         Dim discountVat As Decimal = ParseDecimalForDb(If(lblBuonoScontoIVA Is Nothing, Nothing, lblBuonoScontoIVA.Text), 0D)
-        Dim total As Decimal = ParseDecimalForDb(Session("Ordine_Totale_Documento"), 0D)
-        Dim calculatedTotal As Decimal = subtotal + vat + shippingCost + insuranceCost + paymentCost + discount + discountVat
-        If Math.Abs(total - calculatedTotal) > 0.02D Then Return False
+
+        ' Merce, IVA e totale della bozza = valori del database (Carrello_Totali) calcolati con gli STESSI ingressi
+        ' sigillati nella bozza, cioe quelli che l'ordine passera a Carrello_Documento. Il web non somma ne arrotonda.
+        If _cartTotalsUnavailable Then
+            failureReason = CheckoutFailureReason.TechnicalTransient
+            Return False
+        End If
+        Dim totalsInput As CartTotalsInput = CartTotalsInput.ForOrder(
+            identity.LoginId,
+            insuranceCost,
+            shippingCost,
+            paymentCost,
+            ParseDecimalForDb(Session("Coupon_Arrotondamento"), 0D),
+            CInt(ParseDecimalForDb(Session("AbilitatoIvaReverseCharge"), 0D)),
+            ParseDecimalForDb(Session("Iva_Vettori"), 0D),
+            ParseDecimalForDb(Session("Ordine_TotaleBuonoScontoImponibile"), 0D),
+            ParseDecimalForDb(Session("Ordine_BuonoScontoValoreIva"), 0D),
+            IsCouponArticleOrder())
+        Dim dbTotals As CartTotalsResult = Nothing
+        If Not CartTotalsService.TryCompute(totalsInput, dbTotals, HttpContext.Current) Then
+            failureReason = CheckoutFailureReason.TechnicalTransient
+            Return False
+        End If
+        ' Il totale mostrato deve coincidere al centesimo con quello del database per gli stessi ingressi:
+        ' altrimenti il riepilogo va riletto prima di chiedere una nuova conferma.
+        Dim shownTotal As Decimal = ParseDecimalForDb(Session("Ordine_Totale_Documento"), 0D)
+        If shownTotal <> dbTotals.Totale Then
+            failureReason = CheckoutFailureReason.CartChanged
+            Return False
+        End If
+        Dim subtotal As Decimal = dbTotals.Merce
+        Dim vat As Decimal = dbTotals.Iva
+        Dim total As Decimal = dbTotals.Totale
 
         Dim couponFingerprint As String = OrderDurableIdempotencyService.ComputePayloadFingerprint(
             FingerprintDbValue(Session("Ordine_DescrizioneBuonoSconto")),
@@ -3561,18 +3662,17 @@ End Sub
     Dim impD As Double = SafeMoney(Me.lblImponibile.Text, 0)
     Dim spedD As Double = SafeMoney(Me.lblSpeseSped.Text, 0)
     Dim assD As Double = SafeMoney(Me.lblSpeseAss.Text, 0)
-    Dim buonoD As Double = SafeMoney(Me.lblBuonoSconto.Text, 0)
 
-    Dim ivaVett As Integer = GetSessionInt("Iva_Vettori", 0)
-
-    Dim ivaUtentePerc As Double = SafeDblFromText(If(Session("Iva_Utente"), "-1").ToString(), -1)
-    Dim ivaAssPerc As Double = If(ivaUtentePerc > -1, ivaUtentePerc, preleva_ValoreIva(-1))
-
-    Dim ivaCalcolata As Double = calcola_iva(spedD, ivaVett) + assD * (ivaAssPerc / 100)
-
-    Me.lblIva.Text = FormatCurrencyIt(ivaCalcolata)
-
-    Dim totBase As Double = impD + spedD + assD + ivaCalcolata
+    ' Base su cui il costo del pagamento e percentuale: merce + spedizione + assicurazione + IVA, tutti dal
+    ' database (Carrello_Totali senza costo di pagamento, buono e arrotondamento: come la base precedente).
+    Dim baseTotals As CartTotalsResult = Nothing
+    Dim totBase As Double = impD + spedD + assD
+    Select Case TryReadDbTotals(False, False, False, baseTotals)
+        Case CartTotalsOutcome.Ok
+            totBase = CDbl(baseTotals.Merce) + spedD + assD + CDbl(baseTotals.Iva)
+        Case CartTotalsOutcome.Unavailable
+            _cartTotalsUnavailable = True
+    End Select
 
     For i = 0 To gvPagamento.Rows.Count - 1
 
@@ -3657,8 +3757,8 @@ End Sub
 
     End If
 
-    Dim pagD As Double = SafeMoney(Me.lblPagamento.Text, 0)
-    Me.lblTotale.Text = FormatCurrencyIt(impD + ivaCalcolata + assD + spedD + pagD + buonoD)
+    ' IVA e totale mostrati: dal database con il costo di pagamento scelto, il buono e l'arrotondamento.
+    ApplyDbTotalsToLabels()
 
 End Sub
 
@@ -4552,18 +4652,6 @@ End Function
 
 
     Protected Sub Page_PreRenderComplete(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRenderComplete
-        Dim imponibileVal As Double = SafeDbl(lblImponibile.Text, 0)
-        Dim speseAssVal As Double = SafeDbl(lblSpeseAss.Text, 0)
-        Dim speseSpedVal As Double = SafeDbl(lblSpeseSped.Text, 0)
-        Dim pagamentoVal As Double = SafeDbl(lblPagamento.Text, 0)
-        Dim buonoVal As Double = SafeDbl(lblBuonoSconto.Text, 0)
-        Dim ivaVettoreVal As Double = SafeDbl(Session("Iva_Vettori"), 0)
-        ' IVA utente: nel carrello Ã¨ trattata come PERCENTUALE (es. 22) quando > -1
-        Dim ivaUtentePerc As Double = SafeDblFromText(If(Session("Iva_Utente"), "-1").ToString(), -1)
-        ' Per l'assicurazione: se l'utente non ha IVA propria, uso la default (preleva_ValoreIva(-1))
-        Dim ivaAssPerc As Double = If(ivaUtentePerc > -1, ivaUtentePerc, preleva_ValoreIva(-1))
-
-        
         'Nascondo i Pannelli quando non ci sono articoli nel carrello
         If (Me.gvArticoliGratis.Items.Count = 0) And (Me.Repeater1.items.Count = 0) Then
             Me.Panel_Unico.Visible = False
@@ -4605,14 +4693,6 @@ End Function
         'Aggiorno i Pagamenti ed i relativi costi
         'LeggiPagamenti()
 
-        'Conteggi dell'iva
-        Dim ivaNuova As Double = calcola_iva(speseSpedVal, ivaVettoreVal) + (speseAssVal * (ivaAssPerc / 100))
-        lblIva.Text = FormatCurrencyIt(ivaNuova)
-
-        Dim totaleDoc As Double = imponibileVal + ivaNuova + speseAssVal + speseSpedVal + pagamentoVal + buonoVal
-        lblTotale.Text = FormatCurrencyIt(totaleDoc)
-
-
         'Aggiorno il valore del Buono Sconto
         If GV_BuoniSconti.Rows.Count > 0 Then
             Dim scontoPercentuale As Label = GV_BuoniSconti.Rows(0).Cells(0).FindControl("lbl_Percentuale_BuonoSconto")
@@ -4651,8 +4731,8 @@ End Function
 AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
 
 
-            ' IVA per scorporare il buono: se l'utente ha IVA propria uso quella (percentuale), altrimenti default
-            Dim ivaBuonoPerc As Double = If(ivaUtentePerc > -1, ivaUtentePerc, preleva_ValoreIva(-1))
+            ' IVA per scorporare il buono: la stessa aliquota che l'ordine ricevera (ResolveCouponVatValue)
+            Dim ivaBuonoPerc As Double = ResolveCouponVatValue()
 
 
             Dim buonoTot As Double = SafeMoney(lblBuonoSconto.Text, 0) ' totale sconto (negativo)
@@ -4662,8 +4742,6 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
             lblBuonoScontoIVA.Text = FormatCurrencyIt(buonoIva)
             lblBuonoSconto.Text = FormatCurrencyIt(buonoImp)
 
-            lblIva.Text = FormatCurrencyIt(SafeMoney(lblIva.Text, 0) + buonoIva)
-
             Dim totBuono As Double = SafeMoney(lblBuonoSconto.Text, 0) + SafeMoney(lblBuonoScontoIVA.Text, 0)
             totSconto.Text =
             IIf(SafeDblFromText(scontoPercentuale.Text, 0) > 0,
@@ -4672,20 +4750,9 @@ AddOrReplaceMeta(Me.Page, "robots", "noindex, nofollow")
         "<br/>" & FormatCurrencyIt(totBuono)
         End If
 
-		Dim totaleTemp As Double =
-            SafeMoney(lblImponibile.Text, 0) +
-            SafeMoney(lblIva.Text, 0) +
-            SafeMoney(lblSpeseAss.Text, 0) +
-            SafeMoney(lblSpeseSped.Text, 0) +
-            SafeMoney(lblPagamento.Text, 0) +
-            SafeMoney(lblBuonoSconto.Text, 0)
-
-
-            totaleTemp = Math.Round(totaleTemp, 2, MidpointRounding.AwayFromZero)
-            lblTotale.Text = FormatCurrencyIt(totaleTemp)
- 
-
-        Session("Calcolo_Iva") = lblIva.Text
+        ' IVA e totale mostrati: dal database (Carrello_Totali), con gli stessi ingressi dell'ordine. Al passo di
+        ' conferma il totale e quello sigillato nella bozza (BindCheckoutConfirmSummary): dopo il sigillo non si ricalcola.
+        If Not IsCheckoutConfirmStep() Then ApplyDbTotalsToLabels()
 
         'Simulo il Click del tasto btCompleta
         'If Page.IsPostBack = False Then
@@ -5259,95 +5326,6 @@ End Sub
         End If
 
         Return risultato
-    End Function
-
-    Function calcola_iva(ByVal Spese_Spedizione As Double, ByVal ValoreIvaVettore As Integer) As Double
-
-    Dim tot_iva As Double = 0
-
-    ' Iva utente: qui Ã¨ trattata come PERCENTUALE (es. 22) quando > -1
-    Dim ivaUtentePerc As Double = -1
-    If Session("Iva_Utente") IsNot Nothing Then
-        ivaUtentePerc = SafeDblFromText(Session("Iva_Utente").ToString(), -1)
-    End If
-
-    Dim rcEnabled As Boolean = (GetSessionInt("AbilitatoIvaReverseCharge", 0) = 1)
-
-    ' -------------------- ARTICOLI NORMALI (Repeater1) --------------------
-    If Repeater1.Items.Count > 0 Then
-        For Each row As RepeaterItem In Repeater1.Items
-
-            Dim lblValoreIva As Label = CType(row.FindControl("lblValoreIva"), Label)
-            Dim lblIdIvaRC As Label = CType(row.FindControl("lblidIvaRC"), Label)
-            Dim lblPrezzo As Label = CType(row.FindControl("lblPrezzo"), Label)
-            Dim tbQta As TextBox = CType(row.FindControl("tbQta"), TextBox)
-
-            Dim qnt As Integer = SafeIntFromText(If(tbQta IsNot Nothing, tbQta.Text, "0"), 0)
-            If qnt <= 0 Then Continue For
-
-            Dim prezzoNetto As Double = SafeMoney(If(lblPrezzo IsNot Nothing, lblPrezzo.Text, "0"), 0)
-
-            Dim ivaPerc As Double = 0
-
-            ' Caso esenzione / IVA utente personalizzata (percentuale)
-            If ivaUtentePerc > -1 Then
-
-                ivaPerc = ivaUtentePerc
-
-            Else
-                ' Caso Reverse Charge: qui prendo il valore IVA dalla tabella IVA (id in lblIdIvaRC)
-                Dim idRc As Integer = SafeIntFromText(If(lblIdIvaRC IsNot Nothing, lblIdIvaRC.Text, "-1"), -1)
-
-                If rcEnabled AndAlso idRc <> -1 Then
-                    ivaPerc = preleva_ValoreIva(idRc)
-                Else
-                    ivaPerc = SafeDblFromText(If(lblValoreIva IsNot Nothing, lblValoreIva.Text, "0"), 0)
-                End If
-            End If
-
-            tot_iva += (prezzoNetto * qnt) * (ivaPerc / 100)
-
-        Next
-    End If
-
-    ' -------------------- ARTICOLI GRATIS (gvArticoliGratis) --------------------
-    If gvArticoliGratis.Items.Count > 0 Then
-        For Each row As RepeaterItem In gvArticoliGratis.Items
-
-            Dim lblValoreIva As Label = CType(row.FindControl("lblValoreIva"), Label)
-            Dim lblIdIvaRC As Label = CType(row.FindControl("lblidIvaRC"), Label)
-            Dim lblPrezzo As Label = CType(row.FindControl("lblPrezzo"), Label)
-            Dim tbQta As TextBox = CType(row.FindControl("tbQta"), TextBox)
-
-            Dim qnt As Integer = SafeIntFromText(If(tbQta IsNot Nothing, tbQta.Text, "0"), 0)
-            If qnt <= 0 Then Continue For
-
-            Dim prezzoNetto As Double = SafeMoney(If(lblPrezzo IsNot Nothing, lblPrezzo.Text, "0"), 0)
-
-            Dim ivaPerc As Double = 0
-
-            If ivaUtentePerc > -1 Then
-                ivaPerc = ivaUtentePerc
-            Else
-                Dim idRc As Integer = SafeIntFromText(If(lblIdIvaRC IsNot Nothing, lblIdIvaRC.Text, "-1"), -1)
-
-                If rcEnabled AndAlso idRc <> -1 Then
-                    ivaPerc = preleva_ValoreIva(idRc)
-                Else
-                    ivaPerc = SafeDblFromText(If(lblValoreIva IsNot Nothing, lblValoreIva.Text, "0"), 0)
-                End If
-            End If
-
-            tot_iva += (prezzoNetto * qnt) * (ivaPerc / 100)
-
-        Next
-    End If
-
-    ' IVA sulle spese di spedizione
-    tot_iva += Spese_Spedizione * (ValoreIvaVettore / 100)
-
-    Return Math.Round(tot_iva, 2, MidpointRounding.AwayFromZero)
-
     End Function
 
 	
