@@ -2,7 +2,7 @@
 
 Valido per **ogni database KeepStore**: stessi file, stessi passi, nessun nome di database o di cliente. Cambiano solo i valori che l'operatore legge dal preflight. Regola generale: [AGENTS](../AGENTS.md#multitenant-by-design), paragrafo «Schema unico, codice standard e universale».
 
-**Stato.** Provata sul LAB e **dal PO con SQLyog su una copia debug del suo database sul server online** (forward, verify, rollback, secondo forward, verify: vedi Masterplan `KS-DB-ORDER-CHAIN-DEBUG-REHEARSAL-1A`); **non applicata a nessun database operativo**. Ogni database richiede il via esplicito del PO. CONSEGNA SERVER SOSPESA.
+**Stato.** Provata sul LAB e **dal PO con SQLyog su una copia debug del suo database sul server online** (forward, verify, rollback, secondo forward, verify: vedi Masterplan `KS-DB-ORDER-CHAIN-DEBUG-REHEARSAL-1A`); **applicata dal PO anche a `taikun`**, il suo database funzionale sul server online (forward e verify 99 OK, poi un ordine web reale coerente: Masterplan `KS-GOV-ALIGN-PROGRAM-1A`). **Piano dal 2026-11-13 (sera):** le modifiche si applicano soltanto su `taikun` e gli altri database li allinea il programma di allineamento di Enzo, che imposta l'account esatto per ogni nome di database; questa procedura manuale resta valida per `taikun`, per le copie di prova e per un database fuori dal programma, sempre con il via esplicito del PO. CONSEGNA SERVER SOSPESA.
 
 **Ambiente provato.** MySQL 8.0.17 o successivo (obbligatorio: lo script lo controlla; LAB 8.0.46; copia debug del PO su 8.0.42 con SQLyog), routine con coppia di caratteri `utf8mb3`/`utf8mb3_general_ci` oppure `utf8mb4`/`utf8mb4_0900_ai_ci`. Su MySQL 5.7, MariaDB o altre coppie i controlli si fermano (STOP) per costruzione: la compatibilita va provata prima, non si forza.
 

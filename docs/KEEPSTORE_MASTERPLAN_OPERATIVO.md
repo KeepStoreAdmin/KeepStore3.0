@@ -1,5 +1,21 @@
 # KeepStore Masterplan Operativo
 
+## KS-GOV-ALIGN-PROGRAM-1A — 13/11/2026 — SOLO `taikun`, ALLINEAMENTO CON IL PROGRAMMA DI ENZO + DOCS
+
+**Esito: A (docs).** Nessun database operativo toccato da questa sessione (non ha connessioni al server online); nessuna scrittura sul repository del gestionale.
+
+**Decisione del PO (2026-11-13, sera).** «Cambio di programma, tutto ok»: Enzo ha sviluppato un programma di allineamento dei database; il problema del `DEFINER` e quindi risolto, perche il programma aggiorna gli altri database e mette l'account esatto per ogni nome di database. Gli aggiornamenti si fanno **solo su `taikun`**, poi il PO lancia il programma. Effetto: niente file di esecuzione per gli altri database, niente sostituzione di account da parte del PO, nessun «via» per database da chiedere a me. Regola registrata in [AGENTS](../AGENTS.md#multitenant-by-design) (paragrafo «Schema unico, codice standard e universale»). Il programma non e leggibile nel repository del gestionale (lo strumento `AutoStoredProcedure/CreaStoreProcedure` genera solo procedure `New/Mod/Del` senza `DEFINER`; l'unica maschera «Allinea» e `frmAllineaContabilita`, contabilita): cosa copia (tabelle, routine, trigger, viste) e come tratta `DEFINER`, `SQL SECURITY` e set di caratteri va chiesto prima della prossima modifica a routine.
+
+**Risultato su `taikun` (eseguito dal PO con SQLyog, serata del 2026-11-13).** Catena universale `ORDER_CHAIN_UNIVERSAL_1A`: preflight OK, forward riuscito, verify **99 OK** (testo memorizzato in forma CRLF 11.791 e 1.583 caratteri, coppia `utf8mb3` e `DEFINER` originali conservati). Poi un **ordine web reale** (documento n. 339): il numero e consecutivo e unico, la riga ha l'IVA scritta come id dell'aliquota (22%), il piede ha merce 2,70, imponibile 9,26, IVA 2,037 e totale 11,30, uguale in carrello, riepilogo e conferma (somma esatta 11,2972 arrotondata una sola volta), impegno di magazzino +1, una riga agente. Alla prima apertura nel gestionale `controllaarrotondamento` passa da 1 a 0.
+
+**Rilievo per Enzo (diagnosi dal codice del gestionale, sola lettura; da confermare con lui).** All'apertura dell'ordine web nel gestionale compare un messaggio d'errore che non dipende dalla catena: `MustRollBack` applica `ParseInv` anche a una riga di tipo `Sql`. Correzione proposta: saltare o eseguire le righe `Sql` prima della conversione. Resta anche l'eventuale verifica di `LiquidazioniCompresso` su ciascun database (nota nel Masterplan `KS-DB-ORDER-CHAIN-DEBUG-REHEARSAL-1A`).
+
+**Variante «senza account» accantonata (non integrata).** Dopo la richiesta del PO di non incorporare account nelle routine, e stata costruita e provata sul LAB una catena `v2`: routine create senza clausola `DEFINER` e con `SQL SECURITY INVOKER`, reinstallazione in `utf8mb4` anche per chi parte da `utf8mb3` con `DEFINER`, controllo che il vecchio definer abbia i privilegi sulle tabelle (riga di `mysql.db`), rollback tollerante agli stati parziali. Prove LAB: preflight, forward, verify 99 OK, rollback, stati parziali, rifiuti, matrice completa 65 casi **OK 1065 / DEV 0 / FAIL 0 / OSS 20** con piedi identici alla routine reale. Non integrata perche il piano e cambiato (programma di Enzo): resta come ripiego, non nel repository; il LAB e stato ripulito dalle routine ombra.
+
+**Limiti.** Il LAB non puo provare la semantica `INVOKER` con altri account (esiste solo l'account di lavoro). `taikun` resta la sola applicazione reale; gli altri database non hanno la catena finche il PO non lancia il programma. Nessun task successivo avviato. **CONSEGNA SERVER SOSPESA.**
+
+**Prossimo passo (NON AVVIATO).** (1) Chiedere a Enzo cosa copia il programma di allineamento e come tratta `DEFINER`, `SQL SECURITY` e set di caratteri; (2) smoke test del carrello nel browser su `taikun` (cifre e «n/d»); (3) correzioni di Enzo al gestionale; (4) database «prova» vuoto del PO portato al livello finale prima di essere duplicato.
+
 ## KS-DB-ORDER-CHAIN-DEBUG-REHEARSAL-1A — 13/11/2026 — PROVA COMPLETA SULLA COPIA DEBUG (SQLYOG), RISPOSTE PER ENZO DAL CODICE, NOTA `LiquidazioniCompresso` + DOCS
 
 **Esito: A (docs).** Nessun database operativo toccato; nessuna scrittura sul repository del gestionale.
