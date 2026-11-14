@@ -89,7 +89,6 @@ Partial Class documentidettaglio
         ' Rebind only the five document consumers, after state restoration and
         ' before postback events. Leave page ViewState and financial events intact.
         litGoogleSurveyOptIn.Text = String.Empty
-        img_bs_label.Text = String.Empty
         Try
             FormView1.DataBind()
             FormView2.DataBind()
@@ -122,7 +121,6 @@ Partial Class documentidettaglio
         GridView2.Visible = False
         Lista_Articoli.Visible = False
         litGoogleSurveyOptIn.Text = String.Empty
-        img_bs_label.Text = String.Empty
         Response.Clear()
         Response.SuppressContent = True
         ' One terminal outcome for missing, invalid, foreign and unverifiable IDs.

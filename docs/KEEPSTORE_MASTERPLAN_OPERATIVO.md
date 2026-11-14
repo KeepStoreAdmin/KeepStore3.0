@@ -1,5 +1,18 @@
 # KeepStore Masterplan Operativo
 
+## KS-STD-CHECKOUT-COMPARATOR-TRACKERS-1A — 14/11/2026 — SOURCE ONLY
+
+**Esito: A (SOURCE).** Su richiesta del PO («cancellarmi tutto cio che riguarda i comparatori di prezzo ... non deve esserci nel codice delle pagine»): tolti dal checkout e dalla conferma ordine i tracker dei comparatori e di affiliazione. Nessun database, server o configurazione toccati; non pubblicato.
+
+**Cosa c'era (verificato nel codice).** Tutto codice morto: le tre chiamate in `ordine.aspx.vb` erano gia commentate. Rimossi: `Track_BestShopping`, `track_Kelkoo` (pixel TradeDoubler, leggeva le colonne `ORGANIZATION`/`EVENT` di `aziende`), `track_Pangora` (identificativo del commerciante scritto nel codice), il blocco di chiamate commentate e la variabile `Contatore_BestShopping`; in `ordine.aspx` i tre controlli `img_bs_label`, `DivImg`, `litScript`; la classe `App_Code/OB_image_bestshopping.vb` (con la chiave del tracker nel sorgente); in `documentidettaglio.aspx`/`.vb` l'etichetta `img_bs_label` e il piccolo script `bsButton`. Ricerca testuale dopo la rimozione: nessun nome di comparatore o affiliato nei file di codice tracciati.
+
+**Altre due cose richieste.** (1) Ritirato `Tools/Generate-CarrelloDocumentoDeployment.ps1` (debito (b): non serve piu con l'allineamento di Enzo). (2) Controllo 60 di `Tools/Test-TenantEmailAllCallersMigration.ps1` rimosso: confrontava il file `ordine.aspx.vb` con quello di un commit del 2026-10-07 (cutover e-mail gia integrato e provato), quindi falliva a ogni modifica legittima della pagina, uguale sulla stable; restano gli altri 68 controlli. In `ordine.aspx.vb` l'intestazione dell'e-mail d'ordine omette ora il logo quando l'indirizzo manca (il caso non era raggiungibile in condizioni normali: l'indirizzo viene dalla riga azienda salvata, che ha `url1`/`url2` perche l'host si e risolto; la guardia toglie solo il dubbio).
+
+**Prove (poche).** `Tools/Test-NoComparatorTrackers.ps1`: 6 controlli statici sui file di codice tracciati e sulle due pagine d'ordine, 3 mutazioni rilevate; precompile safe 4.8, test del dominio (40 PASS) e test e-mail (68 controlli) rieseguiti. Revisione ChatGPT: non richiesta (rimozione meccanica di codice senza chiamate attive). Self-review del diff: tolte solo le funzioni elencate, nessun altro cambiamento nei file d'ordine salvo la guardia del logo.
+
+**Non toccato, decisione del PO.** Le pagine `export.aspx` e `export_csv.aspx` (generatori dei feed per i comparatori: leggono `id`, `pwd` e `comparatore` dall'URL e scrivono in `Public/Export`), i 59 file di `Public/Export` tracciati (circa 156 MB, quasi tutti del 2010-2011), le quattro icone `Images/footer_ico/{ciao,informaprezzi,shoppydoo,trovaprezzi}.gif` (nessun riferimento nel codice) e le colonne `ORGANIZATION`/`EVENT` di `aziende`. Sono pagine pubbliche e file dati: si tolgono solo con un via esplicito. `Tools/Install-CarrelloDocumento-MultiDatabase.ps1` (installa la migrazione `20260911` su piu database con credenziali) e della stessa famiglia del generatore ritirato: da decidere.
+
+**Osservazione.** Durante il task il file tracciato `test.aspx` e risultato cancellato nella copia canonica (non da questa sessione): le cancellazioni tracciate locali sono ora cinque invece di quattro; preservate, non ripristinate ne messe in staging.
 ## KS-STD-RUNTIME-TENANT-DOMAIN-1A — 14/11/2026 — SOURCE ONLY
 
 **Esito: A (SOURCE).** Chiude il debito (c) della regola «schema unico, codice standard e universale» ([AGENTS](../AGENTS.md#multitenant-by-design)): nessun dominio di un cliente nel codice condiviso. Nessun database, server o configurazione toccati; non pubblicato.

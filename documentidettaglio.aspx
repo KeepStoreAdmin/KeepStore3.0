@@ -373,22 +373,6 @@
     </asp:Repeater>
     
     
-    <!-- Tracking per Bestshopping -->
-    <asp:Label ID="img_bs_label" runat="server"></asp:Label>
-    
-    <script type="text/javascript">
-        //check if the browser support HTML5 postmessage
-        if (typeof BrowserEnabled === "undefined") {
-            var BrowserEnabled = true;
-        }
-        if (!BrowserEnabled) {
-            var bsButton = document.getElementById("bsButton");
-            if (bsButton) {
-                bsButton.innerHTML = "HTML5 is not suported by your browser!";
-            }
-        }
-    </script>
-
     <asp:Literal ID="litGoogleSurveyOptIn" runat="server"></asp:Literal>
 </asp:Content>
 

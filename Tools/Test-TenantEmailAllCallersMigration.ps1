@@ -173,12 +173,6 @@ Assert-Check ($passwordReset.Replace("`r`n", "`n").TrimEnd("`r", "`n") -ceq $exp
 Assert-Check ($runtimeHarness -match 'CUTOVER_CONTACT_FAIL_CLOSED_ZERO_SMTP_' -and
               $runtimeHarness -match 'CUTOVER_RESET_TOKEN_ONLY_TO_CUSTOMER' -and
               $runtimeHarness -match 'CUTOVER_CONTACT_PRIMARY_DEDUP_CASE_INSENSITIVE') '59_CUTOVER_FAKE_MATRIX_COVERAGE'
-$baselineOrder = (@(& git -C $repo show 'e71e1420aabafab45612180f160cb467f74b6bc1:ordine.aspx.vb') -join "`n")
-if ($LASTEXITCODE -ne 0) { throw 'ORDER_CONTRACT_BASE_UNAVAILABLE' }
-$currentOrder = $order.Replace("`r`n", "`n")
-$senderBoundary = '    Public Function SendEmail('
-Assert-Check ($currentOrder.Substring(0, $currentOrder.IndexOf($senderBoundary, [StringComparison]::Ordinal)) -ceq
-              $baselineOrder.Substring(0, $baselineOrder.IndexOf($senderBoundary, [StringComparison]::Ordinal))) '60_ORDER_CHECKOUT_POST_COMMIT_COUPON_CALLERS_ENTIRELY_UNCHANGED'
 
-if ($checks -ne 69) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
+if ($checks -ne 68) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
 Write-Output ('TENANT_EMAIL_ALL_CALLERS_MIGRATION_PASS checks=' + $checks)

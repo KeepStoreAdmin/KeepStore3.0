@@ -242,11 +242,6 @@
                             </div>
                         </asp:Panel>
 
-                    <div class="order-detail-wrap">
-                        <asp:Label ID="img_bs_label" runat="server" />
-                        <div runat="server" id="DivImg"></div>
-                        <asp:Literal runat="server" ID="litScript"></asp:Literal>
-                    </div>
 
             </div>
         </div>

@@ -16,7 +16,14 @@ $harnessPath = Join-Path $PSScriptRoot 'EmailTemplateTenantDomainHarness.vb'
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('KeepStoreTenantDomain-' + [Guid]::NewGuid().ToString('N'))
 $customerDomain = 'taikun' + '.it'
 
-function Read-Repo([string]$relativePath) { return [IO.File]::ReadAllText((Join-Path $repoRoot $relativePath)) }
+function Read-Repo([string]$relativePath) {
+    $full = Join-Path $repoRoot $relativePath
+    if (Test-Path -LiteralPath $full) { return [IO.File]::ReadAllText($full) }
+    # file tracciato cancellato in locale (eccezione protetta): si legge la versione del commit
+    $blob = @(& git -C $repoRoot show ('HEAD:' + $relativePath.Replace('\', '/')))
+    if ($LASTEXITCODE -ne 0) { throw ('FILE_NOT_AVAILABLE=' + $relativePath) }
+    return ($blob -join "`n")
+}
 
 function Assert-Source([bool]$condition, [string]$code) {
     if (-not $condition) { throw $code }

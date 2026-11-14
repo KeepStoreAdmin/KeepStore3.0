@@ -30,7 +30,6 @@ End Sub
     Const _Tls12 As SslProtocols = DirectCast(&HC00, SslProtocols)
     Const Tls12 As SecurityProtocolType = DirectCast(_Tls12, SecurityProtocolType)
 
-    Dim Contatore_BestShopping As Integer = 0
 
     Public firstName As String
     Public lastName As String
@@ -1202,20 +1201,6 @@ CheckoutFailureRecoveryService.TracePhase(
                     pOut.Value = documento_memorizzato
                     cmd.Parameters.Add(pOut)
 
-                    ' Tracking esterni: lasciati come nel tuo file (commentati)
-                    Try
-                        Dim NAME As String = ""
-                        Dim PRICES As String = ""
-                        Dim UNITS As String = ""
-                        Dim valore As Decimal = 0
-                        Dim quantita As Decimal = 0
-
-                        'Track_BestShopping(numDoc_tracking)
-                        'track_Kelkoo(numDoc_tracking, valore, quantita, NAME, PRICES, UNITS)
-                        'track_Pangora(numDoc_tracking, quantita, valore, NAME, PRICES, UNITS)
-                    Catch
-                    End Try
-
                     cmd.ExecuteNonQuery()
 
                     NumDoc = 0
@@ -2228,9 +2213,11 @@ CheckoutFailureRecoveryService.TracePhase(
 
         Dim sb As New StringBuilder()
         sb.Append("<section class=""ks-order-company-header"">")
-        sb.Append("<div class=""ks-order-company-logo"">")
-        sb.Append("<img src=""").Append(H(logoUrl)).Append(""" alt=""").Append(H(FirstNonEmpty(companyName, "Logo azienda"))).Append(""" />")
-        sb.Append("</div>")
+        If Not String.IsNullOrWhiteSpace(logoUrl) Then
+            sb.Append("<div class=""ks-order-company-logo"">")
+            sb.Append("<img src=""").Append(H(logoUrl)).Append(""" alt=""").Append(H(FirstNonEmpty(companyName, "Logo azienda"))).Append(""" />")
+            sb.Append("</div>")
+        End If
         sb.Append("<div class=""ks-order-company-title"">")
         If Not String.IsNullOrWhiteSpace(companyName) Then
             sb.Append("<h4>").Append(H(companyName)).Append("</h4>")
@@ -2863,113 +2850,6 @@ CheckoutFailureRecoveryService.TracePhase(
         Return value.Contains("paypal") OrElse value.Contains("carta") OrElse value.Contains("banca sella") OrElse value.Contains("online")
     End Function
 
-    ' --- Tracking: lasciati, ma con una correzione di base sulla query del carrello (parametrizzata) ---
-    Private Sub track_Kelkoo(ByVal orderNumber As String, ByRef orderValue As Decimal, ByRef qta As Decimal, ByRef N As String, ByRef P As String, ByRef U As String)
-        Try
-            Dim organization As String = ""
-            Dim currency As String = "EUR"
-            Dim eventId As String = ""
-            Dim reportInfo As String = ""
-
-            Dim conn As MySqlConnection = New MySqlConnection
-            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            conn.Open()
-
-            Dim cmdD As New MySqlCommand
-            cmdD.Connection = conn
-
-            cmdD.CommandText = "SELECT QNT, DESCRIZIONE1, PREZZO, PREZZOIVATO FROM carrello WHERE loginid = ?loginid"
-            cmdD.Parameters.AddWithValue("?loginid", GetSessionLong("LoginId", 0))
-            Dim drReport As MySqlDataReader = cmdD.ExecuteReader()
-
-            While drReport.Read
-                reportInfo &= "f1=" & drReport.Item("QNT") & "&f2=" & drReport.Item("DESCRIZIONE1") & "&f3=" & drReport.Item("PREZZOIVATO").ToString().Replace(",", ".") & "|"
-                orderValue += CType(drReport.Item("PREZZOIVATO"), Decimal)
-                qta += CType(drReport.Item("QNT"), Decimal)
-
-                If N.Length > 0 Then N &= ","
-                N &= drReport.Item("DESCRIZIONE1")
-
-                If P.Length > 0 Then P &= ","
-                P &= drReport.Item("PREZZOIVATO").ToString().Replace(",", ".")
-
-                If U.Length > 0 Then U &= ","
-                U &= drReport.Item("QNT")
-            End While
-
-            drReport.Close()
-
-            If reportInfo.Length > 0 Then
-                reportInfo = reportInfo.Substring(0, reportInfo.Length - 1)
-            End If
-            reportInfo = Server.UrlEncode(reportInfo)
-
-            Dim ReviewStr As String
-
-            cmdD.Parameters.Clear()
-            cmdD.CommandType = CommandType.Text
-
-            Dim SQL As String = ""
-            SQL = " SELECT UTENTI.RAGIONESOCIALE, UTENTI.COGNOMENOME, UTENTI.EMAIL, UTENTI.AZIENDEID, AZIENDE.ORGANIZATION, AZIENDE.EVENT " &
-                  " FROM UTENTI INNER JOIN AZIENDE ON UTENTI.AZIENDEID = AZIENDE.ID " &
-                  " WHERE UTENTI.Id = ?utentiId"
-
-            cmdD.CommandText = SQL
-            cmdD.Parameters.AddWithValue("?utentiId", GetSessionLong("UTENTIID", 0))
-            Dim drD As MySqlDataReader = cmdD.ExecuteReader()
-
-            Dim Nome As String = ""
-            Dim mail As String = ""
-
-            If drD.Read Then
-                If drD.Item("COGNOMENOME").ToString().Length = 0 Then
-                    Nome = drD.Item("RAGIONESOCIALE").ToString()
-                Else
-                    Nome = drD.Item("COGNOMENOME").ToString() & " " & drD.Item("RAGIONESOCIALE").ToString()
-                End If
-
-                mail = drD.Item("EMAIL").ToString()
-                organization = drD.Item("ORGANIZATION").ToString()
-                eventId = drD.Item("EVENT").ToString()
-            End If
-
-            cmdD.Dispose()
-            drD.Close()
-            conn.Close()
-
-            Dim dataSpedizione As Date = DateAdd(DateInterval.Day, 10, Date.Now)
-            Dim DATA As String = CType(Format(dataSpedizione, "yyyy-MM-dd"), String)
-
-            ReviewStr = "name=" & Nome & "&email=" & mail & "&expDeliveryDate=" & DATA
-            ReviewStr = Server.UrlEncode(ReviewStr)
-
-            DivImg.InnerHtml = "<img src='http://tbs.tradedoubler.com/report?organization=" & organization & "&event=" & eventId & "&orderNumber=" & orderNumber & "&orderValue=" & CType(orderValue, Decimal).ToString().Replace(",", ".") & "&currency=" & currency & "&reportInfo=" & reportInfo & "&review=" & ReviewStr & "'/>"
-        Catch
-        End Try
-    End Sub
-
-    Private Sub track_Pangora(ByVal orderId As String, ByVal qta As Decimal, ByVal orderValue As Decimal, ByRef N As String, ByRef P As String, ByRef U As String)
-        Try
-            Me.litScript.Text = "<!-- Pangora Sales Tracking Script V 1.0.0 - All rights reserved -->"
-            Me.litScript.Text &= "<script language='JavaScript'>"
-            Me.litScript.Text &= "  var pg_pangora_merchant_id='36904';"
-            Me.litScript.Text &= "  var pg_order_id='" & orderId & "';"
-            Me.litScript.Text &= "  var pg_cart_size='" & CType(qta, Decimal).ToString().Replace(",", ".") & "';"
-            Me.litScript.Text &= "  var pg_cart_value='" & CType(orderValue, Decimal).ToString().Replace(",", ".") & "';"
-            Me.litScript.Text &= "  var pg_currency='EUR';"
-            Me.litScript.Text &= "  var pg_product_name='" & N & "';"
-            Me.litScript.Text &= "  var pg_product_price='" & P & "';"
-            Me.litScript.Text &= "  var pg_product_units='" & U & "';"
-            Me.litScript.Text &= "</script>"
-            Me.litScript.Text &= "<script language='JavaScript' src='https://clicks.pangora.com/sales-tracking/salesTracker.js'>"
-            Me.litScript.Text &= "</script>"
-            Me.litScript.Text &= "<noscript>"
-            Me.litScript.Text &= "  <img src='https://clicks.pangora.com/sales-tracking/36904/salesPixel.do'/>"
-            Me.litScript.Text &= "</noscript>"
-        Catch
-        End Try
-    End Sub
-
     Private Sub set_check_documento_pie(ByVal idDocumento As Integer)
         Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
             conn.Open()
@@ -2989,44 +2869,6 @@ CheckoutFailureRecoveryService.TracePhase(
                 cmd.ExecuteNonQuery()
             End Using
         End Using
-    End Sub
-
-    Private Sub Track_BestShopping(ByVal numero_documento As Long)
-        Try
-            Dim tr, sc
-            Dim cont = 0
-            Dim pa(cont, 3)
-
-            Dim conn As MySqlConnection = New MySqlConnection
-            conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            conn.Open()
-
-            Dim cmdD As New MySqlCommand
-            cmdD.Connection = conn
-            cmdD.CommandText = "SELECT ArticoliId, Codice, QNT, DESCRIZIONE1, PREZZO, PREZZOIVATO FROM carrello WHERE loginid = ?loginid"
-            cmdD.Parameters.AddWithValue("?loginid", GetSessionLong("LoginId", 0))
-            Dim drReport As MySqlDataReader = cmdD.ExecuteReader()
-
-            While drReport.Read
-                cont += 1
-                ReDim pa(cont, 3)
-                pa(cont - 1, 0) = drReport.Item("Codice")
-                pa(cont - 1, 1) = drReport.Item("PREZZOIVATO").ToString()
-                pa(cont - 1, 2) = drReport.Item("QNT").ToString()
-            End While
-
-            drReport.Close()
-
-            tr = numero_documento
-            sc = GetSessionDouble("Ordine_SpeseSped", 0) * ((GetSessionDouble("Iva_Vettori", 0) / 100) + 1)
-
-            Dim img_bs As Object
-            img_bs = New OB_image_bestshopping()
-            img_bs_label.Text = img_bs.WriteImage(pa, tr, sc)
-
-            conn.Close()
-        Catch
-        End Try
     End Sub
 
     Function recupera_stato_default_Documento(ByVal TipoDocumento As Integer,
