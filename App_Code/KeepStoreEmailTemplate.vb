@@ -147,15 +147,17 @@ Public NotInheritable Class KeepStoreEmailLogo
     End Function
 
     Private Shared Function CombineHttpsBaseUrl(ByVal siteUrl As String, ByVal path As String) As String
+        ' Nessun ripiego su un dominio fisso: la base arriva sempre dalla vetrina risolta dal chiamante.
+        ' Base vuota o non sicura -> nessun URL (il renderer omette l'immagine).
         Dim baseUrl As String = If(siteUrl, "").Trim()
         If baseUrl = "" Then
-            baseUrl = "https://www.taikun.it"
+            Return ""
         End If
 
         If baseUrl.StartsWith("//", StringComparison.Ordinal) OrElse
            baseUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
            baseUrl.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
-            baseUrl = "https://www.taikun.it"
+            Return ""
         End If
 
         If baseUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then
@@ -646,7 +648,14 @@ Public NotInheritable Class KeepStoreEmailRenderer
         sb.Append("<table role=""presentation"" width=""640"" cellspacing=""0"" cellpadding=""0"" style=""width:100%;max-width:640px;background:#ffffff;border:1px solid #dde5ec;border-radius:8px;overflow:hidden;"">")
         sb.Append("<tr><td style=""padding:24px 32px;border-bottom:1px solid #e7ebef;background:#ffffff;"">")
         sb.Append("<table role=""presentation"" width=""100%"" cellspacing=""0"" cellpadding=""0""><tr>")
-        sb.Append("<td align=""left"" style=""vertical-align:middle;""><img src=""").Append(Attr(logoPath)).Append(""" alt=""").Append(Attr(companyName)).Append(""" style=""display:block;max-width:190px;max-height:78px;height:auto;border:0;outline:none;text-decoration:none;""></td>")
+        sb.Append("<td align=""left"" style=""vertical-align:middle;"">")
+        If Not String.IsNullOrWhiteSpace(logoPath) Then
+            sb.Append("<img src=""").Append(Attr(logoPath)).Append(""" alt=""").Append(Attr(companyName)).Append(""" style=""display:block;max-width:190px;max-height:78px;height:auto;border:0;outline:none;text-decoration:none;"">")
+        Else
+            ' Senza base URL della vetrina il logo non ha un indirizzo affidabile: si mostra il nome dell'azienda.
+            sb.Append("<span style=""font-size:20px;line-height:26px;font-weight:bold;color:#17212b;"">").Append(Html(companyName)).Append("</span>")
+        End If
+        sb.Append("</td>")
         If Not String.IsNullOrWhiteSpace(model.StatusBadge) Then
             sb.Append("<td align=""right"" style=""vertical-align:middle;""><span style=""display:inline-block;padding:7px 11px;border-radius:999px;background:#eef5ff;color:#175aa6;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;"">").Append(Html(model.StatusBadge)).Append("</span></td>")
         End If
