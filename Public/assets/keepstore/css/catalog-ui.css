@@ -2642,3 +2642,103 @@
   #ksCatalogPage .ks-dept-tile,
   #ksCatalogPage .ks-dept-more-summary { border-color: ButtonText; }
 }
+
+/* ===== Card prodotto: meno riquadri, una sola casella (KS-A03-CARDS-1A) =====
+   Solo la griglia predefinita (layout-tabgrid-1): le viste compatta e lista restano invariate.
+   Markup, acquisto multiplo, quantita e carrello invariati: cambia soltanto la presentazione. */
+/* !important solo su questo peso: la classe del tema .fw-medium lo impone a 500 con !important */
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .price-wrap .new-price {
+  font-size: 22px;
+  font-weight: 700 !important;
+  line-height: 26px;
+}
+
+/* Disponibilita e codice: una riga senza riquadri (a capo se non entrano) */
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .list-computer-memory {
+  align-items: center;
+  gap: 4px 10px;
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .list-computer-memory li {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .list-computer-memory li + li .caption {
+  color: var(--gray-2, #73787d);
+}
+
+/* Riga di acquisto senza riquadro (il riquadro verde "gia nel carrello" resta) */
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .box-infor-detail > .ks-card-purchase-actions {
+  padding: 0;
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .box-infor-detail > .ks-card-purchase-actions.ks-cart-qty-present,
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .box-infor-detail > .ks-card-purchase-actions:has(.ks-cart-qty-input-present) {
+  padding: 7px 8px;
+  border-color: rgba(19, 140, 64, 0.2);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(19, 140, 64, 0.08), rgba(19, 140, 64, 0.035));
+  box-shadow: 0 8px 20px rgba(19, 140, 64, 0.08);
+}
+
+/* Una sola casella "Seleziona": via l'icona decorativa impilata, resta la casella vera */
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input::before,
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input::after {
+  content: none;
+  display: none;
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary-2, #D80027);
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: 2px;
+}
+
+#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input label {
+  margin: 0;
+  padding-block: 7px;
+  color: var(--text-4, #40484E);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Mobile: l'etichetta (che attiva la casella) e alta 44px e si estende sotto la casella */
+@media (max-width: 1199.98px) {
+  #ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input input[type="checkbox"] {
+    position: relative;
+    z-index: 1;
+  }
+
+  #ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .ks-card-purchase-actions > .form-check-input label {
+    margin-left: -26px;
+    padding: 13px 0 13px 26px;
+  }
+}
