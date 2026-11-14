@@ -74,7 +74,7 @@ function Test-MobileHitArea([string]$css) {
     return ($b -match '(?s)@media \(max-width: 1199\.98px\) \{.*input\[type="checkbox"\] \{\s*position: relative;\s*z-index: 1;.*\.form-check-input label \{\s*margin-left: -26px;\s*padding: 13px 0 13px 26px;')
 }
 function Test-CacheBuster([string]$aspx) {
-    return ($aspx -match 'css/catalog-ui\.css"\) %>\?v=20261114-cards1a')
+    return ($aspx -match 'css/catalog-ui\.css"\) %>\?v=20261114-(?:cards1a|deadcode-c1a)')
 }
 
 # ---- 1) sorgente reale --------------------------------------------------------
@@ -112,7 +112,7 @@ $m = Mutate-Text $cat 'input[type="checkbox"]:focus-visible {' 'input[type="chec
 Assert-Detected (Test-Checkbox $m) 'M10_KEYBOARD_FOCUS_NOT_VISIBLE'
 $m = Mutate-Text $cat '  margin-left: -26px;' '  margin-left: 0;' 'M11'
 Assert-Detected (Test-MobileHitArea $m) 'M11_MOBILE_TOUCH_TARGET_NOT_44PX'
-$m = Mutate-Text $aspx 'css/catalog-ui.css") %>?v=20261114-cards1a' 'css/catalog-ui.css") %>?v=20261114-dept-nav1a' 'M12'
+$m = Mutate-Text $aspx 'css/catalog-ui.css") %>?v=20261114-deadcode-c1a' 'css/catalog-ui.css") %>?v=20261114-dept-nav1a' 'M12'
 Assert-Detected (Test-CacheBuster $m) 'M12_CACHE_BUSTER_NOT_UPDATED'
 
 Write-Output 'CATALOG_CARDS_SIMPLIFIED_OK'

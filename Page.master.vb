@@ -414,16 +414,7 @@ Partial Class PageMaster
 
 
 
-    ' Helper: safely add controls to <head> (works even if Header is missing)
-    Private Sub AddToHeader(ByVal c As Control)
-        Try
-            If c Is Nothing Then Exit Sub
-            If Me.Page Is Nothing OrElse Me.Page.Header Is Nothing Then Exit Sub
-            Me.Page.Header.Controls.Add(c)
-        Catch
-            ' no-op
-        End Try
-    End Sub' ============================================================
+' ============================================================
 ' SEO JSON-LD (iniettato dalle pagine contenuto tramite SeoBuilder)
 ' ============================================================
 Private _seoJsonLd As String = String.Empty
@@ -665,49 +656,9 @@ Dim IvaTipo As Integer
         Return stringa
     End Function
 
-    Protected Sub rptNavCategorie_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-        If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
-            Dim c As NavCategoriaItem = TryCast(e.Item.DataItem, NavCategoriaItem)
-            If c Is Nothing Then Exit Sub
-
-            Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavTipologie"), Repeater)
-            If rpt IsNot Nothing Then
-                rpt.DataSource = c.Tipologie
-                rpt.DataBind()
-            End If
-        End If
-    
-    End Sub
     '==========================================================
     ' NAVBAR: Settori/Categorie/Tipologie (abilitati)
     '==========================================================
-    Private Sub BindNavSettori()
-        Try
-            If FindCtrl(Of Literal)("litDesktopCatalogMegaMenu") IsNot Nothing OrElse FindCtrl(Of Repeater)("rptNavSettoriMobile") IsNot Nothing Then
-                Return
-            End If
-
-            Dim data As List(Of NavSettoreItem) = LoadNavSettori()
-
-            Dim rpt As Repeater = FindCtrl(Of Repeater)("rptNavSettori")
-            If rpt IsNot Nothing Then
-                rpt.DataSource = data
-                rpt.DataBind()
-            End If
-
-            ' Mobile menu (stessa gerarchia)
-            Dim rptM As Repeater = FindCtrl(Of Repeater)("rptNavSettoriMobile")
-            If rptM IsNot Nothing Then
-                rptM.DataSource = data
-                rptM.DataBind()
-            End If
-
-        Catch ex As Exception
-            'Fail-safe: non bloccare la pagina per un errore menu
-        End Try
-    End Sub
-
-
     '==========================================================
     ' INIT: azienda, catalogo, popup, sfondo
     '==========================================================
@@ -906,8 +857,6 @@ End If
                 "ORDER BY Expr1"
         End If
     
-        'Navbar settori (abilitati)
-        BindNavSettori()
 End Sub
 
     '==========================================================
@@ -1486,105 +1435,6 @@ End Function
         ImpostaTemplate()
     End Sub
 
-    Public Sub CreaVistaPromo()
-        Dim dr As MySqlDataReader
-        Dim Data As Date = System.DateTime.Today
-        Dim strSelect As String = "SELECT id "
-        Dim strSelect2 As String
-        Dim strFrom As String = "FROM articoli WHERE Abilitato=1 AND NoPromo=0 "
-        Dim strWhere As String
-        Dim MarcheID As String
-        Dim SettoriId As String
-        Dim CategorieId As String
-        Dim TipologieId As String
-        Dim GruppiId As String
-        Dim SottoGruppiId As String
-        Dim ArticoliId As String
-
-        conn.Open()
-
-        cmd.CommandType = CommandType.Text
-
-        cmd.CommandText = "Delete from voffertearticoli"
-        cmd.ExecuteNonQuery()
-
-        cmd.CommandText = "SELECT DISTINCT Id, MarcheID, SettoriId, CategorieId, TipologieId, GruppiId, SottoGruppiId, ArticoliId, OfferteId" &
-                          ", Descrizione, Immagine, DataInizio, DataFine, DaListino, AListino, QntMinima, Multipli, Prezzo, Sconto " &
-                          "FROM voffertedettagli " &
-                          "WHERE ('" & Format(Date.Today, "yyyyMMdd") & "' between datainizio and datafine) and Abilitato=1 ORDER BY OfferteId, id"
-
-        dr = cmd.ExecuteReader()
-
-        Dim cmd2 As MySqlCommand = New MySqlCommand()
-        Dim conn3 As New MySqlConnection
-        conn3.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-        conn3.Open()
-        cmd2.Connection = conn3
-        cmd2.CommandType = CommandType.Text
-
-        While dr.Read()
-            MarcheID = dr.Item("MarcheId").ToString()
-            SettoriId = dr.Item("SettoriId").ToString()
-            CategorieId = dr.Item("CategorieId").ToString()
-            TipologieId = dr.Item("TipologieId").ToString()
-            GruppiId = dr.Item("GruppiId").ToString()
-            SottoGruppiId = dr.Item("SottoGruppiId").ToString()
-            ArticoliId = dr.Item("ArticoliId").ToString()
-
-            strSelect2 = ""
-            strWhere = ""
-
-            strSelect2 &= ", " & dr.Item("OfferteId") & " as OfferteID "
-            strSelect2 &= ", " & dr.Item("Id") & " as OfferteDettagliId "
-            strSelect2 &= ", '" & sostituisci_caratteri_speciali(dr.Item("Descrizione")) & "' as OfferteDescrizione "
-            strSelect2 &= ", '" & dr.Item("Immagine") & "' as OfferteImmagine "
-            strSelect2 &= ", '" & Format(dr.Item("DataInizio"), "yyyyMMdd") & "' as OfferteDataInizio "
-            strSelect2 &= ", '" & Format(dr.Item("DataFine"), "yyyyMMdd") & "' as OfferteDataFine "
-            strSelect2 &= ", " & dr.Item("DaListino") & " as OfferteDaListino "
-            strSelect2 &= ", " & dr.Item("AListino") & " as OfferteAListino "
-            strSelect2 &= ", " & dr.Item("QntMinima") & " as OfferteQntMinima "
-            strSelect2 &= ", " & dr.Item("Multipli") & " as OfferteMultipli "
-            strSelect2 &= ", " & dr.Item("Prezzo").ToString().Replace(",", ".") & " as OffertePrezzo "
-            strSelect2 &= ", " & dr.Item("Sconto").ToString().Replace(",", ".") & " as OfferteSconto "
-
-            If MarcheID <> "" AndAlso MarcheID <> "0" Then
-                strWhere &= " AND MarcheID=" & MarcheID
-            End If
-            If SettoriId <> "" AndAlso SettoriId <> "0" Then
-                strWhere &= " AND SettoriId=" & SettoriId
-            End If
-            If CategorieId <> "" AndAlso CategorieId <> "0" Then
-                strWhere &= " AND CategorieId=" & CategorieId
-            End If
-            If TipologieId <> "" AndAlso TipologieId <> "0" Then
-                strWhere &= " AND TipologieId=" & TipologieId
-            End If
-            If GruppiId <> "" AndAlso GruppiId <> "0" Then
-                strWhere &= " AND GruppiId=" & GruppiId
-            End If
-            If SottoGruppiId <> "" AndAlso SottoGruppiId <> "0" Then
-                strWhere &= " AND SottoGruppiId=" & SottoGruppiId
-            End If
-            If ArticoliId <> "" AndAlso ArticoliId <> "0" Then
-                strWhere &= " AND Id=" & ArticoliId
-            End If
-
-            cmd2.CommandText = "Insert into voffertearticoli (" & strSelect & strSelect2 & strFrom & strWhere & ")"
-            cmd2.ExecuteNonQuery()
-        End While
-
-        conn3.Close()
-        conn3.Dispose()
-
-        dr.Close()
-        dr.Dispose()
-
-        cmd.Dispose()
-        cmd2.Dispose()
-
-        conn.Close()
-        conn.Dispose()
-    End Sub
 
     Public Sub ImpostaTemplate()
         Dim imgLogoCtrl As Image = FindCtrl(Of Image)("imgLogo")
@@ -2132,9 +1982,6 @@ End Function
     End Sub
 
     ' Metodo pubblico comodo da usare dalle pagine figlie
-    Public Sub AggiornaTotaleCarrelloHeader()
-        LeggiCarrello()
-    End Sub
 
     '==========================================================
     ' META TAG SEO
@@ -2251,41 +2098,9 @@ End Sub
     '==========================================================
     ' FOOTER DIV (menu informativi)
     '==========================================================
-    Protected Sub DataList_DIV1_Init(ByVal sender As Object, ByVal e As System.EventArgs)
-        If IsNothing(Me.Session("AziendaID")) Then
-            LeggiAzienda()
-        End If
 
-        SqlDataFooterDIV1.SelectCommand = "SELECT id, AziendeId, nome, descrizione, img, link_esterno, target, div_position, ordinamento, abilitato FROM pagine WHERE (Abilitato = 1) AND (AziendeId=?id) AND (div_position=1) AND ((Tipo=1) OR (Tipo=3) OR (Tipo=5) OR (Tipo=7)) ORDER BY ordinamento_footer ASC, Nome ASC"
-        SqlDataFooterDIV1.SelectParameters.Add("?id", Session("AziendaID"))
-    End Sub
 
-    Protected Sub DataList_DIV2_Init(ByVal sender As Object, ByVal e As System.EventArgs)
-        If IsNothing(Me.Session("AziendaID")) Then
-            LeggiAzienda()
-        End If
 
-        SqlDataFooterDIV2.SelectCommand = "SELECT id, AziendeId, nome, descrizione, img, link_esterno, target, div_position, ordinamento, abilitato FROM pagine WHERE (Abilitato = 1) AND (AziendeId=?id) AND (div_position=2) AND ((Tipo=1) OR (Tipo=3) OR (Tipo=5) OR (Tipo=7)) ORDER BY ordinamento_footer ASC, Nome ASC"
-        SqlDataFooterDIV2.SelectParameters.Add("?id", Session("AziendaID"))
-    End Sub
-
-    Protected Sub DataList_DIV3_Init(ByVal sender As Object, ByVal e As System.EventArgs)
-        If IsNothing(Me.Session("AziendaID")) Then
-            LeggiAzienda()
-        End If
-
-        SqlDataFooterDIV3.SelectCommand = "SELECT id, AziendeId, nome, descrizione, img, link_esterno, target, div_position, ordinamento, abilitato FROM pagine WHERE (Abilitato = 1) AND (AziendeId=?id) AND (div_position=3) AND ((Tipo=1) OR (Tipo=3) OR (Tipo=5) OR (Tipo=7)) ORDER BY ordinamento_footer ASC, Nome ASC"
-        SqlDataFooterDIV3.SelectParameters.Add("?id", Session("AziendaID"))
-    End Sub
-
-    Protected Sub DataList_DIV4_Init(ByVal sender As Object, ByVal e As System.EventArgs)
-        If IsNothing(Me.Session("AziendaID")) Then
-            LeggiAzienda()
-        End If
-
-        SqlDataFooterDIV4.SelectCommand = "SELECT id, AziendeId, nome, descrizione, img, link_esterno, target, div_position, ordinamento, abilitato FROM pagine WHERE (Abilitato = 1) AND (AziendeId=?id) AND (div_position=4) AND ((Tipo=1) OR (Tipo=3) OR (Tipo=5) OR (Tipo=7)) ORDER BY ordinamento_footer ASC, Nome ASC"
-        SqlDataFooterDIV4.SelectParameters.Add("?id", Session("AziendaID"))
-    End Sub
 
     '==========================================================
     ' FACEBOOK POPUP COOKIE
@@ -2329,197 +2144,6 @@ End Sub
 
 
 
-' ===========================================================
-'  NAV MODELS (Settori -> Categorie -> Tipologie)
-'  Fix: aggiunge Tipologie/SettoriId/DefaultUrl e definisce NavTipologiaItem
-' ===========================================================
-
-Public Class NavTipologiaItem
-    Public Property Id As Integer
-    Public Property CategorieId As Integer
-    Public Property Descrizione As String
-
-    ' URL completo del tipo:
-    '   articoli.aspx?ct=<cat>&st=<settore>&tp=<tipologia>
-    Public Property DefaultUrl As String
-End Class
-
-Public Class NavCategoriaItem
-    Public Property Id As Integer
-    Public Property Descrizione As String
-
-    ' Settore padre (serve per costruire URL e per debug)
-    Public Property SettoriId As Integer
-
-    ' URL “di default” della categoria, tipicamente punta alla prima tipologia abilitata
-    Public Property DefaultUrl As String
-
-    ' Tipologie figlie
-    Public Property Tipologie As List(Of NavTipologiaItem)
-
-    ' Compatibilità legacy (se in qualche punto vecchio usavi .Url)
-    Public Property Url As String
-        Get
-            Return DefaultUrl
-        End Get
-        Set(value As String)
-            DefaultUrl = value
-        End Set
-    End Property
-End Class
-
-Public Class NavSettoreItem
-    Public Property Id As Integer
-    Public Property Descrizione As String
-
-    ' URL “di default” del settore, tipicamente punta a prima categoria -> prima tipologia
-    Public Property DefaultUrl As String
-
-    Public Property Categorie As List(Of NavCategoriaItem)
-End Class
-
-' ===========================================================
-'  FINE NAV MODELS
-' ===========================================================
-
-    '==========================================================
-    ' MENU NAV (Settori → Categorie → Tipologie) - gerarchia legacy
-    '   - Mostra SOLO elementi Abilitato=1
-    '   - Link coerenti con il catalogo: articoli.aspx?ct=...&st=...&tp=...
-    '==========================================================
-    Private Function LoadNavSettori() As List(Of NavSettoreItem)
-
-        Dim result As New List(Of NavSettoreItem)()
-
-        Dim connStr As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-
-        Dim settoriById As New Dictionary(Of Integer, NavSettoreItem)()
-        Dim categorieById As New Dictionary(Of Integer, NavCategoriaItem)()
-
-        Using conn As New MySqlConnection(connStr)
-            conn.Open()
-
-            ' 1) Settori (abilitati)
-            Using cmdS As New MySqlCommand("SELECT id, Descrizione FROM settori WHERE Abilitato=1 ORDER BY Predefinito DESC, Ordinamento, Descrizione, id", conn)
-                Using rdr As MySqlDataReader = cmdS.ExecuteReader()
-                    While rdr.Read()
-                        Dim settoreId As Integer = Convert.ToInt32(rdr("id"))
-                        Dim descr As String = Convert.ToString(rdr("Descrizione"))
-
-                        Dim s As New NavSettoreItem()
-                        s.Id = settoreId
-                        s.Descrizione = descr
-                        s.Categorie = New List(Of NavCategoriaItem)()
-                        s.DefaultUrl = ResolveUrl("~/articoli.aspx?st=" & settoreId.ToString())
-
-                        settoriById(settoreId) = s
-                        result.Add(s)
-                    End While
-                End Using
-            End Using
-
-            ' 2) Categorie (abilitate) collegate a Settori abilitati
-            Dim sqlC As String =
-                "SELECT c.id, c.Descrizione, c.SettoriId " &
-                "FROM categorie c " &
-                "INNER JOIN settori s ON s.id=c.SettoriId AND s.Abilitato=1 " &
-                "WHERE c.Abilitato=1 " &
-                "ORDER BY c.SettoriId, c.Ordinamento, c.Descrizione, c.id"
-
-            Using cmdC As New MySqlCommand(sqlC, conn)
-                Using rdr As MySqlDataReader = cmdC.ExecuteReader()
-                    While rdr.Read()
-                        Dim catId As Integer = Convert.ToInt32(rdr("id"))
-                        Dim catDesc As String = Convert.ToString(rdr("Descrizione"))
-                        Dim settoreId As Integer = Convert.ToInt32(rdr("SettoriId"))
-
-                        If settoriById.ContainsKey(settoreId) Then
-                            Dim c As New NavCategoriaItem()
-                            c.Id = catId
-                            c.Descrizione = catDesc
-                            c.SettoriId = settoreId
-                            c.Tipologie = New List(Of NavTipologiaItem)()
-                            c.DefaultUrl = ResolveUrl("~/articoli.aspx?ct=" & catId.ToString() & "&st=" & settoreId.ToString())
-
-                            categorieById(catId) = c
-                            settoriById(settoreId).Categorie.Add(c)
-                        End If
-                    End While
-                End Using
-            End Using
-
-            ' 3) Tipologie (abilitate) collegate a Categorie/Settori abilitati
-            Dim sqlT As String =
-                "SELECT t.id, t.Descrizione, t.CategorieId, c.SettoriId " &
-                "FROM tipologie t " &
-                "INNER JOIN categorie c ON c.id=t.CategorieId AND c.Abilitato=1 " &
-                "INNER JOIN settori s ON s.id=c.SettoriId AND s.Abilitato=1 " &
-                "WHERE t.Abilitato=1 " &
-                "ORDER BY c.SettoriId, c.Ordinamento, c.Descrizione, c.id, t.Ordinamento, t.Descrizione, t.id"
-
-            Using cmdT As New MySqlCommand(sqlT, conn)
-                Using rdr As MySqlDataReader = cmdT.ExecuteReader()
-                    While rdr.Read()
-                        Dim tpId As Integer = Convert.ToInt32(rdr("id"))
-                        Dim tpDesc As String = Convert.ToString(rdr("Descrizione"))
-                        Dim catId As Integer = Convert.ToInt32(rdr("CategorieId"))
-                        Dim settoreId As Integer = Convert.ToInt32(rdr("SettoriId"))
-
-                        If categorieById.ContainsKey(catId) Then
-                            Dim t As New NavTipologiaItem()
-                            t.Id = tpId
-                            t.Descrizione = tpDesc
-                            t.CategorieId = catId
-                            t.DefaultUrl = ResolveUrl("~/articoli.aspx?ct=" & catId.ToString() & "&st=" & settoreId.ToString() & "&tp=" & tpId.ToString())
-
-                            categorieById(catId).Tipologie.Add(t)
-                        End If
-                    End While
-                End Using
-            End Using
-
-        End Using
-
-        ' 4) DefaultUrl coerenti (settore → prima categoria → prima tipologia)
-        For Each s As NavSettoreItem In result
-
-            For Each c As NavCategoriaItem In s.Categorie
-                If c.Tipologie IsNot Nothing AndAlso c.Tipologie.Count > 0 Then
-                    ' categoria punta alla prima tipologia abilitata (come legacy)
-                    c.DefaultUrl = c.Tipologie(0).DefaultUrl
-                Else
-                    c.DefaultUrl = ResolveUrl("~/articoli.aspx?ct=" & c.Id.ToString() & "&st=" & s.Id.ToString())
-                End If
-            Next
-
-            If s.Categorie IsNot Nothing AndAlso s.Categorie.Count > 0 Then
-                s.DefaultUrl = s.Categorie(0).DefaultUrl
-            Else
-                s.DefaultUrl = ResolveUrl("~/articoli.aspx?st=" & s.Id.ToString())
-            End If
-
-        Next
-
-        Return result
-
-    End Function
-
-Protected Sub rptNavSettori_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-    If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
-        Dim s As NavSettoreItem = TryCast(e.Item.DataItem, NavSettoreItem)
-        If s Is Nothing Then Exit Sub
-
-        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavCategorie"), Repeater)
-        If rpt IsNot Nothing Then
-            AddHandler rpt.ItemDataBound, AddressOf rptNavCategorie_ItemDataBound
-            rpt.DataSource = s.Categorie
-            rpt.DataBind()
-        End If
-    End If
-End Sub
-
-
-
     '------------------------------------------------------------
     ' Utility: HTML encode per binding in markup (prevenzione XSS)
     '------------------------------------------------------------
@@ -2530,35 +2154,5 @@ End Sub
     End Function
 
 
-
-'==========================================================
-' NAV MOBILE: Settori/Categorie/Tipologie
-'==========================================================
-Protected Sub rptNavSettoriMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-    If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
-        Dim s As NavSettoreItem = TryCast(e.Item.DataItem, NavSettoreItem)
-        If s Is Nothing Then Exit Sub
-
-        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavCategorieMobile"), Repeater)
-        If rpt IsNot Nothing Then
-            AddHandler rpt.ItemDataBound, AddressOf rptNavCategorieMobile_ItemDataBound
-            rpt.DataSource = s.Categorie
-            rpt.DataBind()
-        End If
-    End If
-End Sub
-
-Protected Sub rptNavCategorieMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-    If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
-        Dim c As NavCategoriaItem = TryCast(e.Item.DataItem, NavCategoriaItem)
-        If c Is Nothing Then Exit Sub
-
-        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavTipologieMobile"), Repeater)
-        If rpt IsNot Nothing Then
-            rpt.DataSource = c.Tipologie
-            rpt.DataBind()
-        End If
-    End If
-End Sub
 
 End Class

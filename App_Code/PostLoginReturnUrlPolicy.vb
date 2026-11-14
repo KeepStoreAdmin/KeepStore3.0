@@ -27,7 +27,6 @@ Public NotInheritable Class PostLoginReturnUrlPolicy
         "privacy.aspx",
         "promo.aspx",
         "promo_in_scadenza.aspx",
-        "search.aspx",
         "settore_disabilitato.aspx",
         "sitemap.aspx",
         "track-your-order.aspx",

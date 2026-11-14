@@ -113,26 +113,6 @@ body.ks-page-home {
   color: #1f2933;
 }
 
-.ks-order-detail .ks-order-status-row {
-  margin-top: 24px;
-}
-
-.ks-order-detail .ks-status-card {
-  height: calc(100% - 30px);
-}
-
-.ks-order-detail .ks-status-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.ks-order-detail .ks-status-card-head h5 {
-  margin: 0;
-}
-
 .ks-order-detail .ks-status-badge {
   display: inline-flex;
   align-items: center;
@@ -314,11 +294,6 @@ body.ks-page-home {
 }
 
 @media (max-width: 767.98px) {
-  .ks-order-detail .ks-status-card-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .ks-order-detail .ks-status-badge,
   .ks-myaccount .ks-status-badge {
     white-space: normal;
@@ -597,8 +572,7 @@ body.ks-page-home .ks-home-main .tf-btn {
   border-radius: 6px;
 }
 
-body.ks-page-home .ks-home-collection-block,
-body.ks-page-home .ks-home-full-width {
+body.ks-page-home .ks-home-collection-block {
   padding: 28px 0;
 }
 
@@ -927,41 +901,6 @@ body.ks-page-home .ks-home-side-banner .caption {
   overflow: hidden;
 }
 
-/* Benefits */
-body.ks-page-home .ks-home-benefits-section {
-  padding: 14px 0 30px;
-}
-
-body.ks-page-home .ks-home-benefits-section .tf-icon-box {
-  min-height: 92px;
-  padding: 18px 20px;
-  border: 1px solid #eceff3;
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: none;
-}
-
-body.ks-page-home .ks-home-benefits-section .tf-icon-box .icon-box {
-  width: 42px;
-  height: 42px;
-  color: #2f3b48;
-  background: transparent;
-  box-shadow: none;
-}
-
-body.ks-page-home .ks-home-benefits-section .tf-icon-box .body-text {
-  margin-bottom: 4px;
-  color: #2a3440;
-  font-size: 14px;
-  line-height: 1.25;
-}
-
-body.ks-page-home .ks-home-benefits-section .tf-icon-box .body-text-3 {
-  color: #667280;
-  font-size: 12px;
-  line-height: 1.3;
-}
-
 /* Categories */
 body.ks-page-home .ks-home-category-grid {
   display: grid;
@@ -1040,46 +979,6 @@ body.ks-page-home .ks-ai130-shell {
   border: 1px solid #eceff3;
 }
 
-body.ks-page-home .ks-ai130-kicker {
-  display: block;
-  margin-bottom: 6px;
-  color: #ff3b30;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-body.ks-page-home .ks-ai130-form {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-}
-
-body.ks-page-home .ks-ai130-form input,
-body.ks-page-home .ks-ai130-results,
-body.ks-page-home .ks-ai130-answer {
-  border: 1px solid #eceff3;
-  border-radius: 6px;
-  background: #f8fafc;
-}
-
-body.ks-page-home .ks-ai130-form input {
-  height: 42px;
-  padding: 0 14px;
-}
-
-body.ks-page-home .ks-ai130-form button {
-  height: 42px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 6px;
-  color: #fff;
-  background: #ff3b30;
-  font-weight: 700;
-}
-
-body.ks-page-home .ks-ai130-examples,
 body.ks-page-home .ks-ai130-tools {
   display: flex;
   flex-wrap: wrap;
@@ -1087,7 +986,6 @@ body.ks-page-home .ks-ai130-tools {
   margin-top: 12px;
 }
 
-body.ks-page-home .ks-ai130-examples button,
 body.ks-page-home .ks-ai130-tools a {
   padding: 7px 10px;
   border: 1px solid #eceff3;
@@ -1096,20 +994,6 @@ body.ks-page-home .ks-ai130-tools a {
   color: #3c4652;
   font-size: 12px;
   text-decoration: none;
-}
-
-body.ks-page-home .ks-ai130-answer,
-body.ks-page-home .ks-ai130-results {
-  padding: 14px;
-}
-
-body.ks-page-home .ks-ai130-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-  color: #2d3742;
-  font-weight: 700;
 }
 
 /* Product sections */
@@ -1537,30 +1421,19 @@ body.ks-page-home #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initial
   margin: 0;
 }
 
-body.ks-page-home .ks-home-offers-fallback,
-body.ks-page-home .ks-home-promo-institutional,
 body.ks-page-home .ks-home-wide-promo-inner,
-body.ks-page-home .ks-home-bottom-promo-grid,
 body.ks-page-home .ks-home-trust-panel {
   border: 1px solid #eceff3;
   border-radius: 6px;
   background: #fff;
 }
 
-body.ks-page-home .ks-home-promo-institutional,
 body.ks-page-home .ks-home-wide-promo-inner,
 body.ks-page-home .ks-home-trust-panel {
   padding: 24px;
   display: flex;
   justify-content: space-between;
   gap: 24px;
-}
-
-body.ks-page-home .ks-home-bottom-promo-grid,
-body.ks-page-home .ks-home-services-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
 }
 
 body.ks-page-home .ks-home-collection-grid {
@@ -1570,8 +1443,7 @@ body.ks-page-home .ks-home-collection-grid {
 }
 
 body.ks-page-home .ks-home-bottom-promo-card,
-body.ks-page-home .ks-home-collection-card,
-body.ks-page-home .ks-home-service-item {
+body.ks-page-home .ks-home-collection-card {
   min-height: 136px;
   padding: 24px;
   border: 1px solid #eceff3;
@@ -1607,58 +1479,6 @@ body.ks-page-home .ks-home-collection-card em {
   color: #667280;
   font-size: 12px;
   font-style: normal;
-}
-
-body.ks-page-home .ks-home-service-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 10px;
-  color: #ff3b30;
-  background: #fff0ef;
-}
-
-body.ks-page-home .ks-home-service-item h6 {
-  margin: 0 0 8px;
-  color: #27313d;
-  font-size: 16px;
-  line-height: 1.25;
-  font-weight: 700;
-}
-
-body.ks-page-home .ks-home-service-item p {
-  margin: 0;
-  color: #667280;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-body.ks-page-home .ks-home-trust-list {
-  min-width: 320px;
-  display: grid;
-  gap: 10px;
-}
-
-body.ks-page-home .ks-home-trust-list div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #3b4652;
-  font-size: 13px;
-}
-
-body.ks-page-home .ks-home-trust-list i {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: #ff3b30;
-  background: #fff0ef;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 body.ks-page-home .ks-home-brands {
@@ -1729,40 +1549,8 @@ body.ks-page-home .ks-home-main .product-progress-sale .progress {
   background: #eef1f4;
 }
 
-body.ks-page-home .ks-home-main .ks-home-progress-heading {
-  align-items: baseline;
-  color: #687382;
-  display: flex;
-  flex-wrap: wrap;
-  font-size: 11px;
-  gap: 4px 10px;
-  justify-content: space-between;
-  line-height: 1.35;
-  margin-bottom: 7px;
-  min-width: 0;
-}
-
-body.ks-page-home .ks-home-main .ks-home-progress-heading strong {
-  color: #d80027;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-body.ks-page-home .ks-home-main .ks-home-progress-bar {
-  background-color: #d80027 !important;
-  border-radius: inherit;
-}
-
 body.ks-page-home .ks-home-main .box-quantity {
   margin-top: 8px;
-}
-
-body.ks-page-home .ks-home-main .ks-home-progress-quantity {
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  min-width: 0;
 }
 
 body.ks-page-home .ks-home-main .text-avaiable {
@@ -1888,13 +1676,10 @@ body.ks-page-home .ks-home-main .sw-dot-default {
   body.ks-page-home .ks-home-product-grid,
   body.ks-page-home .ks-home-deals .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
   body.ks-page-home .ks-home-best-section .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
-  body.ks-page-home #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initialized) .swiper-wrapper,
-  body.ks-page-home .ks-home-bottom-promo-grid,
-  body.ks-page-home .ks-home-services-grid {
+  body.ks-page-home #HomeRecentlyViewedSection .tf-sw-products:not(.swiper-initialized) .swiper-wrapper {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  body.ks-page-home .ks-home-promo-institutional,
   body.ks-page-home .ks-home-wide-promo-inner,
   body.ks-page-home .ks-home-trust-panel {
     flex-direction: column;
@@ -2073,9 +1858,7 @@ body.ks-page-home .ks-home-main .sw-dot-default {
     opacity: 1;
   }
 
-  body.ks-page-home .ks-home-bottom-promo-grid,
-  body.ks-page-home .ks-home-collection-grid,
-  body.ks-page-home .ks-home-services-grid {
+  body.ks-page-home .ks-home-collection-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2869,10 +2652,6 @@ body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-price-value {
   word-break: normal;
 }
 
-.ks-recent-card .ks-recent-price-slot {
-  min-height: 46px;
-}
-
 /* Recent-card metadata must not shift the price between adjacent products. */
 #ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-card-brand-code {
   display: -webkit-box;
@@ -2912,8 +2691,7 @@ body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-price-value {
   outline-offset: 3px;
 }
 
-.ks-recent-card .ks-price,
-.ks-recent-card .ks-recent-price-slot {
+.ks-recent-card .ks-price {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -3056,8 +2834,7 @@ body.ks-page-home #HomeRecentlyViewedSection .swiper-slide > .ks-grid-card .card
 /* STOREFRONT-PRODUCT-MEDIA-SORT-1A: product photos remain complete and centered. */
 #quickView .quickview-image .tf-image-view,
 #compare .tf-compare-item .image,
-#ksCompareGrid .ks-compare-page-card .image,
-body.ks-page-home .ks-ai130-img {
+#ksCompareGrid .ks-compare-page-card .image {
   align-items: center;
   background: #fff;
   display: flex;
@@ -3067,8 +2844,7 @@ body.ks-page-home .ks-ai130-img {
 
 #quickView #ksQuickViewMainImage,
 #compare .tf-compare-item .image img,
-#ksCompareGrid .ks-compare-page-card .image img,
-body.ks-page-home .ks-ai130-img img {
+#ksCompareGrid .ks-compare-page-card .image img {
   display: block;
   height: 100%;
   max-width: 100%;
@@ -3080,13 +2856,6 @@ body.ks-page-home .ks-ai130-img img {
 #ksCompareGrid .ks-compare-page-card .image {
   aspect-ratio: 1 / 1;
   width: 100%;
-}
-
-body.ks-page-home .ks-ai130-img {
-  display: inline-flex;
-  height: 72px;
-  vertical-align: middle;
-  width: 72px;
 }
 
 /* STOREFRONT-CART-FEEDBACK-AND-AWARENESS-1A: server-backed cart state. */
@@ -3513,7 +3282,6 @@ body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
 .ks-guide-primary:hover { color: #fff; filter: brightness(.9); }
 .ks-guide-next { padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; align-self: start; min-width: 0; }
 .ks-guide-next p, .ks-guide-choices button { overflow-wrap: anywhere; }
-.ks-guide-request { font-size: 18px; font-weight: 600; color: #17212c; }
 .ks-guide-status { color: #8c201a; font-weight: 600; margin-top: 12px; }
 .ks-guide-status:empty { display: none; }
 .ks-guide-catalog-fallback { display: inline-flex; align-items: center; min-height: 44px; margin-top: 12px; text-decoration: underline; font-weight: 600; }

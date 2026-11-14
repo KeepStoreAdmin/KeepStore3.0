@@ -291,21 +291,6 @@ Partial Class SiteHeader
         rpt.DataBind()
     End Sub
 
-    Protected Sub rptNavTipologieMobile_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
-        If e.Item Is Nothing OrElse (e.Item.ItemType <> ListItemType.Item AndAlso e.Item.ItemType <> ListItemType.AlternatingItem) Then
-            Return
-        End If
-
-        Dim tipologia As CatalogMenuNode = TryCast(e.Item.DataItem, CatalogMenuNode)
-        Dim rpt As Repeater = TryCast(e.Item.FindControl("rptNavGruppiMobile"), Repeater)
-        If tipologia Is Nothing OrElse rpt Is Nothing Then
-            Return
-        End If
-
-        rpt.DataSource = tipologia.Children
-        rpt.DataBind()
-    End Sub
-
     Private Sub BindCompanyContacts()
         Dim phone As String = DefaultPhoneText
         Dim email As String = DefaultEmailText

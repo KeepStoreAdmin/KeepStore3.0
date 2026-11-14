@@ -26,14 +26,6 @@
   margin:0 0 8px 0;
 }
 
-.ks-filter-actions{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:8px;
-}
-
 .ks-filter-scroll{
   max-height:240px;
   overflow:auto;
@@ -44,12 +36,6 @@
   display:block;
   margin:2px 0;
 }
-
-.ks-filter-removeall{
-  font-size:12px;
-  text-decoration:none;
-}
-.ks-filter-removeall:hover{ text-decoration:underline; }
 
 /* Toolbar (ordinamento / contatori) */
 .ks-catalog-toolbar{
@@ -85,113 +71,6 @@
 .ks-pager span[disabled]{
   opacity:.55;
   pointer-events:none;
-}
-
-/* ------------------------------------------------------------
-   Catalogo - GridView cards
-   ------------------------------------------------------------
-   Alcune pagine legacy usano ancora GridView per la lista articoli.
-   Qui trasformiamo la tabella in una griglia di card, senza cambiare controlli/ID.
-*/
-
-.ks-gv-grid {
-  width: 100%;
-  border: 0;
-}
-
-/* Il GridView rende un <table>. Convertiamo il <tbody> in flex grid. */
-.ks-gv-grid > tbody {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-/* Nascondiamo eventuale header row se presente */
-.ks-gv-grid > thead,
-.ks-gv-grid tr.ks-gv-header {
-  display: none;
-}
-
-/* Ogni riga = una card */
-.ks-gv-grid > tbody > tr {
-  display: block;
-  width: calc(33.333% - 10.666px);
-}
-
-@media (max-width: 991.98px) {
-  .ks-gv-grid > tbody > tr {
-    width: calc(50% - 8px);
-  }
-}
-
-@media (max-width: 575.98px) {
-  .ks-gv-grid > tbody {
-    gap: 12px;
-  }
-  .ks-gv-grid > tbody > tr {
-    width: 100%;
-  }
-}
-
-/* La cella contiene la card, togliamo padding/bordi */
-.ks-gv-grid > tbody > tr > td {
-  padding: 0 !important;
-  border: 0 !important;
-}
-
-/* Righe del pager: forziamo full width */
-.ks-gv-grid > tbody > tr.ks-gv-pager,
-.ks-gv-grid > tbody > tr.pager,
-.ks-gv-grid > tbody > tr.GridPager {
-  width: 100% !important;
-}
-
-.ks-gv-pager {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  padding-top: 8px;
-}
-
-.ks-gv-pager a,
-.ks-gv-pager span {
-  display: inline-block;
-  margin: 0 4px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  text-decoration: none;
-}
-
-.ks-gv-pager span {
-  font-weight: 600;
-}
-
-/* Card base */
-.ks-product-card {
-  height: 100%;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.ks-product-card .ks-product-img {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  background: #fff;
-}
-
-.ks-product-card .ks-product-title {
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.ks-product-card .ks-product-meta {
-  font-size: 0.9rem;
-  opacity: 0.85;
-}
-
-.ks-product-card .price-wrap {
-  margin-top: 6px;
 }
 
 /* ==========================================================
@@ -1844,10 +1723,6 @@
     gap: 6px !important;
   }
 
-  .ks-recently-viewed-block .ks-rv-cart-action {
-    display: none !important;
-  }
-
   .ks-recently-viewed-block .ks-mobile-card-buy-cta {
     align-items: center;
     background: var(--primary-2, #D80027);
@@ -1917,10 +1792,6 @@
 
 @media (hover: none) and (max-width: 991.98px),
        (pointer: coarse) and (max-width: 991.98px) {
-  .ks-recently-viewed-block .ks-rv-cart-action {
-    display: none !important;
-  }
-
   .ks-recently-viewed-block .ks-mobile-card-buy-cta {
     align-items: center;
     display: inline-flex;

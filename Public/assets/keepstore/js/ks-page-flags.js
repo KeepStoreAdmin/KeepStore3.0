@@ -9,8 +9,6 @@
   var SUGGEST_TIMEOUT_MS = 4200;
   var SUBMIT_LOOKUP_TIMEOUT_MS = 900;
   var RANK_PREFIX = 'ks_search_rank_';
-  var MARKET_KEY = 'ks_ai_marketplace_135_query';
-  var COMPARE_KEY = 'ks_compare_products';
   var STYLE_ID = 'ks-page-flags-step135-style';
   var BOUND_ATTR = 'data-ks-suggest-bound';
   var HEADER_SEARCH_ROOT = '[data-ks-search-form="desktop"],[data-ks-search-form="mobile"]';
@@ -216,14 +214,6 @@
         reject(err);
       });
     });
-  }
-  function buildQueryUrl(params) {
-    var u = new URL(SEARCH_ENDPOINT, window.location.href);
-    Object.keys(params || {}).forEach(function (k) {
-      var v = params[k];
-      if (v !== undefined && v !== null && v !== '') u.searchParams.set(k, String(v));
-    });
-    return u.toString();
   }
   function isSearchInput(input) {
     if (!input || input.disabled || input.type === 'hidden' || input.type === 'email' || input.type === 'password') return false;
@@ -690,15 +680,6 @@
     });
     return s.suggestPromise;
   }
-  function rankKey(seed) {
-    var h = 0, i, chr;
-    seed = String(seed || '') + '|' + Date.now();
-    for (i = 0; i < seed.length; i++) { chr = seed.charCodeAt(i); h = ((h << 5) - h) + chr; h |= 0; }
-    return Math.abs(h).toString(36);
-  }
-  function saveRank(key, data) {
-    try { sessionStorage.setItem(RANK_PREFIX + key, JSON.stringify({ ids: data.rank_ids || [], ts: Date.now() })); } catch (err) {}
-  }
   function readRank(key) {
     try { return JSON.parse(sessionStorage.getItem(RANK_PREFIX + key) || 'null'); } catch (err) { return null; }
   }
@@ -1035,96 +1016,6 @@
     cached.ids.forEach(function (id) { if (map[id]) container.appendChild(map[id]); });
   }
 
-  function localHomeProducts(limit) {
-    var out = [], seen = Object.create(null);
-    all(document, 'a[href*="articolo.aspx?id="]').forEach(function (a) {
-      if (out.length >= (limit || 12)) return;
-      if (a.closest('header,footer,#KsAiMarketplace135,#KsAiMarketplace134,#KsAiMarketplace133,#KsAiMarketplace132,#KsAiCatalogEngine131,#KsLocalAiSearch130,#KsSmartConsult129,.ks-home-brands-block')) return;
-      var href = a.getAttribute('href') || '', id = parseArticleId(href);
-      if (!id || seen[id]) return;
-      var card = a.closest('.card-product,.ks-final-product-card,.swiper-slide,article,li') || a.parentElement;
-      var img = card ? q(card, 'img') : null;
-      var src = img ? (img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '') : '';
-      if (!src || /logo|brand|payment|placeholder|nofoto/i.test(src)) return;
-      var title = txt(q(card, '.name-product a,.product-title a,h6 a,h5 a,.title a') || a);
-      if (!title || title.length < 4 || /scopri|catalogo|categoria/i.test(title)) return;
-      // Use authoritative price markup, never scrape arbitrary card numbers.
-      var priceNode = q(card, '.ks-home-price-value--current');
-      var priceSource = q(card, '[data-ks-price]');
-      var price = priceNode ? txt(priceNode) : (priceSource ? priceSource.getAttribute('data-ks-price') || '' : '');
-      seen[id] = 1;
-      out.push({ id: id, url: href, title: title, image: src, image_fallback: src, price: price, brand: '', category: 'HOME', reason: 'Fallback locale dalla HOME.', badges: ['HOME'] });
-    });
-    return out;
-  }
-  function compareList() {
-    try { return JSON.parse(localStorage.getItem(COMPARE_KEY) || '[]') || []; } catch (err) { return []; }
-  }
-  function saveCompare(list) {
-    try { localStorage.setItem(COMPARE_KEY, JSON.stringify((list || []).slice(0, 12))); } catch (err) {}
-    var count = document.getElementById('ksCompareCount');
-    if (count) count.textContent = String((list || []).length);
-  }
-  function addCompare(item) {
-    var list = compareList();
-    if (!item || !item.id) return;
-    if (!list.some(function (x) { return String(x.id) === String(item.id); })) list.unshift({ id: item.id, title: item.title, url: item.url, image: item.image || item.image_fallback || '', price: item.price || '' });
-    saveCompare(list);
-  }
-  function marketplaceMarkup() {
-    return '';
-  }
-  function itemBadges(item) {
-    var badges = item.badges || [];
-    if (!badges.length) {
-      if (item.isOffer) badges.push('Promo');
-      if (item.availability > 0) badges.push('Disp.');
-      if (item.isRefurbished) badges.push('Ricond.');
-    }
-    return badges.slice(0, 3);
-  }
-  function renderMarketItems(items) {
-    var grid = document.getElementById('ksMarket135Grid');
-    if (!grid) return;
-    if (!items || !items.length) {
-      grid.innerHTML = '<div class="ks-suggest-empty">Nessun risultato trovato. Prova una ricerca piu generica.</div>';
-      return;
-    }
-    grid.innerHTML = items.map(function (item, idx) {
-      var img = item.image || item.image_fallback || item.imageUrl || '';
-      var badges = itemBadges(item).map(function (b) { return '<span>' + esc(b) + '</span>'; }).join('');
-      return '<article class="ks-market135-card" data-idx="' + idx + '"><div class="ks-market135-badges">' + badges + '</div>' +
-        '<a class="ks-market135-media" href="' + esc(item.url || '#') + '">' + (img ? '<img src="' + esc(img) + '" alt="' + esc(item.title || '') + '">' : '') + '</a>' +
-        '<div class="ks-market135-meta"><span>' + esc(item.brand || '') + '</span><span>' + esc(item.category || '') + '</span></div>' +
-        '<h5><a href="' + esc(item.url || '#') + '">' + esc(item.title || '') + '</a></h5><div class="ks-market135-price">' + priceText(item.price) + '</div>' +
-        '<div class="ks-market135-actions"><a class="ks-market135-btn" href="' + esc(item.url || '#') + '">Dettagli</a><button type="button" class="ks-market135-compare" data-idx="' + idx + '">Confronta</button></div><div class="ks-market135-reason">' + esc(item.reason || '') + '</div></article>';
-    }).join('');
-    all(grid, '.ks-market135-compare').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var idx = parseInt(btn.getAttribute('data-idx') || '-1', 10);
-        if (items[idx]) { addCompare(items[idx]); btn.textContent = 'Aggiunto'; }
-      });
-    });
-  }
-  function renderFacets(data, runQuery) {
-    var box = document.getElementById('ksMarket135Facets');
-    if (!box) return;
-    var chunks = [], facets = data && data.facets ? data.facets : {};
-    ['brands', 'categories'].forEach(function (key) {
-      (facets[key] || []).slice(0, 5).forEach(function (f) {
-        chunks.push('<button type="button" data-q="' + esc(f.value || f.label || '') + '">' + esc(f.label || f.value || '') + ' <small>' + esc(f.count || '') + '</small></button>');
-      });
-    });
-    if (data && data.catalogUrl) chunks.push('<a class="ks-market135-open" href="' + esc(data.catalogUrl) + '">Apri catalogo</a>');
-    box.innerHTML = chunks.join('');
-    all(box, 'button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var input = document.getElementById('ksMarket135Input');
-        if (input) input.value = (input.value ? input.value + ' ' : '') + (b.getAttribute('data-q') || '');
-        runQuery();
-      });
-    });
-  }
   function initHomeMarketplace() {
     return;
   }

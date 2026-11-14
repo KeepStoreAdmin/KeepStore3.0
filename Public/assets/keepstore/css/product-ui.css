@@ -909,82 +909,6 @@
   }
 }
 
-.ks-availability-info {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  color: #fff;
-  cursor: help;
-  display: inline-flex;
-  height: 18px;
-  justify-content: center;
-  line-height: 1;
-  margin-left: 4px;
-  position: relative;
-  vertical-align: middle;
-  width: 18px;
-}
-
-.ks-availability-info__icon {
-  display: block;
-  height: 18px;
-  width: 18px;
-}
-
-.ks-availability-info__shape {
-  fill: #004ec3;
-}
-
-.ks-availability-info__stem {
-  fill: none;
-  stroke: #fff;
-  stroke-linecap: round;
-  stroke-width: 1.9;
-}
-
-.ks-availability-info__dot {
-  fill: #fff;
-}
-
-.ks-availability-info:focus {
-  outline: 2px solid #94a3b8;
-  outline-offset: 2px;
-}
-
-.ks-availability-info::after {
-  background: #fff;
-  border: 1px solid #d7dde6;
-  border-radius: 8px;
-  bottom: calc(100% + 8px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
-  color: #334155;
-  content: attr(data-tooltip);
-  font-size: 12px;
-  font-weight: 500;
-  left: 0;
-  line-height: 1.4;
-  max-width: min(320px, 78vw);
-  min-width: 240px;
-  opacity: 0;
-  padding: 10px 12px;
-  pointer-events: none;
-  position: absolute;
-  text-align: left;
-  text-transform: none;
-  transform: translateY(4px);
-  transition: opacity 0.16s ease, transform 0.16s ease;
-  visibility: hidden;
-  z-index: 20;
-}
-
-.ks-availability-info:hover::after,
-.ks-availability-info:focus::after {
-  opacity: 1;
-  transform: translateY(0);
-  visibility: visible;
-}
-
 @media (max-width: 1199.98px) {
   .ks-product-page .tf-product-info-list {
     flex-direction: column;
@@ -1207,10 +1131,6 @@
     display: none;
   }
 
-  .ks-availability-info::after {
-    left: auto;
-    right: 0;
-  }
 }
 
 @media (hover: none), (pointer: coarse) {
