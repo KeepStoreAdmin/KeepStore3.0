@@ -10,7 +10,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261015-mobile-excellence1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261114-pdp-hierarchy1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -153,45 +153,6 @@
                                             </ul>
                                         </div>
 
-                                        <div class="infor-center">
-                                            <asp:PlaceHolder ID="phProductInfoPrice" runat="server" Visible="false">
-                                                <div class="product-info-price">
-                                                    <asp:Literal ID="litPriceHtml" runat="server" />
-                                                </div>
-                                            </asp:PlaceHolder>
-
-                                            <ul class="product-fearture-list">
-                                                <asp:PlaceHolder ID="phCategoryFeature" runat="server" Visible="false">
-                                                    <li>
-                                                        <p class="body-md-2 fw-semibold">Categoria</p>
-                                                        <span class="body-text-3"><asp:Literal ID="litCategory2" runat="server" /></span>
-                                                    </li>
-                                                </asp:PlaceHolder>
-                                                <asp:PlaceHolder ID="phBrandFeature" runat="server" Visible="false">
-                                                    <li>
-                                                        <p class="body-md-2 fw-semibold">Marca</p>
-                                                        <span class="body-text-3"><asp:Literal ID="litMarcaFeature" runat="server" /></span>
-                                                    </li>
-                                                </asp:PlaceHolder>
-                                                <li>
-                                                    <p class="body-md-2 fw-semibold">Codice</p>
-                                                    <span class="body-text-3"><asp:Literal ID="litCodice3" runat="server" /></span>
-                                                </li>
-                                                <asp:PlaceHolder ID="phEan3" runat="server" Visible="false">
-                                                    <li>
-                                                        <p class="body-md-2 fw-semibold">EAN/GTIN</p>
-                                                        <span class="body-text-3"><asp:Literal ID="litEan3" runat="server" /></span>
-                                                    </li>
-                                                </asp:PlaceHolder>
-                                                <asp:PlaceHolder ID="phAvailability" runat="server" Visible="false">
-                                                    <li>
-                                                        <p class="body-md-2 fw-semibold">Stock</p>
-                                                        <span class="body-text-3 text-secondary"><asp:Literal ID="litAvailability" runat="server" /></span>
-                                                    </li>
-                                                </asp:PlaceHolder>
-                                            </ul>
-                                        </div>
-
                                         <asp:PlaceHolder ID="phRefurbished" runat="server" Visible="false">
                                             <div class="ks-refurbished-detail">
                                                 <img src="/Public/assets/images/img/refurbished.png" alt="Ricondizionato" />
@@ -308,13 +269,6 @@
                                             </div>
                                         </div>
 
-                                        <div class="product-detail">
-                                            <p class="caption">Acquisto</p>
-                                            <p class="body-text-3">
-                                                <span>Prezzi e disponibilita sono calcolati con il listino corrente.</span>
-                                                <span>Puoi modificare la quantita prima di aggiungere il prodotto al carrello.</span>
-                                            </p>
-                                        </div>
                                     </div>
                                 </div>
                             </div>

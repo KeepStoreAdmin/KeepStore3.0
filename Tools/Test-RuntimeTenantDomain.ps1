@@ -120,7 +120,7 @@ Assert-Source (Test-IcecatTenantImages $icecat) 'S06_ICECAT_IMAGES_FROM_RESOLVED
 Assert-Source ((Get-IcecatHelperText $icecat) -match 'If imageUrl = "" Then') 'S06C_ICECAT_EMPTY_URL_KEEPS_TEXT'
 Assert-Source ([regex]::Match($main, '(?s)Private Function BuildSiteHomeUrl\(\) As String.*?End Function').Value -match 'StartsWith\("//"') 'S06D_MAIN_REJECTS_UNSAFE_PREFIXES'
 Assert-Source (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'test.aspx.vb'))) 'S07_DEAD_TEST_CODE_BEHIND_REMOVED'
-Assert-Source ((Read-Repo 'test.aspx') -notmatch 'CodeFile|Inherits') 'S08_TEST_PAGE_STILL_NOT_WIRED_TO_CODE'
+Assert-Source (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'test.aspx')) -or ((Read-Repo 'test.aspx') -notmatch 'CodeFile|Inherits')) 'S08_TEST_PAGE_REMOVED_OR_NOT_WIRED_TO_CODE'
 
 # Mutazioni statiche: ognuna deve essere rilevata dal controllo corrispondente.
 Assert-Detects 'M1_LITERAL_IN_MAIN' (Test-NoCustomerDomain ($main + "`n' https://www." + $customerDomain))

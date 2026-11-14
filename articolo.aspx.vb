@@ -384,11 +384,18 @@ Partial Class articolo
 
         BindProductCarousel(phSimilar, rptSimilar, similarItems)
 
+        ' "Prodotti correlati": relazioni manuali, collegati e compatibili. Gli articoli gia mostrati in
+        ' "Scopri articoli simili" non si ripetono (anche i ripieghi automatici dei collegati possono coincidere).
         Dim relatedItems As New List(Of RelatedItem)()
         AddUniqueRelatedItems(relatedItems, manualRelated, 10)
         AddUniqueRelatedItems(relatedItems, linkedItems, 10)
         AddUniqueRelatedItems(relatedItems, compatibleItems, 10)
-        AddUniqueRelatedItems(relatedItems, similarItems, 10)
+        Dim shownAsSimilar As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        For Each similarItem As RelatedItem In similarItems
+            Dim similarKey As String = RelatedBusinessKey(similarItem)
+            If Not String.IsNullOrEmpty(similarKey) Then shownAsSimilar.Add(similarKey)
+        Next
+        relatedItems.RemoveAll(Function(candidate) candidate IsNot Nothing AndAlso shownAsSimilar.Contains(RelatedBusinessKey(candidate)))
         BindProductCarousel(phRelated, rptRelated, relatedItems)
 
         BindBrandCarousel(row)
@@ -1547,29 +1554,22 @@ Partial Class articolo
         Dim categoryName As String = taxonomy.MostSpecificName
         lnkCategory.Text = Server.HtmlEncode(categoryName)
         lnkCategory.NavigateUrl = BuildCategoryCatalogUrl(row)
-        phCategoryFeature.Visible = (Not String.IsNullOrEmpty(categoryName))
-        phCategoryInfo.Visible = phCategoryFeature.Visible
-        litCategory2.Text = Server.HtmlEncode(categoryName)
+        phCategoryInfo.Visible = (Not String.IsNullOrEmpty(categoryName))
         litCategoryInfo.Text = Server.HtmlEncode(categoryName)
 
         Dim codice As String = FirstNonEmpty(GetRowString(row, "Codice"), GetRowString(row, "SKU"))
         litCodice.Text = Server.HtmlEncode(codice)
-        litCodice3.Text = Server.HtmlEncode(codice)
         litCodice4.Text = Server.HtmlEncode(codice)
 
         Dim ean As String = FirstNonEmpty(GetRowString(row, "Ean"), GetRowString(row, "EAN"))
         If Not String.IsNullOrEmpty(ean) Then
             phEan.Visible = True
-            phEan3.Visible = True
             phEanInfo.Visible = True
             litEan.Text = Server.HtmlEncode(ean)
-            litEan3.Text = Server.HtmlEncode(ean)
             litEan4.Text = Server.HtmlEncode(ean)
         Else
             phEan.Visible = False
-            phEan3.Visible = False
             phEanInfo.Visible = False
-            litEan3.Text = String.Empty
             litEan4.Text = String.Empty
         End If
 
@@ -1578,20 +1578,16 @@ Partial Class articolo
         Dim brandId As Integer = FirstPositiveInt(GetRowInt(row, "MarcaId", 0), GetRowInt(row, "IdMarca", 0), GetRowInt(row, "MarcheId", 0))
         If brandId > 0 AndAlso Not String.IsNullOrEmpty(brandName) Then
             phBrand.Visible = True
-            phBrandFeature.Visible = True
             phBrandInfo.Visible = True
 
             Dim brandLogoUrl As String = NormalizeBrandLogoUrl(GetRowString(row, "Marche_img"))
             lnkMarca.Text = BuildPrimaryBrandLinkHtml(brandName, brandLogoUrl)
             lnkMarca.NavigateUrl = BuildBrandCatalogUrl(row, brandId)
 
-            litMarcaFeature.Text = Server.HtmlEncode(brandName)
             litMarcaInfo.Text = Server.HtmlEncode(brandName)
         Else
             phBrand.Visible = False
-            phBrandFeature.Visible = False
             phBrandInfo.Visible = False
-            litMarcaFeature.Text = String.Empty
             litMarcaInfo.Text = String.Empty
         End If
 
@@ -1607,9 +1603,8 @@ Partial Class articolo
                                                                 ResolveEffectiveProductGross(row),
                                                                 promotionModel)
 
-        litPriceHtml.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
-        ' Box prezzo sticky (stesso HTML del prezzo principale)
-        litPriceHtml2.Text = litPriceHtml.Text
+        ' Prezzo nel riquadro di acquisto (unico punto in cui il prezzo e mostrato in alto)
+        litPriceHtml2.Text = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
         litPriceDisplayLabel.Text = _priceDisplayContext.DisplayLabel
         litPriceInfo.Text = BuildPriceText(price.CurrentPrice)
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
@@ -1648,9 +1643,7 @@ Partial Class articolo
         _pdpStructuredAvailability = availabilityModel
         Dim availabilityText As String = availabilityModel.Text
         Dim availabilityHtml As String = availabilityModel.Html
-        phAvailability.Visible = False
         phAvailabilityInfo.Visible = Not String.IsNullOrEmpty(availabilityText)
-        litAvailability.Text = String.Empty
         litBuyBoxAvailability.Text = availabilityHtml
         litAvailabilityInfo.Text = availabilityHtml
 

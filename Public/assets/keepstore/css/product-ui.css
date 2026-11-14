@@ -73,10 +73,6 @@
   outline-offset: 2px;
 }
 
-.ks-product-page .product-detail .body-text-3 span {
-  display: block;
-}
-
 .ks-product-page .product-info-name {
   display: block;
   line-height: 25px;
@@ -199,40 +195,25 @@
   outline-offset: 2px;
 }
 
-.ks-product-page .product-info-price {
+/* Prezzo in evidenza nel riquadro di acquisto (unico prezzo in alto nella scheda). */
+.ks-product-page .ks-pdp-buybox-sticky .product-delivery .price-text {
   align-items: baseline;
   display: flex;
-  gap: 12px;
-  min-height: 36px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
 }
 
-.ks-product-page .product-info-price .new-price {
+.ks-product-page .ks-pdp-buybox-sticky .product-delivery .new-price {
   color: #ff3d3d;
-  font-size: 30px;
-  font-weight: 500;
-  line-height: 36px;
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 38px;
 }
 
-.ks-product-page .product-info-price .old-price {
-  font-size: 18px;
-  line-height: 24px;
+.ks-product-page .ks-pdp-buybox-sticky .product-delivery .old-price {
+  font-size: 16px;
+  line-height: 22px;
   text-decoration: line-through;
-}
-
-.ks-product-page .product-fearture-list {
-  gap: 2px;
-}
-
-.ks-product-page .product-fearture-list li {
-  gap: 12px;
-  line-height: 18px;
-  min-height: 0;
-}
-
-.ks-product-page .product-fearture-list .body-md-2,
-.ks-product-page .product-fearture-list .body-text-3 {
-  font-size: 13px;
-  line-height: 18px;
 }
 
 .ks-refurbished-detail {
@@ -1023,6 +1004,31 @@
     top: auto;
     z-index: auto;
   }
+
+  /* Telefono e tablet: titolo e dati principali, subito dopo prezzo e acquisto, poi il resto.
+     Il contenitore dei dati non genera un riquadro proprio cosi i suoi blocchi si ordinano con il riquadro di acquisto. */
+  .ks-product-page .tf-product-info-content {
+    display: contents;
+  }
+
+  .ks-product-page .tf-product-info-content > .infor-heading {
+    order: 1;
+    width: 100%;
+  }
+
+  .ks-product-page .tf-product-info-choose-option {
+    order: 2;
+  }
+
+  .ks-product-page .tf-product-info-content > .ks-refurbished-detail {
+    order: 3;
+    width: 100%;
+  }
+
+  .ks-product-page .tf-product-info-content > .infor-bottom {
+    order: 4;
+    width: 100%;
+  }
 }
 
 @media (min-width: 1200px) {
@@ -1079,9 +1085,9 @@
     white-space: nowrap;
   }
 
-  .ks-product-page .product-info-price .new-price {
-    font-size: 28px;
-    line-height: 34px;
+  .ks-product-page .ks-pdp-buybox-sticky .product-delivery .new-price {
+    font-size: 30px;
+    line-height: 36px;
   }
 
   .ks-product-page .tf-product-media-wrap {

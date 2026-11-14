@@ -51,7 +51,29 @@ Public Module AvailabilityDisplayHelper
         End Try
 
         If mode <> 2 Then mode = DefaultDisplayMode
+
+        ' Decisione PO 2026-11-14: i numeri (Disponibili / Impegnati / In arrivo) si mostrano solo a chi e
+        ' autenticato su questa vetrina; gli ospiti vedono sempre le parole (Disponibile, Pochi pezzi, In arrivo).
+        If mode = 2 AndAlso Not IsAuthenticatedVisitor(ctx) Then mode = DefaultDisplayMode
         Return mode
+    End Function
+
+    ''' <summary>
+    ''' True solo se la sessione appartiene a un account autenticato per la vetrina risolta (stesso contratto del carrello:
+    ''' LoginId positivo e AuthenticatedAziendaID uguale all'azienda della richiesta). Ogni dubbio vale ospite.
+    ''' </summary>
+    Public Function IsAuthenticatedVisitor(Optional ByVal ctx As HttpContext = Nothing) As Boolean
+        Try
+            If ctx Is Nothing Then ctx = HttpContext.Current
+            If ctx Is Nothing OrElse ctx.Session Is Nothing Then Return False
+            Dim loginId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(ctx.Session("LoginId"))
+            If loginId <= 0 Then loginId = StorefrontCommercialIsolationPolicy.PositiveInteger(ctx.Session("LoginID"))
+            Dim companyId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(ctx.Session("AziendaID"))
+            Dim authenticatedCompanyId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(ctx.Session("AuthenticatedAziendaID"))
+            Return CartStorefrontScopePolicy.IsAuthenticatedScopeValid(companyId, authenticatedCompanyId, loginId)
+        Catch
+            Return False
+        End Try
     End Function
 
     Public Function BuildFromDataItem(ByVal dataItem As Object, Optional ByVal ctx As HttpContext = Nothing) As AvailabilityDisplayModel
