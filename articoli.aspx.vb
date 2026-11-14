@@ -42,6 +42,7 @@ Partial Class Articoli
     Private Const ProductCardReplaceMaxCount As Integer = 3
     Private Const CatalogNavInitialSectors As Integer = 12
     Private Const CatalogNavInitialCategories As Integer = 10
+    Private Const CatalogDepartmentTilesVisible As Integer = 12
     Private Const DefaultCatalogPageSize As Integer = 12
     Private catalogSideFiltersDeferred As Boolean = False
     Private catalogSideFiltersBound As Boolean = False
@@ -365,6 +366,9 @@ Partial Class Articoli
     End Sub
 
     Private Sub BindCatalogCategoryNavigation()
+        If pnlCatalogDepartmentTiles IsNot Nothing Then pnlCatalogDepartmentTiles.Visible = False
+        If litCatalogDepartmentTiles IsNot Nothing Then litCatalogDepartmentTiles.Text = String.Empty
+
         If pnlCatalogCategoryNav Is Nothing OrElse litCatalogCategoryNav Is Nothing OrElse
             pnlCatalogDepartmentsMobile Is Nothing OrElse litCatalogCategoryNavMobile Is Nothing Then Exit Sub
 
@@ -379,6 +383,8 @@ Partial Class Articoli
         Dim taxonomy As CatalogTaxonomyContext = GetCatalogTaxonomyContext()
         Dim activeSectorId As Integer = taxonomy.SectorId
         Dim activeCategoryId As Integer = taxonomy.CategoryId
+
+        BindCatalogDepartmentTiles(sectors, taxonomy)
 
         Dim sectorItems As New List(Of String)()
         Dim activeSectorIndex As Integer = -1
@@ -452,6 +458,85 @@ Partial Class Articoli
         pnlCatalogCategoryNav.Visible = True
         pnlCatalogDepartmentsMobile.Visible = True
     End Sub
+
+    ' Riquadri delle categorie nella pagina di un reparto: settore scelto, nessuna categoria, nessuna ricerca o filtro, prima pagina.
+    ' Stessi dati e stessi URL dell'albero laterale (un solo provider, nessuna query in piu); contenuti reali, nessuna immagine inventata.
+    Private Sub BindCatalogDepartmentTiles(ByVal sectors As List(Of CatalogMenuSector), ByVal taxonomy As CatalogTaxonomyContext)
+        If pnlCatalogDepartmentTiles Is Nothing OrElse litCatalogDepartmentTiles Is Nothing Then Return
+        If taxonomy Is Nothing OrElse Not taxonomy.HasSector OrElse taxonomy.HasCategory Then Return
+        If HasCatalogRefinement() Then Return
+
+        Dim sector As CatalogMenuSector = Nothing
+        For Each candidate As CatalogMenuSector In sectors
+            If candidate IsNot Nothing AndAlso candidate.Id = taxonomy.SectorId Then
+                sector = candidate
+                Exit For
+            End If
+        Next
+        If sector Is Nothing OrElse sector.Categories Is Nothing Then Return
+
+        Dim tiles As New List(Of String)()
+        For Each category As CatalogMenuCategory In sector.Categories
+            If category Is Nothing Then Continue For
+            Dim label As String = CatalogNavText(category.Descrizione, 46)
+            If label = "" Then Continue For
+
+            Dim html As New StringBuilder()
+            html.Append("<li><a class=""ks-dept-tile"" href=""")
+            html.Append(HA(BuildCatalogCategoryUrl(sector.Id, category.Id)))
+            html.Append("""><span class=""ks-dept-tile-name"">")
+            html.Append(Server.HtmlEncode(label))
+            html.Append("</span>")
+            Dim typologies As Integer = If(category.Children Is Nothing, 0, category.Children.Count)
+            If typologies > 0 Then
+                html.Append("<span class=""ks-dept-tile-meta"">")
+                html.Append(typologies.ToString(CultureInfo.InvariantCulture))
+                html.Append(If(typologies = 1, " tipologia", " tipologie"))
+                html.Append("</span>")
+            End If
+            html.Append("<i class=""icon-arrow-right"" aria-hidden=""true""></i></a></li>")
+            tiles.Add(html.ToString())
+        Next
+        If tiles.Count < 2 Then Return
+
+        Dim output As New StringBuilder()
+        output.Append("<section class=""ks-dept-tiles-section"" aria-labelledby=""ksDeptTilesTitle"">")
+        output.Append("<h2 id=""ksDeptTilesTitle"" class=""ks-dept-tiles-title"">Categorie in ")
+        output.Append(Server.HtmlEncode(CatalogNavText(sector.Descrizione, 60)))
+        output.Append("</h2><ul class=""ks-dept-tile-grid"">")
+
+        Dim visibleCount As Integer = Math.Min(CatalogDepartmentTilesVisible, tiles.Count)
+        For index As Integer = 0 To visibleCount - 1
+            output.Append(tiles(index))
+        Next
+
+        Dim extraCount As Integer = tiles.Count - visibleCount
+        If extraCount > 0 Then
+            output.Append("<li class=""ks-dept-tile-more""><details class=""ks-dept-more""><summary class=""ks-dept-more-summary"">")
+            output.Append("<span class=""ks-dept-more-closed"">")
+            output.Append(Server.HtmlEncode(If(extraCount = 1, "Mostra 1 altra categoria",
+                                               "Mostra altre " & extraCount.ToString(CultureInfo.InvariantCulture) & " categorie")))
+            output.Append("</span><span class=""ks-dept-more-open"">Mostra meno</span>")
+            output.Append("<i class=""icon-arrow-down"" aria-hidden=""true""></i></summary><ul class=""ks-dept-tile-grid"">")
+            For index As Integer = visibleCount To tiles.Count - 1
+                output.Append(tiles(index))
+            Next
+            output.Append("</ul></details></li>")
+        End If
+        output.Append("</ul></section>")
+
+        litCatalogDepartmentTiles.Text = output.ToString()
+        pnlCatalogDepartmentTiles.Visible = True
+    End Sub
+
+    ' Vero se l'utente sta gia raffinando (ricerca, filtri, prezzo, pagina oltre la prima): in quel caso i riquadri non si disegnano.
+    Private Function HasCatalogRefinement() As Boolean
+        For Each key As String In New String() {"q", "mr", "tp", "gr", "sg", "inpromo", "ricondizionato", "disponibile", "pmin", "pmax", "taglia", "colore"}
+            If Not String.IsNullOrWhiteSpace(Request.QueryString(key)) Then Return True
+        Next
+        Dim pg As Integer = 0
+        Return Integer.TryParse(Request.QueryString("pg"), pg) AndAlso pg > 1
+    End Function
 
     Private Sub AppendCatalogNavItems(ByVal html As StringBuilder, ByVal items As List(Of String),
                                      ByVal initialCount As Integer, ByVal activeIndex As Integer,

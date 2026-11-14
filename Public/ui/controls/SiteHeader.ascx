@@ -208,6 +208,7 @@
             </div>
         </div>
     </div>
+    <asp:Literal ID="litDepartmentsBar" runat="server" EnableViewState="false" />
 </header>
 
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">

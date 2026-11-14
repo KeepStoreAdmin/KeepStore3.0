@@ -189,12 +189,54 @@ Partial Class SiteHeader
     End Sub
 
     Private Sub BindDesktopCatalog(ByVal sectors As List(Of CatalogMenuSector))
+        If litDepartmentsBar IsNot Nothing Then
+            litDepartmentsBar.Text = BuildDepartmentsBarHtml(sectors)
+        End If
+
         If litDesktopCatalogMegaMenu Is Nothing Then
             Return
         End If
 
         litDesktopCatalogMegaMenu.Text = BuildDesktopCatalogMegaMenuHtml(sectors)
     End Sub
+
+    ' Barra dei reparti sempre visibile (solo desktop). Stessa sorgente del megamenu (provider unico, ordine del gestionale);
+    ' il CSS ne mostra una riga, gli altri reparti restano nel menu Catalogo e dietro "Tutti i reparti".
+    Private Function BuildDepartmentsBarHtml(ByVal sectors As List(Of CatalogMenuSector)) As String
+        If sectors Is Nothing OrElse sectors.Count = 0 Then
+            Return String.Empty
+        End If
+
+        Dim scope As CatalogTaxonomyContext = If(_headerCurrentScope, New CatalogTaxonomyContext())
+        Dim items As New StringBuilder()
+        Dim count As Integer = 0
+
+        For Each sector As CatalogMenuSector In sectors
+            If sector Is Nothing OrElse String.IsNullOrWhiteSpace(sector.Descrizione) Then
+                Continue For
+            End If
+
+            Dim onPath As Boolean = scope.HasSector AndAlso sector.Id = scope.SectorId
+            items.Append("<li class='ks-dept-item")
+            If onPath Then items.Append(" is-current")
+            items.Append("'><a class='ks-dept-link body-md-2' href='")
+            items.Append(HttpUtility.HtmlAttributeEncode(sector.DefaultUrl))
+            items.Append("'")
+            AppendDesktopCatalogPathAttributes(items, onPath, onPath AndAlso Not scope.HasCategory)
+            items.Append(">")
+            items.Append(HttpUtility.HtmlEncode(sector.Descrizione))
+            items.Append("</a></li>")
+            count += 1
+        Next
+
+        If count = 0 Then
+            Return String.Empty
+        End If
+
+        Return "<div id='ksDepartmentsBar' class='ks-departments-bar d-none d-xl-block'><div class='container'>" &
+               "<nav class='ks-dept-nav' aria-label='Reparti'><ul class='ks-dept-list'>" & items.ToString() &
+               "</ul><a class='ks-dept-all body-md-2' href='articoli.aspx'>Tutti i reparti</a></nav></div></div>"
+    End Function
 
     Protected Function MobileSectorMediaClass(ByVal imgUrl As Object) As String
         Dim value As String = Convert.ToString(imgUrl)

@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261114-catalog-nav1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261114-dept-nav1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261111-catalog-departments1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261108-catalog-search-context-1a" />
     <style>
@@ -224,6 +224,9 @@
 
                 <div class="content-area">
                     <p class="body-text-3 text-main-2 mb-2"><asp:Label ID="lblPrezzi" runat="server" /></p>
+                    <asp:Panel ID="pnlCatalogDepartmentTiles" runat="server" Visible="false" CssClass="ks-dept-tiles">
+                        <asp:Literal ID="litCatalogDepartmentTiles" runat="server" EnableViewState="false" />
+                    </asp:Panel>
                     <asp:Panel ID="pnlCatalogDepartmentsMobile" runat="server" Visible="false" CssClass="ks-catalog-category-nav ks-catalog-departments-mobile d-xl-none">
                         <details class="ks-catalog-departments">
                             <summary>Esplora i reparti</summary>

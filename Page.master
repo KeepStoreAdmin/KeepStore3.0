@@ -35,7 +35,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-catalog-nav1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-dept-nav1a" %>" />
     <noscript><style>#preload{display:none!important}</style></noscript>
 </head>
 
@@ -265,6 +265,7 @@
         </script>
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20261021-suggest-commercial1a"></script>
+        <script src="<%= ThemeManager.Asset("js/ks-departments-bar.js") %>?v=20261114-dept-nav1a"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
         <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260929-cart-quantity-async-ux-1b"></script>
         <script src="<%= ThemeManager.Asset("js/ks-minicart-quantity.js") %>?v=20261023-mini-quantity-1a"></script>
