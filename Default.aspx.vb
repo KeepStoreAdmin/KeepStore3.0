@@ -928,7 +928,9 @@ Partial Public Class _Default
     End Function
 
     Private Function GetBestSellerPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts("COALESCE(ca.CommercialScore,0)>0",
+        ' La vetrina dei piu scelti non mostra articoli che non si possono acquistare ora: stessa quantita netta della scheda e del carrello
+        ' (giacenza meno impegnata, vedi OrderInventoryAvailabilityService), quella che l'etichetta "Non disponibile" legge.
+        Return QueryProducts("COALESCE(ca.CommercialScore,0)>0 AND (" & StockWhereClause() & "-" & ReservedWhereClause() & ")>=1",
                              "CommercialScore DESC, LastCommercialActivity DESC, id DESC, TCid ASC",
                              limit, False, False, True)
     End Function
@@ -2918,7 +2920,7 @@ Partial Public Class _Default
                                       ByVal emphasize As Boolean,
                                       Optional ByVal reserveDealSlots As Boolean = False) As String
         Dim sb As New StringBuilder()
-        Dim priceClass As String = If(emphasize, "new-price h4 fw-normal text-primary mb-0", "new-price body-md-2 fw-medium text-primary mb-0") & " ks-home-price-value ks-home-price-value--current"
+        Dim priceClass As String = If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 fw-medium mb-0") & " ks-home-price-value ks-home-price-value--current"
         Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2") & " ks-home-price-value ks-home-price-value--old"
         Dim slotClass As String = If(emphasize, "ks-home-price-slot--emphasized", "ks-home-price-slot--compact")
         Dim stackClass As String = If(emphasize, "ks-home-price-stack--emphasized", "ks-home-price-stack--compact")

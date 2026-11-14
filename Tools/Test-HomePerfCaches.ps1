@@ -337,9 +337,9 @@ Assert-Detected (Test-DefaultVb (Mutate-Text $vb 'Return snapshot.CopyTable()' '
 Assert-Detected (Test-DefaultVb (Mutate-Text $vb 'Private Const HomeAssortmentCacheSeconds As Integer = 120' 'Private Const HomeAssortmentCacheSeconds As Integer = 86400' 'S16')) 'S16_ASSORTMENT_CACHE_TOO_LONG'
 Assert-Detected (Test-DefaultVb ($vb + "`n' StorefrontTenantScopedCache.GetOrLoad second use`n")) 'S17_SECOND_UNREVIEWED_CACHE_USE'
 $poolMutated = Mutate-Text $vb 'Private Function GetBestSellerPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(' 'Private Function GetBestSellerPool(ByVal limit As Integer) As DataTable
+' 'Private Function GetBestSellerPool(ByVal limit As Integer) As DataTable
         Dim cached = StorefrontTenantScopedCache.GetOrLoad(Of StorefrontCachedTable)("x", "y", 1, "z", 60, Nothing)
-        Return QueryProducts(' 'S18'
+' 'S18'
 Assert-Detected (Test-CommercialNotCached $poolMutated) 'S18_PRICE_BEARING_POOL_GETS_CACHED'
 Assert-Detected (Test-HeaderMobileViewState (Mutate-Text $headerAscx '<asp:Repeater ID="rptNavSettoriMobile" runat="server" EnableViewState="false"' '<asp:Repeater ID="rptNavSettoriMobile" runat="server"' 'S19') $header) 'S19_MOBILE_MENU_SAVES_VIEWSTATE_AGAIN'
 Assert-Detected (Test-HeaderMobileViewState (Mutate-Text $headerAscx '<asp:Repeater ID="rptNavTipologieMobile" runat="server" EnableViewState="false">' '<asp:Repeater ID="rptNavTipologieMobile" runat="server">' 'S20') $header) 'S20_NESTED_MOBILE_REPEATER_SAVES_VIEWSTATE_AGAIN'

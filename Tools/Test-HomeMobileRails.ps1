@@ -29,6 +29,9 @@ function Assert-Detected([bool]$stillPasses, [string]$code) {
 function Get-RailBlock([string]$css) {
     $a = $css.IndexOf('/* ===== KS-A04-HOME-VETRINA-1A')
     if ($a -lt 0) { throw 'RAIL_BLOCK_MISSING' }
+    # il blocco della seconda tranche (desktop e tablet) viene dopo: qui conta solo quello del telefono
+    $z = $css.IndexOf('/* ===== KS-A04-HOME-VETRINA-2A', $a)
+    if ($z -gt $a) { return $css.Substring($a, $z - $a) }
     return $css.Substring($a)
 }
 
@@ -83,10 +86,10 @@ function Test-CarouselRows([string]$js) {
     return ($decl -and $base -and $breakpoints)
 }
 function Test-BestSwiper([string]$aspx) {
-    return ($aspx -match 'data-pagination-lg="5" data-grid="2" data-grid-mobile="1">')
+    return ($aspx -match 'data-pagination-lg="4" data-grid="1" data-grid-mobile="1">')
 }
 function Test-Busters([string]$master) {
-    return ($master -match 'theme-overrides\.css"\) & "\?v=20261114-home-vetrina1a"' -and $master -match 'js/carousel\.js"\) %>\?v=20261114-home-vetrina1a')
+    return ($master -match 'theme-overrides\.css"\) & "\?v=20261114-home-vetrina2a"' -and $master -match 'js/carousel\.js"\) %>\?v=20261114-home-vetrina1a')
 }
 
 $css = Read-Repo 'Public\assets\keepstore\css\theme-overrides.css'

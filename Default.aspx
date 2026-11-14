@@ -517,27 +517,6 @@
         </div>
     </section>
 
-    <section id="HomeFeaturedProductsSection" runat="server" class="ks-home-section ks-home-featured">
-        <div class="container">
-            <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <div>
-                    <h5 class="fw-semibold">Novità e arrivi</h5>
-                    <p class="body-text-3 text-main-2 mb-0">Nuovi articoli da scoprire e prodotti in arrivo.</p>
-                </div>
-                <a href="articoli.aspx" class="tf-btn btn-line">
-                    <span>Esplora il catalogo</span>
-                </a>
-            </div>
-            <div class="ks-home-product-grid">
-                <asp:Repeater ID="rptHomeFeaturedProducts" runat="server" EnableViewState="false">
-                    <ItemTemplate>
-                        <%# RenderGridCard(Container.DataItem) %>
-                    </ItemTemplate>
-                </asp:Repeater>
-            </div>
-        </div>
-    </section>
-
     <section id="HomeOffersSection" runat="server" class="ks-home-section ks-home-deals">
         <div class="container">
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
@@ -571,6 +550,27 @@
                     <div class="d-flex d-lg-none sw-dot-default sw-pagination-products justify-content-center"></div>
                 </div>
             </asp:Panel>
+        </div>
+    </section>
+
+    <section id="HomeFeaturedProductsSection" runat="server" class="ks-home-section ks-home-featured">
+        <div class="container">
+            <div class="flat-title wow fadeInUp" data-wow-delay="0s">
+                <div>
+                    <h5 class="fw-semibold">Novità e arrivi</h5>
+                    <p class="body-text-3 text-main-2 mb-0">Nuovi articoli da scoprire e prodotti in arrivo.</p>
+                </div>
+                <a href="articoli.aspx" class="tf-btn btn-line">
+                    <span>Esplora il catalogo</span>
+                </a>
+            </div>
+            <div class="ks-home-product-grid">
+                <asp:Repeater ID="rptHomeFeaturedProducts" runat="server" EnableViewState="false">
+                    <ItemTemplate>
+                        <%# RenderGridCard(Container.DataItem) %>
+                    </ItemTemplate>
+                </asp:Repeater>
+            </div>
         </div>
     </section>
 
@@ -618,7 +618,7 @@
                     <div class="swiper-button-next nav-swiper nav-next-products"><i class="icon-arrow-right-lg"></i></div>
                 </div>
             </div>
-            <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="15" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5" data-grid="2" data-grid-mobile="1">
+            <div class="swiper tf-sw-products" data-preview="4" data-tablet="3" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="15" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="3" data-pagination-lg="4" data-grid="1" data-grid-mobile="1">
                 <div class="swiper-wrapper">
                     <asp:Repeater ID="rptBestSeller" runat="server" EnableViewState="false">
                         <ItemTemplate>

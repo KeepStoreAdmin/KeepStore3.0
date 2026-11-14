@@ -3685,3 +3685,114 @@ body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
     min-height: 0;
   }
 }
+/* ===== KS-A04-HOME-VETRINA-2A - HOME desktop e tablet: reparti e categorie in un solo blocco compatto, prezzi come il catalogo. ===== */
+
+/* Prezzi come la scheda del catalogo, a ogni larghezza: stesso carattere del testo (le classi h4 e fw-normal usavano un carattere non
+   caricato e ricadevano su un serif), colore scuro e peso 500; l'offerta resta in evidenza con un corpo piu grande. */
+body.ks-page-home #ksHomePage .ks-home-price-value { font-family: inherit; }
+body.ks-page-home #ksHomePage .ks-grid-card .new-price.ks-home-price-value--current {
+  color: var(--black, #121212);
+  font-size: 20px;
+  line-height: 22px;
+  font-weight: 500;
+}
+body.ks-page-home #ksHomePage .ks-grid-card .old-price { font-size: 14px; line-height: 22px; }
+body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .new-price.ks-home-price-value--current {
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  /* Reparti: riquadri orizzontali compatti (immagine a sinistra, nome a destra), senza il testo ripetuto di ogni riquadro.
+     Le regole dei pochi reparti (1, 2 o 3) restano quelle di prima: sono piu specifiche. */
+  body.ks-page-home .ks-home-categories .ks-home-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  body.ks-page-home .ks-home-categories .ks-home-category-card {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 64px;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  body.ks-page-home .ks-home-categories .ks-home-category-media { flex: 0 0 48px; width: 48px; height: 48px; }
+  body.ks-page-home .ks-home-categories .ks-home-category-title {
+    min-height: 0;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  body.ks-page-home .ks-home-categories .ks-home-category-link { display: none; }
+
+  /* Categorie: etichette che vanno a capo, nello stesso blocco dei reparti (titolo piu leggero, niente spazio vuoto in mezzo). */
+  body.ks-page-home #ksHomePage .ks-home-categories { padding-bottom: 12px; }
+  body.ks-page-home #ksHomePage .ks-home-direct-categories { padding-top: 0; padding-bottom: 22px; }
+  body.ks-page-home #ksHomePage .ks-home-direct-categories .flat-title {
+    margin-bottom: 12px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  body.ks-page-home #ksHomePage .ks-home-direct-categories .flat-title h5 { font-size: 16px; line-height: 24px; }
+  body.ks-page-home #ksHomePage .ks-home-direct-category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.ks-page-home #ksHomePage .ks-home-direct-category-list > li { flex: 0 1 auto; max-width: 100%; }
+  body.ks-page-home #ksHomePage .ks-home-direct-category-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    height: auto;
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 22px;
+    box-shadow: none;
+  }
+  body.ks-page-home #ksHomePage .ks-home-direct-category-name { grid-column: auto; font-size: 14px; line-height: 20px; }
+  body.ks-page-home #ksHomePage .ks-home-direct-category-sector {
+    display: inline;
+    align-self: auto;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+  body.ks-page-home #ksHomePage .ks-home-direct-category-arrow { align-self: center; margin-bottom: 0; }
+
+  /* Scheda offerta: gli spazi riservati per allineare le schede erano tarati sul vecchio prezzo da 34 px (la scheda era alta 919 px).
+     Restano uno spazio per il prezzo, uno per il prezzo a quantita e uno per la disponibilita, ma della misura che serve davvero. */
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-thumbs { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 8px 0 12px; }
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-thumbs .image-swap { height: 44px; }
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-slot--gallery { min-height: 64px; }
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-slot--price .ks-home-price-stack { min-height: 84px; }
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-price-amount-slot { min-height: 40px; }
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-price-tier-slot { min-height: 34px; }
+  body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-slot--availability { min-height: 40px; }
+}@media (min-width: 1200px) {
+  body.ks-page-home .ks-home-categories .ks-home-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  /* Tablet: la griglia dei prodotti (novita, catalogo) diventa una fila scorrevole con la scheda successiva che si intravede,
+     come sul telefono (prima 3 colonne e 3 righe di schede alte oltre 650 px: la sezione era alta 2.000-2.900 px). */
+  body.ks-page-home #ksHomePage .ks-home-product-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: calc((100% - 32px) / 3.2);
+    gap: 16px;
+    overflow-x: auto;
+    padding: 2px 2px 10px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.ks-page-home #ksHomePage .ks-home-product-grid::-webkit-scrollbar { display: none; }
+  body.ks-page-home #ksHomePage .ks-home-product-grid > * {
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+}
