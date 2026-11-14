@@ -275,6 +275,13 @@ P0 = gate di affidabilita/rilascio; P1 = outcome cliente core; P2 = evoluzione p
 - TARGET/AC del batch proposto `HOME-ADAPTIVE-SHOPPING-1A`: (1) composizione capability-driven da dati reali; (2) banner/branding/prodotti/attributi pertinenti e omissione delle sezioni prive di dati; (3) accesso mobile chiaro a ricerca/catalogo/assistente. Una release per elettronica, food, pitture, moda e altri cataloghi, senza demo o inferenze arbitrarie dalla merceologia.
 - Dipendenze/prove: [confine architetturale](KEEPSTORE_SYSTEM_BLUEPRINT.md#home-adattiva-e-assistente--confine-current--target), contratto residuo di discovery approvato nel mandato sopra; capability engine generale ancora TARGET, resolver invariati. AC multi-tenant con almeno due cataloghi sintetici di merceologie diverse e QA mobile, inclusi assenza attributi/immagini, catalogo piccolo/vuoto e isolamento listino/promo. Nessuna query per card o cache cross-tenant.
 
+### KS-E02 — HOME «effetto wow» e ricerca in alto (mandato PO 2026-11-14)
+
+- **Mandato:** rendere la HOME «effetto wow» con dati reali, perfezionare la ricerca in alto e tutto cio che compare in vetrina, cancellare il codice morto. **SEO e footer esclusi** (PO). P1; CURRENT PARZIALE, TARGET non completato.
+- **Audit e piano:** [Masterplan, KS-A04-HOME-AUDIT-1A](KEEPSTORE_MASTERPLAN_OPERATIVO.md#ks-a04-home-audit-1a--14112026--audit--piano-home-effetto-wow-e-ricerca-in-alto--docs) (benchmark Prezzoforte, Stay On, IKEA, Bytecno e fonti sugli utenti, diagnosi, codice morto, limiti).
+- **Micro-task in ordine:** (1) `KS-A04-SEARCH-SUGGEST-UNPRICED-1A` **FATTO, #486** (suggerimenti morti sul catalogo reale); (2) `KS-A04-HOME-AUDIT-1A` docs; (3) `KS-A04-HOME-IMG-ENCODE-1A`; (4) `KS-A04-SEARCH-PANEL-UX-1A`; (5) `KS-A04-SEARCH-LATENCY-1A` (CRITICAL, circa 2,6 s oggi per richiesta); (6) `KS-A04-HOME-DEADCODE-1A`; (7) `KS-A04-HOME-VETRINA-1A`; (8) `KS-A04-HOME-PERF-1A` (CRITICAL per la cache). Gli stati dal punto 2 in poi si aggiornano nel Masterplan a ogni chiusura; nulla e pubblicato (CONSEGNA SERVER SOSPESA).
+- **AC del risultato cliente:** la ricerca risponde in modo visibile (stato di attesa immediato, prodotti con prezzo e disponibilita, ambito per reparto/marca, uscita guidata dallo zero) su telefono e desktop; la HOME mostra subito che cosa vende il negozio (reparti con immagine), usa le stesse card del catalogo, omette le sezioni prive di dati e gli articoli non acquistabili, ed e piu corta da telefono; nessun dato inventato, nessun claim non dimostrabile, nessuna regressione commerciale o di isolamento tenant.
+
 ## F. SHOPPING ASSISTANT
 
 ### KS-F01 — Assistente riconoscibile e conversazione progressiva
