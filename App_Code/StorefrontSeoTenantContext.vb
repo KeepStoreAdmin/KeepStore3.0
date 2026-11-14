@@ -61,7 +61,7 @@ Public NotInheritable Class StorefrontSeoTenantContext
             Dim fromCache As IList(Of StorefrontSeoTenantIdentity) = TryCast(HttpRuntime.Cache(cacheKey), IList(Of StorefrontSeoTenantIdentity))
             If fromCache IsNot Nothing Then Return fromCache
 
-            Const sql As String = "SELECT Id, Nome, Descrizione, url1, url2, LogoWeb, ListinoDefault FROM aziende ORDER BY Id"
+            Const sql As String = "SELECT Id, Nome, Descrizione, url1, url2, LogoWeb, ListinoDefault, telefono, email FROM aziende ORDER BY Id"
             Using connection As New MySqlConnection(settings.ConnectionString)
                 connection.Open()
                 Using command As New MySqlCommand(sql, connection)
@@ -76,7 +76,11 @@ Public NotInheritable Class StorefrontSeoTenantContext
                                 SafeReaderString(reader, "url2"),
                                 SafeReaderString(reader, "LogoWeb"),
                                 SafeReaderInteger(reader, "ListinoDefault"))
-                            If identity IsNot Nothing Then result.Add(identity)
+                            If identity IsNot Nothing Then
+                                identity.SupportPhone = SafeReaderString(reader, "telefono")
+                                identity.SupportEmail = SafeReaderString(reader, "email")
+                                result.Add(identity)
+                            End If
                         End While
                     End Using
                 End Using

@@ -16,6 +16,8 @@ function Assert-Source([bool]$condition, [string]$code) {
     Write-Output ('PASS ' + $code)
 }
 function Mutate-Text([string]$text, [string]$old, [string]$new, [string]$code) {
+    # i letterali multilinea del file prendono i fine riga del checkout (CRLF con autocrlf): si confrontano sempre con LF.
+    $old = $old -replace "`r`n", "`n"; $new = $new -replace "`r`n", "`n"
     $out = $text.Replace($old, $new)
     if ($out -eq $text) { throw ('MUTATION_NOT_APPLIED=' + $code) }
     return $out

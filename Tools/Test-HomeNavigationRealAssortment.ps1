@@ -18,10 +18,14 @@ try {
  $models=[regex]::Match($provider,'(?s)Public Class CatalogMenuSector.*?(?=Public Module CatalogMenuProvider)').Value
  $selection=[regex]::Match($vb,'(?ms)^    Private NotInheritable Class HomeEditorialNavigation.*?(?=^    Protected Function HomeSectorMicrocopy)').Value
  $directClass=[regex]::Match($vb,'(?ms)^    Private NotInheritable Class HomeDirectCategory\b.*?^    End Class').Value
- $methods=@('BuildHomeNavigationAssortmentSql','LoadHomeNavigationAssortment','FilterHomeAssortmentSectors','SelectHomeAssortmentBrands','FilterBrandRows','SelectHomeDirectCategories','SafeText','RenderHomeSectorMedia','HomeSectorInitial')|ForEach-Object {Method $vb $_}
+ $methods=@('BuildHomeNavigationAssortmentSql','LoadHomeNavigationAssortment','ReadHomeNavigationAssortment','FilterHomeAssortmentSectors','SelectHomeAssortmentBrands','FilterBrandRows','SelectHomeDirectCategories','SafeText','RenderHomeSectorMedia','HomeSectorInitial')|ForEach-Object {Method $vb $_}
  $taxonomy=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/CatalogTaxonomyResolver.vb')) -replace '(?m)^(Option .*|Imports .*)\r?\n',''
+ # The real tenant-scoped cache helper is compiled verbatim; only the database scope key is a synthetic constant.
+ $cacheHelper=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/StorefrontTenantScopedCache.vb')) -replace '(?m)^(Option .*|Imports .*)\r?\n',''
+ $cacheConst=[regex]::Match($vb,'(?m)^    Private Const HomeAssortmentCacheSeconds .*$').Value
+ if(!$cacheConst){throw 'CACHE_CONST_MISSING'}
  $breadcrumb=[regex]::Match([IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code/ProductStructuredDataBuilder.vb')),'(?ms)^Public NotInheritable Class StorefrontBreadcrumbItem\b.*?^End Class').Value
- $providerStub="Public Module CatalogMenuProvider`nPublic Function LoadCatalogMenuCached() As List(Of CatalogMenuSector)`nThrow New InvalidOperationException(""UNEXPECTED_GLOBAL_PROVIDER_READ"")`nEnd Function`nEnd Module`n"
+ $providerStub="Public Class StorefrontSeoTenantContext`nPublic Shared Function ConfiguredDatabaseScopeKey() As String`nReturn ""synthetic-database-scope""`nEnd Function`nEnd Class`nPublic Module CatalogMenuProvider`nPublic Function LoadCatalogMenuCached() As List(Of CatalogMenuSector)`nThrow New InvalidOperationException(""UNEXPECTED_GLOBAL_PROVIDER_READ"")`nEnd Function`nEnd Module`n"
  # The real VB selection, query builder and loader are compiled verbatim. Only DB transport and
  # logo file existence are substituted; no ASP.NET request, MySQL, IIS or operational assets are used.
  $standins=@'
@@ -81,6 +85,7 @@ End Class
 Public Class HomeNavigationFixture
  Public Db As New FixtureDb()
  Public Listino As Integer
+ Public Company As Integer = 1
  Public LastError As String
  Public Invalidations As Integer
  Private Class HomeQueryConnectionLease
@@ -95,6 +100,9 @@ Public Class HomeNavigationFixture
  Private Function GetCurrentListino() As Integer
   Return Listino
  End Function
+ Private Function GetCurrentAziendaId() As Integer
+  Return Company
+ End Function
  Private Sub InvalidateHomeQueryConnection()
   Invalidations += 1
  End Sub
@@ -106,7 +114,7 @@ Public Class HomeNavigationFixture
   Return If(text.StartsWith("valid-",StringComparison.Ordinal), "/synthetic/" & text, "")
  End Function
 '@
- $code="Imports System`nImports System.Data`nImports System.Collections.Generic`nImports System.Globalization`nImports System.Web`nImports System.Text.RegularExpressions`n"+(@($models,$breadcrumb,$providerStub,$taxonomy,$standins,$directClass,$selection,($methods -join "`n"),'End Class') -join "`n")
+ $code="Imports System`nImports System.Data`nImports System.Collections.Generic`nImports System.Globalization`nImports System.Web`nImports System.Text.RegularExpressions`n"+(@($models,$breadcrumb,$providerStub,$taxonomy,$cacheHelper,$standins,$directClass,$selection,$cacheConst,($methods -join "`n"),'End Class') -join "`n")
  Add-Type -AssemblyName Microsoft.VisualBasic
  Add-Type -AssemblyName System.Web
  $compiler=New-Object Microsoft.VisualBasic.VBCodeProvider
@@ -118,7 +126,7 @@ Public Class HomeNavigationFixture
  $type=$compiled.CompiledAssembly.GetType('HomeNavigationFixture',$true)
  $sectorType=$compiled.CompiledAssembly.GetType('CatalogMenuSector',$true)
  $flags=[Reflection.BindingFlags]'Public,NonPublic,Instance,Static'
- $page=[Activator]::CreateInstance($type)
+ $page=[Activator]::CreateInstance($type);$co=100
  function Call($name,[object[]]$arguments){for($i=0;$i -lt $arguments.Count;$i++){if($null -ne $arguments[$i]){$arguments[$i]=$arguments[$i].PSObject.BaseObject}};return ,$type.GetMethod($name,$flags).Invoke($page,$arguments)}
  $sql=Call 'BuildHomeNavigationAssortmentSql' @()
  [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'query.sql'),$sql)
@@ -151,7 +159,7 @@ fs.writeFileSync(process.argv[3],JSON.stringify(out));db.close();
  function Ids($items){return (@($items|ForEach-Object {$_.Id}) -join ',')}
  function Field($nav,$name){return ,$nav.GetType().GetField($name).GetValue($nav)}
  if(!$CategoryDeltaOnly){foreach($list in @(1,10,99,10,1)){
-  $page.Listino=$list;$page.Db.Data=Table $list;$before=$page.Db.Reads
+  $co++;$page.Company=$co;$page.Listino=$list;$page.Db.Data=Table $list;$before=$page.Db.Reads
   $rows=Call 'LoadHomeNavigationAssortment' @()
   Check "single aggregate read list$list/$before" ($page.Db.Reads -eq $before+1 -and $page.Db.Parameter -is [int] -and $page.Db.Parameter -eq $list -and $page.Db.Sql -ceq $sql)
   $sectors=Call 'FilterHomeAssortmentSectors' @($source,$rows)
@@ -169,7 +177,7 @@ fs.writeFileSync(process.argv[3],JSON.stringify(out));db.close();
   Check "brand limit and no duplicate identities list$list/$before" ($visible.Rows.Count -le 12 -and @($brands.Rows|Group-Object id|Where-Object {$_.Count -gt 1}).Count -eq 0)
   Check "brand URL/data retained list$list/$before" (@($visible.Rows|Where-Object {$_['link'] -ne ('articoli.aspx?mr='+$_['id'])}).Count -eq 0)
  }
- $page.Db.Fail=$true;$page.Listino=1;$rows=Call 'LoadHomeNavigationAssortment' @()
+ $co++;$page.Company=$co;$page.Db.Fail=$true;$page.Listino=1;$rows=Call 'LoadHomeNavigationAssortment' @()
  Check 'read failure distinct from empty assortment' ($null -eq $rows)
  Check 'read failure preserves all provider navigation' ((Ids (Call 'FilterHomeAssortmentSectors' @($source,$rows))) -eq (Ids $source))
  Check 'read failure does not expose unverified brands' ((Call 'SelectHomeAssortmentBrands' (,$rows)).Rows.Count -eq 0)
@@ -178,7 +186,8 @@ fs.writeFileSync(process.argv[3],JSON.stringify(out));db.close();
  $bind=Method $vb 'BindHome';$loader=Method $vb 'LoadHomeNavigationAssortment'
  Check 'single per-request membership load wired before editorial selection' ([regex]::Matches($bind,'LoadHomeNavigationAssortment\(').Count -eq 1 -and $bind.IndexOf('FilterHomeAssortmentSectors(') -lt $bind.IndexOf('BuildHomeEditorialNavigation('))
  Check 'brand filtering precedes final12 and preliminary24 removed' ($bind.Contains('FilterBrandRows(SelectHomeAssortmentBrands(navigationAssortment), 12)') -and !$vb.Contains('GetBrands(24)'))
- Check 'typed authoritative list parameter no cache' ($loader.Contains('GetCurrentListino()') -and $loader.Contains('MySqlDbType.Int32') -and !$loader.Contains('Cache') -and (Method $vb 'GetCurrentListino').Contains('_priceDisplayContext.PriceListId'))
+ $reader=Method $vb 'ReadHomeNavigationAssortment'
+ Check 'typed authoritative list parameter, short cache keyed database+company+list' ($loader.Contains('GetCurrentListino()') -and $reader.Contains('MySqlDbType.Int32') -and $loader.Contains('StorefrontTenantScopedCache.GetOrLoad(Of StorefrontCachedTable)') -and $loader.Contains('ConfiguredDatabaseScopeKey()') -and $loader.Contains('GetCurrentAziendaId()') -and $loader.Contains('listino.ToString(CultureInfo.InvariantCulture)') -and (Method $vb 'GetCurrentListino').Contains('_priceDisplayContext.PriceListId'))
  Check 'ordinary catalog uses same view and list constraint' ($sql.Contains('FROM vsuperarticoli v') -and $sql.Contains('WHERE v.NListino=@listino') -and $sql -notmatch 'Vetrina|Giacenza|Prezzo|Disponibil|LIMIT|TCId')
  $markup=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'Default.aspx'))
  Check 'empty brand section omitted and full catalog links retained' ($bind.Contains('HomeBrandsSection.Visible = Not IsTableEmpty(brandRows)') -and $markup.Contains('href="articoli.aspx"'))
@@ -198,7 +207,7 @@ fs.writeFileSync(process.argv[3],JSON.stringify(out));db.close();
  $fixtures=New-Object 'Collections.Generic.List[object]'
  foreach($list in @(1,10,77,99,10,1)){
   $tenant=if($list -eq 1){'Tech'}else{'Food'};$tree=Tree $tenant;$beforeTree=@($tree|ForEach-Object {($_.Id.ToString()+':'+(Ids $_.Categories))}) -join '|'
-  $page.Listino=$list;$page.Db.Data=Table $list;$beforeReads=$page.Db.Reads;$rows=Call 'LoadHomeNavigationAssortment' @()
+  $co++;$page.Company=$co;$page.Listino=$list;$page.Db.Data=Table $list;$beforeReads=$page.Db.Reads;$rows=Call 'LoadHomeNavigationAssortment' @()
   $filtered=Call 'FilterHomeAssortmentSectors' @($tree,$rows);$categories=Call 'SelectHomeDirectCategories' @($filtered,$rows,8)
   $expected=if($list -eq 1){'2101,2001,1901,1801,1701,1601,1501,1401'}elseif($list -eq 10){'501,201,506,202,510,203,511,512'}else{''}
   Check "category membership/round-robin/editorial order list$list/$beforeReads" ((Ids $categories) -eq $expected)
@@ -212,7 +221,7 @@ fs.writeFileSync(process.argv[3],JSON.stringify(out));db.close();
   if($list -eq 1){Check 'eight different sectors when present' (@($categories|Select-Object -ExpandProperty SectorId -Unique).Count -eq 8)}
   if($fixtures.Count -lt 4){$fixtures.Add([pscustomobject]@{Name=if($list -eq 1){'Tech'}elseif($list -eq 10){'Food'}else{'Empty'+$list};Sectors=(Field (Call 'BuildHomeEditorialNavigation' (,$filtered)) 'MainSectors');Categories=$categories})}
  }
- $page.Db.Fail=$true;$page.Listino=1;$failedRows=Call 'LoadHomeNavigationAssortment' @()
+ $co++;$page.Company=$co;$page.Db.Fail=$true;$page.Listino=1;$failedRows=Call 'LoadHomeNavigationAssortment' @()
  Check 'category read error omits all unverified links' ((Call 'SelectHomeDirectCategories' @((Tree 'Tech'),$failedRows,8)).Count -eq 0)
  Check 'category null tree and zero limit empty' ((Call 'SelectHomeDirectCategories' @($null,(Table 1),8)).Count -eq 0 -and (Call 'SelectHomeDirectCategories' @((Tree 'Tech'),(Table 1),0)).Count -eq 0)
  $bind=Method $vb 'BindHome';$selector=Method $vb 'SelectHomeDirectCategories';$markup=[IO.File]::ReadAllText((Join-Path $RepositoryRoot 'Default.aspx'))

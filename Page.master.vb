@@ -658,74 +658,12 @@ Dim IvaTipo As Integer
     Dim conn As New MySqlConnection
     Dim conn2 As New MySqlConnection
     Dim cmd As New MySqlCommand
-    Public social_buttons As New Dictionary(Of String, String)
-    Public social_buttons_rules As New Dictionary(Of String, String)
 
     Function sostituisci_caratteri_speciali(ByRef stringa As String) As String
         stringa = Server.HtmlDecode(stringa)
         stringa = stringa.Replace("'", "''")
         Return stringa
     End Function
-
-    '==========================================================
-    '  SOCIAL BUTTONS (hardening SQL)
-    '==========================================================
-    Sub Load_social_buttons()
-        Dim dr As MySqlDataReader = Nothing
-
-        Dim aziendaId As Integer = 0
-        Integer.TryParse(Convert.ToString(Me.Session("AziendaID")), aziendaId)
-        If aziendaId <= 0 Then
-            Exit Sub
-        End If
-
-        Try
-            If conn.State <> ConnectionState.Open Then
-                conn.Open()
-            End If
-
-            cmd.Parameters.Clear()
-            cmd.CommandType = CommandType.Text
-            cmd.CommandText = "SELECT `key`, `value` " &
-                              "FROM social_buttons " &
-                              "WHERE company_id = @companyId AND enabled = 1 " &
-                              "ORDER BY button_order"
-            cmd.Parameters.AddWithValue("@companyId", aziendaId)
-
-            dr = cmd.ExecuteReader()
-            social_buttons.Clear()
-            While dr.Read()
-                social_buttons(dr.Item("key").ToString()) = dr.Item("value").ToString()
-            End While
-            dr.Close()
-
-            cmd.Parameters.Clear()
-            cmd.CommandText = "SELECT enabled, callToAction, buttonColor, position " &
-                              "FROM social_buttons_rules " &
-                              "WHERE company_id = @companyId"
-            cmd.Parameters.AddWithValue("@companyId", aziendaId)
-
-            dr = cmd.ExecuteReader()
-            social_buttons_rules.Clear()
-            If dr.Read() Then
-                social_buttons_rules("enabled") = dr.Item("enabled").ToString()
-                social_buttons_rules("callToAction") = dr.Item("callToAction").ToString()
-                social_buttons_rules("buttonColor") = dr.Item("buttonColor").ToString()
-                social_buttons_rules("position") = dr.Item("position").ToString()
-            End If
-            dr.Close()
-
-        Catch
-            ' Se i social falliscono, non buttiamo giù il sito
-        Finally
-            If dr IsNot Nothing AndAlso Not dr.IsClosed Then
-                dr.Close()
-            End If
-            If conn.State = ConnectionState.Open Then
-                conn.Close()
-            End If
-        End Try
-    End Sub
 
     Protected Sub rptNavCategorie_ItemDataBound(ByVal sender As Object, ByVal e As RepeaterItemEventArgs)
         If e.Item.ItemType = ListItemType.Item OrElse e.Item.ItemType = ListItemType.AlternatingItem Then
@@ -771,7 +709,7 @@ Dim IvaTipo As Integer
 
 
     '==========================================================
-    ' INIT: azienda, catalogo, popup, sfondo, social
+    ' INIT: azienda, catalogo, popup, sfondo
     '==========================================================
     Protected Sub Page_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Init
         conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
@@ -864,9 +802,6 @@ Dim IvaTipo As Integer
             dr.Close()
             conn.Close()
         End If
-
-        ' Carico social con query parametrizzate
-        Load_social_buttons()
 
         cmd.Dispose()
     End Sub

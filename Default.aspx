@@ -239,7 +239,7 @@
                                 <span>Tutti i settori</span>
                             </h6>
                             <ul class="menu-category-list" role="menu">
-                                <asp:Repeater ID="rptHeroDepartments" runat="server">
+                                <asp:Repeater ID="rptHeroDepartments" runat="server" EnableViewState="false">
                                     <ItemTemplate>
                                         <li class="menu-item" role="none">
                                             <a href='<%# Eval("DefaultUrl") %>' class="item-link body-text-3" role="menuitem">
@@ -262,12 +262,12 @@
                 <div id="HeroSliderWrap" runat="server" class="wrap-item-2 ks-home-main-hero">
                     <div id="Slide_Show_Container" runat="server" class="swiper ks-home-hero-slider wow fadeInUp" data-wow-delay="0s">
                         <div class="swiper-wrapper">
-                            <asp:Repeater ID="rptHeroSlides" runat="server">
+                            <asp:Repeater ID="rptHeroSlides" runat="server" EnableViewState="false">
                                 <ItemTemplate>
                                     <div class="swiper-slide">
                                         <div class="banner-image-product-4 style-2 hover-img ks-home-hero-banner ks-home-hero-panel">
                                             <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-style ks-home-hero-media position-absolute top-0 start-0 w-100" aria-label='<%# SafeText(Eval("Caption")) %>'>
-                                                <img width="800" height="794" class="lazyload" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' data-src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
+                                                <img width="800" height="794" fetchpriority="high" decoding="async" src='<%# ResolveHeroSlideImage(Eval("Image"), String.Empty) %>' alt='<%# SafeText(Eval("Caption")) %>' />
                                             </a>
                                             <div class="content ks-home-hero-content d-flex flex-column gap-2">
                                                 <p class="caption fw-semibold ks-home-hero-eyebrow mb-0"><%# SafeText(Eval("Eyebrow")) %></p>
@@ -293,7 +293,7 @@
                 </div>
 
                 <asp:Panel ID="HeroSideWrap" runat="server" CssClass="wrap-item-3 ks-home-side-promos" Visible="false">
-                    <asp:Repeater ID="rptSideBanners" runat="server">
+                    <asp:Repeater ID="rptSideBanners" runat="server" EnableViewState="false">
                         <ItemTemplate>
                             <div class="cls-category style-abs hover-img ks-home-side-banner">
                                 <a href='<%# ResolveLink(Eval("LinkUrl"), "articoli.aspx") %>' class="img-box img-style d-block" aria-label='<%# SafeText(Eval("Title")) %>'>
@@ -348,7 +348,7 @@
                             <p id="ksGuideDepartmentsLabel">Limita a un reparto <span>(facoltativo)</span></p>
                             <div class="ks-guide-choices" role="group" aria-labelledby="ksGuideDepartmentsLabel">
                                 <button type="button" data-ks-guide-department="" aria-pressed="true">Tutti i reparti</button>
-                                <asp:Repeater ID="rptHomeAiExamples" runat="server">
+                                <asp:Repeater ID="rptHomeAiExamples" runat="server" EnableViewState="false">
                                     <ItemTemplate><button type="button" data-ks-guide-department='<%# SafeText(Eval("DefaultUrl")) %>' aria-pressed="false"><%# SafeText(Eval("Descrizione")) %></button></ItemTemplate>
                                 </asp:Repeater>
                             </div>
@@ -376,7 +376,7 @@
                     <asp:Panel ID="HomeAiQuickLinksPanel" runat="server" CssClass="ks-guide-fallback-departments" Visible="false">
                         <p>Oppure esplora un reparto:</p>
                         <div class="ks-ai130-tools">
-                            <asp:Repeater ID="rptHomeAiQuickLinks" runat="server">
+                            <asp:Repeater ID="rptHomeAiQuickLinks" runat="server" EnableViewState="false">
                                 <ItemTemplate><a href='<%# SafeText(Eval("DefaultUrl")) %>'><%# SafeText(Eval("Descrizione")) %></a></ItemTemplate>
                             </asp:Repeater>
                         </div>
@@ -461,7 +461,7 @@
                 </a>
             </div>
             <div class="ks-home-category-grid">
-                <asp:Repeater ID="rptHomeMainCategories" runat="server">
+                <asp:Repeater ID="rptHomeMainCategories" runat="server" EnableViewState="false">
                     <ItemTemplate>
                         <a href='<%# Eval("DefaultUrl") %>' class="ks-home-category-card">
                             <span class="ks-home-category-media">
@@ -482,7 +482,7 @@
                 <h5 id="ksHomeDirectCategoriesTitle" class="fw-semibold">Esplora le categorie</h5>
             </div>
             <ul class="ks-home-direct-category-list">
-                <asp:Repeater ID="rptHomeDirectCategories" runat="server">
+                <asp:Repeater ID="rptHomeDirectCategories" runat="server" EnableViewState="false">
                     <ItemTemplate>
                         <li>
                             <a href='<%# SafeText(ResolveUrl(Convert.ToString(Eval("DefaultUrl")))) %>' class="ks-home-direct-category-link">
@@ -508,7 +508,7 @@
                 <a href="articoli.aspx" class="tf-btn btn-line"><span>Esplora tutto il catalogo</span></a>
             </div>
             <div class="ks-home-product-grid">
-                <asp:Repeater ID="rptHomeCatalogDiscovery" runat="server">
+                <asp:Repeater ID="rptHomeCatalogDiscovery" runat="server" EnableViewState="false">
                     <ItemTemplate>
                         <%# RenderGridCard(Container.DataItem) %>
                     </ItemTemplate>
@@ -529,7 +529,7 @@
                 </a>
             </div>
             <div class="ks-home-product-grid">
-                <asp:Repeater ID="rptHomeFeaturedProducts" runat="server">
+                <asp:Repeater ID="rptHomeFeaturedProducts" runat="server" EnableViewState="false">
                     <ItemTemplate>
                         <%# RenderGridCard(Container.DataItem) %>
                     </ItemTemplate>
@@ -560,7 +560,7 @@
             <asp:Panel ID="HomeOffersSliderWrap" runat="server" CssClass="box-btn-slide-2 sw-nav-effect">
                 <div class="swiper tf-sw-products slider-thumb-deal" data-preview="4" data-tablet="3" data-mobile-sm="2" data-mobile="1" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="4">
                     <div class="swiper-wrapper">
-                        <asp:Repeater ID="rptDealOfDay" runat="server">
+                        <asp:Repeater ID="rptDealOfDay" runat="server" EnableViewState="false">
                             <ItemTemplate>
                                 <div class="swiper-slide">
                                     <%# RenderDealCard(Container.DataItem) %>
@@ -594,7 +594,7 @@
     <section id="HomeCollectionSection" runat="server" visible="false" class="ks-home-section ks-home-collection-block ks-home-adaptive-discovery" aria-label="Altri reparti">
         <div class="container">
             <div class="ks-home-collection-grid">
-                <asp:Repeater ID="rptHomeCollection" runat="server">
+                <asp:Repeater ID="rptHomeCollection" runat="server" EnableViewState="false">
                     <ItemTemplate>
                         <a href='<%# SafeText(Eval("DefaultUrl")) %>' class="ks-home-collection-card d-flex flex-column gap-2">
                             <span class="mb-0"><%# SafeText(Eval("Descrizione")) %></span>
@@ -620,7 +620,7 @@
             </div>
             <div class="swiper tf-sw-products" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="15" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5" data-grid="2" data-grid-mobile="1">
                 <div class="swiper-wrapper">
-                    <asp:Repeater ID="rptBestSeller" runat="server">
+                    <asp:Repeater ID="rptBestSeller" runat="server" EnableViewState="false">
                         <ItemTemplate>
                             <div class="swiper-slide">
                                 <%# RenderGridCard(Container.DataItem) %>
@@ -648,7 +648,7 @@
             </div>
             <div class="swiper tf-sw-products ks-recently-viewed-swiper" data-preview="5" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15" data-pagination="2" data-pagination-sm="3" data-pagination-md="4" data-pagination-lg="5">
                 <div class="swiper-wrapper" data-ks-recent-items>
-                    <asp:Repeater ID="rptRecentlyViewed" runat="server">
+                    <asp:Repeater ID="rptRecentlyViewed" runat="server" EnableViewState="false">
                         <ItemTemplate>
                             <div class="swiper-slide">
                                 <%# RenderGridCard(Container.DataItem) %>
@@ -664,7 +664,7 @@
     <section id="HomeBottomPromoSection" runat="server" visible="false" class="ks-home-section ks-home-banner-product ks-home-adaptive-discovery" aria-label="Continua a esplorare i reparti">
         <div class="container">
             <div class="ks-home-collection-grid">
-                <asp:Repeater ID="rptHomeBottomPromo" runat="server">
+                <asp:Repeater ID="rptHomeBottomPromo" runat="server" EnableViewState="false">
                     <ItemTemplate>
                         <a href='<%# SafeText(Eval("DefaultUrl")) %>' class="ks-home-bottom-promo-card d-flex flex-column gap-2">
                             <span class="mb-0"><%# SafeText(Eval("Descrizione")) %></span>
@@ -702,11 +702,11 @@
             <div class="flat-title wow fadeInUp" data-wow-delay="0s"><h5>Marche del catalogo</h5></div>
             <div class="swiper ks-home-brands" data-preview="6" data-tablet="4" data-mobile-sm="3" data-mobile="2" data-space-lg="30" data-space-md="20" data-space="15">
                 <div class="swiper-wrapper">
-                    <asp:Repeater ID="rptBrands" runat="server">
+                    <asp:Repeater ID="rptBrands" runat="server" EnableViewState="false">
                         <ItemTemplate>
                             <div class="swiper-slide">
                                 <a href='<%# BrandLink(Eval("id"), Eval("link")) %>' class="brand-item ks-home-brand-item" title='<%# SafeText(Eval("Descrizione")) %>'>
-                                    <span class="ks-home-brand-media"><img class="lazyload" src='<%# BrandImage(Eval("img")) %>' data-src='<%# BrandImage(Eval("img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' /></span>
+                                    <span class="ks-home-brand-media"><img class="lazyload" loading="lazy" decoding="async" src='<%# BrandImage(Eval("img")) %>' data-src='<%# BrandImage(Eval("img")) %>' alt='<%# SafeText(Eval("Descrizione")) %>' /></span>
                                 </a>
                             </div>
                         </ItemTemplate>

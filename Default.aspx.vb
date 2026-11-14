@@ -170,9 +170,9 @@ Partial Public Class _Default
         litHomePriceDisplayLabel.Text = HttpUtility.HtmlEncode(_priceDisplayContext.DisplayLabel)
         MarkBodyAsHome()
         ApplyHomeSeo()
-        If Not IsPostBack Then
-            BindHome()
-        End If
+        ' I repeater della HOME non salvano lo stato nel ViewState (il testo collegato ai dati lo riempiva di centinaia di KB):
+        ' si ricostruiscono a ogni richiesta, anche in un eventuale postback.
+        BindHome()
     End Sub
 
     Private Sub MarkBodyAsHome()
@@ -1918,10 +1918,38 @@ Partial Public Class _Default
                " WHERE v.NListino=@listino ORDER BY BrandOrder, m.Descrizione, m.id"
     End Function
 
+    ' Struttura dell'assortimento (settori, categorie, marchi) senza prezzi, giacenze, promozioni ne dati dell'utente: si memorizza per
+    ' pochi minuti con chiave database + azienda + listino. Ogni richiesta riceve una COPIA; una lettura fallita non si memorizza
+    ' (Nothing = errore di lettura, tavola vuota = assortimento letto e vuoto, esattamente come prima).
+    Private Const HomeAssortmentCacheSeconds As Integer = 120
+
     Private Function LoadHomeNavigationAssortment() As DataTable
+        Dim listino As Integer = 0
         Try
-            Dim listino As Integer = GetCurrentListino()
-            If listino <= 0 Then Throw New InvalidOperationException("HOME_NAVIGATION_CONTEXT_INVALID")
+            listino = GetCurrentListino()
+        Catch
+            listino = 0
+        End Try
+        If listino <= 0 Then
+            InvalidateHomeQueryConnection()
+            ' Do not log connector errors, SQL text or installation/connection details.
+            ReportHomeError("HomeNavigationAssortment", New InvalidOperationException("HOME_NAVIGATION_ASSORTMENT_READ_FAILED"))
+            Return Nothing
+        End If
+
+        Dim snapshot As StorefrontCachedTable = StorefrontTenantScopedCache.GetOrLoad(Of StorefrontCachedTable)(
+            "HomeAssortment",
+            StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey(),
+            GetCurrentAziendaId(),
+            listino.ToString(CultureInfo.InvariantCulture),
+            HomeAssortmentCacheSeconds,
+            Function() ReadHomeNavigationAssortment(listino))
+        If snapshot Is Nothing Then Return Nothing
+        Return snapshot.CopyTable()
+    End Function
+
+    Private Function ReadHomeNavigationAssortment(ByVal listino As Integer) As StorefrontCachedTable
+        Try
             Using lease As HomeQueryConnectionLease = AcquireHomeQueryLease()
                 Using cmd As New MySqlCommand(BuildHomeNavigationAssortmentSql(), lease.Connection)
                     cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
@@ -1929,7 +1957,7 @@ Partial Public Class _Default
                         Dim result As New DataTable()
                         If lease.Connection.State <> ConnectionState.Open Then lease.Connection.Open()
                         adapter.Fill(result)
-                        Return result
+                        Return New StorefrontCachedTable(result)
                     End Using
                 End Using
             End Using
@@ -2955,7 +2983,7 @@ Partial Public Class _Default
         sb.Append("<div class='card-product-wrapper overflow-visible'>")
         sb.Append("<div class='product-thumb-image'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='card-image'>")
-        sb.Append("<img class='lazyload img-product' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
+        sb.Append("<img class='lazyload img-product' decoding='async' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
         sb.Append("</a>")
         sb.Append(RenderActionButtons(row, False))
         sb.Append(RenderCornerBadgeStack(row, True))
@@ -2970,7 +2998,7 @@ Partial Public Class _Default
             For i As Integer = 0 To galleryImages.Count - 1
                 sb.Append("<li class='image-swap")
                 If i = 0 Then sb.Append(" active")
-                sb.Append("'><img class='lazyload' src='").Append(EncodeAttr(galleryImages(i))).Append("' data-src='").Append(EncodeAttr(galleryImages(i))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append(" anteprima ").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append("'></li>")
+                sb.Append("'><img class='lazyload' loading='lazy' decoding='async' src='").Append(EncodeAttr(galleryImages(i))).Append("' data-src='").Append(EncodeAttr(galleryImages(i))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append(" anteprima ").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append("'></li>")
             Next
             sb.Append("</ul>")
         End If
@@ -3016,8 +3044,8 @@ Partial Public Class _Default
         sb.Append("<div class='card-product style-img-border wow fadeInLeft ks-grid-card' data-wow-delay='0s'>")
         sb.Append("<div class='card-product-wrapper'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
-        sb.Append("<img class='img-product lazyload' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' data-src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-product lazyload' decoding='async' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-hover lazyload' loading='lazy' decoding='async' src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' data-src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
         Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
                                        Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))

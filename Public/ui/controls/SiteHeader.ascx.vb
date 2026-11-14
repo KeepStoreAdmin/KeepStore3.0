@@ -23,6 +23,7 @@ Partial Class SiteHeader
     Private Const DefaultFavicon16Virtual As String = "~/Public/assets/images/favicons/favicon-16x16.png"
     Private Const DefaultPhoneText As String = ""
     Private Const DefaultEmailText As String = ""
+    Private Const FreeShippingPromoCacheSeconds As Integer = 120
     Private _headerCurrentScope As CatalogTaxonomyContext
 
     Private Class HeaderLogoInfo
@@ -82,6 +83,9 @@ Partial Class SiteHeader
             Dim catalogMenu As List(Of CatalogMenuSector) = CatalogMenuProvider.LoadCatalogMenuCached()
             _headerCurrentScope = ResolveHeaderSearchScope(catalogMenu, Request.QueryString)
             BindDesktopCatalog(catalogMenu)
+            ' Il menu mobile non salva piu il proprio testo nel ViewState (era il pezzo piu grande di ogni pagina):
+            ' dopo un postback si ricostruisce qui, come il menu desktop.
+            BindMobileCatalog(catalogMenu)
         End If
     End Sub
 
@@ -306,28 +310,36 @@ Partial Class SiteHeader
         Dim phone As String = DefaultPhoneText
         Dim email As String = DefaultEmailText
 
-        Try
-            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-                conn.Open()
-                Using cmd As New MySqlCommand("SELECT telefono, email FROM aziende WHERE id=@companyId LIMIT 1", conn)
-                    cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
-                    Using reader As MySqlDataReader = cmd.ExecuteReader()
-                        If reader.Read() Then
-                            Dim dbPhone As String = SafeString(reader, "telefono")
-                            Dim dbEmail As String = SafeString(reader, "email")
+        ' Telefono ed e-mail arrivano dall'identita dell'azienda gia in cache (nessuna connessione in piu al database);
+        ' la lettura diretta resta come ripiego quando l'identita non e disponibile.
+        Dim tenant As StorefrontSeoTenantIdentity = ResolveHeaderTenant()
+        If tenant IsNot Nothing Then
+            If Not String.IsNullOrWhiteSpace(tenant.SupportPhone) Then phone = tenant.SupportPhone.Trim()
+            If Not String.IsNullOrWhiteSpace(tenant.SupportEmail) Then email = tenant.SupportEmail.Trim()
+        Else
+            Try
+                Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                    conn.Open()
+                    Using cmd As New MySqlCommand("SELECT telefono, email FROM aziende WHERE id=@companyId LIMIT 1", conn)
+                        cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId())
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            If reader.Read() Then
+                                Dim dbPhone As String = SafeString(reader, "telefono")
+                                Dim dbEmail As String = SafeString(reader, "email")
 
-                            If Not String.IsNullOrWhiteSpace(dbPhone) Then
-                                phone = dbPhone.Trim()
+                                If Not String.IsNullOrWhiteSpace(dbPhone) Then
+                                    phone = dbPhone.Trim()
+                                End If
+                                If Not String.IsNullOrWhiteSpace(dbEmail) Then
+                                    email = dbEmail.Trim()
+                                End If
                             End If
-                            If Not String.IsNullOrWhiteSpace(dbEmail) Then
-                                email = dbEmail.Trim()
-                            End If
-                        End If
+                        End Using
                     End Using
                 End Using
-            End Using
-        Catch
-        End Try
+            Catch
+            End Try
+        End If
 
         SetPhoneLink(hlSupportPhoneTop, litSupportPhoneTop, phone)
         SetPhoneLink(hlSupportPhoneHeader, litSupportPhoneHeader, phone)
@@ -352,20 +364,25 @@ Partial Class SiteHeader
             Dim listino As Integer = 0
             If Not Integer.TryParse(Convert.ToString(rawListino, CultureInfo.InvariantCulture), NumberStyles.Integer, CultureInfo.InvariantCulture, listino) OrElse listino <= 0 Then Return
 
-            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-                conn.Open()
-                Dim companyId As Integer = ResolveHeaderCompanyId(conn)
-                If companyId <= 0 Then Return
-                Using cmd As New MySqlCommand("SELECT MIN(v.CostoMinimo) FROM vettori v WHERE v.Id <> 0 AND v.AziendeID=@companyId AND v.Abilitato=1 AND v.Web=1 AND v.Promo=1 AND v.Promo_Data_Inizio <= CURDATE() AND v.Promo_Data_Fine >= CURDATE() AND LOCATE(CONCAT(';', @listino, ';'), CONCAT(';', COALESCE(v.Listini_Abilitati,''), ';')) > 0 AND v.CostoMinimo > 0 AND EXISTS (SELECT 1 FROM vettoricosti c WHERE c.VettoriId=v.Id AND c.CostoFisso=0 AND c.Costo_Percentuale=0 AND c.PesoMax > 0)", conn)
-                    cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
-                    cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
-                    Dim raw As Object = cmd.ExecuteScalar()
-                    If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
-                        minAmount = Convert.ToDecimal(raw, CultureInfo.InvariantCulture)
-                        hasPromo = (minAmount > 0D)
-                    End If
-                End Using
-            End Using
+            ' L'azienda e quella dell'host (mai la sola sessione): senza identita valida o con sessione discordante non si mostra nulla.
+            Dim tenant As StorefrontSeoTenantIdentity = ResolveHeaderTenant()
+            If tenant Is Nothing Then Return
+            Dim companyId As Integer = tenant.CompanyId
+
+            ' Cache breve per database + azienda + listino (la promozione dipende solo da questi). Ritardo massimo accettato: 120 s anche
+            ' al cambio di giorno (testo informativo; il costo di spedizione reale lo calcola il carrello). Un errore tecnico non viene
+            ' memorizzato come "nessuna promozione" (il loader fallito restituisce Nothing e si riprova alla richiesta successiva).
+            Dim snapshot As FreeShippingPromoSnapshot = StorefrontTenantScopedCache.GetOrLoad(Of FreeShippingPromoSnapshot)(
+                "HeaderFreeShipping",
+                StorefrontSeoTenantContext.ConfiguredDatabaseScopeKey(),
+                companyId,
+                listino.ToString(CultureInfo.InvariantCulture),
+                FreeShippingPromoCacheSeconds,
+                Function() LoadFreeShippingPromoSnapshot(companyId, listino))
+            If snapshot IsNot Nothing AndAlso snapshot.HasPromo Then
+                minAmount = snapshot.MinAmount
+                hasPromo = True
+            End If
         Catch
             hasPromo = False
         End Try
@@ -377,6 +394,23 @@ Partial Class SiteHeader
                                      "</span> su ordini idonei"
         End If
     End Sub
+
+    ' Lettura autorevole della promozione "spedizione gratuita" per azienda e listino. Lancia in caso di errore tecnico (non si memorizza).
+    Private Shared Function LoadFreeShippingPromoSnapshot(ByVal companyId As Integer, ByVal listino As Integer) As FreeShippingPromoSnapshot
+        Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            conn.Open()
+            Using cmd As New MySqlCommand("SELECT MIN(v.CostoMinimo) FROM vettori v WHERE v.Id <> 0 AND v.AziendeID=@companyId AND v.Abilitato=1 AND v.Web=1 AND v.Promo=1 AND v.Promo_Data_Inizio <= CURDATE() AND v.Promo_Data_Fine >= CURDATE() AND LOCATE(CONCAT(';', @listino, ';'), CONCAT(';', COALESCE(v.Listini_Abilitati,''), ';')) > 0 AND v.CostoMinimo > 0 AND EXISTS (SELECT 1 FROM vettoricosti c WHERE c.VettoriId=v.Id AND c.CostoFisso=0 AND c.Costo_Percentuale=0 AND c.PesoMax > 0)", conn)
+                cmd.Parameters.Add("@companyId", MySqlDbType.Int32).Value = companyId
+                cmd.Parameters.Add("@listino", MySqlDbType.Int32).Value = listino
+                Dim raw As Object = cmd.ExecuteScalar()
+                If raw IsNot Nothing AndAlso raw IsNot DBNull.Value Then
+                    Dim minAmount As Decimal = Convert.ToDecimal(raw, CultureInfo.InvariantCulture)
+                    Return New FreeShippingPromoSnapshot(minAmount > 0D, minAmount)
+                End If
+            End Using
+        End Using
+        Return New FreeShippingPromoSnapshot(False, 0D)
+    End Function
 
     Private Sub SetPhoneLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal phone As String)
         If link Is Nothing OrElse literal Is Nothing Then
@@ -500,23 +534,32 @@ Partial Class SiteHeader
     Private Function LoadHeaderLogoInfo() As HeaderLogoInfo
         Dim info As New HeaderLogoInfo()
 
-        Try
-            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
-                conn.Open()
-                Using cmd As New MySqlCommand("SELECT LogoWeb, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
-                    cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId(conn))
-                    Using reader As MySqlDataReader = cmd.ExecuteReader()
-                        If reader.Read() Then
-                            Dim logoWeb As String = SafeString(reader, "LogoWeb")
-                            info.DesktopLogoFile = logoWeb
-                            info.MobileLogoFile = logoWeb
-                            info.CompanyName = SafeString(reader, "CompanyName")
-                        End If
+        ' Logo e nome arrivano dall'identita dell'azienda gia in cache (nessuna connessione in piu al database);
+        ' la lettura diretta resta come ripiego quando l'identita non e disponibile.
+        Dim tenant As StorefrontSeoTenantIdentity = ResolveHeaderTenant()
+        If tenant IsNot Nothing Then
+            info.DesktopLogoFile = tenant.LogoFileName
+            info.MobileLogoFile = tenant.LogoFileName
+            info.CompanyName = tenant.CompanyName
+        Else
+            Try
+                Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                    conn.Open()
+                    Using cmd As New MySqlCommand("SELECT LogoWeb, nome AS CompanyName FROM aziende WHERE id=@companyId LIMIT 1", conn)
+                        cmd.Parameters.AddWithValue("@companyId", ResolveHeaderCompanyId())
+                        Using reader As MySqlDataReader = cmd.ExecuteReader()
+                            If reader.Read() Then
+                                Dim logoWeb As String = SafeString(reader, "LogoWeb")
+                                info.DesktopLogoFile = logoWeb
+                                info.MobileLogoFile = logoWeb
+                                info.CompanyName = SafeString(reader, "CompanyName")
+                            End If
+                        End Using
                     End Using
                 End Using
-            End Using
-        Catch
-        End Try
+            Catch
+            End Try
+        End If
 
         If String.IsNullOrWhiteSpace(info.CompanyName) AndAlso Session IsNot Nothing Then
             info.CompanyName = Convert.ToString(Session("AziendaNome"))
@@ -525,7 +568,18 @@ Partial Class SiteHeader
         Return info
     End Function
 
-    Private Function ResolveHeaderCompanyId(ByVal conn As MySqlConnection) As Integer
+    ' Identita dell'azienda del SOLO host richiesto (selezione esatta host -> una riga, lista in cache per database). Se la sessione
+    ' porta un'altra azienda (stato anomalo) non si usa nessuna delle due: il chiamante ricade sulla lettura diretta o non mostra nulla.
+    Private Function ResolveHeaderTenant() As StorefrontSeoTenantIdentity
+        Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then Return Nothing
+        Dim sessionCompanyId As Integer = 0
+        If Session IsNot Nothing Then Integer.TryParse(Convert.ToString(Session("AziendaID")), sessionCompanyId)
+        If sessionCompanyId > 0 AndAlso sessionCompanyId <> tenant.CompanyId Then Return Nothing
+        Return tenant
+    End Function
+
+    Private Function ResolveHeaderCompanyId() As Integer
         Dim companyId As Integer = 0
 
         If Session IsNot Nothing Then

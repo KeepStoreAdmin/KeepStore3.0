@@ -14,6 +14,9 @@ Public NotInheritable Class StorefrontSeoTenantIdentity
     Public Property SecondaryHost As String
     Public Property LogoFileName As String
     Public Property DefaultPriceListId As Integer
+    ' Contatti di assistenza dell'azienda (stessa lettura in cache dell'identita: l'intestazione non li rilegge dal database).
+    Public Property SupportPhone As String = String.Empty
+    Public Property SupportEmail As String = String.Empty
 
     Public Function AllowedHosts() As IList(Of String)
         Dim values As New List(Of String)()
