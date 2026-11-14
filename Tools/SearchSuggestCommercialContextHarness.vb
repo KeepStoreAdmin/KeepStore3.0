@@ -137,10 +137,12 @@ Public Module SearchSuggestCommercialContextHarness
             selected = selected.Where(Function(row) facts.Add(AuthoritativeFacts(row))).ToList()
         End If
         Dim multiplicities = selected.GroupBy(Function(row) Identity(row)).ToDictionary(Function(g) g.Key, Function(g) g.Count())
+        ' Come nel SQL reale: la molteplicita e calcolata prima del filtro, il prezzo mancante o non positivo omette il candidato.
+        If sql.Contains(" AND v.SuggestPrice>0") Then selected = selected.Where(Function(row) HasPositivePrice(row)).ToList()
         If sql.Contains("COUNT(*) AS InvalidCount") Then
             Dim invalid As New DataTable()
             invalid.Columns.Add("InvalidCount", GetType(Integer))
-            invalid.Rows.Add(selected.Where(Function(row) multiplicities(Identity(row)) <> 1 OrElse row.IsNull("Giacenza") OrElse row.IsNull("Disponibilita")).Count())
+            invalid.Rows.Add(selected.Where(Function(row) multiplicities(Identity(row)) <> 1 OrElse Not HasPositivePrice(row) OrElse row.IsNull("Giacenza") OrElse row.IsNull("Disponibilita")).Count())
             Return invalid
         End If
         If sql.Contains(" AND v.SuggestAvailable > 0") Then selected = selected.Where(Function(row) Convert.ToDecimal(row("Disponibilita")) > 0D).ToList()
@@ -160,6 +162,10 @@ Public Module SearchSuggestCommercialContextHarness
             result.Rows(result.Rows.Count - 1)("ExactMatches") = exact
         Next
         Return result
+    End Function
+
+    Private Function HasPositivePrice(ByVal row As DataRow) As Boolean
+        Return Not row.IsNull("Prezzo") AndAlso Convert.ToDecimal(row("Prezzo")) > 0D
     End Function
 
     Private Function Identity(ByVal row As DataRow) As String
@@ -404,6 +410,7 @@ Private Sub RunGuided(ByVal payloadPath As String)
         relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("SuggestPriceList") = 1
         clean = Result(commercial, False, 1)
         Assert(CInt(clean("total")) = 1, "F04 foreign list excluded rather than merged into active identity")
+        VerifyUnpricedCandidateCases()
         For Each company As Integer In {1, 2}
             Dim list As Integer = If(company = 1, 1, 10)
             ctx = Context(company, list) : commercial = MakeSupport(ctx)
@@ -414,6 +421,53 @@ Private Sub RunGuided(ByVal payloadPath As String)
             Dim recent = DirectCast(Invoke(page, "BuildRecentResult", New List(Of Integer) From {120, 121}, Invoke(page, "ReadFilters"), 8), Dictionary(Of String, Object))
             Assert(CInt(recent("total")) = 2, "F04 distinct products remain separate in tenant " & company & "/list " & list)
         Next
+    End Sub
+
+    ' KS-A04-SEARCH-SUGGEST-UNPRICED-1A: un candidato senza prezzo nel listino corrente non deve piu far fallire l'intera risposta,
+    ' ma gli altri controlli fail-closed (molteplicita, disponibilita incompleta, conflitti) restano sui candidati superstiti.
+    Private Sub VerifyUnpricedCandidateCases()
+        Dim ctx = Context(2, 10) : ctx.Session("TC") = 1
+        Dim commercial = MakeSupport(ctx)
+        Dim page = Endpoint(commercial)
+        Dim sql As String = commercial.CatalogFrom()
+        Assert(sql.TrimEnd().EndsWith("AND v.SuggestPrice>0"), "U00 price predicate closes the candidate source before order and LIMIT")
+        Assert(Not sql.Contains("v.SuggestAvailable IS NOT NULL") AndAlso Not sql.Contains("v.Disponibilita IS NOT NULL"), "U00 incomplete availability is not an accepted omission")
+
+        For Each unpriced As Object In New Object() {DBNull.Value, 0D, -1D}
+            relationalRows = RawRows(commercial)
+            relationalRows.ImportRow(relationalRows.Rows(0))
+            relationalRows.Rows(1)("id") = 121 : relationalRows.Rows(1)("Codice") = "SKU121"
+            relationalRows.Rows(1)("Prezzo") = unpriced
+            Dim mixed = DirectCast(Invoke(page, "BuildRecentResult", New List(Of Integer) From {120, 121}, Invoke(page, "ReadFilters"), 8), Dictionary(Of String, Object))
+            Assert(CInt(mixed("total")) = 1, "U01 mixed priced/unpriced candidates keep only the priced one (" & Convert.ToString(unpriced) & ")")
+            Dim search = Result(commercial, False, 8)
+            Assert(CInt(search("total")) = 1 AndAlso CBool(DirectCast(search("strong"), Dictionary(Of String, Object))("canRedirect")), "U01 search keeps the priced exact candidate (" & Convert.ToString(unpriced) & ")")
+
+            relationalRows = RawRows(commercial)
+            relationalRows.Rows(0)("Prezzo") = unpriced
+            Dim none = Result(commercial, False, 8)
+            Assert(CInt(none("total")) = 0 AndAlso Not CBool(DirectCast(none("strong"), Dictionary(Of String, Object))("canRedirect")), "U02 all candidates unpriced is an empty success, never a 503 (" & Convert.ToString(unpriced) & ")")
+        Next
+
+        ' Conflitti e dati incompleti dei candidati con prezzo restano fail-closed.
+        relationalRows = RawRows(commercial)
+        relationalRows.Rows(0)("Disponibilita") = DBNull.Value
+        Reject(Sub() Result(commercial), "U03 priced candidate with incomplete availability stays fail-closed")
+        relationalRows = RawRows(commercial)
+        relationalRows.Rows(0)("Giacenza") = DBNull.Value
+        Reject(Sub() Result(commercial), "U03 priced candidate with incomplete stock stays fail-closed")
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("Prezzo") = 101D
+        Reject(Sub() Result(commercial), "U04 two priced rows with conflicting facts stay fail-closed")
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("Prezzo") = DBNull.Value
+        Reject(Sub() Result(commercial), "U05 same commercial identity with one unpriced row: multiplicity counted before the filter stays fail-closed")
+        ' Limite documentato: due righe senza prezzo della stessa identita sono omesse insieme.
+        relationalRows = RawRows(commercial)
+        relationalRows.Rows(0)("Prezzo") = DBNull.Value
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("PrezzoIvato") = DBNull.Value
+        Assert(CInt(Result(commercial)("total")) = 0, "U06 documented limit: duplicate unpriced identity is omitted together")
+        relationalRows = Nothing
     End Sub
 
     Private Sub VerifyCallerCases()

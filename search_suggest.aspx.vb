@@ -145,8 +145,10 @@ Partial Public Class search_suggest
             payload("code") = ex.Code
             payload("catalogUrl") = "articoli.aspx"
             payload("error") = "Contesto commerciale non disponibile. Continua nel catalogo."
+            If ex.Status >= 500 Then LogSuggestFailure("Suggerimenti rifiutati. Code=" & ex.Code & " Status=" & ex.Status.ToString(CultureInfo.InvariantCulture) & ".")
         Catch ex As Exception
             Response.StatusCode = 503
+            LogSuggestFailure("Suggerimenti non disponibili. Error type: " & ex.GetType().Name & ".")
             payload("code") = "commercial_unavailable"
             payload("catalogUrl") = "articoli.aspx"
             payload("ok") = False
@@ -157,6 +159,21 @@ Partial Public Class search_suggest
         serializer.MaxJsonLength = Integer.MaxValue
         Response.Write(serializer.Serialize(payload))
         If Context.ApplicationInstance IsNot Nothing Then Context.ApplicationInstance.CompleteRequest()
+    End Sub
+
+    ' Un 503 dei suggerimenti non lasciava traccia: senza una riga di log un difetto (per esempio un articolo senza prezzo) resta invisibile.
+    ' Una sola riga al minuto per processo, senza testo dell'eccezione, query o dati del cliente.
+    Private Shared _lastSuggestFailureLogTicks As Long = 0
+
+    Private Sub LogSuggestFailure(ByVal message As String)
+        Try
+            Dim nowTicks As Long = DateTime.UtcNow.Ticks
+            Dim lastTicks As Long = System.Threading.Interlocked.Read(_lastSuggestFailureLogTicks)
+            If nowTicks - lastTicks < TimeSpan.TicksPerMinute Then Return
+            If System.Threading.Interlocked.CompareExchange(_lastSuggestFailureLogTicks, nowTicks, lastTicks) <> lastTicks Then Return
+            KeepStoreLog.Info("search_suggest", message, Context)
+        Catch
+        End Try
     End Sub
 
     Private Function IsGuided2Request() As Boolean

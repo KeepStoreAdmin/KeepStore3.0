@@ -197,6 +197,11 @@ Public NotInheritable Class SearchSuggestCommercialSupport
         For image As Integer = 1 To 6
             projection.Add("i.Immagine" & image.ToString(CultureInfo.InvariantCulture))
         Next
+        ' Un candidato senza prezzo nel listino corrente non e acquistabile: si omette qui, PRIMA di ordine e LIMIT.
+        ' Prima bastava UN solo articolo senza prezzo tra i candidati per far fallire tutta la risposta (503).
+        ' Resta fail-closed (VerifyCandidateProjection/VerifyRows) per i candidati che sopravvivono: disponibilita incompleta,
+        ' molteplicita diversa da 1, prezzo finale o offerta incoerenti. Limite noto: due righe senza prezzo della stessa
+        ' identita commerciale sono omesse insieme e il loro conflitto non viene segnalato.
         Return " FROM (SELECT normalized.*, COUNT(*) OVER(PARTITION BY normalized.id,normalized.SuggestTC,normalized.NListino) AS SuggestMultiplicity" &
             " FROM (SELECT DISTINCT " & String.Join(",", projection.ToArray()) & "," & price & " AS SuggestPrice," &
             " CASE WHEN ks_qty1_price.AppliedPromoNet>0 THEN 1 ELSE 0 END AS SuggestOffer," &
@@ -212,7 +217,8 @@ Public NotInheritable Class SearchSuggestCommercialSupport
             " AND (?suggestVariants=1 OR COALESCE(vsuperarticoli.TCId,-1)<=0)" &
             " AND (COALESCE(vsuperarticoli.TCId,-1)<=0 OR EXISTS(SELECT 1 FROM articoli_tagliecolori valid_tc" &
             " WHERE valid_tc.id=vsuperarticoli.TCId AND valid_tc.ArticoliId=vsuperarticoli.id))" &
-            ") normalized) v WHERE 1=1 "
+            ") normalized) v WHERE 1=1" &
+            " AND v.SuggestPrice>0 "
     End Function
 
     Public Function Execute(ByVal sql As String, ByVal parameters As List(Of SearchSuggestParameter)) As DataTable
