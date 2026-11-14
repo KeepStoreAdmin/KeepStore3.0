@@ -70,7 +70,7 @@ function Test-TilesMarkup([string]$aspx) {
     $j = $aspx.IndexOf('ID="pnlCatalogDepartmentsMobile"')
     return ($i -gt 0 -and $j -gt $i -and
             $aspx -match 'ID="litCatalogDepartmentTiles" runat="server" EnableViewState="false"' -and
-            $aspx -match 'css/catalog-ui\.css"\) %>\?v=20261114-dept-nav1a')
+            $aspx -match 'css/catalog-ui\.css"\) %>\?v=20261114-(dept-nav|cards)1a')
 }
 function Test-TilesCodeBehind([string]$vb) {
     $nav = [regex]::Match($vb, '(?s)Private Sub BindCatalogCategoryNavigation\(\).*?End Sub').Value
@@ -161,9 +161,7 @@ $m = Mutate-Text $vb 'AndAlso pg > 1' 'AndAlso pg > 0' 'M15'
 Assert-Detected (Test-TilesCodeBehind $m) 'M15_FIRST_PAGE_TREATED_AS_REFINEMENT'
 $m = Mutate-Text $vb 'Server.HtmlEncode(label)' 'label' 'M16'
 Assert-Detected (Test-TilesCodeBehind $m) 'M16_TILE_NAME_NOT_ENCODED'
-$m = Mutate-Text $cat '@media (min-width: 1200px) {
-  #ksCatalogPage .ks-dept-tile-grid { grid-template-columns: repeat(4' '@media (min-width: 1200px) {
-  #ksCatalogPage .ks-dept-tile-grid { grid-template-columns: repeat(5' 'M17'
+$m = Mutate-Text $cat ("@media (min-width: 1200px) {" + [char]10 + "  #ksCatalogPage .ks-dept-tile-grid { grid-template-columns: repeat(4") ("@media (min-width: 1200px) {" + [char]10 + "  #ksCatalogPage .ks-dept-tile-grid { grid-template-columns: repeat(5") 'M17'
 Assert-Detected (Test-TilesCss $m) 'M17_TILES_NOT_FOUR_COLUMNS_ON_DESKTOP'
 $m = Mutate-Text $cat '#ksCatalogPage .ks-dept-tile-grid > li { display: flex; }' '' 'M18'
 Assert-Detected (Test-TilesCss $m) 'M18_TILES_OF_A_ROW_HAVE_DIFFERENT_HEIGHTS'
