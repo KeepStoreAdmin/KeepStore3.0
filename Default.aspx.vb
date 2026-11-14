@@ -3335,7 +3335,7 @@ Partial Public Class _Default
         sb.Append("<div class='card-product-wrapper overflow-visible'>")
         sb.Append("<div class='product-thumb-image'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='card-image'>")
-        sb.Append("<img class='lazyload img-product' src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' data-src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
+        sb.Append("<img class='lazyload img-product' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
         sb.Append("</a>")
         sb.Append(RenderActionButtons(row, False))
         sb.Append(RenderCornerBadgeStack(row, True, False))
@@ -3350,7 +3350,7 @@ Partial Public Class _Default
             For i As Integer = 0 To galleryImages.Count - 1
                 sb.Append("<li class='image-swap")
                 If i = 0 Then sb.Append(" active")
-                sb.Append("'><img class='lazyload' src='").Append(galleryImages(i)).Append("' data-src='").Append(galleryImages(i)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append(" anteprima ").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append("'></li>")
+                sb.Append("'><img class='lazyload' src='").Append(EncodeAttr(galleryImages(i))).Append("' data-src='").Append(EncodeAttr(galleryImages(i))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append(" anteprima ").Append((i + 1).ToString(CultureInfo.InvariantCulture)).Append("'></li>")
             Next
             sb.Append("</ul>")
         End If
@@ -3468,8 +3468,8 @@ Partial Public Class _Default
         sb.Append("<div class='card-product style-img-border wow fadeInLeft ks-grid-card' data-wow-delay='0s'>")
         sb.Append("<div class='card-product-wrapper'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
-        sb.Append("<img class='img-product lazyload' src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' data-src='").Append(StorefrontProductImageSlots.CoverUrl(row)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' src='").Append(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row))).Append("' data-src='").Append(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-product lazyload' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-hover lazyload' src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' data-src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
         sb.Append("</a>")
         Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
                                        Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))

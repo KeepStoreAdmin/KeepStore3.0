@@ -28,7 +28,8 @@ Public Module ThemeManager
     Private Const DefaultBaseUrl As String = "/Public/assets/keepstore/"
     Private Const ProductImageBaseUrl As String = "/Public/assets/images/articoli/"
     Private Const ProductPlaceholderUrl As String = "/Public/assets/images/img/placeholder.svg"
-    Private Const ProductPlaceholderFallbackDataUri As String = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20320%20320'%20role='img'%20aria-label='Immagine%20prodotto%20non%20disponibile'%3E%3Crect%20width='320'%20height='320'%20fill='%23f3f5f7'/%3E%3Crect%20x='52'%20y='58'%20width='216'%20height='150'%20rx='12'%20fill='%23fff'%20stroke='%23aeb7c1'%20stroke-width='5'/%3E%3Ccircle%20cx='218'%20cy='102'%20r='17'%20fill='%23d5dbe1'/%3E%3Cpath%20d='M70%20190l58-62%2043%2044%2032-30%2047%2048z'%20fill='%23c7ced6'/%3E%3Ctext%20x='160'%20y='258'%20text-anchor='middle'%20font-family='Arial,sans-serif'%20font-size='18'%20font-weight='700'%20fill='%23343a40'%3EImmagine%20non%20disponibile%3C/text%3E%3C/svg%3E"
+    ' Gli apici dell'SVG sono percent-encoded (%27): il valore e valido anche scritto dentro un attributo HTML racchiuso fra apici.
+    Private Const ProductPlaceholderFallbackDataUri As String = "data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20320%20320%27%20role=%27img%27%20aria-label=%27Immagine%20prodotto%20non%20disponibile%27%3E%3Crect%20width=%27320%27%20height=%27320%27%20fill=%27%23f3f5f7%27/%3E%3Crect%20x=%2752%27%20y=%2758%27%20width=%27216%27%20height=%27150%27%20rx=%2712%27%20fill=%27%23fff%27%20stroke=%27%23aeb7c1%27%20stroke-width=%275%27/%3E%3Ccircle%20cx=%27218%27%20cy=%27102%27%20r=%2717%27%20fill=%27%23d5dbe1%27/%3E%3Cpath%20d=%27M70%20190l58-62%2043%2044%2032-30%2047%2048z%27%20fill=%27%23c7ced6%27/%3E%3Ctext%20x=%27160%27%20y=%27258%27%20text-anchor=%27middle%27%20font-family=%27Arial,sans-serif%27%20font-size=%2718%27%20font-weight=%27700%27%20fill=%27%23343a40%27%3EImmagine%20non%20disponibile%3C/text%3E%3C/svg%3E"
 
     ''' <summary>
     ''' Nome logico del tema attivo (per tagging e future switch).
@@ -159,7 +160,8 @@ Public Module ThemeManager
 
     ''' <summary>
     ''' URL canonico di un'immagine prodotto locale esistente.
-    ''' URL HTTP/HTTPS e data URI vengono preservati; i file locali mancanti usano il placeholder.
+    ''' URL HTTP/HTTPS e data URI immagine vengono preservati solo se sicuri per gli attributi HTML (vedi IsSafeExternalImageReference);
+    ''' i file locali mancanti e i valori non sicuri usano il placeholder.
     ''' </summary>
     Public Function ProductImageUrl(ByVal imgValue As Object) As String
         Dim raw As String = ProductImageRawValue(imgValue)
@@ -246,9 +248,30 @@ Public Module ThemeManager
 
     Private Function IsExternalProductImageUrl(ByVal raw As String) As Boolean
         If String.IsNullOrWhiteSpace(raw) Then Return False
-        Return raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) _
-            OrElse raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) _
-            OrElse raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+        If raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse
+           raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then Return IsSafeExternalImageReference(raw)
+        If raw.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Return IsSafeImageDataUri(raw)
+        Return False
+    End Function
+
+    ' Un URL esterno viene restituito cosi com'e e scritto dentro attributi HTML (src, data-src) da molte pagine: non deve
+    ' poter chiudere l'attributo ne aprire un tag. Un valore non sicuro non e piu "esterno" e ricade nel ramo del file
+    ' locale (placeholder se il file non esiste). Nessuna codifica qui: il valore resta quello autorevole dei dati.
+    Private Function IsSafeExternalImageReference(ByVal raw As String) As Boolean
+        If raw.Length > 2048 Then Return False
+        For Each ch As Char In raw
+            Dim code As Integer = AscW(ch)
+            If code < 32 OrElse code = 127 OrElse ch = """"c OrElse ch = "'"c OrElse ch = "<"c OrElse ch = ">"c OrElse ch = "`"c Then Return False
+        Next
+        Dim parsed As Uri = Nothing
+        Return Uri.TryCreate(raw, UriKind.Absolute, parsed)
+    End Function
+
+    ' Solo immagini incorporate in base64 (nessun data:text/html, nessun carattere fuori dall'alfabeto base64).
+    Private Function IsSafeImageDataUri(ByVal raw As String) As Boolean
+        If raw.Length > 2000000 Then Return False
+        Return System.Text.RegularExpressions.Regex.IsMatch(raw, "^data:image/(?:png|jpe?g|gif|webp|avif|svg\+xml);base64,[A-Za-z0-9+/]+={0,2}$",
+                                                            System.Text.RegularExpressions.RegexOptions.IgnoreCase)
     End Function
 
     Private Function NormalizeProductFileName(ByVal raw As String) As String
