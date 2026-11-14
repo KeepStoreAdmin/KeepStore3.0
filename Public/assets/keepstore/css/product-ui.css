@@ -1262,3 +1262,94 @@
   font-weight: 700;
   margin-left: 4px;
 }
+
+/* ===== Barra fissa di acquisto (KS-A03-PDP-BUYBAR-1A), telefono e tablet =====
+   Creata da ks-pdp-buybar.js solo quando il pulsante Acquista principale non e nel viewport. */
+.ks-pdp-buybar { display: none; }
+
+@media (max-width: 1199.98px) {
+  .ks-pdp-buybar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1020;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid var(--line, #e1e1e1);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.1);
+  }
+
+  .ks-pdp-buybar[hidden] { display: none; }
+
+  .ks-pdp-buybar__summary {
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .ks-pdp-buybar__price {
+    color: var(--black, #121212);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 26px;
+    white-space: nowrap;
+  }
+
+  .ks-pdp-buybar__note {
+    color: var(--gray-2, #73787d);
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .ks-pdp-buybar__price[hidden],
+  .ks-pdp-buybar__note[hidden] { display: none; }
+
+  .ks-pdp-buybar__cta {
+    flex: 1 1 auto;
+    max-width: 260px;
+    min-height: 48px;
+    margin-inline-start: auto;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--primary-2, #D80027);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 24px;
+    cursor: pointer;
+  }
+
+  .ks-pdp-buybar__cta:hover { background: #b90021; }
+
+  .ks-pdp-buybar__cta:focus-visible {
+    outline: 3px solid var(--text-4, #40484E);
+    outline-offset: 2px;
+  }
+
+  .ks-pdp-buybar__cta:disabled { opacity: 0.6; cursor: default; }
+
+  /* spazio in fondo pagina e messaggio di conferma del carrello seguono l'altezza reale della barra (misurata da ks-pdp-buybar.js) */
+  body.ks-pdp-buybar-on { padding-bottom: var(--ks-pdp-buybar-h, calc(72px + env(safe-area-inset-bottom, 0px))); }
+
+  body.ks-pdp-buybar-on .ks-cart-feedback-toast { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 16px); }
+}
+
+@media (max-width: 1199.98px) and (prefers-reduced-motion: no-preference) {
+  .ks-pdp-buybar { animation: ks-pdp-buybar-in 160ms ease-out; }
+}
+
+@keyframes ks-pdp-buybar-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (forced-colors: active) {
+  .ks-pdp-buybar__cta { border: 1px solid ButtonText; }
+}
