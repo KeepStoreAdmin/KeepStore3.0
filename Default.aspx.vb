@@ -16,7 +16,6 @@ Partial Public Class _Default
     Inherits Page
 
     Private Shared ReadOnly ItCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
-    Private Shared ReadOnly Rng As New Random()
     Private _priceDisplayContext As StorefrontPriceDisplayContext
     Private ReadOnly _homePromotionModelCache As New Dictionary(Of String, ProductPromotionDisplayModel)(StringComparer.Ordinal)
     Private _homeTiming As HomeServerStageTiming
@@ -378,10 +377,6 @@ Partial Public Class _Default
         If HomeCollectionSection IsNot Nothing Then HomeCollectionSection.Visible = (collectionRows.Count > 0)
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = (bottomRows.Count > 0)
 
-        If HomeLegacyEditorialSection IsNot Nothing Then
-            HomeLegacyEditorialSection.Visible = False
-        End If
-
         ' Only the configured commercial index qualifies this section; no visits/catalog fallback.
         Dim bestRows As DataTable = TakeRankedHomeRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool)
         PopulatePromotionDisplaySnapshot(bestRows)
@@ -417,10 +412,6 @@ Partial Public Class _Default
                                        Not IsTableEmpty(discoveryRows)
 
         ApplyHomeComposition(HomePriceDisplayNote.Visible)
-
-        If HomeLowerColumnsSection IsNot Nothing Then
-            HomeLowerColumnsSection.Visible = False
-        End If
 
         Dim brandRows As DataTable
         Using HomeServerStageTiming.Measure(_homeTiming, "home.brands.resolve")
@@ -646,90 +637,6 @@ Partial Public Class _Default
         ' Recently viewed also has a client lifecycle; leave its visibility unchanged.
     End Sub
 
-    Private Sub BindThreeColumnZone(ByVal source As DataTable, ByVal leftRepeater As Repeater, ByVal centerRepeater As Repeater, ByVal rightRepeater As Repeater)
-        Dim work As DataTable = If(source IsNot Nothing, source.Copy(), EmptyProductsTable())
-        Dim total As Integer = If(work Is Nothing, 0, work.Rows.Count)
-        Dim leftStart As Integer = 0
-        Dim leftCount As Integer = 0
-        Dim centerStart As Integer = 0
-        Dim centerCount As Integer = 0
-        Dim rightStart As Integer = 0
-        Dim rightCount As Integer = 0
-
-        Select Case total
-            Case Is >= 7
-                leftCount = 3
-                centerStart = 3
-                centerCount = 1
-                rightStart = 4
-                rightCount = Math.Min(3, total - rightStart)
-            Case 5, 6
-                leftCount = 2
-                centerStart = 2
-                centerCount = 1
-                rightStart = 3
-                rightCount = Math.Min(3, total - rightStart)
-            Case 3, 4
-                leftCount = 1
-                centerStart = 1
-                centerCount = 1
-                rightStart = 2
-                rightCount = Math.Max(0, total - rightStart)
-            Case 2
-                centerCount = 1
-                rightStart = 1
-                rightCount = 1
-            Case 1
-                centerCount = 1
-        End Select
-
-        leftRepeater.DataSource = SliceTable(work, leftStart, leftCount)
-        Using HomeServerStageTiming.Measure(_homeTiming, "bind.leftRepeater")
-            leftRepeater.DataBind()
-        End Using
-        centerRepeater.DataSource = SliceTable(work, centerStart, centerCount)
-        Using HomeServerStageTiming.Measure(_homeTiming, "bind.centerRepeater")
-            centerRepeater.DataBind()
-        End Using
-        rightRepeater.DataSource = SliceTable(work, rightStart, rightCount)
-        Using HomeServerStageTiming.Measure(_homeTiming, "bind.rightRepeater")
-            rightRepeater.DataBind()
-        End Using
-    End Sub
-
-    Private Function BuildSlidesTable(ByVal source As DataTable, ByVal groupSize As Integer) As DataTable
-        Dim result As New DataTable()
-        result.Columns.Add("Html", GetType(String))
-
-        Dim work As DataTable = source
-        If work Is Nothing OrElse work.Rows.Count = 0 Then
-            result.Rows.Add("<ul class='product-list-wrap'></ul>")
-            Return result
-        End If
-
-        Dim effectiveGroupSize As Integer = Math.Max(groupSize, 1)
-        Dim index As Integer = 0
-        While index < work.Rows.Count
-            Dim sb As New StringBuilder()
-            sb.Append("<ul class='product-list-wrap'>")
-            Dim upper As Integer = Math.Min(index + effectiveGroupSize - 1, work.Rows.Count - 1)
-            For i As Integer = index To upper
-                sb.Append("<li class='wow fadeInUp' data-wow-delay='0s'>")
-                sb.Append(RenderRowCardFromRow(work.Rows(i)))
-                sb.Append("</li>")
-            Next
-            sb.Append("</ul>")
-            result.Rows.Add(sb.ToString())
-            index += effectiveGroupSize
-        End While
-
-        If result.Rows.Count = 0 Then
-            result.Rows.Add("<ul class='product-list-wrap'></ul>")
-        End If
-
-        Return result
-    End Function
-
     Private Function GetHeroSlides() As DataTable
         Dim wideSource As DataTable = DistinctRowsByColumn(GetHeroWideBanners(), "Image")
         If wideSource IsNot Nothing AndAlso wideSource.Rows.Count > 0 Then
@@ -879,52 +786,6 @@ Partial Public Class _Default
         Return result
     End Function
 
-    Private Function ConvertHeroRowsToSideRows(ByVal source As DataTable) As DataTable
-        Dim result As DataTable = SideBannersFallback()
-        If source Is Nothing Then
-            Return result
-        End If
-
-        For Each row As DataRow In source.Rows
-            Dim newRow As DataRow = result.NewRow()
-            Dim title As String = CleanMarketingText(If(row.Table.Columns.Contains("Caption"), row("Caption"), String.Empty), "Scopri i prodotti")
-            newRow("Title") = title
-            newRow("Description") = CleanMarketingText(If(row.Table.Columns.Contains("Description"), row("Description"), String.Empty), String.Empty)
-            newRow("Image") = Convert.ToString(If(row.Table.Columns.Contains("Image"), row("Image"), String.Empty)).Trim()
-            newRow("LinkUrl") = NormalizeProjectLink(Convert.ToString(If(row.Table.Columns.Contains("LinkUrl"), row("LinkUrl"), String.Empty)), "articoli.aspx")
-            newRow("Badge") = BuildSideBannerBadge()
-            result.Rows.Add(newRow)
-        Next
-
-        Return result
-    End Function
-
-    Private Function MergeSideBannerRows(ByVal primary As DataTable, ByVal secondary As DataTable, ByVal limit As Integer) As DataTable
-        Dim result As DataTable = SideBannersFallback()
-        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
-
-        For Each source As DataTable In New DataTable() {primary, secondary}
-            If source Is Nothing Then
-                Continue For
-            End If
-
-            For Each row As DataRow In source.Rows
-                Dim imageKey As String = Convert.ToString(If(row.Table.Columns.Contains("Image"), row("Image"), String.Empty)).Trim()
-                If String.IsNullOrWhiteSpace(imageKey) OrElse seen.Contains(imageKey) Then
-                    Continue For
-                End If
-
-                seen.Add(imageKey)
-                result.ImportRow(row)
-                If result.Rows.Count >= limit Then
-                    Return result
-                End If
-            Next
-        Next
-
-        Return result
-    End Function
-
     Private Function CleanMarketingText(ByVal value As Object, ByVal fallback As String) As String
         Dim text As String = HttpUtility.HtmlDecode(Convert.ToString(value)).Trim()
         text = System.Text.RegularExpressions.Regex.Replace(text, "\s+", " ").Trim()
@@ -1054,22 +915,6 @@ Partial Public Class _Default
         Return result
     End Function
 
-    Private Function GetFeaturedPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts("COALESCE(v.Vetrina,0)=1 AND COALESCE(NULLIF(v.Img1,''),'')<>'' AND " & StockWhereClause() & ">=1",
-                             "COALESCE(v.DataCreazione,CURDATE()) DESC, COALESCE(v.Visite,0) DESC, v.id DESC",
-                             limit)
-    End Function
-
-    Private Function GetMostViewedPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(v.Visite,0)>0",
-                             "COALESCE(v.Visite,0) DESC, COALESCE(v.DataCreazione,CURDATE()) DESC, v.id DESC",
-                             limit)
-    End Function
-
-    Private Function GetTopRatedPool(ByVal limit As Integer) As DataTable
-        Return GetMostViewedPool(limit)
-    End Function
-
     Private Function GetNewArrivalsPool(ByVal limit As Integer) As DataTable
         Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(v.InOrdine,0)<=0 AND v.DataCreazione >= @homeNewStart AND v.DataCreazione < @homeTodayEnd",
                              "DataCreazione DESC, id DESC, TCid ASC",
@@ -1196,16 +1041,6 @@ Partial Public Class _Default
             If Not added Then Exit Do
         Loop
         Return result
-    End Function
-
-    Private Function GetPureTopSellingPool(ByVal limit As Integer) As DataTable
-        ' Compatibility entry point for historical fixtures; no legacy sales query.
-        Return GetBestSellerPool(limit)
-    End Function
-
-    Private Function GetCurrentYearSellingPool(ByVal limit As Integer) As DataTable
-        ' Compatibility entry point for historical fixtures; the HOME uses only the rolling index.
-        Return GetBestSellerPool(limit)
     End Function
 
     Private Function LoadHomeCatalogDiscovery(ByVal deals As DataTable,
@@ -1919,26 +1754,11 @@ Partial Public Class _Default
         Return text
     End Function
 
-    Private Function TakeDistinctRows(ByVal count As Integer, ByVal usedBusinessKeys As HashSet(Of String), ParamArray ByVal sources() As DataTable) As DataTable
-        Return CollectDistinctRows(count, usedBusinessKeys, Nothing, True, False, False, sources)
-    End Function
-
-    Private Function PreviewDistinctRows(ByVal count As Integer, ByVal usedBusinessKeys As HashSet(Of String), ParamArray ByVal sources() As DataTable) As DataTable
-        Return CollectDistinctRows(count, usedBusinessKeys, Nothing, False, False, False, sources)
-    End Function
-
     Private Function TakeDiverseRows(ByVal count As Integer,
                                      ByVal usedBusinessKeys As HashSet(Of String),
                                      ByVal usedDisplayKeys As HashSet(Of String),
                                      ParamArray ByVal sources() As DataTable) As DataTable
         Return CollectDistinctRows(count, usedBusinessKeys, usedDisplayKeys, True, True, True, sources)
-    End Function
-
-    Private Function PreviewDiverseRows(ByVal count As Integer,
-                                        ByVal usedBusinessKeys As HashSet(Of String),
-                                        ByVal usedDisplayKeys As HashSet(Of String),
-                                        ParamArray ByVal sources() As DataTable) As DataTable
-        Return CollectDistinctRows(count, usedBusinessKeys, usedDisplayKeys, False, False, True, sources)
     End Function
 
     Private Function CollectDistinctRows(ByVal count As Integer,
@@ -2089,89 +1909,6 @@ Partial Public Class _Default
         dt.Columns.Add("LastCommercialActivity", GetType(Date))
         Return dt
     End Function
-
-    Private Function ShuffleTable(ByVal source As DataTable) As DataTable
-        If source Is Nothing OrElse source.Rows.Count <= 1 Then
-            Return source
-        End If
-
-        Dim rows As New List(Of DataRow)()
-        For Each row As DataRow In source.Rows
-            rows.Add(row)
-        Next
-
-        For i As Integer = rows.Count - 1 To 1 Step -1
-            Dim swapIndex As Integer = Rng.Next(0, i + 1)
-            Dim tmp As DataRow = rows(i)
-            rows(i) = rows(swapIndex)
-            rows(swapIndex) = tmp
-        Next
-
-        Dim shuffled As DataTable = source.Clone()
-        For Each row As DataRow In rows
-            shuffled.ImportRow(row)
-        Next
-        Return shuffled
-    End Function
-
-    Private Sub CommitBusinessKeys(ByVal source As DataTable, ByVal usedBusinessKeys As HashSet(Of String))
-        If source Is Nothing OrElse usedBusinessKeys Is Nothing Then
-            Return
-        End If
-
-        For Each row As DataRow In source.Rows
-            Dim businessKey As String = GetBusinessKey(row)
-            If String.IsNullOrWhiteSpace(businessKey) Then
-                Continue For
-            End If
-
-            usedBusinessKeys.Add(businessKey)
-        Next
-    End Sub
-
-    Private Sub CommitDisplayKeys(ByVal source As DataTable, ByVal usedDisplayKeys As HashSet(Of String))
-        If source Is Nothing OrElse usedDisplayKeys Is Nothing Then
-            Return
-        End If
-
-        For Each row As DataRow In source.Rows
-            Dim displayKey As String = GetDisplayKey(row)
-            If String.IsNullOrWhiteSpace(displayKey) Then
-                Continue For
-            End If
-
-            usedDisplayKeys.Add(displayKey)
-        Next
-    End Sub
-
-    Private Sub BindLowerBlock(ByVal wrapper As Control,
-                               ByVal repeater As Repeater,
-                               ByVal source As DataTable,
-                               ByVal minItems As Integer,
-                               ByVal usedBusinessKeys As HashSet(Of String),
-                               ByVal usedDisplayKeys As HashSet(Of String))
-        Dim visible As Boolean = (source IsNot Nothing AndAlso source.Rows.Count >= minItems)
-
-        If wrapper IsNot Nothing Then
-            wrapper.Visible = visible
-        End If
-
-        If repeater Is Nothing Then
-            Return
-        End If
-
-        If visible Then
-            CommitBusinessKeys(source, usedBusinessKeys)
-            CommitDisplayKeys(source, usedDisplayKeys)
-            repeater.DataSource = BuildSlidesTable(source, 5)
-        Else
-            repeater.DataSource = Nothing
-        End If
-
-        Using HomeServerStageTiming.Measure(_homeTiming, "bind.repeater")
-            repeater.DataBind()
-        End Using
-    End Sub
 
     Private Shared Function BuildHomeNavigationAssortmentSql() As String
         ' Ordinary catalog membership only; enabled menu sectors and usable brand logos are filtered later.
@@ -2447,15 +2184,6 @@ Partial Public Class _Default
         Return NormalizeProjectLink(link, fallback)
     End Function
 
-    Protected Function ResolveBannerImage(ByVal value As Object, ByVal fallback As String) As String
-        Dim fileName As String = Convert.ToString(value).Trim()
-        If String.IsNullOrWhiteSpace(fileName) Then Return fallback
-        fileName = fileName.Replace("\", "/")
-        If fileName.StartsWith("/") OrElse fileName.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then Return fileName
-        fileName = Path.GetFileName(fileName)
-        Return "/Public/assets/images/banner/" & fileName
-    End Function
-
     Protected Function ResolveHeroSlideImage(ByVal value As Object, ByVal fallback As String) As String
         Return ResolveProjectImage(value, fallback, "/Public/assets/images/slideshows/", "/Public/assets/images/banner/")
     End Function
@@ -2560,14 +2288,6 @@ Partial Public Class _Default
         Return ThemeManager.ProductThumbnailImageUrl(value)
     End Function
 
-    Protected Function ProductImageFull(ByVal value As Object) As String
-        Return ThemeManager.ProductImageUrl(value)
-    End Function
-
-    Private Function ProductImagePlaceholder() As String
-        Return ThemeManager.PlaceholderProductImageUrl()
-    End Function
-
     Private Function ResolveBrandImage(ByVal value As Object) As String
         Const publicRoot As String = "/Public/assets/images/marche/"
         Try
@@ -2621,10 +2341,6 @@ Partial Public Class _Default
         Return ResolveLink(fallback, "articoli.aspx")
     End Function
 
-    Protected Function CurrentPrice(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
-        Return CurrentPrice(priceIvato, 0D, promoIvato, inOfferta)
-    End Function
-
     Private Function CurrentPrice(ByVal row As DataRow) As Decimal
         If row Is Nothing Then
             Return 0D
@@ -2638,15 +2354,6 @@ Partial Public Class _Default
         Return GetBasePrice(row)
     End Function
 
-    Protected Function CurrentPrice(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
-        Dim listino As Decimal = ToDecimal(priceIvato)
-        Dim promoPrice As Decimal = 0D
-        If TryGetValidPromoPrice(priceIvato, promo, promoIvato, inOfferta, promoPrice) Then
-            Return promoPrice
-        End If
-        Return listino
-    End Function
-
     Private Function GetBasePrice(ByVal row As DataRow) As Decimal
         If row Is Nothing Then
             Return 0D
@@ -2655,10 +2362,6 @@ Partial Public Class _Default
         Dim netPrice As Decimal = If(row.Table.Columns.Contains("Prezzo"), ToDecimal(row("Prezzo")), 0D)
         Dim grossPrice As Decimal = If(row.Table.Columns.Contains("PrezzoIvato"), ToDecimal(row("PrezzoIvato")), 0D)
         Return _priceDisplayContext.SelectPrice(netPrice, grossPrice).GetValueOrDefault()
-    End Function
-
-    Protected Function SavingsAmount(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
-        Return SavingsAmount(priceIvato, 0D, promoIvato, inOfferta)
     End Function
 
     Private Function SavingsAmount(ByVal row As DataRow) As Decimal
@@ -2674,29 +2377,8 @@ Partial Public Class _Default
         Return 0D
     End Function
 
-    Protected Function SavingsAmount(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Decimal
-        Dim listino As Decimal = ToDecimal(priceIvato)
-        Dim current As Decimal = CurrentPrice(priceIvato, promo, promoIvato, inOfferta)
-        If listino > current AndAlso current > 0D Then
-            Return listino - current
-        End If
-        Return 0D
-    End Function
-
-    Protected Function ShowDiscount(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Boolean
-        Return ShowDiscount(priceIvato, 0D, promoIvato, inOfferta)
-    End Function
-
     Private Function ShowDiscount(ByVal row As DataRow) As Boolean
         Return SavingsAmount(row) > 0D
-    End Function
-
-    Protected Function ShowDiscount(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Boolean
-        Return SavingsAmount(priceIvato, promo, promoIvato, inOfferta) > 0D
-    End Function
-
-    Protected Function DiscountPercent(ByVal priceIvato As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Integer
-        Return DiscountPercent(priceIvato, 0D, promoIvato, inOfferta)
     End Function
 
     Private Function DiscountPercent(ByVal row As DataRow) As Integer
@@ -2712,26 +2394,9 @@ Partial Public Class _Default
         Return Convert.ToInt32(Math.Round(((listino - current) / listino) * 100D, MidpointRounding.AwayFromZero))
     End Function
 
-    Protected Function DiscountPercent(ByVal priceIvato As Object, ByVal promo As Object, ByVal promoIvato As Object, ByVal inOfferta As Object) As Integer
-        Dim listino As Decimal = ToDecimal(priceIvato)
-        Dim current As Decimal = CurrentPrice(priceIvato, promo, promoIvato, inOfferta)
-        If listino <= 0D OrElse current <= 0D OrElse current >= listino Then
-            Return 0
-        End If
-        Return Convert.ToInt32(Math.Round(((listino - current) / listino) * 100D, MidpointRounding.AwayFromZero))
-    End Function
-
     Protected Function FormatMoney(ByVal value As Object) As String
         Dim amount As Decimal = ToDecimal(value)
         Return UiPriceFormatter.FormatStorefrontAmount(amount)
-    End Function
-
-    Protected Function AvailabilityPercent(ByVal giacenza As Object, ByVal sold As Object) As Decimal
-        Dim available As Decimal = Math.Max(0D, ToDecimal(giacenza))
-        Dim soldCount As Decimal = Math.Max(0D, ToDecimal(sold))
-        Dim total As Decimal = soldCount + available
-        If total <= 0D Then Return 0D
-        Return Math.Min(100D, Math.Max(0D, Decimal.Round((soldCount / total) * 100D, 2, MidpointRounding.AwayFromZero)))
     End Function
 
     Protected Function CountdownSeconds(ByVal offerteDataFine As Object) As Integer
@@ -2751,33 +2416,6 @@ Partial Public Class _Default
             Return Convert.ToInt32(amount).ToString(ItCulture)
         End If
         Return amount.ToString("N2", ItCulture)
-    End Function
-
-    Private Function TryGetValidPromoPrice(ByVal priceIvato As Object,
-                                           ByVal promo As Object,
-                                           ByVal promoIvato As Object,
-                                           ByVal inOfferta As Object,
-                                           ByRef promoPrice As Decimal) As Boolean
-        promoPrice = 0D
-        If SafeInt(inOfferta) <> 1 Then
-            Return False
-        End If
-
-        Dim listino As Decimal = ToDecimal(priceIvato)
-        Dim promoGross As Decimal = ToDecimal(promoIvato)
-        Dim promoNet As Decimal = ToDecimal(promo)
-        Dim candidate As Decimal = _priceDisplayContext.SelectPromoPrice(promoNet, promoGross).GetValueOrDefault()
-
-        If candidate <= 0D Then
-            Return False
-        End If
-
-        If listino > 0D AndAlso candidate >= listino Then
-            Return False
-        End If
-
-        promoPrice = candidate
-        Return True
     End Function
 
     Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
@@ -3226,23 +2864,6 @@ Partial Public Class _Default
                "</p></div>"
     End Function
 
-    Private Function RenderCenterSaleBadge(ByVal row As DataRow) As String
-        If row Is Nothing Then Return String.Empty
-
-        Dim tierPrice As Decimal = 0D
-        Dim hasImmediateDiscount As Boolean = ShowDiscount(row)
-        Dim hasQuantityTier As Boolean = TryGetValidTierPrice(row, tierPrice)
-        If Not hasImmediateDiscount AndAlso Not hasQuantityTier Then Return String.Empty
-
-        Dim badgeText As String = If(hasImmediateDiscount,
-                                     FormatMoney(SavingsAmount(row)),
-                                     "Quantità")
-
-        Return "<div class='box-sale-wrap style-2 z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>" &
-               HttpUtility.HtmlEncode(badgeText) &
-               "</p></div>"
-    End Function
-
     Private Function RenderRefurbishedBadge(ByVal row As DataRow) As String
         If row Is Nothing OrElse Not IsRefurbished(row) Then
             Return String.Empty
@@ -3252,13 +2873,12 @@ Partial Public Class _Default
     End Function
 
     Private Function RenderCornerBadgeStack(ByVal row As DataRow,
-                                            ByVal includeSale As Boolean,
-                                            ByVal useWideSaleBadge As Boolean) As String
+                                            ByVal includeSale As Boolean) As String
         If row Is Nothing Then Return String.Empty
 
         Dim badges As New StringBuilder()
         If includeSale Then
-            badges.Append(If(useWideSaleBadge, RenderCenterSaleBadge(row), RenderSaleBadge(row)))
+            badges.Append(RenderSaleBadge(row))
         End If
         badges.Append(RenderRefurbishedBadge(row))
 
@@ -3338,7 +2958,7 @@ Partial Public Class _Default
         sb.Append("<img class='lazyload img-product' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("' />")
         sb.Append("</a>")
         sb.Append(RenderActionButtons(row, False))
-        sb.Append(RenderCornerBadgeStack(row, True, False))
+        sb.Append(RenderCornerBadgeStack(row, True))
         sb.Append("</div>")
         sb.Append("</div>")
         Dim galleryImages As List(Of String) = ProductGalleryImages(row)
@@ -3387,78 +3007,6 @@ Partial Public Class _Default
         Return sb.ToString()
     End Function
 
-    Private Function RenderRowCardFromRow(ByVal row As DataRow) As String
-        If row Is Nothing Then Return String.Empty
-
-        Dim sb As New StringBuilder()
-        sb.Append("<div class='card-product style-row row-small-2 ks-row-card'>")
-        sb.Append("<div class='card-product-wrapper'>")
-        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
-        sb.Append("<img class='img-product lazyload' src='").Append(ProductImageThumb(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(ProductImageThumb(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' src='").Append(StorefrontProductImageSlots.HoverUrl(row)).Append("' data-src='").Append(StorefrontProductImageSlots.HoverUrl(row)).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("</a>")
-        sb.Append(RenderCornerBadgeStack(row, False, False))
-        sb.Append("</div>")
-        sb.Append("<div class='card-product-info'><div class='box-title'>")
-        sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
-        sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
-        sb.Append("<div class='group-btn'>")
-        sb.Append(RenderPriceBlock(row, False))
-        sb.Append(RenderAvailability(row))
-        sb.Append(RenderActionButtons(row, True))
-        sb.Append("</div>")
-        sb.Append("</div></div>")
-        Return sb.ToString()
-    End Function
-
-    Protected Function RenderRowCard(ByVal dataItem As Object) As String
-        Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
-        If rowView Is Nothing Then Return String.Empty
-        Return RenderRowCardFromRow(rowView.Row)
-    End Function
-
-    Protected Function RenderBigCard(ByVal dataItem As Object) As String
-        Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
-        If rowView Is Nothing Then Return String.Empty
-        Dim row As DataRow = rowView.Row
-        Dim images As List(Of String) = ProductGalleryImages(row)
-        Dim hasDiscount As Boolean = ShowDiscount(row)
-
-        Dim sb As New StringBuilder()
-        sb.Append("<div class='card-product style-border style-thums-2 p-lg-30 wow fadeInUp ks-big-card' data-wow-delay='0s'>")
-        sb.Append("<div class='card-product-wrapper overflow-visible aspect-ratio-0'>")
-        sb.Append("<div class='product-thumb-slider thumbs-right ks-home-product-view'>")
-        sb.Append("<div class='swiper tf-product-view-main'><div class='swiper-wrapper'>")
-        For Each imageUrl As String In images
-            sb.Append("<div class='swiper-slide'><a href='").Append(ProductUrl(row("id"))).Append("' class='d-block tf-image-view'>")
-            sb.Append("<img class='lazyload' src='").Append(imageUrl).Append("' data-src='").Append(imageUrl).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-            sb.Append("</a></div>")
-        Next
-        sb.Append("</div></div>")
-        sb.Append("<div class='swiper tf-product-view-thumbs' data-direction='vertical'><div class='swiper-wrapper'>")
-        For Each imageUrl As String In images
-            sb.Append("<div class='swiper-slide'><div class='item'><img class='lazyload' src='").Append(imageUrl).Append("' data-src='").Append(imageUrl).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'></div></div>")
-        Next
-        sb.Append("</div></div>")
-        sb.Append("</div>")
-        sb.Append(RenderActionButtons(row, False))
-        sb.Append(RenderCornerBadgeStack(row, True, True))
-        sb.Append("</div>")
-        sb.Append("<div class='card-product-info'>")
-        sb.Append("<div class='box-title gap-xl-6'>")
-        sb.Append("<p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
-        sb.Append("<h6 class='bg-white relative z-5'><a href='").Append(ProductUrl(row("id"))).Append("' class='name-product fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></h6>")
-        sb.Append("</div>")
-        If hasDiscount Then sb.Append(RenderCountdownBlock(row))
-        sb.Append("<div class='group-btn'>")
-        sb.Append(RenderPriceBlock(row, True))
-        sb.Append(RenderAvailability(row))
-        sb.Append(RenderActionButtons(row, True))
-        sb.Append("</div>")
-        sb.Append("</div></div>")
-        Return sb.ToString()
-    End Function
-
     Protected Function RenderGridCard(ByVal dataItem As Object) As String
         Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
         If rowView Is Nothing Then Return String.Empty
@@ -3474,7 +3022,7 @@ Partial Public Class _Default
         Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
                                        Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))
         If Not informativeOnly Then sb.Append(RenderActionButtons(row, False))
-        sb.Append(RenderCornerBadgeStack(row, True, False))
+        sb.Append(RenderCornerBadgeStack(row, True))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
         If row.Table.Columns.Contains("HomeMerchandisingLabel") Then
@@ -3491,11 +3039,6 @@ Partial Public Class _Default
         sb.Append("</div>")
         sb.Append("</div></div>")
         Return sb.ToString()
-    End Function
-
-    Protected Function IsRefurbished(ByVal row As DataRowView) As Boolean
-        If row Is Nothing Then Return False
-        Return IsRefurbished(row.Row)
     End Function
 
     Protected Function IsRefurbished(ByVal row As DataRow) As Boolean

@@ -543,7 +543,7 @@
             <div class="flat-title pb-8 wow fadeInUp" data-wow-delay="0s">
                 <div>
                     <h5 class="fw-semibold text-primary flat-title-has-icon">
-                        <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span data-ks-i18n="home.deal">Occasione Imperdibile</span>
+                        <span class="icon"><i class="icon-fire tf-ani-tada"></i></span><span>Occasione Imperdibile</span>
                     </h5>
                     <p class="body-text-3 text-main-2 mb-0">Promozioni e occasioni disponibili nel catalogo.</p>
                 </div>
@@ -609,43 +609,6 @@
         </div>
     </section>
 
-    <section id="HomeLegacyEditorialSection" runat="server" visible="false" class="tf-sp-2 flat-animate-tab ks-home-editorial-section">
-        <div class="container">
-            <div class="flat-title">
-                <div class="flat-title-tab-default">
-                    <ul class="menu-tab-line" role="tablist">
-                        <li class="nav-tab-item d-flex" role="presentation"><a href="#feature" class="tab-link main-title link fw-semibold active" data-bs-toggle="tab" data-ks-i18n="home.offers">Offerte</a></li>
-                        <li class="nav-tab-item d-flex" role="presentation"><a href="#toprate" class="tab-link main-title link fw-semibold" data-bs-toggle="tab" data-ks-i18n="home.topRated">Top Rated</a></li>
-                        <li class="nav-tab-item d-flex" role="presentation"><a href="#on-sale" class="tab-link main-title link fw-semibold" data-bs-toggle="tab" data-ks-i18n="home.newArrivals">Nuovi Arrivi</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="tab-content">
-                <div class="tab-pane active show" id="feature" role="tabpanel">
-                    <div class="grid-cls grid-cls-v1">
-                        <div class="grid-item1"><ul class="product-list-wrap"><asp:Repeater ID="rptFeatureLeft" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul></div>
-                        <div class="grid-item2"><asp:Repeater ID="rptFeatureCenter" runat="server"><ItemTemplate><%# RenderBigCard(Container.DataItem) %></ItemTemplate></asp:Repeater></div>
-                        <div class="grid-item3"><ul class="product-list-wrap"><asp:Repeater ID="rptFeatureRight" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul></div>
-                    </div>
-                </div>
-                <div class="tab-pane" id="toprate" role="tabpanel">
-                    <div class="grid-cls grid-cls-v1">
-                        <div class="grid-item1"><ul class="product-list-wrap"><asp:Repeater ID="rptToprateLeft" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul></div>
-                        <div class="grid-item2"><asp:Repeater ID="rptToprateCenter" runat="server"><ItemTemplate><%# RenderBigCard(Container.DataItem) %></ItemTemplate></asp:Repeater></div>
-                        <div class="grid-item3"><ul class="product-list-wrap"><asp:Repeater ID="rptToprateRight" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul></div>
-                    </div>
-                </div>
-                <div class="tab-pane" id="on-sale" role="tabpanel">
-                    <div class="grid-cls grid-cls-v1">
-                        <div class="grid-item1"><ul class="product-list-wrap"><asp:Repeater ID="rptOnSaleLeft" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul></div>
-                        <div class="grid-item2"><asp:Repeater ID="rptOnSaleCenter" runat="server"><ItemTemplate><%# RenderBigCard(Container.DataItem) %></ItemTemplate></asp:Repeater></div>
-                        <div class="grid-item3"><ul class="product-list-wrap"><asp:Repeater ID="rptOnSaleRight" runat="server"><ItemTemplate><li><%# RenderRowCard(Container.DataItem) %></li></ItemTemplate></asp:Repeater></ul></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <section id="HomeLegacyBestSection" runat="server" visible="false" class="ks-home-section ks-home-best-section">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
@@ -677,7 +640,7 @@
              data-ks-placeholder="<%= ThemeManager.PlaceholderProductImageUrl() %>">
         <div class="container">
             <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                <h5 class="fw-semibold" data-ks-i18n="home.recentlyViewed">Visti di recente</h5>
+                <h5 class="fw-semibold">Visti di recente</h5>
                 <div class="box-btn-slide relative">
                     <div class="swiper-button-prev nav-swiper nav-prev-products ks-rv-prev"><i class="icon-arrow-left-lg"></i></div>
                     <div class="swiper-button-next nav-swiper nav-next-products ks-rv-next"><i class="icon-arrow-right-lg"></i></div>
@@ -712,44 +675,6 @@
                         </a>
                     </ItemTemplate>
                 </asp:Repeater>
-            </div>
-        </div>
-    </section>
-
-    <section id="HomeLowerColumnsSection" runat="server" visible="false" class="tf-sp-2 ks-home-lower-columns-section">
-        <div class="container">
-            <div class="tf-grid-product">
-                <div id="Top20Block" runat="server" class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                        <h5 class="fw-semibold">Top 20</h5>
-                        <div class="box-btn-slide relative"><div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div><div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div></div>
-                    </div>
-                    <div class="swiper ks-column-swiper"><div class="swiper-wrapper"><asp:Repeater ID="rptTop20Slides" runat="server"><ItemTemplate><div class="swiper-slide"><asp:Literal ID="litTop20SlideHtml" runat="server" Text='<%# Eval("Html") %>' /></div></ItemTemplate></asp:Repeater></div><div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div></div>
-                </div>
-
-                <div id="LowerFeaturedBlock" runat="server" class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                        <h5 class="fw-semibold" data-ks-i18n="home.featured">In Evidenza</h5>
-                        <div class="box-btn-slide relative"><div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div><div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div></div>
-                    </div>
-                    <div class="swiper ks-column-swiper"><div class="swiper-wrapper"><asp:Repeater ID="rptFeaturedProductsSlides" runat="server"><ItemTemplate><div class="swiper-slide"><asp:Literal ID="litFeaturedProductsSlideHtml" runat="server" Text='<%# Eval("Html") %>' /></div></ItemTemplate></asp:Repeater></div><div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div></div>
-                </div>
-
-                <div id="TopSellingBlock" runat="server" class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                        <h5 class="fw-semibold" data-ks-i18n="home.topSelling">I Piu' Venduti</h5>
-                        <div class="box-btn-slide relative"><div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div><div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div></div>
-                    </div>
-                    <div class="swiper ks-column-swiper"><div class="swiper-wrapper"><asp:Repeater ID="rptTopSellingProductSlides" runat="server"><ItemTemplate><div class="swiper-slide"><asp:Literal ID="litTopSellingProductSlideHtml" runat="server" Text='<%# Eval("Html") %>' /></div></ItemTemplate></asp:Repeater></div><div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div></div>
-                </div>
-
-                <div id="OnSaleBlock" runat="server" class="tf-grid-product-item box-btn-slide-item">
-                    <div class="flat-title wow fadeInUp" data-wow-delay="0s">
-                        <h5 class="fw-semibold" data-ks-i18n="home.onSale">In Offerta</h5>
-                        <div class="box-btn-slide relative"><div class="swiper-button-prev nav-swiper ks-col-prev"><i class="icon-arrow-left-lg"></i></div><div class="swiper-button-next nav-swiper ks-col-next"><i class="icon-arrow-right-lg"></i></div></div>
-                    </div>
-                    <div class="swiper ks-column-swiper"><div class="swiper-wrapper"><asp:Repeater ID="rptOnSaleProductSlides" runat="server"><ItemTemplate><div class="swiper-slide"><asp:Literal ID="litOnSaleProductSlideHtml" runat="server" Text='<%# Eval("Html") %>' /></div></ItemTemplate></asp:Repeater></div><div class="d-flex d-lg-none sw-dot-default ks-col-pagination justify-content-center"></div></div>
-                </div>
             </div>
         </div>
     </section>
