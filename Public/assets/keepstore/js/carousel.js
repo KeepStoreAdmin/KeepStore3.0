@@ -65,6 +65,8 @@ if ($(".tf-sw-products").length > 0) {
         var perGroupMd = $this.data("pagination-md") || 1;
         var perGroupLg = $this.data("pagination-lg") || 1;
         var gridRows = $this.data("grid") || 1; //
+        // Righe della griglia sotto i 575 px (facoltativo): una sola riga con scorrimento al posto di due righe da due colonne.
+        var gridRowsMobile = $this.data("grid-mobile") || gridRows;
 
         var swiper = new Swiper($this[0], {
             speed: 800,
@@ -72,7 +74,7 @@ if ($(".tf-sw-products").length > 0) {
             spaceBetween: spacing,
             slidesPerGroup: perGroup,
             grid: {
-                rows: gridRows,
+                rows: gridRowsMobile,
                 fill: "row",
             },
             pagination: {

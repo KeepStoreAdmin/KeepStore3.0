@@ -35,7 +35,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-search-panel1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-home-vetrina1a" %>" />
     <noscript><style>#preload{display:none!important}</style></noscript>
 </head>
 
@@ -222,7 +222,7 @@
         <script src="<%= ThemeManager.Asset("js/bootstrap-select.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/jquery.nice-select.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/swiper-bundle.min.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/carousel.js") %>"></script>
+        <script src="<%= ThemeManager.Asset("js/carousel.js") %>?v=20261114-home-vetrina1a"></script>
         <script src="<%= ThemeManager.Asset("js/wow.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/infinityslide.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/multiple-modal.js") %>"></script>
