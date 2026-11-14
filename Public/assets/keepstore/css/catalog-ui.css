@@ -357,11 +357,11 @@
   min-inline-size: 0;
 }
 
-#ksCatalogPage .ks-brand-facet .ks-filter-list > span {
+#ksCatalogPage .widget-facet .ks-filter-list > span {
   display: contents;
 }
 
-#ksCatalogPage .ks-brand-facet .ks-filter-list > br {
+#ksCatalogPage .widget-facet .ks-filter-list > br {
   display: none;
 }
 
@@ -2386,4 +2386,144 @@
     grid-template-columns: minmax(116px, 1fr) 108px 44px;
     grid-template-areas: "selection quantity buy";
   }
+}
+
+/* ===== Navigazione del catalogo: albero compatto e filtri a caselle (KS-A03-CATALOG-NAV-1A) =====
+   Solo presentazione: i filtri restano link (URL e selezione singola invariati). */
+
+/* Albero dei settori (solo desktop: sotto 1200px la tassonomia sta nei reparti mobili). */
+@media (min-width: 1200px) {
+  #ksCatalogPage .ks-category-nav-list,
+  #ksCatalogPage .ks-category-nav-sublist,
+  #ksCatalogPage .ks-catalog-category-nav .ks-category-nav-more-list {
+    gap: 2px;
+  }
+
+  #ksCatalogPage .ks-category-nav-link,
+  #ksCatalogPage .ks-category-nav-sublink {
+    min-height: 34px;
+    padding: 5px 8px;
+    border-radius: 6px;
+  }
+
+  #ksCatalogPage .ks-category-nav-link.active,
+  #ksCatalogPage .ks-category-nav-sublink.active {
+    background: var(--gray-1, #f5f6f8);
+  }
+}
+
+/* Sezioni dei filtri: titolo, spaziatura e separatori uniformi. */
+#ksCatalogPage .widget-facet .facet-title.title-sidebar {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+#ksCatalogPage .widget-facet.facet-fieldset:not(:last-child),
+#ksCatalogPage .widget-facet.facet-price {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--gray-5, #e5e5e5);
+}
+
+#ksCatalogPage .widget-facet.ks-facet-availability {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--gray-5, #e5e5e5);
+}
+
+/* Opzioni dei filtri come righe con casella disegnata (il link resta un link). */
+#ksCatalogPage .widget-facet .ks-filter-option {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  text-decoration: none;
+}
+
+/* Righe compatte solo da desktop: sotto 1200px restano le righe da 44px del pannello mobile. */
+@media (min-width: 1200px) {
+  #ksCatalogPage .widget-facet .ks-filter-option {
+    min-height: 32px;
+    padding: 4px 0;
+  }
+}
+
+#ksCatalogPage .widget-facet .ks-filter-option::before {
+  content: "";
+  flex: 0 0 18px;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #9aa1ab;
+  border-radius: 4px;
+  background: #fff;
+}
+
+#ksCatalogPage .widget-facet .ks-filter-option:hover::before {
+  border-color: var(--primary, #ff3d3d);
+}
+
+#ksCatalogPage .widget-facet .ks-filter-option.active::before {
+  border-color: var(--primary, #ff3d3d);
+  background: var(--primary, #ff3d3d) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M2.5 6.2l2.4 2.4 4.6-5'/%3E%3C/svg%3E") center / 12px 12px no-repeat;
+}
+
+#ksCatalogPage .widget-facet .ks-filter-option > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#ksCatalogPage .widget-facet .ks-filter-option > small {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+#ksCatalogPage .widget-facet .ks-filter-option:focus-visible {
+  outline: 2px solid var(--primary, #ff3d3d);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (forced-colors: active) {
+  #ksCatalogPage .widget-facet .ks-filter-option::before {
+    border-color: ButtonText;
+  }
+
+  #ksCatalogPage .widget-facet .ks-filter-option.active::before {
+    background-color: Highlight;
+    border-color: Highlight;
+  }
+}
+
+/* Casella «Solo disponibili» allineata alle altre opzioni. */
+#ksCatalogPage .ks-filter-checkbox {
+  margin: 0;
+}
+
+#ksCatalogPage .ks-filter-checkbox > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (min-width: 1200px) {
+  #ksCatalogPage .ks-filter-checkbox > span {
+    min-height: 32px;
+  }
+}
+
+#ksCatalogPage .ks-filter-checkbox input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary, #ff3d3d);
+}
+
+#ksCatalogPage .ks-filter-checkbox label {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  cursor: pointer;
 }

@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261006-brand-loadmore1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261114-catalog-nav1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261111-catalog-departments1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261108-catalog-search-context-1a" />
     <style>
@@ -68,7 +68,7 @@
                                         <asp:DataList ID="DataList2" runat="server" DataSourceID="sdsMarche" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("mr", Container.DataItem) %>' data-ks-batch-key="mr" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("mr", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " active", "") %>'<%# If(ThemeManager.CatalogFilterSelected("mr", Container.DataItem), " aria-current=""true""", "") %> href='<%# ThemeManager.CatalogFilterUrl("mr", Container.DataItem) %>' data-ks-batch-key="mr" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("mr", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -88,7 +88,7 @@
                                         <asp:DataList ID="DataList3" runat="server" DataSourceID="sdsTipologie" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("tp", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("tp", Container.DataItem) %>' data-ks-batch-key="tp" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("tp", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("tp", Container.DataItem), " active", "") %>'<%# If(ThemeManager.CatalogFilterSelected("tp", Container.DataItem), " aria-current=""true""", "") %> href='<%# ThemeManager.CatalogFilterUrl("tp", Container.DataItem) %>' data-ks-batch-key="tp" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("tp", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -109,7 +109,7 @@
                                         <asp:DataList ID="DataList1" runat="server" DataSourceID="sdsGruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>' data-ks-batch-key="gr" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("gr", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " active", "") %>'<%# If(ThemeManager.CatalogFilterSelected("gr", Container.DataItem), " aria-current=""true""", "") %> href='<%# ThemeManager.CatalogFilterUrl("gr", Container.DataItem) %>' data-ks-batch-key="gr" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("gr", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -125,7 +125,7 @@
                                         <asp:DataList ID="DataList4" runat="server" DataSourceID="sdsSottogruppo" RepeatLayout="Flow" CssClass="ks-filter-list">
                                             <ItemTemplate>
                                                 <fieldset class="fieldset-item">
-                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>' href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>' data-ks-batch-key="sg" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("sg", Container.DataItem) %>'>
+                                                    <a class='ks-filter-option link<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " active", "") %>'<%# If(ThemeManager.CatalogFilterSelected("sg", Container.DataItem), " aria-current=""true""", "") %> href='<%# ThemeManager.CatalogFilterUrl("sg", Container.DataItem) %>' data-ks-batch-key="sg" data-ks-batch-value='<%# ThemeManager.CatalogFilterId("sg", Container.DataItem) %>'>
                                                         <span><%# Server.HtmlEncode(Convert.ToString(Eval("descrizione"))) %></span>
                                                         <small><%# If(UiData.HasColumn(Container.DataItem, "Numero"), Eval("Numero"), "") %></small>
                                                     </a>
@@ -135,8 +135,8 @@
                                     </div>
                                 </div>
 
-                                <div class="widget-facet facet-fieldset">
-                                    <p class="facet-title title-sidebar fw-semibold">Disponibilita</p>
+                                <div class="widget-facet facet-fieldset ks-facet-availability">
+                                    <p class="facet-title title-sidebar fw-semibold">Disponibilità</p>
                                     <div class="box-fieldset-item">
                                         <fieldset class="fieldset-item ks-filter-checkbox">
                                             <asp:CheckBox ID="CheckBox_Disponibile" runat="server" Text="Solo disponibili" data-ks-batch-key="disponibile" data-ks-batch-value="1" AutoPostBack="true" />
@@ -187,7 +187,7 @@
                                 <p class="facet-title title-sidebar fw-semibold">Offerte</p>
                                 <div class="box-fieldset-item">
                                     <div class="fieldset-item">
-                                        <a ID="lnkCatalogDeals" runat="server" class="ks-filter-option link py-3">
+                                        <a ID="lnkCatalogDeals" runat="server" class="ks-filter-option link">
                                             <span>Solo offerte</span>
                                             <small ID="catalogDealsState" runat="server" Visible="false">Attivo</small>
                                         </a>
@@ -199,7 +199,7 @@
                                 <p class="facet-title title-sidebar fw-semibold">Condizione</p>
                                 <div class="box-fieldset-item">
                                     <div class="fieldset-item">
-                                        <a ID="lnkCatalogRefurbished" runat="server" class="ks-filter-option link py-3">
+                                        <a ID="lnkCatalogRefurbished" runat="server" class="ks-filter-option link">
                                             <span>Solo ricondizionati</span>
                                             <small ID="catalogRefurbishedState" runat="server" Visible="false">Attivo</small>
                                         </a>
@@ -287,7 +287,7 @@
                                         <asp:ListItem Value="P_basso" Text="Prezzo crescente"></asp:ListItem>
                                         <asp:ListItem Value="P_alto" Text="Prezzo decrescente"></asp:ListItem>
                                         <asp:ListItem Value="P_offerta" Text="Offerte"></asp:ListItem>
-                                        <asp:ListItem Value="P_disponibilita" Text="Disponibilita"></asp:ListItem>
+                                        <asp:ListItem Value="P_disponibilita" Text="Disponibilità"></asp:ListItem>
                                         <asp:ListItem Value="P_recenti" Text="Inseriti di recente"></asp:ListItem>
                                         <asp:ListItem Value="P_popolarita" Text="Più visualizzati"></asp:ListItem>
                                         <asp:ListItem Value="P_codice" Text="Codice"></asp:ListItem>
@@ -308,7 +308,7 @@
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_basso" data-ks-sort-icon="icon-money-bag"><i class="icon-money-bag" aria-hidden="true"></i><span>Prezzo crescente</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_alto" data-ks-sort-icon="icon-money-bag"><i class="icon-money-bag" aria-hidden="true"></i><span>Prezzo decrescente</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_offerta" data-ks-sort-icon="icon-fire"><i class="icon-fire" aria-hidden="true"></i><span>Offerte</span></button>
-                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_disponibilita" data-ks-sort-icon="icon-check"><i class="icon-check" aria-hidden="true"></i><span>Disponibilita</span></button>
+                                        <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_disponibilita" data-ks-sort-icon="icon-check"><i class="icon-check" aria-hidden="true"></i><span>Disponibilità</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_recenti" data-ks-sort-icon="icon-clock"><i class="icon-clock" aria-hidden="true"></i><span>Inseriti di recente</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_popolarita" data-ks-sort-icon="icon-star"><i class="icon-star" aria-hidden="true"></i><span>Più visualizzati</span></button>
                                         <button type="button" class="ks-sort-option" role="option" aria-selected="false" data-ks-sort-value="P_codice" data-ks-sort-icon="icon-sort"><i class="icon-sort" aria-hidden="true"></i><span>Codice</span></button>
@@ -621,7 +621,7 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261111-catalog-departments1a"></script>
+    <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261114-catalog-nav1a"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>

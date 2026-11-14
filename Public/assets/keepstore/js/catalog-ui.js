@@ -424,7 +424,7 @@
           var value = node.getAttribute('data-ks-batch-value');
           var selected = multi.indexOf(key) >= 0 ? batch.values[key].split('|').indexOf(value) >= 0 : batch.values[key] === value;
           node.classList.toggle('active', selected);
-          node.setAttribute('role', 'checkbox'); node.setAttribute('aria-checked', String(selected));
+          node.setAttribute('role', 'checkbox'); node.setAttribute('aria-checked', String(selected)); node.removeAttribute('aria-current');
           if (key === 'inpromo' || key === 'ricondizionato') {
             var label = node.querySelector('span'), badge = node.querySelector('small');
             if (label) node.setAttribute('aria-label', label.textContent.trim());
@@ -454,7 +454,7 @@
           node.setAttribute('data-ks-batch-key', wrapper.getAttribute('data-ks-batch-key'));
           node.setAttribute('data-ks-batch-value', wrapper.getAttribute('data-ks-batch-value'));
         }
-        var item = { node: node, cls: node.getAttribute('class'), role: node.getAttribute('role'), aria: node.getAttribute('aria-checked'), checked: node.checked, selected: node.selectedIndex, onclick: node.onclick, onchange: node.onchange, clickAttr: node.getAttribute('onclick'), changeAttr: node.getAttribute('onchange') };
+        var item = { node: node, cls: node.getAttribute('class'), role: node.getAttribute('role'), aria: node.getAttribute('aria-checked'), current: node.getAttribute('aria-current'), checked: node.checked, selected: node.selectedIndex, onclick: node.onclick, onchange: node.onchange, clickAttr: node.getAttribute('onclick'), changeAttr: node.getAttribute('onchange') };
         batch.nodes.push(item);
         item.label = node.getAttribute('aria-label');
         item.badge = node.tagName === 'A' && node.querySelector('small');
@@ -470,7 +470,7 @@
       if (!batch) return;
       batch.nodes.forEach(function (item) {
         var node = item.node;
-        [['class', item.cls], ['role', item.role], ['aria-checked', item.aria], ['aria-label', item.label], ['onclick', item.clickAttr], ['onchange', item.changeAttr]].forEach(function (pair) {
+        [['class', item.cls], ['role', item.role], ['aria-checked', item.aria], ['aria-current', item.current], ['aria-label', item.label], ['onclick', item.clickAttr], ['onchange', item.changeAttr]].forEach(function (pair) {
           if (pair[1] === null) node.removeAttribute(pair[0]); else node.setAttribute(pair[0], pair[1]);
         });
         node.onclick = item.onclick; node.onchange = item.onchange;

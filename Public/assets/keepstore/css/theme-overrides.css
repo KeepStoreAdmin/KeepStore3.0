@@ -2376,28 +2376,11 @@ body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-info,
   width: 100%;
 }
 
-/* Keep the real KeepStore facet inventory accessible without extending the page row. */
+/* Colonna dei filtri del catalogo: scorre con la pagina, senza scorrimento interno
+   (prima era una colonna alta come lo schermo con i filtri nascosti sotto l'albero dei settori). */
 @media (min-width: 1200px) {
   #ksCatalogPage .canvas-filter-product.sidebar-filter {
     align-self: flex-start;
-    height: calc(100vh - 32px);
-    max-height: calc(100vh - 32px);
-    overflow: hidden;
-    position: sticky;
-    top: 16px;
-  }
-
-  #ksCatalogPage .canvas-filter-product.sidebar-filter .canvas-wrapper {
-    height: 100%;
-    max-height: 100%;
-    min-height: 0;
-  }
-
-  #ksCatalogPage .canvas-filter-product.sidebar-filter .canvas-body {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
   }
 }
 
