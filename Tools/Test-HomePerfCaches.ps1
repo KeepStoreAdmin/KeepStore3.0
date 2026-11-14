@@ -318,15 +318,15 @@ Assert-Detected (Test-HeaderSource (Mutate-Text $header 'Return New FreeShipping
 Assert-Detected (Test-HeaderSource (Mutate-Text $header 'AziendeID=@companyId AND v.Abilitato=1' 'AziendeID>0 AND v.Abilitato=1' 'S09')) 'S09_SHIPPING_QUERY_NOT_COMPANY_SCOPED'
 Assert-Detected (Test-MasterSource ($master + "`nSub Load_social_buttons()`nEnd Sub`n")) 'S10_SOCIAL_QUERIES_COME_BACK'
 Assert-Detected (Test-AspxViewState (Mutate-Text $aspx '<asp:Repeater ID="rptBestSeller" runat="server" EnableViewState="false">' '<asp:Repeater ID="rptBestSeller" runat="server">' 'S11')) 'S11_REPEATER_SAVES_VIEWSTATE_AGAIN'
-Assert-Detected (Test-DefaultVb (Mutate-Text $vb 'BindHome()
+Assert-Detected (Test-DefaultVb (Mutate-Text $vb '        BindHome()
     End Sub
 
-    Private Sub MarkBodyAsHome()' 'If Not IsPostBack Then
+    '' Un solo generatore per richiesta' '        If Not IsPostBack Then
             BindHome()
         End If
     End Sub
 
-    Private Sub MarkBodyAsHome()' 'S12')) 'S12_POSTBACK_RENDERS_EMPTY_HOME'
+    '' Un solo generatore per richiesta' 'S12')) 'S12_POSTBACK_RENDERS_EMPTY_HOME'
 Assert-Detected (Test-DefaultVb (Mutate-Text $vb '            GetCurrentAziendaId(),
             listino.ToString(CultureInfo.InvariantCulture),' '            1,
             listino.ToString(CultureInfo.InvariantCulture),' 'S13')) 'S13_ASSORTMENT_KEY_WITHOUT_COMPANY'

@@ -155,6 +155,8 @@ Partial Public Class _Default
     End Property
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
+        ' La composizione delle vetrine cambia a ogni richiesta: la risposta non si riusa senza rivalidare (Cache-Control: no-cache).
+        Response.Cache.SetCacheability(HttpCacheability.NoCache)
         Using HomeServerStageTiming.Measure(_homeTiming, "home.context")
             _priceDisplayContext = StorefrontPriceDisplayContextProvider.GetCurrent(HttpContext.Current)
         End Using
@@ -173,6 +175,43 @@ Partial Public Class _Default
         ' I repeater della HOME non salvano lo stato nel ViewState (il testo collegato ai dati lo riempiva di centinaia di KB):
         ' si ricostruiscono a ogni richiesta, anche in un eventuale postback.
         BindHome()
+    End Sub
+
+    ' Un solo generatore per richiesta, con un seme casuale (due istanze create nello stesso istante darebbero la stessa sequenza).
+    Private ReadOnly _homeRandom As New Random(Guid.NewGuid().GetHashCode())
+
+    ' La memoria di cio che e stato mostrato contiene SOLO identificativi (mai prezzi) ed e separata per azienda, listino, stato di accesso
+    ' e modalita IVA: al cambio di contesto la storia precedente non si usa.
+    Private Function HomeRotationSessionKey(ByVal section As String) As String
+        Return "KeepStore.HomeRotation." & section & "." &
+               GetCurrentAziendaId().ToString(CultureInfo.InvariantCulture) & "." &
+               GetCurrentListino().ToString(CultureInfo.InvariantCulture) & "." &
+               If(_priceDisplayContext.IsAuthenticated, "a", "g") & If(_priceDisplayContext.IsVatIncluded, "i", "e")
+    End Function
+
+    Private Function RotateHomePool(ByVal section As String,
+                                    ByVal pool As DataTable,
+                                    ByVal take As Integer,
+                                    ByVal usedBusinessKeys As HashSet(Of String),
+                                    ByVal usedDisplayKeys As HashSet(Of String)) As DataTable
+        If IsTableEmpty(pool) Then Return pool
+        Dim recent As ICollection(Of Integer) = Nothing
+        Try
+            If Session IsNot Nothing Then recent = StorefrontShowcaseRotation.ParseIds(Session(HomeRotationSessionKey(section)))
+        Catch
+            recent = Nothing
+        End Try
+        ' La finestra si forma sui candidati realmente selezionabili (distinti per codice e per chiave di visualizzazione, esclusi gli
+        ' articoli gia usati da altre sezioni), non sulle righe grezze della query.
+        Dim candidates As DataTable = CollectDistinctRows(Integer.MaxValue, usedBusinessKeys, usedDisplayKeys, False, False, True, pool)
+        Return StorefrontShowcaseRotation.Rotate(candidates, take, recent, _homeRandom)
+    End Function
+
+    Private Sub RememberHomeSelection(ByVal section As String, ByVal shown As DataTable)
+        Try
+            If Session IsNot Nothing Then Session(HomeRotationSessionKey(section)) = StorefrontShowcaseRotation.FormatIds(shown)
+        Catch
+        End Try
     End Sub
 
     Private Sub MarkBodyAsHome()
@@ -352,7 +391,11 @@ Partial Public Class _Default
             bestSellerPool = GetBestSellerPool(120)
         End Using
 
+        ' Rotazione: dai candidati GIA idonei, distinti e ordinati dalla regola commerciale si estrae un sottoinsieme diverso a ogni richiesta
+        ' (i mostrati l'ultima volta vanno in coda). Prezzi e promozioni restano quelli del resolver autorevole.
+        dealPool = RotateHomePool("deals", dealPool, 6, usedBusinessKeys, usedDisplayKeys)
         Dim dealRows As DataTable = TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)
+        RememberHomeSelection("deals", dealRows)
         rptDealOfDay.DataSource = dealRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptDealOfDay")
             rptDealOfDay.DataBind()
@@ -364,7 +407,10 @@ Partial Public Class _Default
             HomeOffersSliderWrap.Visible = Not IsTableEmpty(dealRows)
         End If
 
+        newArrivalsPool = RotateHomePool("arrivals", newArrivalsPool, 8, usedBusinessKeys, usedDisplayKeys)
+        incomingPool = RotateHomePool("arrivals", incomingPool, 8, usedBusinessKeys, usedDisplayKeys)
         Dim featuredRows As DataTable = TakeHomeArrivalsRows(8, usedBusinessKeys, usedDisplayKeys, newArrivalsPool, incomingPool)
+        RememberHomeSelection("arrivals", featuredRows)
         PopulatePromotionDisplaySnapshot(featuredRows)
         rptHomeFeaturedProducts.DataSource = featuredRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptHomeFeaturedProducts")
@@ -378,7 +424,9 @@ Partial Public Class _Default
         If HomeBottomPromoSection IsNot Nothing Then HomeBottomPromoSection.Visible = (bottomRows.Count > 0)
 
         ' Only the configured commercial index qualifies this section; no visits/catalog fallback.
+        bestSellerPool = RotateHomePool("best", bestSellerPool, 8, usedBusinessKeys, usedDisplayKeys)
         Dim bestRows As DataTable = TakeRankedHomeRows(8, usedBusinessKeys, usedDisplayKeys, bestSellerPool)
+        RememberHomeSelection("best", bestRows)
         PopulatePromotionDisplaySnapshot(bestRows)
         rptBestSeller.DataSource = bestRows
         Using HomeServerStageTiming.Measure(_homeTiming, "bind.rptBestSeller")
@@ -916,7 +964,7 @@ Partial Public Class _Default
     End Function
 
     Private Function GetNewArrivalsPool(ByVal limit As Integer) As DataTable
-        Return QueryProducts(StockWhereClause() & ">=1 AND COALESCE(v.InOrdine,0)<=0 AND v.DataCreazione >= @homeNewStart AND v.DataCreazione < @homeTodayEnd",
+        Return QueryProducts(NetStockSql() & ">=1 AND COALESCE(v.InOrdine,0)<=0 AND v.DataCreazione >= @homeNewStart AND v.DataCreazione < @homeTodayEnd",
                              "DataCreazione DESC, id DESC, TCid ASC",
                              limit, False, False, False, True)
     End Function
@@ -928,9 +976,7 @@ Partial Public Class _Default
     End Function
 
     Private Function GetBestSellerPool(ByVal limit As Integer) As DataTable
-        ' La vetrina dei piu scelti non mostra articoli che non si possono acquistare ora: stessa quantita netta della scheda e del carrello
-        ' (giacenza meno impegnata, vedi OrderInventoryAvailabilityService), quella che l'etichetta "Non disponibile" legge.
-        Return QueryProducts("COALESCE(ca.CommercialScore,0)>0 AND (" & StockWhereClause() & "-" & ReservedWhereClause() & ")>=1",
+        Return QueryProducts("COALESCE(ca.CommercialScore,0)>0",
                              "CommercialScore DESC, LastCommercialActivity DESC, id DESC, TCid ASC",
                              limit, False, False, True)
     End Function
@@ -1141,7 +1187,7 @@ Partial Public Class _Default
         Next
         orderSql.Append("ELSE 9999 END")
 
-        Dim dt As DataTable = TryLoadProducts("v.id IN (" & idsCsv & ") AND " & StockWhereClause() & ">=1", orderSql.ToString(), orderedIds.Count)
+        Dim dt As DataTable = TryLoadProducts("v.id IN (" & idsCsv & ") AND " & NetStockSql() & ">=1", orderSql.ToString(), orderedIds.Count)
         If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
             dt = DistinctRowsByProductId(dt)
             dt = DistinctRowsByBusinessKey(dt)
@@ -1342,16 +1388,14 @@ Partial Public Class _Default
             sql.Append("AND ").Append(availableSql).Append(">=1 ")
             sql.Append("AND (COALESCE(v.TCid,-1)=-1 OR v.TCid>0) ")
         ElseIf allowIncoming Then
-            sql.Append("AND (").Append(StockWhereClause()).Append(">=1 OR COALESCE(v.InOrdine,0)>0) ")
+            sql.Append("AND (").Append(NetStockSql()).Append(">=1 OR COALESCE(v.InOrdine,0)>0) ")
         Else
-            sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")
+            ' Tutte le vetrine mostrano solo articoli acquistabili ora (quantita netta), non la sola giacenza lorda.
+            sql.Append("AND ").Append(NetStockSql()).Append(">=1 ")
         End If
-        If catalogDiscovery Then
-            ' Filter the selected base unit price before variant ranking/LIMIT; promo alone cannot qualify.
-            sql.Append("AND ").Append(If(_priceDisplayContext.IsVatIncluded, prezzoIvatoSql, "COALESCE(v.Prezzo,0)")).Append(">0 ")
-        Else
-            sql.Append("AND (COALESCE(v.Prezzo,0)>0 OR COALESCE(v.PrezzoIvato,0)>0 OR COALESCE(v.PrezzoPromo,0)>0 OR COALESCE(v.PrezzoPromoIvato,0)>0) ")
-        End If
+        ' Filter the selected base unit price (the VAT mode of the request) before variant ranking/LIMIT, in EVERY pool: a promo price
+        ' or the other VAT mode alone cannot qualify (it would give "Prezzo su richiesta" or hide a valid variant).
+        sql.Append("AND ").Append(If(_priceDisplayContext.IsVatIncluded, prezzoIvatoSql, "COALESCE(v.Prezzo,0)")).Append(">0 ")
         If Not String.IsNullOrWhiteSpace(whereClause) Then
             sql.Append("AND ").Append(whereClause).Append(" ")
         End If
@@ -1422,6 +1466,12 @@ Partial Public Class _Default
         For Each row As DataRow In products.Rows
             row("DisplayPromoSnapshotReady") = False
             row("DisplayPromoTechnicalError") = False
+            ' Nessun valore residuo di una elaborazione precedente della stessa riga.
+            row("DisplayPromoQtyOnePrice") = DBNull.Value
+            row("DisplayPromoTierPrice") = DBNull.Value
+            row("DisplayPromoTierQntMinima") = DBNull.Value
+            row("DisplayPromoTierMultipli") = DBNull.Value
+            row("DisplayPromoDeadline") = DBNull.Value
             Dim articleId As Integer = SafeInt(row("id"))
             Dim tcId As Integer = If(row.Table.Columns.Contains("TCid"), SafeInt(row("TCid")), -1)
             Dim model As ProductPromotionDisplayModel = GetHomePromotionModel(articleId,
@@ -1454,16 +1504,16 @@ Partial Public Class _Default
                 End If
             End If
 
-            If model IsNot Nothing AndAlso model.Offers IsNot Nothing Then
-                Dim earliestDeadline As Nullable(Of Date) = Nothing
-                For Each offer As ProductPromotionOffer In model.Offers
-                    If offer Is Nothing OrElse Not offer.EndsOn.HasValue Then Continue For
-                    If Not earliestDeadline.HasValue OrElse offer.EndsOn.Value.Date < earliestDeadline.Value.Date Then
-                        earliestDeadline = offer.EndsOn.Value.Date
-                    End If
-                Next
-                If earliestDeadline.HasValue Then
-                    row("DisplayPromoDeadline") = earliestDeadline.Value
+            ' La scadenza e quella dell'offerta che determina il prezzo mostrato (immediata), mai quella di un'altra offerta a quantita.
+            If model IsNot Nothing Then
+                Dim deadline As Nullable(Of Date) = Nothing
+                If model.HasDefaultQuantityOffer Then
+                    deadline = model.BestDefaultQuantityEndsOn
+                ElseIf model.HasQuantityTierOffer Then
+                    deadline = model.BestQuantityTierEndsOn
+                End If
+                If deadline.HasValue Then
+                    row("DisplayPromoDeadline") = deadline.Value.Date
                 End If
             End If
         Next
@@ -1501,8 +1551,10 @@ Partial Public Class _Default
     Private Function FilterAuthorizedPromotionRows(ByVal products As DataTable) As DataTable
         Dim filtered As DataTable = If(products IsNot Nothing, products.Clone(), EmptyProductsTable())
         If products Is Nothing Then Return filtered
+        ' Occasione Imperdibile: solo promozioni IMMEDIATE (quantita uno) con uno sconto significativo; un prezzo valido solo a quantita
+        ' superiori o una differenza trascurabile non qualificano (restano visibili altrove con le loro condizioni).
         For Each row As DataRow In products.Rows
-            If ToDecimal(row("DisplayPromoQtyOnePrice")) > 0D OrElse ToDecimal(row("DisplayPromoTierPrice")) > 0D Then
+            If ShowDiscount(row) Then
                 filtered.ImportRow(row)
             End If
         Next
@@ -1538,12 +1590,18 @@ Partial Public Class _Default
         Return "COALESCE(stk.Impegnata, COALESCE(v.Impegnata,0))"
     End Function
 
+    ' Quantita netta acquistabile: giacenza meno impegnata, la stessa che la scheda e l'etichetta "Non disponibile" leggono
+    ' (OrderInventoryAvailabilityService.CalculateNetAvailableQuantity). Mai NULL: entrambe le espressioni hanno COALESCE a 0.
+    Private Function NetStockSql() As String
+        Return "(" & StockWhereClause() & "-" & ReservedWhereClause() & ")"
+    End Function
+
     Private Function OfferWhereClause() As String
         ' Coarse candidate filter only; the authorized snapshot decides eligibility.
         Return "COALESCE(v.InOfferta,0)=1 AND " &
                "(v.OfferteDaListino IS NULL OR @listino >= v.OfferteDaListino) AND " &
                "(v.OfferteAListino IS NULL OR @listino <= v.OfferteAListino) AND " &
-               StockWhereClause() & ">=1"
+               NetStockSql() & ">=1"
     End Function
 
     Private Function GetRecentlyViewedIds() As List(Of Integer)
@@ -2394,34 +2452,23 @@ Partial Public Class _Default
         Return _priceDisplayContext.SelectPrice(netPrice, grossPrice).GetValueOrDefault()
     End Function
 
-    Private Function SavingsAmount(ByVal row As DataRow) As Decimal
-        If row Is Nothing Then
-            Return 0D
-        End If
+    ' Prezzo barrato, badge, "Risparmi" e qualifica per le offerte nascono tutti dalla STESSA regola, calcolata sui prezzi arrotondati
+    ' come li legge il cliente (StorefrontPromotionDisplayPolicy). Il prezzo pagabile (CurrentPrice) non cambia mai.
+    Private Function PromotionDisplay(ByVal row As DataRow) As StorefrontPromotionDisplay
+        If row Is Nothing Then Return StorefrontPromotionDisplayPolicy.Resolve(0D, 0D)
+        Return StorefrontPromotionDisplayPolicy.Resolve(GetBasePrice(row), CurrentPrice(row))
+    End Function
 
-        Dim listino As Decimal = GetBasePrice(row)
-        Dim current As Decimal = CurrentPrice(row)
-        If listino > current AndAlso current > 0D Then
-            Return listino - current
-        End If
-        Return 0D
+    Private Function SavingsAmount(ByVal row As DataRow) As Decimal
+        Return PromotionDisplay(row).Savings
     End Function
 
     Private Function ShowDiscount(ByVal row As DataRow) As Boolean
-        Return SavingsAmount(row) > 0D
+        Return PromotionDisplay(row).HasDiscount
     End Function
 
     Private Function DiscountPercent(ByVal row As DataRow) As Integer
-        If row Is Nothing Then
-            Return 0
-        End If
-
-        Dim listino As Decimal = GetBasePrice(row)
-        Dim current As Decimal = CurrentPrice(row)
-        If listino <= 0D OrElse current <= 0D OrElse current >= listino Then
-            Return 0
-        End If
-        Return Convert.ToInt32(Math.Round(((listino - current) / listino) * 100D, MidpointRounding.AwayFromZero))
+        Return PromotionDisplay(row).Percent
     End Function
 
     Protected Function FormatMoney(ByVal value As Object) As String
@@ -2450,31 +2497,18 @@ Partial Public Class _Default
 
     Private Function TryGetValidPromoPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
-        If HasPromotionDisplayTechnicalError(row) Then Return False
-        If HasPromotionDisplaySnapshot(row) Then
-            promoPrice = ToDecimal(row("DisplayPromoQtyOnePrice"))
-            Return promoPrice > 0D
-        End If
-
-        Dim appliesToInitialQuantity As Boolean = False
-        If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then
-            Return False
-        End If
-
-        Return appliesToInitialQuantity
+        ' Solo lo snapshot autorevole (resolver delle promozioni): senza snapshot o con errore tecnico non c'e promozione, mai un ripiego
+        ' sui prezzi promozionali della vista (che non controllano proprietario, azienda o NoPromo).
+        If HasPromotionDisplayTechnicalError(row) OrElse Not HasPromotionDisplaySnapshot(row) Then Return False
+        promoPrice = ToDecimal(row("DisplayPromoQtyOnePrice"))
+        Return promoPrice > 0D
     End Function
 
     Private Function TryGetValidTierPrice(ByVal row As DataRow, ByRef promoPrice As Decimal) As Boolean
         promoPrice = 0D
-        If HasPromotionDisplayTechnicalError(row) Then Return False
-        If HasPromotionDisplaySnapshot(row) Then
-            promoPrice = ToDecimal(row("DisplayPromoTierPrice"))
-            Return promoPrice > 0D
-        End If
-
-        Dim appliesToInitialQuantity As Boolean = False
-        If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then Return False
-        Return Not appliesToInitialQuantity
+        If HasPromotionDisplayTechnicalError(row) OrElse Not HasPromotionDisplaySnapshot(row) Then Return False
+        promoPrice = ToDecimal(row("DisplayPromoTierPrice"))
+        Return promoPrice > 0D
     End Function
 
     Private Function HasPromotionDisplaySnapshot(ByVal row As DataRow) As Boolean
@@ -2489,73 +2523,6 @@ Partial Public Class _Default
                row.Table.Columns.Contains("DisplayPromoTechnicalError") AndAlso
                Not row.IsNull("DisplayPromoTechnicalError") AndAlso
                Convert.ToBoolean(row("DisplayPromoTechnicalError"), CultureInfo.InvariantCulture)
-    End Function
-
-    Private Function TryGetCommercialPromoPrice(ByVal row As DataRow,
-                                                 ByRef promoPrice As Decimal,
-                                                 ByRef appliesToInitialQuantity As Boolean) As Boolean
-        promoPrice = 0D
-        appliesToInitialQuantity = False
-        If row Is Nothing OrElse Not IsPromoRowValid(row) Then Return False
-
-        Dim baseNet As Decimal = If(row.Table.Columns.Contains("Prezzo"), ToDecimal(row("Prezzo")), 0D)
-        Dim promoNet As Decimal = If(row.Table.Columns.Contains("PrezzoPromo"), ToDecimal(row("PrezzoPromo")), 0D)
-        If baseNet <= 0D OrElse promoNet <= 0D OrElse promoNet >= baseNet Then Return False
-
-        Dim qntMinima As Decimal = If(row.Table.Columns.Contains("OfferteQntMinima"), ToDecimal(row("OfferteQntMinima")), 0D)
-        Dim multipli As Decimal = If(row.Table.Columns.Contains("OfferteMultipli"), ToDecimal(row("OfferteMultipli")), 0D)
-        If qntMinima <= 0D AndAlso multipli <= 0D Then Return False
-
-        appliesToInitialQuantity = IsQuantityCompatible(1D, qntMinima, multipli)
-
-        Dim basePrice As Decimal = GetBasePrice(row)
-        Dim promoGross As Decimal = If(row.Table.Columns.Contains("PrezzoPromoIvato"), ToDecimal(row("PrezzoPromoIvato")), 0D)
-        Dim candidate As Decimal = _priceDisplayContext.SelectPromoPrice(promoNet, promoGross).GetValueOrDefault()
-
-        If basePrice <= 0D OrElse candidate <= 0D OrElse candidate >= basePrice Then Return False
-
-        promoPrice = candidate
-        Return True
-    End Function
-
-    Private Function IsQuantityCompatible(ByVal quantity As Decimal,
-                                          ByVal qntMinima As Decimal,
-                                          ByVal multipli As Decimal) As Boolean
-        If qntMinima > 0D Then Return quantity >= qntMinima
-        If multipli <= 0D Then Return False
-        Return Decimal.Remainder(quantity, multipli) = 0D
-    End Function
-
-    Private Function IsPromoRowValid(ByVal row As DataRow) As Boolean
-        If row Is Nothing OrElse SafeInt(row("InOfferta")) <> 1 Then
-            Return False
-        End If
-
-        Dim currentListino As Integer = GetCurrentListino()
-        Dim daListino As Integer = SafeInt(If(row.Table.Columns.Contains("OfferteDaListino"), row("OfferteDaListino"), 0))
-        Dim aListino As Integer = SafeInt(If(row.Table.Columns.Contains("OfferteAListino"), row("OfferteAListino"), 0))
-        If daListino > 0 AndAlso currentListino < daListino Then
-            Return False
-        End If
-        If aListino > 0 AndAlso currentListino > aListino Then
-            Return False
-        End If
-
-        Dim startDate As DateTime
-        If row.Table.Columns.Contains("OfferteDataInizio") AndAlso TryParseKeepStoreDate(row("OfferteDataInizio"), startDate) Then
-            If startDate.Date > Date.Today Then
-                Return False
-            End If
-        End If
-
-        Dim endDate As DateTime
-        If row.Table.Columns.Contains("OfferteDataFine") AndAlso TryParseKeepStoreDate(row("OfferteDataFine"), endDate) Then
-            If endDate.Date < Date.Today Then
-                Return False
-            End If
-        End If
-
-        Return True
     End Function
 
     Private Function TryParseKeepStoreDate(ByVal value As Object, ByRef parsed As DateTime) As Boolean
@@ -2593,31 +2560,8 @@ Partial Public Class _Default
 
     Private Function TryGetPromoDeadline(ByVal row As DataRow, ByRef deadline As DateTime) As Boolean
         deadline = DateTime.MinValue
-        If HasPromotionDisplaySnapshot(row) Then
-            If Not row.Table.Columns.Contains("DisplayPromoDeadline") OrElse row.IsNull("DisplayPromoDeadline") Then Return False
-            deadline = Convert.ToDateTime(row("DisplayPromoDeadline"), CultureInfo.InvariantCulture).Date.AddDays(1)
-            Return deadline > DateTime.Now
-        End If
-
-        Dim promoPrice As Decimal = 0D
-        Dim appliesToInitialQuantity As Boolean = False
-        If Not TryGetCommercialPromoPrice(row, promoPrice, appliesToInitialQuantity) Then Return False
-
-        Dim raw As Object = Nothing
-        If row.Table.Columns.Contains("OfferteDataFine") Then
-            raw = row("OfferteDataFine")
-        End If
-
-        If raw Is Nothing OrElse raw Is DBNull.Value Then
-            Return False
-        End If
-
-        Dim parsed As DateTime
-        If Not TryParseKeepStoreDate(raw, parsed) Then
-            Return False
-        End If
-
-        deadline = parsed.Date.AddDays(1)
+        If Not HasPromotionDisplaySnapshot(row) OrElse Not row.Table.Columns.Contains("DisplayPromoDeadline") OrElse row.IsNull("DisplayPromoDeadline") Then Return False
+        deadline = Convert.ToDateTime(row("DisplayPromoDeadline"), CultureInfo.InvariantCulture).Date.AddDays(1)
         Return deadline > DateTime.Now
     End Function
 
@@ -2930,7 +2874,7 @@ Partial Public Class _Default
         If reserveDealSlots Then sb.Append("<div class='ks-deal-price-amount-slot'>")
         sb.Append("<p class='price-wrap fw-medium ks-home-price-slot ").Append(slotClass).Append("'>")
         Dim current As Decimal = CurrentPrice(row)
-        sb.Append("<span class='").Append(priceClass).Append("'>").Append(If(current > 0D, FormatMoney(current), "Prezzo su richiesta")).Append("</span>")
+        sb.Append("<span class='").Append(priceClass).Append("'>").Append(If(StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D, FormatMoney(current), "Prezzo su richiesta")).Append("</span>")
         If ShowDiscount(row) Then
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(GetBasePrice(row))).Append("</span>")
         End If
@@ -2952,15 +2896,8 @@ Partial Public Class _Default
         Dim tierPrice As Decimal = 0D
         If Not TryGetValidTierPrice(row, tierPrice) Then Return String.Empty
 
-        Dim qntMinima As Decimal = 0D
-        Dim multipli As Decimal = 0D
-        If HasPromotionDisplaySnapshot(row) Then
-            qntMinima = ToDecimal(row("DisplayPromoTierQntMinima"))
-            multipli = ToDecimal(row("DisplayPromoTierMultipli"))
-        Else
-            qntMinima = If(row.Table.Columns.Contains("OfferteQntMinima"), ToDecimal(row("OfferteQntMinima")), 0D)
-            multipli = If(row.Table.Columns.Contains("OfferteMultipli"), ToDecimal(row("OfferteMultipli")), 0D)
-        End If
+        Dim qntMinima As Decimal = ToDecimal(row("DisplayPromoTierQntMinima"))
+        Dim multipli As Decimal = ToDecimal(row("DisplayPromoTierMultipli"))
         Dim condition As String = If(qntMinima > 0D,
                                      "Minimo " & FormatQuantity(qntMinima) & " pz.",
                                      "Multipli " & FormatQuantity(multipli) & " pz.")

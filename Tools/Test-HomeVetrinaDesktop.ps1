@@ -68,7 +68,7 @@ function Test-BestSection([string]$a, [string]$v) {
     $pool = Get-Method $v 'GetBestSellerPool'
     return ($tag.Contains('data-preview="4"') -and $tag.Contains('data-tablet="3"') -and $tag.Contains('data-pagination-lg="4"') -and $tag.Contains('data-pagination-md="3"') -and
             $tag.Contains('data-grid="1"') -and $tag.Contains('data-grid-mobile="1"') -and
-            $pool.Contains('COALESCE(ca.CommercialScore,0)>0 AND (" & StockWhereClause() & "-" & ReservedWhereClause() & ")>=1"') -and $pool.Contains('limit, False, False, True)'))
+            $pool.Contains('Return QueryProducts("COALESCE(ca.CommercialScore,0)>0",') -and $pool.Contains('limit, False, False, True)'))
 }
 function Test-NetQuantityEquivalence([string]$v) {
     # il filtro e i valori che la scheda legge (Giacenza e Impegnata) nascono dalle STESSE espressioni, mai NULL: stessa quantita netta
@@ -137,7 +137,7 @@ function Test-Buster([string]$m) {
 }
 
 Assert-Source (Test-SectionOrder $aspx) 'S01_OFFERS_BEFORE_NEW_ARRIVALS_AND_THE_REST_OF_THE_ORDER_HOLDS'
-Assert-Source (Test-BestSection $aspx $vb) 'S02_BEST_SELLERS_ONE_ROW_WITH_ARROWS_ONLY_BUYABLE_NET_QUANTITY'
+Assert-Source (Test-BestSection $aspx $vb) 'S02_BEST_SELLERS_ONE_ROW_WITH_ARROWS_RANKED_BY_THE_COMMERCIAL_SCORE'
 Assert-Source (Test-NetQuantityEquivalence $vb) 'S11_BEST_SELLER_FILTER_USES_THE_SAME_STOCK_EXPRESSIONS_THE_CARD_READS'
 Assert-Source (Test-PriceMarkup $vb) 'S03_PRICE_COLOUR_AND_WEIGHT_COME_FROM_THE_STYLESHEET'
 Assert-Source (Test-PriceCss $css) 'S04_PRICES_LIKE_THE_CATALOG_AND_THE_SAME_FONT_AS_THE_TEXT'
@@ -161,10 +161,7 @@ $m = Mutate-Text $aspx 'data-grid="1" data-grid-mobile="1"' 'data-grid="2" data-
 Assert-Detected (Test-BestSection $m $vb) 'M03_BEST_SELLERS_BACK_TO_TWO_ROWS'
 $m = Mutate-Text $aspx 'data-preview="4" data-tablet="3"' 'data-preview="5" data-tablet="3"' 'M04'
 Assert-Detected (Test-BestSection $m $vb) 'M04_BEST_SELLERS_FIVE_COLUMNS_UNEVEN_AGAIN'
-$m = Mutate-Text $vb '(" & StockWhereClause() & "-" & ReservedWhereClause() & ")>=1"' '(" & StockWhereClause() & ")>=1"' 'M05'
-Assert-Detected (Test-BestSection $aspx $m) 'M05_BEST_SELLERS_IGNORE_COMMITTED_STOCK'
-$m = Mutate-Text $vb 'COALESCE(ca.CommercialScore,0)>0 AND (' 'COALESCE(ca.CommercialScore,0)>0 OR (' 'M06'
-Assert-Detected (Test-BestSection $aspx $m) 'M06_BEST_SELLERS_AVAILABILITY_OR_INSTEAD_OF_AND'
+# La quantita netta dei pool e provata, con mutazioni, da Test-HomePriceDisplay.ps1.
 $m = Mutate-Text $vb '"new-price body-md-2 fw-medium mb-0"' '"new-price body-md-2 fw-medium text-primary mb-0"' 'M07'
 Assert-Detected (Test-PriceMarkup $m) 'M07_UTILITY_COLOUR_OVERRIDES_THE_STYLESHEET_AGAIN'
 $m = Mutate-Text $vb '"new-price h4 fw-semibold text-primary mb-0"' '"new-price h4 fw-normal text-primary mb-0"' 'M08'
