@@ -430,6 +430,7 @@ Partial Public Class search_suggest
         output("intelligence") = New Dictionary(Of String, Object) From {{"summary", "Mostro gli ultimi articoli visitati o il fallback catalogo."}}
         output("catalogUrl") = BuildCatalogUrl(String.Empty, filters)
         output("total") = 0
+        output("displayLabel") = _commercial.PriceContext.DisplayLabel
         output("quickLinks") = BuildQuickLinks(String.Empty, New List(Of SuggestItem)(), Nothing)
 
         If recentIds Is Nothing OrElse recentIds.Count = 0 Then Return output
@@ -561,6 +562,7 @@ Partial Public Class search_suggest
             {"expanded_tokens", scoringTokens},
             {"minimumScore", If(aiMode, AiScoreThreshold, 0)},
             {"total", mapped.Count},
+            {"displayLabel", _commercial.PriceContext.DisplayLabel},
             {"catalogUrl", BuildCatalogUrl(If(String.IsNullOrWhiteSpace(intent.SearchText), query, intent.SearchText), filters)},
             {"quickLinks", BuildQuickLinks(query, mapped, intent)}
         }

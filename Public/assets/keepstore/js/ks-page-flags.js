@@ -103,7 +103,13 @@
       '.ks-search-host input[type="text"],.ks-search-host input[type="search"]{outline:none;}',
       '.ks-suggest{position:absolute;left:0;right:0;top:calc(100% + 9px);z-index:6000;background:#fff;border:1px solid #edf1f5;border-radius:18px;box-shadow:0 22px 54px rgba(15,23,42,.18);padding:8px;display:none;max-height:520px;overflow:auto;text-align:left;}',
       '.ks-suggest.is-open{display:block;}',
-      '.ks-suggest-head{display:flex;justify-content:space-between;gap:12px;padding:9px 12px 8px;font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:#ef4444;}',
+      '.ks-suggest-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px 6px;font-size:12px;font-weight:800;color:#111827;}',
+      '.ks-suggest-scope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:2px 12px 8px;}',
+      '.ks-suggest-scope-label{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-right:2px;}',
+      '.ks-suggest-chip{display:inline-flex;align-items:center;gap:4px;min-height:32px;padding:4px 12px;border:1px solid #d9dee5;border-radius:999px;background:#fff;color:#1f2933;font-size:13px;font-weight:700;line-height:1.2;text-decoration:none;cursor:pointer;}',
+      '.ks-suggest-chip:hover{background:#f8fafc;border-color:#aeb7c1;color:#111827;}',
+      '.ks-suggest-chip.is-active{background:#111827;border-color:#111827;color:#fff;}',
+      '.ks-suggest-chip:focus-visible,.ks-suggest-all:focus-visible,.ks-suggest-note a:focus-visible{outline:3px solid #d80027;outline-offset:2px;}',
       '.ks-suggest-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;}',
       '.ks-suggest-item{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;text-decoration:none;color:#111827;}',
       '.ks-suggest-item.is-active,.ks-suggest-item:hover{background:#f8fafc;color:#111827;}',
@@ -111,11 +117,28 @@
       '.ks-suggest-thumb img{max-width:100%;max-height:100%;object-fit:contain;display:block;}',
       '.ks-suggest-meta{min-width:0;display:grid;gap:4px;}',
       '.ks-suggest-title{font-size:13px;line-height:1.28;font-weight:800;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}',
-      '.ks-suggest-sub{font-size:11px;line-height:1.2;color:#6b7280;display:flex;gap:8px;flex-wrap:wrap;}',
+      '.ks-suggest-sub{font-size:11px;line-height:1.3;color:#5b6573;display:flex;gap:4px 8px;flex-wrap:wrap;align-items:center;}',
       '.ks-suggest-sub b{font-weight:900;color:#111827;}',
-      '.ks-suggest-price{font-size:14px;font-weight:900;color:#ef4444;white-space:nowrap;}',
-      '.ks-suggest-foot{display:flex;justify-content:space-between;gap:10px;padding:9px 12px 5px;border-top:1px solid #edf1f5;margin-top:6px;font-size:12px;color:#64748b;}',
-      '.ks-suggest-empty{padding:14px;color:#64748b;font-size:13px;}',
+      '.ks-suggest-tag{padding:1px 8px;border-radius:999px;background:#fff3cd;color:#7a5b00;font-weight:800;}',
+      '.ks-suggest-side{display:grid;justify-items:end;align-content:center;gap:4px;}',
+      '.ks-suggest-price{font-size:15px;font-weight:900;color:#b0001f;white-space:nowrap;}',
+      '.ks-suggest-badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef1f4;color:#475569;font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;}',
+      '.ks-suggest-badge.is-promo{background:#fde8ec;color:#b0001f;}',
+      '.ks-suggest-badge.is-ok{background:#e4f5ea;color:#116533;}',
+      '.ks-suggest-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 12px 6px;border-top:1px solid #edf1f5;margin-top:6px;font-size:12px;color:#5b6573;}',
+      '.ks-suggest-all{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:999px;background:#d80027;color:#fff;font-size:14px;font-weight:800;text-decoration:none;}',
+      '.ks-suggest-all:hover{background:#b0001f;color:#fff;}',
+      '.ks-suggest-note a{color:#b0001f;font-weight:800;text-decoration:underline;}',
+      '.ks-suggest-empty{padding:14px;color:#475569;font-size:13px;display:grid;gap:4px;}',
+      '.ks-suggest-empty strong{color:#111827;font-size:14px;}',
+      '.ks-suggest-skel{display:grid;gap:4px;padding:0 4px 4px;}',
+      '.ks-suggest-skel-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:8px 12px;}',
+      '.ks-suggest-skel-thumb{width:58px;height:58px;border-radius:13px;background:#eef1f4;}',
+      '.ks-suggest-skel-lines{display:grid;gap:8px;}',
+      '.ks-suggest-skel-lines i{display:block;height:11px;border-radius:6px;background:#eef1f4;}',
+      '.ks-suggest-skel-lines i+i{width:60%;}',
+      '@media (prefers-reduced-motion:no-preference){.ks-suggest-skel-thumb,.ks-suggest-skel-lines i{animation:ksSuggestPulse 1.2s ease-in-out infinite;}@keyframes ksSuggestPulse{0%,100%{opacity:1}50%{opacity:.45}}}',
+      '@media (max-width:767.98px){.ks-suggest-item{grid-template-columns:52px minmax(0,1fr) auto;gap:10px;padding:10px 8px;}.ks-suggest-thumb{width:52px;height:52px;}.ks-suggest-foot{display:grid;}.ks-suggest-all{width:100%;}}',
       '.ks-header-catalog-item.is-open>.sub-menu-container,.ks-header-catalog-item:focus-within>.sub-menu-container{transform:translateY(0)!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;}',
       '.ks-header-catalog-item.is-open>.item-link .icon{transform:rotate(180deg);color:var(--primary);}',
       '.ks-market135{margin:26px 0 34px;}',
@@ -212,7 +235,10 @@
   }
   function inputFromRoot(root) { return all(root, 'input[type="text"],input[type="search"],input:not([type])').filter(isSearchInput)[0] || null; }
   function selectFromRoot(root) { return q(root, 'select.dropdown_product_cat,select'); }
-  function buttonsFromRoot(root) { return all(root, 'button,.btn-submit-form,[role="button"].btn-submit-form,input[type="submit"]'); }
+  // Solo i pulsanti di invio della ricerca: i chip e i collegamenti del pannello dei suggerimenti non lo sono (il pannello e dentro root).
+  function buttonsFromRoot(root) {
+    return all(root, 'button,.btn-submit-form,[role="button"].btn-submit-form,input[type="submit"]').filter(function (button) { return !button.closest('.ks-suggest'); });
+  }
   function searchValue(root) {
     var input = inputFromRoot(root);
     return String(input && input.value || '').replace(/\s+/g, ' ').trim();
@@ -423,37 +449,177 @@
     return true;
   }
   function priceText(value) { return value ? esc(value) : ''; }
+  // Etichette leggibili del tipo di corrispondenza (il server restituisce codici tecnici come "exact-code").
+  var MATCH_LABELS = { 'exact-code': 'Codice esatto', 'exact-ean': 'EAN esatto', 'prefix-code': 'Codice', 'prefix-ean': 'EAN' };
+  function matchLabel(kind) { return MATCH_LABELS[String(kind || '')] || ''; }
+  // Telefono dell'assistenza preso dalla pagina (nessun numero scritto nel codice).
+  function supportPhone() {
+    var link = q(document, 'a[href^="tel:"]');
+    var href = link ? String(link.getAttribute('href') || '') : '';
+    if (!/^tel:\+?[0-9][0-9 ().\-]{4,24}$/.test(href)) return null;
+    return { tel: href.slice(4), text: txt(link) || href.slice(4) };
+  }
+  // Reparti reali: le opzioni del selettore dell'intestazione (valore = pagina del catalogo con st=N).
+  function departmentOptions(root) {
+    var sel = selectFromRoot(root), out = [];
+    if (!sel || !sel.options) return out;
+    for (var i = 0; i < sel.options.length; i++) {
+      var option = sel.options[i], url = safeSearchUrl(String(option.value || ''), '/articoli.aspx'), label = txt(option), st = '';
+      if (!url || !label) continue;
+      var params = null;
+      try { params = new URL(url).searchParams; st = params.get('st') || ''; } catch (err) { st = ''; }
+      // Solo reparti (st=N): le voci di categoria o marca del selettore hanno anche ct, tp, gr, sg o mr.
+      if (!/^[1-9]\d*$/.test(st) || ['ct', 'tp', 'gr', 'sg', 'mr'].some(function (k) { return params.has(k); })) continue;
+      out.push({ label: label, value: String(option.value), url: url, key: label.toLowerCase() });
+    }
+    return out;
+  }
+  function scopeActive(root) {
+    var sel = selectFromRoot(root);
+    return !!(sel && /[?&]st=[1-9]/.test(String(sel.value || '')));
+  }
+  function catalogLinkHtml(root, label) {
+    return '<a class="ks-suggest-catalog ks-suggest-all" href="' + esc(buildCatalogUrl(root).toString()) + '">' + esc(label) + '</a>';
+  }
+  // Restringe la ricerca a un reparto che compare davvero nei risultati; con un reparto attivo mostra come toglierlo.
+  function scopeChipsHtml(root, items) {
+    var sel = selectFromRoot(root);
+    if (scopeActive(root)) {
+      var current = sel && sel.selectedIndex >= 0 ? txt(sel.options[sel.selectedIndex]) : '';
+      return current ? '<div class="ks-suggest-scope" role="group" aria-label="Reparto della ricerca"><span class="ks-suggest-scope-label">Reparto</span>' +
+        '<button type="button" class="ks-suggest-chip is-active" data-ks-scope-reset="1">' + esc(current) + ' <span aria-hidden="true">\u00d7</span><span class="visually-hidden">: cerca in tutti i reparti</span></button></div>' : '';
+    }
+    var options = departmentOptions(root), byKey = {}, seen = {}, chips = [];
+    if (options.length < 2) return '';
+    options.forEach(function (o) { byKey[o.key] = o; });
+    items.forEach(function (item) {
+      var key = String(item && item.department || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!key || seen[key] || !byKey[key]) return;
+      seen[key] = 1;
+      chips.push(byKey[key]);
+    });
+    if (chips.length < 2) return '';
+    return '<div class="ks-suggest-scope" role="group" aria-label="Restringi la ricerca a un reparto"><span class="ks-suggest-scope-label">Reparto</span>' +
+      chips.slice(0, 4).map(function (o) {
+        return '<button type="button" class="ks-suggest-chip" data-ks-scope="' + esc(o.value) + '">' + esc(o.label) + '</button>';
+      }).join('') + '</div>';
+  }
+  function badgesHtml(item) {
+    var out = [];
+    (Array.isArray(item && item.badges) ? item.badges : []).forEach(function (badge) {
+      var label = String(badge || '');
+      if (!label || label === 'Catalogo' || label === 'Budget ok' || out.length >= 2) return;
+      out.push('<span class="ks-suggest-badge' + (label === 'Promo' ? ' is-promo' : (label === 'Disponibile' ? ' is-ok' : '')) + '">' + esc(label) + '</span>');
+    });
+    return out.join('');
+  }
+  function skeletonHtml(message, rows) {
+    var html = '<div class="ks-suggest-empty ks-suggest-pending" role="status">' + esc(message) + '</div>';
+    if (rows) {
+      html += '<div class="ks-suggest-skel" aria-hidden="true">';
+      for (var i = 0; i < rows; i++) html += '<div class="ks-suggest-skel-row"><span class="ks-suggest-skel-thumb"></span><span class="ks-suggest-skel-lines"><i></i><i></i></span></div>';
+      html += '</div>';
+    }
+    return html;
+  }
+  function browseChipsHtml(root, label) {
+    var options = departmentOptions(root);
+    if (!options.length) return '';
+    return '<div class="ks-suggest-scope" role="group" aria-label="' + esc(label) + '"><span class="ks-suggest-scope-label">' + esc(label) + '</span>' +
+      options.slice(0, 12).map(function (o) {
+        return '<a class="ks-suggest-chip ks-suggest-browse" href="' + esc(o.url) + '">' + esc(o.label) + '</a>';
+      }).join('') + '</div>';
+  }
+  // Nessun prodotto: invece di un vicolo cieco, reparti reali, il catalogo e il telefono dell'assistenza.
+  function zeroResultHtml(root, query) {
+    var phone = supportPhone();
+    return '<div class="ks-suggest-empty ks-suggest-zero" role="status"><strong>Nessun prodotto per \u00ab' + esc(query) + '\u00bb</strong>' +
+      '<span>Controlla l\u2019ortografia o prova un termine pi\u00f9 generico: tipo di prodotto, marca o codice.</span></div>' +
+      (scopeActive(root) ? scopeChipsHtml(root, []) : '') + browseChipsHtml(root, 'Sfoglia un reparto') +
+      '<div class="ks-suggest-foot">' + catalogLinkHtml(root, 'Cerca \u00ab' + query + '\u00bb nel catalogo') +
+      (phone ? '<span class="ks-suggest-note">Serve aiuto? <a href="tel:' + esc(phone.tel) + '">' + esc(phone.text) + '</a></span>' : '') + '</div>';
+  }
+  // Campo vuoto e nessun articolo recente: invita a cercare e mostra i reparti.
+  function idleHtml(root) {
+    return '<div class="ks-suggest-empty ks-suggest-idle" role="status"><strong>Cosa stai cercando?</strong>' +
+      '<span>Scrivi almeno 2 caratteri: prodotto, marca, codice o EAN.</span></div>' +
+      browseChipsHtml(root, 'Sfoglia un reparto') +
+      '<div class="ks-suggest-foot">' + catalogLinkHtml(root, 'Vai al catalogo') + '</div>';
+  }
+  function navigateSuggestLink(root, anchor) {
+    var s = state(root), generation = s.generation, intent = s.intent;
+    if (!currentSearch(root, generation, intent)) return;
+    var url = safeSearchUrl(String(anchor.getAttribute('href') || ''), '/articoli.aspx') || buildCatalogUrl(root).toString();
+    invalidateSearch(root);
+    window.location.href = url;
+  }
+  // Riporta il focus nel campo senza riaprire i suggerimenti (il gestore di focus del campo li aprirebbe di nuovo).
+  function focusFieldQuietly(root) {
+    var field = inputFromRoot(root), s = state(root);
+    if (!field || document.activeElement === field) return;
+    s.suppressFocusOpen = true;
+    try { field.focus(); } finally { s.suppressFocusOpen = false; }
+  }
+  function bindSuggestLinks(root, box) {
+    if (!box.__ksEscapeBound) {
+      box.__ksEscapeBound = true;
+      box.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        e.preventDefault();
+        hideSuggest(root);
+        focusFieldQuietly(root);
+      });
+    }
+    all(box, '.ks-suggest-catalog').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        navigateSuggestLink(root, a);
+      });
+    });
+    all(box, '[data-ks-scope],[data-ks-scope-reset]').forEach(function (chip) {
+      chip.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var sel = selectFromRoot(root), target = -1, i;
+        if (!sel) return;
+        if (chip.hasAttribute('data-ks-scope-reset')) {
+          for (i = 0; i < sel.options.length && target < 0; i++) if (!/[?&]st=[1-9]/.test(String(sel.options[i].value || ''))) target = i;
+        } else {
+          var wanted = chip.getAttribute('data-ks-scope');
+          for (i = 0; i < sel.options.length && target < 0; i++) if (String(sel.options[i].value) === wanted) target = i;
+        }
+        if (target < 0) return;
+        sel.selectedIndex = target;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        focusFieldQuietly(root);
+      });
+    });
+  }
   function renderSuggestMessage(root, message, phase) {
     var s = state(root), box = ensureSuggest(root), input = inputFromRoot(root);
     clearSearchSelection(root);
     s.phase = phase || 'error';
-    var pending = s.phase === 'pending';
+    var pending = s.phase === 'pending', query = searchValue(root), html;
     box.setAttribute('aria-busy', pending ? 'true' : 'false');
     if (input) input.setAttribute('aria-busy', pending ? 'true' : 'false');
-    box.innerHTML = '<div class="ks-suggest-empty" role="status">' + esc(message) +
-      ' <a class="ks-suggest-catalog" href="' + esc(buildCatalogUrl(root).toString()) + '">Vai al catalogo</a></div>' +
-      emptySearchList(box);
-    var generation = s.generation, intent = s.intent;
-    q(box, '.ks-suggest-catalog').addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!currentSearch(root, generation, intent)) return;
-      var url = buildCatalogUrl(root).toString();
-      invalidateSearch(root);
-      window.location.href = url;
-    });
+    if (pending) html = skeletonHtml(message, query.length >= 2 ? 3 : 0) + (query.length >= 2 ? '<div class="ks-suggest-foot">' + catalogLinkHtml(root, 'Vai al catalogo') + '</div>' : '');
+    else if (s.phase === 'empty') html = query.length >= 2 ? zeroResultHtml(root, query) : idleHtml(root);
+    else html = '<div class="ks-suggest-empty" role="status">' + esc(message) + '</div><div class="ks-suggest-foot">' + catalogLinkHtml(root, 'Vai al catalogo') + '</div>';
+    box.innerHTML = html + emptySearchList(box);
+    bindSuggestLinks(root, box);
     showSuggest(root);
   }
   function renderSuggest(root, data) {
     var s = state(root), box = ensureSuggest(root), items = searchItems(data);
     if (items === null) {
-      renderSuggestMessage(root, 'Suggerimenti non disponibili. Premi Invio per cercare nel catalogo.', 'invalid');
+      renderSuggestMessage(root, 'Suggerimenti non disponibili ora. Premi Invio per cercare nel catalogo.', 'invalid');
       return false;
     }
     s.items = items;
     s.active = -1;
     if (!items.length) {
-      renderSuggestMessage(root, 'Nessun suggerimento disponibile. Premi Invio per cercare nel catalogo.', 'empty');
+      renderSuggestMessage(root, '', 'empty');
       return true;
     }
     s.phase = 'results';
@@ -461,22 +627,28 @@
     box.setAttribute('aria-busy', 'false');
     var input = inputFromRoot(root);
     if (input) input.setAttribute('aria-busy', 'false');
-    var head = data && data.recent ? 'Articoli recenti' : 'Suggerimenti catalogo';
-    var html = ['<div class="ks-suggest-head"><span>' + esc(head) + '</span><span>Invio: catalogo</span></div><ul class="ks-suggest-list" role="listbox" aria-label="Prodotti suggeriti" id="' + esc(box.id + '-list') + '">'];
+    var recent = !!(data && data.recent), query = searchValue(root);
+    var head = recent ? 'Visti di recente' : 'Prodotti per \u00ab' + query + '\u00bb';
+    var html = ['<div class="ks-suggest-head"><span class="ks-suggest-head-title">' + esc(head) + '</span></div>'];
+    if (!recent) html.push(scopeChipsHtml(root, items));
+    html.push('<ul class="ks-suggest-list" role="listbox" aria-label="Prodotti suggeriti" id="' + esc(box.id + '-list') + '">');
     items.forEach(function (item, i) {
       var img = item.image || item.image_fallback || item.imageUrl || '';
-      var meta = [];
+      var kind = String(item.matchKind || ''), label = matchLabel(kind), meta = [];
       if (item.brand) meta.push('<span><b>' + esc(item.brand) + '</b></span>');
       if (item.category) meta.push('<span>' + esc(item.category) + '</span>');
       if (item.code) meta.push('<span>Cod. ' + esc(item.code) + '</span>');
-      if (item.ean) meta.push('<span>EAN ' + esc(item.ean) + '</span>');
-      if (item.matchKind) meta.push('<span>' + esc(item.matchKind) + '</span>');
+      if (item.ean && /ean/.test(kind)) meta.push('<span>EAN ' + esc(item.ean) + '</span>');
+      if (label) meta.push('<span class="ks-suggest-tag">' + esc(label) + '</span>');
       html.push('<li role="presentation"><a class="ks-suggest-item" role="option" aria-selected="false" tabindex="-1" id="' + esc(box.id + '-option-' + i) + '" href="' + esc(safeSearchUrl(item.url, '/articolo.aspx')) + '" data-idx="' + i + '">' +
-        '<span class="ks-suggest-thumb">' + (img ? '<img src="' + esc(img) + '" alt="' + esc(item.title || '') + '">' : '') + '</span>' +
+        '<span class="ks-suggest-thumb">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy">' : '') + '</span>' +
         '<span class="ks-suggest-meta"><span class="ks-suggest-title">' + esc(item.title || '') + '</span><span class="ks-suggest-sub">' + meta.join('') + '</span></span>' +
-        '<span class="ks-suggest-price">' + priceText(item.price) + '</span></a></li>');
+        '<span class="ks-suggest-side"><span class="ks-suggest-price">' + priceText(item.price) + '</span>' + badgesHtml(item) + '</span></a></li>');
     });
-    html.push('</ul><div class="ks-suggest-foot"><span>Ricerca per codice, EAN, marca, categoria e compatibilita.</span><span>' + esc(items.length) + ' risultati</span></div>');
+    var catalog = safeSearchUrl(data && data.catalogUrl, '/articoli.aspx') || buildCatalogUrl(root).toString();
+    var note = data && typeof data.displayLabel === 'string' ? data.displayLabel : '';
+    html.push('</ul><div class="ks-suggest-foot"><a class="ks-suggest-catalog ks-suggest-all" href="' + esc(catalog) + '">' + (recent ? 'Vai al catalogo' : 'Vedi tutti i risultati') + '</a>' +
+      (note ? '<span class="ks-suggest-note">' + esc(note) + '</span>' : '') + '</div>');
     box.innerHTML = html.join('');
     var generation = s.generation;
     all(box, '.ks-suggest-item').forEach(function (a) {
@@ -489,9 +661,11 @@
         openActive(root, parseInt(a.getAttribute('data-idx'), 10), generation);
       });
     });
+    bindSuggestLinks(root, box);
     showSuggest(root);
     return true;
   }
+  function pendingMessage(root) { return searchValue(root).length >= 2 ? 'Cerco i prodotti\u2026' : 'Carico i suggerimenti\u2026'; }
   function requestSuggest(root, forceRecent, generation) {
     var s = state(root);
     if (generation === undefined) generation = invalidateSearch(root);
@@ -500,7 +674,7 @@
     window.clearTimeout(s.timer);
     s.timer = 0;
     var query = searchValue(root), recent = forceRecent || query.length < 2;
-    renderSuggestMessage(root, 'Ricerca in corso. Puoi premere Invio per cercare nel catalogo.', 'pending');
+    renderSuggestMessage(root, pendingMessage(root), 'pending');
     s.ctrl = newSearchController();
     s.suggestPromise = fetchJsonTimed(buildSuggestUrl(root, query, recent ? 8 : 10, recent), SUGGEST_TIMEOUT_MS, s.ctrl).then(function (data) {
       if (!currentSearch(root, generation, intent)) return false;
@@ -511,7 +685,7 @@
       s.ctrl = null;
       var timeout = err && err.message === 'timeout';
       renderSuggestMessage(root, timeout ? 'Ricerca non completata in tempo. Premi Invio per cercare nel catalogo.' :
-        'Errore temporaneo nella suggest. Premi Invio per cercare nel catalogo.', timeout ? 'timeout' : 'error');
+        'Suggerimenti non disponibili ora. Premi Invio per cercare nel catalogo.', timeout ? 'timeout' : 'error');
       return false;
     });
     return s.suggestPromise;
@@ -561,7 +735,7 @@
   }
   function queueSearch(root, recent) {
     var generation = invalidateSearch(root), s = state(root);
-    renderSuggestMessage(root, 'Ricerca in corso. Puoi premere Invio per cercare nel catalogo.', 'pending');
+    renderSuggestMessage(root, pendingMessage(root), 'pending');
     s.timer = window.setTimeout(function () { requestSuggest(root, recent, generation); }, 220);
   }
   function moveSearchSelection(root, step) {
@@ -604,7 +778,7 @@
         input.setAttribute('aria-autocomplete', 'list');
         input.setAttribute('aria-controls', s.box.id + '-list');
         input.setAttribute('aria-expanded', 'false');
-        input.addEventListener('focus', function () { if (inputFromRoot(root) === input) queueSearch(root, true); });
+        input.addEventListener('focus', function () { if (!s.suppressFocusOpen && inputFromRoot(root) === input) queueSearch(root, true); });
         input.addEventListener('input', function (e) {
           if (inputFromRoot(root) !== input) return;
           if (s.composing || e.isComposing) invalidateSearch(root);
@@ -615,6 +789,8 @@
         input.addEventListener('blur', function (e) {
           // Moving to the same search button must not turn Enter + click into two lookups.
           if (s.submit && e.relatedTarget && buttonsFromRoot(root).indexOf(e.relatedTarget) >= 0) return;
+          // Tab verso il pulsante Cerca, il reparto o le azioni del pannello: il pannello resta aperto (chiude focusin fuori dalla ricerca).
+          if (e.relatedTarget && root.contains(e.relatedTarget)) return;
           hideSuggest(root);
         });
         input.addEventListener('keydown', function (e) {

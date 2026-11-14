@@ -57,16 +57,23 @@
   overflow: visible;
 }
 
+/* Il reparto e un affinamento: pillola compatta sotto il campo (nel DOM segue campo e pulsante, come nell'ordine visivo). */
 .ks-header-ui .ks-mobile-search-area .ks-search-shell .select-category {
   grid-column: 1 / -1;
+  grid-row: 2;
   min-width: 0;
-  width: 100%;
-  max-width: none;
+  width: auto;
+  max-width: 100%;
+  justify-self: start;
 }
 
 .ks-header-ui .ks-mobile-search-area .ks-search-shell .ks-search-category-select {
-  padding: 10px;
+  min-height: 40px;
+  padding: 4px 12px;
+  border: 1px solid var(--gray-4, #dcdfe3);
+  border-radius: 999px;
   background-color: var(--gray-5, #f5f5f5);
+  font-size: 13px;
 }
 
 .ks-header-ui .ks-mobile-search-area .ks-search-shell .br-line {
