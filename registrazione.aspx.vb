@@ -1113,14 +1113,13 @@ Partial Class registrazione
 
     Private Function BuildSiteHomeUrl() As String
         Dim host As String = SessionText("AziendaUrl")
-        If String.IsNullOrWhiteSpace(host) Then
-            host = "www.taikun.it"
-        End If
-
-        If host.StartsWith("//", StringComparison.Ordinal) OrElse
+        ' Nessun dominio fisso: se l'indirizzo della vetrina manca o non e' sicuro si usa l'URL canonico
+        ' della vetrina risolta dall'host ("" se non si risolve).
+        If String.IsNullOrWhiteSpace(host) OrElse
+           host.StartsWith("//", StringComparison.Ordinal) OrElse
            host.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
            host.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
-            host = "www.taikun.it"
+            Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
         End If
 
         If host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then

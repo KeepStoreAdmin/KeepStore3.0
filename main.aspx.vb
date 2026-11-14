@@ -127,8 +127,13 @@ Partial Class main
 
     Private Function BuildSiteHomeUrl() As String
         Dim url As String = SessionText("AziendaUrl")
-        If url = "" Then
-            Return "https://www.taikun.it"
+        ' Nessun dominio fisso: se l'indirizzo della vetrina manca o non e' sicuro (stessi criteri della pagina di
+        ' registrazione) si usa l'URL canonico della vetrina risolta dall'host ("" se non si risolve).
+        If url = "" OrElse
+           url.StartsWith("//", StringComparison.Ordinal) OrElse
+           url.StartsWith("data:", StringComparison.OrdinalIgnoreCase) OrElse
+           url.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) Then
+            Return StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/")
         End If
 
         If url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) Then

@@ -178,10 +178,10 @@ Partial Class icecat_consult
                                 'Inserisco le immaggini No e Yes
                                 Try
                                     If (tmp_caratteristica.Attributes("Presentation_Value").InnerText = "S") Or (tmp_caratteristica.Attributes("Presentation_Value").InnerText = "Si") Or (tmp_caratteristica.Attributes("Presentation_Value").InnerText = "Y") Then
-                                        risultato = risultato & tmp_caratteristica.Attributes("Presentation_Value").InnerText.Replace("Y", "<img alt="""" src=""https://www.taikun.it/Images/icecat/yes.png"" />").Replace("Si", " <img alt="""" src=""https://www.taikun.it/Images/icecat/yes.png"" /> ").Replace("S", " <img alt="""" src=""https://www.taikun.it/Images/icecat/yes.png"" /> ")
+                                        risultato = risultato & IcecatFlagMarkup(tmp_caratteristica.Attributes("Presentation_Value").InnerText, True)
                                     Else
                                         If (tmp_caratteristica.Attributes("Presentation_Value").InnerText = "N") Or (tmp_caratteristica.Attributes("Presentation_Value").InnerText = "No") Or (tmp_caratteristica.Attributes("Presentation_Value").InnerText = "-") Then
-                                            risultato = risultato & tmp_caratteristica.Attributes("Presentation_Value").InnerText.Replace("No", " <img alt="""" src=""https://www.taikun.it/Images/icecat/no.png"" /> ").Replace("NO", " <img alt="""" src=""https://www.taikun.it/Images/icecat/no.png"" /> ").Replace("N", "<img alt="""" src=""https://www.taikun.it/Images/icecat/no.png"" />").Replace("-", " <img alt="""" src=""https://www.taikun.it/Images/icecat/no.png"" /> ")
+                                            risultato = risultato & IcecatFlagMarkup(tmp_caratteristica.Attributes("Presentation_Value").InnerText, False)
                                         Else
                                             risultato = risultato & tmp_caratteristica.Attributes("Presentation_Value").InnerText
                                         End If
@@ -210,4 +210,21 @@ Partial Class icecat_consult
             End If
         End If
     End Sub
+
+    ' Valori "si"/"no" di Icecat -> icona. L'HTML finisce nel campo descrizione_html dell'XML restituito da questa
+    ' pagina e viene usato fuori da essa: serve un URL assoluto, quello della vetrina risolta dall'host (nessun dominio
+    ' scritto nel codice). Markup identico a prima: spazi attorno all'icona tranne per i valori "Y" e "N".
+    ' Se la vetrina non si risolve resta il testo del valore, mai un'immagine con indirizzo vuoto.
+    Private Function IcecatFlagMarkup(ByVal value As String, ByVal isYes As Boolean) As String
+        Dim imageUrl As String = StorefrontSeoTenantContext.BuildCanonicalUrl(HttpContext.Current, "/Images/icecat/" & If(isYes, "yes.png", "no.png"))
+        If imageUrl = "" Then
+            Return value
+        End If
+
+        Dim markup As String = "<img alt="""" src=""" & imageUrl & """ />"
+        If value <> "Y" AndAlso value <> "N" Then
+            markup = " " & markup & " "
+        End If
+        Return markup
+    End Function
 End Class
