@@ -1,5 +1,39 @@
 # KeepStore Masterplan Operativo
 
+## KS-A03-DEPARTMENT-FILTERS-AUDIT-1A — 14/11/2026 — AUDIT DEI DATI + DOCS (filtri per reparto)
+
+**Esito: A (audit), nessun codice cambiato; in attesa di una decisione del PO sulla sorgente dei dati.** Richiesta: «filtri per reparto», cioe filtri tecnici propri di ogni reparto (memoria, pollici, rete...) come nel riferimento Bytecno dell'[audit](KEEPSTORE_MASTERPLAN_OPERATIVO.md#ks-a03-pdp-navigation-audit-1a--14112026--audit-e-proposta--docs), **solo dove i dati esistono** (regola del prodotto: attributi mancanti omessi, mai inventati). Prima di scrivere codice ho misurato i dati reali.
+
+**Metodo.** Dump del PO `taikun_database_20260920.sql` (file locale non versionato): caricate in tabelle di lavoro dell'**istanza LAB isolata** (`audit_*`, rimosse a fine lavoro) soltanto le tabelle del catalogo (articoli, settori, categorie, tipologie, marche), **nessun dato personale**; nessuna lettura del MySQL online e nessuna apertura di schede su Smoke (ogni scheda scrive il contatore `Visite` sul database condiviso). Dati del 20/09/2026, non il catalogo di oggi: servono a stimare, non a certificare. 11.859 articoli, **4.541 abilitati** in 18 settori attivi, 131 categorie, 571 tipologie e 421 marche attive.
+
+**1. Che cosa e gia strutturato (e gia filtrabile).** Marca, tipologia (compilata nel 98% degli articoli; Informatica usa 143 tipologie), gruppo (26% in Informatica) e sottogruppo (7%), prezzo, disponibilita, offerta, ricondizionato, varianti taglia/colore: sono i filtri che il catalogo ha gia. Altre colonne: `Mesi` (garanzia) compilata nell'87% ma poco selettiva (24 mesi nel 63% degli articoli, poi 12, 6, 3, 1, 60, 36); il campo testuale `Garanzia` e vuoto ovunque; `Peso` e logistico (nessun senso per il cliente). **Non esiste nessuna tabella di attributi per articolo** (nessuna «caratteristiche/attributi/specifiche»): la schermata «Attributi prodotto» del [manuale per Enzo](KEEPSTORE_SHOPPING_ATTRIBUTES_ENZO.md) e ancora solo un progetto.
+
+**2. Descrizioni: ricche ma non filtrabili.** Contengono le schede tecniche dei produttori, ma solo 189 articoli su 4.541 (4%) hanno una tabella o un elenco dt/dd e solo il 21% ha almeno tre coppie «etichetta: valore» in una forma qualunque. Anche dove ci sono, le coppie sono incollate in un unico blocco («128 GB espandibile fino a: 1.500 GB»), le etichette cambiano da marca a marca e la copertura per categoria e bassa: smartphone (302 articoli) memoria interna 15%, RAM 15%, pollici 15%; notebook 39%; monitor 22 articoli. Usarle per un filtro nasconderebbe l'85% degli smartphone quando si applica: e il «falso filtro rigido» che il contratto dell'assistente vieta (etichette scoperte = non approvate).
+
+**3. Titoli: disciplinati, e il dato utile e li.** Convenzione dei titoli, per esempio `CELLULARE SMARTPHONE SAMSUNG Galaxy A27 5G ... DISPLAY 6.7" 8GB/256GB DUOS COLORE BLUE GARANZIA TIM`. Copertura nelle categorie dove i filtri tecnici contano:
+
+| Categoria (articoli) | Attributo nel titolo | Copertura | Valori ricavabili |
+| --- | --- | --- | --- |
+| Smartphone (302) | memoria | 92% | 256GB 126, 128GB 113, 512GB 14, 64GB 10 |
+| Smartphone | rete | 89% | 5G 215, 4G 53 |
+| Smartphone | garanzia dell'operatore | 65% | Vodafone 74, TIM 54, Italia 31, Europea 34, Wind 3 |
+| Smartphone | schermo (pollici) | 48% | 6,7" 39, 6,6" 16, 6,67" 16, 6,9" 9 |
+| Monitor (22) | diagonale / pannello | 100% / 86% | 27" 13, 24" 5; IPS 11, VA 8 |
+| Televisori (26) | diagonale | 77% | 32" 6, 43" 4, 55" 3, 65" 3 |
+| Tablet (10), PC desktop (19), pen drive (10) | capacita | 100% | — |
+| Notebook (18) | pollici / memoria | 94% / 44% | — |
+
+In tutto **14 categorie con almeno 10 articoli** superano il 60% di copertura su pollici o memoria. Rumore da gestire: refusi (`2128GB`, `25GB`), coppia RAM/ROM nello stesso titolo (`8GB/256GB`, `6GB+6GB/256GB`), televisori e monitor nella stessa categoria, articoli senza il dato (telefoni a tasti: nessuna memoria).
+
+**Opzioni (decide il PO).**
+- **A — filtri derivati dai titoli.** L'estrazione sta **nel database** (una vista standard, identica per ogni database, come vuole la regola «logica nel database»; la applichi su `taikun` e Enzo la propaga), il web la legge. Valori normalizzati (256 GB, 6,7", 5G, Garanzia Vodafone). Nel catalogo una sezione «Caratteristiche» compare **solo se** almeno il 70% dei risultati ha il valore e ci sono almeno 2 valori; gli articoli senza dato finiscono in «Non specificato» (non spariscono); nessun reparto scritto nel codice. *Pro:* subito, copre proprio smartphone, monitor, TV, tablet. *Contro:* euristica legata al modo di scrivere i titoli (se cambia, cambiano i filtri) e i refusi dei titoli diventano valori sbagliati.
+- **B — attributi strutturati.** Tabella degli attributi e schermata del gestionale di Enzo (il progetto e nel manuale); i filtri compaiono da soli dove i dati sono inseriti. *Pro:* affidabile. *Contro:* richiede lavoro di Enzo e l'inserimento dei dati.
+- **C — A ora, B dopo** (consigliata): stessa interfaccia nel catalogo; quando Enzo carica gli attributi veri, la vista li unisce e li fa prevalere sui titoli.
+- **Non consigliato:** filtri dalle descrizioni (copertura bassa, valori incollati) o una scorciatoia per un singolo reparto scritta nel codice (viola «multi-merceologia»).
+
+**Da decidere:** (1) sorgente: A, B o C; (2) quali attributi partire: memoria, pollici, rete, garanzia dell'operatore (e colore?); (3) soglia di copertura (proposta 70%); (4) dove mostrarli (proposta: solo con categoria o tipologia scelta). Nessuna decisione e stata presa e nessun codice scritto.
+
+**Limiti.** Dati del 20/09/2026, un solo catalogo (Taikun): la stima non vale per altri tenant (per questo la regola «solo dove i dati esistono»). Le percentuali sono sui soli articoli abilitati. L'analisi delle descrizioni usa un estrattore mio (tabelle, dt/dd, elenchi e righe «etichetta: valore»): per le categorie principali e stato controllato a mano sugli esempi, non e una misura esaustiva. Revisione ChatGPT: non richiesta (audit senza codice).
 ## KS-A03-FILTER-BUTTONS-1A — 14/11/2026 — SOURCE + PROVA SMOKE (pulsanti del pannello filtri mobile)
 
 **Esito: A (SOURCE, provato nel browser su Smoke in sola lettura).** Segnalato nel report del batch card: nel pannello filtri da telefono «Applica filtri» e «Annulla» erano **identici** (rosso `#ff3d3d`, testo nero) e il testo bianco di «Reset filtri» (e del pulsante «Applica» del prezzo) su quel rosso aveva un contrasto di circa 3,5:1, sotto il minimo di 4,5:1 per il testo piccolo. Solo presentazione: un blocco CSS in `catalog-filters-ui.css` e il cache-buster in `articoli.aspx`; nessun cambio a markup, JavaScript, VB o dati (la logica batch Applica/Annulla/Reset resta com'e). Non pubblicato sul server; Smoke, che serve la copia canonica, lo mostra gia.
