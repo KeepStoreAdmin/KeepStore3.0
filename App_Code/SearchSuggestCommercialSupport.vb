@@ -199,7 +199,7 @@ Public NotInheritable Class SearchSuggestCommercialSupport
         Next
         ' Un candidato senza prezzo nel listino corrente non e acquistabile: si omette qui, PRIMA di ordine e LIMIT.
         ' Prima bastava UN solo articolo senza prezzo tra i candidati per far fallire tutta la risposta (503).
-        ' Resta fail-closed (VerifyCandidateProjection/VerifyRows) per i candidati che sopravvivono: disponibilita incompleta,
+        ' Resta fail-closed (CandidateIntegrityProjection/VerifyRows) per i candidati che sopravvivono: disponibilita incompleta,
         ' molteplicita diversa da 1, prezzo finale o offerta incoerenti. Limite noto: due righe senza prezzo della stessa
         ' identita commerciale sono omesse insieme e il loro conflitto non viene segnalato.
         Return " FROM (SELECT normalized.*, COUNT(*) OVER(PARTITION BY normalized.id,normalized.SuggestTC,normalized.NListino) AS SuggestMultiplicity" &
@@ -231,16 +231,28 @@ Public NotInheritable Class SearchSuggestCommercialSupport
         Return rows
     End Function
 
-    Public Sub VerifyCandidateProjection(ByVal selectSql As String, ByVal parameters As List(Of SearchSuggestParameter))
-        Dim start As Integer = selectSql.IndexOf(" FROM (SELECT", StringComparison.Ordinal)
-        If start < 0 Then Fail("commercial_query_invalid", 503)
-        Dim result As DataTable = Execute("SELECT COUNT(*) AS InvalidCount" & selectSql.Substring(start) &
-            " AND (v.SuggestPrice IS NULL OR v.SuggestPrice<=0 OR v.SuggestAvailable IS NULL" &
-            " OR v.Disponibilita IS NULL OR v.SuggestMultiplicity<>1)", parameters)
-        If result.Rows.Count <> 1 OrElse Convert.ToInt32(result.Rows(0)("InvalidCount")) <> 0 Then Fail("commercial_unavailable", 503)
-    End Sub
+    ' Integrita dei candidati nella STESSA query principale, tramite una funzione finestra senza PARTITION: e valutata sull'intero
+    ' insieme dopo il WHERE e prima di DISTINCT, ORDER BY e LIMIT. Sostituisce la vecchia seconda esecuzione della query pesante
+    ' (SELECT COUNT(*)) e ne conserva la regola "tutto o niente": VerifyRows rifiuta la risposta se anche un solo candidato, oltre il
+    ' LIMIT compreso, ha dati commerciali incompleti o ambigui (la molteplicita e calcolata PRIMA di ogni WHERE).
+    ' CONTRATTO (revisione 14/11/2026): fail-closed sui candidati FINALI, cioe dopo i filtri dell'utente (promo, disponibili,
+    ' ricondizionati, prezzo) e dopo la soglia AI, prima del LIMIT. Un candidato non valido escluso da questi filtri non puo comparire
+    ' nella risposta ne influenzarne l'ordine; una riga superstite di un'identita in conflitto conserva SuggestMultiplicity<>1.
+    Public Shared Function CandidateIntegrityProjection() As String
+        Return ", SUM(CASE WHEN v.SuggestPrice IS NULL OR v.SuggestPrice<=0 OR v.SuggestAvailable IS NULL OR v.Disponibilita IS NULL" &
+            " OR v.SuggestMultiplicity<>1 THEN 1 ELSE 0 END) OVER() AS SuggestInvalidCount "
+    End Function
 
     Public Sub VerifyRows(ByVal rows As DataTable)
+        ' Fail-closed: la colonna di integrita deve essere proiettata dalla query principale (anche con zero righe: una tabella
+        ' vera ha sempre le colonne) e valere 0 su ogni riga; il valore e il conteggio dei candidati non validi dell'intero insieme,
+        ' non delle sole righe restituite. Valore nullo (DBNull) o non interpretabile = rifiuto.
+        If Not rows.Columns.Contains("SuggestInvalidCount") Then Fail("commercial_unavailable", 503)
+        For Each integrityRow As DataRow In rows.Rows
+            Dim invalidCount As Decimal
+            If Not Decimal.TryParse(Convert.ToString(integrityRow("SuggestInvalidCount"), CultureInfo.InvariantCulture), NumberStyles.Number, CultureInfo.InvariantCulture, invalidCount) OrElse
+               invalidCount <> 0D Then Fail("commercial_unavailable", 503)
+        Next
         If rows.Rows.Count = 0 Then Return
         If _batch Is Nothing Then _batch = _batchLoader(_settings.ConnectionString, Eligibility)
         If _batch Is Nothing OrElse _batch.Status <> ProductPromotionEligibilityLoadStatus.Success Then Fail("promotion_unavailable", 503)

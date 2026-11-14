@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([switch]$BaselineCandidate, [string]$GuidedPayloadPath = '')
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
@@ -127,6 +127,18 @@ fs.writeFileSync(process.argv[3],JSON.stringify(results),'utf8');
     [IO.File]::WriteAllText((Join-Path $work 'resources.json'),($journal|ConvertTo-Json))
     if($BaselineCandidate){& $exe $callerUrlsPath '--review-candidate'}elseif($GuidedPayloadPath){& $exe $callerUrlsPath $GuidedPayloadPath}else{& $exe $callerUrlsPath}
     if($LASTEXITCODE -ne 0){throw 'SEARCH_SUGGEST_HARNESS_FAILED'}
+    # KS-A04-SEARCH-LATENCY-1A: forma dei tre consumatori (ricerca, recenti, guidata2) - una sola query pesante con la finestra di integrita.
+    if(-not $BaselineCandidate -and -not $GuidedPayloadPath){
+        $webSource=[IO.File]::ReadAllText((Join-Path $root 'search_suggest.aspx.vb'));$supportSource=[IO.File]::ReadAllText((Join-Path $root 'App_Code/SearchSuggestCommercialSupport.vb'))
+        if($webSource.Contains('VerifyCandidateProjection') -or $supportSource.Contains('VerifyCandidateProjection')){throw 'SEARCH_SUGGEST_OLD_VERIFICATION_STILL_PRESENT'}
+        if(-not [regex]::IsMatch($webSource,'(?s)Private Sub AppendSelect\(.*?CandidateIntegrityProjection\(\).*?End Sub')){throw 'SEARCH_SUGGEST_APPENDSELECT_WITHOUT_INTEGRITY'}
+        foreach($builder in @('BuildSearchResult','BuildRecentResult','BuildGuided2Result')){
+            $body=[regex]::Match($webSource,('(?s)Private Function '+$builder+'\(.*?\r?\n    End Function')).Value
+            if(-not $body.Contains('AppendSelect(sql') -or $body.Contains('COUNT(*)') -or $body.Contains('VerifyRows')){throw ('SEARCH_SUGGEST_BUILDER_SHAPE '+$builder)}
+        }
+        if(-not [regex]::Match($webSource,'(?s)Private Function BuildGuided2Result\(.*?\r?\n    End Function').Value.Contains('" LIMIT 97"')){throw 'SEARCH_SUGGEST_GUIDED2_LIMIT_SHAPE'}
+        Write-Output 'SEARCH_SUGGEST_SINGLE_QUERY_SHAPE=PASS'
+    }
     if($BaselineCandidate){Write-Output 'SEARCH_SUGGEST_CANDIDATE_REPRODUCTION=PASS'}else{Write-Output 'SEARCH_SUGGEST_SYNTHETIC_SUITE=PASS'}
 } finally {
     if(Test-Path -LiteralPath $work){

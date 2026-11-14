@@ -17,7 +17,6 @@ Public Module SearchSuggestCommercialContextHarness
     Private captures As New List(Of IList(Of SearchSuggestParameter))()
     Private products As DataTable
     Private account As DataTable
-    Private invalidProjection As Integer
     Private batchStatus As ProductPromotionEligibilityLoadStatus
     Private batchLoads As Integer
     Private offers As New List(Of ProductPromotionEligibilityRawOffer)()
@@ -107,12 +106,6 @@ Public Module SearchSuggestCommercialContextHarness
         captures.Add(parameters)
         If sql.Contains("FROM vlogin") Then Return account
         If relationalRows IsNot Nothing Then Return RelationalQuery(sql, parameters)
-        If sql.Contains("COUNT(*) AS InvalidCount") Then
-            Dim table As New DataTable()
-            table.Columns.Add("InvalidCount", GetType(Integer))
-            table.Rows.Add(invalidProjection)
-            Return table
-        End If
         Return products.Copy()
     End Function
 
@@ -139,17 +132,14 @@ Public Module SearchSuggestCommercialContextHarness
         Dim multiplicities = selected.GroupBy(Function(row) Identity(row)).ToDictionary(Function(g) g.Key, Function(g) g.Count())
         ' Come nel SQL reale: la molteplicita e calcolata prima del filtro, il prezzo mancante o non positivo omette il candidato.
         If sql.Contains(" AND v.SuggestPrice>0") Then selected = selected.Where(Function(row) HasPositivePrice(row)).ToList()
-        If sql.Contains("COUNT(*) AS InvalidCount") Then
-            Dim invalid As New DataTable()
-            invalid.Columns.Add("InvalidCount", GetType(Integer))
-            invalid.Rows.Add(selected.Where(Function(row) multiplicities(Identity(row)) <> 1 OrElse Not HasPositivePrice(row) OrElse row.IsNull("Giacenza") OrElse row.IsNull("Disponibilita")).Count())
-            Return invalid
-        End If
-        If sql.Contains(" AND v.SuggestAvailable > 0") Then selected = selected.Where(Function(row) Convert.ToDecimal(row("Disponibilita")) > 0D).ToList()
+        If sql.Contains(" AND v.SuggestAvailable > 0") Then selected = selected.Where(Function(row) ModelAvailable(row).HasValue AndAlso ModelAvailable(row).Value > 0D).ToList()
         For Each spec In parameters
             If spec.Name = "@minPrice" Then selected = selected.Where(Function(row) Convert.ToDecimal(row("PrezzoFinale")) >= Convert.ToDecimal(spec.Value)).ToList()
             If spec.Name = "@maxPrice" Then selected = selected.Where(Function(row) Convert.ToDecimal(row("PrezzoFinale")) <= Convert.ToDecimal(spec.Value)).ToList()
         Next
+        ' Funzioni finestra della query reale: valutate sull'insieme finale, prima di ORDER BY e LIMIT.
+        Dim projectsIntegrity As Boolean = sql.Contains("AS SuggestInvalidCount")
+        Dim invalidTotal As Integer = selected.Where(Function(row) multiplicities(Identity(row)) <> 1 OrElse Not HasPositivePrice(row) OrElse Not ModelAvailable(row).HasValue OrElse row.IsNull("Disponibilita")).Count()
         Dim exact As Integer = selected.Where(Function(row) Convert.ToString(row("Codice")) = "SKU120").Count()
         If sql.Contains("PrezzoFinale ASC") Then selected = selected.OrderBy(Function(row) Convert.ToDecimal(row("PrezzoFinale"))).ToList()
         If sql.Contains("PrezzoFinale DESC") Then selected = selected.OrderByDescending(Function(row) Convert.ToDecimal(row("PrezzoFinale"))).ToList()
@@ -158,10 +148,21 @@ Public Module SearchSuggestCommercialContextHarness
         Dim result As DataTable = relationalRows.Clone()
         For Each row As DataRow In selected
             result.ImportRow(row)
+            result.Rows(result.Rows.Count - 1)("SuggestInvalidCount") = invalidTotal
             result.Rows(result.Rows.Count - 1)("SuggestMultiplicity") = multiplicities(Identity(row))
             result.Rows(result.Rows.Count - 1)("ExactMatches") = exact
         Next
+        ' Come la query reale: senza la proiezione le colonne di integrita non esistono e VerifyRows deve rifiutare.
+        If Not projectsIntegrity Then
+            result.Columns.Remove("SuggestInvalidCount")
+        End If
         Return result
+    End Function
+
+    ' Come la query reale: SuggestAvailable = GREATEST(0, Giacenza - Impegnata); NULL se manca uno dei due termini.
+    Private Function ModelAvailable(ByVal row As DataRow) As Nullable(Of Decimal)
+        If row.IsNull("Giacenza") OrElse row.IsNull("Impegnata") Then Return Nothing
+        Return Math.Max(0D, Convert.ToDecimal(row("Giacenza")) - Convert.ToDecimal(row("Impegnata")))
     End Function
 
     Private Function HasPositivePrice(ByVal row As DataRow) As Boolean
@@ -175,7 +176,7 @@ Public Module SearchSuggestCommercialContextHarness
     Private Function AuthoritativeFacts(ByVal row As DataRow) As String
         Dim fields As New List(Of String)()
         For Each column As DataColumn In row.Table.Columns
-            If {"LegacyPromo", "LegacyPriceRow", "SuggestMultiplicity", "ExactMatches", "RankScore", "Enabled", "Export"}.Contains(column.ColumnName) Then Continue For
+            If {"LegacyPromo", "LegacyPriceRow", "SuggestMultiplicity", "ExactMatches", "RankScore", "Enabled", "Export", "SuggestInvalidCount"}.Contains(column.ColumnName) Then Continue For
             Dim value = row(column)
             fields.Add(column.ColumnName & "=" & If(Convert.IsDBNull(value), "<NULL>", Convert.ToString(value, CultureInfo.InvariantCulture)))
         Next
@@ -216,7 +217,7 @@ Public Module SearchSuggestCommercialContextHarness
     End Function
 
 Private Sub RunGuided(ByVal payloadPath As String)
-        relationalRows = Nothing : invalidProjection = 0 : offers.Clear()
+        relationalRows = Nothing : offers.Clear()
         batchStatus = ProductPromotionEligibilityLoadStatus.Success
         Dim samples As New List(Of Object)()
         For Each company As Integer In {1, 2}
@@ -371,7 +372,7 @@ Private Sub RunGuided(ByVal payloadPath As String)
                     For Each recent As Boolean In {False, True}
                         Dim output = Result(commercial, recent, 1)
                         Assert(CInt(output("total")) = expected, "F02 relational publication matrix " & Convert.ToString(publish) & "/" & enabled & "/" & list & "/recent=" & recent)
-                        Assert(commands.Last().Contains("COALESCE(vsuperarticoli.Export,0)<>0") AndAlso commands(commands.Count - 2).Contains("COALESCE(vsuperarticoli.Export,0)<>0"), "F02 both candidate count and result source scoped")
+                        Assert(commands.Last().Contains("COALESCE(vsuperarticoli.Export,0)<>0") AndAlso commands.Last().Contains("AS SuggestInvalidCount"), "F02 the single candidate query is publication scoped and carries the integrity window")
                     Next
                 Next
             Next
@@ -467,6 +468,39 @@ Private Sub RunGuided(ByVal payloadPath As String)
         relationalRows.Rows(0)("Prezzo") = DBNull.Value
         relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("PrezzoIvato") = DBNull.Value
         Assert(CInt(Result(commercial)("total")) = 0, "U06 documented limit: duplicate unpriced identity is omitted together")
+        ' KS-A04-SEARCH-LATENCY-1A: l'integrita e una funzione finestra della query principale, valutata prima del LIMIT.
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("id") = 121 : relationalRows.Rows(1)("Codice") = "SKU121"
+        relationalRows.Rows(1)("Disponibilita") = DBNull.Value
+        Reject(Sub() Result(commercial, False, 1), "L01 invalid candidate beyond the LIMIT still rejects the whole response")
+        Reject(Sub() Result(commercial, True, 1), "L01 same for the recent products path")
+        relationalRows = RawRows(commercial)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("id") = 121 : relationalRows.Rows(1)("Codice") = "SKU121"
+        Dim bothTotal As Integer = CInt(Result(commercial, False, 8)("total"))
+        Assert(bothTotal = 2, "L02 two valid candidates are both returned")
+        ' Semantica dichiarata: un candidato non valido ESCLUSO dai filtri dell'utente (qui il prezzo massimo) non fa piu fallire la richiesta,
+        ' perche non puo comparire nella risposta ne influenzarne l'ordine; lo stesso candidato senza filtro la fa fallire (U03/L01).
+        Dim filteredContext = Context(2, 10, False, "max=150") : filteredContext.Session("TC") = 1
+        Dim filtered = MakeSupport(filteredContext)
+        relationalRows = RawRows(filtered)
+        relationalRows.ImportRow(relationalRows.Rows(0)) : relationalRows.Rows(1)("id") = 121 : relationalRows.Rows(1)("Codice") = "SKU121"
+        relationalRows.Rows(1)("PrezzoFinale") = 400D : relationalRows.Rows(1)("Giacenza") = DBNull.Value
+        Assert(CInt(Result(filtered, False, 8)("total")) = 1, "L03 invalid candidate excluded by the user price filter does not reject the valid ones")
+        ' Modo AI: la soglia di punteggio e parte dello stesso WHERE della finestra; una sola query pesante per richiesta.
+        Dim aiContext = Context(2, 10, False, "mode=ai") : aiContext.Session("TC") = 1
+        Dim aiSupport = MakeSupport(aiContext)
+        relationalRows = RawRows(aiSupport)
+        Result(aiSupport, False, 8)
+        Dim aiSql As String = commands.Last()
+        Assert(aiSql.Contains("AS SuggestInvalidCount") AndAlso aiSql.Contains(") >= "), "L04 AI threshold and integrity window live in the same single statement")
+        Assert(commands.Where(Function(c) c.Contains("FROM (SELECT normalized.*")).Count() = 1, "L05 exactly one heavy candidate query per request (no separate verification COUNT)")
+        Assert(Not commands.Any(Function(c) c.Contains("COUNT(*) AS InvalidCount")), "L05 the old verification statement is gone")
+        ' Il modello relazionale non esegue SQL: l'elenco delle condizioni della finestra si verifica sul testo reale della proiezione.
+        Dim integrity As String = SearchSuggestCommercialSupport.CandidateIntegrityProjection()
+        For Each condition As String In {"v.SuggestPrice IS NULL", "v.SuggestPrice<=0", "v.SuggestAvailable IS NULL", "v.Disponibilita IS NULL", "v.SuggestMultiplicity<>1"}
+            Assert(integrity.Contains(condition), "L06 integrity window checks " & condition)
+        Next
+        Assert(integrity.Contains("OVER() AS SuggestInvalidCount") AndAlso Not integrity.Contains("PARTITION"), "L06 one unpartitioned window over the whole candidate set")
         relationalRows = Nothing
     End Sub
 
@@ -540,7 +574,7 @@ Private Sub RunGuided(ByVal payloadPath As String)
         Dim table As New DataTable()
         For Each name As String In {"id", "SuggestPriceList", "TCid", "SuggestMultiplicity", "Prezzo", "PrezzoIvato", "IdIvaRC", "ValoreIvaRC",
             "Giacenza", "Impegnata", "Disponibilita", "InOrdine", "ScortaMinima", "PrezzoFinale", "InOfferta",
-            "Ricondizionato", "SpeditoGratis", "RankScore", "ExactMatches", "Codice", "Ean", "Descrizione1", "Descrizione2",
+            "Ricondizionato", "SpeditoGratis", "RankScore", "ExactMatches", "SuggestInvalidCount", "Codice", "Ean", "Descrizione1", "Descrizione2",
             "DescrizioneLunga", "DescrizioneHTML", "MarcheDescrizione", "CategorieDescrizione", "TipologieDescrizione",
             "SettoriDescrizione", "Img1", "Img2", "Img3", "Img4", "Immagine1", "Immagine2", "Immagine3", "Immagine4", "Immagine5", "Immagine6"}
             table.Columns.Add(name, GetType(Object))
@@ -561,6 +595,7 @@ Private Sub RunGuided(ByVal payloadPath As String)
         row("PrezzoFinale") = Decimal.Round(support.PriceContext.SelectPrice(promo.EffectivePriceNet, promo.EffectivePriceGross).Value, 2, MidpointRounding.AwayFromZero)
         row("InOfferta") = If(promo.HasAppliedOffer, 1, 0)
         row("Ricondizionato") = 0 : row("SpeditoGratis") = 0 : row("RankScore") = 10000000 : row("ExactMatches") = 1
+        row("SuggestInvalidCount") = 0
         row("Codice") = "SKU120" : row("Ean") = "8000000000120" : row("Descrizione1") = "Synthetic product"
         row("SettoriDescrizione") = "Synthetic department"
         table.Rows.Add(row)
@@ -693,9 +728,11 @@ Private Sub RunGuided(ByVal payloadPath As String)
         s = MakeSupport(Context(2, 10))
         Reject(Sub() s.Execute("SELECT test", New List(Of SearchSuggestParameter)), "promotion failure never empty success")
         batchStatus = ProductPromotionEligibilityLoadStatus.Success
-        s = MakeSupport(Context(2, 10)) : invalidProjection = 1
-        Reject(Sub() s.VerifyCandidateProjection("SELECT v.id" & s.CatalogFrom(), New List(Of SearchSuggestParameter)), "invalid candidate before LIMIT")
-        invalidProjection = 0
+        s = MakeSupport(Context(2, 10))
+        products = ProductRows(s) : products.Rows(0)("SuggestInvalidCount") = 1 : Reject(Sub() s.VerifyRows(products), "invalid candidate counted over the whole set rejects the response")
+        products = ProductRows(s) : products.Rows(0)("SuggestInvalidCount") = DBNull.Value : Reject(Sub() s.VerifyRows(products), "unknown invalid count rejects the response")
+        products = ProductRows(s) : products.Columns.Remove("SuggestInvalidCount") : Reject(Sub() s.VerifyRows(products), "missing integrity column rejects the response")
+        products = ProductRows(s) : s.VerifyRows(products) : Assert(True, "zero invalid count accepted")
         Dim projection = StorefrontPromotionCatalogProvider.BuildQuantityOnePriceJoin(False)
         For Each clause As String In {"offer_header.DataInizio<=?promoEvaluationDate", "offer_header.AziendeId=?promoCompanyId", "offer_header.UtentiId=?promoCurrentUserId",
                 "offer_header.DataFine>=?promoEvaluationDate", "offer_header.QntMinima<=1", "allowed_tc.ArticoliId IS NOT NULL"}

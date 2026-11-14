@@ -590,8 +590,9 @@ Partial Public Class search_suggest
             sql.Append(", ")
             sql.Append(If(String.IsNullOrWhiteSpace(rankExpr), "0", rankExpr))
             sql.Append(" AS RankScore, SUM(CASE WHEN LOWER(TRIM(COALESCE(v.Codice,'')))=@qExact OR LOWER(TRIM(COALESCE(v.Ean,'')))=@qExact THEN 1 ELSE 0 END) OVER() AS ExactMatches ")
-            Return
         End If
+        ' Integrita dei candidati nella stessa query principale (vedi SearchSuggestCommercialSupport.CandidateIntegrityProjection).
+        sql.Append(SearchSuggestCommercialSupport.CandidateIntegrityProjection())
     End Sub
 
     Private Function BuildScoreExpression(ByVal tokens As List(Of String), ByVal intent As QueryIntent) As String
@@ -670,7 +671,6 @@ Partial Public Class search_suggest
         AppendIntFilter(sql, parameters, filters.SottoGruppoId, a & "SottoGrupPIId", "@sg")
         AppendIntFilter(sql, parameters, filters.MarcaId, a & "MarcheId", "@mr")
 
-        _commercial.VerifyCandidateProjection(sql.ToString(), parameters)
         If filters.SoloPromo Then sql.Append(" AND " & a & "SuggestHasPromotion <> 0")
         If filters.SoloDisponibili Then sql.Append(" AND " & a & "SuggestAvailable > 0")
         If filters.SoloRicondizionati Then sql.Append(" AND COALESCE(" & a & "Ricondizionato,0) = 1")
