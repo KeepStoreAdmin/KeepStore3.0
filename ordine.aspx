@@ -37,7 +37,7 @@
         .ks-order-actions .tf-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;border-radius:8px;padding:12px 18px;font-weight:800;text-decoration:none;transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease;}
         .ks-order-actions .ks-order-btn-primary{background:var(--primary,#ff3d3d);border:1px solid var(--primary,#ff3d3d);color:#fff;box-shadow:0 12px 22px rgba(225,40,37,.18);}
         .ks-order-actions .ks-order-btn-primary:hover,
-        .ks-order-actions .ks-order-btn-primary:focus{background:var(--primary-2,#d80027);border-color:var(--primary-2,#d80027);color:#fff;box-shadow:0 14px 28px rgba(216,0,39,.22);}
+        .ks-order-actions .ks-order-btn-primary:focus{background:var(--primary-hover,#b8001f);border-color:var(--primary-hover,#b8001f);color:#fff;box-shadow:0 14px 28px rgba(216,0,39,.22);}
         .ks-order-actions .ks-order-btn-secondary{background:#fff;border:1px solid rgba(225,40,37,.38);color:#c52222;}
         .ks-order-actions .ks-order-btn-secondary:hover,
         .ks-order-actions .ks-order-btn-secondary:focus{background:#fff5f5;border-color:#e12825;color:#a61212;}

@@ -195,7 +195,11 @@ $master = Read-Repo 'Page.master'
 function Get-CardsBlock([string]$c) {
     $i = $c.IndexOf('KS-A04-HOME-CARDS-1A')
     if ($i -lt 0) { return '' }
-    return $c.Substring($i)
+    $tail = $c.Substring($i)
+    # Il blocco finisce al marker del task successivo (/* KS-A04-...) o a fine file: le regole accodate dopo non sono card della HOME.
+    $next = [regex]::Match($tail.Substring(1), '(?m)^/\* KS-A04-(?!HOME-CARDS-1A)')
+    if ($next.Success) { return $tail.Substring(0, $next.Index + 1) }
+    return $tail
 }
 function Hex-ToLuminance([string]$hex) {
     $h = $hex.TrimStart('#'); if ($h.Length -eq 3) { $h = ($h.ToCharArray() | ForEach-Object { "$_$_" }) -join '' }
@@ -263,7 +267,7 @@ function Test-NoLeakToDeals([string]$c) {
     $bad = $selectors | Where-Object { $_ -match 'ks-deal' -or ($_ -notmatch 'ks-grid-card|ks-recent-card') }
     return (@($bad).Count -eq 0) -and ($b -notmatch 'ks-deal')
 }
-function Test-Buster([string]$m) { return $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"') }
+function Test-Buster([string]$m) { return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-palette-aa1a"')) }
 
 Assert-Source (Test-TileRule $css) 'CSS_TILE_SQUARE_ONE_FRAME_NO_FIXED_HEIGHT'
 Assert-Source (Test-ActionTiers $css) 'CSS_ACTION_TIERS_FROM_GEOMETRY_204_156'
@@ -375,7 +379,7 @@ $m = Mutate-Text $css 'body.ks-page-home #HomeRecentlyViewedSection .ks-recent-c
 Assert-Detected (Test-RecentRules $m) 'C18_RECENT_TILE_NOT_SQUARE'
 $m = Mutate-Text $css 'body.ks-page-home #ksHomePage .ks-grid-card { padding: 12px; }' 'body.ks-page-home #ksHomePage .ks-grid-card, body.ks-page-home #ksHomePage .ks-deal-card { padding: 12px; }' 'C19'
 Assert-Detected (Test-NoLeakToDeals $m) 'C19_DEAL_CARD_RESTYLED_BY_MISTAKE'
-$m = Mutate-Text $master 'v=20261115-home-cards1a' 'v=20261114-deadcode-c1a' 'C20'
+$m = Mutate-Text $master 'v=20261115-palette-aa1a' 'v=20261114-deadcode-c1a' 'C20'
 Assert-Detected (Test-Buster $m) 'C20_STALE_CSS_CACHE_BUSTER'
 
 Write-Output 'HOME_CARDS_PARITY_ALL_PASS'

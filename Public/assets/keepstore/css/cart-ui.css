@@ -698,7 +698,7 @@
 .ks-cart-page .ks-cart-trust-item i,
 .ks-cart-page .ks-address-smart-note i{
     flex: 0 0 auto;
-    color: #ff3d3d;
+    color: var(--primary, #D80027);
     font-size: 18px;
     line-height: 1;
     margin-top: .05rem;
@@ -2168,7 +2168,7 @@
     max-width: 150px;
     align-items: center;
     justify-content: center;
-    color: #777777;
+    color: var(--gray-2, #666666);
     font-size: 12px;
     font-weight: 600;
     line-height: 1.35;
@@ -2195,7 +2195,7 @@
 .ks-rv-code{
     min-height: 17px;
     margin: 0 0 6px;
-    color: #777777;
+    color: var(--gray-2, #666666);
     overflow: hidden;
     font-size: 12px;
     line-height: 1.35;
@@ -2824,7 +2824,7 @@
     --ks-checkout-ink: #333e48;
     --ks-checkout-muted: #626970;
     --ks-checkout-border: #ebebeb;
-    --ks-checkout-primary: #ff3d3d;
+    --ks-checkout-primary: var(--primary, #D80027);
     color: var(--ks-checkout-ink);
     padding-bottom: 48px;
 }
@@ -3366,7 +3366,7 @@
     --ks-checkout-ink: #333e48;
     --ks-checkout-muted: #626970;
     --ks-checkout-border: #ebebeb;
-    --ks-checkout-primary: #ff3d3d;
+    --ks-checkout-primary: var(--primary, #D80027);
     color: var(--ks-checkout-ink);
 }
 

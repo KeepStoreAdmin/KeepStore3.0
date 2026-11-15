@@ -65,7 +65,7 @@ Assert-Source (Test-PdpCodeBehindClean $vb) 'S02_PDP_CODE_BEHIND_HAS_NO_REFERENC
 Assert-Source (Test-RelatedExcludesSimilar $vb) 'S03_RELATED_PRODUCTS_DO_NOT_REPEAT_SIMILAR_PRODUCTS'
 Assert-Source (Test-HelperGateUsesAuthContract $helper) 'S04_AVAILABILITY_NUMBERS_GATED_BY_STOREFRONT_AUTH_CONTRACT'
 Assert-Source (Test-CssMobileOrder $css) 'S05_CSS_MOBILE_ORDER_AND_NO_DEAD_RULES'
-Assert-Source ($aspx -match 'product-ui\.css"\) %>\?v=20261114-(pdp-(hierarchy|buybar)1a|deadcode-c1a)') 'S06_CSS_CACHE_BUSTER_UPDATED'
+Assert-Source ($aspx -match 'product-ui\.css"\) %>\?v=(20261114-(pdp-(hierarchy|buybar)1a|deadcode-c1a)|20261115-palette-aa1a)') 'S06_CSS_CACHE_BUSTER_UPDATED'
 $explicitCallers = @(& git -C $repoRoot grep -l -E 'BuildFromDataItemExplicit|BuildFromValuesExplicit' -- '*.vb' '*.aspx' '*.ascx' '*.master' ':!Tools' ':!docs' ':!App_Code/AvailabilityDisplayHelper.vb' 2>$null)
 Assert-Source ($explicitCallers.Count -eq 0) 'S07_NO_PRODUCTION_CALLER_OF_EXPLICIT_MODE_THAT_BYPASSES_THE_VISITOR_RULE'
 

@@ -63,14 +63,14 @@ function Test-BarScript([string]$js) {
 }
 function Test-MasterWiring([string]$master) {
     return ($master -match 'js/ks-departments-bar\.js"\) %>\?v=20261114-dept-nav1a' -and
-            $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:dept-nav1a|search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-home-cards1a)"')
+            $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:dept-nav1a|search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-(?:home-cards|palette-aa)1a)"')
 }
 function Test-TilesMarkup([string]$aspx) {
     $i = $aspx.IndexOf('ID="pnlCatalogDepartmentTiles"')
     $j = $aspx.IndexOf('ID="pnlCatalogDepartmentsMobile"')
     return ($i -gt 0 -and $j -gt $i -and
             $aspx -match 'ID="litCatalogDepartmentTiles" runat="server" EnableViewState="false"' -and
-            $aspx -match 'css/catalog-ui\.css"\) %>\?v=(?:20261114-(?:(?:dept-nav|cards)1a|deadcode-c1a)|20261115-grey-aa1a)')
+            $aspx -match 'css/catalog-ui\.css"\) %>\?v=(?:20261114-(?:(?:dept-nav|cards)1a|deadcode-c1a)|20261115-(?:grey|palette)-aa1a)')
 }
 function Test-TilesCodeBehind([string]$vb) {
     $nav = [regex]::Match($vb, '(?s)Private Sub BindCatalogCategoryNavigation\(\).*?End Sub').Value

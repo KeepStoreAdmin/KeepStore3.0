@@ -1486,8 +1486,8 @@
 
 #ksCatalogPage .ks-multi-footer__cta:hover,
 #ksCatalogPage .ks-multi-footer__cta:active {
-  border-color: var(--primary-2, #d80027) !important;
-  background: var(--primary-2, #d80027) !important;
+  border-color: var(--primary-hover, #b8001f) !important;
+  background: var(--primary-hover, #b8001f) !important;
   color: #fff !important;
 }
 

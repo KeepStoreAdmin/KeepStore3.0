@@ -625,7 +625,7 @@ body.ks-page-home .ks-home-departments-list .nav-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #ff3b30;
+  background: var(--primary);
   color: #fff;
   font-size: 14px;
   line-height: 1;
@@ -654,7 +654,7 @@ body.ks-page-home .ks-home-departments-list .item-link {
 
 body.ks-page-home .ks-home-departments-list .item-link:hover {
   background: #f7f8fa;
-  color: #ff3b30;
+  color: var(--primary);
 }
 
 /* The shared header/offcanvas catalog is the HOME navigation source of truth. */
@@ -678,7 +678,7 @@ body.ks-page-home .ks-home-menu-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ff3b30;
+  color: var(--primary);
   font-size: 13px;
   font-weight: 700;
 }
@@ -926,7 +926,7 @@ body.ks-page-home .ks-home-category-card {
 }
 
 body.ks-page-home .ks-home-category-card:hover {
-  color: #ff3b30;
+  color: var(--primary);
   transform: translateY(-1px);
 }
 
@@ -938,7 +938,7 @@ body.ks-page-home .ks-home-category-media {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ff3b30;
+  color: var(--primary);
   font-weight: 700;
 }
 
@@ -962,7 +962,7 @@ body.ks-page-home .ks-home-category-title {
 }
 
 body.ks-page-home .ks-home-category-link {
-  color: #ff3b30;
+  color: var(--primary);
   font-size: 11px;
   line-height: 1;
   font-weight: 700;
@@ -1068,7 +1068,7 @@ body.ks-page-home .ks-home-main .card-product-info .box-title > * {
 
 body.ks-page-home .ks-home-main .caption {
   margin-bottom: 5px;
-  color: #7d8793;
+  color: var(--gray-2);
   font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
@@ -1100,14 +1100,14 @@ body.ks-page-home .ks-home-main .price-wrap {
 }
 
 body.ks-page-home .ks-home-main .new-price {
-  color: #ff3b30;
+  color: var(--primary);
   font-size: 17px;
   line-height: 1.15;
   font-weight: 700;
 }
 
 body.ks-page-home .ks-home-main .old-price {
-  color: #8b949e;
+  color: var(--gray-2);
   font-size: 12px;
   text-decoration: line-through;
 }
@@ -1128,7 +1128,7 @@ body.ks-page-home .ks-home-main .box-icon {
 }
 
 body.ks-page-home .ks-home-main .box-icon:hover {
-  background: #ff3b30;
+  background: var(--primary);
   color: #fff;
 }
 
@@ -1379,7 +1379,7 @@ body.ks-page-home .ks-home-deals .ks-deal-card .ks-home-price-value {
 body.ks-page-home .ks-home-deals .ks-deal-card .box-sale-tag {
   margin-top: 0;
   color: #fff;
-  background: #ff3b30;
+  background: var(--primary);
   font-size: 13px;
   white-space: normal;
 }
@@ -1457,7 +1457,7 @@ body.ks-page-home .ks-home-bottom-promo-card span,
 body.ks-page-home .ks-home-collection-card span {
   display: block;
   margin-bottom: 8px;
-  color: #ff3b30;
+  color: var(--primary);
   font-size: 11px;
   line-height: 1;
   font-weight: 700;
@@ -1476,7 +1476,7 @@ body.ks-page-home .ks-home-bottom-promo-card em,
 body.ks-page-home .ks-home-collection-card em {
   display: block;
   margin-top: 8px;
-  color: #667280;
+  color: var(--gray-2);
   font-size: 12px;
   font-style: normal;
 }
@@ -1519,7 +1519,7 @@ body.ks-page-home #HomeLowerColumnsSection {
 
 body.ks-page-home .ks-home-main .box-sale-wrap {
   border-radius: 50%;
-  background: #ff3b30;
+  background: var(--primary);
   color: #fff;
 }
 
@@ -1533,7 +1533,7 @@ body.ks-page-home .ks-home-main .box-sale-tag {
   margin: 8px 0 0;
   padding: 5px 8px;
   border-radius: 999px;
-  color: #ff3b30;
+  color: var(--primary);
   background: #fff0ef;
   font-size: 11px;
   font-weight: 700;
@@ -3666,4 +3666,19 @@ body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-wrapp
   height: 100%;
   padding: 0;
   object-fit: contain;
+}
+
+/* KS-A04-PALETTE-AA-1A - voce attiva e hover del menu principale: il rosso del tema su #ebebeb non arriva a 4,5:1 (il rosso AA #D80027 fa 4,46:1).
+   Stati con --primary-hover (#B8001F, 5,76:1). `.link:hover` del tema ha !important: serve lo stesso peso qui. La voce "Home" e attiva su ogni pagina perche
+   `active` e scritto nel markup (difetto registrato a parte). */
+.header-bottom .main-nav-menu .nav-item.active .item-link,
+.header-bottom .main-nav-menu .nav-item:hover .item-link,
+.header-bottom .main-nav-menu .nav-item .item-link.link:hover {
+  color: var(--primary-hover, #B8001F) !important;
+}
+
+/* KS-A04-PALETTE-AA-1A - eyebrow del hero della HOME: la regola `.ks-home-main .caption` (grigio del tema) batteva `.ks-home-hero-eyebrow` per specificita e lo lasciava grigio su fondo
+   quasi nero: con il vecchio grigio passava per un soffio (#7d8793, 5,6:1), con #666 no (3,5:1). Torna al chiaro voluto dal blocco del hero (bianco al 86%), in tinta unita calcolabile. */
+body.ks-page-home .ks-home-main .ks-home-hero-eyebrow.caption {
+  color: #dcdfe3;
 }

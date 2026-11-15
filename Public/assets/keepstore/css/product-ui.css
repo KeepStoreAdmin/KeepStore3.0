@@ -204,7 +204,7 @@
 }
 
 .ks-product-page .ks-pdp-buybox-sticky .product-delivery .new-price {
-  color: #ff3d3d;
+  color: var(--primary, #D80027);
   font-size: 32px;
   font-weight: 600;
   line-height: 38px;
@@ -267,7 +267,7 @@
 .ks-product-page .card-product-wrapper .product-img::before,
 .ks-product-list-section .card-product-wrapper .product-img::before,
 .ks-product-page .card-usually .image::before {
-  color: #73787d;
+  color: var(--gray-2, #666666);
   content: "Immagine non disponibile";
   display: none;
   font-size: 13px;

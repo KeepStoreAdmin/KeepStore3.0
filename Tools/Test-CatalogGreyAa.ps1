@@ -11,6 +11,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+$script:ThemeOldGrey = $false
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $cssDir = Join-Path $repoRoot 'Public/assets/keepstore/css'
 function Norm([string]$text) { return ($text -replace "`r`n", "`n") }
@@ -46,7 +47,7 @@ $aspxVb = Read-Repo 'articoli.aspx.vb'
 $card = Read-Repo 'Public/ui/controls/ProductCard.ascx'
 $cssOriginal = Read-Repo 'Public/assets/keepstore/css/catalog-ui.css'
 function Test-MarkupAnchors([string]$aspxText) {
-    if ($aspxText -notmatch 'css/catalog-ui\.css"\) %>\?v=20261115-grey-aa1a') { return $false }
+    if ($aspxText -notmatch 'css/catalog-ui\.css"\) %>\?v=(?:20261115-grey-aa1a|20261115-palette-aa1a)') { return $false }
     if (-not $aspxText.Contains('<p class="body-text-3 text-main-2 mb-2 ks-price-basis-note"><asp:Label ID="lblPrezzi" runat="server" /></p>')) { return $false }
     return $true
 }
@@ -91,6 +92,13 @@ function Write-Fixture([string]$directory, [string]$catalogCss) {
     foreach ($n in $styleNames) {
         $target = Join-Path $cssCopy $n
         if ($n -eq 'catalog-ui.css') { [IO.File]::WriteAllText($target, $catalogCss, (New-Object Text.UTF8Encoding($false))) }
+        elseif ($n -eq 'styles.css' -and $script:ThemeOldGrey) {
+            # Simula un tema (o il CSS di un cliente) con il vecchio grigio: dal task KS-A04-PALETTE-AA-1A il token --gray-2 vale #666 e da solo rende AA categoria, codice e nota,
+            # quindi le regole esplicite del catalogo sono ridondanti e togliere una di esse e un mutante equivalente: si prova insieme al vecchio token.
+            $oldTheme = ([IO.File]::ReadAllText((Join-Path $cssDir 'styles.css'))).Replace('--gray-2: #666666;', '--gray-2: #73787d;')
+            if ($oldTheme -eq [IO.File]::ReadAllText((Join-Path $cssDir 'styles.css'))) { throw 'OLD_THEME_GREY_NOT_APPLIED' }
+            [IO.File]::WriteAllText($target, $oldTheme, (New-Object Text.UTF8Encoding($false)))
+        }
         else { Copy-Item -LiteralPath (Join-Path $cssDir $n) -Destination $target -Force }
     }
     $links = ($styleNames | ForEach-Object { '<link rel="stylesheet" href="css/' + $_ + '" />' }) -join "`n"
@@ -201,8 +209,10 @@ try {
         $json = Invoke-KsJs $browser $measureJs
         return (Evaluate ($json | ConvertFrom-Json))
     }
-    function Assert-Fails([string]$name, [string]$catalogCss, [string]$mustContain) {
+    function Assert-Fails([string]$name, [string]$catalogCss, [string]$mustContain, [switch]$ThemeOldGrey) {
+        $script:ThemeOldGrey = $ThemeOldGrey.IsPresent
         $f = @(Run-Fixture $name $catalogCss)
+        $script:ThemeOldGrey = $false
         if ($f.Count -eq 0) { throw ('MUTATION_NOT_DETECTED=' + $name) }
         if (-not (@($f | Where-Object { $_ -like ('*' + $mustContain + '*') }).Count)) { throw ('MUTATION_DETECTED_FOR_THE_WRONG_REASON=' + $name + ' wanted ' + $mustContain + ' got ' + ($f -join ' | ')) }
         Write-Output ('PASS MUTATION_DETECTED ' + $name + ' (' + $f.Count + ' findings)')
@@ -223,7 +233,7 @@ try {
     $codeRule = "#ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .list-computer-memory li + li .caption {"
     $codeBlock = [regex]::Match($css, [regex]::Escape($codeRule) + '[^}]*}').Value
     if ($codeBlock -eq '') { throw 'CODE_RULE_NOT_FOUND' }
-    $codeBlockBad = $codeBlock.Replace('color: #666;', 'color: var(--gray-2, #73787d);')
+    $codeBlockBad = $codeBlock.Replace('color: #666;', 'color: #73787d;')
     if ($codeBlockBad -eq $codeBlock) { throw 'MUTATION_NOT_APPLIED=M03' }
     Assert-Fails 'M03_code_back_to_the_theme_grey' $css.Replace($codeBlock, $codeBlockBad) 'code:CONTRAST_BELOW_AA'
     $lowOverride = "`n#ksCatalogPage article.card-product .list-computer-memory li + li .caption { color: #666; }`n"
@@ -233,20 +243,20 @@ try {
     $catBlock = [regex]::Match($css.Substring($catStart), '^[^}]*}').Value
     $catNoColor = $catBlock.Replace('  color: #666;' + "`n", '')
     if ($catNoColor -eq $catBlock) { throw 'MUTATION_NOT_APPLIED=M05' }
-    Assert-Fails 'M05_category_colour_removed' $css.Replace($catBlock, $catNoColor) 'cat:CONTRAST_BELOW_AA'
-    Assert-Fails 'M06_category_selector_no_longer_matches' $css.Replace($catRule, '#ksCatalogPage article.card-product .product-tag-x {') 'cat:CONTRAST_BELOW_AA'
+    Assert-Fails 'M05_category_colour_removed_with_the_old_theme_grey' $css.Replace($catBlock, $catNoColor) 'cat:CONTRAST_BELOW_AA' -ThemeOldGrey
+    Assert-Fails 'M06_category_selector_no_longer_matches_with_the_old_theme_grey' $css.Replace($catRule, '#ksCatalogPage article.card-product .product-tag-x {') 'cat:CONTRAST_BELOW_AA' -ThemeOldGrey
     $noteRule = "#ksCatalogPage .ks-price-basis-note {`n  color: #666;`n}"
-    Assert-Fails 'M07_note_rule_removed' (Mutate-Text $css $noteRule '' 'M07') 'note:CONTRAST_BELOW_AA'
-    Assert-Fails 'M08_disclosure_red_back_to_the_theme' (Mutate-Text $css "  color: #d80027;`n  background: var(--white, #fff);" "  color: var(--primary, #ff3b30);`n  background: var(--white, #fff);" 'M08') 'disclosureClosed:CONTRAST_BELOW_AA'
+    Assert-Fails 'M07_note_rule_removed_with_the_old_theme_grey' (Mutate-Text $css $noteRule '' 'M07') 'note:CONTRAST_BELOW_AA' -ThemeOldGrey
+    Assert-Fails 'M08_disclosure_red_back_to_the_theme' (Mutate-Text $css "  color: #d80027;`n  background: var(--white, #fff);" "  color: #ff3d3d;`n  background: var(--white, #fff);" 'M08') 'disclosureClosed:CONTRAST_BELOW_AA'
     Assert-Fails 'M09_widened_to_the_availability_text' ($css + "`n#ksCatalogPage article.card-product .ks-availability__status-text { color: #666; }`n") 'avail:COLOR_CHANGED'
     Assert-Fails 'M10_recent_card_category_overridden_back_to_grey' ($css + "`n#ksCatalogPage .ks-recently-viewed-block .ks-recent-card .ks-card-category { color: #73787d; }`n") 'rCatA:CONTRAST_BELOW_AA'
-    Assert-Fails 'M13_recent_div_card_category_rule_loses_its_colour' (Mutate-Text $css "  color: #666;`n  min-height: 18px;" "  min-height: 18px;" 'M13') 'rCatD:CONTRAST_BELOW_AA'
-    Assert-Fails 'M14_recent_brand_code_rule_removed' (Mutate-Text $css "#ksCatalogPage .ks-catalog-card .ks-card-brand-code {`n  color: #666;`n}" '' 'M14') 'rBrandD:CONTRAST_BELOW_AA'
+    Assert-Fails 'M13_recent_div_card_category_rule_loses_its_colour_with_the_old_theme_grey' (Mutate-Text $css "  color: #666;`n  min-height: 18px;" "  min-height: 18px;" 'M13') 'rCatD:CONTRAST_BELOW_AA' -ThemeOldGrey
+    Assert-Fails 'M14_recent_brand_code_rule_removed_with_the_old_theme_grey' (Mutate-Text $css "#ksCatalogPage .ks-catalog-card .ks-card-brand-code {`n  color: #666;`n}" '' 'M14') 'rBrandD:CONTRAST_BELOW_AA' -ThemeOldGrey
 
     # Mutazione sul markup ancorato: la classe della nota o il buster spariscono dalla pagina.
     if (Test-MarkupAnchors (Mutate-Text $aspx 'ks-price-basis-note' 'ks-price-note' 'M11')) { throw 'MUTATION_NOT_DETECTED=M11_note_class_removed_from_the_page' }
     Write-Output 'PASS MUTATION_DETECTED M11_note_class_removed_from_the_page'
-    if (Test-MarkupAnchors (Mutate-Text $aspx '?v=20261115-grey-aa1a' '?v=20261114-deadcode-c1a' 'M12')) { throw 'MUTATION_NOT_DETECTED=M12_css_buster_not_bumped' }
+    if (Test-MarkupAnchors (Mutate-Text $aspx '?v=20261115-palette-aa1a' '?v=20261114-deadcode-c1a' 'M12')) { throw 'MUTATION_NOT_DETECTED=M12_css_buster_not_bumped' }
     Write-Output 'PASS MUTATION_DETECTED M12_css_buster_not_bumped'
 
     Write-Output 'CATALOG_GREY_AA_ALL_PASS'
