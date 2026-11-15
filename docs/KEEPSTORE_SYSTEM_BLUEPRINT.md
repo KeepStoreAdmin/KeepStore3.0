@@ -1046,7 +1046,7 @@ Il gestionale KeepStore usa l'archivio `connessioni` come primo punto di verific
 | `PayPalPaymentState.vb` | Stato pagamento | `PP-ORDER` pending / `TXN` completed | test offline |
 | `MiniCart.ascx` | User control | Mini carrello/header | da completare con audit dedicato |
 | `SiteHeader.ascx` | User control | Header pubblico | da completare con audit dedicato |
-| `SiteFooter.ascx` | User control | Footer pubblico | da completare con audit dedicato |
+| `SiteFooter.ascx` | User control | Footer pubblico: dati dell'azienda solo dall'identita dell'host (nessuna connessione, nessun ripiego sulla sessione); `SiteFooter.ascx.vb` va consegnato insieme | verificato in KS-B02A-FOOTER-TRUTH-1A (2026-11-15) |
 | `ProductCard.ascx` | User control | Card prodotto | da completare con audit dedicato |
 | `ProductDetailView.ascx` | User control | Vista dettaglio prodotto | da completare con audit dedicato |
 

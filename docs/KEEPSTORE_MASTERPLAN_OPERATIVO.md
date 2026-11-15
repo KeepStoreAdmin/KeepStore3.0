@@ -1,5 +1,18 @@
 # KeepStore Masterplan Operativo
 
+## KS-B02A-FOOTER-TRUTH-1A — 15/11/2026 — SOURCE (il piede dice solo cio che e vero per l'azienda)
+
+**Esito: A (SOURCE). Livello L (partito M, alzato dopo la revisione: il piede sceglie i dati di quale azienda mostrare). PR [#509](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/509).** Il piede non mostra piu telefono finto, e-mail inventata, «10% Off», newsletter finta, social e pagamenti di template, categorie da elettronica e link sbagliati. Mandato PO: «Piede del template» (residuo KS-B02).
+
+**Fatti (Smoke, Edge).** «+39 000 000 0000»; `info@www.taikun.it` (`web.config:35` vuoto, ripiego `info@<host>`); la newsletter mostrava «presa in carico» senza inviare nulla; quattro loghi fissi (uno e Maestro, non Mastercard); dieci link con destinazione sbagliata; il piede apriva una connessione al database a ogni pagina e preferiva la sessione all'host. `pagine`: 0 righe nel LAB e non letta da `Page.master.vb` (la leggono `main.aspx` e `registrazione.aspx`): la roadmap era inesatta.
+
+**Soluzione.** `SiteFooter.ascx` e `.vb`: nome, logo, telefono ed e-mail dall'identita dell'host in cache, nessuna connessione e nessun ripiego sulla sessione; Facebook solo se la sessione e dell'azienda dell'host e l'host e facebook/fb; settori reali del catalogo; link a condizioni di vendita, diritto di recesso, FAQ, privacy, traccia ordine; telefono ed e-mail con lista bianca; senza ViewState.
+
+**Revisioni (L: ChatGPT, poi Claude sulla risposta, poi CODE).** Accolti prima del codice tre BLOCCANTI comuni (ripiego SQL che preferiva la sessione, Facebook fuori dal controllo azienda, override globale `SupportEmail`) e: telefono «a strip» (`tel:918` da «dalle 9 alle 18»), URL categorie a regex esatta, `/` tolto dai separatori, host Facebook ristretti, «(0)» dopo il prefisso, test del collegamento del codice. Scartati: href con `/` (coerenza con la testata) e «ne link ne testo» per dati non validi. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-FooterTruth.ps1` (visto rosso; 8 controlli, 50 mutazioni; due aziende e sessione discordante; due mutanti equivalenti sostituiti); `Test-FocusVisible` aggiornato; precompile 4.8 e segreti PASS; Smoke: 10 pagine 200, due aziende con dati propri, accordion a 390 px, piede 749 -> 536 px a 1440, prima risposta `faq.aspx` mediana 2,84 -> 2,40 s, ViewState 26.860 -> 26.684. `Test-FocusVisible` e fallito una volta con la CPU occupata (precompile in parallelo) e passa da solo: instabile preesistente.
+
+**Limiti e residuo (NON AVVIATO).** Indirizzo e P.IVA nel piede (decisione PO, dato di Enzo); newsletter reale (serve un archivio iscritti); pagamenti reali da `pagamentitipo`; accordion mobile non da tastiera (`main.js`); modale newsletter, regola CSS `.ft-body-center` e `ApplySupportEmail` sono codice morto; `condizioni-vendita.aspx.vb` ha un ripiego `LIKE` con `LIMIT 1`; pagine in sottocartella (`BancaSella/`) hanno link relativi rotti, come la testata. Se un server ha valorizzato `KeepStore.Site.SupportEmail`, il piede mostra ora l'e-mail dell'azienda. **Alla consegna futura:** `SiteFooter.ascx` e `SiteFooter.ascx.vb` insieme (aggiornato il runbook del carrello persistente). CONSEGNA SERVER SOSPESA.
 ## KS-A04-NAV-ACTIVE-1A — 15/11/2026 — SOURCE (voce attiva del menu principale dalla pagina corrente)
 
 **Esito: A (SOURCE). Livello S. PR [#508](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/508).** Nessun dato commerciale toccato. Mandato PO: «Home sempre attiva» (residuo noto: `active` scritto fisso su «Home» in `SiteHeader.ascx`, quindi «Home» appariva in rosso su ogni pagina, anche su Contatti o sul catalogo).

@@ -61,6 +61,7 @@ App_Code/PersistentAnonymousCartCleanupService.vb
 carrello.aspx.vb
 privacy.aspx
 Public/ui/controls/SiteFooter.ascx
+Public/ui/controls/SiteFooter.ascx.vb
 ```
 
 1. Verificare anche le dipendenze preesistenti, in particolare `App_Code/CartTransactionRetryPolicy.vb`, i resolver/commercial services e `Bin/MySql.Data.dll`: questo delta non e un sito installabile da zero.
