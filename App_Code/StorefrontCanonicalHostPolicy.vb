@@ -17,6 +17,8 @@ Public NotInheritable Class StorefrontSeoTenantIdentity
     ' Contatti di assistenza dell'azienda (stessa lettura in cache dell'identita: l'intestazione non li rilegge dal database).
     Public Property SupportPhone As String = String.Empty
     Public Property SupportEmail As String = String.Empty
+    ' Dati societari della stessa riga di aziende (lettura separata e facoltativa); Nothing se non disponibili o non agganciabili con certezza.
+    Public Property LegalProfile As StorefrontCompanyLegalProfile
 
     Public Function AllowedHosts() As IList(Of String)
         Dim values As New List(Of String)()
@@ -27,6 +29,109 @@ Public NotInheritable Class StorefrontSeoTenantIdentity
         End If
         Return values
     End Function
+End Class
+
+' Dati societari di un'azienda: immutabili (nessuna proprieta si scrive dopo la creazione), con il proprio CompanyId perche chi li mostra possa verificare
+' che appartengano all'azienda dell'host. Nothing diventa vuoto e i valori sono solo tagliati (Trim): la presentazione e di chi li mostra.
+Public NotInheritable Class StorefrontCompanyLegalProfile
+    Private ReadOnly _companyId As Integer
+    Private ReadOnly _legalName As String
+    Private ReadOnly _vatNumber As String
+    Private ReadOnly _registeredAddress As String
+    Private ReadOnly _registeredPostalCode As String
+    Private ReadOnly _registeredCity As String
+    Private ReadOnly _registeredProvince As String
+    Private ReadOnly _operationalAddress As String
+    Private ReadOnly _operationalPostalCode As String
+    Private ReadOnly _operationalCity As String
+    Private ReadOnly _operationalProvince As String
+
+    Public Sub New(ByVal companyId As Integer, ByVal legalName As String, ByVal vatNumber As String,
+                   ByVal registeredAddress As String, ByVal registeredPostalCode As String, ByVal registeredCity As String, ByVal registeredProvince As String,
+                   ByVal operationalAddress As String, ByVal operationalPostalCode As String, ByVal operationalCity As String, ByVal operationalProvince As String)
+        _companyId = companyId
+        _legalName = Clean(legalName)
+        _vatNumber = Clean(vatNumber)
+        _registeredAddress = Clean(registeredAddress)
+        _registeredPostalCode = Clean(registeredPostalCode)
+        _registeredCity = Clean(registeredCity)
+        _registeredProvince = Clean(registeredProvince)
+        _operationalAddress = Clean(operationalAddress)
+        _operationalPostalCode = Clean(operationalPostalCode)
+        _operationalCity = Clean(operationalCity)
+        _operationalProvince = Clean(operationalProvince)
+    End Sub
+
+    Private Shared Function Clean(ByVal value As String) As String
+        If value Is Nothing Then Return String.Empty
+        Return value.Trim()
+    End Function
+
+    Public ReadOnly Property CompanyId As Integer
+        Get
+            Return _companyId
+        End Get
+    End Property
+
+    Public ReadOnly Property LegalName As String
+        Get
+            Return _legalName
+        End Get
+    End Property
+
+    Public ReadOnly Property VatNumber As String
+        Get
+            Return _vatNumber
+        End Get
+    End Property
+
+    Public ReadOnly Property RegisteredAddress As String
+        Get
+            Return _registeredAddress
+        End Get
+    End Property
+
+    Public ReadOnly Property RegisteredPostalCode As String
+        Get
+            Return _registeredPostalCode
+        End Get
+    End Property
+
+    Public ReadOnly Property RegisteredCity As String
+        Get
+            Return _registeredCity
+        End Get
+    End Property
+
+    Public ReadOnly Property RegisteredProvince As String
+        Get
+            Return _registeredProvince
+        End Get
+    End Property
+
+    Public ReadOnly Property OperationalAddress As String
+        Get
+            Return _operationalAddress
+        End Get
+    End Property
+
+    Public ReadOnly Property OperationalPostalCode As String
+        Get
+            Return _operationalPostalCode
+        End Get
+    End Property
+
+    Public ReadOnly Property OperationalCity As String
+        Get
+            Return _operationalCity
+        End Get
+    End Property
+
+    Public ReadOnly Property OperationalProvince As String
+        Get
+            Return _operationalProvince
+        End Get
+    End Property
 End Class
 
 Public NotInheritable Class StorefrontCanonicalHostPolicy
@@ -74,6 +179,54 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
             .DefaultPriceListId = defaultPriceListId
         }
     End Function
+
+    ' Mappa le colonne di aziende nel profilo legale (sede legale = SL_*, sede operativa = Indirizzo, Cap, Citta, Provincia: come le stampe del gestionale).
+    ' L'Id deve essere valido: un Id illeggibile (0) non produce un profilo.
+    Public Shared Function CreateLegalProfile(ByVal companyId As Integer,
+                                              ByVal column As Func(Of String, String)) As StorefrontCompanyLegalProfile
+        If companyId <= 0 OrElse column Is Nothing Then Return Nothing
+        Return New StorefrontCompanyLegalProfile(companyId,
+                                                 column("RagioneSociale"), column("Piva"),
+                                                 column("SL_Indirizzo"), column("SL_CAP"), column("SL_Citta"), column("SL_Provincia"),
+                                                 column("Indirizzo"), column("Cap"), column("Citta"), column("Provincia"))
+    End Function
+
+    ' Associa il profilo all'identita con lo STESSO CompanyId, mai per posizione, e solo se quell'Id compare UNA volta tra le righe e UNA volta tra le
+    ' identita (la chiave di aziende e (id, IvaTipo): l'id non e unico per schema). In ogni altro caso l'identita resta senza profilo.
+    Public Shared Sub ApplyLegalProfiles(ByVal identities As IEnumerable(Of StorefrontSeoTenantIdentity),
+                                         ByVal profiles As IEnumerable(Of StorefrontCompanyLegalProfile))
+        If identities Is Nothing Then Return
+
+        Dim profileCounts As New Dictionary(Of Integer, Integer)()
+        Dim profileById As New Dictionary(Of Integer, StorefrontCompanyLegalProfile)()
+        If profiles IsNot Nothing Then
+            For Each profile As StorefrontCompanyLegalProfile In profiles
+                If profile Is Nothing OrElse profile.CompanyId <= 0 Then Continue For
+                Dim seenProfile As Integer = 0
+                profileCounts.TryGetValue(profile.CompanyId, seenProfile)
+                profileCounts(profile.CompanyId) = seenProfile + 1
+                profileById(profile.CompanyId) = profile
+            Next
+        End If
+
+        Dim identityCounts As New Dictionary(Of Integer, Integer)()
+        For Each identity As StorefrontSeoTenantIdentity In identities
+            If identity Is Nothing OrElse identity.CompanyId <= 0 Then Continue For
+            Dim seenIdentity As Integer = 0
+            identityCounts.TryGetValue(identity.CompanyId, seenIdentity)
+            identityCounts(identity.CompanyId) = seenIdentity + 1
+        Next
+
+        For Each identity As StorefrontSeoTenantIdentity In identities
+            If identity Is Nothing Then Continue For
+            Dim attached As StorefrontCompanyLegalProfile = Nothing
+            Dim companyId As Integer = identity.CompanyId
+            If companyId > 0 AndAlso profileCounts.ContainsKey(companyId) AndAlso identityCounts.ContainsKey(companyId) Then
+                If profileCounts(companyId) = 1 AndAlso identityCounts(companyId) = 1 Then attached = profileById(companyId)
+            End If
+            identity.LegalProfile = attached
+        Next
+    End Sub
 
     Public Shared Function BuildCanonicalUrl(ByVal tenant As StorefrontSeoTenantIdentity,
                                              ByVal relativePathAndQuery As String) As String

@@ -7,6 +7,11 @@ param()
 # Oracolo 2 (codice reale di SiteFooter.ascx.vb, regione FooterPure, compilato in memoria): telefono, e-mail, Facebook, copyright e contatti con casi limite e iniezioni;
 # due aziende sintetiche e sessione di un'altra azienda senza dati incrociati. Oracolo 3: il collegamento del codice (nessun database, nessun ripiego sulla sessione).
 # Limite noto: l'ancora #diritto-recesso e uno span vuoto sopra il testo letto dal database (condizioni-vendita.aspx): il test prova che esiste, non che il testo parli di recesso.
+# KS-B02B-FOOTER-LEGAL-1A - i dati societari (ragione sociale, P.IVA, sede legale e operativa) vengono SOLO dal profilo legale dell'azienda dell'host.
+# Oracolo 4 (markup): il blocco legale e un controllo del server dentro .ft-bottom, senza testo fisso. Oracolo 5 (regione FooterPure compilata INSIEME al file della policy):
+# regole di visualizzazione, due aziende con marcatori disgiunti, profilo di un'altra azienda = nessun dato. Oracolo 6 (policy compilata): mappatura colonna -> proprieta,
+# aggancio profilo -> identita solo per Id che compare UNA volta (la chiave di aziende e (id, IvaTipo): l'id non e unico per schema). Oracolo 7 (testo del caricatore): il SELECT principale
+# e invariato, il secondo e facoltativo, dopo la chiusura del primo reader e prima della cache. Confronti sensibili alle maiuscole (-ceq, -cne, -cmatch).
 # Mutazioni su copie in memoria. Solo ASCII: Windows PowerShell 5.1 legge i file senza BOM come ANSI.
 
 $ErrorActionPreference = 'Stop'
@@ -31,13 +36,16 @@ function Assert-Detected([bool]$stillPasses, [string]$code) {
 
 $ascx = Read-Repo 'Public/ui/controls/SiteFooter.ascx'
 $vb = Read-Repo 'Public/ui/controls/SiteFooter.ascx.vb'
+$policy = Read-Repo 'App_Code/StorefrontCanonicalHostPolicy.vb'
+$ctx = Read-Repo 'App_Code/StorefrontSeoTenantContext.vb'
 
 # --- Oracolo 1: markup reale -----------------------------------------------------------------------------------------------------------------
 function Test-NoFabricatedContent([string]$text) {
     foreach ($bad in @('10% Off', 'Enter your email', 'Subscribe', 'Be the first', '+39 000', '390000000000', 'x.com', 'linkedin.com', 'whatsapp.com',
                        'Pagamenti accettati', 'method-payment', 'Discover', 'Visa', 'PayPal', 'Mastercard', 'ft-body-center', 'ksNewsletter', 'litSupportEmail', 'lnkSupportEmail',
                        'Nuovi arrivi', 'Occasione del giorno', 'Top offerte', 'Informazioni consegna', 'Servizio clienti', 'Resi e cambi', 'Supporto prodotti',
-                       'Notebook e computer', 'Gaming e console', 'Smartphone e tablet', 'Accessori tech', 'Audio e cuffie', 'Fotografia e video', 'icon-location')) {
+                       'Notebook e computer', 'Gaming e console', 'Smartphone e tablet', 'Accessori tech', 'Audio e cuffie', 'Fotografia e video', 'icon-location',
+                       'P.IVA', 'Partita IVA', 'Sede legale', 'Sede operativa', 'Capitale sociale', 'Registro imprese')) {
         if ($text.IndexOf($bad, [StringComparison]::OrdinalIgnoreCase) -ge 0) { return $false }
     }
     if ($text -match 'href="#"') { return $false }
@@ -80,12 +88,12 @@ function Test-RequiredLinks([string]$text) {
     return $true
 }
 function Test-DynamicHooks([string]$text) {
-    foreach ($id in @('ulFooterColumns', 'phFooterCategories', 'litFooterCategories', 'litFooterContacts', 'litFooterCopyright', 'ulFooterSocial', 'liFooterFacebook', 'lnkFooterFacebook', 'imgFooterLogo')) {
+    foreach ($id in @('ulFooterColumns', 'phFooterCategories', 'litFooterCategories', 'litFooterContacts', 'litFooterCopyright', 'ulFooterSocial', 'liFooterFacebook', 'lnkFooterFacebook', 'imgFooterLogo', 'phFooterLegal', 'litFooterLegal')) {
         if ($text -notmatch ('\bID="' + $id + '"') -and $text -notmatch ('\bid="' + $id + '"')) { return $false }
     }
     # il blocco e il piede stampabile nascosto da ordine.aspx; la griglia e un controllo del server (3 o 4 colonne decise dal codice)
     if ($text -notmatch '<footer class="tf-footer">') { return $false }
-    foreach ($lit in @('litFooterCategories', 'litFooterContacts', 'litFooterCopyright')) {
+    foreach ($lit in @('litFooterCategories', 'litFooterContacts', 'litFooterCopyright', 'litFooterLegal')) {
         if ($text -notmatch ('<asp:Literal ID="' + $lit + '" runat="server" EnableViewState="False" />')) { return $false }
     }
     if ($text -notmatch '<i class="icon-facebook" aria-hidden="true"></i>') { return $false }
@@ -97,12 +105,20 @@ Assert-Source (Test-StaticLinksExist $ascx) 'F02_EVERY_STATIC_FOOTER_LINK_POINTS
 Assert-Source (Test-RequiredLinks $ascx) 'F03_THE_REAL_LEGAL_AND_ACCOUNT_PAGES_ARE_LINKED_WITH_THEIR_OWN_LABELS'
 Assert-Source (Test-DynamicHooks $ascx) 'F04_DYNAMIC_PARTS_ARE_SERVER_CONTROLS_WITHOUT_VIEWSTATE'
 
+# il blocco dei dati societari: un controllo del server (nascosto se vuoto) dentro .ft-bottom, prima del copyright, a capo anche per nomi lunghi (text-break), nessun testo fisso
+function Test-LegalMarkup([string]$text) {
+    $one = '<asp:PlaceHolder ID="phFooterLegal" runat="server" Visible="false">\s*<p class="caption text-center text-break ft-legal"><asp:Literal ID="litFooterLegal" runat="server" EnableViewState="False" /></p>\s*</asp:PlaceHolder>'
+    if ([regex]::Matches($text, 'phFooterLegal').Count -ne 1 -or [regex]::Matches($text, 'litFooterLegal').Count -ne 1) { return $false }
+    return ($text -cmatch ('(?s)<div class="ft-bottom">.*?' + $one + '.*?<p class="nocopy caption text-center"><asp:Literal ID="litFooterCopyright"'))
+}
+Assert-Source (Test-LegalMarkup $ascx) 'F09_THE_LEGAL_BLOCK_IS_A_HIDDEN_SERVER_CONTROL_INSIDE_THE_BOTTOM_ROW_BEFORE_THE_COPYRIGHT'
+
 # --- Oracolo 2: il VERO codice (regione FooterPure di SiteFooter.ascx.vb) compilato ed eseguito ---------------------------------------------------
 function Get-PureRegion([string]$vbText) {
     $m = [regex]::Match($vbText, '(?ms)^[ \t]*#Region "FooterPure"\n(.*?)\n[ \t]*#End Region')
     if ($m.Success) { return $m.Groups[1].Value } else { return $null }
 }
-function Compile-Footer([string]$region) {
+function Compile-Footer([string]$region, [string]$policyText) {
     $code = @"
 Imports System
 Imports System.Collections.Generic
@@ -131,8 +147,26 @@ $region
         Return BuildFooterContactsHtml(n, p, e)
     End Function
     Public Function Data(ByVal host As Integer, ByVal sess As Integer, ByVal name As String, ByVal logo As String, ByVal phone As String, ByVal email As String, ByVal fb As String, ByVal year As Integer) As String()
-        Dim d As FooterData = BuildFooterData(host, sess, name, logo, phone, email, fb, year)
+        Dim d As FooterData = BuildFooterData(host, sess, name, logo, phone, email, fb, Nothing, year)
         Return New String() {d.LogoFileName, d.CompanyName, d.FacebookUrl, d.ContactsHtml, d.CopyrightHtml}
+    End Function
+    Private Shared Function Prof(ByVal id As Integer, ByVal f As String()) As StorefrontCompanyLegalProfile
+        Return New StorefrontCompanyLegalProfile(id, f(0), f(1), f(2), f(3), f(4), f(5), f(6), f(7), f(8), f(9))
+    End Function
+    Public Function Legal(ByVal f As String()) As String
+        Return BuildFooterLegalHtml(Prof(1, f))
+    End Function
+    Public Function LegalNothing() As String
+        Return BuildFooterLegalHtml(Nothing)
+    End Function
+    Public Function Vat(ByVal v As String) As String
+        Return NormalizeVatNumber(v)
+    End Function
+    Public Function DataL(ByVal host As Integer, ByVal sess As Integer, ByVal name As String, ByVal profileId As Integer, ByVal f As String()) As String()
+        Dim p As StorefrontCompanyLegalProfile = Nothing
+        If f IsNot Nothing Then p = Prof(profileId, f)
+        Dim d As FooterData = BuildFooterData(host, sess, name, "", "", "", "", p, 2026)
+        Return New String() {d.LegalHtml, d.ContactsHtml, d.CopyrightHtml}
     End Function
     Public Function Cats(ByVal spec As String, ByVal max As Integer) As String
         Dim items As New List(Of KeyValuePair(Of String, String))()
@@ -153,14 +187,14 @@ End Class
     $p.GenerateInMemory = $true
     $p.CompilerOptions = '/optionInfer+ /optionExplicit+ /optionStrict- /imports:Microsoft.VisualBasic'
     @('System.dll', 'System.Core.dll', 'System.Web.dll') | ForEach-Object { [void]$p.ReferencedAssemblies.Add($_) }
-    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($code))
+    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($policyText, $code))
     if ($c.Errors.HasErrors) { throw ('FOOTER_COMPILE ' + (($c.Errors | Where-Object { -not $_.IsWarning } | Select-Object -First 3 | ForEach-Object { 'line ' + $_.Line + ': ' + $_.ErrorText }) -join ' | ')) }
     return [Activator]::CreateInstance($c.CompiledAssembly.GetType('FooterProbe', $true))
 }
-function Test-Behaviour([string]$vbText) {
+function Test-Behaviour([string]$vbText, [string]$policyText) {
     $region = Get-PureRegion $vbText
     if ($null -eq $region) { throw 'FOOTER_PURE_REGION_NOT_FOUND' }
-    $p = Compile-Footer $region
+    $p = Compile-Footer $region $policyText
     # Facebook: solo se la sessione appartiene all'azienda dell'host (la stessa riga che ha scritto il link) e l'indirizzo e https su un host facebook
     $fbUrl = 'https://www.facebook.com/alfa.srl'
     if ($p.Fb(1, 1, $fbUrl) -ne $fbUrl -or $p.Fb(1, 1, (' ' + $fbUrl + ' ')) -ne $fbUrl) { return $false }
@@ -227,14 +261,101 @@ function Test-Behaviour([string]$vbText) {
     if ($p.Cats($null, 7) -ne '' -or $p.Cats('', 7) -ne '') { return $false }
     # griglia: tre colonne senza il catalogo, quattro con il catalogo
     if ($p.Grid(3) -ne 'ft-link-wrap w-100 tf-grid-layout md-col-2 lg-col-3' -or $p.Grid(4) -ne 'ft-link-wrap w-100 tf-grid-layout md-col-2 lg-col-4') { return $false }
+    return (Test-Legal $p)
+}
+
+# riga dei dati societari: nome, P.IVA, sede legale (via, CAP, citta, provincia), sede operativa (via, CAP, citta, provincia)
+function Lg([string]$n, [string]$v, [string]$ra, [string]$rp, [string]$rc, [string]$rv, [string]$oa, [string]$op, [string]$oc, [string]$ov) { return , [string[]]@($n, $v, $ra, $rp, $rc, $rv, $oa, $op, $oc, $ov) }
+function Show-LegalFailure([string]$id, [string]$got) { if ($env:KS_FOOTER_TEST_VERBOSE) { Write-Host ('LEGAL_CASE_FAILED ' + $id + ' got=[' + $got + ']') } }
+function Test-Legal($p) {
+    $nl = [string][char]10; $cr = [string][char]13; $tab = [string][char]9; $nbsp = [string][char]0x00A0; $ls = [string][char]0x2028; $rlo = [string][char]0x202E; $zw = [string][char]0x200B
+    $head = 'Alfa Srl - P.IVA 12345678901'
+    $legalCases = @(
+        @('c01 due sedi diverse', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' 'Via Torino 2' '10100' 'Torino' 'TO'), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)<br />Sede operativa: Via Torino 2, 10100 Torino (TO)')),
+        @('c02 stessa sede (maiuscole e spazi diversi)', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' '  VIA   ROMA 1 ' '20100' 'MILANO' 'mi'), ($head + '<br />Sede legale e operativa: Via Roma 1, 20100 Milano (MI)')),
+        @('c03 stessa via, citta diversa', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' 'Via Roma 1' '20100' 'Monza' 'MI'), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)<br />Sede operativa: Via Roma 1, 20100 Monza (MI)')),
+        @('c03b stessa citta, via diversa', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' 'Via Roma 2' '20100' 'Milano' 'MI'), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)<br />Sede operativa: Via Roma 2, 20100 Milano (MI)')),
+        @('c04 stessa via e citta, CAP diverso', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' 'Via Roma 1' '20121' 'Milano' 'MI'), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)<br />Sede operativa: Via Roma 1, 20121 Milano (MI)')),
+        @('c05 stessa sede, provincia diversa', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' 'Via Roma 1' '20100' 'Milano' 'MB'), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)<br />Sede operativa: Via Roma 1, 20100 Milano (MB)')),
+        @('c06 solo sede operativa', (Lg 'Alfa Srl' '12345678901' '' '' '' '' 'Via Torino 2' '10100' 'Torino' 'TO'), ($head + '<br />Sede: Via Torino 2, 10100 Torino (TO)')),
+        @('c07 solo sede legale', (Lg 'Alfa Srl' '12345678901' 'Via Roma 1' '20100' 'Milano' 'MI' '' '' '' ''), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)')),
+        @('c08 solo nome', (Lg 'Alfa Srl' '' '' '' '' '' '' '' '' ''), 'Alfa Srl'),
+        @('c09 sola P.IVA', (Lg '' '12345678901' '' '' '' '' '' '' '' ''), 'P.IVA 12345678901'),
+        @('c10 niente', (Lg '' '' '' '' '' '' '' '' '' ''), ''),
+        @('c11 CAP tutto zeri', (Lg '' '' 'Via Roma 1' '00000' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, Milano (MI)'),
+        @('c12 CAP non plausibile N/D', (Lg '' '' 'Via Roma 1' 'N/D' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, Milano (MI)'),
+        @('c13 CAP non plausibile trattino', (Lg '' '' 'Via Roma 1' '-' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, Milano (MI)'),
+        @('c14 CAP di quattro cifre', (Lg '' '' 'Via Roma 1' '2010' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, Milano (MI)'),
+        @('c15 CAP di sei cifre', (Lg '' '' 'Via Roma 1' '201000' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, Milano (MI)'),
+        @('c16 CAP con una lettera', (Lg '' '' 'Via Roma 1' '2010a' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, Milano (MI)'),
+        @('c17 senza via nessuna sede', (Lg '' '' '' '20100' 'Milano' 'MI' '' '' '' ''), ''),
+        @('c18 senza citta nessuna sede', (Lg '' '' 'Via Roma 1' '20100' '' 'MI' '' '' '' ''), ''),
+        @('c19 via senza lettere', (Lg '' '' '-' '20100' 'Milano' 'MI' '' '' '' ''), ''),
+        @('c20 via di sole cifre', (Lg '' '' '123' '20100' 'Milano' 'MI' '' '' '' ''), ''),
+        @('c21 citta senza lettere', (Lg '' '' 'Via Roma 1' '20100' '-' 'MI' '' '' '' ''), ''),
+        @('c22 virgola finale nella via', (Lg '' '' 'Via Roma 1,' '20100' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano (MI)'),
+        @('c23 punto finale nella via', (Lg '' '' 'Via Roma 1.' '20100' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano (MI)'),
+        @('c24 punteggiatura e spazi finali', (Lg '' '' 'Via Roma 1 , ;' '20100' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano (MI)'),
+        @('c25 provincia minuscola', (Lg '' '' 'Via Roma 1' '20100' 'Milano' 'mi' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano (MI)'),
+        @('c26 provincia per esteso', (Lg '' '' 'Via Roma 1' '20100' 'Milano' 'Milano' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano'),
+        @('c27 provincia con cifra', (Lg '' '' 'Via Roma 1' '20100' 'Milano' 'M1' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano'),
+        @('c28 provincia vuota', (Lg '' '' 'Via Roma 1' '20100' 'Milano' '' '' '' '' ''), 'Sede legale: Via Roma 1, 20100 Milano'),
+        @('c29 a capo, tab, spazio non separabile, separatore di riga', (Lg ('Alfa' + $nl + $cr + $nl + $tab + 'Srl') '12345678901' ('Via' + $nbsp + 'Roma' + $ls + '1') '20100' 'Milano' 'MI' '' '' '' ''), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)')),
+        @('c30 caratteri di formato (bidi, larghezza zero)', (Lg 'Alfa Srl' '12345678901' ('Via' + $rlo + ' Roma 1') '20100' ('Mil' + $zw + 'ano') 'MI' '' '' '' ''), ($head + '<br />Sede legale: Via Roma 1, 20100 Milano (MI)')),
+        @('c31 e commerciale codificata una volta sola', (Lg 'Rossi & Figli' '' '' '' '' '' '' '' '' ''), 'Rossi &amp; Figli'),
+        @('c32 apostrofo', (Lg '' '' ("Via dell'Orto 3") '20100' 'Milano' 'MI' '' '' '' ''), 'Sede legale: Via dell&#39;Orto 3, 20100 Milano (MI)'),
+        @('c33 P.IVA con prefisso e spazi', (Lg 'Alfa Srl' 'it 12345678901' '' '' '' '' '' '' '' ''), 'Alfa Srl - P.IVA IT12345678901'),
+        @('c34 P.IVA non valida: il nome resta', (Lg 'Alfa Srl' 'DA COMUNICARE' '' '' '' '' '' '' '' ''), 'Alfa Srl'),
+        @('c35 P.IVA tutta a zeri: il nome resta', (Lg 'Alfa Srl' '00000000000' '' '' '' '' '' '' '' ''), 'Alfa Srl'),
+        @('c36 P.IVA con prefisso e zeri', (Lg 'Alfa Srl' 'IT00000000000' '' '' '' '' '' '' '' ''), 'Alfa Srl')
+    )
+    foreach ($c in $legalCases) {
+        $got = $p.Legal($c[1])
+        if ($got -cne $c[2]) { Show-LegalFailure $c[0] $got; return $false }
+    }
+    # null: nessun campo e un valore inventato
+    $nulls = New-Object 'string[]' 10
+    if ($p.LegalNothing() -cne '' -or $p.Legal($nulls) -cne '' -or $p.LegalNothing() -cne '') { return $false }   # il primo giro viene dopo un caso non vuoto: nessuno stato condiviso tra le chiamate
+    # l'accento passa (codificato o no) e non diventa un altro carattere
+    $acc = $p.Legal((Lg '' '' ('Via Giosu' + [char]0x00E8 + ' Carducci 4') '20100' 'Milano' 'MI' '' '' '' ''))
+    if ($acc -cnotmatch ('^Sede legale: Via Giosu(' + [char]0x00E8 + '|&#232;) Carducci 4, 20100 Milano \(MI\)$')) { return $false }
+    # nessun testo dell'azienda puo aggiungere markup o righe: tutto codificato, una sola separazione per riga
+    $evil = $p.Legal((Lg '<script>alert(1)</script>' '12345678901' 'Via "Roma" & <b>1</b>' '20100' '<i>Mi</i>lano' 'MI' '' '' '' ''))
+    if ($evil -cmatch '<script|<b>|<i>|</b>|</i>|onerror|href=' -or -not $evil.Contains('&lt;script&gt;') -or [regex]::Matches($evil, '<br />').Count -ne 1) { return $false }
+    $brs = $p.Legal((Lg 'A<br />B' '' 'Via Roma 1' '20100' 'Milano' 'MI' '' '' '' ''))
+    if ([regex]::Matches($brs, '<br />').Count -ne 1 -or -not $brs.Contains('&lt;br /&gt;')) { return $false }
+    # P.IVA: solo prefisso di due lettere e da 5 a 14 cifre, mai tutta a zeri, mai testo
+    $vatOk = @(@(' 123 456 789 01 ', '12345678901'), @('IT 12345678901', 'IT12345678901'), @('it12345678901', 'IT12345678901'), @('123.456.789-01', '12345678901'), @('01234567890', '01234567890'),
+               @('12345', '12345'), @('12345678901234', '12345678901234'), @('DE123456789', 'DE123456789'), @(('12345678901' + $nl), '12345678901'), @(('0' * 4 + '1'), '00001'))
+    foreach ($v in $vatOk) { if ($p.Vat($v[0]) -cne $v[1]) { Show-LegalFailure ('vat ' + $v[0]) ($p.Vat($v[0])); return $false } }
+    $vatBad = @($null, '', '   ', '1234', '123456789012345', '00000000000', 'IT00000000000', '00000', 'ABC12345678', '12345678901x', 'P.IVA 12345678901', 'DA COMUNICARE', 'NON DISPONIBILE', '01234567890 REA', 'AAAAA', 'IT', '+39 12345678901',
+                (([string][char]0x0661) * 11), (([string][char]0xFF11) * 11), ([string][char]0x212A + '1234567'), ('1' * 31), '12345678901;', '123/456')
+    foreach ($v in $vatBad) { if ($p.Vat($v) -cne '') { Show-LegalFailure ('vatbad ' + $v) ($p.Vat($v)); return $false } }
+    # maiuscola indipendente dalla cultura corrente (turco: la i minuscola non diventa I)
+    $saved = [Threading.Thread]::CurrentThread.CurrentCulture
+    try { [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo('tr-TR'); $tr = $p.Vat('ie1234567890') } finally { [Threading.Thread]::CurrentThread.CurrentCulture = $saved }
+    if ($tr -cne 'IE1234567890') { return $false }
+    # due aziende con marcatori disgiunti: ognuna solo i propri dati; il profilo di un'altra azienda o la sessione di un'altra azienda non mostrano nulla
+    $A = Lg 'ZZAalfa Srl' '11111111111' 'ZZAvia Uno 1' '10100' 'ZZAcitta' 'MI' '' '' '' ''
+    $B = Lg 'ZZBbeta SpA' '22222222222' 'ZZBvia Due 2' '20200' 'ZZBcitta' 'VE' '' '' '' ''
+    $da = $p.DataL(1, 1, 'Alfa', 1, $A)
+    if ($da[0] -cne 'ZZAalfa Srl - P.IVA 11111111111<br />Sede legale: ZZAvia Uno 1, 10100 ZZAcitta (MI)' -or -not $da[1].Contains('href="Contattaci.aspx"')) { return $false }
+    $db = $p.DataL(2, 0, 'Beta', 2, $B)
+    if ($db[0] -cne 'ZZBbeta SpA - P.IVA 22222222222<br />Sede legale: ZZBvia Due 2, 20200 ZZBcitta (VE)') { return $false }
+    if ($p.DataL(2, 2, 'Beta', 2, $null)[0] -cne '') { return $false }
+    if ($p.DataL(1, 1, 'Alfa', 1, $A)[0] -cne $da[0]) { return $false }
+    foreach ($bad in @(@(1, 1, 2, $B), @(2, 2, 1, $A), @(1, 1, 0, $A), @(1, 1, -1, $A), @(0, 0, 0, $A), @(0, 0, 1, $A), @(1, 2, 1, $A), @(2, 1, 2, $B), @(0, 1, 1, $A), @(-1, 0, -1, $A))) {
+        $r = $p.DataL($bad[0], $bad[1], 'X', $bad[2], $bad[3])
+        if ($r[0] -cne '' -or -not $r[1].Contains('href="Contattaci.aspx"')) { return $false }
+    }
     return $true
 }
-Assert-Source (Test-Behaviour $vb) 'F05_THE_REAL_FOOTER_CODE_IS_TRUTHFUL_SAFE_AND_TENANT_ISOLATED'
+Assert-Source (Test-Behaviour $vb $policy) 'F05_THE_REAL_FOOTER_CODE_IS_TRUTHFUL_SAFE_AND_TENANT_ISOLATED'
 
 # --- Oracolo 3: il collegamento del codice (nessun database, nessun ripiego sulla sessione) ------------------------------------------------------
 function Test-Glue([string]$vbText) {
     # nessuna connessione, nessuna lettura dell'azienda dalla sola sessione, nessun valore inventato, nessuna richiesta usata per dedurre l'azienda
-    foreach ($bad in @('MySqlConnection', 'MySqlCommand', 'ConfigurationManager', 'Session("AziendaNome")', 'Session("AziendaCopyright")', 'info@', 'KeepStore.Site.SupportEmail', 'SELECT ', 'Request.Url', 'Request.Headers')) {
+    foreach ($bad in @('MySqlConnection', 'MySqlCommand', 'ConfigurationManager', 'Session("AziendaNome")', 'Session("AziendaCopyright")', 'info@', 'KeepStore.Site.SupportEmail', 'SELECT ', 'Request.Url', 'Request.Headers', 'CodiceFiscale', 'CognomeNome', 'TaxCode')) {
         if ($vbText.IndexOf($bad, [StringComparison]::Ordinal) -ge 0) { return $false }
     }
     if ($vbText -match '(?i)\b(Visa|PayPal|Mastercard|Maestro|Discover)\b|Pagamenti accettati|\+39 0|Notebook|Subscribe|10% Off') { return $false }
@@ -252,12 +373,13 @@ function Test-Glue([string]$vbText) {
     if ($vbText -notmatch '(?s)Handles Me\.Init\s+Me\.EnableViewState = False') { return $false }
     # l'azienda e quella dell'host (identita in cache), mai quella della sola sessione
     if ($vbText -notmatch '(?s)Private Function ResolveFooterTenant\(\) As StorefrontSeoTenantIdentity\s+Try\s+Return StorefrontSeoTenantContext\.Resolve\(HttpContext\.Current\)') { return $false }
-    foreach ($line in @('hostCompanyId = tenant.CompanyId', 'companyName = tenant.CompanyName', 'logoFileName = tenant.LogoFileName', 'phone = tenant.SupportPhone', 'email = tenant.SupportEmail')) {
+    foreach ($line in @('hostCompanyId = tenant.CompanyId', 'companyName = tenant.CompanyName', 'logoFileName = tenant.LogoFileName', 'phone = tenant.SupportPhone', 'email = tenant.SupportEmail', 'legalProfile = tenant.LegalProfile')) {
         if ($vbText.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return $false }
     }
-    if ($vbText -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, DateTime\.Now\.Year\)') { return $false }
+    if ($vbText -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, DateTime\.Now\.Year\)') { return $false }
     # tutto cio che il piede mostra dell'azienda viene da BuildFooterData
-    foreach ($line in @('litFooterContacts.Text = data.ContactsHtml', 'litFooterCopyright.Text = data.CopyrightHtml', 'BindFooterLogo(data)', 'BindFooterSocial(data)', 'BuildLogoAssetUrlFromFileName(data.LogoFileName)', 'lnkFooterFacebook.HRef = data.FacebookUrl')) {
+    foreach ($line in @('litFooterContacts.Text = data.ContactsHtml', 'litFooterCopyright.Text = data.CopyrightHtml', 'BindFooterLogo(data)', 'BindFooterSocial(data)', 'BuildLogoAssetUrlFromFileName(data.LogoFileName)', 'lnkFooterFacebook.HRef = data.FacebookUrl',
+                  'BindFooterLegal(data)', 'phFooterLegal.Visible = data.LegalHtml.Length > 0', 'litFooterLegal.Text = data.LegalHtml')) {
         if ($vbText.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return $false }
     }
     # il collegamento Facebook ha un nome accessibile (icona senza testo)
@@ -267,9 +389,138 @@ Assert-Source (Test-Glue $vb) 'F06_THE_FOOTER_READS_ONLY_THE_VERIFIED_HOST_IDENT
 Assert-Source ($ascx -notmatch '(?i)onsus' -and $vb -notmatch '(?i)onsus') 'F07_NO_TEMPLATE_NAME_IN_THE_FOOTER_SOURCES'
 Assert-Source ($vb -notmatch '[^\x00-\x7F]') 'F08_FOOTER_CODE_BEHIND_IS_ASCII_ONLY'
 
+# --- Oracolo 6: la policy (profilo legale, mappatura colonne, aggancio all'identita) compilata ed eseguita ---------------------------------------------
+function Compile-Policy([string]$policyText) {
+    $code = @"
+Imports System
+Imports System.Collections.Generic
+Public Class PolicyProbe
+    Public Function Cols(ByVal id As Integer) As String
+        Dim p As StorefrontCompanyLegalProfile = StorefrontCanonicalHostPolicy.CreateLegalProfile(id, Function(name As String) "<" & name & ">")
+        If p Is Nothing Then Return "NOTHING"
+        Return p.CompanyId.ToString() & "|" & p.LegalName & "|" & p.VatNumber & "|" & p.RegisteredAddress & "|" & p.RegisteredPostalCode & "|" & p.RegisteredCity & "|" & p.RegisteredProvince & "|" & p.OperationalAddress & "|" & p.OperationalPostalCode & "|" & p.OperationalCity & "|" & p.OperationalProvince
+    End Function
+    Public Function ColsNullFunction(ByVal id As Integer) As String
+        Dim p As StorefrontCompanyLegalProfile = StorefrontCanonicalHostPolicy.CreateLegalProfile(id, Nothing)
+        If p Is Nothing Then Return "NOTHING"
+        Return "PROFILE"
+    End Function
+    Public Function ColsNullValues(ByVal id As Integer) As String
+        Dim p As StorefrontCompanyLegalProfile = StorefrontCanonicalHostPolicy.CreateLegalProfile(id, Function(name As String) CType(Nothing, String))
+        If p Is Nothing Then Return "NOTHING"
+        Return p.LegalName & "|" & p.VatNumber & "|" & p.RegisteredCity & "|" & p.OperationalProvince
+    End Function
+    Public Function Trimmed() As String
+        Dim p As New StorefrontCompanyLegalProfile(7, "  A  ", " B ", " C", "D ", " E ", "F", "G", "H", "I", " J ")
+        Return p.LegalName & "|" & p.VatNumber & "|" & p.RegisteredAddress & "|" & p.RegisteredPostalCode & "|" & p.RegisteredCity & "|" & p.RegisteredProvince & "|" & p.OperationalAddress & "|" & p.OperationalPostalCode & "|" & p.OperationalCity & "|" & p.OperationalProvince
+    End Function
+    Private Shared Function Idents(ByVal spec As String) As List(Of StorefrontSeoTenantIdentity)
+        Dim list As New List(Of StorefrontSeoTenantIdentity)()
+        If spec Is Nothing Then Return list
+        For Each part As String In spec.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+            list.Add(StorefrontCanonicalHostPolicy.CreateTenant(Integer.Parse(part), "T" & part, "", "https://t" & list.Count.ToString() & ".example.it", "", "", 1))
+        Next
+        Return list
+    End Function
+    Private Shared Function Rows(ByVal spec As String) As List(Of StorefrontCompanyLegalProfile)
+        If spec Is Nothing Then Return Nothing
+        Dim list As New List(Of StorefrontCompanyLegalProfile)()
+        For Each part As String In spec.Split(New Char() {","c}, StringSplitOptions.RemoveEmptyEntries)
+            list.Add(New StorefrontCompanyLegalProfile(Integer.Parse(part), "P" & part, "", "", "", "", "", "", "", "", ""))
+        Next
+        Return list
+    End Function
+    Private Shared Function Show(ByVal list As List(Of StorefrontSeoTenantIdentity)) As String
+        Dim sb As New System.Text.StringBuilder()
+        For Each t As StorefrontSeoTenantIdentity In list
+            sb.Append(t.CompanyId.ToString()).Append("=").Append(If(t.LegalProfile Is Nothing, "-", t.LegalProfile.LegalName)).Append(";")
+        Next
+        Return sb.ToString()
+    End Function
+    Public Function Apply(ByVal identityIds As String, ByVal profileIds As String) As String
+        Dim list As List(Of StorefrontSeoTenantIdentity) = Idents(identityIds)
+        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(list, Rows(profileIds))
+        Return Show(list)
+    End Function
+    Public Function ApplyTwice(ByVal identityIds As String, ByVal first As String, ByVal second As String) As String
+        Dim list As List(Of StorefrontSeoTenantIdentity) = Idents(identityIds)
+        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(list, Rows(first))
+        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(list, Rows(second))
+        Return Show(list)
+    End Function
+    Public Function ApplyNothingList() As String
+        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(Nothing, Rows("1"))
+        Return "OK"
+    End Function
+End Class
+"@
+    $p = New-Object CodeDom.Compiler.CompilerParameters
+    $p.GenerateInMemory = $true
+    $p.CompilerOptions = '/optionInfer+ /optionExplicit+ /optionStrict- /imports:Microsoft.VisualBasic'
+    @('System.dll', 'System.Core.dll') | ForEach-Object { [void]$p.ReferencedAssemblies.Add($_) }
+    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($policyText, $code))
+    if ($c.Errors.HasErrors) { throw ('POLICY_COMPILE ' + (($c.Errors | Where-Object { -not $_.IsWarning } | Select-Object -First 3 | ForEach-Object { 'line ' + $_.Line + ': ' + $_.ErrorText }) -join ' | ')) }
+    return $c.CompiledAssembly
+}
+function Test-PolicyBehaviour([string]$policyText) {
+    $asm = Compile-Policy $policyText
+    $o = [Activator]::CreateInstance($asm.GetType('PolicyProbe', $true))
+    # mappatura: ogni proprieta riceve la colonna giusta (nessuno scambio tra sede legale e operativa, nessun campo fuori elenco)
+    if ($o.Cols(5) -cne '5|<RagioneSociale>|<Piva>|<SL_Indirizzo>|<SL_CAP>|<SL_Citta>|<SL_Provincia>|<Indirizzo>|<Cap>|<Citta>|<Provincia>') { return $false }
+    if ($o.Cols(0) -cne 'NOTHING' -or $o.Cols(-3) -cne 'NOTHING' -or $o.ColsNullFunction(5) -cne 'NOTHING') { return $false }
+    if ($o.ColsNullValues(5) -cne '|||') { return $false }
+    if ($o.Trimmed() -cne 'A|B|C|D|E|F|G|H|I|J') { return $false }
+    # il profilo e immutabile: nessuna proprieta con scrittura pubblica
+    $type = $asm.GetType('StorefrontCompanyLegalProfile', $true)
+    foreach ($prop in $type.GetProperties()) { if ($prop.CanWrite) { return $false } }
+    if ($type.GetProperties().Count -ne 11) { return $false }
+    # aggancio: per Id intero, mai per posizione; solo se l'Id compare UNA volta tra le righe e UNA volta tra le identita; chiave di aziende = (id, IvaTipo)
+    if ($o.Apply('1,2,3', '2,1,99') -cne '1=P1;2=P2;3=-;') { return $false }
+    if ($o.Apply('3,2,1', '1,2,3') -cne '3=P3;2=P2;1=P1;') { return $false }
+    if ($o.Apply('1,2', '') -cne '1=-;2=-;' -or $o.Apply('1,2', $null) -cne '1=-;2=-;') { return $false }
+    if ($o.Apply('1,2', '1,1,2') -cne '1=-;2=P2;') { return $false }
+    if ($o.Apply('1,1,2', '1,2') -cne '1=-;1=-;2=P2;') { return $false }
+    if ($o.Apply('0,2', '0,2') -cne '0=-;2=P2;' -or $o.Apply('2', '-2,2') -cne '2=P2;') { return $false }
+    if ($o.Apply('', '1') -cne '') { return $false }
+    if ($o.Apply('1,2,3', '3') -cne '1=-;2=-;3=P3;') { return $false }
+    if ($o.ApplyTwice('1,2', '1,2', '') -cne '1=-;2=-;' -or $o.ApplyTwice('1,2', '1,2', '2') -cne '1=-;2=P2;') { return $false }
+    if ($o.ApplyNothingList() -cne 'OK') { return $false }
+    return $true
+}
+Assert-Source (Test-PolicyBehaviour $policy) 'F10_THE_LEGAL_PROFILE_IS_MAPPED_PER_COLUMN_AND_ATTACHED_ONLY_BY_A_UNIQUE_COMPANY_ID'
+
+# --- Oracolo 7: il caricatore (testo): SELECT principale invariato, secondo SELECT facoltativo, dopo il primo reader e prima della cache --------------------
+function Test-Context([string]$c, [string]$policyText) {
+    $main = 'Const sql As String = "SELECT Id, Nome, Descrizione, url1, url2, LogoWeb, ListinoDefault, telefono, email FROM aziende ORDER BY Id"'
+    $legalSelect = 'SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva, SL_Indirizzo, SL_CAP, SL_Citta, SL_Provincia FROM aziende ORDER BY Id'
+    if (-not $c.Contains($main) -or -not $c.Contains('Const sql As String = "' + $legalSelect + '"')) { return $false }
+    if ([regex]::Matches($c, 'SELECT ').Count -ne 2) { return $false }
+    if ($c -match '(?is)CodiceFiscale|CognomeNome|For Each candidate|Exit For|Session\(') { return $false }
+    # il secondo SELECT parte quando il primo reader e gia chiuso, dentro la stessa connessione e PRIMA di inserire l'elenco in cache
+    if ($c -cnotmatch '(?s)End While\s+End Using\s+End Using\s+AttachLegalProfiles\(connection, result\)\s+End Using\s+HttpRuntime\.Cache\.Insert') { return $false }
+    $m = [regex]::Match($c, '(?ms)^    Private Shared Sub AttachLegalProfiles\(.*?^    End Sub')
+    if (-not $m.Success) { return $false }
+    $b = $m.Value
+    $iTry = $b.IndexOf("        Try`n"); $iWhile = $b.IndexOf('While reader.Read()'); $iEndWhile = $b.IndexOf('End While'); $iApply = $b.IndexOf('StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)'); $iCatch = $b.IndexOf("        Catch`n")
+    if ($iTry -lt 0 -or $iWhile -lt $iTry -or $iEndWhile -lt $iWhile -or $iApply -lt $iEndWhile -or $iCatch -lt $iApply) { return $false }
+    foreach ($line in @('command.CommandTimeout = 5', 'Dim profiles As New List(Of StorefrontCompanyLegalProfile)()', 'Dim companyId As Integer = SafeReaderInteger(reader, "Id")',
+                        'StorefrontCanonicalHostPolicy.CreateLegalProfile(companyId, Function(name As String) SafeReaderString(reader, name))', 'If profile IsNot Nothing Then profiles.Add(profile)')) {
+        if ($b.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return $false }
+    }
+    if ($b -cnotmatch '(?s)Catch\s+StorefrontCanonicalHostPolicy\.ApplyLegalProfiles\(identities, Nothing\)\s+End Try') { return $false }
+    # ogni colonna che la policy legge deve stare nel secondo SELECT
+    $cols = @([regex]::Matches($policyText, 'column\("([A-Za-z_]+)"\)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    if ($cols.Count -ne 10) { return $false }
+    foreach ($col in $cols) { if ($legalSelect -cnotmatch ('[ ,]' + $col + '[ ,]')) { return $false } }
+    return $true
+}
+Assert-Source (Test-Context $ctx $policy) 'F11_THE_LEGAL_SELECT_IS_OPTIONAL_AFTER_THE_FIRST_READER_AND_BEFORE_THE_CACHE_AND_THE_MAIN_SELECT_IS_UNCHANGED'
+
 # --- Mutazioni (copie in memoria): ognuna deve far fallire almeno un controllo ------------------------------------------------------------------
-function Test-AllMarkup([string]$text) { return ((Test-NoFabricatedContent $text) -and (Test-StaticLinksExist $text) -and (Test-RequiredLinks $text) -and (Test-DynamicHooks $text)) }
-function Test-AllCode([string]$text) { return ((Test-Behaviour $text) -and (Test-Glue $text)) }
+function Test-AllMarkup([string]$text) { return ((Test-NoFabricatedContent $text) -and (Test-StaticLinksExist $text) -and (Test-RequiredLinks $text) -and (Test-DynamicHooks $text) -and (Test-LegalMarkup $text)) }
+function Test-AllCode([string]$text) { return ((Test-Behaviour $text $policy) -and (Test-Glue $text)) }
+function Test-AllPolicy([string]$text) { return ((Test-PolicyBehaviour $text) -and (Test-Behaviour $vb $text) -and (Test-Context $ctx $text)) }
+function Test-AllContext([string]$text) { return (Test-Context $text $policy) }
 
 $m = Mutate-Text $ascx '<div class="ft-body-bottom">' '<p>10% Off Your First Order</p><div class="ft-body-bottom">' 'M01'
 Assert-Detected (Test-AllMarkup $m) 'M01_THE_FABRICATED_PROMOTION_COMES_BACK'
@@ -402,5 +653,161 @@ $m = Mutate-Text $vb '        Dim html As String = String.Empty
         Visa.ToString()
         Try' 'M55'
 Assert-Detected (Test-AllCode $m) 'M55_A_FIXED_PAYMENT_NAME_COMES_BACK_IN_THE_CODE'
+
+# --- dati societari: markup ---------------------------------------------------------------------------------------------------------------------
+$m = Mutate-Text $ascx '<asp:Literal ID="litFooterLegal" runat="server" EnableViewState="False" />' '<asp:Literal ID="litFooterLegal" runat="server" />' 'M90'
+Assert-Detected (Test-AllMarkup $m) 'M90_LEGAL_LITERAL_GETS_VIEWSTATE_BACK'
+$m = Mutate-Text $ascx 'class="caption text-center text-break ft-legal"' 'class="caption text-center ft-legal"' 'M91'
+Assert-Detected (Test-AllMarkup $m) 'M91_A_LONG_COMPANY_NAME_CANNOT_WRAP_ANY_MORE'
+$m = Mutate-Text $ascx '<asp:PlaceHolder ID="phFooterLegal" runat="server" Visible="false">' '<asp:PlaceHolder ID="phFooterLegal" runat="server">' 'M92'
+Assert-Detected (Test-AllMarkup $m) 'M92_AN_EMPTY_LEGAL_PARAGRAPH_STAYS_IN_THE_PAGE'
+$m = Mutate-Text $ascx '<div class="ft-body-bottom">' '<p>P.IVA 00000000000</p><div class="ft-body-bottom">' 'M93'
+Assert-Detected (Test-AllMarkup $m) 'M93_A_FIXED_VAT_NUMBER_IS_WRITTEN_IN_THE_MARKUP'
+$m = Mutate-Text $ascx '<p class="caption text-center text-break ft-legal">' '<p class="nocopy caption text-center text-break ft-legal">' 'M94'
+Assert-Detected (Test-AllMarkup $m) 'M94_THE_LEGAL_PARAGRAPH_GETS_THE_NO_COPY_CLASS'
+$m = Mutate-Text $ascx '<asp:PlaceHolder ID="phFooterLegal" runat="server" Visible="false">
+                        <p class="caption text-center text-break ft-legal"><asp:Literal ID="litFooterLegal" runat="server" EnableViewState="False" /></p>
+                    </asp:PlaceHolder>
+                    <p class="nocopy caption text-center"><asp:Literal ID="litFooterCopyright" runat="server" EnableViewState="False" /></p>' '<p class="nocopy caption text-center"><asp:Literal ID="litFooterCopyright" runat="server" EnableViewState="False" /></p>
+                    <asp:PlaceHolder ID="phFooterLegal" runat="server" Visible="false">
+                        <p class="caption text-center text-break ft-legal"><asp:Literal ID="litFooterLegal" runat="server" EnableViewState="False" /></p>
+                    </asp:PlaceHolder>' 'M95'
+Assert-Detected (Test-AllMarkup $m) 'M95_THE_LEGAL_PARAGRAPH_COMES_AFTER_THE_COPYRIGHT'
+
+# --- dati societari: codice del piede -----------------------------------------------------------------------------------------------------------
+$m = Mutate-Text $vb 'If legal IsNot Nothing AndAlso legal.CompanyId = hostCompanyId Then data.LegalHtml' 'If legal IsNot Nothing Then data.LegalHtml' 'M60'
+Assert-Detected (Test-AllCode $m) 'M60_THE_PROFILE_OF_ANOTHER_COMPANY_IS_SHOWN_ON_THE_HOST'
+$m = Mutate-Text $vb '        Dim data As New FooterData()
+        If IsFooterTenantAllowed(hostCompanyId, sessionCompanyId) Then' '        Dim data As New FooterData()
+        If legal IsNot Nothing AndAlso legal.CompanyId = hostCompanyId Then data.LegalHtml = BuildFooterLegalHtml(legal)
+        If IsFooterTenantAllowed(hostCompanyId, sessionCompanyId) Then' 'M61'
+Assert-Detected (Test-AllCode $m) 'M61_LEGAL_DATA_IS_BUILT_OUTSIDE_THE_TENANT_GATE'
+$m = Mutate-Text $vb 'Dim head As String = HttpUtility.HtmlEncode(CleanLegalText(legal.LegalName))' 'Dim head As String = CleanLegalText(legal.LegalName)' 'M62'
+Assert-Detected (Test-AllCode $m) 'M62_THE_LEGAL_NAME_IS_NOT_ENCODED'
+$m = Mutate-Text $vb '"Sede legale: " & HttpUtility.HtmlEncode(registered)' '"Sede legale: " & registered' 'M63'
+Assert-Detected (Test-AllCode $m) 'M63_THE_REGISTERED_ADDRESS_IS_NOT_ENCODED'
+$m = Mutate-Text $vb 'If Not nonZeroDigit OrElse Not VatPattern.IsMatch(vat) Then Return String.Empty' 'If Not VatPattern.IsMatch(vat) Then Return String.Empty' 'M64'
+Assert-Detected (Test-AllCode $m) 'M64_AN_ALL_ZERO_VAT_NUMBER_IS_SHOWN'
+$m = Mutate-Text $vb '^[A-Z]{0,2}[0-9]{5,14}\z' '^[A-Z]{0,2}[0-9]{1,14}\z' 'M65'
+Assert-Detected (Test-AllCode $m) 'M65_A_SHORT_VAT_NUMBER_IS_SHOWN'
+$m = Mutate-Text $vb '^[A-Z]{0,2}[0-9]{5,14}\z' '^[A-Z0-9]{5,16}\z' 'M66'
+Assert-Detected (Test-AllCode $m) 'M66_FREE_TEXT_IS_ACCEPTED_AS_A_VAT_NUMBER'
+$m = Mutate-Text $vb 'Return LegalSpaces.Replace(LegalFormatChars.Replace(value, String.Empty), " ").Trim()' 'Return LegalFormatChars.Replace(value, String.Empty).Trim()' 'M67'
+Assert-Detected (Test-AllCode $m) 'M67_LINE_BREAKS_AND_SPACES_ARE_NOT_COLLAPSED'
+$m = Mutate-Text $vb 'Return LegalSpaces.Replace(LegalFormatChars.Replace(value, String.Empty), " ").Trim()' 'Return LegalSpaces.Replace(value, " ").Trim()' 'M68'
+Assert-Detected (Test-AllCode $m) 'M68_BIDI_AND_ZERO_WIDTH_CHARACTERS_ARE_KEPT'
+$m = Mutate-Text $vb 'If Not PostalPattern.IsMatch(raw) OrElse raw = "00000" Then Return String.Empty' 'If Not PostalPattern.IsMatch(raw) Then Return String.Empty' 'M69'
+Assert-Detected (Test-AllCode $m) 'M69_AN_ALL_ZERO_POSTAL_CODE_IS_SHOWN'
+$m = Mutate-Text $vb '^[0-9]{5}\z' '^[0-9]{4,6}\z' 'M70'
+Assert-Detected (Test-AllCode $m) 'M70_A_POSTAL_CODE_OF_THE_WRONG_LENGTH_IS_SHOWN'
+$m = Mutate-Text $vb '            If IsSameLegalPlace(' '            If False AndAlso IsSameLegalPlace(' 'M71'
+Assert-Detected (Test-AllCode $m) 'M71_THE_SAME_PLACE_IS_SHOWN_TWICE'
+$m = Mutate-Text $vb 'String.Equals(NormalizeCity(city1), NormalizeCity(city2), StringComparison.OrdinalIgnoreCase) AndAlso' 'True AndAlso' 'M72'
+Assert-Detected (Test-AllCode $m) 'M72_TWO_CITIES_WITH_THE_SAME_STREET_ARE_MERGED'
+$m = Mutate-Text $vb 'String.Equals(NormalizePostalCode(postal1), NormalizePostalCode(postal2), StringComparison.OrdinalIgnoreCase) AndAlso' 'True AndAlso' 'M72b'
+Assert-Detected (Test-AllCode $m) 'M72B_TWO_POSTAL_CODES_ARE_MERGED'
+$m = Mutate-Text $vb 'String.Equals(NormalizeProvince(province1), NormalizeProvince(province2), StringComparison.OrdinalIgnoreCase)' 'True' 'M72c'
+Assert-Detected (Test-AllCode $m) 'M72C_TWO_PROVINCES_ARE_MERGED'
+$m = Mutate-Text $vb 'String.Equals(NormalizeStreet(street1), NormalizeStreet(street2), StringComparison.OrdinalIgnoreCase)' 'String.Equals(NormalizeStreet(street1), NormalizeStreet(street2), StringComparison.Ordinal)' 'M73'
+Assert-Detected (Test-AllCode $m) 'M73_THE_STREET_COMPARISON_IS_CASE_SENSITIVE'
+$m = Mutate-Text $vb 'lines.Add("Sede operativa: " & HttpUtility.HtmlEncode(operational))' 'lines.Add("Sede operativa: " & HttpUtility.HtmlEncode(registered))' 'M74'
+Assert-Detected (Test-AllCode $m) 'M74_THE_OPERATIONAL_LINE_SHOWS_THE_REGISTERED_ADDRESS'
+$m = Mutate-Text $vb 'lines.Add("Sede: " & ' 'lines.Add("Sede legale: " & ' 'M75'
+Assert-Detected (Test-AllCode $m) 'M75_A_LONE_OPERATIONAL_ADDRESS_IS_CALLED_THE_REGISTERED_OFFICE'
+$m = Mutate-Text $vb 'If streetText.Length = 0 OrElse cityText.Length = 0 Then Return String.Empty' 'If cityText.Length = 0 Then Return String.Empty' 'M76'
+Assert-Detected (Test-AllCode $m) 'M76_AN_ADDRESS_WITHOUT_A_STREET_IS_SHOWN'
+$m = Mutate-Text $vb 'If streetText.Length = 0 OrElse cityText.Length = 0 Then Return String.Empty' 'If streetText.Length = 0 Then Return String.Empty' 'M77'
+Assert-Detected (Test-AllCode $m) 'M77_AN_ADDRESS_WITHOUT_A_CITY_IS_SHOWN'
+$m = Mutate-Text $vb 'CleanLegalText(value).TrimEnd(New Char() {" "c, ","c, ";"c, "."c})' 'CleanLegalText(value)' 'M78'
+Assert-Detected (Test-AllCode $m) 'M78_TRAILING_PUNCTUATION_STAYS_IN_THE_STREET'
+$m = Mutate-Text $vb '^[A-Za-z]{2}\z' '^[A-Za-z]{2,20}\z' 'M79'
+Assert-Detected (Test-AllCode $m) 'M79_A_PROVINCE_NAME_IS_SHOWN_INSTEAD_OF_THE_CODE'
+$m = Mutate-Text $vb 'Return raw.ToUpperInvariant()' 'Return raw' 'M80'
+Assert-Detected (Test-AllCode $m) 'M80_THE_PROVINCE_IS_NOT_UPPERCASED'
+$m = Mutate-Text $vb 'sb.Append(Char.ToUpperInvariant(c))' 'sb.Append(c)' 'M81'
+Assert-Detected (Test-AllCode $m) 'M81_THE_VAT_COUNTRY_PREFIX_IS_NOT_UPPERCASED'
+$m = Mutate-Text $vb 'sb.Append(Char.ToUpperInvariant(c))' 'sb.Append(Char.ToUpper(c))' 'M82'
+Assert-Detected (Test-AllCode $m) 'M82_THE_VAT_UPPERCASE_DEPENDS_ON_THE_CURRENT_CULTURE'
+$m = Mutate-Text $vb '        Dim head As String = HttpUtility' '        Dim taxCode As String = "CodiceFiscale"
+        Dim head As String = HttpUtility' 'M83'
+Assert-Detected (Test-AllCode $m) 'M83_THE_TAX_CODE_OF_A_PERSON_IS_USED'
+$m = Mutate-Text $vb 'Return String.Join("<br />", lines.ToArray())' 'Return String.Join(" ", lines.ToArray())' 'M84'
+Assert-Detected (Test-AllCode $m) 'M84_LEGAL_LINES_ARE_NOT_SEPARATED'
+$m = Mutate-Text $vb 'Return String.Join("<br />", lines.ToArray())' 'Return HttpUtility.HtmlEncode(String.Join("<br />", lines.ToArray()))' 'M85'
+Assert-Detected (Test-AllCode $m) 'M85_THE_WHOLE_BLOCK_IS_ENCODED_AGAIN'
+$m = Mutate-Text $vb '        If legal Is Nothing Then Return String.Empty
+        Dim lines As New List(Of String)()' '        If legal Is Nothing Then Return LastLegalHtml
+        Dim lines As New List(Of String)()' 'M86a'
+$m = Mutate-Text $m 'Return String.Join("<br />", lines.ToArray())' 'LastLegalHtml = String.Join("<br />", lines.ToArray())
+        Return LastLegalHtml' 'M86b'
+$m = Mutate-Text $m 'Private Shared ReadOnly VatPattern' 'Private Shared LastLegalHtml As String = String.Empty
+    Private Shared ReadOnly VatPattern' 'M86c'
+Assert-Detected (Test-AllCode $m) 'M86_THE_LAST_LEGAL_BLOCK_IS_REMEMBERED_ACROSS_CALLS'
+$m = Mutate-Text $vb 'legalProfile = tenant.LegalProfile' 'legalProfile = Nothing' 'M87'
+Assert-Detected (Test-AllCode $m) 'M87_THE_PROFILE_OF_THE_HOST_IS_NOT_READ'
+$m = Mutate-Text $vb 'phFooterLegal.Visible = data.LegalHtml.Length > 0' 'phFooterLegal.Visible = True' 'M88'
+Assert-Detected (Test-AllCode $m) 'M88_AN_EMPTY_LEGAL_PARAGRAPH_IS_ALWAYS_VISIBLE'
+$m = Mutate-Text $vb 'litFooterLegal.Text = data.LegalHtml' 'litFooterLegal.Text = String.Empty' 'M89'
+Assert-Detected (Test-AllCode $m) 'M89_THE_LEGAL_TEXT_IS_NEVER_WRITTEN'
+$m = Mutate-Text $vb 'BindFooterLegal(data)
+        If litFooterContacts' 'If litFooterContacts' 'M89b'
+Assert-Detected (Test-AllCode $m) 'M89B_THE_LEGAL_BLOCK_IS_NEVER_BOUND'
+
+# --- dati societari: policy (profilo e aggancio) -------------------------------------------------------------------------------------------------
+$m = Mutate-Text $policy 'If profileCounts(companyId) = 1 AndAlso identityCounts(companyId) = 1 Then attached = profileById(companyId)' 'attached = profileById(companyId)' 'M100'
+Assert-Detected (Test-AllPolicy $m) 'M100_A_PROFILE_IS_ATTACHED_EVEN_WHEN_THE_ID_IS_NOT_UNIQUE'
+$m = Mutate-Text $policy 'If profileCounts(companyId) = 1 AndAlso identityCounts(companyId) = 1 Then' 'If profileCounts(companyId) = 1 Then' 'M101'
+Assert-Detected (Test-AllPolicy $m) 'M101_A_DUPLICATED_IDENTITY_ID_STILL_GETS_A_PROFILE'
+$m = Mutate-Text $policy 'If profileCounts(companyId) = 1 AndAlso identityCounts(companyId) = 1 Then' 'If identityCounts(companyId) = 1 Then' 'M102'
+Assert-Detected (Test-AllPolicy $m) 'M102_A_DUPLICATED_PROFILE_ROW_STILL_GETS_ATTACHED'
+$m = Mutate-Text $policy 'attached = profileById(companyId)' 'attached = System.Linq.Enumerable.Last(profileById.Values)' 'M103'
+Assert-Detected (Test-AllPolicy $m) 'M103_THE_SAME_PROFILE_IS_ATTACHED_TO_EVERY_IDENTITY'
+$m = Mutate-Text $policy '            identity.LegalProfile = attached' '            If attached IsNot Nothing Then identity.LegalProfile = attached' 'M104'
+Assert-Detected (Test-AllPolicy $m) 'M104_A_STALE_PROFILE_SURVIVES_A_NEW_ATTACH'
+$m = Mutate-Text $policy 'If profile Is Nothing OrElse profile.CompanyId <= 0 Then Continue For' 'If profile Is Nothing Then Continue For' 'M105a'
+$m = Mutate-Text $m 'If identity Is Nothing OrElse identity.CompanyId <= 0 Then Continue For' 'If identity Is Nothing Then Continue For' 'M105b'
+$m = Mutate-Text $m 'If companyId > 0 AndAlso profileCounts.ContainsKey(companyId)' 'If profileCounts.ContainsKey(companyId)' 'M105c'
+Assert-Detected (Test-AllPolicy $m) 'M105_AN_UNREADABLE_ID_ZERO_PAIRS_A_PROFILE_WITH_AN_IDENTITY'
+$m = Mutate-Text $policy 'column("SL_Citta")' 'column("Citta")' 'M106'
+Assert-Detected (Test-AllPolicy $m) 'M106_THE_REGISTERED_CITY_IS_READ_FROM_THE_OPERATIONAL_COLUMN'
+$m = Mutate-Text $policy 'Return value.Trim()' 'Return value' 'M108'
+Assert-Detected (Test-AllPolicy $m) 'M108_PROFILE_VALUES_ARE_NOT_TRIMMED'
+$m = Mutate-Text $policy 'If companyId <= 0 OrElse column Is Nothing Then Return Nothing' 'If column Is Nothing Then Return Nothing' 'M110'
+Assert-Detected (Test-AllPolicy $m) 'M110_A_PROFILE_IS_CREATED_FOR_AN_UNREADABLE_ID'
+$m = Mutate-Text $policy 'column("Piva")' 'column("RagioneSociale")' 'M111'
+Assert-Detected (Test-AllPolicy $m) 'M111_THE_VAT_NUMBER_IS_READ_FROM_THE_NAME_COLUMN'
+
+# --- dati societari: caricatore (testo) ----------------------------------------------------------------------------------------------------------
+$m = Mutate-Text $ctx 'ListinoDefault, telefono, email FROM aziende ORDER BY Id' 'ListinoDefault, telefono, email, Piva FROM aziende ORDER BY Id' 'M120'
+Assert-Detected (Test-AllContext $m) 'M120_THE_MAIN_IDENTITY_SELECT_IS_WIDENED'
+$m = Mutate-Text $ctx 'SL_Provincia FROM aziende ORDER BY Id' 'SL_Provincia, CodiceFiscale FROM aziende ORDER BY Id' 'M121'
+Assert-Detected (Test-AllContext $m) 'M121_THE_TAX_CODE_IS_READ'
+$m = Mutate-Text $ctx '                AttachLegalProfiles(connection, result)
+' '' 'M122'
+Assert-Detected (Test-AllContext $m) 'M122_THE_LEGAL_PROFILES_ARE_NEVER_ATTACHED'
+$m = Mutate-Text $ctx '                AttachLegalProfiles(connection, result)
+            End Using
+            HttpRuntime.Cache.Insert(' '            End Using
+            HttpRuntime.Cache.Insert(' 'M123a'
+$m = Mutate-Text $m '    Private Shared Function BuildTenantListCacheKey' '    Private Shared Sub UnusedAttach(ByVal connection As MySqlConnection, ByVal result As IList(Of StorefrontSeoTenantIdentity))
+        AttachLegalProfiles(connection, result)
+    End Sub
+
+    Private Shared Function BuildTenantListCacheKey' 'M123b'
+Assert-Detected (Test-AllContext $m) 'M123_THE_LEGAL_PROFILES_ARE_ATTACHED_OUTSIDE_THE_CONNECTION_BEFORE_THE_CACHE'
+$m = Mutate-Text $ctx '        Catch
+            StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, Nothing)' '        Catch
+            Dim ignoredError As Integer = 0' 'M124'
+Assert-Detected (Test-AllContext $m) 'M124_AN_ERROR_LEAVES_PARTIAL_PROFILES_ATTACHED'
+$m = Mutate-Text $ctx 'If profile IsNot Nothing Then profiles.Add(profile)' 'If profile IsNot Nothing Then profiles.Add(profile)
+                        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)' 'M125'
+Assert-Detected (Test-AllContext $m) 'M125_PROFILES_ARE_ATTACHED_WHILE_THE_ROWS_ARE_STILL_BEING_READ'
+$m = Mutate-Text $ctx '                command.CommandTimeout = 5
+' '' 'M126'
+Assert-Detected (Test-AllContext $m) 'M126_THE_OPTIONAL_QUERY_HAS_NO_SHORT_TIMEOUT'
+$m = Mutate-Text $ctx 'Dim companyId As Integer = SafeReaderInteger(reader, "Id")' 'Dim companyId As Integer = SafeReaderInteger(reader, "IvaTipo")' 'M127'
+Assert-Detected (Test-AllContext $m) 'M127_THE_PROFILE_ID_IS_READ_FROM_THE_WRONG_COLUMN'
+$m = Mutate-Text $ctx 'Function(name As String) SafeReaderString(reader, name)' 'Function(name As String) SafeReaderString(reader, "RagioneSociale")' 'M128'
+Assert-Detected (Test-AllContext $m) 'M128_EVERY_PROFILE_FIELD_READS_THE_SAME_COLUMN'
 
 Write-Output 'FOOTER_TRUTH_ALL_PASS'

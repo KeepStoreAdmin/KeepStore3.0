@@ -7,10 +7,10 @@ Imports System.Text.RegularExpressions
 Imports System.Web
 Imports System.Web.Hosting
 
-' Piede del sito. I dati dell'azienda (nome, logo, telefono, e-mail) arrivano SOLO dall'identita dell'host gia in cache
+' Piede del sito. I dati dell'azienda (nome, logo, telefono, e-mail, dati societari) arrivano SOLO dall'identita dell'host gia in cache
 ' (StorefrontSeoTenantContext): nessuna connessione al database e nessun ripiego sull'azienda della sessione. Senza identita valida
 ' (host sconosciuto, o sessione di un'altra azienda) il piede mostra solo il logo neutro, i link fissi e "Scrivici". Cio che manca si omette:
-' mai un valore inventato.
+' mai un valore inventato. I dati societari si mostrano solo se il profilo porta lo stesso CompanyId dell'host.
 Partial Class SiteFooter
     Inherits System.Web.UI.UserControl
 
@@ -29,21 +29,24 @@ Partial Class SiteFooter
         Dim logoFileName As String = String.Empty
         Dim phone As String = String.Empty
         Dim email As String = String.Empty
+        Dim legalProfile As StorefrontCompanyLegalProfile = Nothing
         If tenant IsNot Nothing Then
             hostCompanyId = tenant.CompanyId
             companyName = tenant.CompanyName
             logoFileName = tenant.LogoFileName
             phone = tenant.SupportPhone
             email = tenant.SupportEmail
+            legalProfile = tenant.LegalProfile
         End If
 
         ' Il link di Facebook vive nella sessione, scritta con l'azienda dell'host nella stessa lettura: BuildFooterData lo usa solo se coincidono.
         Dim facebookRaw As String = If(Session Is Nothing, String.Empty, Convert.ToString(Session("facebookLink")))
-        Dim data As FooterData = BuildFooterData(hostCompanyId, SessionCompanyId(), companyName, logoFileName, phone, email, facebookRaw, DateTime.Now.Year)
+        Dim data As FooterData = BuildFooterData(hostCompanyId, SessionCompanyId(), companyName, logoFileName, phone, email, facebookRaw, legalProfile, DateTime.Now.Year)
 
         BindFooterLogo(data)
         BindFooterColumns()
         BindFooterSocial(data)
+        BindFooterLegal(data)
         If litFooterContacts IsNot Nothing Then litFooterContacts.Text = data.ContactsHtml
         If litFooterCopyright IsNot Nothing Then litFooterCopyright.Text = data.CopyrightHtml
     End Sub
@@ -114,10 +117,23 @@ Partial Class SiteFooter
         lnkFooterFacebook.Attributes("aria-label") = "Facebook"
     End Sub
 
+    ' Dati societari: il blocco c'e solo se ha almeno una riga; vuoto = nessun paragrafo nella pagina.
+    Private Sub BindFooterLegal(ByVal data As FooterData)
+        If phFooterLegal Is Nothing OrElse litFooterLegal Is Nothing Then Return
+        phFooterLegal.Visible = data.LegalHtml.Length > 0
+        litFooterLegal.Text = data.LegalHtml
+    End Sub
+
 #Region "FooterPure"
     ' Funzioni pure (nessun accesso a sessione, database o richiesta): provate compilando questo stesso testo (Tools/Test-FooterTruth.ps1).
     Private Shared ReadOnly MailPattern As New Regex("^[A-Za-z0-9](?:[A-Za-z0-9._+\-]{0,62}[A-Za-z0-9])?@(?:[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24}\z", RegexOptions.CultureInvariant)
     Private Shared ReadOnly CategoryUrlPattern As New Regex("^articoli\.aspx\?st=[0-9]{1,9}\z", RegexOptions.CultureInvariant)
+    Private Shared ReadOnly LegalFormatChars As New Regex("\p{Cf}+", RegexOptions.CultureInvariant)
+    Private Shared ReadOnly LegalSpaces As New Regex("[\s\p{Cc}]+", RegexOptions.CultureInvariant)
+    Private Shared ReadOnly LegalLetter As New Regex("\p{L}", RegexOptions.CultureInvariant)
+    Private Shared ReadOnly VatPattern As New Regex("^[A-Z]{0,2}[0-9]{5,14}\z", RegexOptions.CultureInvariant)
+    Private Shared ReadOnly PostalPattern As New Regex("^[0-9]{5}\z", RegexOptions.CultureInvariant)
+    Private Shared ReadOnly ProvincePattern As New Regex("^[A-Za-z]{2}\z", RegexOptions.CultureInvariant)
 
     Friend NotInheritable Class FooterData
         Public LogoFileName As String = String.Empty
@@ -125,6 +141,7 @@ Partial Class SiteFooter
         Public ContactsHtml As String = String.Empty
         Public CopyrightHtml As String = String.Empty
         Public FacebookUrl As String = String.Empty
+        Public LegalHtml As String = String.Empty
     End Class
 
     ' La sessione puo non avere ancora l'azienda (0): vale l'host. Se ce l'ha ed e diversa da quella dell'host, nessun dato.
@@ -138,13 +155,15 @@ Partial Class SiteFooter
     ' resta solo il neutro. Il link di Facebook richiede in piu che la sessione appartenga all'azienda dell'host.
     Friend Shared Function BuildFooterData(ByVal hostCompanyId As Integer, ByVal sessionCompanyId As Integer, ByVal companyName As String,
                                            ByVal logoFileName As String, ByVal phone As String, ByVal email As String,
-                                           ByVal facebookRaw As String, ByVal year As Integer) As FooterData
+                                           ByVal facebookRaw As String, ByVal legal As StorefrontCompanyLegalProfile, ByVal year As Integer) As FooterData
         Dim data As New FooterData()
         If IsFooterTenantAllowed(hostCompanyId, sessionCompanyId) Then
             data.CompanyName = If(companyName, String.Empty).Trim()
             data.LogoFileName = If(logoFileName, String.Empty).Trim()
             data.ContactsHtml = BuildFooterContactsHtml(data.CompanyName, phone, email)
             data.FacebookUrl = ResolveFooterFacebookUrl(hostCompanyId, sessionCompanyId, facebookRaw)
+            ' i dati societari si mostrano solo se il profilo e della stessa azienda dell'host
+            If legal IsNot Nothing AndAlso legal.CompanyId = hostCompanyId Then data.LegalHtml = BuildFooterLegalHtml(legal)
         Else
             data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)
         End If
@@ -260,6 +279,115 @@ Partial Class SiteFooter
             count += 1
         Next
         Return sb.ToString()
+    End Function
+
+    ' Testo dei dati societari: caratteri di formato tolti, spazi e caratteri di controllo ridotti a un solo spazio; Nothing diventa vuoto.
+    Friend Shared Function CleanLegalText(ByVal value As String) As String
+        If value Is Nothing Then Return String.Empty
+        Return LegalSpaces.Replace(LegalFormatChars.Replace(value, String.Empty), " ").Trim()
+    End Function
+
+    ' Partita IVA: eventuale prefisso di due lettere e da 5 a 14 cifre (separatori spazio . - ignorati), con almeno una cifra diversa da zero.
+    ' Il controllo e sintattico: non prova che il numero sia vero; qualunque testo libero (es. "DA COMUNICARE") si omette.
+    Friend Shared Function NormalizeVatNumber(ByVal value As String) As String
+        Dim raw As String = CleanLegalText(value)
+        If raw.Length = 0 OrElse raw.Length > 30 Then Return String.Empty
+        Dim sb As New StringBuilder()
+        Dim nonZeroDigit As Boolean = False
+        For Each c As Char In raw
+            If c = " "c OrElse c = "."c OrElse c = "-"c Then
+                ' separatore ignorato
+            ElseIf c >= "0"c AndAlso c <= "9"c Then
+                sb.Append(c)
+                If c <> "0"c Then nonZeroDigit = True
+            ElseIf (c >= "A"c AndAlso c <= "Z"c) OrElse (c >= "a"c AndAlso c <= "z"c) Then
+                sb.Append(Char.ToUpperInvariant(c))
+            Else
+                Return String.Empty
+            End If
+        Next
+        Dim vat As String = sb.ToString()
+        If Not nonZeroDigit OrElse Not VatPattern.IsMatch(vat) Then Return String.Empty
+        Return vat
+    End Function
+
+    ' CAP: solo cinque cifre, non tutte zero (altrimenti si omette).
+    Friend Shared Function NormalizePostalCode(ByVal value As String) As String
+        Dim raw As String = CleanLegalText(value)
+        If Not PostalPattern.IsMatch(raw) OrElse raw = "00000" Then Return String.Empty
+        Return raw
+    End Function
+
+    ' Provincia: solo due lettere, in maiuscolo.
+    Friend Shared Function NormalizeProvince(ByVal value As String) As String
+        Dim raw As String = CleanLegalText(value)
+        If Not ProvincePattern.IsMatch(raw) Then Return String.Empty
+        Return raw.ToUpperInvariant()
+    End Function
+
+    ' Via: almeno una lettera, senza virgole, punti e punti e virgola finali.
+    Friend Shared Function NormalizeStreet(ByVal value As String) As String
+        Dim raw As String = CleanLegalText(value).TrimEnd(New Char() {" "c, ","c, ";"c, "."c})
+        If Not LegalLetter.IsMatch(raw) Then Return String.Empty
+        Return raw
+    End Function
+
+    ' Citta: almeno una lettera.
+    Friend Shared Function NormalizeCity(ByVal value As String) As String
+        Dim raw As String = CleanLegalText(value)
+        If Not LegalLetter.IsMatch(raw) Then Return String.Empty
+        Return raw
+    End Function
+
+    ' Un indirizzo esiste solo con via E citta; CAP e provincia si aggiungono se validi. Mai una riga a meta.
+    Friend Shared Function BuildLegalAddressLine(ByVal street As String, ByVal postalCode As String, ByVal city As String, ByVal province As String) As String
+        Dim streetText As String = NormalizeStreet(street)
+        Dim cityText As String = NormalizeCity(city)
+        If streetText.Length = 0 OrElse cityText.Length = 0 Then Return String.Empty
+        Dim line As String = streetText & ", " & (NormalizePostalCode(postalCode) & " " & cityText).Trim()
+        Dim prov As String = NormalizeProvince(province)
+        If prov.Length > 0 Then line &= " (" & prov & ")"
+        Return line
+    End Function
+
+    ' Due sedi sono la stessa solo se via, CAP, citta e provincia coincidono, campo per campo (confronto ordinale senza maiuscole).
+    Friend Shared Function IsSameLegalPlace(ByVal street1 As String, ByVal postal1 As String, ByVal city1 As String, ByVal province1 As String,
+                                            ByVal street2 As String, ByVal postal2 As String, ByVal city2 As String, ByVal province2 As String) As Boolean
+        Return String.Equals(NormalizeStreet(street1), NormalizeStreet(street2), StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(NormalizePostalCode(postal1), NormalizePostalCode(postal2), StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(NormalizeCity(city1), NormalizeCity(city2), StringComparison.OrdinalIgnoreCase) AndAlso
+               String.Equals(NormalizeProvince(province1), NormalizeProvince(province2), StringComparison.OrdinalIgnoreCase)
+    End Function
+
+    ' Righe dei dati societari (testo codificato per pezzo, righe separate da <br />). Ogni parte compare solo se il dato esiste e ha la forma attesa.
+    Friend Shared Function BuildFooterLegalHtml(ByVal legal As StorefrontCompanyLegalProfile) As String
+        If legal Is Nothing Then Return String.Empty
+        Dim lines As New List(Of String)()
+
+        Dim head As String = HttpUtility.HtmlEncode(CleanLegalText(legal.LegalName))
+        Dim vat As String = NormalizeVatNumber(legal.VatNumber)
+        If vat.Length > 0 Then
+            If head.Length > 0 Then head &= " - "
+            head &= "P.IVA " & HttpUtility.HtmlEncode(vat)
+        End If
+        If head.Length > 0 Then lines.Add(head)
+
+        Dim registered As String = BuildLegalAddressLine(legal.RegisteredAddress, legal.RegisteredPostalCode, legal.RegisteredCity, legal.RegisteredProvince)
+        Dim operational As String = BuildLegalAddressLine(legal.OperationalAddress, legal.OperationalPostalCode, legal.OperationalCity, legal.OperationalProvince)
+        If registered.Length > 0 AndAlso operational.Length > 0 Then
+            If IsSameLegalPlace(legal.RegisteredAddress, legal.RegisteredPostalCode, legal.RegisteredCity, legal.RegisteredProvince,
+                                legal.OperationalAddress, legal.OperationalPostalCode, legal.OperationalCity, legal.OperationalProvince) Then
+                lines.Add("Sede legale e operativa: " & HttpUtility.HtmlEncode(registered))
+            Else
+                lines.Add("Sede legale: " & HttpUtility.HtmlEncode(registered))
+                lines.Add("Sede operativa: " & HttpUtility.HtmlEncode(operational))
+            End If
+        ElseIf registered.Length > 0 Then
+            lines.Add("Sede legale: " & HttpUtility.HtmlEncode(registered))
+        ElseIf operational.Length > 0 Then
+            lines.Add("Sede: " & HttpUtility.HtmlEncode(operational))
+        End If
+        Return String.Join("<br />", lines.ToArray())
     End Function
 
     Friend Shared Function FooterGridClass(ByVal visibleColumns As Integer) As String

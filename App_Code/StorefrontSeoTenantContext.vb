@@ -84,6 +84,7 @@ Public NotInheritable Class StorefrontSeoTenantContext
                         End While
                     End Using
                 End Using
+                AttachLegalProfiles(connection, result)
             End Using
             HttpRuntime.Cache.Insert(cacheKey,
                                      CType(result, IList(Of StorefrontSeoTenantIdentity)),
@@ -95,6 +96,29 @@ Public NotInheritable Class StorefrontSeoTenantContext
         End Try
         Return result
     End Function
+
+    ' Dati societari: lettura SEPARATA e facoltativa. Un errore qui (colonna assente, tempo scaduto) lascia l'identita invariata e senza profili: il sito non cambia.
+    ' Il primo lettore e gia chiuso; si raccoglie tutto PRIMA di agganciare (nessun profilo parziale) e si aggancia prima che l'elenco entri in cache.
+    Private Shared Sub AttachLegalProfiles(ByVal connection As MySqlConnection, ByVal identities As IList(Of StorefrontSeoTenantIdentity))
+        Dim profiles As New List(Of StorefrontCompanyLegalProfile)()
+        Try
+            Const sql As String = "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva, SL_Indirizzo, SL_CAP, SL_Citta, SL_Provincia FROM aziende ORDER BY Id"
+            Using command As New MySqlCommand(sql, connection)
+                command.CommandType = CommandType.Text
+                command.CommandTimeout = 5
+                Using reader As MySqlDataReader = command.ExecuteReader()
+                    While reader.Read()
+                        Dim companyId As Integer = SafeReaderInteger(reader, "Id")
+                        Dim profile As StorefrontCompanyLegalProfile = StorefrontCanonicalHostPolicy.CreateLegalProfile(companyId, Function(name As String) SafeReaderString(reader, name))
+                        If profile IsNot Nothing Then profiles.Add(profile)
+                    End While
+                End Using
+            End Using
+            StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)
+        Catch
+            StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, Nothing)
+        End Try
+    End Sub
 
     Public Shared Function ConfiguredDatabaseScopeKey() As String
         Try
