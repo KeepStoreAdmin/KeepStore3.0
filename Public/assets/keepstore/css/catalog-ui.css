@@ -168,7 +168,8 @@
   padding: 8px 10px;
   border: 1px solid var(--gray-5, #e5e5e5);
   border-radius: 8px;
-  color: var(--primary, #ff3b30);
+  /* #d80027 su bianco 5,3:1 (il rosso del tema #ff3d3d fa 3,51:1, sotto AA per il testo da 13px). */
+  color: #d80027;
   background: var(--white, #fff);
   font-size: 13px;
   font-weight: 600;
@@ -833,7 +834,8 @@
   position: relative;
   min-height: 0;
   overflow: hidden;
-  background: #f4f4f4;
+  /* Riquadro bianco come nella HOME: con una foto non quadrata su fondo bianco il grigio mostrava due fasce (KS-A04-CATALOG-GREY-AA-1A). */
+  background: #fff;
   border-radius: 3px;
   z-index: 20;
 }
@@ -893,6 +895,8 @@
 }
 
 #ksCatalogPage article.card-product .product-tag {
+  /* Categoria: #666 (5,7:1 su bianco) al posto del grigio del tema #73787d (4,46:1). */
+  color: #666;
   display: block;
   max-width: 100%;
   min-width: 0;
@@ -1155,7 +1159,7 @@
 #ksCatalogPage .ks-catalog-card .card-product-wrapper {
   aspect-ratio: 1 / 1;
   min-height: 0;
-  background: #f4f4f4;
+  background: #fff;
   border-radius: 4px;
 }
 
@@ -1229,6 +1233,8 @@
 }
 
 #ksCatalogPage .ks-catalog-card .product-tag {
+  /* Anche le card dei "Visti di recente" costruite dal JavaScript, che sono div e non article. */
+  color: #666;
   min-height: 18px;
 }
 
@@ -2537,7 +2543,8 @@
 }
 
 #ksCatalogPage #gridLayout.layout-tabgrid-1 article.card-product .list-computer-memory li + li .caption {
-  color: var(--gray-2, #73787d);
+  /* #666 su bianco 5,7:1; il grigio del tema #73787d fa 4,46:1 (sotto AA per il testo da 12px). La regola resta qui: un override con meno ID perderebbe la cascata. */
+  color: #666;
 }
 
 /* Riga di acquisto senza riquadro (il riquadro verde "gia nel carrello" resta) */
@@ -2612,4 +2619,15 @@
     margin-left: -26px;
     padding: 13px 0 13px 26px;
   }
+}
+
+/* KS-A04-CATALOG-GREY-AA-1A - nota "Prezzi visualizzati IVA ..." in testa ai risultati: stesso grigio AA (#666, 5,7:1) delle card
+   al posto del grigio del tema (#73787d, 4,46:1). Classe dedicata: .body-text-3.text-main-2 e solo tipografia e compare ovunque. */
+#ksCatalogPage .ks-price-basis-note {
+  color: #666;
+}
+
+/* KS-A04-CATALOG-GREY-AA-1A - riga marca/codice delle card dei "Visti di recente" (server e JavaScript): stesso grigio AA delle altre righe. */
+#ksCatalogPage .ks-catalog-card .ks-card-brand-code {
+  color: #666;
 }

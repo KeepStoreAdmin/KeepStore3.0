@@ -9,7 +9,7 @@
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">
     <asp:Literal ID="litSeoHead" runat="server" EnableViewState="false" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261114-deadcode-c1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261115-grey-aa1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261114-filter-buttons1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261108-catalog-search-context-1a" />
     <style>
@@ -223,7 +223,7 @@
                 </div>
 
                 <div class="content-area">
-                    <p class="body-text-3 text-main-2 mb-2"><asp:Label ID="lblPrezzi" runat="server" /></p>
+                    <p class="body-text-3 text-main-2 mb-2 ks-price-basis-note"><asp:Label ID="lblPrezzi" runat="server" /></p>
                     <asp:Panel ID="pnlCatalogDepartmentTiles" runat="server" Visible="false" CssClass="ks-dept-tiles">
                         <asp:Literal ID="litCatalogDepartmentTiles" runat="server" EnableViewState="false" />
                     </asp:Panel>

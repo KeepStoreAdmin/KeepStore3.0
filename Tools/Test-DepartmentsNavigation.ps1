@@ -70,7 +70,7 @@ function Test-TilesMarkup([string]$aspx) {
     $j = $aspx.IndexOf('ID="pnlCatalogDepartmentsMobile"')
     return ($i -gt 0 -and $j -gt $i -and
             $aspx -match 'ID="litCatalogDepartmentTiles" runat="server" EnableViewState="false"' -and
-            $aspx -match 'css/catalog-ui\.css"\) %>\?v=20261114-(?:(?:dept-nav|cards)1a|deadcode-c1a)')
+            $aspx -match 'css/catalog-ui\.css"\) %>\?v=(?:20261114-(?:(?:dept-nav|cards)1a|deadcode-c1a)|20261115-grey-aa1a)')
 }
 function Test-TilesCodeBehind([string]$vb) {
     $nav = [regex]::Match($vb, '(?s)Private Sub BindCatalogCategoryNavigation\(\).*?End Sub').Value
