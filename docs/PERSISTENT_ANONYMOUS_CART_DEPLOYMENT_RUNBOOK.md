@@ -58,6 +58,8 @@ App_Code/PersistentAnonymousCartMutationActivation.vb
 App_Code/PersistentAnonymousCartLifecycleService.vb
 App_Code/PersistentAnonymousCartLoginMergeService.vb
 App_Code/PersistentAnonymousCartCleanupService.vb
+App_Code/StorefrontCanonicalHostPolicy.vb
+App_Code/StorefrontSeoTenantContext.vb
 carrello.aspx.vb
 privacy.aspx
 Public/ui/controls/SiteFooter.ascx
