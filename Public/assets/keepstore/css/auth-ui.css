@@ -209,6 +209,11 @@ body.ks-page-auth .tf-btn {
   scroll-margin-block: 16px;
 }
 
+/* KS-A04-FOCUS-FORCED-COLORS-1A: REGISTRATI sta su una tabella verde inline (registrazione.aspx): #111 fa 4,96:1 sul verde e 19:1 sul bianco. */
+.ks-auth-register[data-ks-registration-form="standard"] [id$="btRegistrati"]:focus-visible {
+  outline-color: #111 !important;
+}
+
 .ks-auth-register[data-ks-registration-form="standard"] .ks-register-consents {
   table-layout: fixed;
 }

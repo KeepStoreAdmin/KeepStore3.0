@@ -94,7 +94,8 @@ function Test-PriceCss([string]$c) {
 function Test-MediaScopes([string]$c) {
     # ogni @media del blocco vale solo da 768 px in su: il telefono resta quello della prima tranche
     $b = Get-Block $c
-    $medias = [regex]::Matches($b, '@media[^{]*')
+    # le @media forced-colors del blocco di KS-A04-FOCUS-FORCED-COLORS-1A (colori forzati, non layout) non contano: il telefono resta quello della prima tranche
+    $medias = @([regex]::Matches($b, '@media[^{]*') | Where-Object { $_.Value -notmatch 'forced-colors' })
     if ($medias.Count -ne 3) { return $false }
     foreach ($m in $medias) {
         if ($m.Value -notmatch '^@media \(min-width: (768|1200)px\)(?: and \(max-width: 1199\.98px\))?\s*$') { return $false }
@@ -133,7 +134,7 @@ function Test-Names([string]$c) {
     return ((Get-Block $c) -notmatch '(?i)onsus|taikun|prezzoforte|stay ?on|ikea|bytecno')
 }
 function Test-Buster([string]$m) {
-    return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-home-vetrina2a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-deadcode-c1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-palette-aa1a"'))
+    return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-home-vetrina2a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-deadcode-c1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-palette-aa1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-focus-fc1a"'))
 }
 
 Assert-Source (Test-SectionOrder $aspx) 'S01_OFFERS_BEFORE_NEW_ARRIVALS_AND_THE_REST_OF_THE_ORDER_HOLDS'
@@ -221,7 +222,7 @@ $m = Mutate-Text $css 'scroll-snap-type: x mandatory;
 }' 'M19'
 Assert-Detected (Test-TabletRail $m) 'M19_TABLET_RAIL_WITHOUT_SNAP'
 Assert-Detected (Test-Names ($css + "`n/* KS-A04-HOME-VETRINA-2A extra: copiato da ONSUS */`n")) 'M20_TEMPLATE_NAME_IN_THE_NEW_CSS'
-$m = Mutate-Text $master 'css/theme-overrides.css") & "?v=20261115-palette-aa1a"' 'css/theme-overrides.css") & "?v=20261114-home-vetrina1a"' 'M21'
+$m = Mutate-Text $master 'css/theme-overrides.css") & "?v=20261115-focus-fc1a"' 'css/theme-overrides.css") & "?v=20261114-home-vetrina1a"' 'M21'
 Assert-Detected (Test-Buster $m) 'M21_CSS_CACHE_BUSTER_NOT_UPDATED'
 $m = Mutate-Text $vb 'Return "COALESCE(stk.Impegnata, COALESCE(v.Impegnata,0))"' 'Return "stk.Impegnata"' 'M22'
 Assert-Detected (Test-NetQuantityEquivalence $m) 'M22_COMMITTED_QUANTITY_CAN_BE_NULL_IN_THE_FILTER'

@@ -405,7 +405,7 @@
 #ksCatalogPage .tf-control-layout li a.ks-view-layout-switch:focus-visible {
   color: var(--primary, #ff3b30);
   border-color: var(--primary, #ff3b30);
-  outline: 2px solid rgba(255, 59, 48, 0.28);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 2px;
 }
 
@@ -448,7 +448,7 @@
 }
 
 #ksCatalogPage .tf-control-view .ks-toolbar-select:focus-within {
-  outline: 2px solid rgba(255, 59, 48, 0.2);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 2px;
 }
 
@@ -561,7 +561,7 @@
 
 #ksCatalogPage .ks-sort-trigger:focus-visible {
   border-color: var(--primary, #ff3b30);
-  outline: 2px solid rgba(255, 59, 48, 0.24);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 2px;
 }
 
@@ -653,7 +653,7 @@
 }
 
 #ksCatalogPage .ks-sort-option:focus-visible {
-  outline: 2px solid rgba(255, 59, 48, 0.24);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: -2px;
 }
 
@@ -1493,7 +1493,7 @@
 
 #ksCatalogPage .ks-multi-footer__cta:focus,
 #ksCatalogPage .ks-multi-footer__cta:focus-visible {
-  outline: 2px solid rgba(255, 59, 48, 0.35);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 3px;
   box-shadow: none;
 }
@@ -2026,7 +2026,7 @@
 }
 
 #ksCatalogPage .ks-catalog-pager__control:focus-visible {
-  outline: 2px solid rgba(216, 0, 39, 0.28);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 2px;
 }
 

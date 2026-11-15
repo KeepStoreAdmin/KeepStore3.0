@@ -1193,7 +1193,7 @@ body.ks-page-home .ks-home-main .ks-home-buy-cta:active .ks-home-buy-cta__text {
 }
 
 body.ks-page-home .ks-home-main .ks-home-buy-cta:focus-visible {
-  outline: 3px solid rgba(216, 0, 39, .26);
+  outline: 3px solid var(--focus-ring, #B8001F);
   outline-offset: 3px;
 }
 
@@ -2233,7 +2233,7 @@ body.ks-page-home .ks-home-main .ks-compact-buy-cta:active,
 }
 
 .ks-compact-buy-cta:focus {
-  outline: 2px solid rgba(216, 0, 39, .28);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 3px;
 }
 
@@ -2242,7 +2242,7 @@ body.ks-page-home .ks-home-main .ks-compact-buy-cta:active,
 }
 
 .ks-compact-buy-cta:focus-visible {
-  outline: 3px solid rgba(216, 0, 39, .34);
+  outline: 3px solid var(--focus-ring, #B8001F);
   outline-offset: 3px;
 }
 
@@ -2471,7 +2471,7 @@ body.ks-page-home .ks-home-main .card-product .ks-home-top-buy-action:active {
 }
 
 body.ks-page-home .ks-home-main .card-product .ks-home-top-buy-action:focus {
-  outline: 2px solid rgba(216, 0, 39, .28);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 3px;
 }
 
@@ -2480,7 +2480,7 @@ body.ks-page-home .ks-home-main .card-product .ks-home-top-buy-action:focus:not(
 }
 
 body.ks-page-home .ks-home-main .card-product .ks-home-top-buy-action:focus-visible {
-  outline: 3px solid rgba(216, 0, 39, .34);
+  outline: 3px solid var(--focus-ring, #B8001F);
   outline-offset: 3px;
 }
 
@@ -3681,4 +3681,39 @@ body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-wrapp
    quasi nero: con il vecchio grigio passava per un soffio (#7d8793, 5,6:1), con #666 no (3,5:1). Torna al chiaro voluto dal blocco del hero (bianco al 86%), in tinta unita calcolabile. */
 body.ks-page-home .ks-home-main .ks-home-hero-eyebrow.caption {
   color: #dcdfe3;
+}
+
+/* ===== KS-A04-FOCUS-FORCED-COLORS-1A - colori forzati (contrasto alto di Windows) =====
+   Con forced-colors: active il browser ignora sfondi e ombre e forza colore e bordo ai colori di sistema. L'anello del focus e un outline: sopravvive da solo.
+   Qui si danno un confine ai controlli che ne avevano solo uno di sfondo e un segno visibile (bordo piu spesso in Highlight) agli stati attivi che il tema affida
+   allo sfondo. Nessun forced-color-adjust:none: l'adattamento dell'utente resta. */
+@media (forced-colors: active) {
+  .ks-guide-path, .ks-brand-loadmore {
+    border: 1px solid ButtonText;
+  }
+  .form-newsletter .subscribe-content .subscribe-button, .form-newsletter .subscribe-content input.subscribe-email {
+    border: 1px solid ButtonText;
+  }
+  .image-select.style-default > .dropdown-toggle {
+    border: 1px solid ButtonText !important; /* KS-FC-DROPDOWN */
+  }
+  .swiper-pagination-bullet {
+    box-sizing: border-box;
+    border: 1px solid ButtonText;
+  }
+  /* KS-FC-STATES */
+  .ks-view-layout-switch.active,
+  .ks-guide-choices button[aria-pressed="true"],
+  .ks-suggest-chip.is-active {
+    border-width: 3px;
+    border-color: Highlight;
+  }
+  .swiper-pagination-bullet-active {
+    border-width: 3px;
+    border-color: Highlight;
+  }
+  .ks-suggest-item.is-active {
+    border-inline-start: 4px solid Highlight;
+  }
+  /* KS-FC-STATES-END */
 }

@@ -18,6 +18,7 @@
   --primary: #D80027;
   --primary-2: #D80027;
   --primary-hover: #B8001F;
+  --focus-ring: #B8001F;
   --secondary: #004ec3;
   --third: #FCB500;
   --third-2: #FFE604;
@@ -3247,7 +3248,6 @@ form input[type=url],
 form input[type=search],
 form input[type=tel],
 form input[type=color] {
-  outline: 0;
   -webkit-box-shadow: none;
   -moz-box-shadow: none;
   box-shadow: none;
@@ -10966,4 +10966,55 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
   }
 }
 
+/* ===== KS-A04-FOCUS-FORCED-COLORS-1A - focus da tastiera sempre visibile (WCAG 2.4.7, 1.4.11) =====
+   Il tema azzerava l'outline (reset di apertura, button:focus*, a:focus, form input[...]) e Bootstrap lo toglie a specificita (0,2,0): qui si ripristina l'anello
+   per la tastiera (:focus-visible: il mouse non lo mostra, i campi di testo si, per scelta del browser). --focus-ring e il token: default #B8001F, 6,87:1 sul bianco;
+   un tenant lo ridefinisce (:root in aziende.css, caricato dopo) con un colore a >= 3:1 sul proprio sfondo; ogni uso ha il fallback. I selettori con attributo stanno dentro
+   :where() (specificita zero): gli anelli dei componenti (specificita >= (0,2,0)) e il loro offset restano. Nessun contenitore tabindex="-1" (modale, offcanvas) mostra l'anello. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+:where([tabindex]:not([tabindex^="-"])):focus-visible,
+:where([role="button"]):focus-visible,
+.btn:focus-visible,
+.btn-close:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible,
+.nav-link:focus-visible,
+.accordion-button:focus-visible,
+.ks-search-host input[type="text"]:focus-visible,
+.ks-search-host input[type="search"]:focus-visible,
+.sib-form .sib-form-container .input:focus-visible {
+  outline: 2px solid var(--focus-ring, #B8001F);
+  outline-offset: 2px;
+}
+
+/* Menu a tendina lingua/valuta (bootstrap-select): il tema lo toglie con !important. */
+.image-select.style-default > .dropdown-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring, #B8001F) !important;
+  outline-offset: 2px;
+}
+
+/* Superfici scure: il rosso fa 1,59:1 sulla fascia della newsletter (#333e48) e 2,9:1 sul banner scuro. */
+.ft-body-center.bg-gray :is(a, button, input):focus-visible,
+.banner-image-product-4 :is(a, button):focus-visible {
+  outline-color: #fff;
+}
+
+/* Contenitori con overflow:hidden (carosello, immagine della card, titolo della card): anello interno, non tagliato. */
+.swiper a:focus-visible,
+.swiper button:focus-visible,
+.card-product-wrapper a:focus-visible,
+.card-product a.name-product:focus-visible {
+  outline-offset: -2px;
+}
+
+/* I pallini del carosello inattivi hanno opacity .2: col focus l'anello non deve sbiadire. */
+.swiper-pagination-bullet:focus-visible {
+  opacity: 1;
+}
 /*# sourceMappingURL=styles.css.map */

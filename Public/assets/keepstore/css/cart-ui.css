@@ -328,7 +328,7 @@
 }
 
 .ks-cart-page .ks-order-inventory-alert:focus{
-    outline: 3px solid rgba(216, 0, 39, .2);
+    outline: 3px solid var(--focus-ring, #B8001F);
     outline-offset: 3px;
 }
 
@@ -1080,7 +1080,7 @@
 }
 
 .ks-cart-page .ks-cart-remove-cell .ks-cart-remove-button:focus-visible {
-    outline: 3px solid rgba(216,0,39,.45);
+    outline: 3px solid var(--focus-ring, #B8001F);
     outline-offset: 2px;
 }
 
@@ -1222,7 +1222,7 @@
 
     .ks-cart-page .tf-table-page-cart .ks-cart-remove-cell .ks-cart-remove-button:focus-visible,
     .ks-cart-page .tf-table-page-cart .btn-quantity:focus-visible{
-        outline: 3px solid rgba(216,0,39,.45);
+        outline: 3px solid var(--focus-ring, #B8001F);
         outline-offset: 2px;
     }
 
@@ -2700,7 +2700,7 @@
 
 .ks-cart-page .ks-wg-quantity .btn-quantity:focus-visible,
 .ks-cart-page .ks-wg-quantity .quantity-product:focus-visible{
-    outline: 3px solid rgba(216, 0, 39, .45);
+    outline: 3px solid var(--focus-ring, #B8001F);
     outline-offset: 2px;
 }
 

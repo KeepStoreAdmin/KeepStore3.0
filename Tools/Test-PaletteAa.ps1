@@ -62,7 +62,7 @@ Assert-Source ($orderStyle.Success -and $orderStyle.Groups[1].Value.Contains('.k
 Assert-Source ($catalogAspx.Contains('CssClass="tf-btn btn-fill ks-multi-footer__cta"') -and $homeVb.Contains("<div class='box-sale-wrap top-0 start-0 pst-default z-5'><p class='small-text'>Promo</p><p class='title-sidebar-2'>") -and $homeVb.Contains("<p class='box-sale-tag'>Risparmi ")) 'ANCHOR_CATALOG_MULTI_CTA_AND_HOME_BADGES'
 Assert-Source ($pdpAspx.Contains('class="tf-btn text-white js-ks-cart-context"') -and $pdpAspx.Contains('<div class="product-delivery">') -and $recentJs.Contains('class="tf-btn btn-line w-100 mt-2 ks-recent-history-link"')) 'ANCHOR_PDP_BUY_BUTTON_AND_RECENT_BTN_LINE'
 function Test-Busters([string]$m) {
-    return ($m -match 'css/styles\.css"\) & "\?v=20261115-palette-aa1a"' -and $m -match 'css/theme-overrides\.css"\) & "\?v=20261115-palette-aa1a"')
+    return ($m -match 'css/styles\.css"\) & "\?v=(?:20261115-palette-aa1a|20261115-focus-fc1a)"' -and $m -match 'css/theme-overrides\.css"\) & "\?v=(?:20261115-palette-aa1a|20261115-focus-fc1a)"')
 }
 Assert-Source (Test-Busters $master) 'MASTER_LOADS_STYLES_AND_THEME_OVERRIDES_WITH_THE_NEW_BUSTER'
 $sheetOrder = @('bootstrap.min.css', 'keepstore.css', 'keepstore-overrides.css', 'account-ui.css', 'documents-ui.css', 'auth-ui.css', 'ks-ui.css', 'nice-select.css', 'swiper-bundle.min.css', 'animate.css', 'styles.css', 'minicart-ui.css',
@@ -287,7 +287,7 @@ try {
     Write-Output 'PASS MUTATION_DETECTED G5_literal_in_the_inline_order_style'
     if (@(Test-NoBadLiterals 'cart-ui.css' '.x { background: var(--primary, #ff3d3d); box-shadow: 0 0 0 2px rgba(255,61,61,.3); }').Count -ne 0) { throw 'GUARD_REJECTS_A_LEGITIMATE_FALLBACK_OR_SHADOW' }
     Write-Output 'PASS GUARD_ALLOWS_FALLBACKS_AND_RGBA_SHADOWS'
-    if (Test-Busters (Mutate-Text $master '"?v=20261115-palette-aa1a"' '"?v=20261115-home-cards1a"' 'M12')) { throw 'MUTATION_NOT_DETECTED=M12_master_buster_not_bumped' }
+    if (Test-Busters (Mutate-Text $master '"?v=20261115-focus-fc1a"' '"?v=20261115-home-cards1a"' 'M12')) { throw 'MUTATION_NOT_DETECTED=M12_master_buster_not_bumped' }
     Write-Output 'PASS MUTATION_DETECTED M12_master_buster_not_bumped'
 
     Write-Output 'PALETTE_AA_ALL_PASS'

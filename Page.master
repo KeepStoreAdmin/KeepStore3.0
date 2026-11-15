@@ -20,13 +20,13 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") & "?v=20261115-focus-fc1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") & "?v=20261115-palette-aa1a" %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/minicart-ui.css") & "?v=20261023-mini-quantity-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/styles.css") & "?v=20261115-focus-fc1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/minicart-ui.css") & "?v=20261115-focus-fc1a" %>" />
 
     <asp:PlaceHolder ID="phSeoJsonLd" runat="server" Visible="false">
         <script type="application/ld+json"><asp:Literal ID="litSeoJsonLd" runat="server" EnableViewState="False" /></script>
@@ -35,7 +35,7 @@
     <asp:Literal ID="litGlobalSeoHead" runat="server" EnableViewState="False" />
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-palette-aa1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-focus-fc1a" %>" />
     <noscript><style>#preload{display:none!important}</style></noscript>
 </head>
 

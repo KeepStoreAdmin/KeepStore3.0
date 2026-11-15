@@ -38,7 +38,7 @@
 }
 
 .popup-shopping-cart .ks-mini-cart-close:focus-visible {
-    outline: 3px solid rgba(216, 0, 39, .45);
+    outline: 3px solid var(--focus-ring, #B8001F);
     outline-offset: 2px;
 }
 
@@ -83,7 +83,7 @@
 }
 
 .popup-shopping-cart .ks-mini-remove:focus-visible {
-    outline: 3px solid rgba(216, 0, 39, .45);
+    outline: 3px solid var(--focus-ring, #B8001F);
     outline-offset: 2px;
 }
 
@@ -302,7 +302,7 @@
 
 #ksMiniCartCanvas a:focus-visible,
 #ksMiniCartCanvas button:focus-visible {
-    outline: 3px solid rgba(216, 0, 39, .45);
+    outline: 3px solid var(--focus-ring, #B8001F);
     outline-offset: 2px;
 }
 

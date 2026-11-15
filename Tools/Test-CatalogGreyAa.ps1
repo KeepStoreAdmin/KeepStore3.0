@@ -47,7 +47,7 @@ $aspxVb = Read-Repo 'articoli.aspx.vb'
 $card = Read-Repo 'Public/ui/controls/ProductCard.ascx'
 $cssOriginal = Read-Repo 'Public/assets/keepstore/css/catalog-ui.css'
 function Test-MarkupAnchors([string]$aspxText) {
-    if ($aspxText -notmatch 'css/catalog-ui\.css"\) %>\?v=(?:20261115-grey-aa1a|20261115-palette-aa1a)') { return $false }
+    if ($aspxText -notmatch 'css/catalog-ui\.css"\) %>\?v=(?:20261115-grey-aa1a|20261115-palette-aa1a|20261115-focus-fc1a)') { return $false }
     if (-not $aspxText.Contains('<p class="body-text-3 text-main-2 mb-2 ks-price-basis-note"><asp:Label ID="lblPrezzi" runat="server" /></p>')) { return $false }
     return $true
 }
@@ -256,7 +256,7 @@ try {
     # Mutazione sul markup ancorato: la classe della nota o il buster spariscono dalla pagina.
     if (Test-MarkupAnchors (Mutate-Text $aspx 'ks-price-basis-note' 'ks-price-note' 'M11')) { throw 'MUTATION_NOT_DETECTED=M11_note_class_removed_from_the_page' }
     Write-Output 'PASS MUTATION_DETECTED M11_note_class_removed_from_the_page'
-    if (Test-MarkupAnchors (Mutate-Text $aspx '?v=20261115-palette-aa1a' '?v=20261114-deadcode-c1a' 'M12')) { throw 'MUTATION_NOT_DETECTED=M12_css_buster_not_bumped' }
+    if (Test-MarkupAnchors (Mutate-Text $aspx '?v=20261115-focus-fc1a' '?v=20261114-deadcode-c1a' 'M12')) { throw 'MUTATION_NOT_DETECTED=M12_css_buster_not_bumped' }
     Write-Output 'PASS MUTATION_DETECTED M12_css_buster_not_bumped'
 
     Write-Output 'CATALOG_GREY_AA_ALL_PASS'

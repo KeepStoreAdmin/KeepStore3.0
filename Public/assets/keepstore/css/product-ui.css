@@ -191,7 +191,7 @@
 .ks-product-page .ks-pdp-shipping-more summary:focus-visible,
 .ks-product-page .ks-pdp-warranty-info summary:focus-visible {
   border-radius: 3px;
-  outline: 2px solid rgba(216, 0, 39, 0.35);
+  outline: 2px solid var(--focus-ring, #B8001F);
   outline-offset: 2px;
 }
 
@@ -1123,7 +1123,7 @@
   }
 
   .ks-product-list-section .ks-mobile-card-buy-cta:focus-visible {
-    outline: 2px solid rgba(216, 0, 39, 0.32);
+    outline: 2px solid var(--focus-ring, #B8001F);
     outline-offset: 3px;
   }
 
