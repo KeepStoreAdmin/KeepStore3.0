@@ -97,12 +97,20 @@ Public NotInheritable Class StorefrontSeoTenantContext
         Return result
     End Function
 
-    ' Dati societari: lettura SEPARATA e facoltativa. Un errore qui (colonna assente, tempo scaduto) lascia l'identita invariata e senza profili: il sito non cambia.
-    ' Il primo lettore e gia chiuso; si raccoglie tutto PRIMA di agganciare (nessun profilo parziale) e si aggancia prima che l'elenco entri in cache.
+    ' Dati societari: lettura SEPARATA e facoltativa. La query completa comprende la sede legale (SL_*); se fallisce (colonne assenti in un database piu vecchio,
+    ' tempo scaduto) se ne prova UNA volta una ridotta con le sole colonne che Page.master legge gia (nome, P.IVA, sede operativa): cosi' l'indirizzo di
+    ' Contattaci non dipende dalle colonne SL_*. Se anche il ridotto fallisce: nessun profilo e il sito non cambia. Il primo lettore e gia chiuso; si aggancia
+    ' prima che l'elenco entri in cache.
     Private Shared Sub AttachLegalProfiles(ByVal connection As MySqlConnection, ByVal identities As IList(Of StorefrontSeoTenantIdentity))
-        Dim profiles As New List(Of StorefrontCompanyLegalProfile)()
+        Dim profiles As List(Of StorefrontCompanyLegalProfile) = ReadLegalProfiles(connection, "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva, SL_Indirizzo, SL_CAP, SL_Citta, SL_Provincia FROM aziende ORDER BY Id")
+        If profiles Is Nothing Then profiles = ReadLegalProfiles(connection, "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id")
+        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)
+    End Sub
+
+    ' Nothing = lettura fallita: la lista si costruisce per intero prima di restituirla (nessun profilo parziale).
+    Private Shared Function ReadLegalProfiles(ByVal connection As MySqlConnection, ByVal sql As String) As List(Of StorefrontCompanyLegalProfile)
         Try
-            Const sql As String = "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva, SL_Indirizzo, SL_CAP, SL_Citta, SL_Provincia FROM aziende ORDER BY Id"
+            Dim profiles As New List(Of StorefrontCompanyLegalProfile)()
             Using command As New MySqlCommand(sql, connection)
                 command.CommandType = CommandType.Text
                 command.CommandTimeout = 5
@@ -114,12 +122,11 @@ Public NotInheritable Class StorefrontSeoTenantContext
                     End While
                 End Using
             End Using
-            StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)
+            Return profiles
         Catch
-            StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, Nothing)
+            Return Nothing
         End Try
-    End Sub
-
+    End Function
     Public Shared Function ConfiguredDatabaseScopeKey() As String
         Try
             Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")

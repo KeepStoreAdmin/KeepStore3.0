@@ -492,29 +492,44 @@ Assert-Source (Test-PolicyBehaviour $policy) 'F10_THE_LEGAL_PROFILE_IS_MAPPED_PE
 # --- Oracolo 7: il caricatore (testo): SELECT principale invariato, secondo SELECT facoltativo, dopo il primo reader e prima della cache --------------------
 function Test-Context([string]$c, [string]$policyText) {
     $main = 'Const sql As String = "SELECT Id, Nome, Descrizione, url1, url2, LogoWeb, ListinoDefault, telefono, email FROM aziende ORDER BY Id"'
-    $legalSelect = 'SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva, SL_Indirizzo, SL_CAP, SL_Citta, SL_Provincia FROM aziende ORDER BY Id'
-    if (-not $c.Contains($main) -or -not $c.Contains('Const sql As String = "' + $legalSelect + '"')) { return $false }
-    if ([regex]::Matches($c, 'SELECT ').Count -ne 2) { return $false }
+    $legalFull = 'SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva, SL_Indirizzo, SL_CAP, SL_Citta, SL_Provincia FROM aziende ORDER BY Id'
+    $legalReduced = 'SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id'
+    $callFull = 'ReadLegalProfiles(connection, "' + $legalFull + '")'
+    $callReduced = 'If profiles Is Nothing Then profiles = ReadLegalProfiles(connection, "' + $legalReduced + '")'
+    if (-not $c.Contains($main) -or -not $c.Contains($callFull) -or -not $c.Contains($callReduced)) { return $false }
+    if ([regex]::Matches($c, 'SELECT ').Count -ne 3) { return $false }
     if ($c -match '(?is)CodiceFiscale|CognomeNome|For Each candidate|Exit For|Session\(') { return $false }
-    # il secondo SELECT parte quando il primo reader e gia chiuso, dentro la stessa connessione e PRIMA di inserire l'elenco in cache
+    # la lettura dei dati societari parte quando il primo reader e gia chiuso, dentro la stessa connessione e PRIMA di inserire l'elenco in cache
     if ($c -cnotmatch '(?s)End While\s+End Using\s+End Using\s+AttachLegalProfiles\(connection, result\)\s+End Using\s+HttpRuntime\.Cache\.Insert') { return $false }
+    # completo per primo; il ridotto (senza SL_*) SOLO se il completo ha fallito; l'aggancio dopo entrambe le letture
     $m = [regex]::Match($c, '(?ms)^    Private Shared Sub AttachLegalProfiles\(.*?^    End Sub')
     if (-not $m.Success) { return $false }
-    $b = $m.Value
-    $iTry = $b.IndexOf("        Try`n"); $iWhile = $b.IndexOf('While reader.Read()'); $iEndWhile = $b.IndexOf('End While'); $iApply = $b.IndexOf('StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)'); $iCatch = $b.IndexOf("        Catch`n")
-    if ($iTry -lt 0 -or $iWhile -lt $iTry -or $iEndWhile -lt $iWhile -or $iApply -lt $iEndWhile -or $iCatch -lt $iApply) { return $false }
+    $a = $m.Value
+    $iFull = $a.IndexOf('Dim profiles As List(Of StorefrontCompanyLegalProfile) = ' + $callFull); $iReduced = $a.IndexOf($callReduced); $iApply = $a.IndexOf('StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)')
+    if ($iFull -lt 0 -or $iReduced -lt $iFull -or $iApply -lt $iReduced) { return $false }
+    if ($legalReduced -cmatch 'SL_') { return $false }
+    # la lettura: nessun profilo parziale (lista intera restituita solo dopo la lettura, Nothing su errore), nessun aggancio qui dentro, tempo massimo breve
+    $r = [regex]::Match($c, '(?ms)^    Private Shared Function ReadLegalProfiles\(.*?^    End Function')
+    if (-not $r.Success) { return $false }
+    $b = $r.Value
+    $iTry = $b.IndexOf("        Try`n"); $iWhile = $b.IndexOf('While reader.Read()'); $iEndWhile = $b.IndexOf('End While'); $iReturn = $b.IndexOf("            Return profiles`n"); $iCatch = $b.IndexOf("        Catch`n")
+    if ($iTry -lt 0 -or $iWhile -lt $iTry -or $iEndWhile -lt $iWhile -or $iReturn -lt $iEndWhile -or $iCatch -lt $iReturn) { return $false }
+    if ($b.Contains('ApplyLegalProfiles')) { return $false }
     foreach ($line in @('command.CommandTimeout = 5', 'Dim profiles As New List(Of StorefrontCompanyLegalProfile)()', 'Dim companyId As Integer = SafeReaderInteger(reader, "Id")',
                         'StorefrontCanonicalHostPolicy.CreateLegalProfile(companyId, Function(name As String) SafeReaderString(reader, name))', 'If profile IsNot Nothing Then profiles.Add(profile)')) {
         if ($b.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return $false }
     }
-    if ($b -cnotmatch '(?s)Catch\s+StorefrontCanonicalHostPolicy\.ApplyLegalProfiles\(identities, Nothing\)\s+End Try') { return $false }
-    # ogni colonna che la policy legge deve stare nel secondo SELECT
+    if ($b -cnotmatch '(?s)Catch\s+Return Nothing\s+End Try') { return $false }
+    # ogni colonna che la policy legge sta nel SELECT completo; le non-SL anche nel ridotto
     $cols = @([regex]::Matches($policyText, 'column\("([A-Za-z_]+)"\)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
     if ($cols.Count -ne 10) { return $false }
-    foreach ($col in $cols) { if ($legalSelect -cnotmatch ('[ ,]' + $col + '[ ,]')) { return $false } }
+    foreach ($col in $cols) {
+        if ($legalFull -cnotmatch ('[ ,]' + $col + '[ ,]')) { return $false }
+        if ($col -cnotmatch '^SL_' -and $legalReduced -cnotmatch ('[ ,]' + $col + '[ ,]')) { return $false }
+    }
     return $true
 }
-Assert-Source (Test-Context $ctx $policy) 'F11_THE_LEGAL_SELECT_IS_OPTIONAL_AFTER_THE_FIRST_READER_AND_BEFORE_THE_CACHE_AND_THE_MAIN_SELECT_IS_UNCHANGED'
+Assert-Source (Test-Context $ctx $policy) 'F11_THE_LEGAL_READ_TRIES_THE_FULL_SELECT_THEN_ONE_REDUCED_SELECT_AFTER_THE_FIRST_READER_AND_BEFORE_THE_CACHE_AND_THE_MAIN_SELECT_IS_UNCHANGED'
 
 # --- Mutazioni (copie in memoria): ognuna deve far fallire almeno un controllo ------------------------------------------------------------------
 function Test-AllMarkup([string]$text) { return ((Test-NoFabricatedContent $text) -and (Test-StaticLinksExist $text) -and (Test-RequiredLinks $text) -and (Test-DynamicHooks $text) -and (Test-LegalMarkup $text)) }
@@ -796,12 +811,25 @@ $m = Mutate-Text $m '    Private Shared Function BuildTenantListCacheKey' '    P
     Private Shared Function BuildTenantListCacheKey' 'M123b'
 Assert-Detected (Test-AllContext $m) 'M123_THE_LEGAL_PROFILES_ARE_ATTACHED_OUTSIDE_THE_CONNECTION_BEFORE_THE_CACHE'
 $m = Mutate-Text $ctx '        Catch
-            StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, Nothing)' '        Catch
-            Dim ignoredError As Integer = 0' 'M124'
-Assert-Detected (Test-AllContext $m) 'M124_AN_ERROR_LEAVES_PARTIAL_PROFILES_ATTACHED'
+            Return Nothing' '        Catch
+            Return New List(Of StorefrontCompanyLegalProfile)()' 'M124'
+Assert-Detected (Test-AllContext $m) 'M124_AN_ERROR_RETURNS_AN_EMPTY_LIST_INSTEAD_OF_FAILING_SO_THE_FALLBACK_IS_NEVER_TRIED'
 $m = Mutate-Text $ctx 'If profile IsNot Nothing Then profiles.Add(profile)' 'If profile IsNot Nothing Then profiles.Add(profile)
-                        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(identities, profiles)' 'M125'
+                        StorefrontCanonicalHostPolicy.ApplyLegalProfiles(Nothing, profiles)' 'M125'
 Assert-Detected (Test-AllContext $m) 'M125_PROFILES_ARE_ATTACHED_WHILE_THE_ROWS_ARE_STILL_BEING_READ'
+$m = Mutate-Text $ctx '        If profiles Is Nothing Then profiles = ReadLegalProfiles(connection, "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id")
+' '' 'M129'
+Assert-Detected (Test-AllContext $m) 'M129_THE_REDUCED_SELECT_IS_NEVER_TRIED'
+$m = Mutate-Text $ctx 'If profiles Is Nothing Then profiles = ReadLegalProfiles(connection, "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id")' 'profiles = ReadLegalProfiles(connection, "SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id")' 'M130'
+Assert-Detected (Test-AllContext $m) 'M130_THE_REDUCED_SELECT_REPLACES_A_SUCCESSFUL_FULL_READ'
+$m = Mutate-Text $ctx 'Provincia, Piva FROM aziende ORDER BY Id")' 'Provincia, Piva, SL_Indirizzo FROM aziende ORDER BY Id")' 'M131'
+Assert-Detected (Test-AllContext $m) 'M131_THE_REDUCED_SELECT_STILL_NEEDS_THE_REGISTERED_OFFICE_COLUMNS'
+$m = Mutate-Text $ctx 'SELECT Id, RagioneSociale, Indirizzo, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id' 'SELECT Id, RagioneSociale, Cap, Citta, Provincia, Piva FROM aziende ORDER BY Id' 'M132'
+Assert-Detected (Test-AllContext $m) 'M132_THE_REDUCED_SELECT_LOSES_THE_OPERATIONAL_STREET'
+$m = Mutate-Text $ctx '            Return profiles
+        Catch' '            Return Nothing
+        Catch' 'M133'
+Assert-Detected (Test-AllContext $m) 'M133_A_SUCCESSFUL_READ_RETURNS_NOTHING'
 $m = Mutate-Text $ctx '                command.CommandTimeout = 5
 ' '' 'M126'
 Assert-Detected (Test-AllContext $m) 'M126_THE_OPTIONAL_QUERY_HAS_NO_SHORT_TIMEOUT'
