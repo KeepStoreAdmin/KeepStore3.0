@@ -54,8 +54,10 @@ $recentJs = Read-Repo 'Public/assets/keepstore/js/keepstore-recently-viewed.js'
 $master = Read-Repo 'Page.master'
 
 $navMatch = [regex]::Match($header, '(?s)<nav class="main-nav-menu">.*?</nav>')
+# il menu e reso dal server: qui lo si legge come sulla HOME (voce Home attiva, nessun aria-current, che non cambia colori ne anelli)
+$navHtml = [regex]::Replace([regex]::Replace($navMatch.Value, '<%= MainNavActive\("home"\) %>', ' active'), '<%= MainNav(?:Active|Current)\("[a-z]+"\) %>', '')
 $orderStyle = [regex]::Match($orderAspx, '(?s)<style>(.*?)</style>')
-Assert-Source ($navMatch.Success -and $navMatch.Value.Contains('<li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span>Home</span></a></li>') -and $navMatch.Value.Contains('<a href="articoli.aspx?inpromo=1" class="item-link body-md-2"><span>Offerte</span></a>')) 'ANCHOR_MAIN_NAV_FROM_SITEHEADER'
+Assert-Source ($navMatch.Success -and $navHtml.Contains('<li class="nav-item active pst-unset"><a href="Default.aspx" class="item-link link body-md-2"><span>Home</span></a></li>') -and $navHtml.Contains('<a href="articoli.aspx?inpromo=1" class="item-link body-md-2"><span>Offerte</span></a>')) 'ANCHOR_MAIN_NAV_FROM_SITEHEADER'
 Assert-Source ($header.Contains('<div class="header-bottom bg-gray-5 d-none d-xl-block">') -and $miniCart.Contains('<a class="tf-btn btn-fill w-100" href="articoli.aspx">Vai al catalogo</a>') -and $miniCart.Contains('<div class="minicart-empty text-center">')) 'ANCHOR_HEADER_BAR_AND_EMPTY_MINICART'
 Assert-Source ($docDetail.Contains('<button type="button" class="tf-btn ks-print-order" data-action="print-order">Stampa ordine</button>') -and $docDetail.Contains('<a href="documenti.aspx?t=4" class="tf-btn btn-gray">Vai ai miei ordini</a>')) 'ANCHOR_ORDER_CONFIRMATION_BUTTONS'
 Assert-Source ($orderStyle.Success -and $orderStyle.Groups[1].Value.Contains('.ks-order-actions .ks-order-btn-primary') -and $orderAspx.Contains('class="tf-btn ks-order-btn-primary"')) 'ANCHOR_ORDER_PAGE_INLINE_STYLE_AND_BUTTON'
@@ -71,7 +73,7 @@ foreach ($n in $sheetOrder) { if (-not (Test-Path -LiteralPath (Join-Path $cssDi
 
 # --- Pagine di prova ------------------------------------------------------------------------------------------------------------------
 function Build-Nav() {
-    $n = $navMatch.Value
+    $n = $navHtml
     $n = $n.Replace('<a href="Default.aspx" class="item-link link body-md-2">', '<a href="Default.aspx" class="item-link link body-md-2" data-probe="nav-home-active">')
     $n = $n.Replace('<a href="articoli.aspx?inpromo=1" class="item-link body-md-2">', '<a href="articoli.aspx?inpromo=1" class="item-link body-md-2" data-probe="nav-offerte">')
     return $n

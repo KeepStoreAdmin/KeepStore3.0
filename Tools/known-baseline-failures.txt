@@ -13,3 +13,4 @@ Test-CheckoutConsentRecovery # pin "code-behind byte content unchanged" contro u
 Test-HomeCatalogDiscovery # compilazione VB della harness: tipi non dichiarati (verificato sulla stable 0e84c52c)
 Test-HomeNavigationRealAssortment # pin "tutto il markup precedente e le card dei settori invariati" (verificato sulla stable 0e84c52c)
 Test-StorefrontPromotionParity # asserzioni su offerta deterministica e fallback della HOME (verificato sulla stable 0e84c52c)
+Test-CatalogMenuCacheConsumers # confronta SiteHeader.ascx.vb con la baseline storica 24a67012: 316 righe diverse gia sulla stable (verificato su f417809f)

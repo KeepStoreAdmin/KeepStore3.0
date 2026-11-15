@@ -242,6 +242,42 @@ Partial Class SiteHeader
                "</ul><a class='ks-dept-all body-md-2' href='articoli.aspx'>Tutti i reparti</a></nav></div></div>"
     End Function
 
+    ' KS-A04-NAV-ACTIVE-1A: la voce attiva del menu principale segue la pagina corrente (prima "Home" era scritta fissa come attiva su ogni pagina).
+    ' "Guida agli acquisti" e un'ancora della HOME: non e mai la pagina corrente.
+    Friend Shared Function ResolveMainNavCurrent(ByVal appRelativePath As String, ByVal inPromo As String) As String
+        If String.IsNullOrEmpty(appRelativePath) Then Return String.Empty
+        If String.Equals(appRelativePath, "~/Default.aspx", StringComparison.OrdinalIgnoreCase) Then Return "home"
+        If String.Equals(appRelativePath, "~/articoli.aspx", StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(inPromo, "1", StringComparison.Ordinal) Then Return "offers"
+        If String.Equals(appRelativePath, "~/Contattaci.aspx", StringComparison.OrdinalIgnoreCase) Then Return "contact"
+        Return String.Empty
+    End Function
+
+    Friend Shared Function NavActiveClass(ByVal current As String, ByVal key As String) As String
+        If Not String.IsNullOrEmpty(key) AndAlso current = key Then Return " active"
+        Return String.Empty
+    End Function
+
+    Friend Shared Function NavCurrentAttr(ByVal current As String, ByVal key As String) As String
+        If Not String.IsNullOrEmpty(key) AndAlso current = key Then Return " aria-current=""page"""
+        Return String.Empty
+    End Function
+
+    Private mainNavKeyCache As String
+
+    Private Function MainNavKey() As String
+        If mainNavKeyCache Is Nothing Then
+            mainNavKeyCache = ResolveMainNavCurrent(Request.AppRelativeCurrentExecutionFilePath, Request.QueryString("inpromo"))
+        End If
+        Return mainNavKeyCache
+    End Function
+
+    Protected Function MainNavActive(ByVal key As String) As String
+        Return NavActiveClass(MainNavKey(), key)
+    End Function
+
+    Protected Function MainNavCurrent(ByVal key As String) As String
+        Return NavCurrentAttr(MainNavKey(), key)
+    End Function
     Protected Function MobileSectorMediaClass(ByVal imgUrl As Object) As String
         Dim value As String = Convert.ToString(imgUrl)
         If String.IsNullOrWhiteSpace(value) Then

@@ -44,7 +44,9 @@ $catalogFlowJs = Read-Repo 'Public/assets/keepstore/js/catalog-product-flow.js'
 $registerAspx = Read-Repo 'registrazione.aspx'
 
 $navMatch = [regex]::Match($header, '(?s)<nav class="main-nav-menu">.*?</nav>')
-Assert-Source ($navMatch.Success -and $navMatch.Value.Contains('<a href="Default.aspx" class="item-link link body-md-2">') -and $navMatch.Value.Contains('<a href="articoli.aspx?inpromo=1" class="item-link body-md-2">')) 'ANCHOR_HEADER_MAIN_NAV_LINKS'
+# il menu e reso dal server: qui lo si legge come sulla HOME (voce Home attiva, nessun aria-current, che non cambia colori ne anelli)
+$navHtml = [regex]::Replace([regex]::Replace($navMatch.Value, '<%= MainNavActive\("home"\) %>', ' active'), '<%= MainNav(?:Active|Current)\("[a-z]+"\) %>', '')
+Assert-Source ($navMatch.Success -and $navHtml.Contains('<a href="Default.aspx" class="item-link link body-md-2">') -and $navHtml.Contains('<a href="articoli.aspx?inpromo=1" class="item-link body-md-2">')) 'ANCHOR_HEADER_MAIN_NAV_LINKS'
 Assert-Source ($header.Contains('class="form-search-product m-auto ks-search-shell"') -and $header.Contains('class="btn-submit-form"') -and $header.Contains('CssClass="dropdown_product_cat ks-search-category-select"') -and $header.Contains('class="image-select center style-default type-lan"')) 'ANCHOR_HEADER_SEARCH_AND_LANGUAGE'
 Assert-Source ($header.Contains("class='ks-dept-link body-md-2'") -or (Read-Repo 'Public/ui/controls/SiteHeader.ascx.vb').Contains("class='ks-dept-link body-md-2'")) 'ANCHOR_DEPARTMENTS_BAR_LINK'
 Assert-Source ($footer.Contains('<div class="ft-body-center bg-gray">') -and $footer.Contains('class="subscribe-email type-fs-2"') -and $footer.Contains('class="subscribe-button tf-btn btn-large hover-shine"')) 'ANCHOR_FOOTER_NEWSLETTER_BAND'
@@ -127,7 +129,7 @@ $bodyTemplate = @'
 <div class="ks-cart-page" style="padding:24px"><div class="tf-table-page-cart"><div class="ks-cart-remove-cell"><button type="button" class="ks-cart-remove-button icon icon-close link border-0 bg-transparent" title="Rimuovi articolo" data-probe="cart-remove" data-expect-width="3"><span class="visually-hidden">Rimuovi articolo</span></button></div><div class="ks-wg-quantity"><button type="button" class="btn-quantity btn-decrease" aria-label="Diminuisci quantita" data-probe="cart-qty-minus" data-expect-width="3"><i class="icon icon-minus" aria-hidden="true"></i></button><input type="text" class="quantity-product" value="1" aria-label="Quantita" data-probe="cart-qty-input" /></div></div></div>
 '@
 function Build-Body([string]$extraReplaceFrom, [string]$extraReplaceTo) {
-    $nav = $navMatch.Value
+    $nav = $navHtml
     $nav = $nav.Replace('<a href="Default.aspx" class="item-link link body-md-2">', '<a href="Default.aspx" class="item-link link body-md-2" data-probe="nav-home-active">')
     $nav = $nav.Replace('<a href="articoli.aspx?inpromo=1" class="item-link body-md-2">', '<a href="articoli.aspx?inpromo=1" class="item-link body-md-2" data-probe="nav-offerte">')
     $b = $bodyTemplate.Replace('{{NAV}}', $nav).Replace('{{PIXEL}}', $pixel)

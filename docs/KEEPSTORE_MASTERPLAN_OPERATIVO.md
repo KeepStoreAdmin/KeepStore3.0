@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-A04-NAV-ACTIVE-1A — 15/11/2026 — SOURCE (voce attiva del menu principale dalla pagina corrente)
+
+**Esito: A (SOURCE). Livello S. PR [#508](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/508).** Nessun dato commerciale toccato. Mandato PO: «Home sempre attiva» (residuo noto: `active` scritto fisso su «Home» in `SiteHeader.ascx`, quindi «Home» appariva in rosso su ogni pagina, anche su Contatti o sul catalogo).
+
+**Fatti.** Il menu principale ha quattro voci statiche; solo «Home» aveva `active` fisso. Pagine: Home = `Default.aspx`; Offerte = `articoli.aspx?inpromo=1` (il catalogo senza `inpromo` non e una voce del menu: c'e il pulsante «Catalogo» a parte); Contatti = `Contattaci.aspx`; «Guida agli acquisti» e un'ancora della HOME e non e mai la pagina corrente. Il menu mobile non aveva nessuno stato.
+
+**Soluzione.** `SiteHeader.ascx.vb`: `ResolveMainNavCurrent(percorso, inpromo)`, `NavActiveClass` e `NavCurrentAttr` (statiche, provabili) e due wrapper che leggono `Request.AppRelativeCurrentExecutionFilePath` e `inpromo`; `SiteHeader.ascx`: classe `active` e `aria-current="page"` dal server sulle tre voci, `aria-current` anche nel menu mobile. Nessun CSS cambiato (la regola rossa dello stato attivo esiste gia).
+
+**Revisioni.** Non richieste (livello S, una superficie, requisito chiaro). **Prove:** nuovo `Tools/Test-HeaderNavActive.ps1` (visto rosso; compila i VERI metodi e li esegue su 17 percorsi; markup senza `active` a mano; 9 mutazioni rilevate); precompile 4.8 PASS; letto dal vivo sul Smoke: Home -> Home, `articoli.aspx?inpromo=1` -> Offerte, catalogo e accesso -> nessuna, Contatti -> Contatti; `Test-PaletteAa` e `Test-FocusVisible` leggono ora il menu come sulla HOME; runner dei test correlati: 11 test in 21 s (esclusi i 2 test lenti rieseguiti a parte), 0 nuovi fallimenti (`Test-CatalogMenuCacheConsumers` confronta con una baseline storica e falliva gia sulla stable: aggiunto all'elenco noto).
+
+**Limiti.** Percorsi riscritti da URL amichevoli non esistono oggi (il percorso e quello del file eseguito). **Alla consegna futura:** `SiteHeader.ascx` e `SiteHeader.ascx.vb` insieme. CONSEGNA SERVER SOSPESA.
 ## KS-A04-FOCUS-NOT-OBSCURED-1A — 15/11/2026 — SOURCE (focus non coperto dalla barra di acquisto fissa)
 
 **Esito: A (SOURCE). Livello S (primo task con il metodo ottimizzato). PR [#507](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/507).** Solo CSS: una regola e un marcatore di versione. Nessun dato commerciale toccato. Mandato PO: «Focus non coperto» (residuo di [#505](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/505), WCAG 2.4.11).
