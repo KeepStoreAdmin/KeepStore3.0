@@ -84,7 +84,7 @@ Public Class KeepStoreAnalyticsGetModule
             Dim incl As String = ConfigurationManager.AppSettings("KeepStore.AnalyticsGet.IncludePaths")
             If String.IsNullOrWhiteSpace(incl) Then
                 ' default: solo pagine note sensibili/di interesse analytics
-                incl = "wishlist.aspx;rettificaMagazzino.aspx;articoli.aspx"
+                incl = "wishlist.aspx;articoli.aspx"
             End If
 
             Dim page As String = Path.GetFileName(req.Path)

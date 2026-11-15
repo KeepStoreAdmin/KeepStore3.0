@@ -44,15 +44,12 @@ if ($null -eq $page) { throw 'SEARCH_COMPLETE_ASPX_MISSING' }
 #  - policy dei ritorni: voce difensiva, la pagina non diventa mai un URL di ritorno se tornasse;
 #  - master: controllo del Referer (conserva il comportamento preesistente);
 #  - catalogo: ponte dei prezzi pendenti in sessione (fissato da Test-CatalogSearchContext, non si tocca qui);
-#  - rettificaMagazzino: commenti di una pagina separata (candidato a una ricognizione propria);
 #  - la pagina stessa: soltanto il suo identificativo di task nel commento.
 $allowedMentions = @{
     'App_Code/StorefrontReturnUrlPolicy.vb :: "search_complete.aspx",' = 1
     'Page.master.vb :: If (Me.Request.UrlReferrer.AbsolutePath.ToString().IndexOf("search_complete") < 0) Then' = 1
     'articoli.aspx.vb :: '' search_complete resta il bridge one-shot; la listing legge solo la request.' = 1
     'articoli.aspx.vb :: Session("Sto_usando_search_complete") = 0' = 1
-    'rettificaMagazzino.aspx.vb :: ''Assegnazione dalla search_complete' = 1
-    'rettificaMagazzino.aspx.vb :: ''Aggiunta per la search_complete' = 1
     'search_complete.aspx :: '' KS-A04-SEARCH-COMPLETE-1A - la vecchia maschera "Ricerca Avanzata" non esiste piu: il catalogo ha gia tutti i suoi filtri' = 1
 }
 $mentionPattern = '(?i)search[_\- ]?complete'
