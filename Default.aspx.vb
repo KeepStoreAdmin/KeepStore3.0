@@ -2864,7 +2864,7 @@ Partial Public Class _Default
                                       ByVal emphasize As Boolean,
                                       Optional ByVal reserveDealSlots As Boolean = False) As String
         Dim sb As New StringBuilder()
-        Dim priceClass As String = If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 fw-medium mb-0") & " ks-home-price-value ks-home-price-value--current"
+        Dim priceClass As String = If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 mb-0") & " ks-home-price-value ks-home-price-value--current"
         Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2") & " ks-home-price-value ks-home-price-value--old"
         Dim slotClass As String = If(emphasize, "ks-home-price-slot--emphasized", "ks-home-price-slot--compact")
         Dim stackClass As String = If(emphasize, "ks-home-price-stack--emphasized", "ks-home-price-stack--compact")
@@ -2984,7 +2984,7 @@ Partial Public Class _Default
         sb.Append("<div class='card-product-wrapper'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
         sb.Append("<img class='img-product lazyload' decoding='async' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' loading='lazy' decoding='async' src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' data-src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
+        sb.Append("<img class='img-hover lazyload' loading='lazy' decoding='async' src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' data-src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' alt='' aria-hidden='true'>")
         sb.Append("</a>")
         Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
                                        Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))
@@ -2992,14 +2992,17 @@ Partial Public Class _Default
         sb.Append(RenderCornerBadgeStack(row, True))
         sb.Append("</div>")
         sb.Append("<div class='card-product-info'>")
+        ' L'etichetta «Novità» / «In arrivo» e una piccola targhetta davanti alla categoria, nel flusso del testo: non copre la foto
+        ' e non prende una riga intera della card. Solo le due parole ammesse, sempre codificate.
+        Dim merchandisingTag As String = String.Empty
         If row.Table.Columns.Contains("HomeMerchandisingLabel") Then
             Dim label As String = Convert.ToString(row("HomeMerchandisingLabel"))
             If label = "Novità" OrElse label = "In arrivo" Then
-                sb.Append("<span class='badge bg-light text-dark mb-8'>").Append(HttpUtility.HtmlEncode(label)).Append("</span>")
+                merchandisingTag = "<span class='ks-card-tag'>" & HttpUtility.HtmlEncode(label) & "</span>"
             End If
         End If
         sb.Append("<div class='box-title'>")
-        sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(CardCategoryLabel(row)).Append("</p>")
+        sb.Append("<div class='bg-white relative z-5'><p class='caption text-main-2 font-2 ks-card-category'>").Append(merchandisingTag).Append(CardCategoryLabel(row)).Append("</p>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='name-product body-md-2 fw-semibold text-secondary link ks-card-title'>").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("</a></div>")
         sb.Append(RenderPriceBlock(row, False))
         sb.Append(RenderAvailability(row))

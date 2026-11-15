@@ -104,7 +104,7 @@ Assert-Source (Test-FilesGone) 'D01_LEGACY_PAGES_AND_THEME_ASSETS_ARE_GONE_AND_N
 Assert-Source (Test-JsClean $js) 'D02_KS_PAGE_FLAGS_HAS_NO_DECLARED_ONLY_FUNCTIONS_OR_VARIABLES'
 Assert-Source (Test-CssClean $css) 'D03_NO_RULE_FOR_A_CLASS_THAT_NOTHING_USES_AND_THE_LIVE_ONES_REMAIN'
 Assert-Source (Test-MarkupAndMembers $master $headerAscx $headerVb $postLogin) 'D04_MASTER_AND_HEADER_HAVE_NO_UNREFERENCED_MEMBERS_OR_DEAD_ATTRIBUTES'
-$busterOk = ((Read-Repo 'Page.master').Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-deadcode-c1a"') -and (Read-Repo 'Page.master').Contains('ThemeManager.Asset("js/ks-page-flags.js") %>?v=20261114-deadcode-c1a') -and
+$busterOk = (((Read-Repo 'Page.master').Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-deadcode-c1a"') -or (Read-Repo 'Page.master').Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"')) -and (Read-Repo 'Page.master').Contains('ThemeManager.Asset("js/ks-page-flags.js") %>?v=20261114-deadcode-c1a') -and
              (Read-Repo 'articoli.aspx').Contains('css/catalog-ui.css") %>?v=20261114-deadcode-c1a') -and (Read-Repo 'articolo.aspx').Contains('css/product-ui.css") %>?v=20261114-deadcode-c1a'))
 Assert-Source $busterOk 'D05_CACHE_BUSTERS_OF_THE_CLEANED_ASSETS_UPDATED'
 

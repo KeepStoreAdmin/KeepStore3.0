@@ -80,7 +80,7 @@ function Test-NetQuantityEquivalence([string]$v) {
 }
 function Test-PriceMarkup([string]$v) {
     $fn = Get-Method $v 'RenderPriceBlock'
-    return ($fn.Contains('If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 fw-medium mb-0")') -and $fn -notmatch 'fw-normal')
+    return ($fn.Contains('If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 mb-0")') -and $fn -notmatch 'fw-normal' -and $fn -notmatch 'body-md-2 fw-medium')
 }
 function Test-PriceCss([string]$c) {
     $b = Get-Block $c
@@ -88,7 +88,7 @@ function Test-PriceCss([string]$c) {
     $m = [regex]::Match($b, '@media')
     if ($m.Success) { $top = $b.Substring(0, $m.Index) }
     return ($top.Contains('body.ks-page-home #ksHomePage .ks-home-price-value { font-family: inherit; }') -and
-            [regex]::IsMatch($top, '(?s)#ksHomePage \.ks-grid-card \.new-price\.ks-home-price-value--current \{\s*color: var\(--black, #121212\);\s*font-size: 20px;\s*line-height: 22px;\s*font-weight: 500;') -and
+            [regex]::IsMatch($top, '(?s)#ksHomePage \.ks-grid-card \.new-price\.ks-home-price-value--current \{\s*color: var\(--black, #121212\);\s*font-size: 22px;\s*line-height: 26px;\s*font-weight: 700;\s*white-space: nowrap;') -and
             [regex]::IsMatch($top, '(?s)#ksHomePage \.ks-home-deals \.ks-deal-card \.new-price\.ks-home-price-value--current \{\s*font-size: 28px;\s*line-height: 32px;\s*font-weight: 600;'))
 }
 function Test-MediaScopes([string]$c) {
@@ -133,7 +133,7 @@ function Test-Names([string]$c) {
     return ((Get-Block $c) -notmatch '(?i)onsus|taikun|prezzoforte|stay ?on|ikea|bytecno')
 }
 function Test-Buster([string]$m) {
-    return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-home-vetrina2a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-deadcode-c1a"'))
+    return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-home-vetrina2a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261114-deadcode-c1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"'))
 }
 
 Assert-Source (Test-SectionOrder $aspx) 'S01_OFFERS_BEFORE_NEW_ARRIVALS_AND_THE_REST_OF_THE_ORDER_HOLDS'
@@ -162,15 +162,15 @@ Assert-Detected (Test-BestSection $m $vb) 'M03_BEST_SELLERS_BACK_TO_TWO_ROWS'
 $m = Mutate-Text $aspx 'data-preview="4" data-tablet="3"' 'data-preview="5" data-tablet="3"' 'M04'
 Assert-Detected (Test-BestSection $m $vb) 'M04_BEST_SELLERS_FIVE_COLUMNS_UNEVEN_AGAIN'
 # La quantita netta dei pool e provata, con mutazioni, da Test-HomePriceDisplay.ps1.
-$m = Mutate-Text $vb '"new-price body-md-2 fw-medium mb-0"' '"new-price body-md-2 fw-medium text-primary mb-0"' 'M07'
-Assert-Detected (Test-PriceMarkup $m) 'M07_UTILITY_COLOUR_OVERRIDES_THE_STYLESHEET_AGAIN'
+$m = Mutate-Text $vb '"new-price body-md-2 mb-0"' '"new-price body-md-2 fw-medium mb-0"' 'M07'
+Assert-Detected (Test-PriceMarkup $m) 'M07_UTILITY_WEIGHT_OVERRIDES_THE_STYLESHEET_AGAIN'
 $m = Mutate-Text $vb '"new-price h4 fw-semibold text-primary mb-0"' '"new-price h4 fw-normal text-primary mb-0"' 'M08'
 Assert-Detected (Test-PriceMarkup $m) 'M08_DEAL_PRICE_WEIGHT_BACK_TO_NORMAL'
 $m = Mutate-Text $css 'body.ks-page-home #ksHomePage .ks-home-price-value { font-family: inherit; }' '' 'M09'
 Assert-Detected (Test-PriceCss $m) 'M09_PRICE_FONT_FALLS_BACK_TO_A_SERIF_AGAIN'
 $m = Mutate-Text $css '  color: var(--black, #121212);
-  font-size: 20px;' '  color: #ff3b30;
-  font-size: 20px;' 'M10'
+  font-size: 22px;' '  color: #ff3b30;
+  font-size: 22px;' 'M10'
 Assert-Detected (Test-PriceCss $m) 'M10_PRICE_COLOUR_NOT_LIKE_THE_CATALOG'
 $m = Mutate-Text $css '@media (min-width: 1200px) {
   body.ks-page-home .ks-home-categories .ks-home-category-grid' '@media (max-width: 1199.98px) {
@@ -221,7 +221,7 @@ $m = Mutate-Text $css 'scroll-snap-type: x mandatory;
 }' 'M19'
 Assert-Detected (Test-TabletRail $m) 'M19_TABLET_RAIL_WITHOUT_SNAP'
 Assert-Detected (Test-Names ($css + "`n/* KS-A04-HOME-VETRINA-2A extra: copiato da ONSUS */`n")) 'M20_TEMPLATE_NAME_IN_THE_NEW_CSS'
-$m = Mutate-Text $master 'v=20261114-deadcode-c1a' 'v=20261114-home-vetrina1a' 'M21'
+$m = Mutate-Text $master 'css/theme-overrides.css") & "?v=20261115-home-cards1a"' 'css/theme-overrides.css") & "?v=20261114-home-vetrina1a"' 'M21'
 Assert-Detected (Test-Buster $m) 'M21_CSS_CACHE_BUSTER_NOT_UPDATED'
 $m = Mutate-Text $vb 'Return "COALESCE(stk.Impegnata, COALESCE(v.Impegnata,0))"' 'Return "stk.Impegnata"' 'M22'
 Assert-Detected (Test-NetQuantityEquivalence $m) 'M22_COMMITTED_QUANTITY_CAN_BE_NULL_IN_THE_FILTER'

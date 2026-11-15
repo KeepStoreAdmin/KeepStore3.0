@@ -3456,13 +3456,14 @@ body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
 /* ===== KS-A04-HOME-VETRINA-2A - HOME desktop e tablet: reparti e categorie in un solo blocco compatto, prezzi come il catalogo. ===== */
 
 /* Prezzi come la scheda del catalogo, a ogni larghezza: stesso carattere del testo (le classi h4 e fw-normal usavano un carattere non
-   caricato e ricadevano su un serif), colore scuro e peso 500; l'offerta resta in evidenza con un corpo piu grande. */
+   caricato e ricadevano su un serif), colore scuro e peso 700 (misura del layout predefinito del catalogo, 22px); l'offerta resta in evidenza con un corpo piu grande. */
 body.ks-page-home #ksHomePage .ks-home-price-value { font-family: inherit; }
 body.ks-page-home #ksHomePage .ks-grid-card .new-price.ks-home-price-value--current {
   color: var(--black, #121212);
-  font-size: 20px;
-  line-height: 22px;
-  font-weight: 500;
+  font-size: 22px;
+  line-height: 26px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 body.ks-page-home #ksHomePage .ks-grid-card .old-price { font-size: 14px; line-height: 22px; }
 body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .new-price.ks-home-price-value--current {
@@ -3563,4 +3564,106 @@ body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .new-price.ks-home-pr
     min-width: 0;
     scroll-snap-align: start;
   }
+}
+
+/* ===== KS-A04-HOME-CARDS-1A - card della HOME come quelle del catalogo: un solo riquadro immagine, titolo e prezzo come il catalogo,
+   azioni che stanno sempre dentro il riquadro. Solo presentazione: il markup dei pulsanti e dei dati resta quello di prima. ===== */
+
+/* Una sola cornice: la card ha gia il suo bordo, quindi il riquadro dell'immagine perde il secondo bordo e i 15px del tema (.style-img-border),
+   le altezze fisse (220/160px) e lo spazio sulle foto. Quadrato come nel catalogo, foto intera (contain). Lo sfondo resta bianco: quello grigio
+   del catalogo mostrerebbe un rettangolo bianco attorno alle foto con sfondo bianco, da valutare con foto reali prima di adottarlo. */
+body.ks-page-home #ksHomePage .ks-grid-card { padding: 12px; }
+body.ks-page-home #ksHomePage .ks-grid-card .card-product-wrapper {
+  aspect-ratio: 1 / 1;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  container: ks-tile / inline-size;
+}
+body.ks-page-home #ksHomePage .ks-grid-card .card-product-wrapper .product-img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #fff;
+}
+body.ks-page-home #ksHomePage .ks-grid-card .card-product-wrapper .img-product,
+body.ks-page-home #ksHomePage .ks-grid-card .card-product-wrapper .img-hover {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  object-fit: contain;
+}
+
+/* Azioni sempre dentro il riquadro, in base alla sua larghezza (il riquadro e quadrato, quindi larghezza = altezza):
+   da 204px quattro azioni, da 156px tre (senza «Confronta»), sotto due (carrello e preferiti) da 44px. Le funzioni tolte restano
+   nel catalogo e nella scheda prodotto. Senza il supporto delle container query non si toglie nulla (stato di prima). */
+@container ks-tile (max-width: 203.98px) {
+  body.ks-page-home #ksHomePage .ks-grid-card .list-product-btn > li:has(> .js-ks-compare) { display: none; }
+}
+@container ks-tile (max-width: 155.98px) {
+  body.ks-page-home #ksHomePage .ks-grid-card .list-product-btn > li:has(> .js-ks-quickview) { display: none; }
+  body.ks-page-home #ksHomePage .ks-grid-card .list-product-btn .box-icon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Tastiera: sul desktop le azioni compaiono solo al passaggio del mouse e, nascoste, non si raggiungono con Tab. Compaiono quando il focus da
+   tastiera e nella card (:focus-visible, non il clic del mouse, che le lascerebbe aperte), con un indicatore di focus dentro il pulsante: il riquadro
+   ha overflow nascosto e un contorno esterno verrebbe tagliato sul bordo. */
+body.ks-page-home #ksHomePage .ks-grid-card:has(:focus-visible) .list-product-btn > li {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: none;
+}
+body.ks-page-home #ksHomePage .ks-grid-card .list-product-btn .box-icon:focus-visible {
+  outline: 2px solid var(--primary-2, #D80027);
+  outline-offset: -4px;
+}
+/* Etichetta «Novita» / «In arrivo»: targhetta nel flusso del testo, davanti alla categoria. */
+body.ks-page-home #ksHomePage .ks-grid-card .ks-card-tag {
+  display: inline;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #f1f3f5;
+  color: #303842;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Titolo e categoria come il catalogo: stessa misura a ogni larghezza, senza maiuscolo imposto (il catalogo mostra il testo com'e) e con un
+   grigio che supera il contrasto minimo AA (#666 su bianco 5,7:1; #73787d fa 4,46:1). Riguarda anche le card dei visti di recente. */
+body.ks-page-home #ksHomePage .ks-grid-card .name-product,
+body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .name-product {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  text-transform: none;
+}
+body.ks-page-home #ksHomePage .ks-grid-card .ks-card-category,
+body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .ks-card-category { color: #666; }
+body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-wrapper {
+  aspect-ratio: 1 / 1;
+  height: auto;
+  min-height: 0;
+  background: #fff;
+}
+body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-wrapper .product-img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-wrapper .img-product,
+body.ks-page-home #HomeRecentlyViewedSection .ks-recent-card .card-product-wrapper .img-hover {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  object-fit: contain;
 }

@@ -66,7 +66,7 @@ function Test-BatchKeepsAriaState([string]$js) {
 function Test-CacheBusters([string]$aspx, [string]$master) {
     return ($aspx -match 'css/catalog-ui\.css"\) %>\?v=20261114-(?:(?:catalog-nav|dept-nav|cards)1a|deadcode-c1a)' -and
             $aspx -match 'js/catalog-ui\.js"\) %>\?v=20261114-catalog-nav1a' -and
-            $master -match 'theme-overrides\.css"\) & "\?v=20261114-(catalog-nav1a|dept-nav1a|search-panel1a|home-vetrina[12]a|deadcode-c1a)"')
+            $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(catalog-nav1a|dept-nav1a|search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-home-cards1a)"')
 }
 function Test-AvailabilitySeparator([string]$aspx, [string]$css) {
     return ($aspx -match 'widget-facet facet-fieldset ks-facet-availability' -and
