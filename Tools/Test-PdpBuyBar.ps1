@@ -70,7 +70,8 @@ function Test-MeasuredHeight([string]$js, [string]$css) {
     $b = Get-BarBlock $css
     return ($js -match "setProperty\('--ks-pdp-buybar-h', h \+ 'px'\)" -and
             $b -match 'body\.ks-pdp-buybar-on \{ padding-bottom: var\(--ks-pdp-buybar-h,' -and
-            $b -match 'body\.ks-pdp-buybar-on \.ks-cart-feedback-toast \{ bottom: calc\(var\(--ks-pdp-buybar-h, 72px\) \+ 16px\); \}')
+            $b -match 'body\.ks-pdp-buybar-on \.ks-cart-feedback-toast \{ bottom: calc\(var\(--ks-pdp-buybar-h, 72px\) \+ 16px\); \}' -and
+            $b -match 'html \{ scroll-padding-bottom: var\(--ks-pdp-buybar-h, 0px\); \}')
 }
 function Test-BarCss([string]$css) {
     $b = Get-BarBlock $css
@@ -91,7 +92,7 @@ function Test-PageWiring([string]$aspx) {
     $j = $aspx.IndexOf('js/ks-pdp-buybar.js')
     return ($i -gt 0 -and $j -gt $i -and
             $aspx -match 'js/ks-pdp-buybar\.js"\) %>\?v=20261114-pdp-buybar1a' -and
-            $aspx -match 'css/product-ui\.css"\) %>\?v=(?:20261114-(?:pdp-buybar1a|deadcode-c1a)|20261115-palette-aa1a|20261115-focus-fc1a)')
+            $aspx -match 'css/product-ui\.css"\) %>\?v=(?:20261114-(?:pdp-buybar1a|deadcode-c1a)|20261115-palette-aa1a|20261115-focus-fc1a|20261115-focus-obscured1a)')
 }
 
 # ---- 1) sorgente reale --------------------------------------------------------
@@ -146,5 +147,8 @@ $m = Mutate-Text $css 'min-height: 48px;' 'min-height: 32px;' 'M16'
 Assert-Detected (Test-BarCss $m) 'M16_TOUCH_TARGET_TOO_SMALL'
 $m = Mutate-Text $aspx 'js/ks-pdp-buybar.js") %>?v=20261114-pdp-buybar1a' 'js/ks-pdp-buybar.js") %>?v=old' 'M17'
 Assert-Detected (Test-PageWiring $m) 'M17_SCRIPT_CACHE_BUSTER_NOT_UPDATED'
+
+$m = Mutate-Text $css 'html { scroll-padding-bottom: var(--ks-pdp-buybar-h, 0px); }' 'html { }' 'M18'
+Assert-Detected (Test-MeasuredHeight $js $m) 'M18_FOCUS_SCROLLS_BEHIND_THE_BAR_NO_SCROLL_PADDING'
 
 Write-Output 'PDP_BUY_BAR_OK'

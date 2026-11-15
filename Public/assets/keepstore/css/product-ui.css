@@ -1259,6 +1259,9 @@
   body.ks-pdp-buybar-on { padding-bottom: var(--ks-pdp-buybar-h, calc(72px + env(safe-area-inset-bottom, 0px))); }
 
   body.ks-pdp-buybar-on .ks-cart-feedback-toast { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 16px); }
+
+  /* KS-A04-FOCUS-NOT-OBSCURED-1A: Tab e Maiusc+Tab portano l'elemento con il focus sopra la barra, non sotto (WCAG 2.4.11 e 2.4.12) */
+  html { scroll-padding-bottom: var(--ks-pdp-buybar-h, 0px); }
 }
 
 @media (max-width: 1199.98px) and (prefers-reduced-motion: no-preference) {

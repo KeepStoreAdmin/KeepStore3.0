@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-A04-FOCUS-NOT-OBSCURED-1A — 15/11/2026 — SOURCE (focus non coperto dalla barra di acquisto fissa)
+
+**Esito: A (SOURCE). Livello S (primo task con il metodo ottimizzato). PR [#507](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/507).** Solo CSS: una regola e un marcatore di versione. Nessun dato commerciale toccato. Mandato PO: «Focus non coperto» (residuo di [#505](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/505), WCAG 2.4.11).
+
+**Fatti (Edge reale, Tab e Maiusc+Tab veri, 160 passi per pagina, scroll assestato a 450 ms).** Pagine pubbliche del Smoke (catalogo a 390 e 1440 px, HOME a 390 px): **nessun elemento con il focus coperto** da elementi fissi o sticky (testata, pulsante «su», toast). Scheda prodotto (HTML della LAB con lo script reale della barra e i fogli attuali: la build della LAB non ha la barra): a 390 e 1024 px 0 casi; a **768 px un caso coperto per piu del 50%** dalla barra fissa, nessuno interamente nascosto. Le letture a 90 ms mostravano piu casi: erano scroll morbido in corso, non difetti a riposo (misurare sempre a scroll assestato). Quindi 2.4.11 (AA, non interamente nascosto) non e violato; si chiude il caso parziale (2.4.12).
+
+**Soluzione.** In `product-ui.css`, nel blocco della barra (telefono e tablet): `html { scroll-padding-bottom: var(--ks-pdp-buybar-h, 0px); }`, la stessa altezza misurata dallo script che guida gia lo spazio in fondo pagina e il toast. Buster di `product-ui.css` in `articolo.aspx`.
+
+**Revisioni.** Non richieste (livello S, perimetro di una regola con misura riproducibile). **Prove:** `Test-PdpBuyBar.ps1` esteso (S08 e mutazione M18, visto rosso prima della regola); misura con il CSS reale: 0 casi a 768 e 390 px; runner dei test correlati: 6 test in 146 s, 0 nuovi fallimenti; CI.
+
+**Limiti e residuo.** Misura su fixture della scheda (il Smoke non si apre sulla scheda: scrive le visite); toast in apertura e focus dentro la barra non misurati. **Alla consegna futura:** `product-ui.css` e `articolo.aspx` insieme. CONSEGNA SERVER SOSPESA.
 ## KS-GOV-METHOD-OPTIMIZE-1A — 15/11/2026 — DOCS + STRUMENTI (metodo ottimizzato: ruoli, livelli S/M/L, budget di tempo)
 
 **Esito: A (DOCS e strumenti, nessun runtime). Livello S. PR [#506](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/506).** Mandato del PO: «questa volta ci hai messo molto tempo [...] ottimizzare al massimo il metodo di lavoro e stabilire bene i ruoli». Il primo task con la catena completa ha richiesto circa 2 ore contro circa 1 dei precedenti.
