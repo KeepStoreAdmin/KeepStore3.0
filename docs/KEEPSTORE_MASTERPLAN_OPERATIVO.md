@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-GOV-METHOD-OPTIMIZE-1A — 15/11/2026 — DOCS + STRUMENTI (metodo ottimizzato: ruoli, livelli S/M/L, budget di tempo)
+
+**Esito: A (DOCS e strumenti, nessun runtime). Livello S. PR [#506](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/506).** Mandato del PO: «questa volta ci hai messo molto tempo [...] ottimizzare al massimo il metodo di lavoro e stabilire bene i ruoli». Il primo task con la catena completa ha richiesto circa 2 ore contro circa 1 dei precedenti.
+
+**Dove andava il tempo.** Ricognizione ampia con script usa-e-getta; due revisioni in serie (circa 20 minuti) e un lancio Codex rifatto per il nome del pacchetto; 29 test correlati scelti a mano e rieseguiti in serie (circa 25 minuti ogni volta, due volte); un `sed -i` in massa che ha spogliato i CR di circa 100 file; voce di Masterplan molto lunga.
+
+**Che cosa cambia.** Sezione nuova in testa ad [AGENTS](../AGENTS.md): **ruoli** (PO decide le priorita; CODE unico esecutore e decisore; ChatGPT revisore avversariale; Claude revisore indipendente; sottoagenti operativi per misure e test), **tre livelli** scelti da CODE (S nessuna catena; M ChatGPT e Claude in parallelo; L catena sequenziale completa solo per CRITICAL o sistemico), **budget per fase** con regola dello sforamento (ridurre o spezzare, mai allargare), **un task = una famiglia di meccanismi**, voce del Masterplan di 15 righe al massimo, divieto di `sed -i` sui file CRLF. Gate di certezza e verifica di ogni affermazione restano.
+
+**Strumenti nuovi.** `Tools/Invoke-KeepStoreCodexReview.ps1` (revisione ChatGPT con prompt standard e timeout), `Tools/Run-KeepStoreRelatedTests.ps1` (mappa i file cambiati ai soli test pertinenti, li esegue in parallelo, separa i fallimenti noti della stable: `Tools/known-baseline-failures.txt`), modelli in `Tools/templates/`. Prova: sul cambiamento del focus il runner sceglie 22 test (contro i 29 scelti a mano) e li esegue in parallelo in 148 secondi invece di circa 25 minuti in serie.
+
+**Prossimo:** `KS-A04-FOCUS-NOT-OBSCURED-1A` con il metodo nuovo (livello M). CONSEGNA SERVER SOSPESA.
 ## KS-A04-FOCUS-FORCED-COLORS-1A — 15/11/2026 — SOURCE + PROVA SMOKE (focus da tastiera sempre visibile e colori forzati; seconda applicazione della catena a tre passaggi)
 
 **Esito: A (SOURCE).** Solo presentazione (CSS, marcatori di versione): nessuna riga di prezzi, carrello, stock, query o dati. Mandato del PO: «Focus e colori forzati» (il residuo registrato dai task #502 e #504). **PR [#505](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/505).** Chi naviga da tastiera deve vedere dove si trova; chi usa i colori forzati di Windows non deve perdere confini, stati e indicatore di focus.

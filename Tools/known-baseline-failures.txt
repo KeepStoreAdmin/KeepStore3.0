@@ -1,0 +1,15 @@
+# Test di Tools\ che falliscono GIA sulla stable (non per colpa del task in corso). Formato: NomeTest # motivo (SHA della stable su cui e stato verificato).
+# Un test qui che passa va tolto dalla lista; un test nuovo che fallisce NON va aggiunto senza provarlo su un worktree pulito della stable (git worktree add --detach).
+Test-CatalogPdpShoppingContinuity # pin "VB e App_Code invariati" contro una baseline storica (verificato su ce0c5b26)
+Test-CatalogSearchContext # pin "query o filtri commerciali invariati" contro una baseline storica (verificato su ce0c5b26)
+Test-HeaderCurrentScope # pin "solo il blocco ricerca della testata cambiato" (verificato su ce0c5b26)
+Test-HeaderMenuMarkup # estrazione del markup della testata fallisce (verificato su ce0c5b26)
+Test-RegistrationFormContinuity # pin "registrazione.aspx.vb invariato" contro una baseline storica (verificato su ce0c5b26)
+Test-MobileCheckoutContinuity # pin "carrello.aspx.vb invariato" contro una baseline storica (verificato su ce0c5b26)
+Test-CheckoutCriticalNoticesVisibility # pin "solo spostamento, tutto il resto invariato" (verificato su ce0c5b26)
+Test-WishlistHeaderOwnerKey # pin "solo i blocchi della lista desideri cambiati" (verificato su ce0c5b26)
+Test-LoginPostOriginGuard # pin a una baseline storica 743e4d4a (nota dalla memoria di lavoro)
+Test-CheckoutConsentRecovery # pin "code-behind byte content unchanged" contro una baseline storica (verificato sulla stable 0e84c52c)
+Test-HomeCatalogDiscovery # compilazione VB della harness: tipi non dichiarati (verificato sulla stable 0e84c52c)
+Test-HomeNavigationRealAssortment # pin "tutto il markup precedente e le card dei settori invariati" (verificato sulla stable 0e84c52c)
+Test-StorefrontPromotionParity # asserzioni su offerta deterministica e fallback della HOME (verificato sulla stable 0e84c52c)
