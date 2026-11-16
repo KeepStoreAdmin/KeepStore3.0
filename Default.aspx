@@ -61,6 +61,12 @@
         #KsLocalAiSearch130 .ks-guide-compare-names { margin: 0; padding-left: 22px; }
         #KsLocalAiSearch130 .ks-guide-compare-names .ks-guide-product-link { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 22px; }
         #KsLocalAiSearch130 [hidden] { display: none !important; }
+        /* KS-A04-GUIDE-CLS-1A: con il JavaScript acceso la guida nasce con l'altezza che ha quando e collegata (data-ks-guide-bound), cosi la pagina non scatta quando parte lo script.
+           Modulo: spazio riservato ma invisibile e non raggiungibile (visibility). Riserva per chi non ha JavaScript: fuori dal flusso. home-default.js mette data-ks-guide-failed se la guida
+           non si collega e allora la riserva torna visibile; il blocco <noscript> sotto fa lo stesso senza JavaScript. */
+        #KsLocalAiSearch130:not([data-ks-guide-bound]):not([data-ks-guide-failed]) [data-ks-guide-fields][hidden] { display: block !important; visibility: hidden; }
+        #KsLocalAiSearch130:not([data-ks-guide-bound]):not([data-ks-guide-failed]) .ks-guide-fallback-departments,
+        #KsLocalAiSearch130:not([data-ks-guide-bound]):not([data-ks-guide-failed]) .ks-guide-next { display: none; }
         @media (min-width: 768px) {
             #KsLocalAiSearch130 .ks-ai130-brain { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); gap: 4px 24px; align-items: center; }
             #KsLocalAiSearch130 h2 { grid-column: 1; }
@@ -213,6 +219,11 @@
             transition: none;
         }
     </style>
+    <noscript><style>
+        #KsLocalAiSearch130:not([data-ks-guide-bound]):not([data-ks-guide-failed]) [data-ks-guide-fields][hidden] { display: none !important; }
+        #KsLocalAiSearch130:not([data-ks-guide-bound]):not([data-ks-guide-failed]) .ks-guide-fallback-departments,
+        #KsLocalAiSearch130:not([data-ks-guide-bound]):not([data-ks-guide-failed]) .ks-guide-next { display: block; }
+    </style></noscript>
 </asp:Content>
 
 <asp:Content ID="cntMain" ContentPlaceHolderID="MainContent" runat="server">
@@ -725,5 +736,5 @@
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20261022-home-vetrina-1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261107-assistant-ux1e" %>"></script>
-    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261021-progressive1a" %>"></script>
+    <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261116-guide-cls1a" %>"></script>
 </asp:Content>

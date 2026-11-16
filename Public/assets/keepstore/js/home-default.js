@@ -206,8 +206,19 @@
 
   // Page-scoped module; the surrounding HOME controllers remain independent.
   function initShoppingGuide() {
-    if (window.KeepStoreShoppingGuide && typeof window.KeepStoreShoppingGuide.init === 'function') {
-      window.KeepStoreShoppingGuide.init(document.getElementById('KsLocalAiSearch130'));
+    var root = document.getElementById('KsLocalAiSearch130');
+    try {
+      if (window.KeepStoreShoppingGuide && typeof window.KeepStoreShoppingGuide.init === 'function') {
+        window.KeepStoreShoppingGuide.init(root);
+      }
+    } catch (err) {
+      if (window.console && console.warn) console.warn('[KeepStore home] guide init error', err);
+    }
+    // KS-A04-GUIDE-CLS-1A: finche la guida non e collegata (data-ks-guide-bound) il CSS di Default.aspx tiene lo spazio del modulo e nasconde la riserva per non spostare
+    // la pagina; se non si e collegata (script assente, init fallita) questo segnale riporta la riserva visibile e toglie il modulo.
+    if (root) {
+      if (root.hasAttribute('data-ks-guide-bound')) root.removeAttribute('data-ks-guide-failed');
+      else root.setAttribute('data-ks-guide-failed', '1');
     }
   }
 
@@ -216,9 +227,12 @@
     if (document.body) {
       document.body.classList.add('ks-home-main');
     }
-    initHomeSwipers();
-    initDepartmentsMenu();
-    initShoppingGuide();
+    try {
+      initHomeSwipers();
+      initDepartmentsMenu();
+    } finally {
+      initShoppingGuide();
+    }
     try {
       if (window.KeepStoreRecentlyViewed && typeof window.KeepStoreRecentlyViewed.render === 'function') {
         window.KeepStoreRecentlyViewed.render('HomeRecentlyViewedSection');
