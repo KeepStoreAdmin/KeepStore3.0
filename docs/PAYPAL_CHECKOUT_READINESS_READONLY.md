@@ -1,3 +1,12 @@
+# PayPal Checkout - verifica di sola lettura della configurazione (per il PO e per Enzo)
+
+Scopo: dire, per ogni metodo di pagamento PayPal (`pagamentitipo.OnLine = 2`) del database SELEZIONATO, se la configurazione e completa e perche no. Nasce da PAYPAL-TINYINT-FLAGS-1A (16/11/2026). Testo standard e universale: non nomina database, clienti o domini; non scrive nulla; non mostra MAI il valore di una credenziale (solo se c'e: 1 o 0).
+
+Come si usa (SQLyog o qualunque client MySQL): selezionare il database dell'installazione, incollare il blocco sotto ed eseguirlo. Risultato: una riga per metodo PayPal di ogni azienda.
+
+Come si legge: il carrello offre PayPal solo se `Abilitato = 1`, `Web = 1`, l'importo del carrello rientra in `TettoImporto` e `ConfigurazioneCompleta = SI`. I flag `MappingAttivo` e `AccountAttivo` sono mostrati come numeri salvati: devono valere **esattamente 1** (0 = non attivo; qualunque altro valore, per esempio -1, e anomalo e il programma lo tratta come NON attivo). `TentativiRegistrati` conta i tentativi di pagamento PayPal gia registrati. Il manuale per Enzo resta [PAYPAL_CHECKOUT_ORDERS_V2_GESTIONALE_ENZO](PAYPAL_CHECKOUT_ORDERS_V2_GESTIONALE_ENZO.md).
+
+```sql
 -- PAYPAL-CHECKOUT-READINESS-READONLY-1A. Read-only check of the PayPal Checkout configuration of the SELECTED database.
 -- Standard and universal: the same text runs on every KeepStore database; it names no database, customer, domain or template.
 -- The target is the database the operator has selected (DATABASE()). Nothing is written. Credential VALUES are never read out:
@@ -41,3 +50,4 @@ LEFT JOIN paypal_checkout_azienda c ON c.AziendeId = p.AziendeID AND c.Pagamenti
 LEFT JOIN paypal_checkout_account a ON a.Id = c.PayPalAccountId
 WHERE p.OnLine = 2
 ORDER BY p.AziendeID, p.id;
+```
