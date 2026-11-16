@@ -1,5 +1,13 @@
 # KeepStore Masterplan Operativo
 
+## PAYPAL-FAIL-DIAGNOSTICS-1A — 16/11/2026 — SOURCE (ogni fallimento del percorso PayPal lascia il motivo nel registro)
+
+**Esito: A (SOURCE). Livello S. PR [#526](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/526).** Il PO ha fatto un ordine di prova (n. 343, account di test) scegliendo PayPal: l'ordine si e salvato ma non e comparsa nessuna schermata PayPal e non e rimasta alcuna traccia, perche `Fail()` in `paypalcheckout` e `paypalreturn` rimandava al dettaglio ordine senza scrivere nulla (l'ordine nasce prima del pagamento e il testo «PayPal: in attesa di avvio pagamento» lo scrive `ordine.aspx` subito dopo l'inserimento).
+
+**Correzione.** `paypalcheckout` e `paypalreturn` scrivono in `paypal-checkout.log` documento, motivo e, per le chiamate a PayPal, `http=<stato> code=<codice>` (`PayPalOrdersV2Client.DescribeFailure`, `PayPalPaymentState.LogCheckoutFailure`); il webhook scrive in `paypal-webhook.log` ogni esito diverso da 200. Mai corpi, token o credenziali; nessuna eccezione; il cliente vede lo stesso comportamento. Nuovo `Test-PayPalFailureDiagnostics` (pin del sorgente, comportamento reale con tutta `App_Code`, 5 mutazioni): rosso prima, 18/18 dopo; test PayPal correlati verdi, secret guard, cart e precompile PASS.
+
+**Limiti e residuo (NON AVVIATO).** Non spiega ancora perche il passaggio a PayPal si e fermato: lo dira il registro al prossimo tentativo, o le SELECT sull'ordine 343 (transazione assente = fermo prima di creare il tentativo; `CREATING` = fallita la chiamata a PayPal). **Alla consegna futura:** `PayPalOrdersV2Client.vb` e `PayPalPaymentState.vb` insieme, poi le tre pagine. CONSEGNA SERVER SOSPESA.
+
 ## PAYPAL-FIRST-PAYMENT-RUNBOOK-1A — 16/11/2026 — DOCS (piano di pubblicazione e primo pagamento PayPal reale)
 
 **Esito: A (DOCS). Livello S. PR [#525](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/525).** Risposta del PO «Si, prepara» dopo #524. Il PO ha eseguito la verifica di prontezza sul database reale: Taikun (azienda 1, pagamento 19, tetto 5000) e Webaffare (azienda 2, pagamento 12, tetto 1000) `ConfigurazioneCompleta = SI`, flag a 1, account PayPal condiviso, 0 tentativi (PayPal mai usato).
