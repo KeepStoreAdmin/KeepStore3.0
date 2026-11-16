@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## KS-A04-FOOTER-TOUCH-44-1A — 16/11/2026 — SOURCE (area di tocco di 44 px nei titoli del piede)
+
+**Esito: A (SOURCE in integrazione). Livello S. PR [#516](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/516).** I quattro titoli del piede sotto i 768 px (Supporto, Catalogo, Area cliente, Contatti) hanno ora un'area di tocco alta almeno 44 px. Prima la riga era 357×24 px su 390 px: sopra il minimo AA di WCAG 2.5.8 (24 px) ma sotto i 44 px di 2.5.5 e delle linee guida Apple e Material. Da 768 px in su non cambia nulla. Nessun dato commerciale toccato.
+
+**Fatti e causa.** Misurato su 390 px: riga e button 357×24. L'altezza sta sull'h6 (`min-height: 44px`, flex, titolo centrato) e non sul button, perche il button arriva dopo con JavaScript: cosi la riga e alta uguale con e senza script (nessun salto di layout) e l'icona +/- (a `top: 50%` dell'h6) resta al centro. Il button riempie la riga (`align-self: stretch`). Sotto i 768 px il piede cresce di 80 px in totale (4 righe da +20 px).
+
+**Revisioni.** Livello S (requisito chiaro, una sola superficie, nessuna area CRITICAL): nessuna catena; test prima, visto rosso (14 rilievi), poi il CSS. Gate di certezza: PASS (la misura prima/dopo e il test bastano a provare il caso).
+
+**Prove.** `Tools/Test-FooterAccordion.ps1` esteso: riga e button di almeno 44 px a 390 e 767, button alto quanto la riga, titolo centrato con e senza script, altezza invariata da 768 px in su, nuova versione di `ks-ui.css`; **37 mutazioni, tutte rilevate** (8 nuove, M24-M31, piu M12a adattata). Test correlati: 9 pertinenti, 0 nuovi fallimenti (3 fallimenti noti della stable). Prova visiva sullo Smoke a 390 px: quattro righe da 360x44 con titolo centrato e icona allineata. Compilazione 4.8 e segreti: PASS in locale; CI sulla PR. Prestazioni: nessuna misura applicabile (una regola CSS).
+
+**Limiti e residuo (NON AVVIATO).** Solo Edge headless: nessun dito reale e nessun dispositivo; l'altezza misurata non e una prova di tocco. Un titolo lungo che va a capo supera i 44 px. CSS dei tenant caricati dopo `ks-ui.css` non verificabili. Restano senza `prefers-reduced-motion` e Firefox, Safari, screen reader reali (task #512). **Alla consegna futura:** prima `ks-ui.css` (innocuo da solo), poi `Page.master` (nuova versione `20261116-footer-touch44a`); rollback della coppia.
+
 ## KS-GOV-AGENTS-ARCHIVE-1A — 16/11/2026 — DOCS (AGENTS.md alleggerito)
 
 **Esito: A (DOCS). Livello S (solo documentale, esente dalla catena). PR [#515](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/515).** Su richiesta del PO («Sì, archivia»): il testo integrale delle Fasi A–I (sincronizzazione della copia locale) e del paragrafo del LAB (identita attestata, avvio, account, cinque cicli amministrativi) e passato, **senza cambiare una parola**, in due allegati normativi: `docs/KEEPSTORE_LOCAL_SYNC_PROCEDURE.md` e `docs/KEEPSTORE_LAB_DB_OPERATING_RECORD.md`. In `AGENTS.md` restano le due sezioni, con lo stesso titolo, e un riassunto vincolante (le regole che servono a ogni task); gli allegati valgono quanto le sezioni.
