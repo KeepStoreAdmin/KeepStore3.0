@@ -1,5 +1,15 @@
 # KeepStore Masterplan Operativo
 
+## PAYPAL-PAY-FIRST-DESIGN-1A — 16/11/2026 — DOCS (progetto «l'ordine si salva solo se il pagamento PayPal va a buon fine» e numero progressivo)
+
+**Esito: A (DOCS, progetto; nessun codice). Livello L (revisione del progetto). PR [#527](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/527).** Il PO, dopo l'ordine di prova n. 343, ha chiesto di ricuperare dai manuali la funzione «se il pagamento riesce si salva l'ordine, se fallisce no», dove impostarla nel gestionale e come gestire il numero assegnato dal database al salvataggio.
+
+**Fatti.** La funzione e solo progettata: `payment-confirmation-policy.md` e i tre campi `pagamentitipo.ConfermaOrdinePrimaPagamento/PermettiPagamentoSuccessivo/InviaEmailOrdinePrimaPagamento` (gia nel database); `ordine.aspx` con 0 scrive «enforcement non ancora attivo» e crea l'ordine. Nel gestionale la griglia «Tipi di Pagamento» legge `Select * from pagamentitipo`: le colonne sono in fondo. Misura sul LAB: un INSERT in `documenti` con la transazione aperta blocca ogni altro INSERT fino al commit (trigger `SettaProssimoDocumento` + `triggerstatus`, transazione Serializable): **incassare dentro la transazione e escluso**.
+
+**Decisione (dopo ChatGPT xhigh e Claude Opus, gate PASS per il progetto).** «Autorizza, crea l'ordine, incassa»: nessun numero prima dell'autorizzazione (PayPal vede un riferimento del tentativo), documento e numero dal database dopo i fondi garantiti, confronto del totale prima del commit, incasso dopo il commit, e-mail e pixel dopo `COMPLETED`, tabella durevole dei tentativi con recupero idempotente, gate lato server su `ordine.aspx`. Accolti i dieci rilievi dei revisori (recupero, esiti ambigui, aggiramento con il token, totale tardivo, client solo CAPTURE, webhook AUTHORIZE, preventivi e coupon...). **Residuo da accettare dal PO:** un'autorizzazione valida non incassata lascia un documento non pagato da annullare, senza addebito.
+
+**Fasi inerti dietro flag 0:** P1 client AUTHORIZE, P2 tabella tentativi e recupero (script in `docs/` finche il PO non autorizza l'eccezione del controllo dei segreti), P3 pagine/ordine/webhook, P4 runbook e specifica per Enzo. Documento `docs/PAYPAL_PAY_FIRST_DESIGN.md`. **Limiti:** payload reali di AUTHORIZE e `PayPal-Request-Id` solo col primo pagamento reale; `Carrello_Totali` e tabella dei tentativi da applicare prima del flag. CONSEGNA SERVER SOSPESA.
+
 ## PAYPAL-FAIL-DIAGNOSTICS-1A — 16/11/2026 — SOURCE (ogni fallimento del percorso PayPal lascia il motivo nel registro)
 
 **Esito: A (SOURCE). Livello S. PR [#526](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/526).** Il PO ha fatto un ordine di prova (n. 343, account di test) scegliendo PayPal: l'ordine si e salvato ma non e comparsa nessuna schermata PayPal e non e rimasta alcuna traccia, perche `Fail()` in `paypalcheckout` e `paypalreturn` rimandava al dettaglio ordine senza scrivere nulla (l'ordine nasce prima del pagamento e il testo «PayPal: in attesa di avvio pagamento» lo scrive `ordine.aspx` subito dopo l'inserimento).
