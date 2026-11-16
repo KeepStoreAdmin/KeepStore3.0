@@ -129,9 +129,11 @@ Public NotInheritable Class StorefrontSeoTenantContext
         End Try
     End Function
     ' Metodi di pagamento pubblici: terza lettura SEPARATA e facoltativa; nessuna eccezione esce da qui e le altre informazioni dell'identita restano. Si leggono solo
-    ' AziendeID, id, Descrizione e Ordinamento: mai Informazioni (IBAN e dati di persone) ne img. Regola, solo metodi offline pubblici e senza gateway ne contrassegno,
-    ' piu stretta di quella del carrello: Abilitato, Web (pubblico), tetto positivo, OnLine=0, Contrassegno=0, costi non nulli, nessuna configurazione bancaria attiva.
-    Private Const PaymentMethodsSql As String = "SELECT p.AziendeID, p.id, p.Descrizione, p.Ordinamento FROM pagamentitipo p WHERE p.Abilitato=1 AND p.Web=1 AND p.CostoMassimo>0 AND p.OnLine=0 AND COALESCE(p.Contrassegno,0)=0 AND p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND NOT EXISTS (SELECT 1 FROM vbancasella_azienda b WHERE b.AziendeId=p.AziendeID AND b.PagamentiTipoId=p.id) ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id"
+    ' AziendeID, id, Descrizione e Ordinamento: mai Informazioni (IBAN e dati di persone) ne img. Regola, piu stretta di quella del carrello e mai piu larga: Abilitato, Web
+    ' (pubblico), tetto positivo, Contrassegno=0, costi non nulli. OnLine=0 solo se non ha configurazioni bancarie attive. OnLine=3 (carta, Banca Sella) solo con UNA
+    ' configurazione attiva distinta (stesso DISTINCT del carrello) con un shopLogin valido (token senza il segnaposto GESPAY) E con UNA sola riga di impostazioni per tutta
+    ' l'azienda: il gateway legge le impostazioni per azienda senza filtro su metodo ne Attivo e prende la prima riga. PayPal e IwBank restano fuori.
+    Private Const PaymentMethodsSql As String = "SELECT p.AziendeID, p.id, p.Descrizione, p.Ordinamento FROM pagamentitipo p LEFT JOIN (SELECT d.AziendeId, d.PagamentiTipoId, COUNT(*) AS ConfigCount, MAX(NULLIF(TRIM(d.shopLogin),'') IS NOT NULL AND TRIM(d.shopLogin) REGEXP '^[A-Za-z0-9_-]+$' AND UPPER(TRIM(d.shopLogin)) <> 'GESPAY') AS HasLogin FROM (SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin FROM vbancasella_azienda WHERE Attivo=1) d GROUP BY d.AziendeId, d.PagamentiTipoId) c ON c.AziendeId=p.AziendeID AND c.PagamentiTipoId=p.id WHERE p.Abilitato=1 AND p.Web=1 AND p.CostoMassimo>0 AND COALESCE(p.Contrassegno,0)=0 AND p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND ((p.OnLine=0 AND c.ConfigCount IS NULL) OR (p.OnLine=3 AND c.ConfigCount=1 AND c.HasLogin=1 AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1)) ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id"
 
     Private Shared Sub AttachPaymentMethods(ByVal connection As MySqlConnection, ByVal identities As IList(Of StorefrontSeoTenantIdentity))
         Try

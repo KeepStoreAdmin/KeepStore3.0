@@ -498,8 +498,8 @@ function Test-Context([string]$c, [string]$policyText) {
     $callFull = 'ReadLegalProfiles(connection, "' + $legalFull + '")'
     $callReduced = 'If profiles Is Nothing Then profiles = ReadLegalProfiles(connection, "' + $legalReduced + '")'
     if (-not $c.Contains($main) -or -not $c.Contains($callFull) -or -not $c.Contains($callReduced)) { return $false }
-    # tre per le letture esistenti (identita, dati societari completo e ridotto) piu due per i metodi di pagamento (SELECT e NOT EXISTS): la loro regola e provata da Test-FooterPayments.ps1
-    if ([regex]::Matches($c, 'SELECT ').Count -ne 5) { return $false }
+    # tre per le letture esistenti (identita, dati societari completo e ridotto) piu quattro per i metodi di pagamento (la SELECT e tre sottoquery annidate: DISTINCT bancario, conteggio righe, aggregato): la loro regola e provata da Test-FooterPayments.ps1
+    if ([regex]::Matches($c, 'SELECT ').Count -ne 7) { return $false }
     if ($c -match '(?is)CodiceFiscale|CognomeNome|For Each candidate|Exit For|Session\(') { return $false }
     # la lettura dei dati societari parte quando il primo reader e gia chiuso, dentro la stessa connessione e PRIMA di inserire l'elenco in cache
     if ($c -cnotmatch '(?s)End While\s+End Using\s+End Using\s+AttachLegalProfiles\(connection, result\)\s+AttachPaymentMethods\(connection, result\)\s+End Using\s+HttpRuntime\.Cache\.Insert') { return $false }

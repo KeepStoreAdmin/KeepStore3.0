@@ -259,13 +259,14 @@ function Test-Context([string]$c) {
     $sql = Get-FooterSql $c
     if ($null -eq $sql) { return 'NO_SQL_CONSTANT' }
     # ogni predicato della regola, una volta sola, e le sole colonne lette
-    foreach ($frag in @('FROM pagamentitipo p', 'p.Abilitato=1', 'p.Web=1', 'p.CostoMassimo>0', 'p.OnLine=0', 'COALESCE(p.Contrassegno,0)=0', 'p.CostoPercentuale IS NOT NULL', 'p.CostoFisso IS NOT NULL',
-                        'NOT EXISTS (SELECT 1 FROM vbancasella_azienda b WHERE b.AziendeId=p.AziendeID AND b.PagamentiTipoId=p.id)', 'ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id')) {
+    foreach ($frag in @('FROM pagamentitipo p', 'p.Abilitato=1', 'p.Web=1', 'p.CostoMassimo>0', 'COALESCE(p.Contrassegno,0)=0', 'p.CostoPercentuale IS NOT NULL', 'p.CostoFisso IS NOT NULL',
+                        'LEFT JOIN (SELECT d.AziendeId, d.PagamentiTipoId, COUNT(*) AS ConfigCount, MAX(NULLIF(TRIM(d.shopLogin),'''') IS NOT NULL AND TRIM(d.shopLogin) REGEXP ''^[A-Za-z0-9_-]+$'' AND UPPER(TRIM(d.shopLogin)) <> ''GESPAY'') AS HasLogin FROM (SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin FROM vbancasella_azienda WHERE Attivo=1) d GROUP BY d.AziendeId, d.PagamentiTipoId) c ON c.AziendeId=p.AziendeID AND c.PagamentiTipoId=p.id',
+                        'AND ((p.OnLine=0 AND c.ConfigCount IS NULL) OR (p.OnLine=3 AND c.ConfigCount=1 AND c.HasLogin=1 AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1))', 'ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id')) {
         if (([regex]::Matches($sql, [regex]::Escape($frag))).Count -ne 1) { return ('FRAGMENT_' + $frag) }
     }
     if ($sql -notmatch '^SELECT p\.AziendeID, p\.id, p\.Descrizione, p\.Ordinamento FROM ') { return 'COLUMNS' }
     if ($sql -match '(?i)Informazioni|\bimg\b|\bSELECT \*|p\.\*') { return 'SENSITIVE_OR_STAR' }
-    if (([regex]::Matches($c, 'SELECT ')).Count -ne 5) { return 'SELECT_COUNT' }
+    if (([regex]::Matches($c, 'SELECT ')).Count -ne 7) { return 'SELECT_COUNT' }
     # dopo i dati societari, prima della cache, dentro la stessa connessione e con il primo reader gia chiuso
     if ($c -cnotmatch '(?s)End While\s+End Using\s+End Using\s+AttachLegalProfiles\(connection, result\)\s+AttachPaymentMethods\(connection, result\)\s+End Using\s+HttpRuntime\.Cache\.Insert') { return 'ORDER' }
     $a = [regex]::Match($c, '(?ms)^    Private Shared Sub AttachPaymentMethods\(.*?^    End Sub')
@@ -395,7 +396,7 @@ if (-not $SkipMutations) {
     Dm 'C1_LONG_TIMEOUT' (Safe { (Test-Context $x) -ceq 'OK' })
     $x = Mutate-Text $ctx 'p.Descrizione, p.Ordinamento FROM pagamentitipo p' 'p.Descrizione, p.Informazioni, p.Ordinamento FROM pagamentitipo p' 'C2'
     Dm 'C2_READS_INFORMAZIONI' (Safe { (Test-Context $x) -ceq 'OK' })
-    $x = Mutate-Text $ctx 'AND p.OnLine=0 AND' 'AND p.OnLine IN (0,3) AND' 'C3'
+    $x = Mutate-Text $ctx '(p.OnLine=0 AND c.ConfigCount IS NULL)' '(p.OnLine IN (0,1,2) AND c.ConfigCount IS NULL)' 'C3'
     Dm 'C3_GATEWAY_METHODS_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
     $x = Mutate-Text $ctx 'AND p.Web=1 AND' 'AND' 'C4'
     Dm 'C4_NON_PUBLIC_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
@@ -403,7 +404,7 @@ if (-not $SkipMutations) {
     Dm 'C5_DISABLED_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
     $x = Mutate-Text $ctx ' AND COALESCE(p.Contrassegno,0)=0' '' 'C6'
     Dm 'C6_CASH_ON_DELIVERY_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
-    $x = Mutate-Text $ctx 'b.PagamentiTipoId=p.id)' 'b.PagamentiTipoId=b.PagamentiTipoId)' 'C7'
+    $x = Mutate-Text $ctx 'AND c.PagamentiTipoId=p.id' 'AND c.PagamentiTipoId=c.PagamentiTipoId' 'C7'
     Dm 'C7_BANK_RULE_NOT_CORRELATED' (Safe { (Test-Context $x) -ceq 'OK' })
     $x = Mutate-Text $ctx "AttachLegalProfiles(connection, result)`n                AttachPaymentMethods(connection, result)" "AttachPaymentMethods(connection, result)`n                AttachLegalProfiles(connection, result)" 'C8'
     Dm 'C8_READ_ORDER_SWAPPED' (Safe { (Test-Context $x) -ceq 'OK' })
@@ -444,76 +445,134 @@ function Invoke-Lab([string]$sql, [bool]$write) {
         return $out
     } finally { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue }
 }
-# righe sintetiche: ogni esclusione del piede ha la sua riga; cart/footer sono le attese per un cliente anonimo (nessuna riga utentirapporto, totale 0,01)
+# metodi offline nelle aziende 1 e 2 (esistenti nel LAB): ogni esclusione ha la sua riga; cart/foot sono le attese per un cliente anonimo (nessuna riga utentirapporto, totale 0,01)
+# comp = azienda del metodo; la carta e provata in aziende sintetiche (una per scenario, cloni di `aziende` dentro la transazione annullata) perche il gateway legge
+# bancasella_impostazioni_azienda per AZIENDA senza filtro su metodo ne Attivo e prende la prima riga: la carta si nomina solo con UNA riga per azienda.
 $fx = @(
-    @{ id = 9001; az = 1; d = 'Contanti';                       ab = 1; web = 1; ord = 1;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $true  },
-    @{ id = 9002; az = 1; d = '-Bonifico Bancario';             ab = 1; web = 1; ord = 2;  cp = '0';    cf = '0';    cm = '999999'; co = 0; ol = 0; cart = $true;  foot = $true  },
-    @{ id = 9003; az = 1; d = 'PayPal fixture';                 ab = 1; web = 1; ord = 3;  cp = '0';    cf = '0';    cm = '1000';   co = 0; ol = 2; cart = $true;  foot = $false },
-    @{ id = 9004; az = 1; d = 'Solo clienti collegati';         ab = 1; web = 0; ord = 4;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
-    @{ id = 9005; az = 1; d = 'Disabilitato';                   ab = 0; web = 1; ord = 5;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
-    @{ id = 9006; az = 1; d = 'Tetto zero';                     ab = 1; web = 1; ord = 6;  cp = '0';    cf = '0';    cm = '0';      co = 0; ol = 0; cart = $false; foot = $false },
-    @{ id = 9007; az = 1; d = 'Carta online configurata';       ab = 1; web = 1; ord = 7;  cp = '0';    cf = '0';    cm = '5000';   co = 0; ol = 3; cart = $true;  foot = $false },
-    @{ id = 9008; az = 1; d = 'Carta online senza config';      ab = 1; web = 1; ord = 8;  cp = '0';    cf = '0';    cm = '5000';   co = 0; ol = 3; cart = $true;  foot = $false },
-    @{ id = 9009; az = 1; d = 'Offline con config valida';      ab = 1; web = 1; ord = 9;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $false },
-    @{ id = 9010; az = 1; d = 'Offline con config senza login'; ab = 1; web = 1; ord = 10; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
-    @{ id = 9011; az = 1; d = 'IwBank fixture';                 ab = 1; web = 1; ord = 11; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 1; cart = $true;  foot = $false },
-    @{ id = 9012; az = 1; d = 'Contrassegno fixture';           ab = 1; web = 1; ord = 12; cp = '0';    cf = '0';    cm = '999';    co = 1; ol = 0; cart = $true;  foot = $false },
-    @{ id = 9013; az = 1; d = 'Costo fisso nullo';              ab = 1; web = 1; ord = 13; cp = '0';    cf = 'NULL'; cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
-    @{ id = 9014; az = 1; d = 'Percentuale nulla';              ab = 1; web = 1; ord = 14; cp = 'NULL'; cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
-    @{ id = 9015; az = 2; d = 'Bonifico azienda due';           ab = 1; web = 1; ord = 1;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $true  },
-    @{ id = 9016; az = 1; d = 'Offline con due config';         ab = 1; web = 1; ord = 16; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false }
+    @{ id = 9001; comp = 1; d = 'Contanti';                       ab = 1; web = 1; ord = 1;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $true  },
+    @{ id = 9002; comp = 1; d = '-Bonifico Bancario';             ab = 1; web = 1; ord = 2;  cp = '0';    cf = '0';    cm = '999999'; co = 0; ol = 0; cart = $true;  foot = $true  },
+    @{ id = 9003; comp = 1; d = 'PayPal fixture';                 ab = 1; web = 1; ord = 3;  cp = '0';    cf = '0';    cm = '1000';   co = 0; ol = 2; cart = $true;  foot = $false },
+    @{ id = 9004; comp = 1; d = 'Solo clienti collegati';         ab = 1; web = 0; ord = 4;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
+    @{ id = 9005; comp = 1; d = 'Disabilitato';                   ab = 0; web = 1; ord = 5;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
+    @{ id = 9006; comp = 1; d = 'Tetto zero';                     ab = 1; web = 1; ord = 6;  cp = '0';    cf = '0';    cm = '0';      co = 0; ol = 0; cart = $false; foot = $false },
+    @{ id = 9009; comp = 1; d = 'Offline con config valida';      ab = 1; web = 1; ord = 9;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $false },
+    @{ id = 9010; comp = 1; d = 'Offline con config senza login'; ab = 1; web = 1; ord = 10; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
+    @{ id = 9011; comp = 1; d = 'IwBank fixture';                 ab = 1; web = 1; ord = 11; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 1; cart = $true;  foot = $false },
+    @{ id = 9012; comp = 1; d = 'Contrassegno fixture';           ab = 1; web = 1; ord = 12; cp = '0';    cf = '0';    cm = '999';    co = 1; ol = 0; cart = $true;  foot = $false },
+    @{ id = 9013; comp = 1; d = 'Costo fisso nullo';              ab = 1; web = 1; ord = 13; cp = '0';    cf = 'NULL'; cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
+    @{ id = 9014; comp = 1; d = 'Percentuale nulla';              ab = 1; web = 1; ord = 14; cp = 'NULL'; cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
+    @{ id = 9015; comp = 2; d = 'Bonifico azienda due';           ab = 1; web = 1; ord = 1;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $true  },
+    @{ id = 9016; comp = 1; d = 'Offline con due config';         ab = 1; web = 1; ord = 16; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false }
 )
-$bankRows = @( @(1, 9007, 'S1'), @(1, 9009, 'S2'), @(1, 9010, ''), @(1, 9016, 'A'), @(1, 9016, 'B') )
+$bankRows = @( @(1, 9009, "'S2'", 1), @(1, 9010, "''", 1), @(1, 9016, "'A'", 1), @(1, 9016, "'B'", 1) )
+$companies = @(@{ id = 1; mode = 'real' }, @{ id = 2; mode = 'real' })
+# scenari della carta: comps = aziende da clonare (one = una riga, same = riga duplicata identica per id, diff = duplicata con Nome diverso);
+# settings = (azienda, metodo M o O = altro metodo disabilitato della stessa azienda, login in SQL, Attivo)
+$scen = @(
+    @{ k = 'K01'; n = 1;  comps = @(@(101, 'one'));                     ol = 3; co = 0; settings = @(@(101, 'M', "'LOGIN1'", 1));                              cart = $true;  foot = $true  },
+    @{ k = 'K02'; n = 2;  comps = @(@(102, 'one'));                     ol = 3; co = 0; settings = @(@(102, 'M', "''", 1));                                      cart = $false; foot = $false },
+    @{ k = 'K03'; n = 3;  comps = @(@(103, 'one'));                     ol = 3; co = 0; settings = @(@(103, 'M', "'   '", 1));                                   cart = $false; foot = $false },
+    @{ k = 'K04'; n = 4;  comps = @(@(104, 'one'));                     ol = 3; co = 0; settings = @(@(104, 'M', 'NULL', 1));                                    cart = $false; foot = $false },
+    @{ k = 'K05'; n = 5;  comps = @(@(105, 'one'));                     ol = 3; co = 0; settings = @(@(105, 'M', "'GESPAY'", 1));                               cart = $true;  foot = $false },
+    @{ k = 'K06'; n = 6;  comps = @(@(106, 'one'));                     ol = 3; co = 0; settings = @(@(106, 'M', 'CHAR(9)', 1));                                 cart = $true;  foot = $false },
+    @{ k = 'K07'; n = 7;  comps = @(@(107, 'one'));                     ol = 3; co = 0; settings = @(@(107, 'M', "'A'", 1), @(107, 'M', "'B'", 1));              cart = $false; foot = $false },
+    @{ k = 'K08'; n = 8;  comps = @(@(108, 'one'));                     ol = 3; co = 0; settings = @(@(108, 'M', "'LOGIN1'", 1), @(108, 'M', "'LOGIN1'", 1));    cart = $true;  foot = $false },
+    @{ k = 'K09'; n = 9;  comps = @(@(109, 'one'));                     ol = 3; co = 0; settings = @(@(109, 'M', "'LOGIN1'", 1), @(109, 'O', "''", 0));          cart = $true;  foot = $false },
+    @{ k = 'K10'; n = 10; comps = @(@(110, 'one'));                     ol = 3; co = 0; settings = @();                                                           cart = $true;  foot = $false },
+    @{ k = 'K11'; n = 11; comps = @(@(111, 'one'), @(112, 'one'));      ol = 3; co = 0; settings = @(@(111, 'O', "'X'", 0), @(112, 'M', "'LOGIN1'", 1));          cart = $true;  foot = $false },
+    @{ k = 'K12'; n = 12; comps = @(@(121, 'same'));                    ol = 3; co = 0; settings = @(@(121, 'M', "'LOGIN1'", 1));                                cart = $true;  foot = $true  },
+    @{ k = 'K13'; n = 13; comps = @(@(131, 'diff'));                    ol = 3; co = 0; settings = @(@(131, 'M', "'LOGIN1'", 1));                                cart = $false; foot = $false },
+    @{ k = 'K14'; n = 14; comps = @(@(141, 'one'));                     ol = 0; co = 0; settings = @(@(141, 'M', "'LOGIN1'", 1));                                cart = $true;  foot = $false },
+    @{ k = 'K15'; n = 15; comps = @(@(151, 'one'));                     ol = 3; co = 1; settings = @(@(151, 'M', "'LOGIN1'", 1));                                cart = $true;  foot = $false },
+    @{ k = 'K16'; n = 16; comps = @(@(161, 'one'));                     ol = 3; co = 0; settings = @(@(161, 'O', "'LOGIN1'", 1));                                cart = $true;  foot = $false }
+)
+foreach ($s in $scen) {
+    # PowerShell appiattisce @(@(a,b)) in @(a,b): si rimettono in forma di lista di liste
+    if (@($s.comps).Count -gt 0 -and $s.comps[0] -isnot [array]) { $s.comps = @(, $s.comps) }
+    if (@($s.settings).Count -gt 0 -and $s.settings[0] -isnot [array]) { $s.settings = @(, $s.settings) }
+    $s.method = 9100 + $s.n; $s.other = 9200 + $s.n
+    $s.company = $s.comps[0][0]
+    foreach ($c in $s.comps) { $companies += @{ id = $c[0]; mode = $c[1] } }
+}
 function Build-LabSql([string]$cartSql, [string]$footerSql) {
-    $values = ($fx | ForEach-Object { '(' + $_.id + ', ' + $_.az + ", '" + $_.d.Replace("'", "''") + "', 'LAB fixture', " + $_.ab + ', ' + $_.web + ', ' + $_.ord + ', 0, ' + $_.cp + ', ' + $_.cf + ', ' + $_.cm + ', 0, ' + $_.co + ', ' + $_.ol + ')' }) -join ",`n"
-    $bank = ($bankRows | ForEach-Object { '(' + $_[0] + ', ' + $_[1] + ", '" + $_[2] + "', 1)" }) -join ', '
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine('START TRANSACTION;')
+    [void]$sb.AppendLine('CREATE TEMPORARY TABLE ks_tmp_az AS SELECT * FROM aziende WHERE Id = 1 LIMIT 1;')
+    foreach ($c in $companies) {
+        if ($c.mode -ceq 'real') { continue }
+        [void]$sb.AppendLine("UPDATE ks_tmp_az SET Id = $($c.id), IvaTipo = 0, Nome = 'SYN $($c.id)', URL1 = 'https://syn$($c.id).example.test', URL2 = '';")
+        [void]$sb.AppendLine('INSERT INTO aziende SELECT * FROM ks_tmp_az;')
+        if ($c.mode -ceq 'same') { [void]$sb.AppendLine('UPDATE ks_tmp_az SET IvaTipo = 1;'); [void]$sb.AppendLine('INSERT INTO aziende SELECT * FROM ks_tmp_az;') }
+        if ($c.mode -ceq 'diff') { [void]$sb.AppendLine("UPDATE ks_tmp_az SET IvaTipo = 1, Nome = 'SYN $($c.id) DIVERSO';"); [void]$sb.AppendLine('INSERT INTO aziende SELECT * FROM ks_tmp_az;') }
+    }
+    $rows = New-Object System.Collections.Generic.List[string]
+    foreach ($f in $fx) {
+        $rows.Add('(' + $f.id + ', ' + $f.comp + ", '" + $f.d.Replace("'", "''") + "', 'LAB fixture', " + $f.ab + ', ' + $f.web + ', ' + $f.ord + ', 0, ' + $f.cp + ', ' + $f.cf + ', ' + $f.cm + ', 0, ' + $f.co + ', ' + $f.ol + ')')
+    }
+    foreach ($s in $scen) {
+        $rows.Add('(' + $s.method + ', ' + $s.company + ", 'Scenario " + $s.k + "', 'LAB fixture', 1, 1, " + $s.n + ', 0, 0, 0, 5000, 0, ' + $s.co + ', ' + $s.ol + ')')
+        if (@($s.settings | Where-Object { $_[1] -ceq 'O' }).Count -gt 0) { $rows.Add('(' + $s.other + ', ' + $s.company + ", 'Altro " + $s.k + "', 'LAB fixture', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)") }
+    }
     [void]$sb.AppendLine('INSERT INTO pagamentitipo (id, AziendeID, Descrizione, Informazioni, Abilitato, Web, Ordinamento, Predefinito, CostoPercentuale, CostoFisso, CostoMassimo, NumeroOrdini, Contrassegno, OnLine) VALUES')
-    [void]$sb.AppendLine($values + ';')
-    [void]$sb.AppendLine('INSERT INTO bancasella_impostazioni_azienda (AziendeId, PagamentiTipoId, shopLogin, Attivo) VALUES ' + $bank + ';')
+    [void]$sb.AppendLine(($rows -join ",`n") + ';')
+    $bank = New-Object System.Collections.Generic.List[string]
+    foreach ($b in $bankRows) { $bank.Add('(' + $b[0] + ', ' + $b[1] + ', ' + $b[2] + ', ' + $b[3] + ')') }
+    foreach ($s in $scen) { foreach ($st in $s.settings) { $mid = $s.method; if ($st[1] -ceq 'O') { $mid = $s.other }; $bank.Add('(' + $st[0] + ', ' + $mid + ', ' + $st[2] + ', ' + $st[3] + ')') } }
+    [void]$sb.AppendLine('INSERT INTO bancasella_impostazioni_azienda (AziendeId, PagamentiTipoId, shopLogin, Attivo) VALUES ' + ($bank -join ', ') + ';')
     [void]$sb.AppendLine('SET @UtenteID = 0, @CostoMassimo = 0.01;')
-    foreach ($az in 1, 2) {
+    $methodCompanies = @(($fx | ForEach-Object { $_.comp }) + ($scen | ForEach-Object { $_.company }) | Sort-Object -Unique)
+    foreach ($az in $methodCompanies) {
         [void]$sb.AppendLine('SET @AziendaID = ' + $az + ';')
         [void]$sb.AppendLine("SELECT 'cart' AS side, c.AziendeID AS az, c.id AS pid FROM (" + $cartSql + ') c WHERE c.id >= 9000 ORDER BY c.id;')
     }
+    [void]$sb.AppendLine('SET @CostoMassimo = 6000, @AziendaID = 101;')
+    [void]$sb.AppendLine("SELECT 'cart6000' AS side, c.AziendeID AS az, c.id AS pid FROM (" + $cartSql + ') c WHERE c.id >= 9000 ORDER BY c.id;')
     [void]$sb.AppendLine("SELECT 'MARK_FOOTER_BEGIN' AS mark;")
     [void]$sb.AppendLine($footerSql + ';')
     [void]$sb.AppendLine("SELECT 'MARK_FOOTER_END' AS mark;")
     [void]$sb.AppendLine('ROLLBACK;')
-    [void]$sb.AppendLine("SELECT 'after_rollback' AS side, COUNT(*) AS n FROM pagamentitipo WHERE id >= 9000;")
-    [void]$sb.AppendLine("SELECT 'bank_after_rollback' AS side, COUNT(*) AS n FROM bancasella_impostazioni_azienda WHERE PagamentiTipoId >= 9000;")
+    [void]$sb.AppendLine("SELECT 'after_rollback' AS side, (SELECT COUNT(*) FROM pagamentitipo WHERE id >= 9000) AS n, (SELECT COUNT(*) FROM aziende WHERE Id >= 100) AS az, (SELECT COUNT(*) FROM bancasella_impostazioni_azienda WHERE AziendeId >= 100 OR PagamentiTipoId >= 9000) AS bank;")
     return $sb.ToString()
 }
 function Parse-Lab([string]$out) {
-    $r = @{ ok = $false; cart = @{ 1 = @(); 2 = @() }; footer = @(); after = -1; bankAfter = -1; raw = $out }
+    $r = @{ ok = $false; cart = @{}; cart6000 = @{}; footer = @(); raw = $out; after = '' }
     if ($out -notmatch 'client exit=0') { return $r }
-    $inFooter = $false; $cartSeen = 0
+    $inFooter = $false
     foreach ($line in ($out -split "`r?`n")) {
         $f = $line -split "`t"
         if ($f[0] -ceq 'MARK_FOOTER_BEGIN') { $inFooter = $true; continue }
         if ($f[0] -ceq 'MARK_FOOTER_END') { $inFooter = $false; continue }
-        if ($f[0] -ceq 'cart' -and $f.Count -ge 3) { $az = [int]$f[1]; $r.cart[$az] += [int]$f[2]; continue }
-        if ($f[0] -ceq 'after_rollback' -and $f.Count -ge 2) { $r.after = [int]$f[1]; continue }
-        if ($f[0] -ceq 'bank_after_rollback' -and $f.Count -ge 2) { $r.bankAfter = [int]$f[1]; continue }
+        if (($f[0] -ceq 'cart' -or $f[0] -ceq 'cart6000') -and $f.Count -ge 3) {
+            $bucket = $r.cart; if ($f[0] -ceq 'cart6000') { $bucket = $r.cart6000 }
+            $az = [int]$f[1]; if (-not $bucket.ContainsKey($az)) { $bucket[$az] = @() }; $bucket[$az] += [int]$f[2]; continue
+        }
+        if ($f[0] -ceq 'after_rollback' -and $f.Count -ge 4) { $r.after = ($f[1] + ',' + $f[2] + ',' + $f[3]); continue }
         if ($inFooter -and $f.Count -ge 2 -and $f[0] -match '^\d+$' -and $f[1] -match '^\d+$' -and [int]$f[1] -ge 9000) { $r.footer += ,@([int]$f[0], [int]$f[1]) }
     }
-    $r.ok = ($r.after -eq 0 -and $r.bankAfter -eq 0)
+    $r.ok = ($r.after -ceq '0,0,0')
     return $r
 }
+# attese per metodo: (azienda, id, ordine, cart, foot) da fixture e scenari
+$expect = New-Object System.Collections.Generic.List[object]
+foreach ($f in $fx) { $expect.Add(@{ comp = $f.comp; id = $f.id; ord = $f.ord; cart = $f.cart; foot = $f.foot }) }
+foreach ($s in $scen) { $expect.Add(@{ comp = $s.company; id = $s.method; ord = $s.n; cart = $s.cart; foot = $s.foot }) }
 function Test-Differential($res) {
     if (-not $res.ok) { return 'RUN_FAILED_OR_NOT_ROLLED_BACK' }
-    foreach ($az in 1, 2) {
-        $expectCart = @($fx | Where-Object { $_.az -eq $az -and $_.cart } | ForEach-Object { [int]$_.id } | Sort-Object)
-        $gotCart = @($res.cart[$az] | Sort-Object)
+    foreach ($az in @($expect | ForEach-Object { $_.comp } | Sort-Object -Unique)) {
+        $expectCart = @($expect | Where-Object { $_.comp -eq $az -and $_.cart } | ForEach-Object { [int]$_.id } | Sort-Object)
+        $gotCart = @(); if ($res.cart.ContainsKey([int]$az)) { $gotCart = @($res.cart[[int]$az] | Sort-Object) }
         if (($expectCart -join ',') -cne ($gotCart -join ',')) { return ('CART_SET_' + $az + ' got=' + ($gotCart -join ',') + ' expected=' + ($expectCart -join ',')) }
     }
-    $expectFooter = @($fx | Where-Object { $_.foot } | Sort-Object { $_.az }, { $_.ord } | ForEach-Object { [string]$_.az + ':' + [string]$_.id })
+    $expectFooter = @($expect | Where-Object { $_.foot } | Sort-Object { $_.comp }, { $_.ord } | ForEach-Object { [string]$_.comp + ':' + [string]$_.id })
     $gotFooter = @($res.footer | ForEach-Object { [string]$_[0] + ':' + [string]$_[1] })
     if (($expectFooter -join ',') -cne ($gotFooter -join ',')) { return ('FOOTER_ROWS got=' + ($gotFooter -join ',') + ' expected=' + ($expectFooter -join ',')) }
     foreach ($row in $res.footer) {
-        if (@($res.cart[[int]$row[0]]) -notcontains [int]$row[1]) { return ('FOOTER_NOT_IN_CART ' + $row[0] + ':' + $row[1]) }
+        if (-not $res.cart.ContainsKey([int]$row[0]) -or (@($res.cart[[int]$row[0]]) -notcontains [int]$row[1])) { return ('FOOTER_NOT_IN_CART ' + $row[0] + ':' + $row[1]) }
     }
+    # disponibilita NOMINALE: oltre il tetto (6000 > 5000) il carrello nasconde la carta valida di K01, il piede la nomina comunque
+    $k01 = ($scen | Where-Object { $_.k -ceq 'K01' })
+    if (@($res.cart6000[[int]$k01.company]) -contains [int]$k01.method) { return 'CART_AT_6000_STILL_OFFERS_THE_CAPPED_CARD' }
+    if (@($res.footer | Where-Object { $_[1] -eq $k01.method }).Count -ne 1) { return 'FOOTER_DOES_NOT_NAME_THE_CARD_NOMINALLY' }
     return 'OK'
 }
 $labRan = $false
@@ -523,9 +582,10 @@ if ($SkipLab) {
     if ($RequireLab) { throw 'LAB_REQUIRED_BUT_UNAVAILABLE' }
     Write-Output 'NOT_EXECUTED lab differential (LAB non raggiungibile o credenziale assente): il piede NON e provato contro il carrello'
 } else {
-    $idOut = Invoke-Lab "SELECT @@server_uuid AS uuid, DATABASE() AS db;`nSELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('pagamentitipo','bancasella_impostazioni_azienda') ORDER BY TABLE_NAME;`n" $false
+    $idOut = Invoke-Lab "SELECT @@server_uuid AS uuid, DATABASE() AS db;`nSELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('pagamentitipo','bancasella_impostazioni_azienda','aziende') ORDER BY TABLE_NAME;`nSELECT COUNT(*) AS azienda_rows_1_2 FROM aziende WHERE Id IN (1, 2);`nSELECT COUNT(*) AS azienda_leftovers FROM aziende WHERE Id >= 100;`n" $false
     Assert-Source ($idOut -match '1167ebae-d0c0-11f1-b348-9c7bef540c10\s+keepstore_regorder_lab_20261025') 'FP10_LAB_IDENTITY_IS_THE_ISOLATED_LAB'
-    Assert-Source (([regex]::Matches($idOut, 'InnoDB')).Count -eq 2) 'FP11_BOTH_TABLES_ARE_TRANSACTIONAL'
+    Assert-Source (([regex]::Matches($idOut, 'InnoDB')).Count -eq 3) 'FP11_THE_THREE_TABLES_ARE_TRANSACTIONAL'
+    Assert-Source (($idOut -match 'azienda_rows_1_2\s+2') -and ($idOut -match 'azienda_leftovers\s+0')) 'FP11b_LAB_AZIENDE_1_AND_2_APPEAR_ONCE_AND_NO_LEFTOVER_COMPANIES'
     $cartSql = Get-CartSql $cartAspx
     Assert-Source (($null -ne $cartSql) -and $cartSql.Contains('WITH eligible_payment AS') -and $cartSql.Contains('@UtenteID') -and $cartSql.Contains('@AziendaID') -and $cartSql.Contains('@CostoMassimo')) 'FP12_THE_REAL_CART_SELECT_WAS_EXTRACTED'
     $footerSql = Get-FooterSql $ctx
@@ -534,17 +594,31 @@ if ($SkipLab) {
     Assert-Source ($d -ceq 'OK') ('FP13_LAB_DIFFERENTIAL_FOOTER_IS_INSIDE_THE_CART_AND_EQUALS_THE_EXPECTED_SET_' + $d)
     $labRan = $true
     if (-not $SkipMutations) {
+        # equivalenti dichiarati (non si chiede di ucciderli): WHERE Attivo=1 dentro la sottoquery (la vista lo filtra gia) e TRIM() del login (collazione PAD SPACE)
         $lab = @(
             @('L1_DISABLED_LISTED', 'p.Abilitato=1 AND ', ''),
             @('L2_NON_PUBLIC_LISTED', 'p.Web=1 AND ', ''),
             @('L3_ZERO_CAP_LISTED', 'p.CostoMassimo>0 AND ', ''),
-            @('L4_GATEWAY_METHODS_LISTED', 'p.OnLine=0 AND ', 'p.OnLine>=0 AND '),
+            @('L4_GATEWAY_METHODS_LISTED', '(p.OnLine=0 AND c.ConfigCount IS NULL)', '(p.OnLine IN (0,1,2) AND c.ConfigCount IS NULL)'),
             @('L5_CASH_ON_DELIVERY_LISTED', 'COALESCE(p.Contrassegno,0)=0 AND ', ''),
             @('L6_NULL_COSTS_LISTED', 'p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND ', ''),
-            @('L7_BANK_CONFIG_IGNORED', ' AND NOT EXISTS (SELECT 1 FROM vbancasella_azienda b WHERE b.AziendeId=p.AziendeID AND b.PagamentiTipoId=p.id)', ''),
-            @('L8_BANK_RULE_NOT_CORRELATED_TO_THE_METHOD', 'b.PagamentiTipoId=p.id', '1=1'),
+            @('L7a_CARD_WITHOUT_LOGIN_LISTED', 'AND c.HasLogin=1', ''),
+            @('L7b_CARD_WITH_DIFFERENT_AZIENDE_ROWS_LISTED', 'c.ConfigCount=1 AND', 'c.ConfigCount>=1 AND'),
+            @('L7c_CARD_WITHOUT_OWN_CONFIG_LISTED', 'c.ConfigCount=1 AND c.HasLogin=1', 'COALESCE(c.ConfigCount,1)=1 AND COALESCE(c.HasLogin,1)=1'),
+            @('L7d_OFFLINE_WITH_CONFIG_LISTED', '(p.OnLine=0 AND c.ConfigCount IS NULL)', 'p.OnLine=0'),
+            @('L7e_CARD_RULE_DROPPED', 'OR (p.OnLine=3', 'OR (p.OnLine=99'),
+            @('L8_BANK_JOIN_NOT_CORRELATED_TO_THE_METHOD', 'AND c.PagamentiTipoId=p.id', ''),
+            @('L8b_BANK_JOIN_NOT_CORRELATED_TO_THE_COMPANY', 'c.AziendeId=p.AziendeID AND ', ''),
+            @('L8c_LOGIN_FLAG_ALWAYS_TRUE', 'MAX(NULLIF(TRIM(d.shopLogin),'''') IS NOT NULL AND TRIM(d.shopLogin) REGEXP ''^[A-Za-z0-9_-]+$'' AND UPPER(TRIM(d.shopLogin)) <> ''GESPAY'')', '1'),
             @('L9_ORDER_IGNORES_ORDINAMENTO', 'p.Ordinamento, ', ''),
-            @('L10_COMPANY_COLUMN_FORGED', 'SELECT p.AziendeID, p.id,', 'SELECT 1 AS AziendeID, p.id,')
+            @('L10_COMPANY_COLUMN_FORGED', 'SELECT p.AziendeID, p.id,', 'SELECT 1 AS AziendeID, p.id,'),
+            @('L11_NO_DISTINCT', 'SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin', 'SELECT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin'),
+            @('L12_DISTINCT_ONLY_ON_THE_LOGIN', 'SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin', 'SELECT DISTINCT AziendeId, PagamentiTipoId, shopLogin'),
+            @('L13_COMPANY_ROW_COUNT_RULE_DROPPED', ' AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1', ''),
+            @('L13b_COMPANY_ROW_COUNT_AT_LEAST_ONE', 'WHERE s.AziendeId=p.AziendeID)=1', 'WHERE s.AziendeId=p.AziendeID)>=1'),
+            @('L13c_COMPANY_ROW_COUNT_NOT_CORRELATED', 's.AziendeId=p.AziendeID', 's.AziendeId=s.AziendeId'),
+            @('L14_DEFAULT_PLACEHOLDER_LOGIN_ACCEPTED', ' AND UPPER(TRIM(d.shopLogin)) <> ''GESPAY''', ''),
+            @('L15_NON_TOKEN_LOGIN_ACCEPTED', ' AND TRIM(d.shopLogin) REGEXP ''^[A-Za-z0-9_-]+$''', '')
         )
         foreach ($mut in $lab) {
             $mSql = $footerSql.Replace($mut[1], $mut[2])
@@ -554,8 +628,8 @@ if ($SkipLab) {
             Dm $mut[0] ((Test-Differential $mres) -ceq 'OK')
         }
     }
-    $clean = Invoke-Lab "SELECT COUNT(*) AS leftovers FROM pagamentitipo WHERE id >= 9000;`nSELECT COUNT(*) AS bank_leftovers FROM bancasella_impostazioni_azienda WHERE PagamentiTipoId >= 9000;`n" $false
-    Assert-Source ($clean -match "leftovers\s+0\s+bank_leftovers\s+0") 'FP14_LAB_LEFT_CLEAN_AFTER_ALL_RUNS'
+    $clean = Invoke-Lab "SELECT COUNT(*) AS leftovers FROM pagamentitipo WHERE id >= 9000;`nSELECT COUNT(*) AS bank_leftovers FROM bancasella_impostazioni_azienda WHERE AziendeId >= 100 OR PagamentiTipoId >= 9000;`nSELECT COUNT(*) AS az_leftovers FROM aziende WHERE Id >= 100;`n" $false
+    Assert-Source ($clean -match "leftovers\s+0\s+bank_leftovers\s+0\s+az_leftovers\s+0") 'FP14_LAB_LEFT_CLEAN_AFTER_ALL_RUNS'
 }
 
 # --- Oracolo 5: il piede reale su Smoke (sola lettura) ---------------------------------------------------------------------------------------
