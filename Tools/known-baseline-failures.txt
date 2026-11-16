@@ -19,3 +19,10 @@ Test-AddressOwnerTenantBarrier # pin "UNCHANGED_FILE_Page.master.vb; UNCHANGED_F
 Test-TrackOrderTenantScope # pin "UNCHANGED_StorefrontSeoTenantContext.vb" contro una baseline storica (verificato su 0af867d2)
 Test-CatalogVariantFacetAlternatives # fallisce in 3 s anche su un worktree pulito della stable (esce con 1, senza node.exe nel PATH di questa macchina; il runner lo abbina per errore a main.js dal nome main.json); verificato su eaf66184
 Test-PayPalWebhookFlow # caso WEBHOOK_CASE_FAILED_complete_fixture_handler_HTTP_403_LOG__ nel flusso di prova (la compilazione del contesto passa; stesso errore prima e dopo il task, verificato su 0af867d2)
+Test-HomeAdaptiveExperience # pin "tutto il VB esistente, query, renderer commerciali e #413 invariati" contro una baseline storica (verificato su b223e959)
+Test-HomeBestSellerClaim # pin "intero VB identico senza commenti" contro la baseline storica 3566479c (verificato su b223e959)
+Test-HomeCommercialMerchandising # cerca il metodo GetPureTopSellingPool, che non esiste piu in Default.aspx.vb (task superato, verificato su b223e959)
+Test-HomeSalesPublicClaims # pin "tutto il sorgente fuori dai due metodi di rendering identico" contro una baseline storica (verificato su b223e959)
+Test-HomeVetrinaWebEligibility # pin "tutto il VB fuori dal caricatore e da BindHome invariato" contro una baseline storica (verificato su b223e959)
+Test-StorefrontPricingAccountIsolation # asserzione VISIBLE_PRICE_LISTINO_FAIL_CLOSED fallisce gia sulla stable (verificato su b223e959)
+Test-StorefrontPromotionBulkPerformance # 18 su 19: "full-pool resolution is retained only when promotion authorization is required" fallisce gia sulla stable (verificato su b223e959)
