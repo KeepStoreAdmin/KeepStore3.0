@@ -26,3 +26,5 @@ Test-HomeSalesPublicClaims # pin "tutto il sorgente fuori dai due metodi di rend
 Test-HomeVetrinaWebEligibility # pin "tutto il VB fuori dal caricatore e da BindHome invariato" contro una baseline storica (verificato su b223e959)
 Test-StorefrontPricingAccountIsolation # asserzione VISIBLE_PRICE_LISTINO_FAIL_CLOSED fallisce gia sulla stable (verificato su b223e959)
 Test-StorefrontPromotionBulkPerformance # 18 su 19: "full-pool resolution is retained only when promotion authorization is required" fallisce gia sulla stable (verificato su b223e959)
+Test-ShoppingAssistantProgressiveResults # richiede -PlaywrightModulePath e -BrowserExecutable obbligatori: il runner non li passa, errore di parametro (verificato su 82b3e27d)
+Test-StorefrontPromotionRouteRetirement # [Net.Http.HttpClientHandler] non trovato: il test non carica System.Net.Http in Windows PowerShell 5.1 (verificato su 82b3e27d)
