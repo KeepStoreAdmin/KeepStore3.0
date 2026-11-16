@@ -232,6 +232,8 @@ Public Module PayPalPaymentState
 
     Private Function SafeInt(ByVal value As Object) As Integer
         If value Is Nothing OrElse value Is DBNull.Value Then Return 0
+        ' Una colonna tinyint(1) arriva dal connettore come System.Boolean: "True" non e un intero e diventerebbe 0 in silenzio.
+        If TypeOf value Is Boolean Then Return If(CBool(value), 1, 0)
         Dim parsed As Integer
         Integer.TryParse(Convert.ToString(value), parsed)
         Return parsed

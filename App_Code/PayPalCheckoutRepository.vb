@@ -41,7 +41,7 @@ Public Module PayPalCheckoutRepository
         If documentId <= 0 Then Return Nothing
         Const sql As String =
             "SELECT a.Id AccountId,c.Id CompanyConfigId,c.AziendeId,c.PagamentiTipoId,a.CredentialKey,a.MerchantId,a.ClientId,a.ClientSecret,a.WebhookId," &
-            "c.PayeeEmail,c.BrandName,c.CurrencyCode,a.Attivo AccountActive,c.Attivo CompanyActive " &
+            "c.PayeeEmail,c.BrandName,c.CurrencyCode,(a.Attivo=1) AccountActive,(c.Attivo=1) CompanyActive " &
             "FROM documenti d INNER JOIN paypal_checkout_azienda c ON c.AziendeId=d.AziendeId AND c.PagamentiTipoId=d.PagamentiTipoId " &
             "INNER JOIN paypal_checkout_account a ON a.Id=c.PayPalAccountId " &
             "INNER JOIN pagamentitipo p ON p.Id=d.PagamentiTipoId AND p.OnLine=@online " &
@@ -56,7 +56,7 @@ Public Module PayPalCheckoutRepository
         If companyId <= 0 OrElse paymentMethodId <= 0 Then Return Nothing
         Const sql As String =
             "SELECT a.Id AccountId,c.Id CompanyConfigId,c.AziendeId,c.PagamentiTipoId,a.CredentialKey,a.MerchantId,a.ClientId,a.ClientSecret,a.WebhookId," &
-            "c.PayeeEmail,c.BrandName,c.CurrencyCode,a.Attivo AccountActive,c.Attivo CompanyActive " &
+            "c.PayeeEmail,c.BrandName,c.CurrencyCode,(a.Attivo=1) AccountActive,(c.Attivo=1) CompanyActive " &
             "FROM paypal_checkout_azienda c INNER JOIN paypal_checkout_account a ON a.Id=c.PayPalAccountId " &
             "INNER JOIN pagamentitipo p ON p.Id=c.PagamentiTipoId AND p.OnLine=@online " &
             "WHERE c.AziendeId=@azienda AND c.PagamentiTipoId=@pagamento LIMIT 1"
@@ -294,11 +294,14 @@ Public Module PayPalCheckoutRepository
                     Using docLock As New MySqlCommand("SELECT d.PagamentiTipoId,COALESCE(pie.TotaleDocumento,0) FROM documenti d LEFT JOIN documentipie pie ON pie.DocumentiId=d.Id WHERE d.Id=@doc AND d.AziendeId=@azienda FOR UPDATE", conn, trns)
                         docLock.Parameters.Add("@doc", MySqlDbType.Int32).Value = tx.DocumentiId
                         docLock.Parameters.Add("@azienda", MySqlDbType.Int32).Value = tx.AziendeId
+                        ' TotaleDocumento e double(15,5) e i vecchi ordini del gestionale hanno piu di due decimali (es. 69.95997): il tentativo (Importo) e il
+                        ' PayPal lavorano al centesimo half-up, quindi anche il totale del documento va confrontato allo stesso modo, altrimenti una capture
+                        ' riuscita non verrebbe registrata.
                         Dim documentMatches As Boolean = False
                         Using reader As MySqlDataReader = docLock.ExecuteReader()
                             documentMatches = reader.Read() AndAlso
                                 Convert.ToInt32(reader(0), CultureInfo.InvariantCulture) = tx.PagamentiTipoId AndAlso
-                                Convert.ToDecimal(reader(1), CultureInfo.InvariantCulture) = tx.Importo
+                                Math.Round(Convert.ToDecimal(reader(1), CultureInfo.InvariantCulture), 2, MidpointRounding.AwayFromZero) = tx.Importo
                         End Using
                         If Not documentMatches Then trns.Rollback() : Return False
                     End Using
@@ -483,6 +486,8 @@ Public Module PayPalCheckoutRepository
 
     Private Function SafeInt(ByVal value As Object) As Integer
         If value Is Nothing OrElse value Is DBNull.Value Then Return 0
+        ' Una colonna tinyint(1) arriva dal connettore come System.Boolean (opzione predefinita): "True" non e un intero e diventerebbe 0 in silenzio.
+        If TypeOf value Is Boolean Then Return If(CBool(value), 1, 0)
         Dim parsed As Integer
         Integer.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed)
         Return parsed
