@@ -1,0 +1,34 @@
+# PayPal «l'ordine si salva solo se il pagamento va a buon fine» - progetto (16/11/2026)
+
+Documento di progetto, SOURCE: descrive come funzionera, non e ancora implementato e non e pubblicato. Nasce dalla richiesta del PO del 16/11/2026 e dalle revisioni indipendenti di ChatGPT e Claude. Stato di partenza e decisioni sono in `.ai-review/` (solo locale); qui resta quanto serve a PO ed Enzo.
+
+## 1. Che cosa esiste oggi (verificato)
+- **La funzione e solo progettata.** [payment-confirmation-policy](payment-confirmation-policy.md) definisce tre campi di `pagamentitipo`: `ConfermaOrdinePrimaPagamento` (0 = bloccante), `PermettiPagamentoSuccessivo`, `InviaEmailOrdinePrimaPagamento` (`int NOT NULL DEFAULT 1`, gia presenti nel database). Il sito li legge ma **non applica il valore 0**: `ordine.aspx` scrive «Policy bloccante configurata; enforcement non ancora attivo» e crea l'ordine comunque. Non impostarli a 0 prima della pubblicazione di questo progetto: oggi l'unico effetto sarebbe nascondere «Paga ora».
+- **Oggi per PayPal l'ordine nasce prima**: il database crea il documento e assegna il numero, il carrello si svuota, parte l'e-mail «ordine ricevuto», poi si va a PayPal. Se PayPal non parte (ordine di prova n. 343) resta un ordine non pagato senza «Paga ora».
+- **Gestionale:** la griglia «Tipi di Pagamento» legge `Select * from pagamentitipo`: le tre colonne compaiono **in fondo alla griglia** (dopo `FE_Pagamento`). Non serve una schermata nuova.
+
+## 2. Come lo imposterai nel gestionale (dopo la pubblicazione)
+Tipi di Pagamento -> riga «PayPal ON-LINE» di ogni azienda -> scorrere a destra: `ConfermaOrdinePrimaPagamento = 0`, `PermettiPagamentoSuccessivo = 0`, `InviaEmailOrdinePrimaPagamento = 0` (riga «PayPal bloccante» del manuale); Salva. Il valore 1 (default) lascia tutto com'e oggi. Per Enzo, miglioramenti non obbligatori: didascalie e caselle di spunta per le tre colonne e i default nell'evento di inserimento (`jDatiPag_AddingRecord`), che oggi non li imposta; la scelta resta per metodo e per azienda, mai nel codice.
+
+## 3. Il numero progressivo (la tua domanda)
+Il numero lo assegna il database quando il documento viene salvato (trigger `SettaProssimoDocumento`: ultimo numero dell'anno e del contatore + 1). Il sito non lo puo conoscere prima. Quindi:
+- **Prima del pagamento non esiste nessun numero.** PayPal e il cliente vedono solo un **riferimento del tentativo** (`KS-<codice>`), non un numero d'ordine.
+- **Il documento nasce dopo che PayPal ha garantito i fondi** (autorizzazione) e il database gli assegna il numero in quel momento; pagina di conferma ed e-mail mostrano il numero vero. All'incasso il numero vero viene passato a PayPal come riferimento della fattura.
+- **Un pagamento annullato, rifiutato o abbandonato non consuma nessun numero e non lascia documenti**, e il carrello resta com'e.
+- Non si crea un documento «tecnico» da cancellare dopo: consumerebbe un numero per ogni pagamento fallito (e la cancellazione riusa il numero solo se e l'ultimo) e svuoterebbe il carrello.
+
+## 4. Sequenza «autorizza, crea l'ordine, incassa» (PayPal, ordine web, flag 0)
+1. Il carrello, invece di creare l'ordine, apre un **tentativo** (riga durevole `CREATING` nel database, creata prima di qualsiasi chiamata a PayPal) e crea l'ordine PayPal con **autorizzazione** (non incasso); il cliente approva su PayPal.
+2. Al ritorno il sito verifica l'ordine su PayPal (importo, valuta, destinatario, riferimento) e **autorizza**: i fondi sono riservati ma **non incassati** (`AUTHORIZED`). Annullo o abbandono = nessun addebito.
+3. Solo con un tentativo `AUTHORIZED` legato a richiesta, cliente, azienda e importo, `ordine.aspx` crea l'ordine. In **un'unica transazione** (senza chiamate a PayPal dentro, perche il database serializza tutti gli inserimenti di documenti e un'attesa li fermerebbe tutti, gestionale compreso): ricontrolli commerciali, documento (numero dal database), **confronto del totale con l'importo autorizzato prima del commit**, riga della transazione PayPal `AUTHORIZED` legata al documento. Qualunque errore prima del commit: rollback, **autorizzazione annullata dopo aver verificato che non esista un documento**, carrello intatto, nessun addebito.
+4. **Dopo il commit**, fuori dalla transazione: incasso dell'autorizzazione. `COMPLETED` -> `Pagato = 1`, e-mail e pixel (solo ora). Esito incerto (risposta persa) -> si rilegge lo stato su PayPal prima di decidere, mai «fallito» a occhio.
+5. Recupero dopo interruzioni: i tentativi hanno stati (`CREATING`, `CREATED`, `AUTHORIZED`, `DOC_COMMITTED`, `CAPTURING`, `COMPLETED`, `VOIDED`, `UNKNOWN`...) e un recupero idempotente (rinfresco, dettaglio ordine del cliente, webhook di incasso, incasso manuale dal pannello PayPal che il webhook riconcilia). Un'autorizzazione senza documento non incassa mai nulla e scade da sola (tre giorni).
+
+## 5. Rischio residuo che serve la tua accettazione
+Nessuna sequenza tra due sistemi (database e PayPal) e a rischio zero. Il caso scelto e il piu raro: **un'autorizzazione valida che poi PayPal non incassa** (entro i tre giorni garantiti). In quel caso il documento esiste, resta **non pagato** (`StatoPagamentoWeb = 3` con il motivo), **nessun addebito**, e va annullato a mano. I casi probabili (scorte esaurite durante l'approvazione, carrello cambiato, errore del database) avvengono **prima** dell'incasso e non lasciano ne ordine ne addebito. L'alternativa (incassare prima di creare l'ordine) lascia invece, se la creazione fallisce, un **cliente addebitato senza ordine** e richiede un codice di rimborso che oggi non esiste.
+
+## 6. Perimetro e fasi (ogni fase e inerte finche il flag resta 1)
+Solo PayPal (`OnLine = 2`), solo ordini web (non preventivi ne coupon), solo con flag 0. Fasi: **P1** client PayPal per autorizzazione, incasso dell'autorizzazione, annullo e lettura, con prove su risposte ufficiali; **P2** tabella dei tentativi (script SQL in questa cartella finche non autorizzi l'eccezione del controllo dei segreti per i file di migrazione) e recupero; **P3** pagine, carrello, `ordine.aspx`, webhook; **P4** runbook e specifica per Enzo. Dal pannello PayPal serviranno anche gli eventi `PAYMENT.AUTHORIZATION.CREATED`, `PAYMENT.AUTHORIZATION.VOIDED` e `PAYMENT.CAPTURE.DECLINED`.
+
+## 7. Limiti
+Non provabile da qui con PayPal reale: forma esatta delle risposte su un ordine con autorizzazione, durata di conservazione del `PayPal-Request-Id`, valore reale di `innodb_lock_wait_timeout` del server. Prima di mettere il flag a 0 sul server: tabella dei tentativi applicata, totali del carrello (`Carrello_Totali`) disponibili, accettazione del punto 5, primo pagamento reale di importo minimo (runbook). CONSEGNA SERVER SOSPESA.
