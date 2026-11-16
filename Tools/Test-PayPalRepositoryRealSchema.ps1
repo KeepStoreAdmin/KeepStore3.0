@@ -103,8 +103,18 @@ function Build-Harness([string]$AppCodeDir, [string]$ExeName) {
 }
 
 function Invoke-Variant([string]$Exe, [string]$Variant) {
-    $lines = @(& $Exe ('tiny=' + $Variant) 2>&1 | ForEach-Object { $_.ToString() })
-    $exit = $LASTEXITCODE
+    # Stesso mutex di Invoke-KeepStoreLabSql.ps1: un solo uso del LAB alla volta (altre prove correlate in parallelo usano le stesse tabelle).
+    $mutex = New-Object System.Threading.Mutex($false, 'Global\KeepStoreLocalLabSql')
+    $held = $false
+    try {
+        try { $held = $mutex.WaitOne(600000) } catch [System.Threading.AbandonedMutexException] { $held = $true }
+        if (-not $held) { return @{ exit = 4; failed = @(); result = ''; notReady = @('LAB_BUSY_TIMEOUT'); lines = @() } }
+        $lines = @(& $Exe ('tiny=' + $Variant) 2>&1 | ForEach-Object { $_.ToString() })
+        $exit = $LASTEXITCODE
+    } finally {
+        if ($held) { try { $mutex.ReleaseMutex() } catch { } }
+        $mutex.Dispose()
+    }
     $failed = @($lines | Where-Object { $_ -like 'FAIL *' } | ForEach-Object { $_.Substring(5) })
     $result = @($lines | Where-Object { $_ -like 'RESULT *' } | Select-Object -First 1)
     $notReady = @($lines | Where-Object { $_ -match '^(ENV_NOT_READY|LAB_|EXC )' })

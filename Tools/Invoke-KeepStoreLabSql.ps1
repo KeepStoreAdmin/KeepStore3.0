@@ -41,13 +41,24 @@ $info.CreateNoWindow = $true
 $info.StandardOutputEncoding = [Text.Encoding]::UTF8
 $info.StandardErrorEncoding = [Text.Encoding]::UTF8
 $info.EnvironmentVariables['MYSQL_PWD'] = $plain
-$process = [Diagnostics.Process]::Start($info)
-$process.StandardInput.Write($prefix + $body)
-$process.StandardInput.Close()
-$out = $process.StandardOutput.ReadToEnd()
-$err = $process.StandardError.ReadToEnd()
-$process.WaitForExit()
-$code = $process.ExitCode
+# Un solo uso del LAB alla volta (mutex di sistema): i test correlati girano in parallelo e due prove con transazioni sulle stesse tabelle (pagamentitipo, documenti...)
+# si bloccavano a vicenda (un mutante del test del piede risultava "non eseguibile"). Il mutex e rilasciato anche se il client fallisce o il processo viene interrotto.
+$labMutex = New-Object System.Threading.Mutex($false, 'Global\KeepStoreLocalLabSql')
+$labMutexHeld = $false
+try {
+    try { $labMutexHeld = $labMutex.WaitOne(600000) } catch [System.Threading.AbandonedMutexException] { $labMutexHeld = $true }
+    if (-not $labMutexHeld) { Write-Output 'LAB_BUSY_TIMEOUT: nessuna esecuzione'; exit 4 }
+    $process = [Diagnostics.Process]::Start($info)
+    $process.StandardInput.Write($prefix + $body)
+    $process.StandardInput.Close()
+    $out = $process.StandardOutput.ReadToEnd()
+    $err = $process.StandardError.ReadToEnd()
+    $process.WaitForExit()
+    $code = $process.ExitCode
+} finally {
+    if ($labMutexHeld) { try { $labMutex.ReleaseMutex() } catch { } }
+    $labMutex.Dispose()
+}
 if ($plain) { $out = $out.Replace($plain, '<hidden>'); $err = $err.Replace($plain, '<hidden>') }
 $plain = $null; $cred = $null
 Write-Output ('mode=' + $(if ($Write) { 'READ-WRITE' } else { 'READ-ONLY' }) + ' client exit=' + $code)
