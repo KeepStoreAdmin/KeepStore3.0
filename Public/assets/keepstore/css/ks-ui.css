@@ -43,3 +43,35 @@
 
 /* Utility: evitare che <p> vuoti creati da descrizioni HTML generino spazi eccessivi */
 .ks-richtext p:empty{ display:none; }
+
+/* KS-A04-FOOTER-ACCORDION-KBD-1A - sezioni del piede azionabili da tastiera (WCAG 2.1.1, 4.1.2).
+   ks-footer-accordion.js mette un <button class="ft-heading-toggle"> DENTRO l'h6 .footer-heading-mobile solo sotto i 768 px: qui sta il reset perche il button
+   sembri il titolo di oggi (stesso testo, peso, colore) e copra tutta la riga, compresa l'icona +/- (che e nel padding dell'h6): l'anello del focus (#505, button:focus-visible)
+   la circonda e il clic sull'icona resta gestito dal piede. L'outline NON si tocca. */
+.footer-heading-mobile .ft-heading-toggle{
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% + 20px);
+  margin: 0 -20px 0 0;
+  padding: 0 20px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Colori forzati: lo sfondo delle due linee +/- (background-color: var(--black)) diventa lo sfondo della pagina e l'indicatore sparisce. */
+@media (forced-colors: active){
+  .ft-link-wrap .footer-heading-mobile::before,
+  .ft-link-wrap .footer-heading-mobile::after{
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+}

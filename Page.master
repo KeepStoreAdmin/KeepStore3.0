@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") & "?v=20261115-focus-fc1a" %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") & "?v=20261116-footer-accordion1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
@@ -229,7 +229,7 @@
         <script src="<%= ThemeManager.Asset("js/lazysize.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/shop.js") %>?v=20261010-catalog-legacy-isolation1a"></script>
         <script src="<%= ThemeManager.Asset("js/count-down.js") %>"></script>
-        <script src="<%= ThemeManager.Asset("js/main.js") %>?v=20260929-cart-authoritative-guard-1b-rev1"></script>
+        <script src="<%= ThemeManager.Asset("js/main.js") %>?v=20261116-footer-accordion1a"></script>
         <script>
         (function () {
             function hidePreload() {
@@ -266,6 +266,7 @@
         <script src="<%= ThemeManager.Asset("js/drift.min.js") %>"></script>
         <script src="<%= ThemeManager.Asset("js/ks-page-flags.js") %>?v=20261114-deadcode-c1a"></script>
         <script src="<%= ThemeManager.Asset("js/ks-departments-bar.js") %>?v=20261114-dept-nav1a"></script>
+        <script src="<%= ThemeManager.Asset("js/ks-footer-accordion.js") %>?v=20261116-footer-accordion1a"></script>
         <asp:Literal ID="litCartStateScript" runat="server" EnableViewState="false" />
         <script src="<%= ThemeManager.Asset("js/keepstore-cart-state.js") %>?v=20260929-cart-quantity-async-ux-1b"></script>
         <script src="<%= ThemeManager.Asset("js/ks-minicart-quantity.js") %>?v=20261023-mini-quantity-1a"></script>

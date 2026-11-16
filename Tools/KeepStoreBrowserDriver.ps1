@@ -12,14 +12,15 @@ $script:KsEdgePath = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.e
 function Start-KsBrowser {
     param(
         [Parameter(Mandatory = $true)][string[]]$LoopbackHosts,
-        [int]$Width = 430, [int]$Height = 900, [switch]$Mobile
+        [int]$Width = 430, [int]$Height = 900, [switch]$Mobile,
+        [string]$ExtraArgs = ''
     )
     if (-not (Test-Path -LiteralPath $script:KsEdgePath)) { throw 'EDGE_NOT_FOUND' }
     $profileDir = Join-Path ([IO.Path]::GetTempPath()) ('ks-edge-' + [Guid]::NewGuid().ToString('N'))
     $port = Get-Random -Minimum 20000 -Maximum 29000
     $rules = ($LoopbackHosts | ForEach-Object { 'MAP ' + $_ + ' 127.0.0.1' }) -join ', '
     $line = '--headless=new --disable-gpu --no-first-run --no-proxy-server "--host-resolver-rules=' + $rules + '" ' +
-            '--remote-debugging-port=' + $port + ' --user-data-dir=' + $profileDir + ' --window-size=' + $Width + ',' + $Height + ' about:blank'
+            '--remote-debugging-port=' + $port + ' --user-data-dir=' + $profileDir + ' --window-size=' + $Width + ',' + $Height + $(if ($ExtraArgs) { ' ' + $ExtraArgs } else { '' }) + ' about:blank'
     $null = Start-Process -FilePath $script:KsEdgePath -ArgumentList $line -WindowStyle Hidden -PassThru
     $target = $null
     for ($i = 0; $i -lt 60 -and -not $target; $i++) {
