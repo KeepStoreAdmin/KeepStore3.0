@@ -32,3 +32,11 @@ Solo PayPal (`OnLine = 2`), solo ordini web (non preventivi ne coupon), solo con
 
 ## 7. Limiti
 Non provabile da qui con PayPal reale: forma esatta delle risposte su un ordine con autorizzazione, durata di conservazione del `PayPal-Request-Id`, valore reale di `innodb_lock_wait_timeout` del server. Prima di mettere il flag a 0 sul server: tabella dei tentativi applicata, totali del carrello (`Carrello_Totali`) disponibili, accettazione del punto 5, primo pagamento reale di importo minimo (runbook). CONSEGNA SERVER SOSPESA.
+
+## 8. Fase P1 fatta (16/11/2026, PR #528): contratto del client per P3
+Il client (`App_Code/PayPalOrdersV2Client.vb`) ha: `CreateAuthorizeOrder`, `AuthorizeOrder`, `GetAuthorization`, `CaptureAuthorization`, `VoidAuthorization`, i validatori `CheckCreatedAuthorizeOrder`, `CheckApprovedAuthorizeOrder`, `CheckAuthorizeResponse`, `CheckAuthorizationSnapshot`, `CheckCaptureSnapshot` (restituiscono il MOTIVO, vuoto = valido), `IsAuthorizationCapturable`, `IsCaptureCompleted`, `IsOutcomeUncertain`. Regole che P3 deve rispettare:
+- **L'id dell'autorizzazione da incassare si legge dal GET dell'ordine validato** (`CheckApprovedAuthorizeOrder` in stato APPROVED o COMPLETED), non dalla sola risposta di authorize, e si passa come `expectedAuthorizationId` ai controlli successivi.
+- **Dopo ogni esito incerto** (`IsOutcomeUncertain`: rete, 202, 207, 409, 5xx, risposta 200/201 inutilizzabile, errori Â«gia eseguitoÂ») **si rilegge lo stato su PayPal** prima di decidere; `NotSent` = nessuna chiamata partita, si puo ritentare.
+- **Incassa soltanto `COMPLETED`** (`IsCaptureCompleted`); un capture `PENDING` non e pagato. Autorizzazione incassabile solo se `CREATED` e non scaduta.
+- **`invoice_id` dell'incasso = id del documento** (`KS-INV-<azienda>-<id documento>`), mai il numero ordine (si ripete ogni anno: `DUPLICATE_INVOICE_ID`). Se PayPal rifiuta un invoice diverso da quello dell'ordine, si ritenta senza invoice (si scopre solo col primo pagamento reale).
+- Prima del primo pagamento reale col percorso CAPTURE esistente va provata la risposta di capture: gli esempi ufficiali non hanno `intent`, `payee`, `custom_id`, `invoice_id` di unita, che `HasAuthoritativeRepresentation` esige.

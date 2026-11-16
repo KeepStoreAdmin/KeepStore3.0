@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## PAYPAL-AUTHORIZE-CLIENT-1A — 16/11/2026 — SOURCE (P1 del pay-first: client PayPal per autorizzare, incassare l'autorizzazione e annullare)
+
+**Esito: A (SOURCE INTEGRATED, inerte). Livello L. PR [#528](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/528), stable `a4f9c994`.** Il client `App_Code/PayPalOrdersV2Client.vb` sa creare un ordine AUTHORIZE da un «tentativo» (senza numero ordine), autorizzarlo, leggerlo, incassare l'autorizzazione (`final_capture`, importo esplicito) e annullarla, con validatori che dicono il MOTIVO del rifiuto. **Nessun chiamante, nessun flag, nessuna pagina, nessun DB: per il cliente non cambia nulla** (PayPal funziona come prima; unico effetto sul percorso esistente: l'errore OAuth ora conserva lo stato HTTP nel registro).
+
+**Fatti.** Specifica ufficiale PayPal letta (OpenAPI): la risposta di authorize NON ha intent, payee, importo di unita, custom/invoice; la capture di un'autorizzazione rende 200/201, void 204/200; authorize puo rispondere 202/207. Misura sul trasporto reale (server loopback): una POST senza corpo NON dichiarava `Content-Length: 0` (corretto). Rilievo F4 (NON toccato): gli esempi ufficiali della capture del percorso CAPTURE non hanno `intent/payee/custom_id/invoice_id` di unita, che `HasAuthoritativeRepresentation` esige: una cattura riuscita rischia di sembrare «non verificata» (da provare col primo pagamento reale).
+
+**Revisioni.** ChatGPT (xhigh): eseguita. Claude Opus: eseguita. Accolti: harness che non compilava, mutanti obbligatori, 422 «gia eseguito» = esito incerto, id ordine/autorizzazione legati, presenza distinta da validita, `NotSent`, void 200 verificato, scadenza, GET autorizzazione stretto. Scartati: «trasporto non allegato» e «fixture incoerenti» (smentiti dal codice). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-PayPalAuthorizeClient.ps1`: 170 controlli (transport finto, esempi letterali, loopback reale) + 40 mutanti uccisi; test correlati PayPal verdi; secret guard, carrello (23), precompile e CI (push e PR) verdi sullo SHA esatto e sulla stable. `Test-PayPalWebhookFlow` NON compila gia sulla stable `9ec16f01` (difetto di #526, `KeepStoreLog` fuori dall'elenco del test): task S separato.
+
+**Limiti e residuo (NON AVVIATO).** Risposte reali di authorize/capture/void, `invoice_id` diverso al capture, `Content-Type` con corpo vuoto: solo col primo pagamento reale. Regole per P3: l'id da incassare si legge dal GET ordine validato; dopo ogni esito incerto o di conflitto si rilegge su PayPal; `invoice_id` del capture = id del documento (mai il numero ordine, che si ripete ogni anno). Prossimo: P2 (tabella dei tentativi). **Alla consegna futura:** `PayPalOrdersV2Client.vb` insieme agli altri file PayPal. CONSEGNA SERVER SOSPESA.
+
 ## PAYPAL-PAY-FIRST-DESIGN-1A — 16/11/2026 — DOCS (progetto «l'ordine si salva solo se il pagamento PayPal va a buon fine» e numero progressivo)
 
 **Esito: A (DOCS, progetto; nessun codice). Livello L (revisione del progetto). PR [#527](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/527).** Il PO, dopo l'ordine di prova n. 343, ha chiesto di ricuperare dai manuali la funzione «se il pagamento riesce si salva l'ordine, se fallisce no», dove impostarla nel gestionale e come gestire il numero assegnato dal database al salvataggio.
