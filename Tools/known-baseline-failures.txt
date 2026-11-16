@@ -28,3 +28,4 @@ Test-StorefrontPricingAccountIsolation # asserzione VISIBLE_PRICE_LISTINO_FAIL_C
 Test-StorefrontPromotionBulkPerformance # 18 su 19: "full-pool resolution is retained only when promotion authorization is required" fallisce gia sulla stable (verificato su b223e959)
 Test-ShoppingAssistantProgressiveResults # richiede -PlaywrightModulePath e -BrowserExecutable obbligatori: il runner non li passa, errore di parametro (verificato su 82b3e27d)
 Test-StorefrontPromotionRouteRetirement # [Net.Http.HttpClientHandler] non trovato: il test non carica System.Net.Http in Windows PowerShell 5.1 (verificato su 82b3e27d)
+Test-RegOrderSql8Compatibility # asserzione "price resolution fiscal promotion locks and transaction code unchanged" fallisce gia sulla stable, anche su un worktree pulito e con -EvidenceDirectory (verificato su 5e43d3e2)

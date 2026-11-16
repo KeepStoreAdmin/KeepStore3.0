@@ -11,7 +11,11 @@ param([switch]$SkipLab, [switch]$RequireLab, [switch]$SkipLive, [switch]$SkipMut
 # il collegamento nel piede e il markup (segnaposto nascosto dentro .ft-bottom, etichetta fissa una volta sola, nessuna marca di pagamento nel markup).
 # Oracolo 4 (differenziale sul LAB locale, transazione annullata): la SELECT REALE del carrello (estratta da carrello.aspx) contro la SELECT REALE del piede (estratta dal
 # caricatore) su righe sintetiche per ogni esclusione: il piede deve essere CONTENUTO nel carrello e coincidere con l'insieme atteso, per due aziende. Senza LAB = NON ESEGUITO.
-# Oracolo 5 (Smoke, sola lettura): il piede reale ha il blocco ben formato e senza PayPal, cifre lunghe o indirizzi. Mutazioni sulle copie in memoria e sul LAB.
+# Oracolo 5 (Smoke, sola lettura): il piede reale ha il blocco ben formato, senza cifre lunghe o indirizzi. Mutazioni sulle copie in memoria e sul LAB.
+# KS-B02F-FOOTER-PAYPAL-1A: PayPal (OnLine=2) si nomina SOLO dove il carrello lo offre davvero: la SELECT del piede lo elenca solo senza configurazioni bancarie attive (stessa
+# base degli altri metodi), la PRONTEZZA e la configurazione vera letta con il codice del carrello (PayPalCheckoutConfig.LoadForCompanyPayment, solo IsConfigured, mai un campo),
+# e la parte della RICHIESTA e PayPalCheckoutSafetyPolicy.CanUseLiveCheckoutForCompany (HTTPS, non locale, host consentito dell'azienda). Il filtro PayPal precede pulizia,
+# deduplica e limite; un valore OnLine sconosciuto non si nomina mai. La politica per azienda ha il proprio test: Test-PayPalLiveCheckoutForCompany.ps1.
 # Solo ASCII: Windows PowerShell 5.1 legge i file senza BOM come ANSI.
 
 $ErrorActionPreference = 'Stop'
@@ -40,6 +44,7 @@ $policy = Read-Repo 'App_Code/StorefrontCanonicalHostPolicy.vb'
 $ctx = Read-Repo 'App_Code/StorefrontSeoTenantContext.vb'
 $links = Read-Repo 'App_Code/KeepStoreContactLinks.vb'
 $cartAspx = Read-Repo 'carrello.aspx'
+$paypalState = Read-Repo 'App_Code/PayPalPaymentState.vb'
 
 function New-Params {
     $p = New-Object CodeDom.Compiler.CompilerParameters
@@ -74,17 +79,36 @@ $region
         Next
         Return list
     End Function
+    Private Shared Function BuildGw(ByVal c As Integer(), ByVal i As Integer(), ByVal n As String(), ByVal ol As Integer(), ByVal ready As Boolean()) As IList(Of StorefrontPaymentMethod)
+        Dim list As New List(Of StorefrontPaymentMethod)()
+        For k As Integer = 0 To c.Length - 1
+            list.Add(New StorefrontPaymentMethod(c(k), i(k), n(k), k, ol(k), ready(k)))
+        Next
+        Return list
+    End Function
     Public Function Html(ByVal host As Integer, ByVal c As Integer(), ByVal i As Integer(), ByVal o As Integer(), ByVal n As String()) As String
-        Return BuildFooterPaymentsHtml(Build(c, i, o, n), host)
+        Return BuildFooterPaymentsHtml(Build(c, i, o, n), host, False)
     End Function
     Public Function HtmlNothing(ByVal host As Integer) As String
-        Return BuildFooterPaymentsHtml(Nothing, host)
+        Return BuildFooterPaymentsHtml(Nothing, host, True)
+    End Function
+    Public Function HtmlGw(ByVal host As Integer, ByVal c As Integer(), ByVal i As Integer(), ByVal n As String(), ByVal ol As Integer(), ByVal ready As Boolean(), ByVal live As Boolean) As String
+        Return BuildFooterPaymentsHtml(BuildGw(c, i, n, ol, ready), host, live)
+    End Function
+    Public Function IsReady(ByVal host As Integer, ByVal c As Integer(), ByVal i As Integer(), ByVal n As String(), ByVal ol As Integer(), ByVal ready As Boolean()) As Boolean
+        Return HasReadyPayPal(BuildGw(c, i, n, ol, ready), host)
+    End Function
+    Public Function ReadyNothing(ByVal host As Integer) As Boolean
+        Return HasReadyPayPal(Nothing, host)
     End Function
     Public Function Gate(ByVal host As Integer, ByVal sess As Integer, ByVal c As Integer(), ByVal i As Integer(), ByVal o As Integer(), ByVal n As String()) As String
-        Return BuildFooterData(host, sess, "Alfa", "", "", "", "", Nothing, Build(c, i, o, n), 2026).PaymentsHtml
+        Return BuildFooterData(host, sess, "Alfa", "", "", "", "", Nothing, Build(c, i, o, n), False, 2026).PaymentsHtml
+    End Function
+    Public Function GateGw(ByVal host As Integer, ByVal sess As Integer, ByVal c As Integer(), ByVal i As Integer(), ByVal n As String(), ByVal ol As Integer(), ByVal ready As Boolean(), ByVal live As Boolean) As String
+        Return BuildFooterData(host, sess, "Alfa", "", "", "", "", Nothing, BuildGw(c, i, n, ol, ready), live, 2026).PaymentsHtml
     End Function
     Public Function GateNothing(ByVal host As Integer, ByVal sess As Integer) As String
-        Return BuildFooterData(host, sess, "Alfa", "", "", "", "", Nothing, Nothing, 2026).PaymentsHtml
+        Return BuildFooterData(host, sess, "Alfa", "", "", "", "", Nothing, Nothing, True, 2026).PaymentsHtml
     End Function
 End Class
 "@
@@ -96,6 +120,11 @@ function M([int[]]$c, [int[]]$i, [int[]]$o, [string[]]$n) { return @{ c = $c; i 
 function Run-Html($p, [int]$hostId, $m) { return [string]$p.Html($hostId, [int[]]$m.c, [int[]]$m.i, [int[]]$m.o, [string[]]$m.n) }
 function Run-Gate($p, [int]$hostId, [int]$sess, $m) { return [string]$p.Gate($hostId, $sess, [int[]]$m.c, [int[]]$m.i, [int[]]$m.o, [string[]]$m.n) }
 function Names([string[]]$n, [int]$company = 1) { $c = @(); $i = @(); $o = @(); for ($k = 0; $k -lt $n.Count; $k++) { $c += $company; $i += (100 + $k); $o += $k }; return (M $c $i $o $n) }
+# metodi con gateway: azienda, id, nome, OnLine, prontezza della configurazione (calcolata fuori dal piede)
+function G([int[]]$c, [int[]]$i, [string[]]$n, [int[]]$ol, [bool[]]$ready) { return @{ c = $c; i = $i; n = $n; ol = $ol; ready = $ready } }
+function Run-Gw($p, [int]$hostId, $g, [bool]$live) { return [string]$p.HtmlGw($hostId, [int[]]$g.c, [int[]]$g.i, [string[]]$g.n, [int[]]$g.ol, [bool[]]$g.ready, $live) }
+function Run-GateGw($p, [int]$hostId, [int]$sess, $g, [bool]$live) { return [string]$p.GateGw($hostId, $sess, [int[]]$g.c, [int[]]$g.i, [string[]]$g.n, [int[]]$g.ol, [bool[]]$g.ready, $live) }
+function Run-Ready($p, [int]$hostId, $g) { return [string]$p.IsReady($hostId, [int[]]$g.c, [int[]]$g.i, [string[]]$g.n, [int[]]$g.ol, [bool[]]$g.ready) }
 
 function Test-FooterBehaviour([string]$vbText, [string]$policyText, [string]$linksText) {
     $p = Compile-Footer $vbText $policyText $linksText
@@ -145,6 +174,31 @@ function Test-FooterBehaviour([string]$vbText, [string]$policyText, [string]$lin
     Add-Case 'gate_other_company_session_blocks' (Run-Gate $p 1 2 $own) ''
     Add-Case 'gate_unknown_host_blocks' (Run-Gate $p 0 0 $own) ''
     Add-Case 'gate_nothing_list' ([string]$p.GateNothing(1, 1)) ''
+    # PayPal (OnLine=2): solo se la configurazione e pronta E la richiesta lo consente; mai da una sola delle due
+    $pp = G @(1, 1) @(10, 20) @('Contanti', 'PayPal') @(0, 2) @($false, $true)
+    Add-Case 'paypal_live_and_ready_shown' (Run-Gw $p 1 $pp $true) 'Contanti, PayPal'
+    Add-Case 'paypal_ready_but_request_not_allowed_hidden' (Run-Gw $p 1 $pp $false) 'Contanti'
+    Add-Case 'paypal_request_allowed_but_not_ready_hidden' (Run-Gw $p 1 (G @(1, 1) @(10, 20) @('Contanti', 'PayPal') @(0, 2) @($false, $false)) $true) 'Contanti'
+    Add-Case 'paypal_other_company_hidden' (Run-Gw $p 1 (G @(1, 2) @(10, 20) @('Contanti', 'PayPal') @(0, 2) @($false, $true)) $true) 'Contanti'
+    Add-Case 'paypal_order_kept' (Run-Gw $p 1 (G @(1, 1) @(20, 10) @('PayPal', 'Contanti') @(2, 0) @($true, $false)) $true) 'PayPal, Contanti'
+    Add-Case 'ready_flag_on_an_offline_method_is_not_a_gateway' (Run-Gw $p 1 (G @(1) @(10) @('Contanti') @(0) @($true)) $false) 'Contanti'
+    # il filtro PayPal precede deduplica e limite: un PayPal scartato non consuma ne il nome ne un posto
+    Add-Case 'paypal_hidden_does_not_consume_the_name' (Run-Gw $p 1 (G @(1, 1) @(10, 20) @('Pagamento', 'Pagamento') @(2, 0) @($false, $false)) $true) 'Pagamento'
+    $hidden8 = G (@(1) * 16) (@(1..16)) @('P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1') (@(2) * 8 + @(0) * 8) (@($false) * 16)
+    Add-Case 'paypal_hidden_does_not_consume_the_limit' (Run-Gw $p 1 $hidden8 $true) 'A1, B1, C1, D1, E1, F1, G1, H1'
+    # un valore OnLine sconosciuto (IwBank = 1, o qualunque altro) non si nomina mai; la carta (3) resta decisa dalla SELECT
+    Add-Case 'unknown_online_values_never_named' (Run-Gw $p 1 (G @(1, 1, 1, 1, 1) @(1, 2, 3, 4, 5) @('Uno', 'Quattro', 'Meno', 'Zero', 'Carta') @(1, 4, -1, 0, 3) @($true, $true, $true, $false, $false)) $true) 'Zero, Carta'
+    Add-Case 'gate_paypal_allowed' (Run-GateGw $p 1 1 $pp $true) 'Contanti, PayPal'
+    Add-Case 'gate_paypal_other_company_session_blocks' (Run-GateGw $p 1 2 $pp $true) ''
+    Add-Case 'gate_paypal_unknown_host_blocks' (Run-GateGw $p 0 0 $pp $true) ''
+    Add-Case 'gate_paypal_not_live_hides_only_paypal' (Run-GateGw $p 1 1 $pp $false) 'Contanti'
+    # la prontezza che decide se serve verificare la richiesta: solo un PayPal pronto dell'azienda dell'host
+    Add-Case 'ready_when_paypal_ready_for_the_host' (Run-Ready $p 1 $pp) 'True'
+    Add-Case 'not_ready_when_paypal_not_ready' (Run-Ready $p 1 (G @(1) @(20) @('PayPal') @(2) @($false))) 'False'
+    Add-Case 'not_ready_when_paypal_is_of_another_company' (Run-Ready $p 1 (G @(2) @(20) @('PayPal') @(2) @($true))) 'False'
+    Add-Case 'not_ready_when_a_card_is_flagged_ready' (Run-Ready $p 1 (G @(1) @(20) @('Carta') @(3) @($true))) 'False'
+    Add-Case 'not_ready_for_an_invalid_host' (Run-Ready $p 0 $pp) 'False'
+    Add-Case 'not_ready_for_a_missing_list' ([string]$p.ReadyNothing(1)) 'False'
     foreach ($c in $cases) { if (-not ($c.got -ceq $c.exp)) { return ('CASE ' + $c.n + ' got=[' + $c.got + '] expected=[' + $c.exp + ']') } }
     return 'OK'
 }
@@ -214,6 +268,29 @@ Public Class PolProbe
         If m Is Nothing Then Return "NOTHING"
         Return m.CompanyId.ToString() & "|" & m.MethodId.ToString() & "|" & m.Name & "|" & m.Order.ToString()
     End Function
+    ' OnLine: letto dalla colonna, mai pronto di default (la prontezza la decide solo chi conosce la configurazione)
+    Public Function CreateOnLine(ByVal onLine As String) As String
+        Dim m As StorefrontPaymentMethod = StorefrontCanonicalHostPolicy.CreatePaymentMethod(Function(col As String) If(col = "AziendeID", "1", If(col = "id", "10", If(col = "Descrizione", "X", If(col = "Ordinamento", "1", If(col = "OnLine", onLine, Nothing))))))
+        If m Is Nothing Then Return "NOTHING"
+        Return m.OnLine.ToString() & "|" & m.GatewayReady.ToString()
+    End Function
+    ' La prontezza si assegna con WithGatewayReady: una copia, l'originale non cambia, tutti gli altri campi restano.
+    Public Function WithReady() As String
+        Dim a As New StorefrontPaymentMethod(3, 7, " PayPal ", 5, 2, False)
+        Dim b As StorefrontPaymentMethod = a.WithGatewayReady(True)
+        Dim c As StorefrontPaymentMethod = b.WithGatewayReady(False)
+        Return a.GatewayReady.ToString() & "|" & b.GatewayReady.ToString() & "|" & c.GatewayReady.ToString() & "|" & b.CompanyId.ToString() & "|" & b.MethodId.ToString() & "|" & b.Name & "|" & b.Order.ToString() & "|" & b.OnLine.ToString() & "|" & (Not Object.ReferenceEquals(a, b)).ToString()
+    End Function
+    ' L'aggancio per azienda conserva OnLine e prontezza di ogni metodo (gli stessi oggetti, mai copie a campi persi).
+    Public Function ApplyKeeps() As String
+        Dim list As List(Of StorefrontSeoTenantIdentity) = Idents(New Integer() {1})
+        Dim rows As New List(Of StorefrontPaymentMethod)()
+        rows.Add(New StorefrontPaymentMethod(1, 10, "Contanti", 1, 0, False))
+        rows.Add(New StorefrontPaymentMethod(1, 20, "PayPal", 2, 2, True))
+        rows.Add(New StorefrontPaymentMethod(1, 30, "Carta", 3, 3, False))
+        StorefrontCanonicalHostPolicy.ApplyPaymentMethods(list, rows)
+        Return String.Join(";", list(0).PaymentMethods.Select(Function(m) m.Name & ":" & m.OnLine.ToString() & ":" & m.GatewayReady.ToString()).ToArray())
+    End Function
 End Class
 "@
     $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource((New-Params), [string[]]@($policyText, $code))
@@ -242,6 +319,12 @@ function Test-PolicyBehaviour([string]$policyText) {
     Add-Case 'create_rejects_bad_id' ([string]$p.Create('1', '0', 'A', '1')) 'NOTHING'
     Add-Case 'create_rejects_blank_name' ([string]$p.Create('1', '10', '   ', '1')) 'NOTHING'
     Add-Case 'create_order_defaults_to_zero' ([string]$p.Create('1', '10', 'A', 'x')) '1|10|A|0'
+    Add-Case 'create_reads_online_and_is_never_ready' ([string]$p.CreateOnLine('2')) '2|False'
+    Add-Case 'create_online_zero' ([string]$p.CreateOnLine('0')) '0|False'
+    Add-Case 'create_online_card' ([string]$p.CreateOnLine('3')) '3|False'
+    Add-Case 'create_online_unreadable_is_zero' ([string]$p.CreateOnLine('x')) '0|False'
+    Add-Case 'with_ready_is_a_copy_that_keeps_the_other_fields' ([string]$p.WithReady()) 'False|True|False|3|7|PayPal|5|2|True'
+    Add-Case 'apply_keeps_online_and_ready' ([string]$p.ApplyKeeps()) 'Contanti:0:False;PayPal:2:True;Carta:3:False'
     Add-Case 'list_is_readonly' ([string]$p.ReadOnlyCheck()) 'READONLY'
     Add-Case 'null_identities_safe' ([string]$p.NullListIsSafe()) 'OK'
     foreach ($c in $cases) { if (-not ($c.got -ceq $c.exp)) { return ('CASE ' + $c.n + ' got=[' + $c.got + '] expected=[' + $c.exp + ']') } }
@@ -261,10 +344,10 @@ function Test-Context([string]$c) {
     # ogni predicato della regola, una volta sola, e le sole colonne lette
     foreach ($frag in @('FROM pagamentitipo p', 'p.Abilitato=1', 'p.Web=1', 'p.CostoMassimo>0', 'COALESCE(p.Contrassegno,0)=0', 'p.CostoPercentuale IS NOT NULL', 'p.CostoFisso IS NOT NULL',
                         'LEFT JOIN (SELECT d.AziendeId, d.PagamentiTipoId, COUNT(*) AS ConfigCount, MAX(NULLIF(TRIM(d.shopLogin),'''') IS NOT NULL AND TRIM(d.shopLogin) REGEXP ''^[A-Za-z0-9_-]+$'' AND UPPER(TRIM(d.shopLogin)) <> ''GESPAY'') AS HasLogin FROM (SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin FROM vbancasella_azienda WHERE Attivo=1) d GROUP BY d.AziendeId, d.PagamentiTipoId) c ON c.AziendeId=p.AziendeID AND c.PagamentiTipoId=p.id',
-                        'AND ((p.OnLine=0 AND c.ConfigCount IS NULL) OR (p.OnLine=3 AND c.ConfigCount=1 AND c.HasLogin=1 AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1))', 'ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id')) {
+                        'AND ((p.OnLine IN (0,2) AND c.ConfigCount IS NULL) OR (p.OnLine=3 AND c.ConfigCount=1 AND c.HasLogin=1 AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1))', 'ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id')) {
         if (([regex]::Matches($sql, [regex]::Escape($frag))).Count -ne 1) { return ('FRAGMENT_' + $frag) }
     }
-    if ($sql -notmatch '^SELECT p\.AziendeID, p\.id, p\.Descrizione, p\.Ordinamento FROM ') { return 'COLUMNS' }
+    if ($sql -notmatch '^SELECT p\.AziendeID, p\.id, p\.Descrizione, p\.Ordinamento, p\.OnLine FROM ') { return 'COLUMNS' }
     if ($sql -match '(?i)Informazioni|\bimg\b|\bSELECT \*|p\.\*') { return 'SENSITIVE_OR_STAR' }
     if (([regex]::Matches($c, 'SELECT ')).Count -ne 7) { return 'SELECT_COUNT' }
     # dopo i dati societari, prima della cache, dentro la stessa connessione e con il primo reader gia chiuso
@@ -291,17 +374,54 @@ function Test-Context([string]$c) {
 $r = Test-Context $ctx
 Assert-Source ($r -ceq 'OK') ('FP03_LOADER_THIRD_OPTIONAL_READ_SAFE_SELECT_' + $r)
 
+# PayPal: la prontezza e il verdetto del codice vero del carrello, e nient'altro (nessun campo di credenziale tocca il caricatore ne la cache)
+function Test-Readiness([string]$c, [string]$paypalState) {
+    $r = [regex]::Match($c, '(?ms)^    Private Shared Function ReadPaymentMethods\(.*?^    End Function')
+    if (-not $r.Success) { return 'NO_READ' }
+    $b = $r.Value
+    # il valore OnLine di PayPal e quello del carrello, e la SELECT lo elenca con lo stesso numero
+    if ($paypalState -cnotmatch 'Public Const PAYPAL_ONLINE_VALUE As Integer = 2\b') { return 'PAYPAL_VALUE_CHANGED' }
+    # dopo il reader (gia chiuso) e prima della restituzione, solo per i metodi OnLine = PayPal, sostituendo con la copia pronta
+    if ($b -cnotmatch '(?s)End While\s+End Using\s+End Using\s+For k As Integer = 0 To methods\.Count - 1\s+If methods\(k\)\.OnLine = PayPalPaymentState\.PAYPAL_ONLINE_VALUE Then\s+methods\(k\) = methods\(k\)\.WithGatewayReady\(IsPayPalGatewayReady\(methods\(k\)\.CompanyId, methods\(k\)\.MethodId\)\)\s+End If\s+Next\s+Return methods') { return 'READINESS_LOOP_SHAPE' }
+    $h = [regex]::Match($c, '(?ms)^    Private Shared Function IsPayPalGatewayReady\(.*?^    End Function')
+    if (-not $h.Success) { return 'NO_HELPER' }
+    if ($h.Value -cnotmatch '(?s)^\s*Private Shared Function IsPayPalGatewayReady\(ByVal companyId As Integer, ByVal methodId As Integer\) As Boolean\s+Try\s+Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig\.LoadForCompanyPayment\(companyId, methodId\)\s+Return cfg IsNot Nothing AndAlso cfg\.IsConfigured\s+Catch\s+Return False\s+End Try\s+End Function') { return 'HELPER_SHAPE' }
+    # della configurazione si legge UN solo membro, IsConfigured; nessun campo di credenziale compare nel file; la configurazione non entra in cache
+    $members = [regex]::Matches($c, '\bcfg\.(\w+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+    if (@($members).Count -ne 1 -or @($members)[0] -cne 'IsConfigured') { return ('CFG_MEMBERS=' + (@($members) -join ',')) }
+    if ($c -cmatch 'ClientSecret|ClientId|MerchantId|PayeeEmail|WebhookId|CredentialKey|CurrencyCode') { return 'CREDENTIAL_FIELD_NAMED' }
+    if (([regex]::Matches($c, 'PayPalCheckoutConfig')).Count -ne 2) { return 'CONFIG_TYPE_USED_ELSEWHERE' }
+    if ($c -cmatch '(?i)Cache\([^)]*\)\s*=\s*cfg|Cache\.Insert\([^)]*cfg|Items\([^)]*\)\s*=\s*cfg') { return 'CONFIG_CACHED' }
+    # i metodi OnLine = PayPal sono scritti una sola volta: la SELECT elenca (0,2) e la prontezza e per ogni PayPal; nessun log
+    if ($h.Value -match '(?i)Trace|Debug|Log|Console') { return 'HELPER_LOGS' }
+    return 'OK'
+}
+$r = Test-Readiness $ctx $paypalState
+Assert-Source ($r -ceq 'OK') ('FP03B_PAYPAL_READINESS_IS_THE_REAL_CART_VERDICT_AND_NOTHING_ELSE_' + $r)
+
 function Test-Glue([string]$v) {
     foreach ($line in @('payments = tenant.PaymentMethods', 'BindFooterPayments(data)', 'phFooterPayments.Visible = data.PaymentsHtml.Length > 0', 'litFooterPayments.Text = data.PaymentsHtml',
                         'Dim payments As IList(Of StorefrontPaymentMethod) = Nothing')) {
         if ($v.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return ('LINE_' + $line) }
     }
-    if ($v -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, DateTime\.Now\.Year\)') { return 'CALL' }
+    if ($v -notmatch 'Dim payPalLive As Boolean = ResolvePayPalLive\(hostCompanyId, payments\)') { return 'LIVE_NOT_RESOLVED_ONCE_BEFORE_THE_CALL' }
+    if ([regex]::Matches($v, 'ResolvePayPalLive\(').Count -ne 2) { return 'LIVE_RESOLVED_ELSEWHERE' }
+    if ($v -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, payPalLive, DateTime\.Now\.Year\)') { return 'CALL' }
     # i metodi si costruiscono SOLO nel ramo consentito (host valido e sessione non di un'altra azienda)
     $m = [regex]::Match($v, '(?s)If IsFooterTenantAllowed\(hostCompanyId, sessionCompanyId\) Then(.*?)Else')
-    if (-not $m.Success -or $m.Groups[1].Value.IndexOf('data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId)', [StringComparison]::Ordinal) -lt 0) { return 'NOT_INSIDE_GATE' }
+    if (-not $m.Success -or $m.Groups[1].Value.IndexOf('data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId, payPalLive)', [StringComparison]::Ordinal) -lt 0) { return 'NOT_INSIDE_GATE' }
     if ([regex]::Matches($v, 'data\.PaymentsHtml = ').Count -ne 1) { return 'ASSIGNED_TWICE' }
-    if ($v -match '(?i)\b(Visa|PayPal|Mastercard|Maestro|Discover|Satispay)\b|Pagamenti accettati') { return 'BRAND_WORD' }
+    # la parte della RICHIESTA si chiede solo se esiste un PayPal pronto per l'azienda dell'host, con la politica del carrello per quell'azienda, e ogni guasto vale "no"
+    $f = [regex]::Match($v, '(?ms)^    Private Function ResolvePayPalLive\(.*?^    End Function')
+    if (-not $f.Success) { return 'NO_RESOLVE_FUNCTION' }
+    if ($f.Value -cnotmatch '(?s)^\s*Private Function ResolvePayPalLive\(ByVal hostCompanyId As Integer, ByVal payments As IList\(Of StorefrontPaymentMethod\)\) As Boolean\s+If Not HasReadyPayPal\(payments, hostCompanyId\) Then Return False\s+Try\s+Return PayPalCheckoutSafetyPolicy\.CanUseLiveCheckoutForCompany\(HttpContext\.Current, hostCompanyId\)\s+Catch\s+Return False\s+End Try\s+End Function') { return 'RESOLVE_SHAPE' }
+    # la regione pura non conosce ne la richiesta ne la politica ne la configurazione
+    $pure = Get-PureRegion $v
+    if ($null -eq $pure) { return 'NO_PURE_REGION' }
+    if ($pure -cmatch 'HttpContext|PayPalCheckout|Request|Session\(') { return 'PURE_REGION_TOUCHES_THE_REQUEST_OR_THE_CONFIG' }
+    if ($v -match '(?i)\b(Visa|Mastercard|Maestro|Discover|Satispay)\b|Pagamenti accettati') { return 'BRAND_WORD' }
+    # PayPal compare come identificatore e commento (la politica del carrello), mai dentro una stringa mostrata: i nomi dei metodi vengono solo dal database
+    if ($v -match '(?i)"[^"\r\n]*\bPayPal\b[^"\r\n]*"') { return 'BRAND_WORD_IN_A_STRING' }
     if ($v -match '[^\x00-\x7F]') { return 'NON_ASCII' }
     return 'OK'
 }
@@ -331,7 +451,7 @@ if (-not $SkipMutations) {
     # piede (regione compilata)
     $x = Mutate-Text $vb 'If method.CompanyId <> hostCompanyId Then Continue For' 'If False Then Continue For' 'V1'
     Dm 'V1_OTHER_COMPANY_ROWS_SHOWN' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
-    $x = Mutate-Text $vb 'data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId)' 'data.PaymentsHtml = String.Empty' 'V2'
+    $x = Mutate-Text $vb 'data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId, payPalLive)' 'data.PaymentsHtml = String.Empty' 'V2'
     Dm 'V2_RESULT_NEVER_SET' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
     $x = Mutate-Text $vb 'Const PaymentNameMax As Integer = 40' 'Const PaymentNameMax As Integer = 60' 'V3'
     Dm 'V3_LENGTH_LIMIT_CHANGED' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
@@ -359,6 +479,26 @@ if (-not $SkipMutations) {
     Dm 'V14_NO_DEDUPE' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
     $x = Mutate-Text $vb 'If names.Count >= PaymentMax Then Exit For' 'If names.Count >= 99 Then Exit For' 'V15'
     Dm 'V15_NO_CAP_AFTER_CLEANING' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    # PayPal (KS-B02F)
+    $x = Mutate-Text $vb 'If Not IsFooterMethodShown(method, payPalLive) Then Continue For' '' 'V16'
+    Dm 'V16_PAYPAL_FILTER_REMOVED' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb 'Return payPalLive AndAlso method.GatewayReady' 'Return payPalLive' 'V17'
+    Dm 'V17_PAYPAL_NAMED_WITHOUT_A_READY_CONFIGURATION' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb 'Return payPalLive AndAlso method.GatewayReady' 'Return method.GatewayReady' 'V18'
+    Dm 'V18_PAYPAL_NAMED_WITHOUT_THE_REQUEST_CHECK' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb "            Case Else`n                Return False" "            Case Else`n                Return True" 'V19'
+    Dm 'V19_UNKNOWN_ONLINE_VALUES_NAMED' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb "            If Not IsFooterMethodShown(method, payPalLive) Then Continue For`n" '' 'V20a'
+    $x = Mutate-Text $x 'If name.Length = 0 OrElse Not seen.Add(name) Then Continue For' "If name.Length = 0 OrElse Not seen.Add(name) Then Continue For`n            If Not IsFooterMethodShown(method, payPalLive) Then Continue For" 'V20b'
+    Dm 'V20_PAYPAL_FILTER_AFTER_THE_DEDUPE' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb 'If method.CompanyId <> hostCompanyId Then Continue For' 'If method.CompanyId <> hostCompanyId AndAlso method.OnLine <> 2 Then Continue For' 'V21'
+    Dm 'V21_PAYPAL_OF_OTHER_COMPANY_NAMED' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb 'AndAlso method.OnLine = PayPalOnLine AndAlso method.GatewayReady Then Return True' 'AndAlso method.OnLine = PayPalOnLine Then Return True' 'V22'
+    Dm 'V22_READY_WITHOUT_THE_FLAG' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb 'If method.CompanyId = hostCompanyId AndAlso' 'If True AndAlso' 'V23'
+    Dm 'V23_READY_OF_OTHER_COMPANY' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
+    $x = Mutate-Text $vb 'Const PayPalOnLine As Integer = 2' 'Const PayPalOnLine As Integer = 3' 'V24'
+    Dm 'V24_PAYPAL_VALUE_CHANGED' (Safe { (Test-FooterBehaviour $x $policy $links) -ceq 'OK' })
     # collegamento e markup
     $x = Mutate-Text $vb 'phFooterPayments.Visible = data.PaymentsHtml.Length > 0' 'phFooterPayments.Visible = False' 'G1'
     Dm 'G1_PLACEHOLDER_NEVER_SHOWN' (Safe { (Test-Glue $x) -ceq 'OK' })
@@ -366,8 +506,16 @@ if (-not $SkipMutations) {
     Dm 'G2_IDENTITY_NEVER_READ' (Safe { (Test-Glue $x) -ceq 'OK' })
     $x = Mutate-Text $vb 'litFooterPayments.Text = data.PaymentsHtml' 'litFooterPayments.Text = String.Empty' 'G3'
     Dm 'G3_LITERAL_NEVER_FILLED' (Safe { (Test-Glue $x) -ceq 'OK' })
-    $x = Mutate-Text $vb "        Else`n            data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)" "        Else`n            data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId)`n            data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)" 'G4'
+    $x = Mutate-Text $vb "        Else`n            data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)" "        Else`n            data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId, payPalLive)`n            data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)" 'G4'
     Dm 'G4_PAYMENTS_ALSO_OUTSIDE_THE_GATE' (Safe { ((Test-Glue $x) -ceq 'OK') -and ((Test-FooterBehaviour $x $policy $links) -ceq 'OK') })
+    $x = Mutate-Text $vb 'If Not HasReadyPayPal(payments, hostCompanyId) Then Return False' '' 'G5'
+    Dm 'G5_REQUEST_CHECKED_WITHOUT_A_READY_PAYPAL' (Safe { (Test-Glue $x) -ceq 'OK' })
+    $x = Mutate-Text $vb 'Return PayPalCheckoutSafetyPolicy.CanUseLiveCheckoutForCompany(HttpContext.Current, hostCompanyId)' 'Return True' 'G6'
+    Dm 'G6_REQUEST_NEVER_CHECKED' (Safe { (Test-Glue $x) -ceq 'OK' })
+    $x = Mutate-Text $vb "        Catch`n            Return False`n        End Try`n    End Function`n`n    Private Function ResolveFooterTenant" "        Catch`n            Return True`n        End Try`n    End Function`n`n    Private Function ResolveFooterTenant" 'G7'
+    Dm 'G7_A_FAILURE_OF_THE_REQUEST_CHECK_NAMES_PAYPAL' (Safe { (Test-Glue $x) -ceq 'OK' })
+    $x = Mutate-Text $vb 'Dim payPalLive As Boolean = ResolvePayPalLive(hostCompanyId, payments)' 'Dim payPalLive As Boolean = True' 'G8'
+    Dm 'G8_LIVE_ALWAYS_TRUE' (Safe { (Test-Glue $x) -ceq 'OK' })
     $x = Mutate-Text $ascx '<asp:PlaceHolder ID="phFooterPayments" runat="server" Visible="false">' '<asp:PlaceHolder ID="phFooterPayments" runat="server" Visible="true">' 'A1'
     Dm 'A1_LABEL_ALWAYS_VISIBLE' (Safe { (Test-Markup $x) -ceq 'OK' })
     $x = Mutate-Text $ascx 'Metodi di pagamento: ' 'Pagamenti accettati: ' 'A2'
@@ -391,13 +539,40 @@ if (-not $SkipMutations) {
     Dm 'P8_FAILED_READ_NOT_DISTINGUISHED' (Safe { (Test-PolicyBehaviour $x) -ceq 'OK' })
     $x = Mutate-Text $policy 'If byCompany.TryGetValue(companyId, bucket) Then' 'If byCompany.Count > 0 Then bucket = byCompany.Values.First()' 'P9'
     Dm 'P9_ATTACH_NOT_BY_COMPANY' (Safe { (Test-PolicyBehaviour $x) -ceq 'OK' })
+    $x = Mutate-Text $policy 'Return New StorefrontPaymentMethod(_companyId, _methodId, _name, _order, _onLine, ready)' 'Return Me' 'P10'
+    Dm 'P10_WITH_READY_NEVER_SETS_IT' (Safe { (Test-PolicyBehaviour $x) -ceq 'OK' })
+    $x = Mutate-Text $policy 'Return New StorefrontPaymentMethod(_companyId, _methodId, _name, _order, _onLine, ready)' 'Return New StorefrontPaymentMethod(_companyId, _methodId, _name, _order, 0, ready)' 'P11'
+    Dm 'P11_WITH_READY_DROPS_ONLINE' (Safe { (Test-PolicyBehaviour $x) -ceq 'OK' })
+    $x = Mutate-Text $policy 'Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")), ToInteger(column("OnLine")), False)' 'Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")), 0, False)' 'P12'
+    Dm 'P12_ONLINE_COLUMN_IGNORED' (Safe { (Test-PolicyBehaviour $x) -ceq 'OK' })
+    $x = Mutate-Text $policy 'Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")), ToInteger(column("OnLine")), False)' 'Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")), ToInteger(column("OnLine")), True)' 'P13'
+    Dm 'P13_NEW_METHODS_READY_BY_DEFAULT' (Safe { (Test-PolicyBehaviour $x) -ceq 'OK' })
     # caricatore (testo)
     $x = Mutate-Text $ctx 'command.CommandTimeout = 3' 'command.CommandTimeout = 30' 'C1'
     Dm 'C1_LONG_TIMEOUT' (Safe { (Test-Context $x) -ceq 'OK' })
-    $x = Mutate-Text $ctx 'p.Descrizione, p.Ordinamento FROM pagamentitipo p' 'p.Descrizione, p.Informazioni, p.Ordinamento FROM pagamentitipo p' 'C2'
+    $x = Mutate-Text $ctx 'p.Descrizione, p.Ordinamento, p.OnLine FROM pagamentitipo p' 'p.Descrizione, p.Informazioni, p.Ordinamento, p.OnLine FROM pagamentitipo p' 'C2'
     Dm 'C2_READS_INFORMAZIONI' (Safe { (Test-Context $x) -ceq 'OK' })
-    $x = Mutate-Text $ctx '(p.OnLine=0 AND c.ConfigCount IS NULL)' '(p.OnLine IN (0,1,2) AND c.ConfigCount IS NULL)' 'C3'
+    $x = Mutate-Text $ctx '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)' '(p.OnLine IN (0,1,2) AND c.ConfigCount IS NULL)' 'C3'
     Dm 'C3_GATEWAY_METHODS_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
+    $x = Mutate-Text $ctx '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)' '(p.OnLine IN (0,2,3) AND c.ConfigCount IS NULL)' 'C3b'
+    Dm 'C3b_CARDS_LISTED_WITHOUT_THEIR_RULE' (Safe { (Test-Context $x) -ceq 'OK' })
+    $x = Mutate-Text $ctx '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)' '(p.OnLine IN (0,2))' 'C3c'
+    Dm 'C3c_PAYPAL_WITH_A_BANK_CONFIG_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
+    # prontezza di PayPal
+    $x = Mutate-Text $ctx 'Return cfg IsNot Nothing AndAlso cfg.IsConfigured' 'Return cfg IsNot Nothing' 'R1'
+    Dm 'R1_READINESS_IGNORES_THE_REAL_CONFIG_VERDICT' (Safe { (Test-Readiness $x $paypalState) -ceq 'OK' })
+    $x = Mutate-Text $ctx "        Catch`n            Return False`n        End Try`n    End Function`n`n    Public Shared Function ConfiguredDatabaseScopeKey" "        Catch`n            Return True`n        End Try`n    End Function`n`n    Public Shared Function ConfiguredDatabaseScopeKey" 'R2'
+    Dm 'R2_A_FAILURE_COUNTS_AS_READY' (Safe { (Test-Readiness $x $paypalState) -ceq 'OK' })
+    $x = Mutate-Text $ctx 'If methods(k).OnLine = PayPalPaymentState.PAYPAL_ONLINE_VALUE Then' 'If True Then' 'R3'
+    Dm 'R3_READINESS_FOR_EVERY_METHOD' (Safe { (Test-Readiness $x $paypalState) -ceq 'OK' })
+    $x = Mutate-Text $ctx 'methods(k) = methods(k).WithGatewayReady(IsPayPalGatewayReady(methods(k).CompanyId, methods(k).MethodId))' 'methods(k) = methods(k).WithGatewayReady(True)' 'R4'
+    Dm 'R4_ALWAYS_READY' (Safe { (Test-Readiness $x $paypalState) -ceq 'OK' })
+    $x = Mutate-Text $ctx 'Return cfg IsNot Nothing AndAlso cfg.IsConfigured' 'Return cfg IsNot Nothing AndAlso cfg.IsConfigured AndAlso Not String.IsNullOrEmpty(cfg.ClientSecret)' 'R5'
+    Dm 'R5_A_CREDENTIAL_FIELD_IS_READ' (Safe { (Test-Readiness $x $paypalState) -ceq 'OK' })
+    $x = Mutate-Text $ctx 'Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(companyId, methodId)' 'Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(1, methodId)' 'R6'
+    Dm 'R6_READINESS_OF_ANOTHER_COMPANY' (Safe { (Test-Readiness $x $paypalState) -ceq 'OK' })
+    $x = Mutate-Text $paypalState 'PAYPAL_ONLINE_VALUE As Integer = 2' 'PAYPAL_ONLINE_VALUE As Integer = 5' 'R7'
+    Dm 'R7_THE_CART_CHANGES_THE_PAYPAL_VALUE' (Safe { (Test-Readiness $ctx $x) -ceq 'OK' })
     $x = Mutate-Text $ctx 'AND p.Web=1 AND' 'AND' 'C4'
     Dm 'C4_NON_PUBLIC_LISTED' (Safe { (Test-Context $x) -ceq 'OK' })
     $x = Mutate-Text $ctx 'WHERE p.Abilitato=1 AND' 'WHERE' 'C5'
@@ -451,7 +626,7 @@ function Invoke-Lab([string]$sql, [bool]$write) {
 $fx = @(
     @{ id = 9001; comp = 1; d = 'Contanti';                       ab = 1; web = 1; ord = 1;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $true  },
     @{ id = 9002; comp = 1; d = '-Bonifico Bancario';             ab = 1; web = 1; ord = 2;  cp = '0';    cf = '0';    cm = '999999'; co = 0; ol = 0; cart = $true;  foot = $true  },
-    @{ id = 9003; comp = 1; d = 'PayPal fixture';                 ab = 1; web = 1; ord = 3;  cp = '0';    cf = '0';    cm = '1000';   co = 0; ol = 2; cart = $true;  foot = $false },
+    @{ id = 9003; comp = 1; d = 'PayPal fixture';                 ab = 1; web = 1; ord = 3;  cp = '0';    cf = '0';    cm = '1000';   co = 0; ol = 2; cart = $true;  foot = $true  },
     @{ id = 9004; comp = 1; d = 'Solo clienti collegati';         ab = 1; web = 0; ord = 4;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
     @{ id = 9005; comp = 1; d = 'Disabilitato';                   ab = 0; web = 1; ord = 5;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
     @{ id = 9006; comp = 1; d = 'Tetto zero';                     ab = 1; web = 1; ord = 6;  cp = '0';    cf = '0';    cm = '0';      co = 0; ol = 0; cart = $false; foot = $false },
@@ -462,9 +637,17 @@ $fx = @(
     @{ id = 9013; comp = 1; d = 'Costo fisso nullo';              ab = 1; web = 1; ord = 13; cp = '0';    cf = 'NULL'; cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
     @{ id = 9014; comp = 1; d = 'Percentuale nulla';              ab = 1; web = 1; ord = 14; cp = 'NULL'; cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
     @{ id = 9015; comp = 2; d = 'Bonifico azienda due';           ab = 1; web = 1; ord = 1;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $true;  foot = $true  },
-    @{ id = 9016; comp = 1; d = 'Offline con due config';         ab = 1; web = 1; ord = 16; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false }
+    @{ id = 9016; comp = 1; d = 'Offline con due config';         ab = 1; web = 1; ord = 16; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 0; cart = $false; foot = $false },
+    # PayPal (KS-B02F): la SELECT del piede lo elenca solo con le stesse condizioni base e SENZA configurazioni bancarie attive (piu stretta del carrello); la prontezza
+    # e la richiesta si decidono fuori dalla SELECT, con il codice del carrello
+    @{ id = 9017; comp = 1; d = 'PayPal con config bancaria';     ab = 1; web = 1; ord = 17; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 2; cart = $true;  foot = $false },
+    @{ id = 9018; comp = 1; d = 'PayPal non pubblico';            ab = 1; web = 0; ord = 18; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 2; cart = $false; foot = $false },
+    @{ id = 9019; comp = 2; d = 'PayPal azienda due';             ab = 1; web = 1; ord = 2;  cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 2; cart = $true;  foot = $true  },
+    @{ id = 9020; comp = 1; d = 'PayPal contrassegno';            ab = 1; web = 1; ord = 20; cp = '0';    cf = '0';    cm = '999';    co = 1; ol = 2; cart = $true;  foot = $false },
+    @{ id = 9021; comp = 1; d = 'PayPal disabilitato';            ab = 0; web = 1; ord = 21; cp = '0';    cf = '0';    cm = '999';    co = 0; ol = 2; cart = $false; foot = $false },
+    @{ id = 9022; comp = 1; d = 'PayPal costo nullo';             ab = 1; web = 1; ord = 22; cp = '0';    cf = 'NULL'; cm = '999';    co = 0; ol = 2; cart = $false; foot = $false }
 )
-$bankRows = @( @(1, 9009, "'S2'", 1), @(1, 9010, "''", 1), @(1, 9016, "'A'", 1), @(1, 9016, "'B'", 1) )
+$bankRows = @( @(1, 9009, "'S2'", 1), @(1, 9010, "''", 1), @(1, 9016, "'A'", 1), @(1, 9016, "'B'", 1), @(1, 9017, "'S3'", 1) )
 $companies = @(@{ id = 1; mode = 'real' }, @{ id = 2; mode = 'real' })
 # scenari della carta: comps = aziende da clonare (one = una riga, same = riga duplicata identica per id, diff = duplicata con Nome diverso);
 # settings = (azienda, metodo M o O = altro metodo disabilitato della stessa azienda, login in SQL, Attivo)
@@ -599,13 +782,15 @@ if ($SkipLab) {
             @('L1_DISABLED_LISTED', 'p.Abilitato=1 AND ', ''),
             @('L2_NON_PUBLIC_LISTED', 'p.Web=1 AND ', ''),
             @('L3_ZERO_CAP_LISTED', 'p.CostoMassimo>0 AND ', ''),
-            @('L4_GATEWAY_METHODS_LISTED', '(p.OnLine=0 AND c.ConfigCount IS NULL)', '(p.OnLine IN (0,1,2) AND c.ConfigCount IS NULL)'),
+            @('L4_GATEWAY_METHODS_LISTED', '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)', '(p.OnLine IN (0,1,2) AND c.ConfigCount IS NULL)'),
+            @('L4b_PAYPAL_NOT_LISTED', '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)', '(p.OnLine IN (0) AND c.ConfigCount IS NULL)'),
+            @('L4c_PAYPAL_WITH_BANK_CONFIG_LISTED', '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)', '(p.OnLine=0 AND c.ConfigCount IS NULL) OR p.OnLine=2'),
             @('L5_CASH_ON_DELIVERY_LISTED', 'COALESCE(p.Contrassegno,0)=0 AND ', ''),
             @('L6_NULL_COSTS_LISTED', 'p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND ', ''),
             @('L7a_CARD_WITHOUT_LOGIN_LISTED', 'AND c.HasLogin=1', ''),
             @('L7b_CARD_WITH_DIFFERENT_AZIENDE_ROWS_LISTED', 'c.ConfigCount=1 AND', 'c.ConfigCount>=1 AND'),
             @('L7c_CARD_WITHOUT_OWN_CONFIG_LISTED', 'c.ConfigCount=1 AND c.HasLogin=1', 'COALESCE(c.ConfigCount,1)=1 AND COALESCE(c.HasLogin,1)=1'),
-            @('L7d_OFFLINE_WITH_CONFIG_LISTED', '(p.OnLine=0 AND c.ConfigCount IS NULL)', 'p.OnLine=0'),
+            @('L7d_OFFLINE_WITH_CONFIG_LISTED', '(p.OnLine IN (0,2) AND c.ConfigCount IS NULL)', 'p.OnLine IN (0,2)'),
             @('L7e_CARD_RULE_DROPPED', 'OR (p.OnLine=3', 'OR (p.OnLine=99'),
             @('L8_BANK_JOIN_NOT_CORRELATED_TO_THE_METHOD', 'AND c.PagamentiTipoId=p.id', ''),
             @('L8b_BANK_JOIN_NOT_CORRELATED_TO_THE_COMPANY', 'c.AziendeId=p.AziendeID AND ', ''),

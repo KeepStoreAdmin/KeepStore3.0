@@ -129,11 +129,12 @@ Public NotInheritable Class StorefrontSeoTenantContext
         End Try
     End Function
     ' Metodi di pagamento pubblici: terza lettura SEPARATA e facoltativa; nessuna eccezione esce da qui e le altre informazioni dell'identita restano. Si leggono solo
-    ' AziendeID, id, Descrizione e Ordinamento: mai Informazioni (IBAN e dati di persone) ne img. Regola, piu stretta di quella del carrello e mai piu larga: Abilitato, Web
-    ' (pubblico), tetto positivo, Contrassegno=0, costi non nulli. OnLine=0 solo se non ha configurazioni bancarie attive. OnLine=3 (carta, Banca Sella) solo con UNA
+    ' AziendeID, id, Descrizione, Ordinamento e OnLine: mai Informazioni (IBAN e dati di persone) ne img. Regola, piu stretta di quella del carrello e mai piu larga: Abilitato,
+    ' Web (pubblico), tetto positivo, Contrassegno=0, costi non nulli. OnLine=0 (nessun gateway) e OnLine=2 (PayPal) solo se non hanno configurazioni bancarie attive; PayPal si
+    ' nomina poi solo se e pronto E la richiesta lo consente (vedi ReadPaymentMethods e il piede). OnLine=3 (carta, Banca Sella) solo con UNA
     ' configurazione attiva distinta (stesso DISTINCT del carrello) con un shopLogin valido (token senza il segnaposto GESPAY) E con UNA sola riga di impostazioni per tutta
-    ' l'azienda: il gateway legge le impostazioni per azienda senza filtro su metodo ne Attivo e prende la prima riga. PayPal e IwBank restano fuori.
-    Private Const PaymentMethodsSql As String = "SELECT p.AziendeID, p.id, p.Descrizione, p.Ordinamento FROM pagamentitipo p LEFT JOIN (SELECT d.AziendeId, d.PagamentiTipoId, COUNT(*) AS ConfigCount, MAX(NULLIF(TRIM(d.shopLogin),'') IS NOT NULL AND TRIM(d.shopLogin) REGEXP '^[A-Za-z0-9_-]+$' AND UPPER(TRIM(d.shopLogin)) <> 'GESPAY') AS HasLogin FROM (SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin FROM vbancasella_azienda WHERE Attivo=1) d GROUP BY d.AziendeId, d.PagamentiTipoId) c ON c.AziendeId=p.AziendeID AND c.PagamentiTipoId=p.id WHERE p.Abilitato=1 AND p.Web=1 AND p.CostoMassimo>0 AND COALESCE(p.Contrassegno,0)=0 AND p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND ((p.OnLine=0 AND c.ConfigCount IS NULL) OR (p.OnLine=3 AND c.ConfigCount=1 AND c.HasLogin=1 AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1)) ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id"
+    ' l'azienda: il gateway legge le impostazioni per azienda senza filtro su metodo ne Attivo e prende la prima riga. IwBank resta fuori.
+    Private Const PaymentMethodsSql As String = "SELECT p.AziendeID, p.id, p.Descrizione, p.Ordinamento, p.OnLine FROM pagamentitipo p LEFT JOIN (SELECT d.AziendeId, d.PagamentiTipoId, COUNT(*) AS ConfigCount, MAX(NULLIF(TRIM(d.shopLogin),'') IS NOT NULL AND TRIM(d.shopLogin) REGEXP '^[A-Za-z0-9_-]+$' AND UPPER(TRIM(d.shopLogin)) <> 'GESPAY') AS HasLogin FROM (SELECT DISTINCT AziendeId, PagamentiTipoId, URL1, URL2, Nome, shopLogin FROM vbancasella_azienda WHERE Attivo=1) d GROUP BY d.AziendeId, d.PagamentiTipoId) c ON c.AziendeId=p.AziendeID AND c.PagamentiTipoId=p.id WHERE p.Abilitato=1 AND p.Web=1 AND p.CostoMassimo>0 AND COALESCE(p.Contrassegno,0)=0 AND p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND ((p.OnLine IN (0,2) AND c.ConfigCount IS NULL) OR (p.OnLine=3 AND c.ConfigCount=1 AND c.HasLogin=1 AND (SELECT COUNT(*) FROM bancasella_impostazioni_azienda s WHERE s.AziendeId=p.AziendeID)=1)) ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id"
 
     Private Shared Sub AttachPaymentMethods(ByVal connection As MySqlConnection, ByVal identities As IList(Of StorefrontSeoTenantIdentity))
         Try
@@ -158,9 +159,25 @@ Public NotInheritable Class StorefrontSeoTenantContext
                     End While
                 End Using
             End Using
+            For k As Integer = 0 To methods.Count - 1
+                If methods(k).OnLine = PayPalPaymentState.PAYPAL_ONLINE_VALUE Then
+                    methods(k) = methods(k).WithGatewayReady(IsPayPalGatewayReady(methods(k).CompanyId, methods(k).MethodId))
+                End If
+            Next
             Return methods
         Catch
             Return Nothing
+        End Try
+    End Function
+
+    ' Prontezza di PayPal per UN metodo di UN'azienda: la configurazione si carica con il codice del carrello (stesso repository, stesse condizioni) e se ne tiene solo il
+    ' verdetto. L'oggetto e locale e si scarta subito: mai in cache, di lui si legge soltanto il verdetto e nessun campo di credenziale passa di qui. Ogni guasto vale "non pronto".
+    Private Shared Function IsPayPalGatewayReady(ByVal companyId As Integer, ByVal methodId As Integer) As Boolean
+        Try
+            Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(companyId, methodId)
+            Return cfg IsNot Nothing AndAlso cfg.IsConfigured
+        Catch
+            Return False
         End Try
     End Function
 

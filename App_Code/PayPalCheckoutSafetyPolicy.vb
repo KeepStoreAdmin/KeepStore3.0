@@ -13,10 +13,19 @@ Public NotInheritable Class PayPalCheckoutSafetyPolicy
                                               ByVal cfg As PayPalCheckoutConfig) As Boolean
         If context Is Nothing OrElse context.Request Is Nothing OrElse context.Request.Url Is Nothing Then Return False
         If cfg Is Nothing OrElse Not cfg.IsConfigured Then Return False
+        Return CanUseLiveCheckoutForCompany(context, cfg.AziendeId)
+    End Function
+
+    ' La parte della politica che dipende solo dalla RICHIESTA e dall'azienda: ingresso sicuro (HTTPS, non locale, non loopback), tenant risolto per l'host uguale
+    ' all'azienda e host consentito. Non legge ne credenziali ne configurazioni: la usa anche il piede, che deve nominare PayPal solo dove il carrello lo offre.
+    Public Shared Function CanUseLiveCheckoutForCompany(ByVal context As HttpContext,
+                                                        ByVal companyId As Integer) As Boolean
+        If companyId <= 0 Then Return False
+        If context Is Nothing OrElse context.Request Is Nothing OrElse context.Request.Url Is Nothing Then Return False
         If Not HasSafeLiveIngress(context) Then Return False
 
         Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(context)
-        If tenant Is Nothing OrElse tenant.CompanyId <> cfg.AziendeId Then Return False
+        If tenant Is Nothing OrElse tenant.CompanyId <> companyId Then Return False
         Return StorefrontCanonicalHostPolicy.IsRequestHostAllowed(tenant, context.Request.Url.Host, False)
     End Function
 

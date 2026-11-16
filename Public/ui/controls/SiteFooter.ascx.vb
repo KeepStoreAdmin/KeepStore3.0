@@ -43,7 +43,8 @@ Partial Class SiteFooter
 
         ' Il link di Facebook vive nella sessione, scritta con l'azienda dell'host nella stessa lettura: BuildFooterData lo usa solo se coincidono.
         Dim facebookRaw As String = If(Session Is Nothing, String.Empty, Convert.ToString(Session("facebookLink")))
-        Dim data As FooterData = BuildFooterData(hostCompanyId, SessionCompanyId(), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, DateTime.Now.Year)
+        Dim payPalLive As Boolean = ResolvePayPalLive(hostCompanyId, payments)
+        Dim data As FooterData = BuildFooterData(hostCompanyId, SessionCompanyId(), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, payPalLive, DateTime.Now.Year)
 
         BindFooterLogo(data)
         BindFooterColumns()
@@ -53,6 +54,17 @@ Partial Class SiteFooter
         If litFooterContacts IsNot Nothing Then litFooterContacts.Text = data.ContactsHtml
         If litFooterCopyright IsNot Nothing Then litFooterCopyright.Text = data.CopyrightHtml
     End Sub
+
+    ' PayPal si nomina solo dove il carrello lo offre: la configurazione pronta e gia nell'identita (HasReadyPayPal); la parte della RICHIESTA (HTTPS, non locale, host
+    ' consentito dell'azienda) e la politica del carrello per quell'azienda. Si chiede solo se esiste un PayPal pronto, e ogni guasto vale "no".
+    Private Function ResolvePayPalLive(ByVal hostCompanyId As Integer, ByVal payments As IList(Of StorefrontPaymentMethod)) As Boolean
+        If Not HasReadyPayPal(payments, hostCompanyId) Then Return False
+        Try
+            Return PayPalCheckoutSafetyPolicy.CanUseLiveCheckoutForCompany(HttpContext.Current, hostCompanyId)
+        Catch
+            Return False
+        End Try
+    End Function
 
     Private Function ResolveFooterTenant() As StorefrontSeoTenantIdentity
         Try
@@ -166,7 +178,7 @@ Partial Class SiteFooter
     Friend Shared Function BuildFooterData(ByVal hostCompanyId As Integer, ByVal sessionCompanyId As Integer, ByVal companyName As String,
                                            ByVal logoFileName As String, ByVal phone As String, ByVal email As String,
                                            ByVal facebookRaw As String, ByVal legal As StorefrontCompanyLegalProfile,
-                                           ByVal payments As IList(Of StorefrontPaymentMethod), ByVal year As Integer) As FooterData
+                                           ByVal payments As IList(Of StorefrontPaymentMethod), ByVal payPalLive As Boolean, ByVal year As Integer) As FooterData
         Dim data As New FooterData()
         If IsFooterTenantAllowed(hostCompanyId, sessionCompanyId) Then
             data.CompanyName = If(companyName, String.Empty).Trim()
@@ -175,7 +187,7 @@ Partial Class SiteFooter
             data.FacebookUrl = ResolveFooterFacebookUrl(hostCompanyId, sessionCompanyId, facebookRaw)
             ' i dati societari si mostrano solo se il profilo e della stessa azienda dell'host
             If legal IsNot Nothing AndAlso legal.CompanyId = hostCompanyId Then data.LegalHtml = BuildFooterLegalHtml(legal)
-            data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId)
+            data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId, payPalLive)
         Else
             data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)
         End If
@@ -368,11 +380,39 @@ Partial Class SiteFooter
     Private Const PaymentMax As Integer = 8
     Private Const PaymentNameMax As Integer = 40
     Private Const PaymentDigitsMax As Integer = 5
+    ' Tipi di gateway della colonna OnLine: 2 = PayPal (lo stesso valore del carrello, PayPalPaymentState.PAYPAL_ONLINE_VALUE, fissato da un test), 3 = carta (la lettura del
+    ' caricatore la elenca soltanto con la sua regola). Ogni altro valore non si nomina mai.
+    Private Const PayPalOnLine As Integer = 2
+    Private Const CardOnLine As Integer = 3
 
-    ' Metodi di pagamento: solo quelli dell'azienda dell'host, testo ripulito come i dati societari, scartati (mai troncati) i nomi che potrebbero portare dati personali o di conto
+    ' Esiste, per l'azienda dell'host, almeno un PayPal con la configurazione pronta? Solo allora serve verificare la richiesta.
+    Friend Shared Function HasReadyPayPal(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer) As Boolean
+        If methods Is Nothing OrElse hostCompanyId <= 0 Then Return False
+        For Each method As StorefrontPaymentMethod In methods
+            If method Is Nothing Then Continue For
+            If method.CompanyId = hostCompanyId AndAlso method.OnLine = PayPalOnLine AndAlso method.GatewayReady Then Return True
+        Next
+        Return False
+    End Function
+
+    ' Un metodo senza gateway si nomina; la carta e gia decisa dalla lettura del caricatore; PayPal solo con la configurazione pronta E la richiesta consentita (nessuna delle
+    ' due basta da sola); ogni altro valore OnLine, mai.
+    Friend Shared Function IsFooterMethodShown(ByVal method As StorefrontPaymentMethod, ByVal payPalLive As Boolean) As Boolean
+        Select Case method.OnLine
+            Case 0, CardOnLine
+                Return True
+            Case PayPalOnLine
+                Return payPalLive AndAlso method.GatewayReady
+            Case Else
+                Return False
+        End Select
+    End Function
+
+    ' Metodi di pagamento: solo quelli dell'azienda dell'host, PayPal solo se pronto e consentito dalla richiesta (il filtro precede pulizia, deduplica e limite: uno scartato
+    ' non consuma ne un nome ne un posto), testo ripulito come i dati societari, scartati (mai troncati) i nomi che potrebbero portare dati personali o di conto
     ' (sei o piu cifre, @, indirizzi web) o piu lunghi del limite, senza duplicati (senza maiuscole), al massimo PaymentMax dopo pulizia e scarti, nell'ordine ricevuto (la policy li
     ' ordina). Vuoto = nessun blocco nel piede. Il testo e del cliente: sempre codificato.
-    Friend Shared Function BuildFooterPaymentsHtml(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer) As String
+    Friend Shared Function BuildFooterPaymentsHtml(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer, ByVal payPalLive As Boolean) As String
         If methods Is Nothing OrElse hostCompanyId <= 0 Then Return String.Empty
         Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim names As New List(Of String)()
@@ -380,6 +420,7 @@ Partial Class SiteFooter
             If names.Count >= PaymentMax Then Exit For
             If method Is Nothing Then Continue For
             If method.CompanyId <> hostCompanyId Then Continue For
+            If Not IsFooterMethodShown(method, payPalLive) Then Continue For
             Dim name As String = CleanPaymentName(method.Name)
             If name.Length = 0 OrElse Not seen.Add(name) Then Continue For
             names.Add(HttpUtility.HtmlEncode(name))

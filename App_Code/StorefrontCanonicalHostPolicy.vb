@@ -141,18 +141,45 @@ Public NotInheritable Class StorefrontCompanyLegalProfile
 End Class
 
 ' Un metodo di pagamento pubblico di un'azienda: immutabile, con il proprio CompanyId perche chi lo mostra possa verificare che appartenga all'azienda dell'host.
+' OnLine e il tipo di gateway della colonna (0 = nessuno, 2 = PayPal, 3 = carta); GatewayReady dice soltanto che la configurazione del gateway e pronta secondo il
+' carrello (mai pronto di default: lo assegna, con una copia, chi conosce la configurazione). Nessun dato di configurazione vive qui.
 Public NotInheritable Class StorefrontPaymentMethod
     Private ReadOnly _companyId As Integer
     Private ReadOnly _methodId As Integer
     Private ReadOnly _name As String
     Private ReadOnly _order As Integer
+    Private ReadOnly _onLine As Integer
+    Private ReadOnly _gatewayReady As Boolean
 
     Public Sub New(ByVal companyId As Integer, ByVal methodId As Integer, ByVal name As String, ByVal order As Integer)
+        Me.New(companyId, methodId, name, order, 0, False)
+    End Sub
+
+    Public Sub New(ByVal companyId As Integer, ByVal methodId As Integer, ByVal name As String, ByVal order As Integer,
+                   ByVal onLine As Integer, ByVal gatewayReady As Boolean)
         _companyId = companyId
         _methodId = methodId
         If name Is Nothing Then _name = String.Empty Else _name = name.Trim()
         _order = order
+        _onLine = onLine
+        _gatewayReady = gatewayReady
     End Sub
+
+    Public Function WithGatewayReady(ByVal ready As Boolean) As StorefrontPaymentMethod
+        Return New StorefrontPaymentMethod(_companyId, _methodId, _name, _order, _onLine, ready)
+    End Function
+
+    Public ReadOnly Property OnLine As Integer
+        Get
+            Return _onLine
+        End Get
+    End Property
+
+    Public ReadOnly Property GatewayReady As Boolean
+        Get
+            Return _gatewayReady
+        End Get
+    End Property
 
     Public ReadOnly Property CompanyId As Integer
         Get
@@ -273,14 +300,15 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
         Next
     End Sub
 
-    ' Mappa le colonne di pagamentitipo lette dal piede. Azienda o metodo illeggibili (0 o negativi) e nome vuoto non producono un metodo; l'ordine illeggibile vale 0.
+    ' Mappa le colonne di pagamentitipo lette dal piede. Azienda o metodo illeggibili (0 o negativi) e nome vuoto non producono un metodo; l'ordine e il tipo di gateway
+    ' (OnLine) illeggibili valgono 0. Il metodo nasce SEMPRE non pronto: la prontezza della configurazione non e una colonna di questa riga.
     Public Shared Function CreatePaymentMethod(ByVal column As Func(Of String, String)) As StorefrontPaymentMethod
         If column Is Nothing Then Return Nothing
         Dim companyId As Integer = ToInteger(column("AziendeID"))
         Dim methodId As Integer = ToInteger(column("id"))
         Dim name As String = column("Descrizione")
         If companyId <= 0 OrElse methodId <= 0 OrElse String.IsNullOrWhiteSpace(name) Then Return Nothing
-        Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")))
+        Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")), ToInteger(column("OnLine")), False)
     End Function
 
     Private Shared Function ToInteger(ByVal value As String) As Integer

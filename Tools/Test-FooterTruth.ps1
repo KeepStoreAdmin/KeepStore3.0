@@ -148,7 +148,7 @@ $region
         Return BuildFooterContactsHtml(n, p, e)
     End Function
     Public Function Data(ByVal host As Integer, ByVal sess As Integer, ByVal name As String, ByVal logo As String, ByVal phone As String, ByVal email As String, ByVal fb As String, ByVal year As Integer) As String()
-        Dim d As FooterData = BuildFooterData(host, sess, name, logo, phone, email, fb, Nothing, Nothing, year)
+        Dim d As FooterData = BuildFooterData(host, sess, name, logo, phone, email, fb, Nothing, Nothing, False, year)
         Return New String() {d.LogoFileName, d.CompanyName, d.FacebookUrl, d.ContactsHtml, d.CopyrightHtml}
     End Function
     Private Shared Function Prof(ByVal id As Integer, ByVal f As String()) As StorefrontCompanyLegalProfile
@@ -166,7 +166,7 @@ $region
     Public Function DataL(ByVal host As Integer, ByVal sess As Integer, ByVal name As String, ByVal profileId As Integer, ByVal f As String()) As String()
         Dim p As StorefrontCompanyLegalProfile = Nothing
         If f IsNot Nothing Then p = Prof(profileId, f)
-        Dim d As FooterData = BuildFooterData(host, sess, name, "", "", "", "", p, Nothing, 2026)
+        Dim d As FooterData = BuildFooterData(host, sess, name, "", "", "", "", p, Nothing, False, 2026)
         Return New String() {d.LegalHtml, d.ContactsHtml, d.CopyrightHtml}
     End Function
     Public Function Cats(ByVal spec As String, ByVal max As Integer) As String
@@ -359,7 +359,9 @@ function Test-Glue([string]$vbText) {
     foreach ($bad in @('MySqlConnection', 'MySqlCommand', 'ConfigurationManager', 'Session("AziendaNome")', 'Session("AziendaCopyright")', 'info@', 'KeepStore.Site.SupportEmail', 'SELECT ', 'Request.Url', 'Request.Headers', 'CodiceFiscale', 'CognomeNome', 'TaxCode')) {
         if ($vbText.IndexOf($bad, [StringComparison]::Ordinal) -ge 0) { return $false }
     }
-    if ($vbText -match '(?i)\b(Visa|PayPal|Mastercard|Maestro|Discover)\b|Pagamenti accettati|\+39 0|Notebook|Subscribe|10% Off') { return $false }
+    if ($vbText -match '(?i)\b(Visa|Mastercard|Maestro|Discover)\b|Pagamenti accettati|\+39 0|Notebook|Subscribe|10% Off') { return $false }
+    # nessun marchio di pagamento nel TESTO mostrato: dal task KS-B02F il codice puo nominare PayPal come identificatore o commento (il carrello e la sua politica), mai dentro una stringa
+    if ($vbText -match '(?i)"[^"\r\n]*\bPayPal\b[^"\r\n]*"') { return $false }
     # sessione: si leggono soltanto l'azienda (per il confronto con l'host) e il link di Facebook scritto con essa
     $sessionNames = @([regex]::Matches($vbText, 'Session\("([^"]+)"\)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
     if (($sessionNames -join '|') -ne 'AziendaID|facebookLink') { return $false }
@@ -377,7 +379,7 @@ function Test-Glue([string]$vbText) {
     foreach ($line in @('hostCompanyId = tenant.CompanyId', 'companyName = tenant.CompanyName', 'logoFileName = tenant.LogoFileName', 'phone = tenant.SupportPhone', 'email = tenant.SupportEmail', 'legalProfile = tenant.LegalProfile')) {
         if ($vbText.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return $false }
     }
-    if ($vbText -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, DateTime\.Now\.Year\)') { return $false }
+    if ($vbText -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, payPalLive, DateTime\.Now\.Year\)') { return $false }
     # tutto cio che il piede mostra dell'azienda viene da BuildFooterData
     foreach ($line in @('litFooterContacts.Text = data.ContactsHtml', 'litFooterCopyright.Text = data.CopyrightHtml', 'BindFooterLogo(data)', 'BindFooterSocial(data)', 'BuildLogoAssetUrlFromFileName(data.LogoFileName)', 'lnkFooterFacebook.HRef = data.FacebookUrl',
                   'BindFooterLegal(data)', 'phFooterLegal.Visible = data.LegalHtml.Length > 0', 'litFooterLegal.Text = data.LegalHtml')) {
