@@ -1,5 +1,13 @@
 # KeepStore Masterplan Operativo
 
+## PAYPAL-FIRST-PAYMENT-RUNBOOK-1A — 16/11/2026 — DOCS (piano di pubblicazione e primo pagamento PayPal reale)
+
+**Esito: A (DOCS). Livello S. PR [#525](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/525).** Risposta del PO «Si, prepara» dopo #524. Il PO ha eseguito la verifica di prontezza sul database reale: Taikun (azienda 1, pagamento 19, tetto 5000) e Webaffare (azienda 2, pagamento 12, tetto 1000) `ConfigurazioneCompleta = SI`, flag a 1, account PayPal condiviso, 0 tentativi (PayPal mai usato).
+
+**Runbook** `docs/PAYPAL_CHECKOUT_FIRST_LIVE_PAYMENT_RUNBOOK.md`: i due file App_Code da pubblicare (`PayPalCheckoutRepository.vb`, `PayPalPaymentState.vb`) con SHA-256 prima/dopo (CRLF; altri file PayPal invariati dal 23/09), verifiche prima (schema; pannello PayPal con webhook LIVE e i cinque eventi, che e la rete di sicurezza perche il ritorno senza sessione rimanda al login), prima prova a importo basso con un conto acquirente diverso dal venditore (il sito crea l'ordine prima di andare su PayPal), annullo, prova del webhook a scheda chiusa, SELECT di controllo e di monitoraggio provate sul LAB in sola lettura, interruttore di spegnimento (Web a 0 nel gestionale; collegamento `Attivo = 0` per fermare anche «Paga ora») e rimborso solo dal pannello PayPal (il sito non lo gestisce).
+
+**Limiti e residuo (NON AVVIATO).** Nessun file pubblicato, nessun pagamento, nessun accesso al pannello PayPal o al server: tutto lo esegue il PO. Restano non verificabili da me le impostazioni del pannello PayPal e l'opzione del connettore del server. CONSEGNA SERVER SOSPESA.
+
 ## PAYPAL-TINYINT-FLAGS-1A — 16/11/2026 — SOURCE (PayPal torna offribile dal carrello: i flag tinyint(1) si leggono come numeri; totale al centesimo)
 
 **Esito: A (SOURCE). Livello L. PR [#524](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/524).** Il PO ha mostrato le schermate di `pagamentitipo` e del gestionale (PayPal ON-LINE abilitato per il web, soglia 5000, ma sparito dal carrello) e ha chiesto di ricostruire la storia dai manuali e di correggere il difetto trovato in #523, accettando l'accensione dei pagamenti PayPal LIVE a livello sorgente. Corretti i tre punti sotto; la **consegna al server** resta sospesa e il primo pagamento reale richiede un mandato a parte.
