@@ -214,22 +214,31 @@ Partial Public Class _Default
         End Try
     End Sub
 
+    ' KS-A04-HOME-BODY-CLASS-1A: le classi della HOME stanno nell'HTML servito, non solo dopo il JavaScript (altrimenti gli stili `body.ks-page-home`
+    ' scattano a pagina caricata e la HOME si sposta). In questo punto il body del master non ha ancora `class`: la lettura e a prova di Nothing.
     Private Sub MarkBodyAsHome()
         Try
             Dim body = TryCast(Master.FindControl("PageBody"), HtmlGenericControl)
             If body IsNot Nothing Then
-                Dim current = Convert.ToString(body.Attributes("class"))
-                If current.IndexOf("ks-page-home", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-page-home").Trim()
-                    current = Convert.ToString(body.Attributes("class"))
-                End If
-                If current.IndexOf("ks-home-main", StringComparison.OrdinalIgnoreCase) < 0 Then
-                    body.Attributes("class") = (current & " ks-home-main").Trim()
-                End If
+                body.Attributes("class") = AppendBodyClass(AppendBodyClass(body.Attributes("class"), "ks-page-home"), "ks-home-main")
             End If
         Catch
         End Try
     End Sub
+
+#Region "BodyClassPure"
+    ' Aggiunge un token alla lista delle classi, senza duplicati (confronto per token e senza maiuscole) e senza fallire se l'attributo non esiste ancora:
+    ' Convert.ToString su un String Nothing restituisce Nothing, ed e per questo che la versione precedente non ha mai scritto nulla (NullReferenceException nascosta dal Catch).
+    Friend Shared Function AppendBodyClass(ByVal current As String, ByVal token As String) As String
+        Dim existing As String = If(current, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(token) Then Return existing
+        For Each part As String In existing.Split(New Char() {" "c, ControlChars.Tab, ControlChars.Cr, ControlChars.Lf}, StringSplitOptions.RemoveEmptyEntries)
+            If String.Equals(part, token.Trim(), StringComparison.OrdinalIgnoreCase) Then Return existing
+        Next
+        If existing.Length = 0 Then Return token.Trim()
+        Return existing & " " & token.Trim()
+    End Function
+#End Region
 
     Private Sub ApplyHomeSeo()
         Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
