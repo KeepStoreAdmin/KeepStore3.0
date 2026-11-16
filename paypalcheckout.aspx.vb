@@ -50,7 +50,7 @@ Partial Class paypalcheckout
             Dim details As PayPalOrdersV2Result = client.GetOrder(tx.PayPalOrderId)
             If details Is Nothing OrElse Not details.Success OrElse
                Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, details.Snapshot, tx.Importo, tx.Valuta) Then
-                Fail(documentId, "Riconciliazione PayPal non disponibile") : Return
+                Fail(documentId, "Riconciliazione PayPal non disponibile", PayPalOrdersV2Client.DescribeFailure(details)) : Return
             End If
             If String.Equals(details.Snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then
                 If PayPalCheckoutRepository.ApplyAuthoritativeState(tx, details.Snapshot, String.Empty) Then
@@ -72,7 +72,7 @@ Partial Class paypalcheckout
                 If captured Is Nothing OrElse Not captured.Success OrElse
                    Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, captured.Snapshot, tx.Importo, tx.Valuta) OrElse
                    Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, captured.Snapshot, String.Empty) Then
-                    Fail(documentId, "Verifica capture PayPal non riuscita") : Return
+                    Fail(documentId, "Verifica capture PayPal non riuscita", PayPalOrdersV2Client.DescribeFailure(captured)) : Return
                 End If
                 If isWeb Then PayPalWebLaunchContext.FinishPayPal(HttpContext.Current, documentId, owner)
                 RedirectResult(documentId, If(String.Equals(captured.Snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase), "ok", "ko")) : Return
@@ -96,15 +96,17 @@ Partial Class paypalcheckout
         End If
         Dim response As PayPalOrdersV2Result = client.CreateOrder(doc, tx.CreateRequestId, returnUrl, cancelUrl)
         If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, response.Snapshot.OrderId, response.Snapshot, tx.Importo, tx.Valuta) OrElse Not PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(response.Snapshot.ApprovalUrl) Then
-            Fail(documentId, "Creazione pagamento PayPal non riuscita") : Return
+            Fail(documentId, "Creazione pagamento PayPal non riuscita", PayPalOrdersV2Client.DescribeFailure(response)) : Return
         End If
         If Not PayPalCheckoutRepository.RecordOrderCreated(tx, response.Snapshot) Then Fail(documentId, "Persistenza pagamento PayPal non riuscita") : Return
         RedirectTerminal(response.Snapshot.ApprovalUrl)
     End Sub
 
-    Private Sub Fail(ByVal documentId As Integer, ByVal message As String)
+    Private Sub Fail(ByVal documentId As Integer, ByVal message As String, Optional ByVal detail As String = "")
         ' Un errore di trasporto puo avere un esito remoto ambiguo: non dichiararlo
         ' fallito e non sbloccare un nuovo attempt senza GET autorevole.
+        ' Il motivo resta nel registro (paypal-checkout.log): prima il cliente tornava al dettaglio ordine senza alcuna traccia.
+        PayPalPaymentState.LogCheckoutFailure("paypal-checkout", documentId, message, detail)
         RedirectResult(documentId, "ko")
     End Sub
 

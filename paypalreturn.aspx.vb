@@ -33,7 +33,7 @@ Partial Class paypalreturn
         Dim client As New PayPalOrdersV2Client(cfg)
         Dim details As PayPalOrdersV2Result = client.GetOrder(tx.PayPalOrderId)
         If details Is Nothing OrElse Not details.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, details.Snapshot, tx.Importo, tx.Valuta) Then
-            Fail(documentId, "Approvazione PayPal non verificata") : Return
+            Fail(documentId, "Approvazione PayPal non verificata", PayPalOrdersV2Client.DescribeFailure(details)) : Return
         End If
         If String.Equals(details.Snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then
             If PayPalCheckoutRepository.ApplyAuthoritativeState(tx, details.Snapshot, String.Empty) Then
@@ -54,7 +54,7 @@ Partial Class paypalreturn
         If Not String.Equals(details.Snapshot.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Fail(documentId, "Ordine PayPal non approvato") : Return
         If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then RedirectResult(documentId, "ko") : Return
         Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
-        If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, capture.Snapshot, tx.Importo, tx.Valuta) Then Fail(documentId, "Capture PayPal non verificata") : Return
+        If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, capture.Snapshot, tx.Importo, tx.Valuta) Then Fail(documentId, "Capture PayPal non verificata", PayPalOrdersV2Client.DescribeFailure(capture)) : Return
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, capture.Snapshot, String.Empty) Then Fail(documentId, "Aggiornamento pagamento non riuscito") : Return
         CloseWebLaunch(doc)
         If String.Equals(capture.Snapshot.CaptureStatus, "COMPLETED", StringComparison.OrdinalIgnoreCase) Then RedirectResult(documentId, "ok") Else RedirectResult(documentId, "ko")
@@ -66,7 +66,8 @@ Partial Class paypalreturn
         If owner IsNot Nothing AndAlso owner.IsComplete Then PayPalWebLaunchContext.FinishPayPal(HttpContext.Current, doc.DocumentId, owner)
     End Sub
 
-    Private Sub Fail(ByVal documentId As Integer, ByVal message As String)
+    Private Sub Fail(ByVal documentId As Integer, ByVal message As String, Optional ByVal detail As String = "")
+        PayPalPaymentState.LogCheckoutFailure("paypal-checkout", documentId, message, detail)
         RedirectResult(documentId, "ko")
     End Sub
 

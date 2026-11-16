@@ -320,6 +320,16 @@ Public Class PayPalOrdersV2Client
                (snapshot.CaptureCount = 0 OrElse HasMatchingCapture(snapshot, attemptAmount, attemptCurrency))
     End Function
 
+    ' Descrizione sicura di un esito negativo per il registro: stato HTTP e codice di errore (nome PayPal o codice interno su una riga).
+    ' Mai corpo della risposta, token, intestazioni o credenziali.
+    Public Shared Function DescribeFailure(ByVal result As PayPalOrdersV2Result) As String
+        If result Is Nothing Then Return "result=none"
+        Dim code As String = Convert.ToString(result.ErrorCode).Replace(vbCr, " ").Replace(vbLf, " ").Trim()
+        If code.Length > 80 Then code = code.Substring(0, 80)
+        If code.Length = 0 Then code = "none"
+        Return "http=" & result.StatusCode.ToString(CultureInfo.InvariantCulture) & " code=" & code
+    End Function
+
     Public Shared Function HasMatchingCapture(ByVal snapshot As PayPalOrderSnapshot,
                                               ByVal expectedAmount As Decimal,
                                               ByVal expectedCurrency As String) As Boolean

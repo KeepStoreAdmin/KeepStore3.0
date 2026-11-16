@@ -174,6 +174,13 @@ Partial Class paypalwebhook
     End Function
 
     Private Sub Finish(ByVal statusCode As Integer, ByVal value As String)
+        ' Ogni esito diverso da 200 lascia una riga (codice e motivo, nessun corpo ne firma): prima un webhook respinto non lasciava traccia.
+        If statusCode <> 200 Then
+            Try
+                KeepStoreLog.Info("paypal-webhook", "status=" & statusCode.ToString(System.Globalization.CultureInfo.InvariantCulture) & " code=" & PayPalPaymentState.SanitizeOutcome(value), HttpContext.Current)
+            Catch
+            End Try
+        End If
         Response.StatusCode = statusCode
         Response.Write(value)
         Context.ApplicationInstance.CompleteRequest()

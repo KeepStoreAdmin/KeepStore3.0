@@ -151,6 +151,17 @@ Public Module PayPalPaymentState
         Return result
     End Function
 
+    ' Una riga di registro per ogni fallimento del percorso PayPal: documento, motivo e, per le chiamate a PayPal, stato HTTP e codice (DescribeFailure).
+    ' Non scrive mai corpi di risposta, token o credenziali e non solleva mai eccezioni.
+    Public Sub LogCheckoutFailure(ByVal area As String, ByVal documentId As Integer, ByVal reason As String, Optional ByVal detail As String = "")
+        Try
+            Dim line As String = "documentId=" & documentId.ToString(CultureInfo.InvariantCulture) & " reason=" & SanitizeOutcome(reason)
+            If Not String.IsNullOrWhiteSpace(detail) Then line &= " | " & SanitizeOutcome(detail)
+            KeepStoreLog.Info(area, line, HttpContext.Current)
+        Catch
+        End Try
+    End Sub
+
     Public Function BuildOrderMarker(ByVal orderId As String) As String
         Return SanitizeMarker(ORDER_PREFIX & SanitizeExternalId(orderId))
     End Function
