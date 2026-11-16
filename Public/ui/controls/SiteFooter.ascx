@@ -63,6 +63,9 @@
                         <li><a class="title-sidebar link fw-bold" href="articoli.aspx?inpromo=1">Offerte</a></li>
                         <li><a class="title-sidebar link fw-bold" href="Contattaci.aspx">Contatti</a></li>
                     </ul>
+                    <asp:PlaceHolder ID="phFooterPayments" runat="server" Visible="false">
+                        <p class="caption text-center text-break ft-payments">Metodi di pagamento: <asp:Literal ID="litFooterPayments" runat="server" EnableViewState="False" /></p>
+                    </asp:PlaceHolder>
                     <asp:PlaceHolder ID="phFooterLegal" runat="server" Visible="false">
                         <p class="caption text-center text-break ft-legal"><asp:Literal ID="litFooterLegal" runat="server" EnableViewState="False" /></p>
                     </asp:PlaceHolder>

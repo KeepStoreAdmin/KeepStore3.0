@@ -30,6 +30,7 @@ Partial Class SiteFooter
         Dim phone As String = String.Empty
         Dim email As String = String.Empty
         Dim legalProfile As StorefrontCompanyLegalProfile = Nothing
+        Dim payments As IList(Of StorefrontPaymentMethod) = Nothing
         If tenant IsNot Nothing Then
             hostCompanyId = tenant.CompanyId
             companyName = tenant.CompanyName
@@ -37,16 +38,18 @@ Partial Class SiteFooter
             phone = tenant.SupportPhone
             email = tenant.SupportEmail
             legalProfile = tenant.LegalProfile
+            payments = tenant.PaymentMethods
         End If
 
         ' Il link di Facebook vive nella sessione, scritta con l'azienda dell'host nella stessa lettura: BuildFooterData lo usa solo se coincidono.
         Dim facebookRaw As String = If(Session Is Nothing, String.Empty, Convert.ToString(Session("facebookLink")))
-        Dim data As FooterData = BuildFooterData(hostCompanyId, SessionCompanyId(), companyName, logoFileName, phone, email, facebookRaw, legalProfile, DateTime.Now.Year)
+        Dim data As FooterData = BuildFooterData(hostCompanyId, SessionCompanyId(), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, DateTime.Now.Year)
 
         BindFooterLogo(data)
         BindFooterColumns()
         BindFooterSocial(data)
         BindFooterLegal(data)
+        BindFooterPayments(data)
         If litFooterContacts IsNot Nothing Then litFooterContacts.Text = data.ContactsHtml
         If litFooterCopyright IsNot Nothing Then litFooterCopyright.Text = data.CopyrightHtml
     End Sub
@@ -117,6 +120,13 @@ Partial Class SiteFooter
         lnkFooterFacebook.Attributes("aria-label") = "Facebook"
     End Sub
 
+    ' Metodi di pagamento: il blocco (etichetta compresa) c'e solo se resta almeno un metodo; vuoto = nessun paragrafo nella pagina.
+    Private Sub BindFooterPayments(ByVal data As FooterData)
+        If phFooterPayments Is Nothing OrElse litFooterPayments Is Nothing Then Return
+        phFooterPayments.Visible = data.PaymentsHtml.Length > 0
+        litFooterPayments.Text = data.PaymentsHtml
+    End Sub
+
     ' Dati societari: il blocco c'e solo se ha almeno una riga; vuoto = nessun paragrafo nella pagina.
     Private Sub BindFooterLegal(ByVal data As FooterData)
         If phFooterLegal Is Nothing OrElse litFooterLegal Is Nothing Then Return
@@ -141,6 +151,7 @@ Partial Class SiteFooter
         Public CopyrightHtml As String = String.Empty
         Public FacebookUrl As String = String.Empty
         Public LegalHtml As String = String.Empty
+        Public PaymentsHtml As String = String.Empty
     End Class
 
     ' La sessione puo non avere ancora l'azienda (0): vale l'host. Se ce l'ha ed e diversa da quella dell'host, nessun dato.
@@ -154,7 +165,8 @@ Partial Class SiteFooter
     ' resta solo il neutro. Il link di Facebook richiede in piu che la sessione appartenga all'azienda dell'host.
     Friend Shared Function BuildFooterData(ByVal hostCompanyId As Integer, ByVal sessionCompanyId As Integer, ByVal companyName As String,
                                            ByVal logoFileName As String, ByVal phone As String, ByVal email As String,
-                                           ByVal facebookRaw As String, ByVal legal As StorefrontCompanyLegalProfile, ByVal year As Integer) As FooterData
+                                           ByVal facebookRaw As String, ByVal legal As StorefrontCompanyLegalProfile,
+                                           ByVal payments As IList(Of StorefrontPaymentMethod), ByVal year As Integer) As FooterData
         Dim data As New FooterData()
         If IsFooterTenantAllowed(hostCompanyId, sessionCompanyId) Then
             data.CompanyName = If(companyName, String.Empty).Trim()
@@ -163,6 +175,7 @@ Partial Class SiteFooter
             data.FacebookUrl = ResolveFooterFacebookUrl(hostCompanyId, sessionCompanyId, facebookRaw)
             ' i dati societari si mostrano solo se il profilo e della stessa azienda dell'host
             If legal IsNot Nothing AndAlso legal.CompanyId = hostCompanyId Then data.LegalHtml = BuildFooterLegalHtml(legal)
+            data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId)
         Else
             data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)
         End If
@@ -350,6 +363,43 @@ Partial Class SiteFooter
             lines.Add("Sede: " & HttpUtility.HtmlEncode(operational))
         End If
         Return String.Join("<br />", lines.ToArray())
+    End Function
+
+    Private Const PaymentMax As Integer = 8
+    Private Const PaymentNameMax As Integer = 40
+    Private Const PaymentDigitsMax As Integer = 5
+
+    ' Metodi di pagamento: solo quelli dell'azienda dell'host, testo ripulito come i dati societari, scartati (mai troncati) i nomi che potrebbero portare dati personali o di conto
+    ' (sei o piu cifre, @, indirizzi web) o piu lunghi del limite, senza duplicati (senza maiuscole), al massimo PaymentMax dopo pulizia e scarti, nell'ordine ricevuto (la policy li
+    ' ordina). Vuoto = nessun blocco nel piede. Il testo e del cliente: sempre codificato.
+    Friend Shared Function BuildFooterPaymentsHtml(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer) As String
+        If methods Is Nothing OrElse hostCompanyId <= 0 Then Return String.Empty
+        Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+        Dim names As New List(Of String)()
+        For Each method As StorefrontPaymentMethod In methods
+            If names.Count >= PaymentMax Then Exit For
+            If method Is Nothing Then Continue For
+            If method.CompanyId <> hostCompanyId Then Continue For
+            Dim name As String = CleanPaymentName(method.Name)
+            If name.Length = 0 OrElse Not seen.Add(name) Then Continue For
+            names.Add(HttpUtility.HtmlEncode(name))
+        Next
+        Return String.Join(", ", names.ToArray())
+    End Function
+
+    ' Nome pulito di un metodo di pagamento, oppure vuoto se non si puo mostrare. Si tolgono solo spazi e trattini (anche en e em dash) iniziali e finali: la convenzione
+    ' osservata nei dati di un'azienda ("-Bonifico Bancario"); ogni altra punteggiatura resta.
+    Friend Shared Function CleanPaymentName(ByVal value As String) As String
+        Dim trimChars As Char() = New Char() {" "c, "-"c, ChrW(8211), ChrW(8212)}
+        Dim name As String = CleanLegalText(value).Trim(trimChars)
+        If name.Length = 0 OrElse name.Length > PaymentNameMax Then Return String.Empty
+        If name.IndexOf("@"c) >= 0 OrElse name.IndexOf("://", StringComparison.Ordinal) >= 0 OrElse name.IndexOf("www.", StringComparison.OrdinalIgnoreCase) >= 0 Then Return String.Empty
+        Dim digits As Integer = 0
+        For Each c As Char In name
+            If c >= "0"c AndAlso c <= "9"c Then digits += 1
+        Next
+        If digits > PaymentDigitsMax Then Return String.Empty
+        Return name
     End Function
 
     Friend Shared Function FooterGridClass(ByVal visibleColumns As Integer) As String

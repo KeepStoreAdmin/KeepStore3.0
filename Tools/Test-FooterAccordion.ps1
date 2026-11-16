@@ -62,7 +62,7 @@ function Render-Footer([string]$source) {
     $contacts = '<li><span class="icon icon-phone" aria-hidden="true"></span><a class="link" href="tel:+390000000000">+39 000 000000</a></li><li><a class="link" href="mailto:info@example.invalid">info@example.invalid</a></li><li><span>Via di prova 1, 00000 Citta</span></li>'
     $t = [regex]::Replace($t, '<asp:Literal ID="litFooterCategories"[^>]*/>', $cats)
     $t = [regex]::Replace($t, '<asp:Literal ID="litFooterContacts"[^>]*/>', $contacts)
-    $t = [regex]::Replace($t, '<asp:Literal ID="litFooterLegal"[^>]*/>', 'Ragione sociale di prova - P.IVA 00000000000')
+    $t = [regex]::Replace($t, '<asp:Literal ID="litFooterLegal"[^>]*/>', 'Ragione sociale di prova - P.IVA 00000000000'); $t = [regex]::Replace($t, '<asp:Literal ID="litFooterPayments"[^>]*/>', 'Contanti, Bonifico Bancario')
     $t = [regex]::Replace($t, '<asp:Literal ID="litFooterCopyright"[^>]*/>', 'Copyright di prova')
     if ($t.Contains('<asp:') -or $t.Contains('<%')) { throw 'FOOTER_RENDER_LEFT_SERVER_MARKUP' }
     return $t

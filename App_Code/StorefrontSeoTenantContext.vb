@@ -85,6 +85,7 @@ Public NotInheritable Class StorefrontSeoTenantContext
                     End Using
                 End Using
                 AttachLegalProfiles(connection, result)
+                AttachPaymentMethods(connection, result)
             End Using
             HttpRuntime.Cache.Insert(cacheKey,
                                      CType(result, IList(Of StorefrontSeoTenantIdentity)),
@@ -127,6 +128,40 @@ Public NotInheritable Class StorefrontSeoTenantContext
             Return Nothing
         End Try
     End Function
+    ' Metodi di pagamento pubblici: terza lettura SEPARATA e facoltativa; nessuna eccezione esce da qui e le altre informazioni dell'identita restano. Si leggono solo
+    ' AziendeID, id, Descrizione e Ordinamento: mai Informazioni (IBAN e dati di persone) ne img. Regola, solo metodi offline pubblici e senza gateway ne contrassegno,
+    ' piu stretta di quella del carrello: Abilitato, Web (pubblico), tetto positivo, OnLine=0, Contrassegno=0, costi non nulli, nessuna configurazione bancaria attiva.
+    Private Const PaymentMethodsSql As String = "SELECT p.AziendeID, p.id, p.Descrizione, p.Ordinamento FROM pagamentitipo p WHERE p.Abilitato=1 AND p.Web=1 AND p.CostoMassimo>0 AND p.OnLine=0 AND COALESCE(p.Contrassegno,0)=0 AND p.CostoPercentuale IS NOT NULL AND p.CostoFisso IS NOT NULL AND NOT EXISTS (SELECT 1 FROM vbancasella_azienda b WHERE b.AziendeId=p.AziendeID AND b.PagamentiTipoId=p.id) ORDER BY p.AziendeID, p.Ordinamento, p.Descrizione, p.id"
+
+    Private Shared Sub AttachPaymentMethods(ByVal connection As MySqlConnection, ByVal identities As IList(Of StorefrontSeoTenantIdentity))
+        Try
+            Dim methods As List(Of StorefrontPaymentMethod) = ReadPaymentMethods(connection)
+            StorefrontCanonicalHostPolicy.ApplyPaymentMethods(identities, methods)
+        Catch
+            ' lettura facoltativa: un guasto qui non toglie nulla alle altre informazioni dell'identita
+        End Try
+    End Sub
+
+    ' Nothing = lettura fallita: nessun elenco, mai un elenco parziale.
+    Private Shared Function ReadPaymentMethods(ByVal connection As MySqlConnection) As List(Of StorefrontPaymentMethod)
+        Try
+            Dim methods As New List(Of StorefrontPaymentMethod)()
+            Using command As New MySqlCommand(PaymentMethodsSql, connection)
+                command.CommandType = CommandType.Text
+                command.CommandTimeout = 3
+                Using reader As MySqlDataReader = command.ExecuteReader()
+                    While reader.Read()
+                        Dim method As StorefrontPaymentMethod = StorefrontCanonicalHostPolicy.CreatePaymentMethod(Function(name As String) SafeReaderString(reader, name))
+                        If method IsNot Nothing Then methods.Add(method)
+                    End While
+                End Using
+            End Using
+            Return methods
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
     Public Shared Function ConfiguredDatabaseScopeKey() As String
         Try
             Dim settings As ConnectionStringSettings = ConfigurationManager.ConnectionStrings("EntropicConnectionString")

@@ -3,6 +3,9 @@ Option Explicit On
 
 Imports System
 Imports System.Collections.Generic
+Imports System.Collections.ObjectModel
+Imports System.Globalization
+Imports System.Linq
 Imports System.Text
 
 Public NotInheritable Class StorefrontSeoTenantIdentity
@@ -19,6 +22,9 @@ Public NotInheritable Class StorefrontSeoTenantIdentity
     Public Property SupportEmail As String = String.Empty
     ' Dati societari della stessa riga di aziende (lettura separata e facoltativa); Nothing se non disponibili o non agganciabili con certezza.
     Public Property LegalProfile As StorefrontCompanyLegalProfile
+    ' Metodi di pagamento pubblici dell'azienda (lettura separata e facoltativa): Nothing se non disponibili o non agganciabili con certezza, vuoto se l'azienda non ne ha.
+    ' L'elenco e di sola lettura (ReadOnlyCollection): l'identita sta in una cache condivisa tra le richieste.
+    Public Property PaymentMethods As IList(Of StorefrontPaymentMethod)
 
     Public Function AllowedHosts() As IList(Of String)
         Dim values As New List(Of String)()
@@ -134,6 +140,45 @@ Public NotInheritable Class StorefrontCompanyLegalProfile
     End Property
 End Class
 
+' Un metodo di pagamento pubblico di un'azienda: immutabile, con il proprio CompanyId perche chi lo mostra possa verificare che appartenga all'azienda dell'host.
+Public NotInheritable Class StorefrontPaymentMethod
+    Private ReadOnly _companyId As Integer
+    Private ReadOnly _methodId As Integer
+    Private ReadOnly _name As String
+    Private ReadOnly _order As Integer
+
+    Public Sub New(ByVal companyId As Integer, ByVal methodId As Integer, ByVal name As String, ByVal order As Integer)
+        _companyId = companyId
+        _methodId = methodId
+        If name Is Nothing Then _name = String.Empty Else _name = name.Trim()
+        _order = order
+    End Sub
+
+    Public ReadOnly Property CompanyId As Integer
+        Get
+            Return _companyId
+        End Get
+    End Property
+
+    Public ReadOnly Property MethodId As Integer
+        Get
+            Return _methodId
+        End Get
+    End Property
+
+    Public ReadOnly Property Name As String
+        Get
+            Return _name
+        End Get
+    End Property
+
+    Public ReadOnly Property Order As Integer
+        Get
+            Return _order
+        End Get
+    End Property
+End Class
+
 Public NotInheritable Class StorefrontCanonicalHostPolicy
     Private Shared ReadOnly NonIndexablePages As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
         "accessonegato.aspx", "aggiungi.aspx", "cart_add.aspx", "catalog_cart_async.aspx",
@@ -225,6 +270,67 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
                 If profileCounts(companyId) = 1 AndAlso identityCounts(companyId) = 1 Then attached = profileById(companyId)
             End If
             identity.LegalProfile = attached
+        Next
+    End Sub
+
+    ' Mappa le colonne di pagamentitipo lette dal piede. Azienda o metodo illeggibili (0 o negativi) e nome vuoto non producono un metodo; l'ordine illeggibile vale 0.
+    Public Shared Function CreatePaymentMethod(ByVal column As Func(Of String, String)) As StorefrontPaymentMethod
+        If column Is Nothing Then Return Nothing
+        Dim companyId As Integer = ToInteger(column("AziendeID"))
+        Dim methodId As Integer = ToInteger(column("id"))
+        Dim name As String = column("Descrizione")
+        If companyId <= 0 OrElse methodId <= 0 OrElse String.IsNullOrWhiteSpace(name) Then Return Nothing
+        Return New StorefrontPaymentMethod(companyId, methodId, name, ToInteger(column("Ordinamento")))
+    End Function
+
+    Private Shared Function ToInteger(ByVal value As String) As Integer
+        Dim parsed As Integer = 0
+        Integer.TryParse(If(value, String.Empty).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, parsed)
+        Return parsed
+    End Function
+
+    ' Associa a ogni identita i metodi della SUA azienda, mai per posizione, e solo se quell'Id compare UNA volta tra le identita (la chiave di aziende e (id, IvaTipo)).
+    ' methods = Nothing (lettura fallita): nessuna identita riceve un elenco. Un'azienda senza righe riceve un elenco vuoto. L'elenco assegnato e di sola lettura e ordinato
+    ' (Ordinamento, nome senza maiuscole, id): il limite del piede sceglie sempre gli stessi metodi.
+    Public Shared Sub ApplyPaymentMethods(ByVal identities As IEnumerable(Of StorefrontSeoTenantIdentity),
+                                          ByVal methods As IEnumerable(Of StorefrontPaymentMethod))
+        If identities Is Nothing Then Return
+
+        Dim byCompany As Dictionary(Of Integer, List(Of StorefrontPaymentMethod)) = Nothing
+        If methods IsNot Nothing Then
+            byCompany = New Dictionary(Of Integer, List(Of StorefrontPaymentMethod))()
+            For Each method As StorefrontPaymentMethod In methods
+                If method Is Nothing OrElse method.CompanyId <= 0 Then Continue For
+                Dim bucket As List(Of StorefrontPaymentMethod) = Nothing
+                If Not byCompany.TryGetValue(method.CompanyId, bucket) Then
+                    bucket = New List(Of StorefrontPaymentMethod)()
+                    byCompany(method.CompanyId) = bucket
+                End If
+                bucket.Add(method)
+            Next
+        End If
+
+        Dim identityCounts As New Dictionary(Of Integer, Integer)()
+        For Each identity As StorefrontSeoTenantIdentity In identities
+            If identity Is Nothing OrElse identity.CompanyId <= 0 Then Continue For
+            Dim seen As Integer = 0
+            identityCounts.TryGetValue(identity.CompanyId, seen)
+            identityCounts(identity.CompanyId) = seen + 1
+        Next
+
+        For Each identity As StorefrontSeoTenantIdentity In identities
+            If identity Is Nothing Then Continue For
+            Dim attached As IList(Of StorefrontPaymentMethod) = Nothing
+            Dim companyId As Integer = identity.CompanyId
+            If byCompany IsNot Nothing AndAlso companyId > 0 AndAlso identityCounts.ContainsKey(companyId) AndAlso identityCounts(companyId) = 1 Then
+                Dim ordered As New List(Of StorefrontPaymentMethod)()
+                Dim bucket As List(Of StorefrontPaymentMethod) = Nothing
+                If byCompany.TryGetValue(companyId, bucket) Then
+                    ordered.AddRange(bucket.OrderBy(Function(m) m.Order).ThenBy(Function(m) m.Name, StringComparer.OrdinalIgnoreCase).ThenBy(Function(m) m.MethodId))
+                End If
+                attached = New ReadOnlyCollection(Of StorefrontPaymentMethod)(ordered)
+            End If
+            identity.PaymentMethods = attached
         Next
     End Sub
 

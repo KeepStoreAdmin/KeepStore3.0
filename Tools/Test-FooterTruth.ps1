@@ -148,7 +148,7 @@ $region
         Return BuildFooterContactsHtml(n, p, e)
     End Function
     Public Function Data(ByVal host As Integer, ByVal sess As Integer, ByVal name As String, ByVal logo As String, ByVal phone As String, ByVal email As String, ByVal fb As String, ByVal year As Integer) As String()
-        Dim d As FooterData = BuildFooterData(host, sess, name, logo, phone, email, fb, Nothing, year)
+        Dim d As FooterData = BuildFooterData(host, sess, name, logo, phone, email, fb, Nothing, Nothing, year)
         Return New String() {d.LogoFileName, d.CompanyName, d.FacebookUrl, d.ContactsHtml, d.CopyrightHtml}
     End Function
     Private Shared Function Prof(ByVal id As Integer, ByVal f As String()) As StorefrontCompanyLegalProfile
@@ -166,7 +166,7 @@ $region
     Public Function DataL(ByVal host As Integer, ByVal sess As Integer, ByVal name As String, ByVal profileId As Integer, ByVal f As String()) As String()
         Dim p As StorefrontCompanyLegalProfile = Nothing
         If f IsNot Nothing Then p = Prof(profileId, f)
-        Dim d As FooterData = BuildFooterData(host, sess, name, "", "", "", "", p, 2026)
+        Dim d As FooterData = BuildFooterData(host, sess, name, "", "", "", "", p, Nothing, 2026)
         Return New String() {d.LegalHtml, d.ContactsHtml, d.CopyrightHtml}
     End Function
     Public Function Cats(ByVal spec As String, ByVal max As Integer) As String
@@ -377,7 +377,7 @@ function Test-Glue([string]$vbText) {
     foreach ($line in @('hostCompanyId = tenant.CompanyId', 'companyName = tenant.CompanyName', 'logoFileName = tenant.LogoFileName', 'phone = tenant.SupportPhone', 'email = tenant.SupportEmail', 'legalProfile = tenant.LegalProfile')) {
         if ($vbText.IndexOf($line, [StringComparison]::Ordinal) -lt 0) { return $false }
     }
-    if ($vbText -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, DateTime\.Now\.Year\)') { return $false }
+    if ($vbText -notmatch 'Dim data As FooterData = BuildFooterData\(hostCompanyId, SessionCompanyId\(\), companyName, logoFileName, phone, email, facebookRaw, legalProfile, payments, DateTime\.Now\.Year\)') { return $false }
     # tutto cio che il piede mostra dell'azienda viene da BuildFooterData
     foreach ($line in @('litFooterContacts.Text = data.ContactsHtml', 'litFooterCopyright.Text = data.CopyrightHtml', 'BindFooterLogo(data)', 'BindFooterSocial(data)', 'BuildLogoAssetUrlFromFileName(data.LogoFileName)', 'lnkFooterFacebook.HRef = data.FacebookUrl',
                   'BindFooterLegal(data)', 'phFooterLegal.Visible = data.LegalHtml.Length > 0', 'litFooterLegal.Text = data.LegalHtml')) {
@@ -498,10 +498,11 @@ function Test-Context([string]$c, [string]$policyText) {
     $callFull = 'ReadLegalProfiles(connection, "' + $legalFull + '")'
     $callReduced = 'If profiles Is Nothing Then profiles = ReadLegalProfiles(connection, "' + $legalReduced + '")'
     if (-not $c.Contains($main) -or -not $c.Contains($callFull) -or -not $c.Contains($callReduced)) { return $false }
-    if ([regex]::Matches($c, 'SELECT ').Count -ne 3) { return $false }
+    # tre per le letture esistenti (identita, dati societari completo e ridotto) piu due per i metodi di pagamento (SELECT e NOT EXISTS): la loro regola e provata da Test-FooterPayments.ps1
+    if ([regex]::Matches($c, 'SELECT ').Count -ne 5) { return $false }
     if ($c -match '(?is)CodiceFiscale|CognomeNome|For Each candidate|Exit For|Session\(') { return $false }
     # la lettura dei dati societari parte quando il primo reader e gia chiuso, dentro la stessa connessione e PRIMA di inserire l'elenco in cache
-    if ($c -cnotmatch '(?s)End While\s+End Using\s+End Using\s+AttachLegalProfiles\(connection, result\)\s+End Using\s+HttpRuntime\.Cache\.Insert') { return $false }
+    if ($c -cnotmatch '(?s)End While\s+End Using\s+End Using\s+AttachLegalProfiles\(connection, result\)\s+AttachPaymentMethods\(connection, result\)\s+End Using\s+HttpRuntime\.Cache\.Insert') { return $false }
     # completo per primo; il ridotto (senza SL_*) SOLO se il completo ha fallito; l'aggancio dopo entrambe le letture
     $m = [regex]::Match($c, '(?ms)^    Private Shared Sub AttachLegalProfiles\(.*?^    End Sub')
     if (-not $m.Success) { return $false }
@@ -522,7 +523,9 @@ function Test-Context([string]$c, [string]$policyText) {
     }
     if ($b -cnotmatch '(?s)Catch\s+Return Nothing\s+End Try') { return $false }
     # ogni colonna che la policy legge sta nel SELECT completo; le non-SL anche nel ridotto
-    $cols = @([regex]::Matches($policyText, 'column\("([A-Za-z_]+)"\)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    # solo le colonne del profilo legale: CreatePaymentMethod legge altre colonne (di pagamentitipo), provate da Test-FooterPayments.ps1
+    $legalFn = [regex]::Match($policyText, '(?ms)Public Shared Function CreateLegalProfile\(.*?^    End Function').Value
+    $cols = @([regex]::Matches($legalFn, 'column\("([A-Za-z_]+)"\)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
     if ($cols.Count -ne 10) { return $false }
     foreach ($col in $cols) {
         if ($legalFull -cnotmatch ('[ ,]' + $col + '[ ,]')) { return $false }
@@ -740,7 +743,7 @@ Assert-Detected (Test-AllCode $m) 'M88_AN_EMPTY_LEGAL_PARAGRAPH_IS_ALWAYS_VISIBL
 $m = Mutate-Text $vb 'litFooterLegal.Text = data.LegalHtml' 'litFooterLegal.Text = String.Empty' 'M89'
 Assert-Detected (Test-AllCode $m) 'M89_THE_LEGAL_TEXT_IS_NEVER_WRITTEN'
 $m = Mutate-Text $vb 'BindFooterLegal(data)
-        If litFooterContacts' 'If litFooterContacts' 'M89b'
+        BindFooterPayments(data)' 'BindFooterPayments(data)' 'M89b'
 Assert-Detected (Test-AllCode $m) 'M89B_THE_LEGAL_BLOCK_IS_NEVER_BOUND'
 
 # --- dati societari: policy (profilo e aggancio) -------------------------------------------------------------------------------------------------
@@ -776,8 +779,10 @@ $m = Mutate-Text $ctx '                AttachLegalProfiles(connection, result)
 ' '' 'M122'
 Assert-Detected (Test-AllContext $m) 'M122_THE_LEGAL_PROFILES_ARE_NEVER_ATTACHED'
 $m = Mutate-Text $ctx '                AttachLegalProfiles(connection, result)
+                AttachPaymentMethods(connection, result)
             End Using
-            HttpRuntime.Cache.Insert(' '            End Using
+            HttpRuntime.Cache.Insert(' '                AttachPaymentMethods(connection, result)
+            End Using
             HttpRuntime.Cache.Insert(' 'M123a'
 $m = Mutate-Text $m '    Private Shared Function BuildTenantListCacheKey' '    Private Shared Sub UnusedAttach(ByVal connection As MySqlConnection, ByVal result As IList(Of StorefrontSeoTenantIdentity))
         AttachLegalProfiles(connection, result)
