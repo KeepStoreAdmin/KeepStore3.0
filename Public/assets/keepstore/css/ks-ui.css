@@ -49,7 +49,9 @@
    sembri il titolo di oggi (stesso testo, peso, colore) e copra tutta la riga, compresa l'icona +/- (che e nel padding dell'h6): l'anello del focus (#505, button:focus-visible)
    la circonda e il clic sull'icona resta gestito dal piede. L'outline NON si tocca. */
 .footer-heading-mobile .ft-heading-toggle{
-  display: block;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
   box-sizing: border-box;
   width: calc(100% + 20px);
   margin: 0 -20px 0 0;
@@ -67,6 +69,16 @@
   appearance: none;
 }
 
+/* KS-A04-FOOTER-TOUCH-44-1A - area di tocco di almeno 44 px (WCAG 2.5.5, Apple HIG 44, Material 48) per i titoli del piede sotto i 768 px.
+   La riga era alta quanto il testo (24 px: sopra il minimo AA di 2.5.8, sotto i 44). L'altezza sta sull'h6, non sul button, perche il button arriva dopo con JavaScript:
+   cosi la riga e alta uguale con e senza script (nessun salto di layout) e l'icona +/- (top: 50% dell'h6) resta al centro. Il button riempie la riga (align-self: stretch). */
+@media (max-width: 767px){
+  .ft-link-wrap .footer-heading-mobile{
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
 /* Colori forzati: lo sfondo delle due linee +/- (background-color: var(--black)) diventa lo sfondo della pagina e l'indicatore sparisce. */
 @media (forced-colors: active){
   .ft-link-wrap .footer-heading-mobile::before,

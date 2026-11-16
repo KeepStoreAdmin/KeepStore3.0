@@ -100,7 +100,8 @@ function Eval-Static([string]$master, [string]$mainJs, [string]$uiCss, [string]$
     Chk ($master -match '<script src="<%= ThemeManager\.Asset\("js/ks-footer-accordion\.js"\) %>\?v=20261116-footer-accordion1a"></script>') 'MASTER_LOADS_THE_SCRIPT_WITH_A_VERSION'
     Chk (($master.IndexOf('js/ks-footer-accordion.js') -gt $master.IndexOf('js/main.js')) -and ($master.IndexOf('js/main.js') -gt 0)) 'MASTER_LOADS_THE_SCRIPT_AFTER_MAIN_JS'
     Chk (-not $master.Contains('main.js") %>?v=20260929-cart-authoritative-guard-1b-rev1"')) 'MASTER_BUMPED_THE_MAIN_JS_VERSION'
-    Chk ($master -match 'css/ks-ui\.css"\) & "\?v=20261116-footer-accordion1a"') 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
+    Chk ($master -match 'css/ks-ui\.css"\) & "\?v=20261116-footer-touch44a"') 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
+    Chk ($uiCss -match '(?s)@media \(max-width: 767px\)\s*\{\s*\.ft-link-wrap \.footer-heading-mobile\s*\{[^}]*min-height: 44px') 'KS_UI_CSS_HAS_THE_44_PX_ROW_UNDER_768'
     Chk ($uiCss.Contains('.footer-heading-mobile .ft-heading-toggle') -and $uiCss.Contains('@media (forced-colors: active)')) 'KS_UI_CSS_HAS_THE_BUTTON_RESET_AND_THE_FORCED_COLORS_RULE'
     if ($null -eq $baseMain) { Chk $false 'MAIN_JS_BASE_COMMIT_NOT_AVAILABLE_THE_CUT_CANNOT_BE_PROVED' }
     else {
@@ -164,10 +165,10 @@ $setupJs = @'
         var b=blocks[i], h=b.querySelector('.footer-heading-mobile'), p=b.querySelector('.tf-collapse-content'), btn=h.querySelector('.ft-heading-toggle');
         var cs=getComputedStyle(p), r=p.getBoundingClientRect(), hr=h.getBoundingClientRect(), br=btn?btn.getBoundingClientRect():null, bcs=btn?getComputedStyle(btn):null, hcs=getComputedStyle(h);
         var parity=btn?['fontWeight','fontSize','fontFamily','lineHeight','letterSpacing','textTransform','textAlign','color'].filter(function(k){return bcs[k]!==hcs[k];}).join(','):'';
-        var ctl=btn?btn.getAttribute('aria-controls'):null;
+        var ctl=btn?btn.getAttribute('aria-controls'):null; var rg=document.createRange(); rg.selectNodeContents(btn||h); var tr=rg.getBoundingClientRect(); var ty=Math.round((tr.top+tr.height/2)-(hr.top+hr.height/2));
         out.push({text:h.textContent.replace(/\s+/g,' ').trim(), htag:h.tagName, hkids:h.children.length, hhtml:h.innerHTML, nbtn:h.querySelectorAll('button').length,
           btn:!!btn, btag:btn?btn.tagName:'', btype:btn?btn.getAttribute('type'):null, bexp:btn?btn.getAttribute('aria-expanded'):null, bctl:ctl,
-          ctlOk:!!(ctl && document.getElementById(ctl)===p), bw:br?Math.round(br.width):0, bh:br?Math.round(br.height):0, hw:Math.round(hr.width), hh:Math.round(hr.height), parity:parity,
+          ctlOk:!!(ctl && document.getElementById(ctl)===p), bw:br?Math.round(br.width):0, bh:br?Math.round(br.height):0, hw:Math.round(hr.width), hh:Math.round(hr.height), ty:ty, parity:parity,
           bgBg:bcs?bcs.backgroundColor:'', bBorder:bcs?bcs.borderTopWidth:'', bDisplay:bcs?bcs.display:'', bAlign:bcs?bcs.textAlign:'',
           open:b.classList.contains('open'), disp:cs.display, shown:(cs.display!=='none' && r.height>0), pid:p.id, pstyle:p.getAttribute('style'), pnext:(h.nextElementSibling===p),
           links:p.querySelectorAll('a').length});
@@ -306,6 +307,7 @@ $sectionNames = @('Supporto', 'Catalogo', 'Area cliente', 'Contatti')
 
 # Esegue tutti gli scenari su una copia (eventualmente mutata) e restituisce l'elenco dei fallimenti. $fast = si ferma al primo.
 $script:BaseH = $null
+$script:BaseTy = $null
 $script:BaseHtml = ''
 function Run-Scenarios([string]$tag, [hashtable]$override, [string]$extraScript, [bool]$fast, [string]$mode = '') {
     $fails = New-Object 'System.Collections.Generic.List[string]'
@@ -323,24 +325,30 @@ function Run-Scenarios([string]$tag, [hashtable]$override, [string]$extraScript,
             if (-not ($s[0].shown -and $s[0].open -and $s[0].bexp -ceq 'true' -and $s[0].nbtn -eq 1)) { Fail ('T_SCRIPT_INCLUDED_TWICE_STILL_TOGGLES_ONCE shown=' + $s[0].shown + ' exp=' + $s[0].bexp + ' buttons=' + $s[0].nbtn) }
             return @($fails.ToArray())
         }
-        # Altezze dei titoli senza lo script (baseline per l'assenza di salti di layout), calcolate una volta sola sui file reali.
-        if ($null -eq $script:BaseH) {
-            $basePath = Write-Doc (Join-Path $work 'baseline') @{} '' 'noscript'
+        # Altezza e centratura dei titoli senza lo script (baseline per l'assenza di salti di layout): una volta sola sui file reali; con un ks-ui.css mutato, sul CSS mutato
+        # (altrimenti una mutazione del CSS non potrebbe mai cambiare la baseline e resterebbe invisibile nello stato senza script).
+        $ownBase = $override.ContainsKey('css/ks-ui.css')
+        if ($ownBase -or $null -eq $script:BaseH) {
+            $basePath = Write-Doc (Join-Path $work ('baseline-' + $tag)) $(if ($ownBase) { $override } else { @{} }) '' 'noscript'
             Open-Fixture $basePath 390
-            $script:BaseH = @(Snap | ForEach-Object { $_.hh })
+            $bh = @(Snap | ForEach-Object { $_.hh })
+            $bty = @(Snap | ForEach-Object { $_.ty })
             Open-Fixture $basePath 1024
-            $script:BaseHtml = (Extra).html
+            $bhtml = (Extra).html
+            if (-not $ownBase) { $script:BaseH = $bh; $script:BaseTy = $bty; $script:BaseHtml = $bhtml }
         }
+        else { $bh = $script:BaseH; $bty = $script:BaseTy; $bhtml = $script:BaseHtml }
         # C. Caricamento a 1024 px: nulla modificato (DOM del server) - serve anche da riferimento per il ritorno a desktop.
         Open-Fixture $path 1024
         $d = @(Snap)
         $ex = Extra
         $serverHtml = $ex.html
-        if ($serverHtml -cne $script:BaseHtml) { Fail 'C_DESKTOP_FOOTER_IDENTICAL_TO_THE_PAGE_WITHOUT_THE_SCRIPT' }
+        if ($serverHtml -cne $bhtml) { Fail 'C_DESKTOP_FOOTER_IDENTICAL_TO_THE_PAGE_WITHOUT_THE_SCRIPT' }
         if ($d.Count -ne 4) { Fail 'C_FOUR_SECTIONS' }
         $server = @{}
         foreach ($s in $d) {
             $server[$s.text] = $s.hhtml
+            if ($s.hh -ge 40) { Fail ('C_DESKTOP_HEADING_KEEPS_ITS_HEIGHT:' + $s.text + ' ' + $s.hh) }
             if ($s.btn -or $s.hkids -ne 0) { Fail ('C_DESKTOP_HEADING_UNTOUCHED:' + $s.text) }
             if (-not $s.shown) { Fail ('C_DESKTOP_PANEL_VISIBLE:' + $s.text) }
             if ($s.open -or $s.pstyle -or $s.pid) { Fail ('C_DESKTOP_NO_RESIDUE:' + $s.text) }
@@ -365,11 +373,14 @@ function Run-Scenarios([string]$tag, [hashtable]$override, [string]$extraScript,
             if (-not $s.ctlOk -or -not $s.pnext) { Fail ('A1_ARIA_CONTROLS_POINTS_TO_THE_SIBLING_PANEL:' + $s.text) }
             if ($s.shown -or $s.open) { Fail ('A1_PANEL_CLOSED_AT_START:' + $s.text) }
             if ($s.text -cne $sectionNames[$i]) { Fail ('A1_NAME_IS_THE_HEADING_TEXT:' + $s.text) }
-            if ($s.bDisplay -cne 'block' -or $s.bBorder -cne '0px' -or $s.bgBg -cne 'rgba(0, 0, 0, 0)') { Fail ('A1_BUTTON_RESET:' + $s.text) }
+            if ($s.bDisplay -cne 'flex' -or $s.bBorder -cne '0px' -or $s.bgBg -cne 'rgba(0, 0, 0, 0)') { Fail ('A1_BUTTON_RESET:' + $s.text) }
             if ([Math]::Abs($s.bw - $s.hw) -gt 2) { Fail ('A1_BUTTON_COVERS_THE_WHOLE_ROW_INCLUDING_THE_ICON:' + $s.text + ' bw=' + $s.bw + ' hw=' + $s.hw) }
             if ($s.parity) { Fail ('A1_BUTTON_TYPOGRAPHY_EQUALS_THE_HEADING:' + $s.text + ' differs=' + $s.parity) }
-            if ($s.hh -ne $script:BaseH[$i]) { Fail ('A1_HEADING_HEIGHT_UNCHANGED_NO_LAYOUT_SHIFT:' + $s.text + ' ' + $s.hh + ' vs ' + $script:BaseH[$i]) }
-        }
+            if ($s.hh -ne $bh[$i]) { Fail ('A1_HEADING_HEIGHT_UNCHANGED_NO_LAYOUT_SHIFT:' + $s.text + ' ' + $s.hh + ' vs ' + $bh[$i]) }
+            if ($s.hh -lt 44 -or $s.bh -lt 44 -or $s.bw -lt 44) { Fail ('A9_TOUCH_TARGET_AT_LEAST_44_PX:' + $s.text + ' row=' + $s.hw + 'x' + $s.hh + ' button=' + $s.bw + 'x' + $s.bh) }
+            if ([Math]::Abs($s.bh - $s.hh) -gt 1) { Fail ('A9_BUTTON_FILLS_THE_ROW_HEIGHT:' + $s.text + ' button=' + $s.bh + ' row=' + $s.hh) }
+            if ([Math]::Abs($s.ty) -gt 3) { Fail ('A9_TITLE_VERTICALLY_CENTERED_IN_THE_ROW:' + $s.text + ' offset=' + $s.ty) }
+            if ([Math]::Abs($bty[$i]) -gt 3) { Fail ('A9_TITLE_CENTERED_EVEN_BEFORE_THE_SCRIPT_RUNS:' + $s.text + ' offset=' + $bty[$i]) }        }
         $errs = @(JsJson 'window.__ksFt.errors()')
         if ($errs.Count -gt 0) { Fail ('A_JS_ERRORS:' + ($errs -join ' ; ')) }
         $tree = Tree-Names
@@ -543,9 +554,11 @@ function Run-Scenarios([string]$tag, [hashtable]$override, [string]$extraScript,
         Set-Width 767 4
         Start-Sleep -Milliseconds 400
         if ((Extra).toggles -ne 4) { Fail 'B_AT_767_ENHANCED' }
+        foreach ($x in @(Snap)) { if ($x.hh -lt 44) { Fail ('B_AT_767_TOUCH_TARGET:' + $x.text + ' ' + $x.hh) } }
         Set-Width 768 0
         Start-Sleep -Milliseconds 400
         if ((Extra).toggles -ne 0) { Fail 'B_AT_768_NOT_ENHANCED' }
+        foreach ($x in @(Snap)) { if ($x.hh -ge 40) { Fail ('B_AT_768_HEADING_HEIGHT_UNCHANGED:' + $x.text + ' ' + $x.hh) } }
         if ((Extra).html -cne $serverHtml) { Fail 'B_AT_768_FOOTER_OUTERHTML_IDENTICAL_TO_THE_SERVER' }
 
         # D. Colori forzati: l'indicatore +/- non sparisce nello sfondo.
@@ -614,9 +627,17 @@ try {
     Assert-Mut 'M09_old_jquery_handler_back_two_mechanisms_toggle_twice' @{} $oldHandler '' 'A3_ENTER_OPENS_ONCE'
     Assert-Mut 'M11_forced_colors_rule_disabled' @{ $cssKey = (Mutate-Text $uiCss '@media (forced-colors: active){' '@media (forced-colors: none){' 'M11') } '' '' 'D_FORCED_COLORS'
     # border/border-radius/background del reset sono GIA dati dal tema (form button, button, Bootstrap): restano come difesa e la loro rimozione e equivalente (provato: non rilevabile). Si mutano le dichiarazioni efficaci.
-    Assert-Mut 'M12a_button_display_block_removed' @{ $cssKey = (Mutate-Text $uiCss "  display: block;`n  box-sizing: border-box;" "  box-sizing: border-box;" 'M12a') } '' '' 'A1_BUTTON_RESET'
+    Assert-Mut 'M12a_button_display_block_removed' @{ $cssKey = (Mutate-Text $uiCss "  display: flex;`n  align-items: center;`n  align-self: stretch;`n  box-sizing: border-box;" "  box-sizing: border-box;" 'M12a') } '' '' 'A1_BUTTON_RESET'
     Assert-Mut 'M12b_button_text_align_inherit_removed' @{ $cssKey = (Mutate-Text $uiCss "  text-align: inherit;`n" '' 'M12b') } '' '' 'A1_BUTTON_TYPOGRAPHY'
     Assert-Mut 'M12c_button_color_inherit_removed' @{ $cssKey = (Mutate-Text $uiCss "  color: inherit;`n" '' 'M12c') } '' '' 'A1_BUTTON_TYPOGRAPHY'
+    Assert-Mut 'M24_row_min_height_removed' @{ $cssKey = (Mutate-Text $uiCss "    min-height: 44px;`n" '' 'M24') } '' '' 'A9_TOUCH_TARGET'
+    Assert-Mut 'M25_row_min_height_40_instead_of_44' @{ $cssKey = (Mutate-Text $uiCss 'min-height: 44px;' 'min-height: 40px;' 'M25') } '' '' 'A9_TOUCH_TARGET'
+    Assert-Mut 'M26_44_px_row_also_at_768_to_991' @{ $cssKey = (Mutate-Text $uiCss "@media (max-width: 767px){`n  .ft-link-wrap .footer-heading-mobile{" "@media (max-width: 991px){`n  .ft-link-wrap .footer-heading-mobile{" 'M26') } '' '' 'B_AT_768_HEADING_HEIGHT_UNCHANGED'
+    Assert-Mut 'M27_row_title_not_centered_without_the_script' @{ $cssKey = (Mutate-Text $uiCss "    align-items: center;`n    min-height: 44px;" "    min-height: 44px;" 'M27') } '' '' 'A9_TITLE_CENTERED_EVEN_BEFORE'
+    Assert-Mut 'M28_button_does_not_stretch_to_the_row' @{ $cssKey = (Mutate-Text $uiCss "  align-self: stretch;`n" '' 'M28') } '' '' 'A9_TOUCH_TARGET'
+    Assert-Mut 'M29_button_title_not_centered_in_the_row' @{ $cssKey = (Mutate-Text $uiCss "  display: flex;`n  align-items: center;`n  align-self: stretch;" "  display: flex;`n  align-self: stretch;" 'M29') } '' '' 'A9_TITLE_VERTICALLY_CENTERED'
+    Assert-Mut 'M30_44_px_row_without_the_media_query_also_on_desktop' @{ $cssKey = (Mutate-Text $uiCss "@media (max-width: 767px){`n  .ft-link-wrap .footer-heading-mobile{" "@media (min-width: 1px){`n  .ft-link-wrap .footer-heading-mobile{" 'M30') } '' '' 'C_DESKTOP_HEADING_KEEPS_ITS_HEIGHT'
+    Assert-Mut 'M31_row_is_block_not_flex' @{ $cssKey = (Mutate-Text $uiCss "    display: flex;`n    align-items: center;`n    min-height: 44px;" "    display: block;`n    align-items: center;`n    min-height: 44px;" 'M31') } '' '' 'A9_TOUCH_TARGET'
     Assert-Mut 'M13_double_load_guard_removed' @{ $jsKey = (Mutate-Text $accJs "  if (window.__ksFooterAccordion) { return; } // script incluso due volte: un solo ascoltatore`n" '' 'M13') } '' 'twice' 'T_SCRIPT_INCLUDED_TWICE'
     Assert-Mut 'M14_font_inherit_removed' @{ $cssKey = (Mutate-Text $uiCss "  font: inherit;`n" '' 'M14') } '' '' 'A1_BUTTON_TYPOGRAPHY'
     Assert-Mut 'M15_button_does_not_cover_the_icon_area' @{ $cssKey = (Mutate-Text $uiCss 'width: calc(100% + 20px);' 'width: 100%;' 'M15') } '' '' 'A1_BUTTON_COVERS'
@@ -630,7 +651,7 @@ try {
     $tag = 'ThemeManager.Asset("js/ks-footer-accordion.js") %>?v=20261116-footer-accordion1a"></script>'
     Assert-StaticMut 'S1_master_without_the_script_tag' (Mutate-Text $master ('<script src="<%= ' + $tag) '' 'S1') $mainJs $uiCss 'MASTER_LOADS_THE_SCRIPT'
     Assert-StaticMut 'S2_main_js_version_not_bumped' (Mutate-Text $master 'js/main.js") %>?v=20261116-footer-accordion1a"' 'js/main.js") %>?v=20260929-cart-authoritative-guard-1b-rev1"' 'S2') $mainJs $uiCss 'MASTER_BUMPED_THE_MAIN_JS_VERSION'
-    Assert-StaticMut 'S3_ks_ui_link_without_a_version' (Mutate-Text $master 'ThemeManager.Asset("css/ks-ui.css") & "?v=20261116-footer-accordion1a" %>' 'ThemeManager.Asset("css/ks-ui.css") %>' 'S3') $mainJs $uiCss 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
+    Assert-StaticMut 'S3_ks_ui_link_without_a_version' (Mutate-Text $master 'ThemeManager.Asset("css/ks-ui.css") & "?v=20261116-footer-touch44a" %>' 'ThemeManager.Asset("css/ks-ui.css") %>' 'S3') $mainJs $uiCss 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
     Assert-StaticMut 'S4_main_js_cut_removes_one_call_too_many' $master (Mutate-Text $mainJs 'infiniteSlide();' '' 'S4') $uiCss 'MAIN_JS_DIFF_IS_EXACTLY'
     Assert-StaticMut 'S5_main_js_still_calls_handleFooter' $master (Mutate-Text $mainJs 'totalPriceVariant();' 'totalPriceVariant();handleFooter();' 'S5') $uiCss 'MAIN_JS_HAS_NO_OLD_FOOTER_ACCORDION'
     Assert-StaticMut 'S6_ks_ui_without_the_forced_colors_block' $master $mainJs (Mutate-Text $uiCss '@media (forced-colors: active){' '@media (min-width: 1px){' 'S6') 'KS_UI_CSS_HAS_THE_BUTTON_RESET'
