@@ -31,7 +31,7 @@ $prompt = 'Sei un revisore tecnico indipendente e avversariale (esperto del domi
     '2) verdetto su ogni affermazione e su ogni punto della soluzione: CONFERMATO / SMENTITO / NON VERIFICABILE, con la prova; controlla specificita, ordine, chiamanti e casi limite riga per riga; ' +
     '3) che cosa nessuno ha visto: classi di casi, stati, regressioni, falsi positivi o negativi dell oracolo di test, mutazioni mancanti; ' +
     '4) difetti classificati BLOCCANTE / CONSIGLIATO / OPZIONALE, ciascuno con il caso concreto che lo fa fallire e la correzione minima. ' +
-    'Non ripetere la proposta: il tuo valore e contraddire con prove e cercare cio che manca. Se un fatto non e verificabile dai file, dillo e indica la misura che lo risolverebbe. Sii conciso (sotto 2000 parole).'
+    'Non ripetere la proposta: il tuo valore e contraddire con prove e cercare cio che manca. Se un fatto non e verificabile dai file, dillo e indica la misura che lo risolverebbe. Sii conciso (sotto 1200 parole).'
 if ($Questions) { $prompt += ' Domande specifiche del task: ' + $Questions }
 
 $argString = 'exec --sandbox read-only --ephemeral --skip-git-repo-check -C "' + $dir + '" -c model_reasoning_effort=' + $Effort + ' -o "' + $Reply + '" "' + $prompt.Replace('"', "'") + '"'
