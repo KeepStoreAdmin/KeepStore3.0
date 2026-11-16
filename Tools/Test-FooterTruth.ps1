@@ -37,6 +37,7 @@ function Assert-Detected([bool]$stillPasses, [string]$code) {
 $ascx = Read-Repo 'Public/ui/controls/SiteFooter.ascx'
 $vb = Read-Repo 'Public/ui/controls/SiteFooter.ascx.vb'
 $policy = Read-Repo 'App_Code/StorefrontCanonicalHostPolicy.vb'
+$links = Read-Repo 'App_Code/KeepStoreContactLinks.vb'
 $ctx = Read-Repo 'App_Code/StorefrontSeoTenantContext.vb'
 
 # --- Oracolo 1: markup reale -----------------------------------------------------------------------------------------------------------------
@@ -118,7 +119,7 @@ function Get-PureRegion([string]$vbText) {
     $m = [regex]::Match($vbText, '(?ms)^[ \t]*#Region "FooterPure"\n(.*?)\n[ \t]*#End Region')
     if ($m.Success) { return $m.Groups[1].Value } else { return $null }
 }
-function Compile-Footer([string]$region, [string]$policyText) {
+function Compile-Footer([string]$region, [string]$policyText, [string]$linksText) {
     $code = @"
 Imports System
 Imports System.Collections.Generic
@@ -132,10 +133,10 @@ $region
         Return ResolveFooterFacebookUrl(tenantId, sessionId, raw)
     End Function
     Public Function Tel(ByVal p As String) As String
-        Return BuildTelHref(p)
+        Return KeepStoreContactLinks.BuildTelHref(p)
     End Function
     Public Function Mail(ByVal e As String) As String
-        Return BuildMailtoHref(e)
+        Return KeepStoreContactLinks.BuildMailtoHref(e)
     End Function
     Public Function Copy(ByVal y As Integer, ByVal n As String) As String
         Return BuildCopyrightHtml(y, n)
@@ -187,14 +188,14 @@ End Class
     $p.GenerateInMemory = $true
     $p.CompilerOptions = '/optionInfer+ /optionExplicit+ /optionStrict- /imports:Microsoft.VisualBasic'
     @('System.dll', 'System.Core.dll', 'System.Web.dll') | ForEach-Object { [void]$p.ReferencedAssemblies.Add($_) }
-    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($policyText, $code))
+    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($policyText, $linksText, $code))
     if ($c.Errors.HasErrors) { throw ('FOOTER_COMPILE ' + (($c.Errors | Where-Object { -not $_.IsWarning } | Select-Object -First 3 | ForEach-Object { 'line ' + $_.Line + ': ' + $_.ErrorText }) -join ' | ')) }
     return [Activator]::CreateInstance($c.CompiledAssembly.GetType('FooterProbe', $true))
 }
-function Test-Behaviour([string]$vbText, [string]$policyText) {
+function Test-Behaviour([string]$vbText, [string]$policyText, [string]$linksText) {
     $region = Get-PureRegion $vbText
     if ($null -eq $region) { throw 'FOOTER_PURE_REGION_NOT_FOUND' }
-    $p = Compile-Footer $region $policyText
+    $p = Compile-Footer $region $policyText $linksText
     # Facebook: solo se la sessione appartiene all'azienda dell'host (la stessa riga che ha scritto il link) e l'indirizzo e https su un host facebook
     $fbUrl = 'https://www.facebook.com/alfa.srl'
     if ($p.Fb(1, 1, $fbUrl) -ne $fbUrl -or $p.Fb(1, 1, (' ' + $fbUrl + ' ')) -ne $fbUrl) { return $false }
@@ -350,7 +351,7 @@ function Test-Legal($p) {
     }
     return $true
 }
-Assert-Source (Test-Behaviour $vb $policy) 'F05_THE_REAL_FOOTER_CODE_IS_TRUTHFUL_SAFE_AND_TENANT_ISOLATED'
+Assert-Source (Test-Behaviour $vb $policy $links) 'F05_THE_REAL_FOOTER_CODE_IS_TRUTHFUL_SAFE_AND_TENANT_ISOLATED'
 
 # --- Oracolo 3: il collegamento del codice (nessun database, nessun ripiego sulla sessione) ------------------------------------------------------
 function Test-Glue([string]$vbText) {
@@ -533,7 +534,7 @@ Assert-Source (Test-Context $ctx $policy) 'F11_THE_LEGAL_READ_TRIES_THE_FULL_SEL
 
 # --- Mutazioni (copie in memoria): ognuna deve far fallire almeno un controllo ------------------------------------------------------------------
 function Test-AllMarkup([string]$text) { return ((Test-NoFabricatedContent $text) -and (Test-StaticLinksExist $text) -and (Test-RequiredLinks $text) -and (Test-DynamicHooks $text) -and (Test-LegalMarkup $text)) }
-function Test-AllCode([string]$text) { return ((Test-Behaviour $text $policy) -and (Test-Glue $text)) }
+function Test-AllCode([string]$text) { return ((Test-Behaviour $text $policy $links) -and (Test-Glue $text)) }
 function Test-AllPolicy([string]$text) { return ((Test-PolicyBehaviour $text) -and (Test-Behaviour $vb $text) -and (Test-Context $ctx $text)) }
 function Test-AllContext([string]$text) { return (Test-Context $text $policy) }
 
@@ -579,30 +580,7 @@ $m = Mutate-Text $vb 'If tenantCompanyId <= 0 OrElse sessionCompanyId <> tenantC
 Assert-Detected (Test-AllCode $m) 'M23_FACEBOOK_LINK_OF_ANOTHER_COMPANY_IS_SHOWN'
 $m = Mutate-Text $vb 'If host = "facebook.com" OrElse' 'If True OrElse host = "facebook.com" OrElse' 'M24'
 Assert-Detected (Test-AllCode $m) 'M24_ANY_HTTPS_HOST_IS_ACCEPTED_AS_FACEBOOK'
-$m = Mutate-Text $vb '                If i <> 0 Then Return String.Empty
-                digits.Append(c)' '                digits.Append(c)' 'M25'
-Assert-Detected (Test-AllCode $m) 'M25_PLUS_SIGN_ACCEPTED_ANYWHERE_IN_THE_PHONE'
-$m = Mutate-Text $vb 'If count < 6 OrElse count > 15 OrElse Not nonZero Then Return String.Empty' 'If count < 1 OrElse count > 15 OrElse Not nonZero Then Return String.Empty' 'M26'
-Assert-Detected (Test-AllCode $m) 'M26_SHORT_NUMBER_BECOMES_A_PHONE_LINK'
-$m = Mutate-Text $vb 'If count < 6 OrElse count > 15 OrElse Not nonZero Then Return String.Empty' 'If count < 6 OrElse count > 15 Then Return String.Empty' 'M27'
-Assert-Detected (Test-AllCode $m) 'M27_ALL_ZERO_NUMBER_BECOMES_A_PHONE_LINK'
-$m = Mutate-Text $vb 'If c >= "0"c AndAlso c <= "9"c Then' 'If Char.IsDigit(c) Then' 'M28'
-Assert-Detected (Test-AllCode $m) 'M28_UNICODE_DIGITS_ACCEPTED_IN_THE_PHONE'
-$m = Mutate-Text $vb 'c = "("c OrElse c = ")"c Then' 'c = "("c OrElse c = ")"c OrElse c = "/"c Then' 'M29'
-Assert-Detected (Test-AllCode $m) 'M29_TWO_NUMBERS_ARE_MERGED_INTO_ONE_PHONE_LINK'
-$m = Mutate-Text $vb '            Else
-                Return String.Empty
-            End If
-        Next
-        Dim number' '            End If
-        Next
-        Dim number' 'M30'
-Assert-Detected (Test-AllCode $m) 'M30_LETTERS_AND_SYMBOLS_ARE_DROPPED_FROM_THE_PHONE_INSTEAD_OF_REJECTED'
-$m = Mutate-Text $vb '        If raw.Contains("..") Then Return String.Empty
-' '' 'M31'
-Assert-Detected (Test-AllCode $m) 'M31_CONSECUTIVE_DOTS_ARE_ACCEPTED_IN_THE_EMAIL'
-$m = Mutate-Text $vb '(?:[A-Za-z0-9._+\-]{0,62}' '(?:[A-Za-z0-9._+%\-]{0,62}' 'M32'
-Assert-Detected (Test-AllCode $m) 'M32_PERCENT_ESCAPES_ACCEPTED_IN_THE_EMAIL_LOCAL_PART'
+# Le mutazioni M25-M32 e M54 (regole del validatore di telefono ed e-mail) sono passate in Tools/Test-ContactLinks.ps1 (V*), insieme al validatore condiviso.
 $m = Mutate-Text $vb 'sb.Append("<li><span class=""product-title"">").Append(HttpUtility.HtmlEncode(name)).Append("</span></li>")' 'sb.Append("<li><span class=""product-title"">").Append(name).Append("</span></li>")' 'M33'
 Assert-Detected (Test-AllCode $m) 'M33_COMPANY_NAME_IS_NOT_ENCODED'
 $m = Mutate-Text $vb '            If telHref.Length > 0 Then' '            If True Then' 'M34'
@@ -660,9 +638,6 @@ $m = Mutate-Text $ascx '<li><a class="link" href="privacy.aspx">Privacy</a></li>
 Assert-Detected (Test-AllMarkup $m) 'M52_AN_UNREVIEWED_PAGE_IS_LINKED'
 $m = Mutate-Text $vb 'OrElse host = "fb.com" OrElse' 'OrElse host.EndsWith(".facebook.com", StringComparison.Ordinal) OrElse host = "fb.com" OrElse' 'M53'
 Assert-Detected (Test-AllCode $m) 'M53_FACEBOOK_REDIRECTOR_SUBDOMAIN_IS_ACCEPTED'
-$m = Mutate-Text $vb '        If raw.StartsWith("+", StringComparison.Ordinal) AndAlso raw.Contains("(0)") Then Return String.Empty
-' '' 'M54'
-Assert-Detected (Test-AllCode $m) 'M54_TRUNK_ZERO_AFTER_THE_COUNTRY_PREFIX_IS_KEPT'
 $m = Mutate-Text $vb '        Dim html As String = String.Empty
         Try' '        Dim html As String = String.Empty
         Visa.ToString()

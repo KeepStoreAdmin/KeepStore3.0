@@ -433,7 +433,11 @@ Partial Class SiteHeader
         Return New FreeShippingPromoSnapshot(False, 0D)
     End Function
 
-    Private Sub SetPhoneLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal phone As String)
+#Region "HeaderContactPure"
+    ' Telefono ed e-mail di assistenza della testata. Dato vuoto = controllo nascosto; dato valido = link con l'href del validatore condiviso
+    ' (KeepStoreContactLinks); dato non vuoto ma non valido (orari, due numeri, parametri) = solo il testo codificato, SENZA href. L'href si assegna
+    ' sempre, anche vuoto: un valore precedente dello stesso controllo non sopravvive. Provato compilando questo stesso testo (Tools/Test-ContactLinks.ps1).
+    Friend Shared Sub SetPhoneLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal phone As String)
         If link Is Nothing OrElse literal Is Nothing Then
             Return
         End If
@@ -445,13 +449,12 @@ Partial Class SiteHeader
             Return
         End If
 
-        Dim telTarget As String = cleanPhone.Replace(" ", String.Empty)
         link.Visible = True
-        link.NavigateUrl = "tel:" & telTarget
+        link.NavigateUrl = KeepStoreContactLinks.BuildTelHref(cleanPhone)
         literal.Text = HttpUtility.HtmlEncode(cleanPhone)
     End Sub
 
-    Private Sub SetMailLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal email As String)
+    Friend Shared Sub SetMailLink(ByVal link As HyperLink, ByVal literal As Literal, ByVal email As String)
         If link Is Nothing OrElse literal Is Nothing Then
             Return
         End If
@@ -464,10 +467,10 @@ Partial Class SiteHeader
         End If
 
         link.Visible = True
-        link.NavigateUrl = "mailto:" & cleanEmail
+        link.NavigateUrl = KeepStoreContactLinks.BuildMailtoHref(cleanEmail)
         literal.Text = HttpUtility.HtmlEncode(cleanEmail)
     End Sub
-
+#End Region
     Private Sub BindAccountLinks()
         Dim isLogged As Boolean = False
         Dim loginIdVal As Integer = 0

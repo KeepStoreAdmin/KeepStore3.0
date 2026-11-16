@@ -3,10 +3,10 @@ param()
 
 # KS-B02C-CONTATTACI-HOST-1A - la pagina Contattaci legge nome, telefono, e-mail, logo e indirizzo SOLO dall'identita dell'host (nessuna sessione, nessuna connessione).
 # Oracolo 1 (testo del codice, senza commenti): nessuna sessione ne database; l'azienda e quella dell'host; guardia 421; le stringhe fissate da altri test restano; ogni controllo usato
-# nel codice esiste nel markup. Oracolo 2 (regione ContactPure compilata con /optionStrict+ INSIEME al file della policy e a quello dell'e-mail): stesso formato di prima (confronto con
+# nel codice esiste nel markup. Oracolo 2 (regione ContactPure compilata con /optionStrict+ INSIEME ai file della policy, dell'e-mail e del validatore condiviso dei link): stesso formato di prima (confronto con
 # il blocco di formattazione ATTUALE incorporato qui, su 768 combinazioni), due aziende con marcatori disgiunti, profilo di un'altra azienda = nessun indirizzo, vista neutra, codifica
 # dei testi e corpo reso dell'e-mail di contatto con il logo dell'azienda (percorso della sessione = logo predefinito, nome file + file esistente = logo proprio).
-# Difetti NOTI conservati e non requisiti: il collegamento "-" di un telefono o di un'e-mail vuoti punta alla mappa. Confronti sensibili alle maiuscole (-ceq, -cne, -cmatch).
+# I collegamenti tel: e mailto: vengono dal validatore condiviso (App_Code/KeepStoreContactLinks.vb): dato vuoto o non valido = nessun href (prima: ripiego sulla mappa); si assegnano SEMPRE (ApplyContactLinks). Confronti sensibili alle maiuscole (-ceq, -cne, -cmatch).
 # Mutazioni su copie in memoria. Solo ASCII: Windows PowerShell 5.1 legge i file senza BOM come ANSI.
 
 $ErrorActionPreference = 'Stop'
@@ -35,6 +35,7 @@ $vb = Read-Repo 'Contattaci.aspx.vb'
 $aspx = Read-Repo 'Contattaci.aspx'
 $policy = Read-Repo 'App_Code/StorefrontCanonicalHostPolicy.vb'
 $emailSource = Read-Repo 'App_Code/KeepStoreEmailTemplate.vb'
+$links = Read-Repo 'App_Code/KeepStoreContactLinks.vb'
 
 # --- Oracolo 1: il markup non cambia e il collegamento del codice -----------------------------------------------------------------------------------
 function Test-Markup([string]$text, [string]$aspxText) {
@@ -64,7 +65,7 @@ function Test-Glue([string]$text) {
     if ([regex]::Matches($code, [regex]::Escape('If Response.StatusCode = 421 Then Return')).Count -ne 2) { return $false }
     foreach ($line in @('LoadCompanyInfo(tenant)', 'ApplySeoBasics(tenant)', 'Dim view As ContactView = BuildContactView(tenant)',
                         'litAddress.Text = view.AddressHtml', 'litPhone.Text = view.PhoneHtml', 'litEmail.Text = view.EmailHtml', 'lnkMap.HRef = view.MapUrl',
-                        'iframeMap.Attributes("src") = view.MapEmbedUrl', 'lnkPhone.HRef = view.TelHref', 'lnkEmail.HRef = view.MailHref',
+                        'iframeMap.Attributes("src") = view.MapEmbedUrl', 'ApplyContactLinks(lnkPhone, lnkEmail, view)',
                         'If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then', 'Dim aziendaId As Integer = tenant.CompanyId', '.AziendaId = aziendaId',
                         'RenderContactEmail(tenant, nome, fromEmailUser, oggetto, messaggio)',
                         'Dim brand As KeepStoreEmailBrandInfo = BuildContactBrand(tenant, BuildSiteHomeUrl(), EmailLogoFileExists(tenant))',
@@ -119,12 +120,15 @@ Public Class LegacyContact
     End Function
 End Class
 '@
-function Compile-Contact([string]$region, [string]$policyText, [string]$emailText) {
+function Compile-Contact([string]$region, [string]$policyText, [string]$emailText, [string]$linksText) {
     $code = @"
 Option Strict On
 Option Explicit On
 Imports System
+Imports System.IO
 Imports System.Web
+Imports System.Web.UI
+Imports System.Web.UI.HtmlControls
 Public Class ContactProbe
 $region
     Private Shared Function Make(ByVal id As Integer, ByVal name As String, ByVal phone As String, ByVal email As String, ByVal logo As String, ByVal profileId As Integer, ByVal f As String()) As StorefrontSeoTenantIdentity
@@ -146,6 +150,21 @@ $region
     Private Shared Function Pack(ByVal v As ContactView) As String()
         Return New String() {v.AddressHtml, v.PhoneHtml, v.EmailHtml, v.MapUrl, v.MapEmbedUrl, v.TelHref, v.MailHref}
     End Function
+    Private Shared Function Render(ByVal link As HtmlAnchor) As String
+        Dim sw As New StringWriter()
+        Dim hw As New HtmlTextWriter(sw)
+        link.RenderControl(hw)
+        hw.Flush()
+        Return sw.ToString()
+    End Function
+    Public Function Anchors(ByVal phone1 As String, ByVal mail1 As String, ByVal phone2 As String, ByVal mail2 As String) As String()
+        Dim phoneLink As New HtmlAnchor()
+        Dim mailLink As New HtmlAnchor()
+        ApplyContactLinks(phoneLink, mailLink, BuildContactView(Make(1, "ZZAalfa", phone1, mail1, "", 0, Nothing)))
+        Dim first As String = phoneLink.HRef & "|" & mailLink.HRef
+        ApplyContactLinks(phoneLink, mailLink, BuildContactView(Make(1, "ZZAalfa", phone2, mail2, "", 0, Nothing)))
+        Return New String() {first, Render(phoneLink) & "|" & Render(mailLink)}
+    End Function
     Public Function Cut(ByVal value As String, ByVal max As Integer) As String
         Return TrimToLen(value, max)
     End Function
@@ -162,16 +181,16 @@ $legacyCode
     $p.GenerateInMemory = $true
     $p.CompilerOptions = '/optionInfer+ /optionExplicit+ /optionStrict+ /imports:Microsoft.VisualBasic'
     @('System.dll', 'System.Core.dll', 'System.Web.dll') | ForEach-Object { [void]$p.ReferencedAssemblies.Add($_) }
-    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($policyText, $emailText, $code))
+    $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($policyText, $emailText, $linksText, $code))
     if ($c.Errors.HasErrors) { throw ('CONTACT_COMPILE ' + (($c.Errors | Where-Object { -not $_.IsWarning } | Select-Object -First 3 | ForEach-Object { 'line ' + $_.Line + ': ' + $_.ErrorText }) -join ' | ')) }
     return $c.CompiledAssembly
 }
 function Lg([string]$n, [string]$v, [string]$ra, [string]$rp, [string]$rc, [string]$rv, [string]$oa, [string]$op, [string]$oc, [string]$ov) { return , [string[]]@($n, $v, $ra, $rp, $rc, $rv, $oa, $op, $oc, $ov) }
 function Show-Failure([string]$id, [string]$got) { if ($env:KS_CONTACT_TEST_VERBOSE) { Write-Host ('CONTACT_CASE_FAILED ' + $id + ' got=[' + $got + ']') } }
-function Test-Behaviour([string]$vbText, [string]$policyText, [string]$emailText) {
+function Test-Behaviour([string]$vbText, [string]$policyText, [string]$emailText, [string]$linksText) {
     $region = Get-PureRegion $vbText
     if ($null -eq $region) { throw 'CONTACT_PURE_REGION_NOT_FOUND' }
-    $asm = Compile-Contact $region $policyText $emailText
+    $asm = Compile-Contact $region $policyText $emailText $linksText
     $p = [Activator]::CreateInstance($asm.GetType('ContactProbe', $true))
     $map = 'https://www.google.com/maps?q='
     # due aziende con marcatori disgiunti; sede legale e operativa differiscono in OGNI campo (la pagina mostra la SEDE OPERATIVA)
@@ -181,7 +200,7 @@ function Test-Behaviour([string]$vbText, [string]$policyText, [string]$emailText
     $expA = @('ZZAvia Uno 1<br />10100 ZZAcitta (MI)', '+39 02 12.34-56 7', 'a@zza.example.it', ($map + 'ZZAvia+Uno+1+10100+ZZAcitta+MI'), ($map + 'ZZAvia+Uno+1+10100+ZZAcitta+MI&output=embed'), 'tel:+39021234567', 'mailto:a@zza.example.it')
     for ($i = 0; $i -lt 7; $i++) { if ($viewA[$i] -cne $expA[$i]) { Show-Failure ('A' + $i) $viewA[$i]; return $false } }
     $viewB = $p.View(2, 'ZZBbeta', '', '', 2, $profB)
-    $expB = @('ZZBvia Due 2<br />20200 ZZBcitta (VE)', '-', '-', ($map + 'ZZBvia+Due+2+20200+ZZBcitta+VE'), ($map + 'ZZBvia+Due+2+20200+ZZBcitta+VE&output=embed'), ($map + 'ZZBvia+Due+2+20200+ZZBcitta+VE'), ($map + 'ZZBvia+Due+2+20200+ZZBcitta+VE'))
+    $expB = @('ZZBvia Due 2<br />20200 ZZBcitta (VE)', '-', '-', ($map + 'ZZBvia+Due+2+20200+ZZBcitta+VE'), ($map + 'ZZBvia+Due+2+20200+ZZBcitta+VE&output=embed'), '', '')
     for ($i = 0; $i -lt 7; $i++) { if ($viewB[$i] -cne $expB[$i]) { Show-Failure ('B' + $i) $viewB[$i]; return $false } }
     if (($viewB -join '|') -cmatch 'ZZA|tel:|mailto:') { return $false }
     if (($p.View(1, 'ZZAalfa', '+39 02 12.34-56 7', 'a@zza.example.it', 1, $profA) -join '|') -cne ($viewA -join '|')) { return $false }
@@ -194,10 +213,10 @@ function Test-Behaviour([string]$vbText, [string]$policyText, [string]$emailText
     $neutral = @(@(0, 'ZZAalfa', '+39 02 1234567', 'a@zza.example.it', 0, $profA), @(-1, 'ZZAalfa', '+39 02 1234567', 'a@zza.example.it', -1, $profA))
     foreach ($case in $neutral) {
         $n = $p.View($case[0], $case[1], $case[2], $case[3], $case[4], $case[5])
-        if ($n[0] -cne '' -or $n[1] -cne '-' -or $n[2] -cne '-' -or $n[3] -cne $map -or $n[4] -cne ($map + '&output=embed') -or $n[5] -cne $map -or $n[6] -cne $map) { Show-Failure 'neutral' ($n -join '|'); return $false }
+        if ($n[0] -cne '' -or $n[1] -cne '-' -or $n[2] -cne '-' -or $n[3] -cne $map -or $n[4] -cne ($map + '&output=embed') -or $n[5] -cne '' -or $n[6] -cne '') { Show-Failure 'neutral' ($n -join '|'); return $false }
     }
     $n = $p.ViewOfNothing()
-    if ($n[0] -cne '' -or $n[1] -cne '-' -or $n[2] -cne '-' -or $n[3] -cne $map -or $n[5] -cne $map) { return $false }
+    if ($n[0] -cne '' -or $n[1] -cne '-' -or $n[2] -cne '-' -or $n[3] -cne $map -or $n[5] -cne '' -or $n[6] -cne '') { return $false }
     # ripiego: profilo senza indirizzo = ragione sociale; nessun profilo o ragione vuota = nome dell'azienda
     $r = $p.View(1, 'ZZAalfa', '', '', 1, (Lg 'ZZA Alfa Srl' '' '' '' '' '' '' '' '' ''))
     if ($r[0] -cne 'ZZA Alfa Srl' -or $r[3] -cne ($map + 'ZZA+Alfa+Srl')) { Show-Failure 'legalname' ($r -join '|'); return $false }
@@ -214,11 +233,15 @@ function Test-Behaviour([string]$vbText, [string]$policyText, [string]$emailText
     $legacy = $asm.GetType('LegacyContact', $true).GetMethod('Format')
     $streets = @('', 'Via Roma 1', ('V' * 250)); $caps = @('', '20100'); $cities = @('', 'Milano'); $provs = @('', 'MI'); $phones = @('', '081-771.83.26', '+39 081 7718326', '. -')
     $emails = @('', '-', 'a@b.it', 'x"y<script>@z'); $names = @('Alfa', 'N & <b>')
+    # i collegamenti attesi dal validatore condiviso (niente ripiego sulla mappa, niente testo grezzo nell'href)
+    $telExp = @{}; $telExp[''] = ''; $telExp['081-771.83.26'] = 'tel:0817718326'; $telExp['+39 081 7718326'] = 'tel:+390817718326'; $telExp['. -'] = ''
+    $mailExp = @{}; $mailExp[''] = ''; $mailExp['-'] = ''; $mailExp['a@b.it'] = 'mailto:a@b.it'; $mailExp['x"y<script>@z'] = ''
     $count = 0
     foreach ($s in $streets) { foreach ($c in $caps) { foreach ($ci in $cities) { foreach ($pr in $provs) { foreach ($ph in $phones) { foreach ($em in $emails) { foreach ($nm in $names) {
         $got = $p.View(1, $nm, $ph, $em, 1, (Lg $nm '' '' '' '' '' $s $c $ci $pr))
         $exp = $legacy.Invoke($null, @($nm, $s, $c, $ci, $pr, $ph, $em))
-        for ($i = 0; $i -lt 7; $i++) { if ($got[$i] -cne $exp[$i]) { Show-Failure ('equiv ' + $count + ' field ' + $i) ($got[$i] + ' <> ' + $exp[$i]); return $false } }
+        for ($i = 0; $i -lt 5; $i++) { if ($got[$i] -cne $exp[$i]) { Show-Failure ('equiv ' + $count + ' field ' + $i) ($got[$i] + ' <> ' + $exp[$i]); return $false } }
+        if ($got[5] -cne $telExp[$ph] -or $got[6] -cne $mailExp[$em]) { Show-Failure ('equiv ' + $count + ' links') ($got[5] + ' | ' + $got[6]); return $false }
         $count++
     } } } } } } }
     if ($count -ne 768) { return $false }
@@ -244,12 +267,23 @@ function Test-Behaviour([string]$vbText, [string]$policyText, [string]$emailText
     if (-not $mailB.Contains('https://t2.example.it/Public/assets/images/logo/zzb.png') -or -not $mailB.Contains('ZZBbeta') -or -not $mailB.Contains('sup@zzb.example.it') -or $mailB -cmatch 'ZZA|zza') { return $false }
     if ($mailMissing.Contains('zza.png') -or -not $mailMissing.Contains('/Public/assets/images/logo/logo.svg')) { Show-Failure 'mailMissing' $mailMissing; return $false }
     if ($mailPath.Contains('zza.png') -or -not $mailPath.Contains('/Public/assets/images/logo/logo.svg')) { Show-Failure 'mailPath' $mailPath; return $false }
+    # i collegamenti si assegnano SEMPRE (la pagina rilegge i dati a ogni richiesta e gli attributi vivono nel ViewState): un href di prima non sopravvive a un dato vuoto o non valido.
+    # Tra le due assegnazioni NON si rende il controllo (la resa di HtmlAnchor consuma l'attributo href): si legge la proprieta, come fa il ViewState prima della richiesta successiva.
+    $okP = '+39 02 1234567'; $okM = 'a@zza.example.it'
+    $an = $p.Anchors($okP, $okM, 'dalle 9 alle 18', 'x@y.it?bcc=z@z.it')
+    if ($an[0] -cne 'tel:+39021234567|mailto:a@zza.example.it' -or $an[1] -cne '<a></a>|<a></a>') { Show-Failure 'anchors valid-invalid' ($an -join ' / '); return $false }
+    $an = $p.Anchors($okP, $okM, '', '')
+    if ($an[1] -cne '<a></a>|<a></a>') { Show-Failure 'anchors valid-empty' ($an -join ' / '); return $false }
+    $an = $p.Anchors('', '', $okP, $okM)
+    if ($an[0] -cne '|' -or $an[1] -cne '<a href="tel:+39021234567"></a>|<a href="mailto:a@zza.example.it"></a>') { Show-Failure 'anchors empty-valid' ($an -join ' / '); return $false }
+    $an = $p.Anchors($okP, $okM, '081 123456', 'b@zzb.example.it')
+    if ($an[1] -cne '<a href="tel:081123456"></a>|<a href="mailto:b@zzb.example.it"></a>') { Show-Failure 'anchors valid-valid' ($an -join ' / '); return $false }
     return $true
 }
-Assert-Source (Test-Behaviour $vb $policy $emailSource) 'K03_THE_REAL_CONTACT_CODE_SHOWS_ONLY_THE_HOST_COMPANY_KEEPS_TODAYS_FORMAT_AND_SENDS_THE_COMPANY_LOGO'
+Assert-Source (Test-Behaviour $vb $policy $emailSource $links) 'K03_THE_REAL_CONTACT_CODE_SHOWS_ONLY_THE_HOST_COMPANY_KEEPS_TODAYS_FORMAT_AND_SENDS_THE_COMPANY_LOGO'
 
 # --- Mutazioni (copie in memoria) -------------------------------------------------------------------------------------------------------------------
-function Test-AllCode([string]$text) { return ((Test-Behaviour $text $policy $emailSource) -and (Test-Glue $text) -and (Test-Markup $text $aspx)) }
+function Test-AllCode([string]$text) { return ((Test-Behaviour $text $policy $emailSource $links) -and (Test-Glue $text) -and (Test-Markup $text $aspx)) }
 function MutCode([string]$old, [string]$new, [string]$code, [string]$name) {
     $m = Mutate-Text $vb $old $new $code
     Assert-Detected (Test-AllCode $m) $name
@@ -278,7 +312,11 @@ MutCode '        If Response.StatusCode = 421 Then Return
         pnlAlert.Visible = False' '        pnlAlert.Visible = False' 'M05' 'M05_A_MESSAGE_IS_SENT_ON_A_REJECTED_HOST'
 MutCode 'Dim view As ContactView = BuildContactView(tenant)' 'Dim view As ContactView = BuildContactView(Nothing)' 'M06' 'M06_THE_VIEW_IS_BUILT_WITHOUT_THE_HOST_IDENTITY'
 MutCode 'litPhone.Text = view.PhoneHtml' 'litPhone.Text = view.EmailHtml' 'M07' 'M07_THE_PHONE_CONTROL_SHOWS_THE_EMAIL'
-MutCode 'lnkPhone.HRef = view.TelHref' 'lnkPhone.HRef = view.MailHref' 'M08' 'M08_THE_PHONE_LINK_USES_THE_MAIL_LINK'
+MutCode 'ApplyContactLinks(lnkPhone, lnkEmail, view)' 'ApplyContactLinks(lnkEmail, lnkPhone, view)' 'M08' 'M08_THE_PHONE_AND_MAIL_LINKS_ARE_SWAPPED'
+MutCode 'phoneLink.HRef = view.TelHref' 'phoneLink.HRef = view.MailHref' 'M08b' 'M08B_THE_PHONE_LINK_GETS_THE_MAIL_HREF'
+MutCode 'mailLink.HRef = view.MailHref' 'mailLink.HRef = view.TelHref' 'M08c' 'M08C_THE_MAIL_LINK_GETS_THE_PHONE_HREF'
+MutCode 'phoneLink.HRef = view.TelHref' 'If view.TelHref.Length > 0 Then phoneLink.HRef = view.TelHref' 'M08d' 'M08D_AN_OLD_PHONE_HREF_SURVIVES_A_VALUE_THAT_IS_NOT_VALID'
+MutCode 'mailLink.HRef = view.MailHref' 'If view.MailHref.Length > 0 Then mailLink.HRef = view.MailHref' 'M08e' 'M08E_AN_OLD_MAIL_HREF_SURVIVES_A_VALUE_THAT_IS_NOT_VALID'
 MutCode 'iframeMap.Attributes("src") = view.MapEmbedUrl' 'iframeMap.Attributes("src") = view.MapUrl' 'M09' 'M09_THE_MAP_FRAME_USES_THE_NON_EMBED_URL'
 MutCode 'litAddress.Text = view.AddressHtml' 'litAddress.Text = view.PhoneHtml' 'M10' 'M10_THE_ADDRESS_CONTROL_SHOWS_THE_PHONE'
 MutCode 'Dim brand As KeepStoreEmailBrandInfo = BuildContactBrand(tenant, BuildSiteHomeUrl(), EmailLogoFileExists(tenant))' 'Dim brand As KeepStoreEmailBrandInfo = BuildContactBrand(tenant, BuildSiteHomeUrl(), True)' 'M11' 'M11_THE_LOGO_FILE_IS_NEVER_CHECKED'
@@ -315,9 +353,6 @@ MutCode 'view.EmailHtml = HttpUtility.HtmlEncode(If(String.IsNullOrWhiteSpace(ma
 MutCode 'Dim mapQ As String = HttpUtility.UrlEncode(addrForMap)' 'Dim mapQ As String = addrForMap' 'M40' 'M40_THE_MAP_QUERY_IS_NOT_ENCODED'
 MutCode 'view.MapEmbedUrl = "https://www.google.com/maps?q=" & mapQ & "&output=embed"' 'view.MapEmbedUrl = "https://www.google.com/maps?q=" & mapQ' 'M41' 'M41_THE_MAP_EMBED_PARAMETER_IS_MISSING'
 MutCode 'If addrForMap = "" Then addrForMap = ragione' '' 'M42' 'M42_THE_MAP_HAS_NO_NAME_FALLBACK'
-MutCode '.Replace(".", "")' '' 'M43' 'M43_DOTS_STAY_IN_THE_PHONE_LINK'
-MutCode '.Replace("-", "")' '' 'M44' 'M44_DASHES_STAY_IN_THE_PHONE_LINK'
-MutCode '.Replace(" ", "")' '' 'M45' 'M45_SPACES_STAY_IN_THE_PHONE_LINK'
 MutCode '        If s.Length > maxLen Then s = s.Substring(0, maxLen)
 ' '' 'M46' 'M46_THE_TEXT_IS_NOT_CUT_TO_THE_MAXIMUM_LENGTH'
 MutCode 'TrimToLen(indirizzo, 200)' 'TrimToLen(indirizzo, 250)' 'M47' 'M47_THE_STREET_LIMIT_CHANGES'
@@ -327,9 +362,10 @@ MutCode 'indirizzo = legal.OperationalAddress' 'indirizzo = legal.RegisteredAddr
 MutCode 'cap = legal.OperationalPostalCode' 'cap = legal.RegisteredPostalCode' 'M51' 'M51_THE_REGISTERED_POSTAL_CODE_IS_SHOWN'
 MutCode 'citta = legal.OperationalCity' 'citta = legal.RegisteredCity' 'M52' 'M52_THE_REGISTERED_CITY_IS_SHOWN'
 MutCode 'prov = legal.OperationalProvince' 'prov = legal.RegisteredProvince' 'M53' 'M53_THE_REGISTERED_PROVINCE_IS_SHOWN'
-MutCode 'view.TelHref = "tel:" & telClean' 'view.TelHref = telClean' 'M54' 'M54_THE_PHONE_LINK_HAS_NO_TEL_SCHEME'
-MutCode 'If mail.Trim() <> "" AndAlso mail <> "-" Then' 'If mail.Trim() <> "" Then' 'M55' 'M55_A_DASH_BECOMES_A_MAIL_LINK'
-MutCode 'view.MailHref = "mailto:" & mail.Trim()' 'view.MailHref = mail.Trim()' 'M56' 'M56_THE_MAIL_LINK_HAS_NO_MAILTO_SCHEME'
+MutCode 'view.TelHref = KeepStoreContactLinks.BuildTelHref(telefono)' 'view.TelHref = "tel:" & telefono' 'M54' 'M54_THE_PHONE_LINK_IS_BUILT_BY_HAND_AGAIN'
+MutCode 'view.MailHref = KeepStoreContactLinks.BuildMailtoHref(mail)' 'view.MailHref = "mailto:" & mail.Trim()' 'M56' 'M56_THE_MAIL_LINK_IS_BUILT_BY_HAND_AGAIN'
+MutCode 'view.TelHref = KeepStoreContactLinks.BuildTelHref(telefono)' 'view.TelHref = view.MapUrl' 'M55' 'M55_AN_EMPTY_PHONE_LINK_FALLS_BACK_TO_THE_MAP_AGAIN'
+MutCode 'view.MailHref = KeepStoreContactLinks.BuildMailtoHref(mail)' 'view.MailHref = view.MapUrl' 'M57b' 'M57B_AN_EMPTY_MAIL_LINK_FALLS_BACK_TO_THE_MAP_AGAIN'
 # (M57, il Trim del nome, e un mutante EQUIVALENTE: CreateTenant taglia gia il nome dell'identita; non si conta)
 MutCode 'telefono = If(tenant.SupportPhone, String.Empty).Trim()' 'telefono = If(tenant.SupportPhone, String.Empty)' 'M58' 'M58_THE_PHONE_IS_NOT_TRIMMED'
 MutCode 'mail = If(tenant.SupportEmail, String.Empty).Trim()' 'mail = If(tenant.SupportEmail, String.Empty)' 'M59' 'M59_THE_EMAIL_IS_NOT_TRIMMED'

@@ -126,7 +126,6 @@ Partial Class SiteFooter
 
 #Region "FooterPure"
     ' Funzioni pure (nessun accesso a sessione, database o richiesta): provate compilando questo stesso testo (Tools/Test-FooterTruth.ps1).
-    Private Shared ReadOnly MailPattern As New Regex("^[A-Za-z0-9](?:[A-Za-z0-9._+\-]{0,62}[A-Za-z0-9])?@(?:[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,24}\z", RegexOptions.CultureInvariant)
     Private Shared ReadOnly CategoryUrlPattern As New Regex("^articoli\.aspx\?st=[0-9]{1,9}\z", RegexOptions.CultureInvariant)
     Private Shared ReadOnly LegalFormatChars As New Regex("\p{Cf}+", RegexOptions.CultureInvariant)
     Private Shared ReadOnly LegalSpaces As New Regex("[\s\p{Cc}]+", RegexOptions.CultureInvariant)
@@ -171,43 +170,6 @@ Partial Class SiteFooter
         Return data
     End Function
 
-    ' Solo cifre ASCII, separatori usuali (spazio . - parentesi) e un "+" iniziale; da 6 a 15 cifre, non tutte zero.
-    ' Tutto il resto ("dalle 9 alle 18", due numeri separati da "/", lettere, cifre Unicode) non diventa mai un attributo href.
-    Friend Shared Function BuildTelHref(ByVal phone As String) As String
-        Dim raw As String = If(phone, String.Empty).Trim()
-        If raw.Length = 0 OrElse raw.Length > 40 Then Return String.Empty
-        If raw.StartsWith("+", StringComparison.Ordinal) AndAlso raw.Contains("(0)") Then Return String.Empty
-        Dim digits As New StringBuilder()
-        Dim nonZero As Boolean = False
-        For i As Integer = 0 To raw.Length - 1
-            Dim c As Char = raw(i)
-            If c >= "0"c AndAlso c <= "9"c Then
-                digits.Append(c)
-                If c <> "0"c Then nonZero = True
-            ElseIf c = "+"c Then
-                If i <> 0 Then Return String.Empty
-                digits.Append(c)
-            ElseIf c = " "c OrElse c = "."c OrElse c = "-"c OrElse c = "("c OrElse c = ")"c Then
-                ' separatore ignorato
-            Else
-                Return String.Empty
-            End If
-        Next
-        Dim number As String = digits.ToString()
-        Dim count As Integer = number.Length - If(number.StartsWith("+", StringComparison.Ordinal), 1, 0)
-        If count < 6 OrElse count > 15 OrElse Not nonZero Then Return String.Empty
-        Return "tel:" & number
-    End Function
-
-    ' Un solo indirizzo semplice (niente parametri, elenchi, spazi, a capo, percentuali, cancelletti, punti consecutivi).
-    Friend Shared Function BuildMailtoHref(ByVal email As String) As String
-        Dim raw As String = If(email, String.Empty).Trim()
-        If raw.Length = 0 OrElse raw.Length > 254 Then Return String.Empty
-        If Not MailPattern.IsMatch(raw) Then Return String.Empty
-        If raw.Contains("..") Then Return String.Empty
-        Return "mailto:" & raw
-    End Function
-
     ' Il link di Facebook: https, uno dei soli host facebook.com, www., m. o fb.com (mai un sottodominio qualsiasi: l.facebook.com e un redirector), e solo se la sessione appartiene all'azienda dell'host.
     Friend Shared Function ResolveFooterFacebookUrl(ByVal tenantCompanyId As Integer, ByVal sessionCompanyId As Integer, ByVal raw As String) As String
         If tenantCompanyId <= 0 OrElse sessionCompanyId <> tenantCompanyId Then Return String.Empty
@@ -243,7 +205,7 @@ Partial Class SiteFooter
 
         Dim phoneText As String = If(phone, String.Empty).Trim()
         If phoneText.Length > 0 Then
-            Dim telHref As String = BuildTelHref(phoneText)
+            Dim telHref As String = KeepStoreContactLinks.BuildTelHref(phoneText)
             If telHref.Length > 0 Then
                 sb.Append("<li><a class=""link"" href=""").Append(HttpUtility.HtmlAttributeEncode(telHref)).Append(""">").Append(HttpUtility.HtmlEncode(phoneText)).Append("</a></li>")
             Else
@@ -253,7 +215,7 @@ Partial Class SiteFooter
 
         Dim emailText As String = If(email, String.Empty).Trim()
         If emailText.Length > 0 Then
-            Dim mailHref As String = BuildMailtoHref(emailText)
+            Dim mailHref As String = KeepStoreContactLinks.BuildMailtoHref(emailText)
             If mailHref.Length > 0 Then
                 sb.Append("<li><a class=""link"" href=""").Append(HttpUtility.HtmlAttributeEncode(mailHref)).Append(""">").Append(HttpUtility.HtmlEncode(emailText)).Append("</a></li>")
             Else

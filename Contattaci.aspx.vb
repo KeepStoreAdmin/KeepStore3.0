@@ -3,6 +3,7 @@ Option Explicit On
 
 Imports System
 Imports System.Web
+Imports System.Web.UI.HtmlControls
 
 ' Pagina Contattaci. I dati dell'azienda (nome, telefono, e-mail, logo, indirizzo) arrivano SOLO dall'identita dell'host gia in cache
 ' (StorefrontSeoTenantContext): nessuna lettura di sessione e nessuna connessione al database. Il profilo legale si usa solo se porta lo
@@ -49,8 +50,7 @@ Partial Class Contattaci
             litEmail.Text = view.EmailHtml
             lnkMap.HRef = view.MapUrl
             iframeMap.Attributes("src") = view.MapEmbedUrl
-            lnkPhone.HRef = view.TelHref
-            lnkEmail.HRef = view.MailHref
+            ApplyContactLinks(lnkPhone, lnkEmail, view)
         Catch
             ' fail-open
         End Try
@@ -68,6 +68,12 @@ Partial Class Contattaci
         Public MailHref As String = String.Empty
     End Class
 
+    ' I collegamenti telefono ed e-mail si assegnano SEMPRE, anche vuoti: un valore vuoto toglie l'attributo href, anche quello rimasto dalla
+    ' richiesta precedente nel ViewState (la pagina rilegge i dati a ogni richiesta). Mai un ripiego sulla mappa.
+    Friend Shared Sub ApplyContactLinks(ByVal phoneLink As HtmlAnchor, ByVal mailLink As HtmlAnchor, ByVal view As ContactView)
+        phoneLink.HRef = view.TelHref
+        mailLink.HRef = view.MailHref
+    End Sub
     Friend Shared Function TrimToLen(ByVal value As String, ByVal maxLen As Integer) As String
         If value Is Nothing Then Return ""
         Dim s As String = value.Trim()
@@ -75,9 +81,9 @@ Partial Class Contattaci
         Return s
     End Function
 
-    ' Stesso formato di prima (indirizzo, "-" per telefono ed e-mail vuoti, ripiego sulla ragione sociale, mappa, tel:/mailto:), ma con i dati
+    ' Stesso formato di prima (indirizzo, "-" per telefono ed e-mail vuoti, ripiego sulla ragione sociale, mappa), ma con i dati
     ' dell'azienda dell'host. Senza identita con azienda valida la vista e neutra; il profilo legale vale solo se e della stessa azienda.
-    ' Il collegamento "-" di un telefono o di un'e-mail vuoti punta alla mappa: difetto noto di sempre, conservato.
+    ' I collegamenti tel: e mailto: vengono dal validatore condiviso (KeepStoreContactLinks): dato vuoto o non valido = nessun href, solo il testo.
     Friend Shared Function BuildContactView(ByVal tenant As StorefrontSeoTenantIdentity) As ContactView
         Dim ragione As String = String.Empty
         Dim indirizzo As String = String.Empty
@@ -127,18 +133,8 @@ Partial Class Contattaci
         view.MapUrl = "https://www.google.com/maps?q=" & mapQ
         view.MapEmbedUrl = "https://www.google.com/maps?q=" & mapQ & "&output=embed"
 
-        Dim telClean As String = telefono.Trim().Replace(" ", "").Replace(".", "").Replace("-", "")
-        If telClean <> "" Then
-            view.TelHref = "tel:" & telClean
-        Else
-            view.TelHref = view.MapUrl
-        End If
-
-        If mail.Trim() <> "" AndAlso mail <> "-" Then
-            view.MailHref = "mailto:" & mail.Trim()
-        Else
-            view.MailHref = view.MapUrl
-        End If
+        view.TelHref = KeepStoreContactLinks.BuildTelHref(telefono)
+        view.MailHref = KeepStoreContactLinks.BuildMailtoHref(mail)
         Return view
     End Function
 
