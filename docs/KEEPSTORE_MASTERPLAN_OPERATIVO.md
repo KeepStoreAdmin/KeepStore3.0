@@ -1,5 +1,13 @@
 # KeepStore Masterplan Operativo
 
+## KS-GOV-AGENTS-ARCHIVE-2A — 16/11/2026 — DOCS (sezione Coordinamento in allegato)
+
+**Esito: A (DOCS). Livello S (solo documentale, esente dalla catena). PR [#517](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/517).** Su richiesta del PO («Archivia Coordinamento»): il testo integrale della sezione «Coordinamento ChatGPT – Claude – Codex» del 2026-11-07 (cinque fasi e doppio gate del punto 5) passa, senza cambiare una parola, in `docs/KEEPSTORE_COORDINATION_PROTOCOL_2026_11_07.md`. In `AGENTS.md` restano il titolo (ancora invariata), l'avviso del 2026-11-12 e un riassunto vincolante: cinque fasi, un solo esecutore per working copy e branch, punto 5, limiti delle autorizzazioni. L'allegato vale quanto la sezione.
+
+**Fatti.** `AGENTS.md` da 92.927 a 91.877 byte (circa 1 KB: la sezione era di 3,7 KB e il riassunto ne tiene 2,7). Verifica meccanica con script: 7 righe tolte, tutte presenti nell'allegato; nessuna riga dell'allegato e estranea all'originale. Sezioni piu grandi rimaste in `AGENTS.md`: MULTITENANT-BY-DESIGN 13,9 KB (circa 5,3 KB sono il paragrafo «Schema unico» con l'elenco dei debiti, in parte gia chiusi), Repository, branch e working copy 9,8 KB, Decisione 2026-11-12 9,3 KB, Flusso canonico 9,0 KB, Mobile-first e ONSUS 8,3 KB.
+
+**Limiti e residuo (NON AVVIATO).** Guadagno piccolo, come previsto. Il candidato piu utile per un'altra archiviazione e il paragrafo «Schema unico, codice standard e universale» (debiti (a)-(d), in parte chiusi): va deciso con il PO perche contiene regole in vigore.
+
 ## KS-A04-FOOTER-TOUCH-44-1A — 16/11/2026 — SOURCE (area di tocco di 44 px nei titoli del piede)
 
 **Esito: A (SOURCE in integrazione). Livello S. PR [#516](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/516).** I quattro titoli del piede sotto i 768 px (Supporto, Catalogo, Area cliente, Contatti) hanno ora un'area di tocco alta almeno 44 px. Prima la riga era 357×24 px su 390 px: sopra il minimo AA di WCAG 2.5.8 (24 px) ma sotto i 44 px di 2.5.5 e delle linee guida Apple e Material. Da 768 px in su non cambia nulla. Nessun dato commerciale toccato.
