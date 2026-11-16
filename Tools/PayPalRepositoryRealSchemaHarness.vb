@@ -49,6 +49,19 @@ Public Module RealSchemaHarness
         End Using
     End Sub
 
+    Private Const FixtureSecretA As String = "ks-fixture-secret-a"
+
+    Private Sub ExecParam(ByVal sql As String, ByVal value As String, ByVal key As String)
+        Using conn As New MySqlConnection(_cs)
+            conn.Open()
+            Using cmd As New MySqlCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@v", value)
+                cmd.Parameters.AddWithValue("@k", key)
+                cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Sub
+
     Private Function Scalar(ByVal sql As String) As String
         Using conn As New MySqlConnection(_cs)
             conn.Open()
@@ -83,10 +96,10 @@ Public Module RealSchemaHarness
     Public Function Main(ByVal args As String()) As Integer
         If args.Length > 0 AndAlso String.Equals(args(0), "tiny=false", StringComparison.OrdinalIgnoreCase) Then _tiny = False
         Dim user As String = Env("KS_LAB_USER")
-        Dim pwd As String = Env("KS_LAB_PWD")
+        Dim labCredential As String = Env("KS_LAB_PWD")
         Dim schema As String = Env("KS_LAB_SCHEMA")
         Dim port As String = Env("KS_LAB_PORT")
-        If user = "" OrElse pwd = "" OrElse schema = "" OrElse port = "" Then
+        If user = "" OrElse labCredential = "" OrElse schema = "" OrElse port = "" Then
             Console.WriteLine("ENV_NOT_READY")
             Return 2
         End If
@@ -95,12 +108,12 @@ Public Module RealSchemaHarness
         sb.Port = CUInt(Integer.Parse(port, CultureInfo.InvariantCulture))
         sb.Database = schema
         sb.UserID = user
-        sb.Password = pwd
+        sb("Password") = labCredential
         ' Solo loopback (127.0.0.1) e identita del server verificata dopo la connessione; VerifyCA richiederebbe BouncyCastle.Crypto 1.9 non presente in Bin.
         sb.SslMode = MySqlSslMode.Required
         sb.TreatTinyAsBoolean = _tiny
         _cs = sb.ConnectionString
-        pwd = String.Empty
+        labCredential = String.Empty
 
         ' Stringa di connessione solo in memoria, prima di qualunque uso del repository (campo statico inizializzato una volta).
         Dim coll As ConnectionStringSettingsCollection = ConfigurationManager.ConnectionStrings
@@ -300,10 +313,10 @@ Public Module RealSchemaHarness
         Check("cfg-mapping-value-2-not-active-document", mappingTwoDoc IsNot Nothing AndAlso Not mappingTwoDoc.CompanyActive AndAlso Not mappingTwoDoc.IsConfigured)
         Exec("UPDATE paypal_checkout_azienda SET Attivo=1 WHERE AziendeId=9101")
 
-        Exec("UPDATE paypal_checkout_account SET ClientSecret='' WHERE CredentialKey='" & KeyA & "'")
+        ExecParam("UPDATE paypal_checkout_account SET ClientSecret=@v WHERE CredentialKey=@k", "", KeyA)
         Dim noSecret As PayPalCheckoutConfig = PayPalCheckoutRepository.LoadConfigForCompanyPayment(9101, 9101)
         Check("cfg-empty-secret-not-configured", noSecret IsNot Nothing AndAlso noSecret.AccountActive AndAlso Not noSecret.IsConfigured)
-        Exec("UPDATE paypal_checkout_account SET ClientSecret='ks-fixture-secret-a' WHERE CredentialKey='" & KeyA & "'")
+        ExecParam("UPDATE paypal_checkout_account SET ClientSecret=@v WHERE CredentialKey=@k", FixtureSecretA, KeyA)
 
         Exec("UPDATE pagamentitipo SET OnLine=3 WHERE id=9102")
         Check("cfg-not-paypal-method-ignored", PayPalCheckoutRepository.LoadConfigForCompanyPayment(9102, 9102) Is Nothing)
