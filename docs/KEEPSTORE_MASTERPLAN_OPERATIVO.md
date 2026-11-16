@@ -1,5 +1,13 @@
 # KeepStore Masterplan Operativo
 
+## KS-GOV-AGENTS-ARCHIVE-1A — 16/11/2026 — DOCS (AGENTS.md alleggerito)
+
+**Esito: A (DOCS). Livello S (solo documentale, esente dalla catena). PR [#515](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/515).** Su richiesta del PO («Sì, archivia»): il testo integrale delle Fasi A–I (sincronizzazione della copia locale) e del paragrafo del LAB (identita attestata, avvio, account, cinque cicli amministrativi) e passato, **senza cambiare una parola**, in due allegati normativi: `docs/KEEPSTORE_LOCAL_SYNC_PROCEDURE.md` e `docs/KEEPSTORE_LAB_DB_OPERATING_RECORD.md`. In `AGENTS.md` restano le due sezioni, con lo stesso titolo, e un riassunto vincolante (le regole che servono a ogni task); gli allegati valgono quanto le sezioni.
+
+**Fatti.** `AGENTS.md` da 102.509 a 92.927 byte (circa 9,6 KB e 2.400 token in meno a ogni sessione): spostati 18,8 KB, ma i riassunti vincolanti ne riportano indietro circa 9. Verifica meccanica con script: 130 righe tolte, tutte presenti negli allegati (eccetto la riga introduttiva, riscritta con il rinvio); nessuna riga degli allegati e estranea all'originale. Nessun test fissa il testo di `AGENTS.md`; i titoli (e quindi le ancore) non cambiano.
+
+**Limiti e residuo (NON AVVIATO).** I riassunti sono testo nuovo scritto da CODE: in caso di dubbio prevale l'allegato. Il risparmio e minore dei 25 KB previsti, perche le regole che servono a ogni task restano in `AGENTS.md`. Altre parti storiche (sezione «Coordinamento» del 2026-11-07, circa 6 KB) non toccate.
+
 ## KS-GOV-FLOW-CANONICAL-1A — 16/11/2026 — DOCS (flusso di lavoro unico)
 
 **Esito: A (DOCS). Livello S (solo documentale, esente dalla catena). PR [#514](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/514).** Su richiesta del PO (ChatGPT analizza e propone a Claude; se e sicuro al 100% invia tutto a Code, che come ulteriore revisore opera sul codice solo quando e convinto; senza sprecare token): in `AGENTS.md` le due sezioni del 2026-11-15 (metodo ottimizzato, catena a tre passaggi) e la descrizione della catena dentro la sezione 2026-11-12 diventano UNA sola sezione, «Flusso di lavoro canonico», in testa al file. Nessun codice toccato.

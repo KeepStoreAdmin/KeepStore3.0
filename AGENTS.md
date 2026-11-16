@@ -1,6 +1,6 @@
 # KeepStore 3.0 - regole operative permanenti
 
-Fonte unica delle regole permanenti. Ingresso operativo: [START_HERE](docs/KEEPSTORE_START_HERE.md). Requisiti e priorita: [PRODUCT_ROADMAP](docs/KEEPSTORE_PRODUCT_ROADMAP.md). Evidenze/storico: [Masterplan](docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md). I Blueprint conservano i contratti tecnici, non una seconda governance.
+Fonte unica delle regole permanenti (gli allegati normativi in `docs/`, citati nelle sezioni che ne riportano il riassunto, ne fanno parte). Ingresso operativo: [START_HERE](docs/KEEPSTORE_START_HERE.md). Requisiti e priorita: [PRODUCT_ROADMAP](docs/KEEPSTORE_PRODUCT_ROADMAP.md). Evidenze/storico: [Masterplan](docs/KEEPSTORE_MASTERPLAN_OPERATIVO.md). I Blueprint conservano i contratti tecnici, non una seconda governance.
 
 ## Flusso di lavoro canonico (richiesta PO 2026-11-16, PERMANENTE, PREVALENTE)
 
@@ -49,7 +49,7 @@ Il livello si alza se la ricognizione trova un fatto che lo giustifica; non si a
 
 **Revisione e catena operativa.** Descritte soltanto nel Flusso di lavoro canonico in testa a questo file (ordine ChatGPT, Claude, CODE, gate di certezza, livelli S/M/L, privacy, canale Codex). Canale ChatGPT verificato il 2026-11-12 con un ping senza contenuto di progetto: Codex CLI 0.167.0-alpha.4.1, login ChatGPT, risposta ricevuta.
 
-**LAB database locale (aggiornamento PO 2026-11-12, PREVALENTE).** Claude e autorizzato, senza conferme per singola operazione, a operare sul database LAB locale di sviluppo e test (MySQL 8 sulla macchina locale, documentato in [LOCAL_IIS_ENVIRONMENT](docs/KEEPSTORE_LOCAL_IIS_ENVIRONMENT.md) come istanza dedicata su `127.0.0.1:13317`) con script, query, DDL e DML di prova, validazioni di schema e verifiche di magazzino, varianti, listini e transazioni, negli stessi ambiti in cui Codex e gia abilitato. Condizioni: (1) prima di ogni scrittura verificare l'identita dell'istanza (marcatore o UUID, porta locale, data directory e nome del database lab) e che non sia il database online; (2) credenziali soltanto dal deposito locale previsto dallo [standard dei segreti](docs/KEEPSTORE_SECRET_PROTECTION_STANDARD.md) (Windows Credential Manager o DPAPI CurrentUser), mai in chiaro in commit, log, output, argv o report, e nessuna lettura di depositi di altri strumenti, per esempio la cartella utente di Codex; (3) il LAB certifica soltanto il LAB, non produzione, IIS reale o MySQL operativo; (4) backup o ripristino secondo la prassi LAB prima di mutazioni non reversibili; (5) il MySQL online resta sorgente read-only del runbook 2026-11-10. Produzione, server remoti, DB operativi reali, pagamenti LIVE, ordini reali e riavvii IIS/server restano fuori mandato. Identita attestata del LAB, senza segreti: MySQL 8.0.46 in `C:/Temp/KeepStoreRegOrderLab-20261025/mysql` (cartelle `engine`, `data`, `private`), solo `127.0.0.1:13317`, `require_secure_transport` con TLS autofirmato, UUID `1167ebae-d0c0-11f1-b348-9c7bef540c10` (anche in `data/auto.cnf`), schema `keepstore_regorder_lab_20261025`. Non e un servizio Windows: si avvia con un solo `mysqld.exe --defaults-file=<mysql>/private/mysqld-lab.ini` in finestra nascosta, senza modificare configurazione, servizi, firewall o ACL, e si attende `ready for connections` in `private/runtime.log` (il processo avvia un figlio che apre il listener). Avviato cosi il 2026-11-12 dopo un arresto normale del 2026-11-10; raggiungibilita provata dal saluto del server (protocollo 10, versione 8.0.46) e dal listener. Accesso: nessun target del LAB era in Windows Credential Manager e la ricerca di altri depositi e stata bloccata dal controllo di sicurezza della sessione e non aggirata; l'account `adminroot` salvato dal PO con prompt mascherato (`%APPDATA%/KeepStore/lab-13317.clixml`) e stato rifiutato dal LAB (errore 1045 dopo handshake TLS verificato con la CA del LAB). Con mandato specifico del PO («Recupero admin LAB», 2026-11-12) e stato creato sul solo LAB l'account dedicato `ks_claude_lab`@`127.0.0.1`: `ALL PRIVILEGES` limitati allo schema LAB, `REQUIRE SSL`, nessun privilegio globale ne `GRANT OPTION`, con l'unica aggiunta di `SHOW_ROUTINE ON *.*` (sola lettura delle definizioni delle routine) concessa con un secondo ciclo su mandato del PO del 2026-11-12, stessa procedura e seconda copia a freddo `data-backup-2`. Procedura: arresto forzato dei soli processi LAB senza client collegati, copia a freddo verificata del datadir (`C:/Temp/KeepStoreLabAdminRecovery-20261112-6b45a349/data-backup`), un solo riavvio con `--init-file` contenente soltanto l'hash nativo della password (file rimosso subito), password casuale generata in memoria e custodita solo in `%APPDATA%/KeepStore/lab-13317-claude.clixml` (DPAPI CurrentUser, mai mostrata). Lettura col `mysql.exe` del LAB (`--ssl-mode=VERIFY_CA`, sessione `READ ONLY` per le sole letture) con la password nel solo ambiente del processo figlio, mai in argv o output (strumento: `Tools/Invoke-KeepStoreLabSql.ps1`, SQL da file via stdin, `-Write` soltanto per DDL e DML di prova sul LAB). Verificati via SQL: UUID attestato, versione 8.0.46, `127.0.0.1:13317`, datadir, `require_secure_transport=1`, TLSv1.3, schema LAB. Il processo LAB corrente e stato avviato con `--init-file` nella riga di comando (il file non esiste piu): ai riavvii usare la procedura standard senza quell'opzione. Il repository collegato `KeepStoreAdmin/KeepStore_web` (SQL e documenti; privato dal 2026-11-13) e riconosciuto come riferimento: questa registrazione non lo modifica e non vi concede scritture. **Terzo ciclo amministrativo (mandato PO 2026-11-12, «ciclo amministrativo LAB per applicare la migrazione alla routine reale»):** stessa procedura (identita attestata, arresto forzato dei soli processi LAB senza client, terza copia a freddo verificata `data-backup-3`, un solo riavvio con `--init-file` contenente soltanto l'hash). L'`--init-file` ha creato l'account **temporaneo** `ks_claude_lab_ddl`@`127.0.0.1` (`REQUIRE SSL`, al massimo 2 connessioni, password casuale in `%APPDATA%/KeepStore/lab-13317-claude-ddl.clixml`, DPAPI CurrentUser) con i soli privilegi per sostituire la routine con `DEFINER` `root`: `SELECT`, `CREATE ROUTINE`, `ALTER ROUTINE` ed `EXECUTE` sullo schema LAB, `SYSTEM_USER`, `SET_USER_ID`, `CREATE USER` e `SHOW_ROUTINE` globali, `SELECT` su `mysql.procs_priv`. A lavoro finito l'account si e **eliminato da solo** (`DROP USER`, poi accesso negato 1045) e il file della credenziale e stato cancellato: `ks_claude_lab` non ha privilegi in piu (resta `SHOW_ROUTINE` globale e `ALL` sullo schema LAB) e le applicazioni future di migrazioni su routine con `DEFINER` `root` richiedono un nuovo mandato specifico. Il processo LAB corrente porta di nuovo `--init-file` (file inesistente) nella riga di comando. **Quarto ciclo amministrativo (mandato PO 2026-11-12, «Sì, ciclo LAB», per applicare la migrazione di arrotondamento alla routine reale):** stessa procedura e stesso account temporaneo, quarta copia a freddo `data-backup-4`; l'account si e di nuovo eliminato da solo e il file della credenziale e stato cancellato, `ks_claude_lab` invariato. **Quinto ciclo amministrativo (mandato PO 2026-11-12, «Sì, ciclo LAB», per applicare la migrazione del totale `Carrello_Totali` alla routine reale):** stessa procedura e stesso account temporaneo, quinta copia a freddo `data-backup-5`; creata la nuova routine `Carrello_Totali` e sostituita `Carrello_Documento`, entrambe con `DEFINER` `root`; l'account temporaneo e stato eliminato (`DROP USER` senza `IF EXISTS`, con guardia su UUID, porta, schema e utente) e il file della credenziale cancellato, `ks_claude_lab` invariato. Ogni nuova applicazione di una migrazione su una routine con `DEFINER` `root` richiede un mandato specifico.
+**LAB database locale (aggiornamento PO 2026-11-12, PREVALENTE).** Claude e autorizzato, senza conferme per singola operazione, a operare sul database LAB locale di sviluppo e test (MySQL 8 su `127.0.0.1:13317`, istanza dedicata, vedi [LOCAL_IIS_ENVIRONMENT](docs/KEEPSTORE_LOCAL_IIS_ENVIRONMENT.md)) con script, query, DDL e DML di prova, validazioni di schema e verifiche di magazzino, varianti, listini e transazioni, negli stessi ambiti in cui Codex e gia abilitato. Il testo integrale, con l'identita attestata, l'avvio, gli account e la storia dei cinque cicli amministrativi, e nel [registro del LAB](docs/KEEPSTORE_LAB_DB_OPERATING_RECORD.md) e **vale quanto questa sezione**. Condizioni: (1) prima di ogni scrittura verificare l'identita dell'istanza (marcatore o UUID, porta locale, data directory e nome del database lab) e che non sia il database online; (2) credenziali soltanto dal deposito locale previsto dallo [standard dei segreti](docs/KEEPSTORE_SECRET_PROTECTION_STANDARD.md) (Windows Credential Manager o DPAPI CurrentUser), mai in chiaro in commit, log, output, argv o report, e nessuna lettura di depositi di altri strumenti, per esempio la cartella utente di Codex; (3) il LAB certifica soltanto il LAB, non produzione, IIS reale o MySQL operativo; (4) backup o ripristino secondo la prassi LAB prima di mutazioni non reversibili; (5) il MySQL online resta sorgente read-only del runbook 2026-11-10. Produzione, server remoti, DB operativi reali, pagamenti LIVE, ordini reali e riavvii IIS/server restano fuori mandato. **Identita attestata, senza segreti:** MySQL 8.0.46 in `C:/Temp/KeepStoreRegOrderLab-20261025/mysql` (cartelle `engine`, `data`, `private`), solo `127.0.0.1:13317`, `require_secure_transport` con TLS autofirmato, UUID `1167ebae-d0c0-11f1-b348-9c7bef540c10` (anche in `data/auto.cnf`), schema `keepstore_regorder_lab_20261025`. Non e un servizio Windows: si avvia con un solo `mysqld.exe --defaults-file=<mysql>/private/mysqld-lab.ini` in finestra nascosta, senza modificare configurazione, servizi, firewall o ACL, e si attende `ready for connections` in `private/runtime.log`; ai riavvii si usa la procedura standard, senza `--init-file`. **Accesso:** account `ks_claude_lab`@`127.0.0.1`, `ALL PRIVILEGES` limitati allo schema LAB, `REQUIRE SSL`, nessun privilegio globale ne `GRANT OPTION` salvo `SHOW_ROUTINE ON *.*`; credenziale solo in `%APPDATA%/KeepStore/lab-13317-claude.clixml` (DPAPI CurrentUser, mai mostrata). Strumento: `Tools/Invoke-KeepStoreLabSql.ps1` (client `mysql.exe` del LAB, `--ssl-mode=VERIFY_CA`, SQL da file via stdin, sessione `READ ONLY`; `-Write` soltanto per DDL e DML di prova sul LAB; la password nel solo ambiente del processo figlio, mai in argv o output). Il repository collegato `KeepStoreAdmin/KeepStore_web` (SQL e documenti) e riferimento: nessuna scrittura. **Ogni applicazione di una migrazione su una routine con `DEFINER` `root` richiede un mandato specifico del PO** (ciclo amministrativo: arresto dei soli processi LAB senza client, copia a freddo verificata del datadir, un solo riavvio con `--init-file`, account temporaneo che si elimina da solo e credenziale cancellata); i cinque cicli gia svolti (2026-11-12) sono nel registro.
 
 **Limiti della sessione, checkpoint e ripresa.** L'autonomia e operativa e decisionale, non temporale: vale solo mentre una sessione Claude Code e realmente attiva con permessi e risorse disponibili. Nessun lavoro in background simulato, nessuna ripartenza autonoma senza orchestratore esterno autorizzato e verificato, nessun aggiramento di quote. Alla chiusura di ogni micro-task e prima di un'interruzione prevedibile si aggiorna il checkpoint gia previsto (START_HERE e Masterplan), separando operazioni completate da pianificate, senza segreti. Alla ripresa lo stato reale di filesystem, Git e GitHub prevale sul checkpoint: non si ripetono commit, push o PR gia conclusi e si completa il task in corso prima del successivo.
 
@@ -191,180 +191,17 @@ Questa modalita e obbligatoria per i task runtime KeepStore salvo deroga esplici
 
 ### Procedura operativa obbligatoria — sincronizzazione della copia locale canonica (decisione PO 2026-11-07, PERMANENTE)
 
-Applicazione permanente — KeepStore 3.0. Questa procedura deve essere applicata dopo ogni merge autorizzato in `frontend-rebuild` e ogni volta che il Product Owner richiede il riallineamento della copia locale canonica.
+Il testo integrale (Fasi A–I, con casi, esiti e report) e nell'[allegato normativo](docs/KEEPSTORE_LOCAL_SYNC_PROCEDURE.md) e **vale quanto questa sezione**; qui restano le regole che servono a ogni task. Si applica dopo ogni merge autorizzato in `frontend-rebuild` e a ogni richiesta di riallineamento del PO, in modo automatico e senza richiedere al PO istruzioni gia presenti nei manuali. Repository `KeepStoreAdmin/KeepStore3.0`, branch stabile `frontend-rebuild`, percorso canonico `C:\KeepStoreWeb\KeepStore3.0`.
 
-Repository: `KeepStoreAdmin/KeepStore3.0` · Branch stabile: `frontend-rebuild` · Percorso canonico: `C:\KeepStoreWeb\KeepStore3.0`
-
-#### FASE A — Controlli preliminari
-
-L'esecutore Windows incaricato deve:
-
-1. Verificare l'esistenza del percorso canonico e che appartenga al repository KeepStore corretto.
-2. Leggere le regole pertinenti di `AGENTS.md`.
-3. Identificare branch, HEAD locale e SHA di `origin/frontend-rebuild`.
-4. Eseguire `git fetch origin` senza modificare il working tree.
-5. Verificare lo stato dello staging, i file tracked modificati, i file untracked e le cancellazioni locali.
-6. Identificare il commit esatto approvato dal Product Owner.
-7. Confrontare lo stato corrente con quello remoto, individuando i file applicativi da aggiornare.
-8. Verificare che non vi siano operazioni Git incomplete o un secondo esecutore attivo sullo stesso percorso.
-
-Il comando `git fetch` non autorizza automaticamente merge, reset o sovrascritture.
-Non utilizzare `git pull` indiscriminatamente. Prima di integrare i commit remoti occorre verificare che l'operazione sia compatibile con le protezioni della copia locale.
-Se il percorso non è quello atteso oppure il repository remoto non corrisponde a KeepStore, interrompere l'operazione.
-
-#### FASE B — Protezione dello stato locale
-
-Prima della sincronizzazione:
-
-1. Identificare le modifiche locali non committate.
-2. Preservare l'inventario storico protetto **53/52/4** (53 protetti, 52 untracked, quattro cancellazioni tracked) secondo il rapporto locale: e' la notazione dell'inventario da preservare, non tre gruppi necessariamente disgiunti da sommare.
-3. Preservare gli untracked inventariati e gli ulteriori contenuti locali legittimi.
-4. Conservare configurazioni operative, immagini, credenziali, upload e dati non versionati.
-5. Predisporre una copia di sicurezza verificabile dei soli elementi a rischio di modifica, collocata fuori dal percorso di lavoro.
-6. Registrare i percorsi coinvolti e, quando pertinente, le impronte dei file da preservare.
-
-Il backup non deve diventare un nuovo archivio completo del progetto a ogni task, salvo effettiva necessità.
-Non utilizzare `git stash` indiscriminatamente sui file protetti.
-Non eseguire `git clean`, `git reset --hard`, `git checkout --force`, modifiche ACL generali o altri comandi che possano cancellare lo stato locale.
-
-#### FASE C — Determinazione della strategia di aggiornamento
-
-L'esecutore deve scegliere automaticamente la strategia meno invasiva.
-
-**Caso 1 — Working tree compatibile con fast-forward.** Quando il branch locale è un antenato di `origin/frontend-rebuild` e non vi sono modifiche locali che possano essere sovrascritte:
-
-- Verificare che lo SHA remoto sia quello autorizzato.
-- Eseguire unicamente l'avanzamento fast-forward del branch locale.
-- Non creare merge commit.
-- Non effettuare rebase.
-- Non utilizzare force.
-
-**Caso 2 — Modifiche locali protette presenti.** Quando sono presenti modifiche o cancellazioni tracked protette:
-
-- Non ripristinarle automaticamente.
-- Non sovrascriverle per ottenere artificialmente uno stato Git pulito.
-- Individuare se i commit remoti interessano gli stessi percorsi.
-- Se non esistono conflitti, utilizzare una procedura Git non distruttiva compatibile con le modifiche locali.
-- Se esistono conflitti, preservare i contenuti e sospendere esclusivamente l'aggiornamento incompatibile.
-- Non utilizzare il ripristino forzato come soluzione.
-
-**Caso 3 — Branch locale divergente.** Se il branch locale contiene commit propri non presenti sul remoto, non eseguire reset o rebase automatici.
-L'esecutore deve distinguere i commit locali da quelli ufficiali, proteggere il lavoro esistente e segnalare il conflitto.
-Un branch divergente non può essere dichiarato allineato attraverso una semplice copia di file.
-
-**Caso 4 — Aggiornamento completo temporaneamente impossibile.** Se le protezioni impediscono la sincronizzazione integrale:
-
-- Aggiornare soltanto ciò che è compatibile e autorizzato.
-- Lasciare invariati i file in conflitto.
-- Documentare esattamente i percorsi non allineati.
-- Dichiarare B — ALLINEAMENTO PARZIALE.
-
-Non è consentito usare una copia temporanea o un altro worktree come prova che il percorso canonico sia stato effettivamente aggiornato.
-
-#### FASE D — Sincronizzazione applicativa
-
-Durante l'aggiornamento devono essere inclusi tutti i file versionati appartenenti ai commit integrati, secondo il loro stato finale nel branch ufficiale:
-
-- Pagine ASPX e code-behind VB.NET.
-- Master Page e User Controls.
-- Classi e servizi `App_Code`.
-- JavaScript, CSS e risorse applicative versionate.
-- Componenti e dipendenze necessarie.
-- Test e strumenti.
-- Manuali e documentazione canonica.
-
-Devono essere considerate anche aggiunte, rinominazioni ed eliminazioni versionate, rispettando le eccezioni locali protette.
-La sincronizzazione deve essere cumulativa: non deve limitarsi ai file dell'ultima PR se la copia locale risulta arretrata rispetto a commit precedenti.
-Non è autorizzato trasferire file dal pacchetto di rilascio ZIP come sostituto della sincronizzazione Git.
-La directory canonica deve rappresentare lo stato SOURCE più recente effettivamente integrato e autorizzato.
-
-#### FASE E — Verifica dell'integrità
-
-Completata la sincronizzazione, l'esecutore deve:
-
-1. Confrontare HEAD locale e HEAD remoto.
-2. Verificare la corrispondenza dei file versionati previsti.
-3. Controllare che le modifiche locali protette siano rimaste inalterate.
-4. Confrontare l'inventario protetto pre/post.
-5. Verificare che non siano stati introdotti file temporanei nello staging.
-6. Controllare che nessun file critico dell'applicazione sia rimasto a una revisione precedente senza essere dichiarato.
-7. Verificare eventuali dipendenze non ancora soddisfatte.
-8. Eseguire compilazione e test mirati soltanto quando necessari o richiesti dal micro-task.
-
-Non ripetere suite complete o audit forensi già acquisiti in assenza di modifiche pertinenti.
-Le verifiche dei file versionati devono distinguere eventuali differenze locali autorizzate da discrepanze applicative non autorizzate.
-La corrispondenza dello SHA del branch non è sufficiente per certificare la corrispondenza del filesystem.
-
-#### FASE F — Classificazione dell'esito
-
-**A — ALLINEAMENTO COMPLETO.** Consentito soltanto se:
-
-- Lo SHA locale corrisponde al commit remoto approvato.
-- Tutti i file applicativi richiesti risultano aggiornati.
-- Le protezioni locali sono preservate.
-- Non esistono differenze applicative non riconciliate.
-- Il controllo finale è stato effettuato direttamente sul percorso canonico.
-
-**B — ALLINEAMENTO PARZIALE.** Da utilizzare quando almeno un file o una dipendenza richiesta non può essere aggiornata o verificata.
-Il rapporto deve specificare quali elementi mancano e perché.
-
-**E — BLOCCO OPERATIVO.** Da utilizzare quando non è possibile procedere in sicurezza, ad esempio per repository errato, impossibilità di verificare il riferimento remoto, conflitto distruttivo non risolvibile o accesso locale insufficiente.
-
-Nessun esito A può essere attribuito sulla sola base di una dichiarazione non verificata.
-
-#### FASE G — Report finale obbligatorio
-
-Esecutore: **Codex e' l'esecutore Windows ordinario**; Claude Code puo' eseguire la procedura e redigerne il rapporto soltanto quando il PO lo incarica espressamente e dispone di accesso reale al filesystem Windows. Un solo esecutore attivo per working copy/branch.
-
-Al termine dell'operazione, l'esecutore che ha operato realmente sul filesystem deve produrre un rapporto sintetico, preferibilmente entro 12 righe, contenente:
-
-STATO COPIA LOCALE CANONICA
-
-- Esito: A / B / E.
-- Percorso effettivamente aggiornato.
-- SHA GitHub di riferimento.
-- SHA locale finale.
-- Numero di file versionati confrontati.
-- Numero di file aggiornati, aggiunti, rinominati o eliminati.
-- Elenco dei file applicativi aggiornati dal micro-task.
-- Stato dei file locali protetti e dell'inventario 53/52/4.
-- Eventuali differenze residue.
-- Test o compilazione eseguiti, se pertinenti.
-- Staging e stato Git finale.
-- Conferma esplicita che il filesystem del percorso canonico è stato verificato.
-
-Quando i file modificati sono numerosi, l'elenco completo deve essere conservato in un manifest locale, mentre il rapporto riporta il totale e i percorsi principali.
-Il Product Owner deve poter identificare senza ambiguità quali file sono stati realmente modificati nel proprio PC.
-
-#### FASE H — Continuità operativa dei micro-task successivi
-
-Ogni nuovo micro-task deve partire dallo stato ufficiale corrente di `frontend-rebuild`.
-Prima di implementare modifiche sul percorso canonico, l'esecutore deve verificarne l'allineamento. Se non è allineato, deve prima eseguire la presente procedura, purché ciò sia compatibile con le autorizzazioni e le protezioni vigenti.
-Prevale LOCAL-FIRST: il lavoro runtime ordinario avviene nella working copy canonica `C:\KeepStoreWeb\KeepStore3.0` su un branch `task/<nome-task>` dedicato; worktree esterni o cloni alternativi solo con deroga esplicita del PO, senza un secondo esecutore.
-Dopo il merge autorizzato, l'aggiornamento deve raggiungere anche `C:\KeepStoreWeb\KeepStore3.0`.
-Non devono rimanere note operative che dichiarano genericamente «sincronizzazione da fare» dopo che l'allineamento è stato realmente completato e verificato.
-Le note storiche devono essere conservate; le note di stato correnti devono essere aggiornate.
-
-**Regola fondamentale:** un task applicativo è SOURCE INTEGRATED quando è integrato su GitHub. La sua CONSEGNA LOCALE è completata soltanto quando i file risultano aggiornati e verificati nel percorso canonico Windows. Le due operazioni devono essere tracciate separatamente, ma fanno parte del medesimo ciclo operativo del progetto.
-
-#### FASE I — Limiti e autorizzazioni
-
-Questa procedura non concede autorizzazioni ulteriori rispetto a quelle permanenti già documentate.
-Restano vietati senza autorizzazione specifica:
-
-- Modifiche a `main`.
-- Force-push, reset distruttivi e rebase non autorizzati.
-- Eliminazione dei file locali protetti.
-- Modifiche generalizzate alle ACL.
-- Accessi o scritture al database operativo.
-- Interventi su IIS, Aruba e server pubblico.
-- Deploy automatici.
-- Pagamenti, invio email o ordini reali.
-- Attivazione di funzionalità in STANDBY.
-- Avvio del Task08.
-
-La sincronizzazione del filesystem locale non costituisce autorizzazione alla pubblicazione in produzione.
-Questa procedura è permanente e deve essere applicata in modo automatico dagli esecutori autorizzati, senza richiedere ripetutamente al Product Owner istruzioni già presenti nei manuali canonici.
+- **A, controlli:** percorso e repository corretti (altrimenti E); branch, HEAD locale e `origin/frontend-rebuild`; `git fetch origin` senza toccare il working tree; staging, tracked modificati, untracked e cancellazioni; commit approvato dal PO; nessuna operazione Git incompleta ne secondo esecutore. Mai `git pull` indiscriminato.
+- **B, protezione:** inventario protetto **53/52/4** (53 protetti, 52 untracked, quattro cancellazioni tracked: notazione dell'inventario, non gruppi da sommare), untracked inventariati, configurazioni, immagini, credenziali e upload; copia di sicurezza, fuori dal percorso di lavoro, solo degli elementi a rischio. Mai `git stash` indiscriminato, `git clean`, `git reset --hard`, `git checkout --force`, ACL generali.
+- **C, strategia (la meno invasiva):** (1) branch locale antenato di `origin/frontend-rebuild` e nessuna modifica sovrascrivibile: solo avanzamento fast-forward allo SHA autorizzato, mai merge commit, rebase o force; (2) modifiche protette presenti: non ripristinarle, procedura non distruttiva se non ci sono conflitti sugli stessi percorsi, altrimenti sospendere solo l'aggiornamento incompatibile; (3) branch divergente: nessun reset o rebase, proteggere il lavoro e segnalare; (4) aggiornamento completo impossibile: aggiornare il compatibile, elencare i percorsi non allineati, **B — ALLINEAMENTO PARZIALE**. Un altro worktree o una copia non provano l'aggiornamento del percorso canonico.
+- **D, applicativa:** cumulativa, tutti i file versionati dei commit integrati nel loro stato finale (ASPX e code-behind, master e user controls, `App_Code`, JS/CSS/risorse, test e strumenti, manuali), con aggiunte, rinominazioni ed eliminazioni, salvo le eccezioni locali protette. Mai il pacchetto ZIP di rilascio al posto di Git.
+- **E, verifica:** HEAD locale = remoto; file versionati previsti corrispondenti; protezioni e inventario pre/post invariati; nessun temporaneo nello staging; dipendenze soddisfatte; compilazione e test mirati solo se servono. La corrispondenza dello SHA non certifica il filesystem; distinguere differenze locali autorizzate da discrepanze applicative. Niente suite o audit forensi gia acquisiti.
+- **F, esito:** **A** solo con SHA locale = commit approvato, file richiesti aggiornati, protezioni preservate, nessuna differenza non riconciliata e controllo finale sul percorso canonico; **B** se un file o una dipendenza non si puo aggiornare o verificare (dire quale e perche); **E** se non si procede in sicurezza (repository errato, riferimento remoto non verificabile, conflitto distruttivo, accesso insufficiente). Nessun A su dichiarazioni non verificate.
+- **G, report (circa 12 righe):** esito A/B/E, percorso aggiornato, SHA GitHub e SHA locale finale, file confrontati e aggiornati, aggiunti, rinominati o eliminati, file applicativi del task, stato dei locali protetti e dell'inventario 53/52/4, differenze residue, test o compilazione, staging e stato Git, conferma esplicita della verifica del filesystem (con molti file, elenco in un manifest locale). Esecutore: Codex di norma; Claude Code solo su incarico espresso del PO e con accesso reale al filesystem; un solo esecutore per working copy e branch.
+- **H, continuita:** ogni task parte dallo stato corrente di `frontend-rebuild`; se la copia non e allineata si esegue prima questa procedura. Lavoro ordinario nella working copy canonica su `task/<nome-task>`; worktree esterni solo con deroga del PO. Note di stato correnti aggiornate, storiche conservate. **SOURCE INTEGRATED** = integrato su GitHub; **CONSEGNA LOCALE** = file aggiornati e verificati nel percorso canonico: due operazioni tracciate separatamente.
+- **I, limiti:** nessuna autorizzazione in piu; restano vietati senza autorizzazione specifica modifiche a `main`, force-push, reset distruttivi e rebase, eliminazione dei file locali protetti, ACL generalizzate, DB operativo, IIS, Aruba e server pubblico, deploy, pagamenti, e-mail, ordini reali, funzioni in STANDBY e Task08. La sincronizzazione del filesystem non e pubblicazione in produzione.
 
 
 ## Ruoli e autorita
