@@ -71,6 +71,11 @@ Public NotInheritable Class KeepStoreLog
         WebhookFlowHost.LastLogCategory = category
         WebhookFlowHost.LastLogException = If(failure Is Nothing, String.Empty, failure.GetType().Name)
     End Sub
+
+    ' PayPalPaymentState.LogCheckoutFailure (PAYPAL-FAIL-DIAGNOSTICS-1A) e il webhook scrivono righe Info: il test non le persiste.
+    Public Shared Sub Info(ByVal area As String, ByVal msg As String, Optional ByVal ctx As HttpContext = Nothing)
+        ' no-op: non cambia la categoria registrata dai casi del test
+    End Sub
 End Class
 
 Public NotInheritable Class WebhookFlowBootstrap
