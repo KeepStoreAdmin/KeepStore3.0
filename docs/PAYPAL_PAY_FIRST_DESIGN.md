@@ -40,3 +40,11 @@ Il client (`App_Code/PayPalOrdersV2Client.vb`) ha: `CreateAuthorizeOrder`, `Auth
 - **Incassa soltanto `COMPLETED`** (`IsCaptureCompleted`); un capture `PENDING` non e pagato. Autorizzazione incassabile solo se `CREATED` e non scaduta.
 - **`invoice_id` dell'incasso = id del documento** (`KS-INV-<azienda>-<id documento>`), mai il numero ordine (si ripete ogni anno: `DUPLICATE_INVOICE_ID`). Se PayPal rifiuta un invoice diverso da quello dell'ordine, si ritenta senza invoice (si scopre solo col primo pagamento reale).
 - Prima del primo pagamento reale col percorso CAPTURE esistente va provata la risposta di capture: gli esempi ufficiali non hanno `intent`, `payee`, `custom_id`, `invoice_id` di unita, che `HasAuthoritativeRepresentation` esige.
+
+## 9. Fase P2 fatta (17/11/2026, PR #531): tabella dei tentativi
+Pagina con gli script (preflight, forward, verify, rollback, monitoraggio): [PAYPAL_PAY_FIRST_ATTEMPTS_TABLE.md](PAYPAL_PAY_FIRST_ATTEMPTS_TABLE.md). Codice: `App_Code/PayPalPaymentAttemptStates.vb` (macchina a stati pura, 13 stati) e `App_Code/PayPalPaymentAttempts.vb` (repository). Regole che P3 deve rispettare:
+- **Ordine di blocco: tentativo -> documenti -> transazioni.** Nella transazione che crea il documento: `LockForDocument` PER PRIMO (un doppio invio aspetta qui), poi il documento, poi `BindDocument` (che rilegge documento e totale da se); nessuna chiamata a PayPal con una riga del tentativo bloccata; il ritorno del cliente legge senza lock.
+- **Caricamenti:** il cliente usa `LoadForOwner(chiave, azienda, login)`; il webhook e il recupero usano i `LoadForSystemBy...` (solo codice fidato). Un `Nothing` puo essere anche un errore tecnico: il gate di `ordine.aspx` deve fallire chiuso.
+- **Nessun fallimento da AUTHORIZED senza prova:** si annulla (`RecordVoiding`, poi la chiamata a PayPal, poi `RecordVoided`) o si prova che l'autorizzazione e persa (`RecordAuthorizationLost`). Un incasso tardivo su un tentativo senza ordine si registra con `RecordOrphanCapture`.
+- **Bozza scaduta o seconda scheda:** prima di aprire un tentativo nuovo si elencano i vivi (`ListLiveByOwner`) e si annullano quelli vecchi; il recupero usa `ListStuck` e `RecommendedAction`.
+- **Prima di attivare:** la tabella va creata sul database di destinazione (PO su `taikun`, poi il programma di Enzo) e va decisa la conservazione delle righe vecchie.
