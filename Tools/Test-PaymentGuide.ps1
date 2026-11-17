@@ -168,7 +168,7 @@ function Test-AspxGuide([string]$text, [string]$cssText) {
     # role: un solo alert per variante di errore, status per l'attesa
     if ([regex]::Matches($retry, 'role="alert"').Count -ne 1 -or [regex]::Matches($contact, 'role="alert"').Count -ne 1) { Show-Failure 'role alert'; return $false }
     if ($wait -match 'role="alert"' -or $wait -notmatch 'role="status"') { Show-Failure 'role status'; return $false }
-    if ($retry -notmatch 'images/pagamenti/paypal\.svg') { Show-Failure 'paypal asset'; return $false }
+    if ($guide -match '<img\b' -or $guide -match 'eyebrow') { Show-Failure 'logo or eyebrow back'; return $false }
     if ($cssText -notmatch '(?m)^\.ks-cart-page \.ks-pay-guide__btn\s*\{') { Show-Failure 'css btn'; return $false }
     if ($cssText -notmatch '(?s)\.ks-pay-guide__btn\s*\{[^}]*min-height:\s*44px') { Show-Failure 'css 44px'; return $false }
     if ($cssText -notmatch '(?s)@media \(max-width: 575px\)\s*\{[^@]*\.ks-pay-guide__actions[^}]*\{[^}]*flex-direction:\s*column') { Show-Failure 'css mobile column'; return $false }

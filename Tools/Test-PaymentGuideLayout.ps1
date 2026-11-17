@@ -68,14 +68,14 @@ $measureJs = @'
   var h2=document.querySelector('.ks-pay-guide__card h2'); var sec=document.querySelector('section.ks-pay-guide__card');
   if(!h2 || document.getElementById(sec.getAttribute('aria-labelledby'))!==h2) out.fails.push('ARIA_LABELLEDBY');
   document.querySelectorAll('.ks-pay-guide__btn').forEach(function(b){ var r=b.getBoundingClientRect(); if(r.height<43.5) out.fails.push('BUTTON_TOO_SHORT '+Math.round(r.height)); if(window.innerWidth<576 && r.width<cr.width-60) out.fails.push('BUTTON_NOT_FULL_WIDTH '+Math.round(r.width)+' vs '+Math.round(cr.width)); });
-  var textSel=['.ks-pay-guide__eyebrow','.ks-pay-guide h2','.ks-pay-guide__lead','.ks-pay-guide__steps strong','.ks-pay-guide__steps span','.ks-pay-guide__btn'];
+  var textSel=['.ks-pay-guide h2','.ks-pay-guide__lead','.ks-pay-guide__steps strong','.ks-pay-guide__steps span','.ks-pay-guide__btn'];
   textSel.forEach(function(s){ document.querySelectorAll(s).forEach(function(el){ var cs=getComputedStyle(el); var fg=parse(cs.color); var bg=bgOf(el); var r=ratio(fg,bg); if(r<4.5) out.fails.push('CONTRAST '+s+' '+r.toFixed(2)); }); });
   document.querySelectorAll('.ks-pay-guide__icon').forEach(function(el){ var r=ratio(parse(getComputedStyle(el).color),parse(getComputedStyle(el).backgroundColor)); if(r<3) out.fails.push('ICON_CONTRAST '+r.toFixed(2)); });
   var cols=getComputedStyle(document.querySelector('.ks-pay-guide__steps')).gridTemplateColumns.split(' ').length; out.info.stepCols=cols;
   if(window.innerWidth<768 && cols!==1) out.fails.push('STEPS_NOT_ONE_COLUMN '+cols);
   if(window.innerWidth>=768 && cols!==3) out.fails.push('STEPS_NOT_THREE_COLUMNS '+cols);
   var li=document.querySelectorAll('.ks-pay-guide__steps li'); if(li.length!==3) out.fails.push('STEP_COUNT '+li.length);
-  var imgs=document.querySelectorAll('.ks-pay-guide__logo'); imgs.forEach(function(i){ if(i.getAttribute('alt')!==''|| i.naturalWidth<1) out.fails.push('LOGO_DECORATIVE_OR_NOT_LOADED'); });
+  var cs0=getComputedStyle(card); if(cs0.boxShadow==='none') out.fails.push('NO_SHADOW'); if(parseFloat(cs0.borderTopLeftRadius)>0) out.fails.push('ROUNDED_CARD'); if(parseFloat(cs0.borderLeftWidth)>0) out.fails.push('BORDER_ON_CARD'); if(document.querySelector('.ks-pay-guide img')) out.fails.push('IMG_IN_GUIDE');
   return JSON.stringify(out);
 })()
 '@

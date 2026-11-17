@@ -66,7 +66,7 @@ function Test-Busters([string]$m, [string]$catalogPage, [string]$productPage, [s
     $tag = '20261115-focus-fc1a'
     return ($m -match ('css/styles\.css"\) & "\?v=' + $tag + '"') -and $m -match ('css/theme-overrides\.css"\) & "\?v=' + $tag + '"') -and $m -match ('css/auth-ui\.css"\) & "\?v=' + $tag + '"') -and $m -match ('css/minicart-ui\.css"\) & "\?v=' + $tag + '"') -and
         $catalogPage -match ('css/catalog-ui\.css"\)[^\r\n]*\?v=' + $tag) -and $catalogPage -match ('css/catalog-product-flow\.css"\)[^\r\n]*\?v=' + $tag) -and
-        $productPage -match ('css/product-ui\.css"\)[^\r\n]*\?v=(?:' + $tag + '|20261115-focus-obscured1a)') -and $cartPage -match ('css/cart-ui\.css"\)[^\r\n]*\?v=(?:' + $tag + '|20261117-pay-guide-1a)'))
+        $productPage -match ('css/product-ui\.css"\)[^\r\n]*\?v=(?:' + $tag + '|20261115-focus-obscured1a)') -and $cartPage -match ('css/cart-ui\.css"\)[^\r\n]*\?v=(?:' + $tag + '|20261117-pay-guide-[12]a)'))
 }
 $productAspx = Read-Repo 'articolo.aspx'
 $cartAspx = Read-Repo 'carrello.aspx'
