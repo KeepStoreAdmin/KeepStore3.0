@@ -360,3 +360,14 @@ Il PO aprira una sezione dedicata con Claude su **SEO, pubblicita da fare e come
 - **Pixel Meta (Facebook/Instagram) e Google Merchant Center.** I campi dedicati sono negli ultimi campi della tabella `aziende` e le tabelle `ks_fb_pixel` e `ks_fb_pixel_products`. Stato verificato il 17/11/2026: il codice dell'evento di acquisto sta in `ordine.aspx` ma **non parte mai**, perche dopo l'ordine il sito rimanda alla pagina di conferma (redirect) e la pagina che contiene il pixel non viene mostrata. Da fare: inviare l'acquisto dalla pagina di conferma finale, una sola volta per ordine, solo a ordine pagato e con il consenso ai cookie di marketing. Il PO oggi non fa inserzioni Meta (ferme).
 - Feed Google Merchant (gia in roadmap come `GOOGLE-MERCHANT-CENTER-FEED-1A`).
 Stato: **NON AVVIATO**, avvio su richiesta del PO.
+
+## Da fare: miglioramenti suggeriti dal giro nel template ONSUS (analisi del 17/11/2026)
+Il template completo sta in **`C:\KeepStoreWeb\Templatre_Onsus`** (regola permanente in AGENTS.md, Design Gate, punto 1). Giro fatto il 17/11/2026 su 27 pagine HTML, CSS/SCSS, 20 script e font: **la maggior parte e gia nel sito** (obiettivo spedizione gratuita nel carrello, preferiti, confronto, anteprima rapida, conto alla rovescia delle promozioni, visti di recente, zoom e galleria, sezione di fiducia in HOME, spedizione nella scheda prodotto, tracciamento ordine, passi della conferma). Quello che il template ha e il sito no, **verificato nel codice**, in ordine di utilita per il cliente:
+1. **Avanzamento dell'ordine a colpo d'occhio** (ricevuto, pagato, in preparazione, spedito, consegnato) nel dettaglio ordine e nel tracciamento, con gli stati reali del documento; si lega alla guida «ripeti il pagamento» (voce 35). Priorita alta, mobile-first.
+2. **Obiettivo spedizione gratuita anche nel mini-carrello** (nel template sta nel cassetto del carrello; nel sito esiste solo nella pagina carrello). Dati gia presenti, lavoro piccolo.
+3. **Fascia di fiducia vicino ai pulsanti di acquisto** (carrello e checkout: pagamento sicuro, resi, assistenza, loghi dei metodi realmente attivi); testi e loghi dai dati dell'azienda, mai inventati.
+4. **Guide e articoli (blog)**: il template ha la pagina blog, il sito no. Va nella fase SEO e contenuti (sezione sopra).
+5. **Recensioni con stelle**: il template le mostra, ma nel sito **non esiste nessun dato di recensioni**; niente stelle finte. Solo se arriva una fonte reale (per esempio recensioni verificate di un servizio esterno).
+6. **Barra «venduti» e scarsita**: nel template e finta; si usa solo con giacenza e vendite reali, e senza pressione ingannevole. Bassa priorita.
+7. Non adottare: confronto immagini, effetto parallasse e gallerie extra (peso e poca utilita); caricano script che il sito oggi non usa.
+Stato: **NON AVVIATO**, ogni voce parte solo su richiesta del PO, con il Design Gate.
