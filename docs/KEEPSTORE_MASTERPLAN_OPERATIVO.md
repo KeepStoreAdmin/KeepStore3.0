@@ -1,5 +1,10 @@
 # KeepStore Masterplan Operativo
 
+## PAYPAL-RESUBMIT-WORDING-1A — 17/11/2026 — SOURCE (testi veri nei messaggi del pay-first)
+
+**Esito: A (SOURCE, non pubblicato). Livello S.** `MsgResubmit` diceva «non ti verra chiesto un nuovo pagamento» e `MsgChanged` «l'autorizzazione precedente viene annullata»: falso, perche una nuova conferma dal carrello crea una nuova bozza e quindi una nuova approvazione PayPal, e la vecchia autorizzazione si libera piu tardi con la pulizia (nessun annullo in quel punto, `ordine.aspx.vb`). Ora i due testi dicono che l'ordine non e stato creato, che si approva di nuovo il pagamento e che nessun importo e stato addebitato (un'autorizzazione e una riserva, non un addebito).
+
+**Prove.** `Test-PayFirstMessages.ps1` (costanti vere, rosso prima, 6 mutanti); Test-PayPalPayFirst e Test-PaymentGuide verdi. Revisioni: non richieste (livello S; il fatto e stato verificato da Opus e da CODE nel task della guida). **Alla consegna futura:** `App_Code/PayPalPayFirst.vb`. CONSEGNA SERVER SOSPESA.
 ## PAYPAL-FAILED-PAYMENT-GUIDE-1A — 17/11/2026 — SOURCE (guida visuale nel carrello dopo un pagamento PayPal pay-first non riuscito)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#539](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/539).** Quando il pay-first rimanda il cliente al carrello (pagamento annullato, non avviato, scaduto, in verifica, da verificare a mano), l'avviso giallo generico («Prezzi e condizioni del carrello») e sostituito da una guida con passi, icone e pulsanti «Riprova il pagamento» e «Cambia metodo di pagamento» (collegamenti `carrello.aspx?payguide=1` che aprono il passo di pagamento con una GET, come `pricechanged`). Area CRITICAL toccata solo in presentazione: nessuna logica di pagamento, prezzi o policy.

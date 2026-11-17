@@ -158,8 +158,8 @@ Public NotInheritable Class PayPalPayFirstService
     Public Const MsgExpired As String = "La sessione di pagamento e scaduta prima della conferma. Non e stato addebitato nulla: rivedi il carrello e riprova."
     Public Const MsgBusy As String = "Stiamo verificando il pagamento PayPal. Riprova tra qualche minuto senza ripetere il pagamento."
     Public Const MsgManual As String = "Il pagamento di questo ordine richiede una verifica. Contatta l'assistenza prima di riprovare."
-    Public Const MsgChanged As String = "Il carrello e cambiato dopo l'autorizzazione PayPal. Rivedi il carrello e conferma di nuovo: nessun importo e stato addebitato e l'autorizzazione precedente viene annullata."
-    Public Const MsgResubmit As String = "Il pagamento e stato autorizzato ma la sessione di conferma non e piu valida. Conferma di nuovo l'ordine dal carrello: non ti verra chiesto un nuovo pagamento."
+    Public Const MsgChanged As String = "Il carrello e cambiato dopo l'autorizzazione PayPal e l'ordine non e stato creato. Rivedi il carrello e conferma di nuovo: ti verra chiesto di approvare di nuovo il pagamento. Nessun importo e stato addebitato."
+    Public Const MsgResubmit As String = "Il pagamento PayPal era stato autorizzato, ma la sessione di conferma non e piu valida e l'ordine non e stato creato. Conferma di nuovo l'ordine dal carrello: ti verra chiesto di approvare di nuovo il pagamento. Nessun importo e stato addebitato."
 
     Private Shared Function Result(ByVal outcome As PayFirstOutcome, ByVal reason As String, Optional ByVal url As String = "", Optional ByVal message As String = "",
                                    Optional ByVal attemptKey As String = "") As PayFirstResult
