@@ -4,6 +4,10 @@
     Area personale
 </asp:Content>
 
+<asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-account-1b" />
+</asp:Content>
+
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
 
     <div class="ks-myaccount ks-account-dashboard">
@@ -33,7 +37,7 @@
                 <asp:SqlDataSource ID="sdsRecentOrders" runat="server"
                     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                    SelectCommand="SELECT vdocumenti.Id, vdocumenti.NDocumento, vdocumenti.DataDocumento, vdocumenti.TotaleDocumento, vdocumenti.StatiDescrizione1, vdocumenti.StatiDescrizione2, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione FROM vdocumenti LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id LEFT JOIN documenti dpay ON dpay.id = vdocumenti.Id WHERE vdocumenti.UtentiId = ?UtentiId AND vdocumenti.AziendeId = ?AziendaId AND vdocumenti.TipoDocumentiId = 4 ORDER BY vdocumenti.ID DESC LIMIT 5">
+                    SelectCommand="SELECT vdocumenti.Id, vdocumenti.NDocumento, vdocumenti.DataDocumento, vdocumenti.TotaleDocumento, vdocumenti.StatiDescrizione1, vdocumenti.StatiDescrizione2, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione FROM vdocumenti LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id LEFT JOIN documenti dpay ON dpay.id = vdocumenti.Id WHERE vdocumenti.UtentiId = ?UtentiId AND vdocumenti.AziendeId = ?AziendaId AND EXISTS (SELECT 1 FROM tipodocumenti tdo WHERE tdo.id = vdocumenti.TipoDocumentiId AND tdo.Web = 1 AND tdo.Abilitato = 1 AND tdo.ImpegnaQnt = 1) ORDER BY vdocumenti.ID DESC LIMIT 5">
                     <SelectParameters>
                         <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="Int32" />
                         <asp:SessionParameter Name="AziendaId" SessionField="AuthenticatedAziendaID" Type="Int32" />
@@ -43,17 +47,29 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="myaccount-content account-dashboard">
-                            <asp:FormView ID="fvDashboardProfile" runat="server" DataSourceID="sdsDashboardProfile" RenderOuterTable="false">
-                                <ItemTemplate>
-                                    <div class="ks-dashboard-hero">
-                                        <div>
-                                            <h3 class="fw-semibold mb-2"><%#: GetDashboardGreeting(Eval("RagioneSociale"), Eval("CognomeNome"), Eval("Username")) %></h3>
-                                            <p class="body-md-2 text-main-2 mb-0">Da qui puoi controllare ordini, dati account e indirizzi.</p>
-                                        </div>
-                                        <a href="documenti.aspx?t=4" class="tf-btn btn-fill">I miei ordini</a>
-                                    </div>
+                            <div class="ks-dashboard-hero">
+                                <div>
+                                    <h3 class="fw-semibold mb-2"><asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua area personale" /></h3>
+                                    <p class="body-md-2 text-main-2 mb-0">Da qui puoi controllare ordini, documenti, dati account e indirizzi.</p>
+                                </div>
+                                <a href="documenti.aspx" class="tf-btn btn-fill">I miei ordini</a>
+                            </div>
 
-                                    <div class="row g-3 g-xl-4 mb-4">
+                            <div id="pnlPayNotice" runat="server" visible="false" class="ks-account-notice">
+                                <svg class="ks-account-notice__icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><rect x="3" y="6" width="18" height="12"/><path d="M3 10h18"/></svg>
+                                <div class="ks-account-notice__text">
+                                    <h4 class="ks-account-notice__title"><asp:Literal ID="litPayNotice" runat="server" /></h4>
+                                    <p class="body-small mb-0">Puoi completare il pagamento online in pochi passaggi.</p>
+                                </div>
+                                <a id="lnkPayNotice" runat="server" class="tf-btn btn-fill ks-account-notice__btn">Paga adesso</a>
+                            </div>
+
+                            <nav class="ks-account-hub" aria-label="Servizi dell'account">
+                                <%= TilesHtml(True) %>
+                            </nav>
+
+                            <asp:FormView ID="fvDashboardProfile" runat="server" DataSourceID="sdsDashboardProfile" RenderOuterTable="false" OnDataBound="fvDashboardProfile_DataBound">
+                                <ItemTemplate>                                    <div class="row g-3 g-xl-4 mb-4">
                                         <div class="col-12 col-xl-6">
                                             <div class="ks-dashboard-card h-100">
                                                 <div class="ks-dashboard-card-head">
@@ -106,15 +122,7 @@
                                         </div>
                                     </div>
                                 </ItemTemplate>
-                                <EmptyDataTemplate>
-                                    <div class="ks-dashboard-hero">
-                                        <div>
-                                            <h3 class="fw-semibold mb-2">Benvenuto nella tua area personale</h3>
-                                            <p class="body-md-2 text-main-2 mb-0">Da qui puoi controllare ordini, dati account e indirizzi.</p>
-                                        </div>
-                                        <a href="documenti.aspx?t=4" class="tf-btn btn-fill">I miei ordini</a>
-                                    </div>
-                                </EmptyDataTemplate>
+
                             </asp:FormView>
 
                             <div class="ks-dashboard-card mb-4">
@@ -123,7 +131,7 @@
                                         <h4 class="fw-semibold mb-1">Ordini recenti</h4>
                                         <p class="body-small text-main-2 mb-0">Ultimi ordini con stato ordine e stato pagamento separati.</p>
                                     </div>
-                                    <a href="documenti.aspx?t=4" class="tf-btn btn-line">Vedi tutti gli ordini</a>
+                                    <a href="documenti.aspx" class="tf-btn btn-line">Vedi tutti gli ordini</a>
                                 </div>
 
                                 <div class="tf-order_history-table ks-dashboard-orders">
@@ -180,23 +188,11 @@
                                 </div>
                             </div>
 
-                            <div class="ks-dashboard-card">
-                                <div class="ks-dashboard-card-head">
-                                    <div>
-                                        <h4 class="fw-semibold mb-1">Azioni rapide</h4>
-                                        <p class="body-small text-main-2 mb-0">Le scorciatoie principali della tua area personale.</p>
-                                    </div>
-                                </div>
-
-                                <div class="ks-dashboard-quicklinks">
-                                    <a href="documenti.aspx?t=4" class="tf-btn btn-line">I miei ordini</a>
-                                    <a href="my-account-edit.aspx" class="tf-btn btn-line">Modifica dati</a>
-                                    <a href="my-account-address.aspx" class="tf-btn btn-line">Indirizzi</a>
-                                    <a href="wishlist.aspx" class="tf-btn btn-line">Wishlist</a>
-                                    <a href="password.aspx" class="tf-btn btn-line">Password</a>
-                                    <a href="logout.aspx" class="tf-btn btn-line">Logout</a>
-                                </div>
-                            </div>
+                            <section class="ks-account-soon" aria-labelledby="ksAccountSoonTitle">
+                                <h4 id="ksAccountSoonTitle" class="fw-semibold mb-1">In arrivo</h4>
+                                <p class="body-small text-main-2 mb-3">Servizi che stiamo preparando: non sono ancora disponibili.</p>
+                                <%= TilesHtml(False) %>
+                            </section>
                         </div>
                     </div>
                 </div>

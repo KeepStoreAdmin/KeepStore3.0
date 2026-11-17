@@ -1,0 +1,370 @@
+/* KS-MYACCOUNT-1B - pannello dell'account (riquadri delle utilita, avviso "da pagare") e lista dei documenti a schede.
+   Stile piatto: fondo bianco, ombra morbida, nessun angolo arrotondato, icona nel colore principale. Caricato solo da myaccount.aspx e documenti.aspx. */
+
+/* ---------- riquadri ---------- */
+.ks-account-hub {
+    margin-bottom: 24px;
+}
+
+.ks-account-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ks-account-tiles > li {
+    display: flex;
+    min-width: 0;
+}
+
+.ks-account-tile {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 96px;
+    padding: 16px 10px;
+    background: #fff;
+    box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .1);
+    color: var(--gray, #333e48);
+    text-align: center;
+    text-decoration: none;
+}
+
+.ks-account-tile__icon {
+    flex: 0 0 auto;
+    color: var(--primary, #D80027);
+}
+
+.ks-account-tile__label {
+    max-width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.ks-account-tile__hint {
+    max-width: 100%;
+    color: #595959;
+    font-size: 12px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+a.ks-account-tile:hover,
+a.ks-account-tile:focus-visible {
+    color: var(--primary, #D80027);
+    box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .2);
+}
+
+.ks-account-tile.is-soon {
+    background: #f4f4f4;
+    box-shadow: none;
+    color: #595959;
+    cursor: default;
+}
+
+.ks-account-tile.is-soon .ks-account-tile__icon {
+    color: #767676;
+}
+
+.ks-account-soon {
+    margin-top: 28px;
+}
+
+@media (min-width: 576px) {
+    .ks-account-tiles {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+}
+
+@media (min-width: 992px) {
+    .ks-account-tiles {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .ks-account-tile {
+        min-height: 120px;
+    }
+}
+
+/* ---------- avviso "da pagare" ---------- */
+.ks-account-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #fff;
+    box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .1);
+}
+
+.ks-account-notice__icon {
+    flex: 0 0 auto;
+    box-sizing: content-box;
+    padding: 12px;
+    background: var(--primary, #D80027);
+    color: #fff;
+}
+
+.ks-account-notice__text {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.ks-account-notice__title {
+    margin: 0 0 2px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ks-account-notice__btn {
+    min-height: 44px;
+}
+
+@media (max-width: 575px) {
+    .ks-account-notice__btn {
+        flex: 1 1 100%;
+        justify-content: center;
+    }
+}
+
+/* ---------- lista a schede (GridView a una colonna) ---------- */
+.tf-order_history-table.ks-doc-list-wrap {
+    overflow: visible;
+    text-align: left;
+}
+
+.tf-order_history-table.ks-doc-list-wrap table.ks-doc-list {
+    display: block;
+    min-width: 0;
+    width: 100%;
+}
+
+/* La riga del pager contiene una tabella annidata: il tema le darebbe 700 px di larghezza minima. */
+.tf-order_history-table.ks-doc-list-wrap .ks-doc-list__pager table {
+    width: auto;
+    min-width: 0;
+}
+
+.ks-doc-list > tbody > tr.ks-doc-list__pager {
+    border: 0;
+}
+
+.ks-doc-list > tbody > tr.ks-doc-list__pager > td {
+    padding: 0;
+}
+
+.ks-doc-list > tbody > tr.ks-doc-list__pager table td {
+    padding: 0;
+}
+
+.ks-doc-list > tbody > tr.ks-doc-list__pager table td > a,
+.ks-doc-list > tbody > tr.ks-doc-list__pager table td > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.ks-doc-list > tbody {
+    display: block;
+}
+
+.ks-doc-list > tbody > tr.td-order-item {
+    display: block;
+    margin-bottom: 16px;
+    border: 0;
+}
+
+.ks-doc-list > tbody > tr.td-order-item > td {
+    display: block;
+    padding: 0;
+    border: 0;
+}
+
+.ks-doc-card {
+    padding: 16px;
+    background: #fff;
+    box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .1);
+    text-align: left;
+}
+
+.ks-doc-card__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.ks-doc-card__title {
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.ks-doc-card__title a {
+    display: inline-block;
+    min-height: 24px;
+    padding: 2px 0;
+}
+
+.ks-doc-card__date {
+    color: #595959;
+    font-size: 14px;
+}
+
+.ks-doc-card__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px 0;
+}
+
+.ks-doc-card__cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ks-doc-card__k {
+    color: #595959;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.ks-doc-card__total {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ks-doc-card__foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e6e6e6;
+}
+
+.ks-doc-card__foot .ks-order-details {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.ks-doc-card__foot .ks-order-details summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+.ks-doc-card__foot .ks-action-stack .tf-btn {
+    min-height: 44px;
+}
+
+.ks-doc-card__tracking {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ks-doc-card__tracking > li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    min-width: 0;
+}
+
+.ks-doc-card__code {
+    max-width: 100%;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.ks-doc-card__track {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--primary, #D80027);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.ks-mini-progress {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.ks-mini-progress__bar {
+    display: inline-flex;
+    gap: 3px;
+}
+
+.ks-mini-progress__bar > i {
+    display: block;
+    width: 22px;
+    height: 6px;
+    background: #d9d9d9;
+}
+
+.ks-mini-progress__bar > i.is-on {
+    background: var(--primary, #D80027);
+}
+
+.ks-mini-progress__text {
+    color: #595959;
+    font-size: 12px;
+}
+
+.ks-mini-progress__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+    .ks-doc-card {
+        padding: 20px 24px;
+    }
+
+    .ks-doc-card__body {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px 24px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .ks-doc-card__body {
+        grid-template-columns: 1.1fr .8fr 1.3fr 1.2fr;
+    }
+}

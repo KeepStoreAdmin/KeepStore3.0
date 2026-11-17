@@ -6,6 +6,7 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-pay-now-1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-account-1b" />
     <style>
         .ks-myaccount .ks-document-date {
             min-width: 0;
@@ -173,7 +174,7 @@
         <asp:SqlDataSource ID="sdsDocumenti" runat="server" 
             ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
             ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
-            SelectCommand="SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline FROM `vdocumenti` LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` WHERE ((`vdocumenti`.`UtentiId` = ?UtentiId) AND (`vdocumenti`.`AziendeId` = ?AziendaId) AND (`vdocumenti`.`TipoDocumentiId` = ?TipoDocumentiId)) ORDER BY `vdocumenti`.`ID` DESC">
+            SelectCommand="SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline, CASE WHEN ltd.Web=1 AND ltd.Abilitato=1 AND ltd.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ListaOrdineWeb FROM `vdocumenti` LEFT JOIN `tipodocumenti` ltd ON ltd.`id` = `vdocumenti`.`TipoDocumentiId` LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` WHERE ((`vdocumenti`.`UtentiId` = ?UtentiId) AND (`vdocumenti`.`AziendeId` = ?AziendaId) AND (`vdocumenti`.`TipoDocumentiId` = ?TipoDocumentiId)) ORDER BY `vdocumenti`.`ID` DESC">
             <SelectParameters>
                 <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="int32" />
                 <asp:SessionParameter Name="AziendaId" SessionField="AziendaID" Type="int32" />
@@ -316,7 +317,7 @@
                         </div>
                     </div>
 
-<div class="tf-order_history-table">
+<div class="tf-order_history-table ks-doc-list-wrap">
     <asp:GridView ID="GridView1" runat="server"
         AllowPaging="True"
         AutoGenerateColumns="False"
@@ -326,107 +327,92 @@
         GridLines="None"
         PageSize="20"
         Width="100%"
-        CssClass="table_def ks-order-table"
+        ShowHeader="False"
+        CssClass="table_def ks-order-table ks-doc-list"
         UseAccessibleHeader="True"
         OnPreRender="GridView1_PreRender_22B">
 
         <EmptyDataRowStyle Font-Bold="False" Height="100px" HorizontalAlign="Center" />
 
         <Columns>
-            <asp:TemplateField HeaderText="Numero">
+            <asp:TemplateField>
                 <ItemTemplate>
-                    <div class="d-flex flex-column">
-                        <div class="body-text-3">
-                            <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="idcoupon" runat="server"
-                                Visible='<%# (Convert.ToString(Request.QueryString("t")) = Convert.ToString(Session("IdDocumentoCoupon"))) %>'
-                                NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>'
-                                Text='<%# Eval("NDocumento") %>'
-                                ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
-                            </asp:HyperLink>
+                    <article class="ks-doc-card">
+                        <header class="ks-doc-card__head">
+                            <div class="ks-doc-card__title">
+                                <span class="ks-doc-card__type"><%#: Eval("TipoDocumentiDescrizione") %> n.</span>
+                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="idcoupon" runat="server"
+                                    Visible='<%# (Convert.ToString(Request.QueryString("t")) = Convert.ToString(Session("IdDocumentoCoupon"))) %>'
+                                    NavigateUrl='<%# "coupon_esito_acquisto.aspx?id=" & Eval("Coupon_idCoupon") & "&cod=" & Eval("Coupon_CodControllo") %>'
+                                    Text='<%# Eval("NDocumento") %>'
+                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
+                                </asp:HyperLink>
 
-                            <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="iddoc" runat="server"
-                                Visible='<%# Not (Convert.ToString(Request.QueryString("t")) = Convert.ToString(Session("IdDocumentoCoupon"))) %>'
-                                NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
-                                Text='<%# Eval("NDocumento") %>'
-                                ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
-                            </asp:HyperLink>
+                                <asp:HyperLink ForeColor="#E12825" Font-Bold="true" ID="iddoc" runat="server"
+                                    Visible='<%# Not (Convert.ToString(Request.QueryString("t")) = Convert.ToString(Session("IdDocumentoCoupon"))) %>'
+                                    NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}") %>'
+                                    Text='<%# Eval("NDocumento") %>'
+                                    ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
+                                </asp:HyperLink>
+                            </div>
+                            <span class="ks-doc-card__date"><%# Eval("DataDocumento", "{0:d}") %></span>
+                        </header>
+
+                        <div class="ks-doc-card__body">
+                            <div class="ks-doc-card__cell">
+                                <span class="ks-doc-card__k">Stato</span>
+                                <span class="ks-status-badge ks-status-badge-order"><%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
+                                <%# ListProgressHtml(Eval("ListaOrdineWeb"), Eval("StatiId")) %>
+                            </div>
+                            <div class="ks-doc-card__cell">
+                                <span class="ks-doc-card__k">Totale</span>
+                                <span class="ks-doc-card__total"><%# Eval("TotaleDocumento", "{0:C}") %></span>
+                                <span class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></span>
+                            </div>
+                            <div class="ks-doc-card__cell">
+                                <span class="ks-doc-card__k">Pagamento</span>
+                                <span class="body-text-3"><%#: GetPaymentMethodLabel(Eval("ListaPagamentoDescrizione")) %></span>
+                                <div class="ks-order-payment-state">
+                                    <span class='<%# GetPaymentStatusCssClass(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %>'><%# GetPaymentStatusLabel(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %></span>
+                                    <asp:Label ID="lblListaDaPagare" runat="server" CssClass="ks-pay-now__badge" Text="Da pagare" Visible='<%# ListPayNowVisible(Eval("id")) %>' />
+                                    <span class="body-small text-main-2"><%#: GetPaymentStatusDescription(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb"), Eval("ListaUltimoEsitoPagamentoWeb"), Eval("ListaPagamentiTipoOnline"), Eval("ListaPagamentoDescrizione")) %></span>
+                                </div>
+                            </div>
+                            <div class="ks-doc-card__cell">
+                                <span class="ks-doc-card__k">Spedizione</span>
+                                <span class="body-text-3"><%#: Eval("VettoriDescrizione") %></span>
+                                <%# ListTrackingHtml(Eval("Tracking"), Eval("Link_Tracking"), Eval("StatiId")) %>
+                            </div>
                         </div>
 
-                        <details class="ks-order-details mt-1">
-                            <summary class="body-small link">Info</summary>
-                            <div class="ks-order-details-body">
-                                <div class="body-small"><strong>Destinatario:</strong> <%#: Eval("RagioneSociale") %> <%#: Eval("CognomeNome") %> - <%#: Eval("SedeLegale") %></div>
-                                <div class="body-small"><strong>Altra destinazione:</strong> <%#: Eval("DestinazioneMerci") %></div>
-                                <div class="body-small"><strong>Pagamento:</strong> <%#: Eval("ListaPagamentoDescrizione") %></div>
-                                <div class="body-small"><strong>Spedizione:</strong> <%#: Eval("VettoriDescrizione") %></div>
-                                <div class="body-small"><strong>Tracking:</strong> <%# separa_tracking(Eval("Tracking"), Eval("Link_Tracking")) %></div>
-                                <div class="body-small" style="<%# testNote(Eval("Note")) %>"><strong>Note corriere:</strong> <%#: Eval("Note") %></div>
-                                <div class="body-small"><strong>Note:</strong> <%#: Eval("NoteEsterne") %></div>
+                        <footer class="ks-doc-card__foot">
+                            <details class="ks-order-details">
+                                <summary class="body-small link">Info</summary>
+                                <div class="ks-order-details-body">
+                                    <div class="body-small"><strong>Destinatario:</strong> <%#: Eval("RagioneSociale") %> <%#: Eval("CognomeNome") %> - <%#: Eval("SedeLegale") %></div>
+                                    <div class="body-small"><strong>Altra destinazione:</strong> <%#: Eval("DestinazioneMerci") %></div>
+                                    <div class="body-small" style="<%# testNote(Eval("Note")) %>"><strong>Note corriere:</strong> <%#: Eval("Note") %></div>
+                                    <div class="body-small"><strong>Note:</strong> <%#: Eval("NoteEsterne") %></div>
+                                </div>
+                            </details>
+                            <div class="ks-action-stack">
+
+                                <asp:HyperLink ID="hlListaPagaAdesso" runat="server" CssClass="tf-btn btn-small d-inline-flex ks-pay-now__btn" NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}#ksPayNow") %>' Visible='<%# ListPayNowVisible(Eval("id")) %>' Text="Paga adesso" ToolTip='<%# "Paga adesso ordine n. " & Eval("NDocumento") %>' />
+
+                                <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
+                                    <span class="text-white">Dettaglio</span>
+                                </a>
+
                             </div>
-                        </details>
-                    </div>
+                        </footer>
+                    </article>
                 </ItemTemplate>
             </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Data">
-                <ItemTemplate>
-                    <span class="body-text-3"><%# Eval("DataDocumento", "{0:d}") %></span>
-                </ItemTemplate>
-            </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Totale">
-                <ItemTemplate>
-                    <div class="d-flex flex-column">
-                        <div class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></div>
-                        <div class="body-small text-main-2">Imponibile: <%# Eval("TotImponibile", "{0:C}") %></div>
-                    </div>
-                </ItemTemplate>
-            </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Metodo pagamento">
-                <ItemTemplate>
-                    <span class="body-text-3"><%#: GetPaymentMethodLabel(Eval("ListaPagamentoDescrizione")) %></span>
-                </ItemTemplate>
-            </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Stato ordine">
-                <ItemTemplate>
-                    <span class="ks-status-badge ks-status-badge-order"><%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
-                </ItemTemplate>
-            </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Stato pagamento">
-                <ItemTemplate>
-                    <div class="ks-order-payment-state">
-                        <span class='<%# GetPaymentStatusCssClass(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %>'><%# GetPaymentStatusLabel(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %></span>
-                        <asp:Label ID="lblListaDaPagare" runat="server" CssClass="ks-pay-now__badge" Text="Da pagare" Visible='<%# ListPayNowVisible(Eval("id")) %>' />
-                        <span class="body-small text-main-2"><%#: GetPaymentStatusDescription(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb"), Eval("ListaUltimoEsitoPagamentoWeb"), Eval("ListaPagamentiTipoOnline"), Eval("ListaPagamentoDescrizione")) %></span>
-                    </div>
-                </ItemTemplate>
-            </asp:TemplateField>
-
-            <asp:TemplateField HeaderText="Azione">
-                <ItemTemplate>
-                    <div class="ks-action-stack">
-
-                        <asp:HyperLink ID="hlListaPagaAdesso" runat="server" CssClass="tf-btn btn-small d-inline-flex ks-pay-now__btn" NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}#ksPayNow") %>' Visible='<%# ListPayNowVisible(Eval("id")) %>' Text="Paga adesso" ToolTip='<%# "Paga adesso ordine n. " & Eval("NDocumento") %>' />
-
-                        <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
-                            <span class="text-white">Dettaglio</span>
-                        </a>
-
-                    </div>
-                </ItemTemplate>
-            </asp:TemplateField>
-            <asp:BoundField DataField="TotIva" HeaderText="Iva" SortExpression="TotIva" DataFormatString="{0:C}" Visible="False" />
-            <asp:BoundField DataField="NDocumento" HeaderText="NDocumento" ReadOnly="True" Visible="False" />
-            <asp:BoundField DataField="id" HeaderText="id" ReadOnly="True" SortExpression="id" Visible="False" />
         </Columns>
 
-        <PagerStyle CssClass="nav" Font-Bold="True" />
-        <HeaderStyle CssClass="title-sidebar fw-medium" />
+        <PagerStyle CssClass="nav ks-doc-list__pager" Font-Bold="True" />
         <EditRowStyle Font-Bold="False" />
-        <RowStyle CssClass="td-order-item" Height="25px" />
+        <RowStyle CssClass="td-order-item" />
 
     </asp:GridView>
 </div>

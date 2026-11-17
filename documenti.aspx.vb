@@ -286,8 +286,10 @@ Partial Class documenti
         strSql &= "dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, "
         strSql &= "COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, "
         strSql &= "COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, "
-        strSql &= "COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline "
+        strSql &= "COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline, "
+        strSql &= "CASE WHEN ltd.Web=1 AND ltd.Abilitato=1 AND ltd.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ListaOrdineWeb "
         strSql &= "FROM `vdocumenti` "
+        strSql &= "LEFT JOIN `tipodocumenti` ltd ON ltd.`id` = `vdocumenti`.`TipoDocumentiId` "
         strSql &= "LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` "
         strSql &= "LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` "
         strSql &= "LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` "
@@ -561,16 +563,24 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Return CanShowPayNow(SafeInt(documentIdObj, 0))
     End Function
 
+    ' KS-MYACCOUNT-1B: la scheda chiede la decisione due volte (etichetta e pulsante): si calcola una volta per documento nella richiesta.
+    Private ReadOnly _payNowDecisions As New System.Collections.Generic.Dictionary(Of Integer, Boolean)()
+
     Private Function CanShowPayNow(ByVal documentId As Integer) As Boolean
         If documentId <= 0 Then Return False
+        Dim cached As Boolean = False
+        If _payNowDecisions.TryGetValue(documentId, cached) Then Return cached
+        Dim decision As Boolean = False
         ' ORDER-REMOTE-PAYMENT-1A: decisione completa sui fatti del documento (una sola query, owner e azienda dell'identita verificata); ogni errore chiude.
         Try
             If CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then Return False
-            Return InternalOrderRemotePaymentPolicy.CanPayNow(
+            decision = InternalOrderRemotePaymentPolicy.CanPayNow(
                 KeepStoreRemotePaymentStore.LoadFacts(documentId, CurrentOrderIdentity.UtentiId, CurrentOrderIdentity.CompanyId), True, True)
         Catch
-            Return False
+            decision = False
         End Try
+        _payNowDecisions(documentId) = decision
+        Return decision
     End Function
 
     Private Function DocumentBelongsToCurrentStorefront(ByVal connection As MySqlConnection,
@@ -784,49 +794,14 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         End Try
     End Function
 
-    ' Gestisce la logica del tracking multiplo usando il template Link_Tracking
-    Public Function separa_tracking(ByVal trackingObj As Object, ByVal linkTrackingObj As Object) As String
-        Dim tracking As String = ""
-        Dim link_tracking As String = ""
-
-        If trackingObj IsNot Nothing AndAlso Not IsDBNull(trackingObj) Then
-            tracking = trackingObj.ToString()
-        End If
-
-        If linkTrackingObj IsNot Nothing AndAlso Not IsDBNull(linkTrackingObj) Then
-            link_tracking = linkTrackingObj.ToString()
-        End If
-
-        If String.IsNullOrWhiteSpace(tracking) OrElse String.IsNullOrWhiteSpace(link_tracking) Then
-            Return ""
-        End If
-
-        Dim ltLower As String = link_tracking.ToLowerInvariant()
-        If Not (ltLower.StartsWith("http://") OrElse ltLower.StartsWith("https://")) Then
-            ' Template di tracking non sicuro: non mostro nulla
-            Return ""
-        End If
-
-        Dim temp As String() = tracking.Split(";"c)
-        Dim sb As New System.Text.StringBuilder()
-
-        For Each codiceRaw As String In temp
-            Dim codice As String = codiceRaw.Trim()
-            If codice <> "" Then
-                Dim safeCode As String = System.Web.HttpUtility.HtmlEncode(codice)
-                Dim href As String = link_tracking.Replace("#ID#", codice)
-                Dim safeHref As String = System.Web.HttpUtility.HtmlAttributeEncode(href)
-
-                sb.Append("<img src=""/Public/Images/interrogativo.png"" alt="""" title=""Clicca sul Numero Tracking"">")
-                sb.Append("<a href=""")
-                sb.Append(safeHref)
-                sb.Append(""" target=""_blank"">")
-                sb.Append(safeCode)
-                sb.Append("</a>; ")
-            End If
-        Next
-
-        Return sb.ToString()
+    ' KS-MYACCOUNT-1B: mini barra e tracking della scheda, dal modulo puro e provato (testo codificato, collegamento solo se sicuro, niente per gli annullati).
+    Protected Function ListProgressHtml(ByVal isOrderObj As Object, ByVal statiIdObj As Object) As String
+        Return KeepStoreOrderProgress.MiniProgressHtml(SafeInt(isOrderObj, 0) = 1, SafeInt(statiIdObj, 0))
     End Function
 
+    Protected Function ListTrackingHtml(ByVal trackingObj As Object, ByVal linkTrackingObj As Object, ByVal statiIdObj As Object) As String
+        Dim tracking As String = If(HasValue(trackingObj), Convert.ToString(trackingObj), "")
+        Dim template As String = If(HasValue(linkTrackingObj), Convert.ToString(linkTrackingObj), "")
+        Return KeepStoreOrderProgress.TrackingLinksHtml(tracking, template, SafeInt(statiIdObj, 0))
+    End Function
 End Class

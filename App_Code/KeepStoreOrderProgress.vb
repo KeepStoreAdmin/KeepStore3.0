@@ -111,4 +111,36 @@ Public Module KeepStoreOrderProgress
         If Not String.IsNullOrEmpty(u.UserInfo) OrElse String.IsNullOrEmpty(u.Host) OrElse u.Host.IndexOf(Probe, StringComparison.OrdinalIgnoreCase) >= 0 Then Return ""
         Return t.Replace("#ID#", Uri.EscapeDataString(code))
     End Function
+
+    ' KS-MYACCOUNT-1B. Mini barra della lista: solo per i tipi ordine, con stato noto e non annullato ("" negli altri casi). Il testo "Passo X di 4" e visibile.
+    Public Function MiniProgressHtml(ByVal isOrder As Boolean, ByVal statiId As Integer) As String
+        If Not isOrder Then Return ""
+        Dim p As OrderProgress = Resolve(statiId)
+        If Not p.Known OrElse p.Cancelled OrElse p.StepNumber < 1 OrElse p.StepNumber > 4 Then Return ""
+        Dim sb As New StringBuilder("<span class=""ks-mini-progress""><span class=""ks-mini-progress__bar"" aria-hidden=""true"">")
+        For n As Integer = 1 To 4
+            sb.Append(If(n <= p.StepNumber, "<i class=""is-on""></i>", "<i></i>"))
+        Next
+        sb.Append("</span><span class=""ks-mini-progress__text"">Passo ").Append(p.StepNumber.ToString(Globalization.CultureInfo.InvariantCulture)).Append(" di 4</span></span>")
+        Return sb.ToString()
+    End Function
+
+    ' KS-MYACCOUNT-1B. Numeri di tracking della lista: testo codificato, collegamento solo se sicuro, niente per un ordine annullato. Non dice mai che l'ordine e partito.
+    Public Function TrackingLinksHtml(ByVal tracking As String, ByVal template As String, ByVal statiId As Integer) As String
+        If Resolve(statiId).Cancelled Then Return ""
+        Dim tokens As List(Of TrackingToken) = ParseTracking(tracking)
+        If tokens.Count = 0 Then Return ""
+        Dim sb As New StringBuilder("<ul class=""ks-doc-card__tracking"">")
+        For Each token As TrackingToken In tokens
+            Dim text As String = System.Net.WebUtility.HtmlEncode(token.Text)
+            sb.Append("<li><span class=""ks-doc-card__code"">").Append(text).Append("</span>")
+            Dim url As String = If(token.Linkable, BuildTrackingUrl(template, token.Text), "")
+            If url.Length > 0 Then
+                sb.Append(" <a class=""ks-doc-card__track"" href=""").Append(System.Net.WebUtility.HtmlEncode(url)).Append(""" target=""_blank"" rel=""noopener noreferrer"">Segui la spedizione<span class=""ks-mini-progress__sr""> numero ").Append(text).Append("</span></a>")
+            End If
+            sb.Append("</li>")
+        Next
+        sb.Append("</ul>")
+        Return sb.ToString()
+    End Function
 End Module
