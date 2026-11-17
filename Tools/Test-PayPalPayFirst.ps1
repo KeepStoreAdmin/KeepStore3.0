@@ -51,7 +51,7 @@ if ($cells[2] -ne '1') { Write-Output 'SKIP: manca la tabella paypal_checkout_te
 $overall = 0
 function Test-Source([string]$Name, [bool]$Ok) { if ($Ok) { Write-Output ('PASS ' + $Name) } else { Write-Output ('FAIL ' + $Name); $script:overall = 1 } }
 
-function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord) {
+function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord, [string]$wh = '', [string]$st = '', [string]$hostPolicy = '', [string]$returnPolicy = '') {
     $list = New-Object System.Collections.ArrayList
     $lockStart = $ord.IndexOf('SyncLock Semaforo', [StringComparison]::Ordinal)
     $lockEnd = $ord.LastIndexOf('End SyncLock', [StringComparison]::Ordinal)
@@ -97,14 +97,37 @@ function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord)
     [void]$list.Add(@{ Name = 'G19 la ripresa pf e agganciata prima della conferma ed e solo GET'; Ok = (($iPf -gt 0) -and ($iConf -gt $iPf) -and ($finishRegion -match 'Request\.HttpMethod, "GET"')) })
     [void]$list.Add(@{ Name = 'G20 una sola chiamata al servizio di incasso, nella ripresa'; Ok = ((([regex]::Matches($ord, 'PayPalPayFirstFinishService\.Run\(')).Count -eq 1) -and ($finishRegion -match 'PayPalPayFirstFinishService\.Run\(')) })
     [void]$list.Add(@{ Name = 'G21 il glue riprende l''incasso con il token del tentativo'; Ok = (($pf -match 'PayPalPayFirstToken\.Create\(result\.AttemptKey, owner\)') -and ($pf -match 'Case PayFirstOutcome\.Finish, PayFirstOutcome\.Confirmation')) })
-    return $list
-}
+    $iAtt = $wh.IndexOf('PayPalPaymentAttempts.LoadForSystemByOrderId(orderId)', [StringComparison]::Ordinal)
+    $iUnk = $wh.IndexOf('UNKNOWN_TRANSACTION', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G22 webhook: il tentativo si cerca PRIMA di dichiarare l''ordine sconosciuto'; Ok = (($iAtt -gt 0) -and ($iUnk -gt $iAtt) -and $wh.Contains('If Not hasTransaction AndAlso payFirstAttempt Is Nothing Then Finish(202')) })
+    $iAuth = $wh.IndexOf('If eventType.StartsWith("PAYMENT.AUTHORIZATION.", StringComparison.Ordinal) Then', [StringComparison]::Ordinal)
+    $iSnap = $wh.IndexOf('Dim snapshot As PayPalOrderSnapshot = BuildSnapshot(resource, orderId, captureId, eventType)', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G23 webhook: gli eventi di autorizzazione non arrivano mai al percorso di sempre (che li scambierebbe per un incasso rifiutato)'; Ok = (($iAuth -gt 0) -and ($iSnap -gt $iAuth)) })
+    $iGuard = $wh.IndexOf('If PayPalPaymentAttempts.LoadForSystemByOrderId(tx.PayPalOrderId) IsNot Nothing Then Finish(200, "OK") : Return', [StringComparison]::Ordinal)
+    $iCap = $wh.IndexOf('client.CaptureOrderVerified(', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G24 webhook: un ordine PayPal con tentativo non passa mai dalla capture dell''ordine'; Ok = (($iGuard -gt 0) -and ($iCap -gt $iGuard)) })
+    $iApply = $wh.LastIndexOf('PayPalCheckoutRepository.ApplyAuthoritativeState(tx, snapshot, eventId)', [StringComparison]::Ordinal)
+    $iSync = $wh.IndexOf('PayPalPayFirstRecovery.SyncAfterCaptureEvent(orderId, snapshot.CaptureId, snapshot.CaptureStatus)', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G25 webhook: dopo l''aggiornamento del documento il tentativo si allinea'; Ok = (($iApply -gt 0) -and ($iSync -gt $iApply)) })
+    [void]$list.Add(@{ Name = 'G26 webhook: eventi supportati anche AUTHORIZATION.VOIDED, AUTHORIZATION.CREATED e CAPTURE.DECLINED'; Ok = ($wh.Contains('eventType = "PAYMENT.AUTHORIZATION.VOIDED"') -and $wh.Contains('eventType = "PAYMENT.AUTHORIZATION.CREATED"') -and $wh.Contains('eventType = "PAYMENT.CAPTURE.DECLINED"')) })
+    $iRecheck = $st.IndexOf('PayPalPayFirstRecovery.RecheckDocument(', [StringComparison]::Ordinal)
+    $iLegacyTx = $st.IndexOf('PayPalCheckoutRepository.LoadTransactionForDocument(documentId)', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G27 ricontrollo: un ordine pay-first si riprende dal tentativo prima del percorso di sempre'; Ok = (($iRecheck -gt 0) -and ($iLegacyTx -gt $iRecheck)) })
+    [void]$list.Add(@{ Name = 'G28 paypalpay.aspx e tra le pagine non indicizzabili e non e mai un ritorno dopo il login'; Ok = ($hostPolicy.Contains('"paypalpay.aspx"') -and $returnPolicy.Contains('"paypalpay.aspx"')) })
+    $iSweep = $pf.IndexOf('PayPalPayFirstRecovery.SweepOwner(', [StringComparison]::Ordinal)
+    $iStart = $pf.IndexOf('PayPalPayFirstService.Start(payCtx', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G29 le autorizzazioni abbandonate dello stesso cliente si liberano prima di aprire un nuovo pagamento'; Ok = (($iSweep -gt 0) -and ($iStart -gt $iSweep)) })
+    return $list}
 
 $pf = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code\PayPalPayFirst.vb'))
 $ret = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'paypalreturn.aspx.vb'))
 $pay = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'paypalpay.aspx.vb'))
 $ord = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'ordine.aspx.vb'))
-foreach ($c in @(Get-SourceChecks $pf $ret $pay $ord)) { Test-Source $c.Name $c.Ok }
+$wh = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'paypalwebhook.aspx.vb'))
+$st = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code\PayPalPaymentState.vb'))
+$hostPolicy = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code\StorefrontCanonicalHostPolicy.vb'))
+$returnPolicy = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code\StorefrontReturnUrlPolicy.vb'))
+foreach ($c in @(Get-SourceChecks $pf $ret $pay $ord $wh $st $hostPolicy $returnPolicy)) { Test-Source $c.Name $c.Ok }
 # --- compilazione ---
 $work = Join-Path ([IO.Path]::GetTempPath()) ('ks-paypal-payfirst-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work -ErrorAction Stop | Out-Null
@@ -202,9 +225,9 @@ try {
                     for ($n = 1; $n -le $srcOcc; $n++) { $srcIdx = $srcText.IndexOf($m.Find, $srcFrom, [StringComparison]::Ordinal); if ($srcIdx -lt 0) { break }; $srcFrom = $srcIdx + $m.Find.Length }
                     if ($srcIdx -lt 0) { Write-Output ('  MUTANT ' + $m.Name + ': ANCORA NON TROVATA (test non valido)'); $survivors++; continue }
                     $srcMut = $srcText.Substring(0, $srcIdx) + $m.Replace + $srcText.Substring($srcIdx + $m.Find.Length)
-                    $mpf = $pf; $mret = $ret; $mpay = $pay; $mord = $ord
-                    switch ($m.File) { 'App_Code\PayPalPayFirst.vb' { $mpf = $srcMut } 'paypalreturn.aspx.vb' { $mret = $srcMut } 'paypalpay.aspx.vb' { $mpay = $srcMut } 'ordine.aspx.vb' { $mord = $srcMut } }
-                    $firstFail = @(Get-SourceChecks $mpf $mret $mpay $mord | Where-Object { -not $_.Ok } | Select-Object -First 1)
+                    $mpf = $pf; $mret = $ret; $mpay = $pay; $mord = $ord; $mwh = $wh; $mst = $st; $mhost = $hostPolicy; $mretpol = $returnPolicy
+                    switch ($m.File) { 'App_Code\PayPalPayFirst.vb' { $mpf = $srcMut } 'paypalreturn.aspx.vb' { $mret = $srcMut } 'paypalpay.aspx.vb' { $mpay = $srcMut } 'ordine.aspx.vb' { $mord = $srcMut } 'paypalwebhook.aspx.vb' { $mwh = $srcMut } 'App_Code\PayPalPaymentState.vb' { $mst = $srcMut } 'App_Code\StorefrontCanonicalHostPolicy.vb' { $mhost = $srcMut } 'App_Code\StorefrontReturnUrlPolicy.vb' { $mretpol = $srcMut } }
+                    $firstFail = @(Get-SourceChecks $mpf $mret $mpay $mord $mwh $mst $mhost $mretpol | Where-Object { -not $_.Ok } | Select-Object -First 1)
                     if ($firstFail.Count -eq 0) { Write-Output ('  SURVIVED ' + $m.Name); $survivors++; continue }
                     $matchedSrc = $false
                     foreach ($prefix in @($m.ExpectedKill)) { if ($firstFail[0].Name.StartsWith($prefix, [StringComparison]::Ordinal)) { $matchedSrc = $true } }

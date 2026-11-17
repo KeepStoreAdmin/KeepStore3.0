@@ -128,6 +128,13 @@ Public Module PayPalPaymentState
         If doc Is Nothing OrElse Not doc.Exists Then result.Message = "PayPal Checkout: documento non trovato" : Return result
         If doc.Pagato = 1 Then result.Success = True : result.Outcome = "ALREADY_COMPLETED" : result.PayReturn = "ok" : Return result
         If doc.PaymentOnline <> PAYPAL_ONLINE_VALUE Then result.Message = "PayPal Checkout: metodo non coerente" : Return result
+        ' PAYPAL-PAY-FIRST-RECOVERY-1A (P3b): un ordine creato dal pay-first si riprende dal tentativo (incasso fermo), non dal percorso CAPTURE di sempre.
+        Dim payFirstAttempt As PayPalAttemptRecord = PayPalPaymentAttempts.LoadForSystemByDocumentId(documentId)
+        If payFirstAttempt IsNot Nothing Then
+            Dim payFirstCfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)
+            If payFirstCfg Is Nothing OrElse Not PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, payFirstCfg) Then result.Message = "PayPal Checkout: configurazione non disponibile" : Return result
+            Return PayPalPayFirstRecovery.RecheckDocument(payFirstAttempt, payFirstCfg, New PayPalOrdersV2Client(payFirstCfg))
+        End If
         Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForDocument(documentId)
         If tx Is Nothing OrElse Not tx.Exists OrElse String.IsNullOrWhiteSpace(tx.PayPalOrderId) Then result.Message = "PayPal Checkout: transazione non trovata" : Return result
         Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(documentId)

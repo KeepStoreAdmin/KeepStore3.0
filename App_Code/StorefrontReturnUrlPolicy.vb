@@ -46,6 +46,7 @@ Public NotInheritable Class StorefrontReturnUrlPolicy
         "password.aspx",
         "pay_your_orders.aspx",
         "paypalcheckout.aspx",
+        "paypalpay.aspx",
         "paypalrecheck.aspx",
         "paypalreturn.aspx",
         "paypalwebhook.aspx",

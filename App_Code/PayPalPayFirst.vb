@@ -566,6 +566,12 @@ Public NotInheritable Class PayPalPayFirstGlue
             ReturnToCart(context, PayPalPayFirstService.MsgNotStarted)
             Return
         End If
+        ' Autorizzazioni abbandonate dello stesso cliente (bozze scadute, mai arrivate all'ordine): si liberano i fondi. Best effort: non blocca mai il pagamento.
+        Try
+            PayPalPayFirstRecovery.SweepOwner(owner.CompanyId, owner.LoginId, payCtx.DraftRequestId, cfg, New PayPalOrdersV2Client(cfg), DateTime.UtcNow)
+        Catch ex As Exception
+            PayPalPaymentState.LogCheckoutFailure("paypal-payfirst", 0, "Pulizia delle autorizzazioni abbandonate non riuscita")
+        End Try
         Apply(context, PayPalPayFirstService.Start(payCtx, cfg, New PayPalOrdersV2Client(cfg), UrlBuilder(context), DateTime.UtcNow), payCtx, owner)
     End Sub
 

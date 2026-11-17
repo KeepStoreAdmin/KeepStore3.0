@@ -35,15 +35,41 @@ Partial Class paypalwebhook
         Dim captureId As String = String.Empty
         Dim orderId As String = ResolveOrderId(eventType, resource, captureId)
         If orderId = String.Empty Then Finish(400, "ORDER_ID_REQUIRED") : Return
+        ' PAYPAL-PAY-FIRST-RECOVERY-1A (P3b): un ordine PayPal puo appartenere a un pagamento aperto PRIMA dell'ordine (tentativo): gli eventi di autorizzazione e quelli
+        ' di un ordine non ancora creato non hanno una riga PayPal del documento. Il tentativo si cerca per primo e la firma si verifica comunque prima di agire.
+        Dim payFirstAttempt As PayPalAttemptRecord = PayPalPaymentAttempts.LoadForSystemByOrderId(orderId)
         Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForExternalReference(If(orderId <> String.Empty, orderId, captureId))
         If tx IsNot Nothing AndAlso tx.LoadStatus = PayPalTransactionLookupStatus.TechnicalError Then Finish(503, "LOOKUP_UNAVAILABLE") : Return
-        If tx Is Nothing OrElse Not tx.Exists Then Finish(202, "UNKNOWN_TRANSACTION") : Return
-        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForDocument(tx.DocumentiId)
-        If cfg Is Nothing OrElse cfg.AziendeId <> tx.AziendeId OrElse cfg.AccountId <> tx.PayPalAccountId OrElse Not cfg.IsWebhookConfigured Then Finish(403, "CONFIGURATION_UNAVAILABLE") : Return
+        Dim hasTransaction As Boolean = tx IsNot Nothing AndAlso tx.Exists
+        If Not hasTransaction AndAlso payFirstAttempt Is Nothing Then Finish(202, "UNKNOWN_TRANSACTION") : Return
+        Dim cfg As PayPalCheckoutConfig = If(hasTransaction, PayPalCheckoutConfig.LoadForDocument(tx.DocumentiId), PayPalCheckoutConfig.LoadForCompanyPayment(payFirstAttempt.AziendeId, payFirstAttempt.PagamentiTipoId))
+        Dim eventCompanyId As Integer = If(hasTransaction, tx.AziendeId, payFirstAttempt.AziendeId)
+        Dim eventAccountId As Integer = If(hasTransaction, tx.PayPalAccountId, payFirstAttempt.PayPalAccountId)
+        If cfg Is Nothing OrElse cfg.AziendeId <> eventCompanyId OrElse cfg.AccountId <> eventAccountId OrElse Not cfg.IsWebhookConfigured Then Finish(403, "CONFIGURATION_UNAVAILABLE") : Return
         Dim verification As PayPalWebhookVerificationResult = New PayPalOrdersV2Client(cfg).VerifyWebhookSignature(
             Request.Headers("PAYPAL-TRANSMISSION-ID"), Request.Headers("PAYPAL-TRANSMISSION-TIME"), Request.Headers("PAYPAL-CERT-URL"),
             Request.Headers("PAYPAL-AUTH-ALGO"), Request.Headers("PAYPAL-TRANSMISSION-SIG"), raw)
         If verification Is Nothing OrElse Not verification.Success Then Finish(400, "SIGNATURE_REJECTED") : Return
+
+        ' Eventi di autorizzazione: riguardano solo i tentativi, mai il percorso di sempre (BuildSnapshot li scambierebbe per un incasso rifiutato).
+        If eventType.StartsWith("PAYMENT.AUTHORIZATION.", StringComparison.Ordinal) Then
+            Dim authorizationOutcome As String = PayPalPayFirstRecovery.HandleAuthorizationEvent(payFirstAttempt, eventType, cfg, New PayPalOrdersV2Client(cfg))
+            raw = String.Empty
+            If authorizationOutcome = "NOT_RECORDED" OrElse authorizationOutcome = "UNKNOWN_NOT_RESOLVED" Then Finish(500, "STATE_UPDATE_FAILED") : Return
+            Finish(200, "OK")
+            Return
+        End If
+
+        ' Ordine senza documento (pay-first prima dell'ordine): un incasso si registra sul tentativo (anche orfano), il resto non richiede nulla.
+        If Not hasTransaction Then
+            If eventType = "PAYMENT.CAPTURE.COMPLETED" OrElse eventType = "PAYMENT.CAPTURE.PENDING" OrElse eventType = "PAYMENT.CAPTURE.DENIED" OrElse eventType = "PAYMENT.CAPTURE.DECLINED" Then
+                Dim orderlessOutcome As String = PayPalPayFirstRecovery.SyncAfterCaptureEvent(orderId, captureId, BuildSnapshot(resource, orderId, captureId, eventType).CaptureStatus)
+                If orderlessOutcome = "NOT_RECORDED" OrElse orderlessOutcome = "UNKNOWN_NOT_RESOLVED" Then Finish(500, "STATE_UPDATE_FAILED") : Return
+            End If
+            raw = String.Empty
+            Finish(200, "OK")
+            Return
+        End If
 
         If eventType = "CHECKOUT.ORDER.APPROVED" Then
             ProcessApprovedOrder(tx, cfg, eventId)
@@ -65,13 +91,19 @@ Partial Class paypalwebhook
         Dim captureDoc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForPayment(tx.DocumentiId)
         If Not MatchesTransaction(tx, cfg, captureDoc, snapshot) Then Finish(409, "EVENT_MISMATCH") : Return
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, snapshot, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return
+        ' Ordine pay-first: il tentativo si allinea (COMPLETED, rifiutato). Un fallimento qui si ripete alla prossima consegna dell'evento.
+        If payFirstAttempt IsNot Nothing Then
+            Dim syncOutcome As String = PayPalPayFirstRecovery.SyncAfterCaptureEvent(orderId, snapshot.CaptureId, snapshot.CaptureStatus)
+            If syncOutcome = "NOT_RECORDED" OrElse syncOutcome = "UNKNOWN_NOT_RESOLVED" Then Finish(500, "STATE_UPDATE_FAILED") : Return
+        End If
         raw = String.Empty
         Finish(200, "OK")
     End Sub
-
     Private Sub ProcessApprovedOrder(ByVal tx As PayPalCheckoutTransactionInfo,
                                      ByVal cfg As PayPalCheckoutConfig,
                                      ByVal eventId As String)
+        ' Un ordine PayPal con tentativo (intent AUTHORIZE) non passa MAI dal percorso CAPTURE di sempre: nessuna capture dell'ordine da qui.
+        If PayPalPaymentAttempts.LoadForSystemByOrderId(tx.PayPalOrderId) IsNot Nothing Then Finish(200, "OK") : Return
         Dim doc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForPayment(tx.DocumentiId)
         If doc Is Nothing OrElse Not doc.Exists OrElse doc.AziendeId <> tx.AziendeId OrElse doc.PagamentiTipoId <> tx.PagamentiTipoId Then Finish(409, "DOCUMENT_MISMATCH") : Return
         Dim client As New PayPalOrdersV2Client(cfg)
@@ -99,7 +131,8 @@ Partial Class paypalwebhook
 
     Private Shared Function IsSupportedEvent(ByVal eventType As String) As Boolean
         Return eventType = "CHECKOUT.ORDER.APPROVED" OrElse eventType = "CHECKOUT.PAYMENT-APPROVAL.REVERSED" OrElse
-               eventType = "PAYMENT.CAPTURE.COMPLETED" OrElse eventType = "PAYMENT.CAPTURE.PENDING" OrElse eventType = "PAYMENT.CAPTURE.DENIED"
+               eventType = "PAYMENT.CAPTURE.COMPLETED" OrElse eventType = "PAYMENT.CAPTURE.PENDING" OrElse eventType = "PAYMENT.CAPTURE.DENIED" OrElse
+               eventType = "PAYMENT.CAPTURE.DECLINED" OrElse eventType = "PAYMENT.AUTHORIZATION.CREATED" OrElse eventType = "PAYMENT.AUTHORIZATION.VOIDED"
     End Function
 
     Private Shared Function ResolveOrderId(ByVal eventType As String,

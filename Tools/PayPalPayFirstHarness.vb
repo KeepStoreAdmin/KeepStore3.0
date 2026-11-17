@@ -102,6 +102,13 @@ Public Class FakePayPal
         Return n
     End Function
 
+    Public Function HasRequestId(ByVal kind As String, ByVal requestId As String) As Boolean
+        For i As Integer = 0 To Kinds.Count - 1
+            If Kinds(i) = kind AndAlso Requests(i).RequestId = requestId Then Return True
+        Next
+        Return False
+    End Function
+
     Public Function LastRequestId(ByVal kind As String) As String
         For i As Integer = Kinds.Count - 1 To 0 Step -1
             If Kinds(i) = kind Then Return Requests(i).RequestId
@@ -484,6 +491,7 @@ Public Module PayFirstHarness
             RunFinish()
             RunTransaction()
             RunToken()
+            RunRecovery()
         Catch ex As FailFastException
         Catch ex As Exception
             _fail += 1
@@ -1203,4 +1211,123 @@ Public Module PayFirstHarness
               Not PayPalPayFirstToken.TryParsePayload("", identity, now, parsed))
         Check("K08 una chiave del tentativo non valida non produce un payload", PayPalPayFirstToken.BuildPayload("../x", identity, now) = "" AndAlso PayPalPayFirstToken.BuildPayload(key, Nothing, now) = "")
     End Sub
+    ' ----- P3b: webhook, ricontrollo dal dettaglio ordine, annullo delle autorizzazioni abbandonate -----
+    Private Function ForceOnly(ByVal a As PayPalAttemptRecord, ByVal state As String, Optional ByVal previous As String = "") As PayPalAttemptRecord
+        Force(a.Id, state, previous)
+        Return Reload(a)
+    End Function
+
+    Private Sub Expire(ByVal id As Long)
+        Exec("UPDATE paypal_checkout_tentativi SET DraftExpiresAt=UTC_TIMESTAMP() - INTERVAL 30 MINUTE WHERE Id=" & id.ToString(CultureInfo.InvariantCulture))
+    End Sub
+
+    Private Sub RunRecovery()
+        ' --- eventi di capture del webhook: il tentativo si allinea ---
+        Dim fw As New FakePayPal()
+        Dim dw As Integer
+        Dim w1 As PayPalAttemptRecord = CommittedAttempt(fw, dw)
+        Check("W01 CAPTURE.COMPLETED su DOC_COMMITTED: il tentativo diventa COMPLETED con l'id della capture", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w1.PayPalOrderId, "KSWEBCAP1", "COMPLETED") = "COMPLETED" AndAlso Reload(w1).Stato = "COMPLETED" AndAlso Reload(w1).PayPalCaptureId = "KSWEBCAP1")
+        Check("W02 evento ripetuto: nessun cambiamento", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w1.PayPalOrderId, "KSWEBCAP1", "COMPLETED") = "ALREADY_COMPLETED")
+        Dim w3 As PayPalAttemptRecord = CommittedAttempt(fw, dw)
+        PayPalPaymentAttempts.BeginCapture(w3.Id, w3.AziendeId)
+        Check("W03 CAPTURE.COMPLETED su CAPTURING: COMPLETED", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w3.PayPalOrderId, "KSWEBCAP3", "COMPLETED") = "COMPLETED" AndAlso Reload(w3).Stato = "COMPLETED")
+        Dim w4 As PayPalAttemptRecord = ForceOnly(CommittedAttempt(fw, dw), "CAPTURE_REFUSED")
+        Check("W04 capture completata dal pannello PayPal dopo un rifiuto: COMPLETED", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w4.PayPalOrderId, "KSWEBCAP4", "COMPLETED") = "COMPLETED" AndAlso Reload(w4).Stato = "COMPLETED")
+        Dim w5 As PayPalAttemptRecord = Authorized(NewCtx(), fw)
+        Check("W05 incasso su un tentativo senza ordine (AUTHORIZED): registrato come incasso orfano, non perso", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w5.PayPalOrderId, "KSWEBCAP5", "COMPLETED") = "ORPHAN_CAPTURE" AndAlso Reload(w5).Stato = "CAPTURED_ORPHAN" AndAlso Reload(w5).PayPalCaptureId = "KSWEBCAP5")
+        Dim w6 As PayPalAttemptRecord = ForceOnly(Authorized(NewCtx(), fw), "VOIDED")
+        Check("W06 incasso tardivo su un'autorizzazione gia annullata: incasso orfano", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w6.PayPalOrderId, "KSWEBCAP6", "COMPLETED") = "ORPHAN_CAPTURE" AndAlso Reload(w6).Stato = "CAPTURED_ORPHAN")
+        Dim w7 As PayPalAttemptRecord = CommittedAttempt(fw, dw)
+        PayPalPaymentAttempts.BeginCapture(w7.Id, w7.AziendeId)
+        Check("W07 CAPTURE.DENIED su CAPTURING: CAPTURE_REFUSED", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w7.PayPalOrderId, "KSWEBCAP7", "DENIED") = "REFUSED" AndAlso Reload(w7).Stato = "CAPTURE_REFUSED")
+        Dim w8 As PayPalAttemptRecord = CommittedAttempt(fw, dw)
+        Check("W08 CAPTURE.DENIED su DOC_COMMITTED (incasso mai avviato): nessun cambiamento", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w8.PayPalOrderId, "KSWEBCAP8", "DENIED") = "NO_CHANGE" AndAlso Reload(w8).Stato = "DOC_COMMITTED")
+        Check("W09 CAPTURE.PENDING: nessun cambiamento", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w8.PayPalOrderId, "KSWEBCAP8", "PENDING") = "NO_CHANGE" AndAlso Reload(w8).Stato = "DOC_COMMITTED")
+        Check("W10 ordine PayPal senza tentativo (percorso di sempre): nessun tentativo, nessuna azione", PayPalPayFirstRecovery.SyncAfterCaptureEvent("KSNOSUCHORDER", "KSWEBCAP9", "COMPLETED") = "NO_ATTEMPT")
+        Dim w11 As PayPalAttemptRecord = CommittedAttempt(fw, dw)
+        PayPalPaymentAttempts.BeginCapture(w11.Id, w11.AziendeId)
+        PayPalPaymentAttempts.RecordUnknown(w11.Id, w11.AziendeId, "TEST_UNKNOWN")
+        Check("W11 CAPTURE.COMPLETED su UNKNOWN (era CAPTURING): COMPLETED", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w11.PayPalOrderId, "KSWEBCAP11", "COMPLETED") = "COMPLETED" AndAlso Reload(w11).Stato = "COMPLETED")
+        Dim w12 As PayPalAttemptRecord = CommittedAttempt(fw, dw)
+        Check("W12 evento senza id della capture: ignorato", PayPalPayFirstRecovery.SyncAfterCaptureEvent(w12.PayPalOrderId, "", "COMPLETED") = "NO_CAPTURE_ID" AndAlso Reload(w12).Stato = "DOC_COMMITTED")
+
+        ' --- eventi di autorizzazione ---
+        Dim fa As New FakePayPal()
+        Dim a1 As PayPalAttemptRecord = Authorized(NewCtx(), fa)
+        Check("H01 AUTHORIZATION.CREATED: ignorato", PayPalPayFirstRecovery.HandleAuthorizationEvent(a1, "PAYMENT.AUTHORIZATION.CREATED", Cfg(), Client(fa)) = "IGNORED" AndAlso Reload(a1).Stato = "AUTHORIZED")
+        Dim callsH As Integer = fa.Requests.Count
+        Check("H02 AUTHORIZATION.VOIDED ma PayPal dice ancora CREATED: nessun cambiamento (l'evento non e una prova)", PayPalPayFirstRecovery.HandleAuthorizationEvent(a1, "PAYMENT.AUTHORIZATION.VOIDED", Cfg(), Client(fa)) = "NO_CHANGE" AndAlso Reload(a1).Stato = "AUTHORIZED" AndAlso fa.Count("getauth") = 1 AndAlso fa.Requests.Count = callsH + 1)
+        fa.Orders(a1.PayPalOrderId).AuthStatus = "VOIDED"
+        Check("H03 AUTHORIZATION.VOIDED e PayPal conferma: autorizzazione persa, tentativo FAILED", PayPalPayFirstRecovery.HandleAuthorizationEvent(a1, "PAYMENT.AUTHORIZATION.VOIDED", Cfg(), Client(fa)) = "AUTHORIZATION_LOST" AndAlso Reload(a1).Stato = "FAILED")
+        Dim a2 As PayPalAttemptRecord = Authorized(NewCtx(), fa)
+        PayPalPaymentAttempts.RecordVoidingUnbound(a2.Id, a2.AziendeId, "T")
+        Check("H04 AUTHORIZATION.VOIDED durante il nostro annullo (VOIDING): VOIDED", PayPalPayFirstRecovery.HandleAuthorizationEvent(Reload(a2), "PAYMENT.AUTHORIZATION.VOIDED", Cfg(), Client(fa)) = "VOIDED" AndAlso Reload(a2).Stato = "VOIDED")
+        Dim dh As Integer
+        Dim a3 As PayPalAttemptRecord = CommittedAttempt(fa, dh)
+        Check("H05 AUTHORIZATION.VOIDED con l'ordine gia creato: nessun cambiamento (si decide all'incasso)", PayPalPayFirstRecovery.HandleAuthorizationEvent(a3, "PAYMENT.AUTHORIZATION.VOIDED", Cfg(), Client(fa)) = "NO_CHANGE" AndAlso Reload(a3).Stato = "DOC_COMMITTED")
+        Dim a4 As PayPalAttemptRecord = Authorized(NewCtx(), fa)
+        PayPalPaymentAttempts.RecordVoidingUnbound(a4.Id, a4.AziendeId, "T")
+        PayPalPaymentAttempts.RecordUnknown(a4.Id, a4.AziendeId, "TEST_UNKNOWN")
+        Check("H06 AUTHORIZATION.VOIDED su UNKNOWN (era VOIDING): VOIDED", PayPalPayFirstRecovery.HandleAuthorizationEvent(Reload(a4), "PAYMENT.AUTHORIZATION.VOIDED", Cfg(), Client(fa)) = "VOIDED" AndAlso Reload(a4).Stato = "VOIDED")
+        Check("H07 evento non supportato: ignorato", PayPalPayFirstRecovery.HandleAuthorizationEvent(a1, "PAYMENT.CAPTURE.REFUNDED", Cfg(), Client(fa)) = "UNSUPPORTED")
+
+        ' --- ricontrollo dal dettaglio dell'ordine ---
+        Dim fc As New FakePayPal()
+        Dim dc As Integer
+        Dim c1 As PayPalAttemptRecord = CommittedAttempt(fc, dc)
+        Dim rc1 As PayPalPendingRecheckResult = PayPalPayFirstRecovery.RecheckDocument(c1, Cfg(), Client(fc))
+        Check("C01 ricontrollo su un ordine pay-first: incasso e pagamento, esito ok", rc1.Success AndAlso rc1.Outcome = "COMPLETED" AndAlso rc1.PayReturn = "ok" AndAlso rc1.DocumentId = dc AndAlso DocState(dc).StartsWith("1|2|", StringComparison.Ordinal))
+        Dim rc1b As PayPalPendingRecheckResult = PayPalPayFirstRecovery.RecheckDocument(c1, Cfg(), Client(fc))
+        Check("C02 ricontrollo ripetuto: nessuna seconda capture", rc1b.Success AndAlso rc1b.PayReturn = "ok" AndAlso fc.Count("capture") = 1)
+        Dim fp As New FakePayPal()
+        Dim dp As Integer
+        Dim c3 As PayPalAttemptRecord = CommittedAttempt(fp, dp)
+        fp.CaptureOutcome = "PENDING"
+        Dim rc3 As PayPalPendingRecheckResult = PayPalPayFirstRecovery.RecheckDocument(c3, Cfg(), Client(fp))
+        Check("C03 capture PENDING: in verifica, esito ok come per il percorso di sempre", rc3.Success AndAlso rc3.Outcome = "PENDING" AndAlso rc3.PayReturn = "ok")
+        Dim fn As New FakePayPal()
+        Dim dn As Integer
+        Dim c4 As PayPalAttemptRecord = CommittedAttempt(fn, dn)
+        fn.FailOAuth = True
+        Dim rc4 As PayPalPendingRecheckResult = PayPalPayFirstRecovery.RecheckDocument(c4, Cfg(), Client(fn))
+        Check("C04 chiamata non partita: non completato, esito ko", Not rc4.Success AndAlso rc4.PayReturn = "ko" AndAlso rc4.Outcome = "NOT_COMPLETED")
+        Dim fr As New FakePayPal()
+        Dim dr As Integer
+        Dim c5 As PayPalAttemptRecord = CommittedAttempt(fr, dr)
+        fr.CaptureOutcome = "DECLINED"
+        Dim rc5 As PayPalPendingRecheckResult = PayPalPayFirstRecovery.RecheckDocument(c5, Cfg(), Client(fr))
+        Check("C05 incasso rifiutato: non completato, documento non pagato con il motivo", Not rc5.Success AndAlso rc5.PayReturn = "ko" AndAlso DocState(dr) = "0|3|")
+
+        ' --- annullo delle autorizzazioni abbandonate (login dedicati: ListLiveByOwner e limitato a 100 righe per proprietario) ---
+        Dim fs As New FakePayPal()
+        Dim e1 As PayPalAttemptRecord = Authorized(NewCtxFor(7305), fs)
+        Expire(e1.Id)
+        Dim e2ctx As PayPalPayFirstContext = NewCtxFor(7305)
+        StartIt(e2ctx, fs)
+        Dim e2 As PayPalAttemptRecord = Latest(e2ctx)
+        Expire(e2.Id)
+        Dim e3 As PayPalAttemptRecord = Authorized(NewCtxFor(7305), fs)
+        Dim e4 As PayPalAttemptRecord = Authorized(NewCtxFor(7305), fs)
+        Expire(e4.Id)
+        Dim e4doc As Integer = NextDoc()
+        CommitPayFirst(e4, "12.34", e4doc)
+        Dim e5 As PayPalAttemptRecord = Authorized(NewCtxFor(7305), fs)
+        Expire(e5.Id)
+        Dim stranger As PayPalAttemptRecord = Authorized(NewCtxFor(7306), fs)
+        Expire(stranger.Id)
+        Dim swept As Integer = PayPalPayFirstRecovery.SweepOwner(9301, 7305, e5.DraftRequestId, Cfg(), Client(fs), DateTime.UtcNow)
+        Check("E01 autorizzazione abbandonata (bozza scaduta, nessun ordine): annullata con il request id di annullo", Reload(e1).Stato = "VOIDED" AndAlso fs.HasRequestId("void", e1.VoidRequestId))
+        Check("E02 tentativo CREATED con bozza scaduta: chiuso", Reload(e2).Stato = "FAILED")
+        Check("E03 bozza ancora valida: non si tocca", Reload(e3).Stato = "AUTHORIZED")
+        Check("E04 tentativo con l'ordine gia creato: non si tocca mai", Reload(e4).Stato = "DOC_COMMITTED")
+        Check("E05 la bozza corrente non si tocca anche se scaduta", Reload(e5).Stato = "AUTHORIZED")
+        Check("E06 il conteggio e esatto", swept = 2)
+        Check("E07 il tentativo di un altro login non si tocca", Reload(stranger).Stato = "AUTHORIZED" AndAlso PayPalPayFirstRecovery.SweepOwner(9301, 7305, "", Cfg(9302), Client(fs), DateTime.UtcNow) = 0)
+    End Sub
+
+    Private Function NewCtxFor(ByVal login As Long) As PayPalPayFirstContext
+        Dim c As PayPalPayFirstContext = NewCtx()
+        c.LoginId = login
+        Return c
+    End Function
 End Module
