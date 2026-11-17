@@ -37,3 +37,5 @@ Test-KeepStoreTenantOnboarding # richiede parametri obbligatori (CanonicalUrl, H
 Test-RegistrationPostSaveRouting # richiede il parametro obbligatorio EvidenceDirectory: l'harness non lo passa (verificato su d4f5bdba)
 Test-LabCartCheckoutSmoke # S01_LOGIN_SYNTHETIC_USER: serve il sito LAB acceso con l'utente sintetico (verificato su d4f5bdba, worktree pulito)
 Test-LabAvailabilityVisitorRule # V05_PRODUCT_SHOWS_WORDS synthetic=0: serve il sito LAB con i dati sintetici (verificato su d4f5bdba, worktree pulito)
+Test-AccountOrderContinuity # richiede -EvidenceDirectory (nuova cartella in TEMP); e con la cartella fallisce gia sulla stable con OUTSIDE_PAYMENT_PRESENTATION_CHANGED documenti.aspx.vb: il confronto con una base vecchia (verificato su 8541cf57, worktree pulito)
+Test-MyAccountRecentOrdersTenant # richiede -EvidenceDirectory (nuova cartella in TEMP); e con la cartella fallisce gia sulla stable con RECENT_ORDERS_ASSERT: Unchanged myaccount.aspx.vb (verificato su 8541cf57, worktree pulito)
