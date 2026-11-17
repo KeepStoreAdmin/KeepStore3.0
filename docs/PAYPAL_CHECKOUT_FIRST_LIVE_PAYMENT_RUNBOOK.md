@@ -20,6 +20,21 @@ Gli hash sono dei file come stanno nella cartella di lavoro `C:\KeepStoreWeb\Kee
 4. Cambiare un file in `App_Code` fa ricompilare e riavviare l'applicazione: farlo in un momento di poco traffico (le sessioni in corso si perdono). Aprire la home e una pagina prodotto: devono caricarsi.
 5. Ripristino: rimettere i due file di backup (stessa procedura, controllo hash PRIMA).
 
+## 1bis. Consegna di PAYPAL-CAPTURE-REPRESENTATION-1A (#533): quattro file, in quest'ordine
+
+Senza questa consegna create e capture di PayPal che seguono gli esempi ufficiali sarebbero scartati (misurato). Prima i file di `App_Code`, poi le tre pagine insieme (le pagine usano un metodo nuovo del client).
+
+| Ordine | File | SHA-256 PRIMA (stable `30029c97`) | SHA-256 DOPO |
+| --- | --- | --- | --- |
+| 1 | `App_Code\PayPalOrdersV2Client.vb` | `23c347f89b3e7aef12aa7d6af793d335ee04cc907d2a0b17cad12cc40328569e` | `e6f6e669327f3349d1d2e3367eb6b84fece2d585983b4819c86119bbc3de884e` |
+| 2 | `paypalcheckout.aspx.vb` | `5bb613185980380ebee78d950aaac37770875bc821518e65e6e0c9b3640368db` | `44bbd7ce891fce204b296d12dd99468b36640e47b802dd207b5285365579bda9` |
+| 2 | `paypalreturn.aspx.vb` | `d606863b1930b5c3bf1722ba25b2c237d5436e2befabceee2e6d0904cb13eaee` | `2b27150c521d2b1efba8bd9047fa8d41fa5409b9b1afd3fb78207c2f829fba83` |
+| 2 | `paypalwebhook.aspx.vb` | `99878475b64533799c6747d519faaf6583911ee09d360f0578c454b35fae317a` | `45d7c4b485741b926c0525a5da4a2ee2c652d4e4d1894fdb5cdd07d30b03a9f7` |
+
+Gli hash sono dei file come stanno nella cartella di lavoro (CRLF). Se il file sul server ha un hash PRIMA diverso, non e la versione di `30029c97` (per esempio mancano gia le correzioni del punto 1): fermarsi e dirmelo. Il client e cumulativo (contiene anche i tipi di P1) ma i file `PayPalCheckoutRepository.vb` e `PayPalPaymentState.vb` del punto 1 devono essere gia al posto loro.
+
+**Cosa guardare nel registro dopo il primo pagamento** (`paypal-checkout.log`, `paypal-webhook.log`): la riga dice lo stato HTTP e un codice. `CAPTURE_RESPONSE_<CAMPO>` = la risposta di cattura non coincide con l'ordine (importo, valuta, id, payee...); `CAPTURE_READBACK_<CAMPO>` = il GET dopo la cattura non e coerente (per esempio `INTENT`, `PAYEE`, `MERCHANT`: **la risposta reale non porta quel campo**) oppure `CAPTURE_READBACK_GET_<stato>` = il GET non e riuscito; in tutti questi casi l'addebito PUO essere avvenuto e il documento resta non pagato: non pagare di nuovo, aprire il dettaglio ordine (ricontrollo) e dirmi riga e ora. Sul create, `check=<CAMPO>` dopo `http=...` dice quale campo della risposta di creazione non coincide (`APPROVAL_HOST` = il link non e di PayPal).
+
 ## 2. Prima del pagamento (senza spendere nulla)
 a. Schema (sola lettura, database selezionato; tutte le righe devono dare `presente = 1`, l'ultima `4`):
 ```sql
