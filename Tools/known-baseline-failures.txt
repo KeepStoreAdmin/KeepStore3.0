@@ -29,3 +29,7 @@ Test-StorefrontPromotionBulkPerformance # 18 su 19: "full-pool resolution is ret
 Test-ShoppingAssistantProgressiveResults # richiede -PlaywrightModulePath e -BrowserExecutable obbligatori: il runner non li passa, errore di parametro (verificato su 82b3e27d)
 Test-StorefrontPromotionRouteRetirement # [Net.Http.HttpClientHandler] non trovato: il test non carica System.Net.Http in Windows PowerShell 5.1 (verificato su 82b3e27d)
 Test-RegOrderSql8Compatibility # asserzione "price resolution fiscal promotion locks and transaction code unchanged" fallisce gia sulla stable, anche su un worktree pulito e con -EvidenceDirectory (verificato su 5e43d3e2)
+Test-CheckoutDraftTelemetry # pretende CurrentVersion = 4 ma la bozza e alla versione 5 (verificato su 4fa056b2)
+Test-CheckoutTerminalOutcomes # pretende "If Vettore <= 0 Then" in ordine.aspx.vb, che ha "If Vettore = 0 Then" (verificato su 4fa056b2)
+Test-OrderDocumentNumberOut # preflight "LF line endings only": la copia di lavoro Windows e CRLF (verificato su 4fa056b2)
+Test-OrderConcurrencyLab # SESSION_A_NEVER_SIGNALLED sul LAB di questa macchina (verificato su 4fa056b2)
