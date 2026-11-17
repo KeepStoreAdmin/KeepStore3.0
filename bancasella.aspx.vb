@@ -34,17 +34,16 @@ Partial Class BancaSella
             result = "Pagamento non disponibile."
             Exit Sub
         End If
-        If String.Equals(document.OrigineOrdine, "WEB", StringComparison.OrdinalIgnoreCase) Then
-            If Not PayPalWebLaunchContext.Consume(HttpContext.Current, documentId, owner, "SELLA", requestedAmount) Then
+        ' ORDER-REMOTE-PAYMENT-1A: contesto di lancio valido (ordine del sito appena creato) = percorso web di sempre; altrimenti decisione completa sui fatti del documento
+        ' (ordine del gestionale o metodo cambiato dal PO) e importo uguale al totale del documento.
+        Dim viaLaunch As Boolean = String.Equals(document.OrigineOrdine, "WEB", StringComparison.OrdinalIgnoreCase) AndAlso
+            PayPalWebLaunchContext.Consume(HttpContext.Current, documentId, owner, "SELLA", requestedAmount)
+        If Not viaLaunch Then
+            If Not InternalOrderRemotePaymentPolicy.CanPayNow(KeepStoreRemotePaymentStore.LoadFacts(documentId, owner.UtentiId, owner.CompanyId), True, True) OrElse
+               requestedAmount <> Math.Round(document.TotalDocument, 2, MidpointRounding.AwayFromZero) Then
                 result = "Pagamento non disponibile."
                 Exit Sub
             End If
-        ElseIf Not InternalOrderRemotePaymentPolicy.CanPayNow(document.OrigineOrdine, True, True,
-            document.ValidOrderType, document.Pagato, document.DocumentState, document.PaymentState,
-            document.PaymentOnline, document.AllowLaterPayment, document.HasGatewayAuthorization,
-            document.TotalDocument) OrElse requestedAmount <> Math.Round(document.TotalDocument, 2, MidpointRounding.AwayFromZero) Then
-            result = "Pagamento non disponibile."
-            Exit Sub
         End If
 
         '=========================================================
@@ -188,6 +187,9 @@ Partial Class BancaSella
                     shopLogin &
                     "&b=" &
                     HttpUtility.UrlEncode(encryptedData)
+
+                ' ORDER-REMOTE-PAYMENT-1A: la carta e stata avviata: si scrivono data e ultimo esito (stato invariato, nessuna tabella dei tentativi), cosi PayPal non la scavalca per un'ora.
+                KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId)
 
                 ' Redirect "pulito": non solleviamo ThreadAbortException
                 Response.Redirect(urlPagamento, False)

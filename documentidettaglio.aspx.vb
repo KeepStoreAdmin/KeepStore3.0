@@ -708,12 +708,11 @@ Partial Class documentidettaglio
     End Function
 
     Private Function CanShowPayNow(ByVal info As PayNowDocumentInfo) As Boolean
-        If info Is Nothing Then Return False
+        If info Is Nothing OrElse _authorizedIdentity Is Nothing OrElse Not _authorizedIdentity.IsComplete Then Return False
 
-        Return InternalOrderRemotePaymentPolicy.CanPayNow(info.OrigineOrdine, True, True,
-            info.ValidOrderType, info.Pagato, info.StatiId, info.StatoPagamentoWeb,
-            info.PagamentiTipoOnline, info.PermettiPagamentoSuccessivo,
-            Not String.IsNullOrEmpty(info.CodiceAutorizzazione), info.TotaleDocumento)
+        ' ORDER-REMOTE-PAYMENT-1A: decisione completa sui fatti del documento (una sola query, owner e azienda dell'identita verificata).
+        Return InternalOrderRemotePaymentPolicy.CanPayNow(
+            KeepStoreRemotePaymentStore.LoadFacts(info.DocumentId, _authorizedIdentity.UtentiId, _authorizedIdentity.CompanyId), True, True)
     End Function
 
     Private Function GetPayNowSessionContext() As String

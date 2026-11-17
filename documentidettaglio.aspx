@@ -5,7 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20260609-order-confirmation-1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-pay-now-1a" />
     <script src="https://ecomm.sella.it/pagam/JavaScript/js_GestPay.js" type="text/javascript"></script>
 </asp:Content>
 
@@ -44,6 +44,30 @@
                 <asp:FormView ID="FormView1" runat="server" DataSourceID="sdsTestata" Width="100%">
                     <ItemTemplate>
 
+                        <span id="ksPayNow"></span>
+                        <div id="pnlPayNowCard" runat="server" visible="false" class="ks-pay-now" role="region" aria-labelledby="ksPayNowTitle">
+                            <div class="ks-pay-now__notice">
+                                <span class="ks-pay-now__icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /><path d="M6.5 15h4" /></svg>
+                                </span>
+                                <div class="ks-pay-now__text">
+                                    <h2 id="ksPayNowTitle">Questo ordine è da pagare</h2>
+                                    <p class="ks-pay-now__lead">Importo da pagare <strong><%# Eval("TotaleDocumento", "{0:C}") %></strong> con <%# Eval("PagamentiTipoDescrizione") %>. Premi il pulsante per andare alla pagina di pagamento.</p>
+                                </div>
+                            </div>
+                            <div class="ks-pay-now__actions">
+                                <asp:TextBox ID="tbTipo" runat="server" Visible="false" Text='<%# Eval("TipoDocumentiId") %>' Width="10"></asp:TextBox>
+                                <asp:TextBox ID="tbOnline" runat="server" Visible="false" Text='<%# Eval("PagamentiTipoOnline") %>' Width="10"></asp:TextBox>
+                                <asp:HiddenField ID="hfPayNowDocumentId" runat="server" Value='<%# Eval("id") %>' />
+
+                                <asp:HyperLink ID="hlBancaSella" runat="server" Visible="false" ToolTip="Paga adesso con carta" CssClass="tf-btn ks-pay-now__btn" Text="Paga adesso con carta" />
+                                <asp:HyperLink ID="hlPayPalCheckout" runat="server" Visible="false" ToolTip="Paga adesso con PayPal" CssClass="tf-btn ks-pay-now__btn" Text="Paga adesso con PayPal" />
+
+                                <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="/Public/assets/images/pagamenti/visa.svg" Style="height:42px;" />
+
+                                <asp:Button ID="btPayPal" runat="server" Visible="false" Text="PAGA ADESSO" Font-Bold="true" CommandName="PagamentoPayPal" idDocumento='<%# Eval("id") %>' nDocumento='<%# Eval("NDocumento") %>' totaleDocumento='<%# Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") %>' dataDocumento='<%# Eval("DataDocumento") %>' ToolTip="Paga con PayPal" CssClass="tf-btn ks-pay-now__btn" />
+                            </div>
+                        </div>
                         <section class="ks-order-confirmation" data-order-number='<%# HtmlAttr(Eval("NDocumento")) %>'>
                             <div class="ks-confirm-hero">
                                 <div class="ks-confirm-hero-main">
@@ -167,23 +191,6 @@
                                 </article>
                             </div>
                         </section>
-
-                        <div id="pnlPayNowCard" runat="server" visible="false" class="order-detail-wrap">
-                            <h5 class="fw-bold">Paga adesso</h5>
-                            <div class="ks-actions">
-                                <asp:TextBox ID="tbTipo" runat="server" Visible="false" Text='<%# Eval("TipoDocumentiId") %>' Width="10"></asp:TextBox>
-                                <asp:TextBox ID="tbOnline" runat="server" Visible="false" Text='<%# Eval("PagamentiTipoOnline") %>' Width="10"></asp:TextBox>
-                                <asp:HiddenField ID="hfPayNowDocumentId" runat="server" Value='<%# Eval("id") %>' />
-
-                                <asp:HyperLink ID="hlBancaSella" runat="server" Visible="false" ToolTip="Paga adesso con carta" CssClass="tf-btn" Text="Paga con carta" />
-                                <asp:HyperLink ID="hlPayPalCheckout" runat="server" Visible="false" ToolTip="Paga con PayPal" CssClass="tf-btn" Text="Paga con PayPal" />
-
-                                <asp:ImageButton ID="btIwBank" runat="server" Visible="false" PostBackUrl='<%# "https://checkout.iwsmile.it/Pagamenti/?ACCOUNT=" & Me.Session("AccountIwBank") & "&ITEM_NAME=Ordine+n.+" & Eval("NDocumento") & "+del+" & Eval("DataDocumento") & "&ITEM_NUMBER=" & Eval("NDocumento") & "&QUANTITY=1&FLAG_ONLY_IWS=0&AMOUNT=" & Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") & "&NOTE=0&URL_OK=" & Request.Url.Scheme & "://" & Request.Url.Host & "/pagamento.aspx?id=" & Eval("id") & "&URL_BAD=" & Request.Url.Scheme & "://" & Request.Url.Host & "/documentidettaglio.aspx?id=" & Eval("id") %>' ToolTip="Paga con IwBank" ImageUrl="/Public/assets/images/pagamenti/visa.svg" Style="height:42px;" />
-
-                                <asp:Button ID="btPayPal" runat="server" Visible="false" Text="PAGA ADESSO" Font-Bold="true" CommandName="PagamentoPayPal" idDocumento='<%# Eval("id") %>' nDocumento='<%# Eval("NDocumento") %>' totaleDocumento='<%# Replace(Replace(Eval("TotaleDocumento", "{0:N}"), ".", ""), ",", ".") %>' dataDocumento='<%# Eval("DataDocumento") %>' ToolTip="Paga con PayPal" CssClass="tf-btn" />
-                            </div>
-                            <p class="body-small ks-muted" style="margin-top:10px;">I pulsanti di pagamento vengono mostrati solo per documenti online non ancora saldati.</p>
-                        </div>
 
                     </ItemTemplate>
                 </asp:FormView>

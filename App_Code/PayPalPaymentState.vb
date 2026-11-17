@@ -23,6 +23,8 @@ Public Class PayPalPaymentDocumentInfo
     Public Property PaymentOnline As Integer
     Public Property TotalDocument As Decimal
     Public Property TransactionId As String
+    ' ORDER-REMOTE-PAYMENT-1A: impostato solo da paypalcheckout dopo la decisione completa sui fatti (ordine del gestionale o metodo cambiato dal PO): abilita i nuovi tentativi.
+    Public Property RemoteManaged As Boolean
 End Class
 
 Public Class PayPalPendingRecheckResult

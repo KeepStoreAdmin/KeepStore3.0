@@ -13,6 +13,7 @@ $out = Join-Path ([IO.Path]::GetTempPath()) ('paypal-rev2-policy-' + [Guid]::New
 try {
     & $compiler /nologo /target:exe /out:$out /r:System.dll `
         (Join-Path $RepositoryRoot 'Tools\PayPalOrderPolicyHarness.vb') `
+        (Join-Path $RepositoryRoot 'App_Code\KeepStoreRemotePayment.vb') `
         (Join-Path $RepositoryRoot 'App_Code\InternalOrderRemotePaymentPolicy.vb') `
         (Join-Path $RepositoryRoot 'App_Code\PayPalAttemptPolicy.vb')
     if ($LASTEXITCODE -ne 0) { throw 'PAYPAL_REV2_HARNESS_COMPILE_FAILED' }

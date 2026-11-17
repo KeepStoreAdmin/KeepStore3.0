@@ -1,0 +1,32 @@
+# MyAccount e ordini del cliente: da rifare, e idee utili in piu (proposta del 17/11/2026)
+
+Richiesta del PO (17/11/2026): rifare tutto **MyAccount** e il modo in cui il cliente vede i suoi ordini dal web, con in piu qualche idea «wow» ma utile, partendo da come lavora Amazon; il PO salva il tracking nel gestionale e il cliente deve poterlo seguire dal sito. Stato: **PROPOSTA, NON AVVIATA** (priorita e perimetro li decide il PO). Il template [ONSUS](../AGENTS.md) (`C:\KeepStoreWeb\Templatre_Onsus`, pagine `my-account*.html`, `order-details.html`, `track-your-order.html`) resta la fonte grafica; la grafica si decide col Design Gate, in stile ONSUS piatto e sobrio (riquadro bianco, quadrato dell'icona nel colore primario, testo semplice), senza etichette maiuscole e senza bordi colorati.
+
+## 1. Com'e oggi (misurato nel codice e nel gestionale, sola lettura)
+- Le pagine: `myaccount.aspx`, `documenti.aspx` (lista ordini), `documentidettaglio.aspx` (dettaglio, con la fascia «Prossimi passi»), `track-your-order.aspx` (cerca per numero), `my-account-address.aspx`, `my-account-edit.aspx`, `wishlist.aspx`.
+- **Pagamento da MyAccount** (da `ORDER-REMOTE-PAYMENT-1A`, PR 542): la lista mostra «Da pagare» e «Paga adesso» e il dettaglio un riquadro in alto, per gli ordini cambiati di metodo dal PO nel gestionale o creati dal gestionale; un ordine del sito col pagamento online fallito non si ripaga (decisione del PO, Roadmap 38).
+- **Il tracking**: il gestionale lo scrive in `documenti.Tracking` (`frmDocumento2.vb`, `Update Documenti set tracking=...`, e la maschera `frmTracking` accetta piu numeri separati da `;`). La tabella `documentipie` ha una sua colonna `Tracking` (100 caratteri) che il gestionale non usa: **da confermare con Enzo quale delle due legge la vista `vdocumenti`** del sito. Il sito mostra il numero e un collegamento al vettore (`vettori.Link_Tracking`); non c'e un avanzamento dell'ordine a colpo d'occhio.
+- Il dettaglio dice «Ordine confermato» con la spunta anche quando il pagamento e fallito, e «Pagamento in verifica» per ogni non pagato (Roadmap 36).
+
+## 2. Che cosa dice la ricerca (fonti 2026)
+- Il tracciamento degli ordini aperti e la funzione di self-service **piu importante** per i clienti (Baymard, studio quantitativo, marzo 2026; circa il 50 per cento degli intervistati): [Baymard, Accounts & Self-Service 2026](https://baymard.com/research-articles/accounts-and-self-service-ux-research-2026).
+- Sei dettagli da avere sempre nel sito, senza mandare a pagine di terzi: data di consegna prevista, **barra di avanzamento**, nome del corriere, **numero di tracking cliccabile**, storico degli spostamenti, riepilogo del contenuto del pacco; solo un terzo dei siti li mostra tutti: [Baymard, 6 dettagli del tracciamento](https://baymard.com/research-articles/integrate-tracking-info).
+- Nella lista ordini servono subito i dati essenziali visibili (non nascosti in sezioni chiuse): un cliente ha aperto quattro ordini prima di trovare quello giusto. Chiarire se un ordine e ancora **restituibile** (togliere il pulsante allo scadere della finestra confonde). Utile un'azione «**Riordina**»: [Baymard, esempi di panoramica ordini](https://baymard.com/ecommerce-design-examples/62-orders-overview), [esempio Amazon](https://baymard.com/ecommerce-design-examples/62-orders-overview/17042-amazon); [Flits, funzioni dell'area cliente](https://blog.getflits.com/9-features-on-a-customer-account-page-e-commerce/).
+- Limite: gli esempi dettagliati di Baymard sono a pagamento; le idee sotto sono la sintesi di cio che e pubblico, da confermare col Design Gate al momento del lavoro.
+
+## 3. Proposta (ordine di utilita per il cliente, solo dati reali)
+1. **«Da pagare» in alto** nella lista e nel dettaglio, con importo, metodo e **Paga adesso** (task `ORDER-REMOTE-PAYMENT-1A`, in corso): copre il cambio di metodo fatto dal PO nel gestionale e gli ordini creati dal gestionale per un cliente registrato.
+2. **Lista ordini nuova**, a schede e mobile-first: miniature degli articoli, stato come etichetta chiara, data di consegna o numero di tracking, totale, azioni rapide (Dettagli, Traccia, Paga adesso, Riordina), ricerca e filtro per anno e stato.
+3. **Tracciamento nel sito, come Amazon**: barra di avanzamento (ricevuto, pagato, in preparazione, spedito, consegnato) calcolata dagli stati veri del documento; corriere e **numeri di tracking cliccabili** (anche piu di uno, separati da `;`); riepilogo del contenuto dei pacchi; la data di consegna prevista **solo se esiste un dato reale**, mai inventata.
+4. **Riordina con un tocco**: rimette nel carrello le righe dell'ordine, con prezzi, promozioni e giacenza ricontrollati dal server (nessun prezzo vecchio).
+5. **«Serve aiuto con questo ordine?»**: apre Contattaci con numero ordine e tipo di problema gia compilati; per i resi e il recesso (14 giorni, vedi il contratto sul recesso B2C) mostra con onesta se la finestra e aperta.
+6. **Pannello «Il mio account»** all'ingresso: ordini da pagare, in viaggio, ultimi ordini, indirizzi, e i prodotti visti di recente e i preferiti gia presenti.
+7. **Avvisi al cliente quando il tracking viene salvato** (e-mail): richiede un evento dal gestionale o un controllo periodico sul sito (nessuno scheduler oggi): da progettare con Enzo, mai senza regola di privacy e di invio.
+8. **Sicurezza dell'account** (piu avanti): 2FA facoltativa e codici monouso, gestione dei dispositivi (Baymard: 60 per cento lo apprezza).
+- Fuori dall'elenco finche non esiste il dato: valutazioni a stelle, «consegna entro...», foto di consegna.
+
+## 4. Dipendenze e rischi
+- Enzo: quale colonna del tracking e la fonte; opzionale, scrivere `OrigineOrdine = 'INTERNO'` negli ordini manuali; un evento «tracking salvato» per gli avvisi.
+- Aree CRITICAL (ordini, pagamenti, carrello per «Riordina»): catena di revisione completa e test con tenant sintetici.
+- Multi-tenant e multi-merceologia: nessun testo o logo di cliente nel codice; vettori e metodi di pagamento letti dai dati.
+- Ogni voce parte solo su richiesta del PO, con il Design Gate (ONSUS, benchmark, architettura KeepStore, mobile-first).

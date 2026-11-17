@@ -24,4 +24,20 @@ Public Module InternalOrderRemotePaymentPolicy
                (paymentState = 0 OrElse paymentState = 1 OrElse paymentState = 3 OrElse paymentState = 4 OrElse paymentState = 5) AndAlso
                Not hasGatewayAuthorization
     End Function
+
+    ' ORDER-REMOTE-PAYMENT-1A: decisione completa sui FATTI del documento (origine, ordine del sito, data, tentativi PayPal, avvio Sella). I chiamanti usano
+    ' questa; la firma sopra resta la regola base dei gate comuni e non decide piu l'origine da sola.
+    Public Function CanPayNow(ByVal facts As RemotePaymentFacts,
+                              ByVal ownerMatches As Boolean,
+                              ByVal tenantMatches As Boolean) As Boolean
+        If facts Is Nothing Then Return False
+        Dim originClass As String = KeepStoreRemotePayment.OriginClass(facts)
+        If originClass.Length = 0 Then Return False
+        If Not CanPayNow(originClass, ownerMatches, tenantMatches, facts.ValidOrderType, facts.Paid, facts.DocumentState,
+                         facts.PaymentState, facts.OnlineMethod, facts.AllowLater, facts.SellaAuthorized, facts.Total) Then Return False
+        ' Mai due gateway insieme: un PayPal aperto o completato su un altro metodo (o con metodo attuale Sella) blocca il pagamento.
+        If facts.PayPalOpenOther Then Return False
+        If KeepStoreRemotePayment.SellaMayBeInFlight(facts) Then Return False
+        Return True
+    End Function
 End Module

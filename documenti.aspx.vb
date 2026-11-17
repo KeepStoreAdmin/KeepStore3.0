@@ -556,59 +556,18 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Return MostraPagaOra(Nothing, pagatoObj, codAutObj, statiIdObj, pagamentiTipoOnlineObj, Nothing)
     End Function
 
+    ' ORDER-REMOTE-PAYMENT-1A: usato dal markup della lista per mostrare «Da pagare» e il pulsante «Paga adesso» solo quando la decisione completa lo ammette.
+    Protected Function ListPayNowVisible(ByVal documentIdObj As Object) As Boolean
+        Return CanShowPayNow(SafeInt(documentIdObj, 0))
+    End Function
+
     Private Function CanShowPayNow(ByVal documentId As Integer) As Boolean
         If documentId <= 0 Then Return False
-
+        ' ORDER-REMOTE-PAYMENT-1A: decisione completa sui fatti del documento (una sola query, owner e azienda dell'identita verificata); ogni errore chiude.
         Try
-            Dim utentiId As Integer = SafeInt(Session("UtentiID"), 0)
-            If utentiId <= 0 Then Return False
-
-            Dim cs As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            Using c As New MySql.Data.MySqlClient.MySqlConnection(cs)
-                Dim sql As String = ""
-                sql &= "SELECT "
-                sql &= "  COALESCE(d.Pagato,0) AS Pagato, "
-                sql &= "  COALESCE(d.OrigineOrdine,'') AS OrigineOrdine, "
-                sql &= "  CASE WHEN td.Web=1 AND td.Abilitato=1 AND td.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ValidOrderType, "
-                sql &= "  COALESCE(d.StatiId,0) AS StatiId, "
-                sql &= "  COALESCE(d.StatoPagamentoWeb,0) AS StatoPagamentoWeb, "
-                sql &= "  COALESCE(p.OnLine,0) AS PagamentiTipoOnline, "
-                sql &= "  COALESCE(p.PermettiPagamentoSuccessivo,0) AS PermettiPagamentoSuccessivo, "
-                sql &= "  COALESCE(pie.TotaleDocumento,0) AS TotaleDocumento, "
-                sql &= "  COALESCE(b.codiceAutorizzazione,'') AS CodiceAutorizzazione "
-                sql &= "FROM documenti d "
-                sql &= "LEFT JOIN tipodocumenti td ON td.id = d.TipoDocumentiId "
-                sql &= "LEFT JOIN pagamentitipo p ON p.id = d.PagamentiTipoId "
-                sql &= "LEFT JOIN documentipie pie ON pie.DocumentiId = d.id "
-                sql &= "LEFT JOIN bancasella_ordini_pagati b ON b.DocumentiId = d.id "
-                sql &= "WHERE d.id=@id AND d.UtentiId=@uid AND d.AziendeId=@aziendaId "
-                sql &= "LIMIT 1"
-
-                Using cmd As New MySql.Data.MySqlClient.MySqlCommand(sql, c)
-                    cmd.Parameters.Add("@id", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = documentId
-                    cmd.Parameters.Add("@uid", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = utentiId
-                    cmd.Parameters.Add("@aziendaId", MySql.Data.MySqlClient.MySqlDbType.Int32).Value = CurrentOrderIdentity.CompanyId
-                    c.Open()
-
-                    Using dr As MySql.Data.MySqlClient.MySqlDataReader = cmd.ExecuteReader()
-                        If Not dr.Read() Then Return False
-
-                        Dim pagato As Integer = SafeInt(dr("Pagato"), 0)
-                        Dim statiId As Integer = SafeInt(dr("StatiId"), 0)
-                        Dim statoPagamentoWeb As Integer = SafeInt(dr("StatoPagamentoWeb"), 0)
-                        Dim online As Integer = SafeInt(dr("PagamentiTipoOnline"), 0)
-                        Dim permettePagamentoSuccessivo As Integer = SafeInt(dr("PermettiPagamentoSuccessivo"), 0)
-                        Dim totaleDocumento As Decimal = SafeDecimal(dr("TotaleDocumento"), 0D)
-                        Dim haAutorizzazione As Boolean = HasValue(dr("CodiceAutorizzazione"))
-
-                        Return InternalOrderRemotePaymentPolicy.CanPayNow(
-                            Convert.ToString(dr("OrigineOrdine")), True, True,
-                            SafeInt(dr("ValidOrderType"), 0) = 1, pagato, statiId,
-                            statoPagamentoWeb, online, permettePagamentoSuccessivo,
-                            haAutorizzazione, totaleDocumento)
-                    End Using
-                End Using
-            End Using
+            If CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete Then Return False
+            Return InternalOrderRemotePaymentPolicy.CanPayNow(
+                KeepStoreRemotePaymentStore.LoadFacts(documentId, CurrentOrderIdentity.UtentiId, CurrentOrderIdentity.CompanyId), True, True)
         Catch
             Return False
         End Try

@@ -162,10 +162,10 @@ Public Module PayPalCheckoutRepository
                                      ByVal previous As PayPalCheckoutTransactionInfo,
                                      ByVal reconciled As PayPalOrderSnapshot) As PayPalCheckoutTransactionInfo
         If doc Is Nothing OrElse cfg Is Nothing OrElse previous Is Nothing OrElse Not previous.IsCurrent OrElse
-           reconciled Is Nothing OrElse Not String.Equals(doc.OrigineOrdine, "INTERNO", StringComparison.OrdinalIgnoreCase) OrElse
+           reconciled Is Nothing OrElse Not (doc.RemoteManaged OrElse String.Equals(doc.OrigineOrdine, "INTERNO", StringComparison.OrdinalIgnoreCase)) OrElse
            String.IsNullOrEmpty(previous.PayPalOrderId) OrElse
            Not String.Equals(previous.PayPalOrderId, reconciled.OrderId, StringComparison.Ordinal) OrElse
-           Not PayPalAttemptPolicy.MaySupersede(doc.OrigineOrdine, previous.Stato, reconciled.Status, reconciled.CaptureStatus) Then Return New PayPalCheckoutTransactionInfo()
+           Not PayPalAttemptPolicy.MaySupersede(If(doc.RemoteManaged, "INTERNO", doc.OrigineOrdine), previous.Stato, reconciled.Status, reconciled.CaptureStatus) Then Return New PayPalCheckoutTransactionInfo()
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()

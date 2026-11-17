@@ -558,3 +558,106 @@ body.ks-page-order-detail .ks-doc-section .table-responsive {
     box-shadow: none !important;
   }
 }
+
+/* ORDER-REMOTE-PAYMENT-1A - ordine da pagare: riquadro nello stile ONSUS (order-notice) nel dettaglio e pulsante "Paga adesso" con etichetta "Da pagare" nella lista. */
+.ks-pay-now{
+    margin: 0 0 24px;
+    background: #fff;
+    color: #20242c;
+    box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .1);
+}
+
+.ks-pay-now__notice{
+    display: flex;
+    align-items: stretch;
+}
+
+.ks-pay-now__icon{
+    display: flex;
+    flex: 0 0 56px;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary, #D80027);
+    color: #fff;
+}
+
+.ks-pay-now__icon svg{
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ks-pay-now__text{
+    min-width: 0;
+    padding: 14px 16px;
+}
+
+.ks-pay-now h2{
+    margin: 0 0 4px;
+    color: #20242c;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.ks-pay-now__lead{
+    margin: 0;
+    color: #333e48;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.ks-pay-now__actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px 16px;
+    border-top: 1px solid #e1e1e1;
+}
+
+.ks-pay-now__btn{
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.ks-pay-now__badge{
+    display: inline-block;
+    margin: 0 0 4px;
+    padding: 2px 8px;
+    background: var(--primary, #D80027);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+@media (min-width: 768px){
+    .ks-pay-now__icon{
+        flex-basis: 64px;
+    }
+
+    .ks-pay-now__text{
+        padding: 16px 20px;
+    }
+
+    .ks-pay-now__actions{
+        padding: 14px 20px 18px;
+    }
+}
+
+@media (max-width: 575px){
+    .ks-pay-now__actions{
+        flex-direction: column;
+    }
+
+    .ks-pay-now__actions .ks-pay-now__btn{
+        width: 100%;
+    }
+}

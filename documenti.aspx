@@ -5,6 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-pay-now-1a" />
     <style>
         .ks-myaccount .ks-document-date {
             min-width: 0;
@@ -398,6 +399,7 @@
                 <ItemTemplate>
                     <div class="ks-order-payment-state">
                         <span class='<%# GetPaymentStatusCssClass(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %>'><%# GetPaymentStatusLabel(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %></span>
+                        <asp:Label ID="lblListaDaPagare" runat="server" CssClass="ks-pay-now__badge" Text="Da pagare" Visible='<%# ListPayNowVisible(Eval("id")) %>' />
                         <span class="body-small text-main-2"><%#: GetPaymentStatusDescription(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb"), Eval("ListaUltimoEsitoPagamentoWeb"), Eval("ListaPagamentiTipoOnline"), Eval("ListaPagamentoDescrizione")) %></span>
                     </div>
                 </ItemTemplate>
@@ -406,6 +408,8 @@
             <asp:TemplateField HeaderText="Azione">
                 <ItemTemplate>
                     <div class="ks-action-stack">
+
+                        <asp:HyperLink ID="hlListaPagaAdesso" runat="server" CssClass="tf-btn btn-small d-inline-flex ks-pay-now__btn" NavigateUrl='<%# Eval("id", "documentidettaglio.aspx?id={0}#ksPayNow") %>' Visible='<%# ListPayNowVisible(Eval("id")) %>' Text="Paga adesso" ToolTip='<%# "Paga adesso ordine n. " & Eval("NDocumento") %>' />
 
                         <a href="<%# Eval("id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
                             <span class="text-white">Dettaglio</span>
