@@ -193,6 +193,26 @@ Public NotInheritable Class PayPalPaymentAttempts
         Return LoadOne("WHERE AttemptKey=@v AND AziendeId=@az AND LoginId=@login", attemptKey, aziendeId, loginId, "LoadForOwner")
     End Function
 
+    ' Ultimo tentativo della bozza (anche con lo slot gia rilasciato: serve a riconoscere CAPTURED_ORPHAN e a non aprire un secondo pagamento). Azienda E login.
+    ' Nothing = nessun tentativo oppure errore tecnico (il chiamante apre il pagamento e CreateOrResume fallisce chiuso se il database non risponde).
+    Public Shared Function LoadLatestForDraft(ByVal aziendeId As Integer, ByVal loginId As Long, ByVal draftRequestId As String) As PayPalAttemptRecord
+        If aziendeId <= 0 OrElse loginId <= 0 OrElse String.IsNullOrEmpty(draftRequestId) Then Return Nothing
+        Try
+            Using conn As New MySqlConnection(ConnectionString())
+                conn.Open()
+                Return ReadOne(conn, Nothing, "SELECT " & SelectColumns & " FROM paypal_checkout_tentativi WHERE AziendeId=@az AND LoginId=@login AND DraftRequestId=@draft ORDER BY TentativoNo DESC LIMIT 1",
+                    Sub(cmd)
+                        cmd.Parameters.Add("@az", MySqlDbType.Int32).Value = aziendeId
+                        cmd.Parameters.Add("@login", MySqlDbType.Int64).Value = loginId
+                        cmd.Parameters.Add("@draft", MySqlDbType.String).Value = draftRequestId
+                    End Sub)
+            End Using
+        Catch ex As Exception
+            LogFailure("LoadLatestForDraft", ex)
+            Return Nothing
+        End Try
+    End Function
+
     ' Caricamenti di SISTEMA (webhook firmato da PayPal, recupero): niente login; solo codice fidato, mai un input del cliente.
     Public Shared Function LoadForSystemByOrderId(ByVal orderId As String) As PayPalAttemptRecord
         If String.IsNullOrWhiteSpace(orderId) OrElse orderId.Length > 100 Then Return Nothing
@@ -490,6 +510,12 @@ Public NotInheritable Class PayPalPaymentAttempts
     Public Shared Function RecordVoiding(ByVal attemptId As Long, ByVal aziendeId As Integer, ByVal reason As String) As Boolean
         Return Transition(attemptId, aziendeId, 0, PayPalPaymentAttemptStates.Voiding,
                           New String() {PayPalPaymentAttemptStates.Authorized, PayPalPaymentAttemptStates.DocCommitted, PayPalPaymentAttemptStates.CaptureRefused}, reason, String.Empty, Nothing, "RecordVoiding")
+    End Function
+
+    ' Annullo di un'autorizzazione SENZA documento: parte solo da AUTHORIZED. RecordVoiding (sopra) ammette anche DOC_COMMITTED e CAPTURE_REFUSED per il
+    ' rifiuto dell'incasso; il percorso di avvio/ritorno e di ordine.aspx non deve mai poter annullare l'autorizzazione di un ordine gia creato.
+    Public Shared Function RecordVoidingUnbound(ByVal attemptId As Long, ByVal aziendeId As Integer, ByVal reason As String) As Boolean
+        Return Transition(attemptId, aziendeId, 0, PayPalPaymentAttemptStates.Voiding, New String() {PayPalPaymentAttemptStates.Authorized}, reason, String.Empty, Nothing, "RecordVoidingUnbound")
     End Function
 
     Public Shared Function RecordVoided(ByVal attemptId As Long, ByVal aziendeId As Integer) As Boolean

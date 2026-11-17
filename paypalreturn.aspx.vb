@@ -7,6 +7,12 @@ Partial Class paypalreturn
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If IsPostBack Then Return
+        ' PAYPAL-PAY-FIRST-PAGES-1A (P3a1): rientro di un pagamento aperto PRIMA dell'ordine (parametro k = chiave del tentativo, nessun documento).
+        Dim attemptKey As String = Convert.ToString(Request.QueryString("k")).Trim()
+        If attemptKey.Length > 0 Then
+            PayPalPayFirstGlue.RunReturn(HttpContext.Current, attemptKey, Convert.ToString(Request.QueryString("action")).Trim(), Convert.ToString(Request.QueryString("token")))
+            Return
+        End If
         Dim documentId As Integer = QueryInt("id")
         Dim utentiId As Integer = PayPalPaymentState.GetSessionInt("UtentiId", 0)
         If PayPalPaymentState.GetSessionInt("LoginId", 0) <= 0 OrElse utentiId <= 0 Then RedirectTerminal("login.aspx") : Return
