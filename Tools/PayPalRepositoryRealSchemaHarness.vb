@@ -188,8 +188,8 @@ Public Module RealSchemaHarness
     Private _accountB As Integer = 0
 
     Private Sub Setup()
-        _userId = Integer.Parse(Scalar("SELECT COALESCE(MIN(UtentiId),1) FROM documenti"), CultureInfo.InvariantCulture)
-        _typeId = Integer.Parse(Scalar("SELECT COALESCE(MIN(TipoDocumentiId),0) FROM documenti"), CultureInfo.InvariantCulture)
+        _userId = Integer.Parse(Scalar("SELECT COALESCE(MIN(UtentiId),1) FROM documenti WHERE UtentiId > 0"), CultureInfo.InvariantCulture)
+        _typeId = Integer.Parse(Scalar("SELECT COALESCE(MIN(TipoDocumentiId),0) FROM documenti WHERE TipoDocumentiId > 0"), CultureInfo.InvariantCulture)
         For Each companyId As Integer In New Integer() {9101, 9102}
             Exec("INSERT INTO pagamentitipo (id,AziendeID,Descrizione,Informazioni,Abilitato,Web,Ordinamento,Predefinito,CostoPercentuale,CostoFisso,CostoMassimo,NumeroOrdini,Contrassegno,OnLine,Cassa,Banca) VALUES (" &
                  companyId & "," & companyId & ",'KS TEST PAYPAL','fixture',1,1,1,0,0,0,5000,0,0,2,0,0)")

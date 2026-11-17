@@ -117,5 +117,12 @@ Mutants = @(
     @{ Name='S07-host-list'; File='App_Code\StorefrontCanonicalHostPolicy.vb'; Source=$true; Find='"paypalpay.aspx", '; Replace=''; ExpectedKill=@('G28') }
     @{ Name='S08-return-list'; File='App_Code\StorefrontReturnUrlPolicy.vb'; Source=$true; Find='"paypalpay.aspx",'; Replace='"paypalpay-x.aspx",'; ExpectedKill=@('G28') }
     @{ Name='S09-sweep-not-called'; File='App_Code\PayPalPayFirst.vb'; Source=$true; Find='PayPalPayFirstRecovery.SweepOwner(owner.CompanyId, owner.LoginId, payCtx.DraftRequestId, cfg, New PayPalOrdersV2Client(cfg), DateTime.UtcNow)'; Replace='Dim unusedSweep As Integer = 0'; ExpectedKill=@('G29') }
+    @{ Name='V01-stock-mark-removed-1'; File='ordine.aspx.vb'; Source=$true; Find='MarkPayFirstVoidAfterStock(payFirst, rollbackSucceeded, orderIdentity)'; Replace='Dim unusedMark1 As Integer = 0'; ExpectedKill=@('G30') }
+    @{ Name='V02-stock-mark-removed-2'; File='ordine.aspx.vb'; Source=$true; Occurrence=2; Find='MarkPayFirstVoidAfterStock(payFirst, rollbackSucceeded, orderIdentity)'; Replace='Dim unusedMark2 As Integer = 0'; ExpectedKill=@('G30') }
+    @{ Name='V03-stock-note-removed'; File='ordine.aspx.vb'; Source=$true; Find='refreshedMessage & PayFirstStockNote(payFirst)'; Replace='refreshedMessage'; ExpectedKill=@('G30') }
+    @{ Name='V04-void-latest-attempt'; File='ordine.aspx.vb'; Source=$true; Find='attempt = PayPalPaymentAttempts.LoadForOwner(key, payFirstVoidCompanyId, payFirstVoidLoginId)'; Replace='attempt = PayPalPaymentAttempts.LoadLatestForDraft(payFirstVoidCompanyId, payFirstVoidLoginId, key)'; ExpectedKill=@('G31') }
+    @{ Name='V05-void-with-document'; File='ordine.aspx.vb'; Source=$true; Find='attempt.DocumentiId > 0 OrElse attempt.Stato <> PayPalPaymentAttemptStates.Authorized'; Replace='attempt.Stato <> PayPalPaymentAttemptStates.Authorized'; ExpectedKill=@('G31') }
+    @{ Name='V06-void-inside-lock'; File='ordine.aspx.vb'; Source=$true; Find='SyncLock Semaforo'; Replace='SyncLock Semaforo : Dim unusedVoid As Boolean = PayPalPayFirstService.VoidAuthorized(Nothing, Nothing, Nothing)'; ExpectedKill=@('G09','G31','G32') }
+    @{ Name='V07-retired-replay-guard'; File='ordine.aspx.vb'; Source=$true; Find='If CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current, checkoutRequestId) Then'; Replace='If False Then'; ExpectedKill=@('G33') }
 )
 }

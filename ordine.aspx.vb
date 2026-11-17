@@ -44,6 +44,12 @@ End Sub
     ' ma la lascio per compatibilità e per evitare effetti collaterali.
     Public facebook_pixel_id As String
 
+    ' PAYPAL-VOID-ON-STOCK-1A: tentativo pay-first esatto (chiave) della richiesta e, se la giacenza lo rifiuta dopo il rollback, tentativo da annullare fuori dal lock.
+    Private payFirstAttemptKey As String = String.Empty
+    Private payFirstVoidKey As String = String.Empty
+    Private payFirstVoidCompanyId As Integer = 0
+    Private payFirstVoidLoginId As Long = 0
+
     Public utenteId As Integer = -1
     Public idsFbPixelsSku As New Dictionary(Of String, String)
     Public redirect As String = ""
@@ -242,6 +248,7 @@ Private Function RoutePayFirst(ByVal identity As OrderStorefrontIdentity,
                latest.Importo = Math.Round(draft.Total, 2, MidpointRounding.AwayFromZero) AndAlso latest.PagamentiTipoId = draft.PaymentMethodId AndAlso
                latest.UtentiId = identity.UtentiId Then
                 attemptId = latest.Id
+                payFirstAttemptKey = latest.AttemptKey
                 Return True
             End If
             ' Stessa bozza con contenuto cambiato: paypalpay annulla la vecchia autorizzazione e ne apre una nuova.
@@ -311,6 +318,44 @@ Private Sub SetPayFirstDocumentStatus(ByVal conn As MySqlConnection, ByVal trns 
         cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
         If cmd.ExecuteNonQuery() <> 1 Then Throw New DataException("Pay-first: stato di pagamento non impostato.")
     End Using
+End Sub
+
+' Giacenza rifiutata DOPO l'autorizzazione PayPal (rollback riuscito, nessun documento): si segna soltanto; l'annullo parte a fine richiesta, fuori dal lock.
+Private Sub MarkPayFirstVoidAfterStock(ByVal payFirst As Boolean, ByVal rollbackSucceeded As Boolean, ByVal identity As OrderStorefrontIdentity)
+    If Not payFirst OrElse Not rollbackSucceeded OrElse String.IsNullOrEmpty(payFirstAttemptKey) OrElse identity Is Nothing Then Return
+    payFirstVoidKey = payFirstAttemptKey
+    payFirstVoidCompanyId = identity.CompanyId
+    payFirstVoidLoginId = identity.LoginId
+End Sub
+
+' Testo neutro: non promette il rilascio (l'annullo puo non riuscire), dice solo che non c'e stato addebito.
+Private Function PayFirstStockNote(ByVal payFirst As Boolean) As String
+    If Not payFirst Then Return String.Empty
+    Return " Nessun importo è stato addebitato su PayPal: una eventuale somma riservata viene annullata o scade da sola."
+End Function
+
+' Fine richiesta (fuori dal SyncLock, il redirect e gia stato impostato): annulla l'autorizzazione del tentativo ESATTO, solo se ancora AUTHORIZED e senza documento.
+' RecordVoidingUnbound e BindDocument sono UPDATE condizionati a Stato='AUTHORIZED': un secondo invio concorrente vince oppure perde in modo sicuro.
+Private Sub ReleasePayFirstAfterStockFailure(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Unload
+    If String.IsNullOrEmpty(payFirstVoidKey) Then Return
+    Dim key As String = payFirstVoidKey
+    payFirstVoidKey = String.Empty
+    Dim attempt As PayPalAttemptRecord = Nothing
+    Try
+        attempt = PayPalPaymentAttempts.LoadForOwner(key, payFirstVoidCompanyId, payFirstVoidLoginId)
+        If attempt Is Nothing OrElse attempt.DocumentiId > 0 OrElse attempt.Stato <> PayPalPaymentAttemptStates.Authorized Then Return
+        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(attempt.AziendeId, attempt.PagamentiTipoId)
+        If cfg Is Nothing OrElse Not PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg) Then Return
+        PayPalPayFirstService.VoidAuthorized(attempt, cfg, New PayPalOrdersV2Client(cfg))
+    Catch ex As Exception
+        Try
+            ' Un'eccezione dopo il passaggio a VOIDING non deve lasciare lo stato muto: si segna incerto (il webhook VOIDED o il ricontrollo lo risolvono).
+            Dim again As PayPalAttemptRecord = If(attempt Is Nothing, Nothing, PayPalPaymentAttempts.LoadForOwner(key, payFirstVoidCompanyId, payFirstVoidLoginId))
+            If again IsNot Nothing AndAlso again.Stato = PayPalPaymentAttemptStates.Voiding Then PayPalPaymentAttempts.RecordUnknown(again.Id, again.AziendeId, "VOID_EXCEPTION")
+            PayPalPaymentState.LogCheckoutFailure("paypal-payfirst", 0, "Annullo dopo giacenza non riuscito", ex.GetType().Name)
+        Catch
+        End Try
+    End Try
 End Sub
 
 ' Ripresa dell'incasso (GET, fuori dal lock). Riprendibile: un rinfresco, «indietro» o un secondo invio ricadono qui e l'incasso non si ripete mai.
@@ -967,6 +1012,11 @@ CheckoutFailureRecoveryService.TracePhase(
            PayPalPayFirstPolicy.Applies(payFirstDraft.PaymentOnline, payFirstDraft.ConfirmBeforePayment, payFirstDraft.TipoDocumentiId,
                PayPalPayFirstPolicy.HasCoupon(Convert.ToString(Session("Coupon_Codice_Controllo")), GetSessionInt("Coupon_idArticolo", 0))) Then
             payFirst = True
+            ' Richiesta ritirata (es. giacenza rifiutata e autorizzazione annullata): un replay non deve aprire un nuovo pagamento per una richiesta che non puo piu creare l'ordine.
+            If CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current, checkoutRequestId) Then
+                DispatchDurableCheckoutFailure(checkoutRequestId, CheckoutFailureReason.Collision, "11-retired-request")
+                Exit Sub
+            End If
             If Not RoutePayFirst(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, payFirstDraft, payFirstAttemptId) Then Exit Sub
         End If
 
@@ -1672,7 +1722,8 @@ CheckoutFailureRecoveryService.TracePhase(
                     CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "11-retry-state",
                         If(availabilityRetryPersisted, "persisted", "session-tombstone"))
-                    StoreInventoryFailure(availabilityError.BuildUserMessage(), availabilityError.BuildLineKeys())
+                    MarkPayFirstVoidAfterStock(payFirst, rollbackSucceeded, orderIdentity)
+                    StoreInventoryFailure(availabilityError.BuildUserMessage() & PayFirstStockNote(payFirst), availabilityError.BuildLineKeys())
                     RedirectToStockFailure(checkoutRequestId)
                     Exit Sub
                 End If
@@ -1692,7 +1743,8 @@ CheckoutFailureRecoveryService.TracePhase(
                     If Not TryReadInventoryFailureAfterRollback(conn, LoginId, refreshedMessage, refreshedLineKeys) Then
                         refreshedMessage = OrderInventoryAvailabilityService.TechnicalErrorMessage
                     End If
-                    StoreInventoryFailure(refreshedMessage, refreshedLineKeys)
+                    MarkPayFirstVoidAfterStock(payFirst, rollbackSucceeded, orderIdentity)
+                    StoreInventoryFailure(refreshedMessage & PayFirstStockNote(payFirst), refreshedLineKeys)
                     RedirectToStockFailure(checkoutRequestId)
                     Exit Sub
                 End If

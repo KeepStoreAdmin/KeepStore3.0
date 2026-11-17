@@ -522,8 +522,8 @@ Public Module PayFirstHarness
     End Sub
 
     Private Sub Setup()
-        _userId = Integer.Parse(Scalar("SELECT COALESCE(MIN(UtentiId),1) FROM documenti"), CultureInfo.InvariantCulture)
-        _typeId = Integer.Parse(Scalar("SELECT COALESCE(MIN(TipoDocumentiId),0) FROM documenti"), CultureInfo.InvariantCulture)
+        _userId = Integer.Parse(Scalar("SELECT COALESCE(MIN(UtentiId),1) FROM documenti WHERE UtentiId > 0"), CultureInfo.InvariantCulture)
+        _typeId = Integer.Parse(Scalar("SELECT COALESCE(MIN(TipoDocumentiId),0) FROM documenti WHERE TipoDocumentiId > 0"), CultureInfo.InvariantCulture)
         For Each companyId As Integer In New Integer() {9301, 9302}
             Exec("INSERT INTO pagamentitipo (id,AziendeID,Descrizione,Informazioni,Abilitato,Web,Ordinamento,Predefinito,CostoPercentuale,CostoFisso,CostoMassimo,NumeroOrdini,Contrassegno,OnLine,Cassa,Banca) VALUES (" &
                  companyId & "," & companyId & ",'KS TEST PAYFIRST','fixture',1,1,1,0,0,0,5000,0,0,2,0,0)")
@@ -734,6 +734,19 @@ Public Module PayFirstHarness
         Exec("UPDATE paypal_checkout_tentativi SET PayPalAuthorizationId='KSVOIDDOCAUTH" & avd.Id.ToString(CultureInfo.InvariantCulture) & "' WHERE Id=" & avd.Id.ToString(CultureInfo.InvariantCulture))
         Dim avd2 As PayPalAttemptRecord = Latest(ctxVd)
         Check("S20 l'annullo di un'autorizzazione non parte da un tentativo con ordine gia creato", Not PayPalPayFirstService.VoidAuthorized(avd2, Cfg(), Client(voidDoc)) AndAlso voidDoc.Count("void") = 0 AndAlso StateOf(avd.Id) = "DOC_COMMITTED")
+        ' PAYPAL-VOID-ON-STOCK-1A: giacenza rifiutata dopo l'autorizzazione = annullo del tentativo esatto, poi la stessa bozza riparte con un nuovo ordine PayPal.
+        Dim stockFake As New FakePayPal()
+        Dim ctxSt As PayPalPayFirstContext = ForcedAttempt("AUTHORIZED")
+        Dim ast As PayPalAttemptRecord = Latest(ctxSt)
+        Exec("UPDATE paypal_checkout_tentativi SET PayPalAuthorizationId='KSSTOCKAUTH" & ast.Id.ToString(CultureInfo.InvariantCulture) & "' WHERE Id=" & ast.Id.ToString(CultureInfo.InvariantCulture))
+        Dim ast2 As PayPalAttemptRecord = PayPalPaymentAttempts.LoadForOwner(ast.AttemptKey, ast.AziendeId, ast.LoginId)
+        Dim voidedOk As Boolean = PayPalPayFirstService.VoidAuthorized(ast2, Cfg(), Client(stockFake))
+        Check("S23 giacenza dopo l'autorizzazione: annullo da AUTHORIZED, una sola chiamata, tentativo VOIDED", voidedOk AndAlso stockFake.Count("void") = 1 AndAlso StateOf(ast.Id) = "VOIDED")
+        Dim rst As PayFirstResult = StartIt(ctxSt, stockFake)
+        Dim ast3 As PayPalAttemptRecord = Latest(ctxSt)
+        Check("S24 dopo l'annullo la stessa bozza riparte con un NUOVO tentativo e un nuovo ordine PayPal", rst.Outcome = PayFirstOutcome.ApprovalRedirect AndAlso ast3 IsNot Nothing AndAlso ast3.Id <> ast.Id AndAlso ast3.Stato = "CREATED")
+        Dim ast4 As PayPalAttemptRecord = PayPalPaymentAttempts.LoadForOwner(ast.AttemptKey, ast.AziendeId, ast.LoginId)
+        Check("S25 un secondo annullo dello stesso tentativo gia chiuso non fa nulla", Not PayPalPayFirstService.VoidAuthorized(ast4, Cfg(), Client(stockFake)) AndAlso stockFake.Count("void") = 1)
         Dim noHost As New FakePayPal()
         Dim ctxNh As PayPalPayFirstContext = NewCtx()
         Dim rnh As PayFirstResult = PayPalPayFirstService.Start(ctxNh, Cfg(), Client(noHost), Function(path As String) String.Empty, DateTime.UtcNow)

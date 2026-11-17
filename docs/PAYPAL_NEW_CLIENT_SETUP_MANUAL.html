@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>KeepStore - Attivare PayPal per un nuovo cliente</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #1d2330; margin: 0; }
+  h1 { font-size: 24pt; margin: 0 0 4px; color: #0b3b8c; }
+  h2 { font-size: 15pt; margin: 22px 0 8px; padding: 6px 10px; background: #0b3b8c; color: #fff; border-radius: 4px; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14px 0 4px; color: #0b3b8c; page-break-after: avoid; }
+  p { margin: 5px 0; }
+  .sub { color: #5b6475; font-size: 11pt; margin-bottom: 14px; }
+  .step { border: 1px solid #c9d3e6; border-left: 5px solid #0b3b8c; border-radius: 4px; padding: 7px 11px; margin: 8px 0; background: #f7f9fd; page-break-inside: avoid; }
+  .step b.n { display: inline-block; min-width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; background: #0b3b8c; color: #fff; margin-right: 8px; font-size: 10pt; }
+  .warn { border: 1px solid #e0b100; border-left: 5px solid #e0b100; background: #fff9e2; padding: 7px 11px; border-radius: 4px; margin: 8px 0; page-break-inside: avoid; }
+  .stop { border: 1px solid #c62828; border-left: 5px solid #c62828; background: #fdecec; padding: 7px 11px; border-radius: 4px; margin: 8px 0; page-break-inside: avoid; }
+  .ok { border: 1px solid #2e7d32; border-left: 5px solid #2e7d32; background: #edf7ee; padding: 7px 11px; border-radius: 4px; margin: 8px 0; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 10pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #c9d3e6; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #e8eef9; }
+  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 9.5pt; }
+  code { background: #eef1f6; padding: 1px 4px; border-radius: 3px; }
+  pre { background: #1e2433; color: #e8ecf5; padding: 9px 11px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; page-break-inside: avoid; }
+  ul, ol { margin: 5px 0 5px 20px; padding: 0; }
+  li { margin: 2px 0; }
+  .cover { padding: 18px 0 8px; border-bottom: 3px solid #0b3b8c; margin-bottom: 12px; }
+  .check::before { content: "\2610  "; }
+  .small { font-size: 9pt; color: #5b6475; }
+  .pagebreak { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Attivare PayPal per un nuovo cliente KeepStore</h1>
+  <div class="sub">Manuale unico, passo passo: dal conto PayPal appena aperto al primo pagamento reale. Versione 17/11/2026 (PayPal Checkout Orders v2, pagamento &laquo;prima si paga, poi nasce l&rsquo;ordine&raquo;).</div>
+</div>
+
+<div class="ok"><b>Come si usa.</b> Segui i passaggi nell&rsquo;ordine, senza saltarne. Ogni passaggio dice che cosa fare e che cosa vedrai se va bene. Se qualcosa non corrisponde, <b>fermati</b> e non andare avanti: chiedi aiuto prima di toccare altro.</div>
+
+<div class="stop"><b>Regola d&rsquo;oro dei segreti.</b> <i>Client Secret</i> e password PayPal si scrivono <b>solo</b> nel pannello KeepStore e nel sito PayPal. Mai in e-mail, chat, WhatsApp, documenti condivisi o foto dello schermo. Se un segreto finisce dove non deve, va rigenerato su PayPal (vedi capitolo 9).</div>
+
+<h2>0. Che cosa serve prima di cominciare</h2>
+<ul>
+  <li class="check">Un <b>conto PayPal Business</b> del cliente, gi&agrave; verificato (identit&agrave; e conto bancario collegati). Un conto personale non va bene.</li>
+  <li class="check">Accesso al conto PayPal con le credenziali del cliente (le inserisce lui o tu davanti a lui, sul tuo computer).</li>
+  <li class="check">Il <b>dominio del sito</b> del cliente (esempio: <code>www.nomecliente.it</code>) e il sito KeepStore gi&agrave; funzionante su quel dominio con HTTPS.</li>
+  <li class="check">L&rsquo;<b>azienda</b> del cliente gi&agrave; presente nel gestionale KeepStore, con il metodo di pagamento <b>&laquo;PayPal ON-LINE&raquo;</b> (capitolo 5).</li>
+  <li class="check">Il database del cliente <b>aggiornato</b> con le tabelle PayPal (<code>paypal_checkout_account</code>, <code>paypal_checkout_azienda</code>, <code>paypal_checkout_transazioni</code>, <code>paypal_checkout_eventi</code> e <code>paypal_checkout_tentativi</code>). Lo fa il programma di allineamento di Enzo: chiedigli conferma.</li>
+</ul>
+
+<h2>1. Su PayPal: creare l&rsquo;app e prendere i codici</h2>
+<p>Qui si ottengono i tre dati che servono al sito: <b>Client ID</b>, <b>Client Secret</b> e <b>Merchant ID</b>. Si lavora sul sito per sviluppatori di PayPal, in modalit&agrave; <b>LIVE</b> (pagamenti veri, non prove).</p>
+
+<div class="step"><b class="n">1</b>Apri il browser e vai su <b>developer.paypal.com</b>. Accedi con l&rsquo;account PayPal Business del cliente.</div>
+<div class="step"><b class="n">2</b>In alto scegli <b>Apps &amp; Credentials</b> (Applicazioni e credenziali). Sopra l&rsquo;elenco metti l&rsquo;interruttore su <b>Live</b>, <u>non</u> Sandbox.</div>
+<div class="step"><b class="n">3</b>Premi <b>Create App</b>. Nome: <code>KeepStore-Live</code>. Tipo: <b>Merchant</b>. Conferma.
+  <p class="small">Se il pulsante non compare, il percorso alternativo dal conto Business &egrave;: Strumenti per aziende &rarr; Credenziali API &rarr; Inizia.</p></div>
+<div class="step"><b class="n">4</b>Si apre la pagina dell&rsquo;app. Vedrai <b>Client ID</b> (visibile) e <b>Secret key 1</b> (nascosta: premi <i>Show</i> per vederla). <b>Non copiarli ancora in nessun posto condiviso</b>: ti serviranno al capitolo 3, li incollerai direttamente nel pannello KeepStore.</div>
+<div class="step"><b class="n">5</b><b>Merchant ID</b> (&laquo;ID commerciante&raquo;): nel conto PayPal, icona ingranaggio &rarr; <i>Impostazioni account</i> &rarr; <i>Dati aziendali</i>. &Egrave; un codice di lettere e numeri (circa 13 caratteri). Annotalo.</div>
+<div class="step"><b class="n">6</b>Controlla che nell&rsquo;app, sezione <i>Features</i>, sia attivo <b>Accept payments</b> (pagamenti). Per il resto non serve altro.</div>
+
+<h2>2. Su PayPal: creare il webhook (la &laquo;rete di sicurezza&raquo;)</h2>
+<p>Il webhook &egrave; un messaggio che PayPal manda al sito quando succede qualcosa a un pagamento (approvato, incassato, rifiutato). Serve anche se il cliente chiude il browser a met&agrave;: il sito sa comunque come &egrave; finita.</p>
+
+<div class="step"><b class="n">1</b>Resta nella pagina dell&rsquo;app <code>KeepStore-Live</code>. Scorri fino alla sezione <b>Webhooks</b> e premi <b>Add Webhook</b>.</div>
+<div class="step"><b class="n">2</b>In <b>Webhook URL</b> scrivi esattamente (con il dominio <u>del cliente</u>, quello canonico, non quello di un altro cliente):
+<pre>https://www.nomecliente.it/paypalwebhook.aspx</pre></div>
+<div class="step"><b class="n">3</b>In <b>Event types</b> spunta questi <b>otto</b> eventi (cercali per nome):
+<table>
+<tr><th>Evento</th><th>Perch&eacute; serve</th></tr>
+<tr><td><code>CHECKOUT.ORDER.APPROVED</code> (Checkout order approved)</td><td>il cliente ha approvato il pagamento</td></tr>
+<tr><td><code>CHECKOUT.PAYMENT-APPROVAL.REVERSED</code></td><td>l&rsquo;approvazione &egrave; stata revocata (vedi nota sotto)</td></tr>
+<tr><td><code>PAYMENT.CAPTURE.PENDING</code></td><td>incasso in verifica</td></tr>
+<tr><td><code>PAYMENT.CAPTURE.COMPLETED</code></td><td>incasso riuscito</td></tr>
+<tr><td><code>PAYMENT.CAPTURE.DENIED</code></td><td>incasso rifiutato</td></tr>
+<tr><td><code>PAYMENT.CAPTURE.DECLINED</code></td><td>incasso respinto</td></tr>
+<tr><td><code>PAYMENT.AUTHORIZATION.CREATED</code></td><td>importo riservato sul conto del cliente</td></tr>
+<tr><td><code>PAYMENT.AUTHORIZATION.VOIDED</code></td><td>riserva annullata (importo liberato)</td></tr>
+</table></div>
+<div class="step"><b class="n">4</b>Premi <b>Save</b>. PayPal mostra <b>Webhook added successfully</b> e assegna un <b>Webhook ID</b> (codice di lettere e numeri, nella riga del webhook). Annotalo: serve al capitolo 3. &Egrave; quello che permette al sito di controllare che il messaggio venga davvero da PayPal.</div>
+
+<div class="warn"><b>Nota sull&rsquo;evento <code>CHECKOUT.PAYMENT-APPROVAL.REVERSED</code>.</b> Alcune schermate del sito PayPal non lo mostrano nell&rsquo;elenco, anche se PayPal lo supporta. Se non lo trovi, salva il webhook con gli altri sette e poi aggiungilo con il piccolo programma del capitolo 10 (serve Enzo o un tecnico). Il pagamento funziona anche senza questo evento; manca solo una riconciliazione rara.</div>
+
+<h2 class="pagebreak">3. Nel gestionale KeepStore: il pannello &laquo;PayPal Checkout&raquo;</h2>
+<p>Apri il gestionale. Nel menu a sinistra scegli <b>Pagamenti Web</b> &rarr; <b>PayPal Checkout</b>. Si apre la schermata <b>&laquo;PayPal Checkout - Configurazione Aziende&raquo;</b>, divisa in tre parti: <b>Profilo PayPal LIVE</b> (in alto), <b>Aziende collegate</b> (al centro) e <b>Note operative</b> (in basso). Sotto ci sono i pulsanti.</p>
+
+<h3>3.1 Creare il profilo (i dati del conto PayPal)</h3>
+<div class="step"><b class="n">1</b>Premi <b>Nuovo profilo</b>.</div>
+<div class="step"><b class="n">2</b>Compila i campi:
+<table>
+<tr><th>Campo</th><th>Che cosa scrivere</th></tr>
+<tr><td>Nome profilo</td><td>un nome leggibile, esempio <code>NomeCliente-Live</code></td></tr>
+<tr><td>Tecnologia</td><td>gi&agrave; compilata: <i>PayPal Checkout - Orders API v2</i></td></tr>
+<tr><td>CredentialKey</td><td>una chiave breve, <b>maiuscole, cifre e trattino basso</b>, almeno 3 caratteri, che inizia con una lettera. Esempio <code>PAYPAL_NOMECLIENTE</code>. Non &egrave; una password e deve essere <b>unica</b>.</td></tr>
+<tr><td>Merchant ID</td><td>quello annotato al capitolo 1 (passo 5)</td></tr>
+<tr><td>Ambiente</td><td><b>LIVE</b></td></tr>
+<tr><td>Client ID</td><td>copiato dalla pagina dell&rsquo;app PayPal</td></tr>
+<tr><td>Client Secret</td><td>copiato dalla pagina dell&rsquo;app PayPal (<i>Secret key 1</i>). Nel pannello resta <b>nascosto</b> e non si rilegge pi&ugrave;.</td></tr>
+<tr><td>Webhook ID</td><td>quello annotato al capitolo 2 (passo 4)</td></tr>
+<tr><td>Attivo</td><td>s&igrave;</td></tr>
+</table></div>
+<div class="step"><b class="n">3</b>Salva. Poi premi <b>Verifica configurazione</b>. Se tutto &egrave; giusto compaiono cinque spunte verdi: <b>Client ID configurato</b>, <b>Client Secret configurato</b>, <b>Webhook ID configurato</b>, <b>Webhook eventi OK</b>, <b>Stato profilo: Attivo</b>.</div>
+<div class="warn">Se una spunta non diventa verde, <b>non</b> andare avanti: ricontrolla quel campo. Per sostituire il Client Secret non si pu&ograve; sovrascrivere a caso: serve l&rsquo;azione dedicata (conferma richiesta) e il valore vecchio non viene mai mostrato.</div>
+
+<h3>3.2 Collegare le aziende</h3>
+<p>Un profilo PayPal pu&ograve; servire una o pi&ugrave; aziende dello stesso database (ognuna con il suo sito). Il collegamento dice: <i>per questa azienda e questo metodo di pagamento, usa questo profilo</i>.</p>
+<div class="step"><b class="n">1</b>Premi <b>Gestisci aziende</b> e poi un nuovo collegamento.</div>
+<div class="step"><b class="n">2</b>Compila:
+<table>
+<tr><th>Campo</th><th>Che cosa scrivere</th></tr>
+<tr><td>Azienda</td><td>scegli l&rsquo;azienda dall&rsquo;elenco</td></tr>
+<tr><td>Tipo pagamento</td><td>il metodo <b>PayPal ON-LINE</b> <u>della stessa azienda</u> (non quello di un&rsquo;altra)</td></tr>
+<tr><td>PayPalAccountId</td><td>il profilo creato al punto 3.1</td></tr>
+<tr><td>Email PayPal</td><td>l&rsquo;indirizzo del conto PayPal che riceve i soldi per quel sito</td></tr>
+<tr><td>Brand checkout</td><td>il nome che il cliente vede sulla pagina PayPal (esempio il nome del negozio)</td></tr>
+<tr><td>Valuta</td><td><code>EUR</code> (tre lettere)</td></tr>
+<tr><td>Attivo</td><td>s&igrave;</td></tr>
+</table></div>
+<div class="step"><b class="n">3</b>Salva e premi di nuovo <b>Verifica configurazione</b>: tutto verde.</div>
+<p class="small">Pulsanti del pannello: <b>Nuovo profilo</b>, <b>Modifica profilo</b>, <b>Gestisci aziende</b>, <b>Verifica configurazione</b> (controlla solo i dati nel database, non muove soldi), <b>Attiva / Disattiva</b> (spegne il profilo senza cancellarlo), <b>Log operazioni</b>.</p>
+
+<h2>4. Controllo che il sito sia pronto</h2>
+<div class="step"><b class="n">1</b>Apri il sito del cliente in una finestra del browser. Aggiungi un prodotto al carrello e arriva alla scelta del pagamento: <b>PayPal</b> deve comparire tra i metodi.</div>
+<div class="step"><b class="n">2</b>Se non compare: controlla nel gestionale che il metodo &laquo;PayPal ON-LINE&raquo; dell&rsquo;azienda sia <b>Abilitato</b> e <b>Web</b>, e che il collegamento del capitolo 3.2 sia <b>Attivo</b>.</div>
+
+<h2 class="pagebreak">5. I tre interruttori di comportamento (Tipi di Pagamento)</h2>
+<p>Nel gestionale, <b>Tipi di Pagamento</b>, la riga <b>PayPal ON-LINE</b> dell&rsquo;azienda ha tre colonne in fondo alla griglia. Decidono <b>quando nasce l&rsquo;ordine</b>.</p>
+<table>
+<tr><th>Colonna</th><th>Valore consigliato per PayPal</th><th>Che cosa fa</th></tr>
+<tr><td><code>ConfermaOrdinePrimaPagamento</code></td><td><b>0</b></td><td><b>0 = l&rsquo;ordine nasce solo se PayPal riserva l&rsquo;importo.</b> Se il cliente annulla o PayPal rifiuta: nessun ordine, nessun numero consumato, il carrello resta com&rsquo;&egrave;. <b>1 = l&rsquo;ordine nasce subito</b> e il cliente paga poi (anche dalla sua area personale).</td></tr>
+<tr><td><code>PermettiPagamentoSuccessivo</code></td><td><b>0</b></td><td>1 = il pulsante &laquo;Paga ora&raquo; compare nell&rsquo;ordine non ancora pagato; 0 = non compare.</td></tr>
+<tr><td><code>InviaEmailOrdinePrimaPagamento</code></td><td><b>0</b></td><td>1 = e-mail &laquo;ordine ricevuto&raquo; subito; 0 = l&rsquo;e-mail parte solo dopo l&rsquo;incasso.</td></tr>
+</table>
+<div class="warn"><b>Importante.</b> Fino all&rsquo;attivazione i tre valori restano a <b>1</b> (comportamento tradizionale). Il passaggio a <b>0</b> si fa <u>dopo</u> il primo pagamento di prova riuscito (capitolo 6) e su <b>una sola riga alla volta</b>. Per tornare indietro basta rimettere <b>1</b> e salvare: il sito torna come prima, senza nuove pubblicazioni.</div>
+<p><b>Per bonifico, contrassegno e altri metodi non digitali</b> lascia sempre <b>1</b>: l&rsquo;ordine nasce subito e la merce viene impegnata. Il comportamento &laquo;paga prima&raquo; vale <u>solo</u> per PayPal (e solo per ordini normali, non per preventivi n&eacute; ordini con coupon).</p>
+
+<h2>6. Primo pagamento di prova (reale, importo minimo)</h2>
+<div class="step"><b class="n">1</b>Con il flag ancora a <b>1</b>: fai un ordine di importo minimo con un account PayPal <b>diverso</b> da quello del negozio. Deve arrivare alla conferma con il numero ordine e l&rsquo;e-mail. Nel gestionale l&rsquo;ordine risulta <b>pagato</b>. Se va bene, passa al punto 2.</div>
+<div class="step"><b class="n">2</b>Metti i tre interruttori a <b>0</b> sulla riga PayPal di <u>una sola</u> azienda. Salva.</div>
+<div class="step"><b class="n">3</b>Ripeti l&rsquo;ordine di importo minimo. Vai su PayPal, approva, torna sul sito: deve apparire la conferma con il numero ordine. L&rsquo;ordine nel gestionale &egrave; <b>pagato</b>.</div>
+<div class="step"><b class="n">4</b>Prova anche questi due casi: <b>(a) annulla</b> sulla pagina PayPal &rarr; torni al carrello, i prodotti ci sono ancora, nessun ordine nuovo; <b>(b) chiudi il browser</b> dopo aver approvato su PayPal &rarr; nessun ordine creato, la riserva sul conto si libera da sola.</div>
+<div class="step"><b class="n">5</b>Controlli finali (sola lettura, in SQLyog sul database del cliente):
+<pre>SELECT Id, Stato, Importo, DocumentiId, UltimoEsito, UpdatedAt
+FROM paypal_checkout_tentativi ORDER BY Id DESC LIMIT 10;
+-- atteso per l'ordine di prova: Stato = COMPLETED</pre></div>
+
+<h2>7. Che cosa vede il cliente (e che cosa fa il sistema)</h2>
+<table>
+<tr><th>Situazione</th><th>Che cosa succede</th></tr>
+<tr><td>Tutto bene</td><td>PayPal conferma, il sito crea l&rsquo;ordine e incassa in pochi secondi. Conferma con numero ordine e e-mail.</td></tr>
+<tr><td>Il cliente annulla su PayPal, o PayPal rifiuta</td><td>Torna al carrello con i prodotti dentro. Pu&ograve; riprovare o <b>scegliere un altro metodo di pagamento</b>. Nessun ordine, nessun addebito.</td></tr>
+<tr><td>La merce nel frattempo &egrave; finita</td><td>Torna al carrello con l&rsquo;avviso sulla giacenza. L&rsquo;importo riservato su PayPal viene rilasciato (nessun addebito).</td></tr>
+<tr><td>Il cliente chiude il browser</td><td>Nessun ordine. La riserva su PayPal scade da sola (fino a tre giorni) o si libera quando il cliente torna a pagare.</td></tr>
+<tr><td>Caso raro: PayPal ha riservato l&rsquo;importo ma l&rsquo;incasso finale &egrave; rifiutato</td><td>L&rsquo;ordine esiste ed &egrave; <b>non pagato</b>; nessun addebito al cliente. Lo vedi nel gestionale con stato pagamento <i>non riuscito</i>. Il cliente pu&ograve; ripetere il pagamento dal dettaglio dell&rsquo;ordine; se non lo fa, annulla tu l&rsquo;ordine.</td></tr>
+</table>
+
+<h2>8. Controlli periodici (per le prime settimane)</h2>
+<pre>-- Tentativi fermi da oltre 10 minuti: normalmente nessuno.
+SELECT Id, Stato, StatoPrecedente, DocumentiId, UltimoEsito, UpdatedAt
+FROM paypal_checkout_tentativi
+WHERE Stato IN ('CAPTURING','CAPTURE_REFUSED','VOIDING','UNKNOWN')
+  AND UpdatedAt &lt; NOW() - INTERVAL 10 MINUTE;
+
+-- Ordini creati ma non pagati:
+SELECT d.Id, d.NDocumento, d.StatoPagamentoWeb, d.UltimoEsitoPagamentoWeb, t.Stato
+FROM documenti d INNER JOIN paypal_checkout_tentativi t ON t.DocumentiId = d.Id
+WHERE COALESCE(d.Pagato,0) = 0;
+
+-- Incassi senza ordine (da rimborsare o abbinare a mano):
+SELECT Id, PayPalCaptureId, UltimoEsito, UpdatedAt
+FROM paypal_checkout_tentativi WHERE Stato = 'CAPTURED_ORPHAN';</pre>
+<p>Un incasso senza ordine si rimborsa dal sito PayPal (<i>Attivit&agrave;</i> &rarr; la transazione &rarr; <i>Rimborsa</i>). Un rimborso &egrave; un&rsquo;operazione di denaro: fallo tu, personalmente, mai tramite terzi.</p>
+
+<h2>9. Sicurezza e problemi tipici</h2>
+<ul>
+  <li><b>Segreto finito dove non doveva</b> (chat, e-mail, foto): su developer.paypal.com apri l&rsquo;app, rigenera la <i>Secret key</i> e sostituiscila nel pannello KeepStore con l&rsquo;azione dedicata. Il vecchio smette di funzionare.</li>
+  <li><b>&laquo;Verifica configurazione&raquo; non diventa tutta verde:</b> la spunta rossa indica il campo mancante. Ripeti il capitolo 3.</li>
+  <li><b>PayPal non compare nel carrello:</b> capitolo 4, punto 2.</li>
+  <li><b>Pagamento riuscito su PayPal ma ordine non pagato nel gestionale:</b> controlla i tre controlli del capitolo 8 e, su PayPal, che il webhook risponda con esito 200 (developer.paypal.com &rarr; Webhooks &rarr; il tuo webhook &rarr; <i>Events</i>).</li>
+  <li><b>Un nuovo cliente non riusa mai codici di un altro:</b> ogni cliente ha la sua app PayPal, il suo Client ID, il suo Secret, il suo Webhook ID.</li>
+</ul>
+
+<h2>10. Appendice (per Enzo): aggiungere un evento che la schermata non mostra</h2>
+<p>Solo se al capitolo 2 non trovi <code>CHECKOUT.PAYMENT-APPROVAL.REVERSED</code>. Il programma chiede Client ID e Secret in modo nascosto sul tuo computer e non li salva. Esegui in PowerShell:</p>
+<pre>$id  = Read-Host 'Client ID LIVE'
+$sec = Read-Host 'Client Secret LIVE' -AsSecureString
+$plain = [Net.NetworkCredential]::new('', $sec).Password
+$basic = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${id}:$plain"))
+$tok = (Invoke-RestMethod -Method Post -Uri 'https://api-m.paypal.com/v1/oauth2/token' `
+        -Headers @{ Authorization = "Basic $basic" } -Body 'grant_type=client_credentials' `
+        -ContentType 'application/x-www-form-urlencoded').access_token
+$h = @{ Authorization = "Bearer $tok" }
+# 1) elenca i webhook e prendi l'Id di quello del cliente
+(Invoke-RestMethod -Uri 'https://api-m.paypal.com/v1/notifications/webhooks' -Headers $h).webhooks | Select id, url
+# 2) aggiungi l'evento (sostituisci WEBHOOK_ID e ripeti l'elenco degli eventi gia presenti)
+$names = 'CHECKOUT.ORDER.APPROVED','CHECKOUT.PAYMENT-APPROVAL.REVERSED','PAYMENT.CAPTURE.PENDING','PAYMENT.CAPTURE.COMPLETED',
+         'PAYMENT.CAPTURE.DENIED','PAYMENT.CAPTURE.DECLINED','PAYMENT.AUTHORIZATION.CREATED','PAYMENT.AUTHORIZATION.VOIDED'
+$body = ConvertTo-Json -Depth 5 @(@{ op = 'replace'; path = '/event_types'; value = @($names | ForEach-Object { @{ name = $_ } }) })
+Invoke-RestMethod -Method Patch -Uri 'https://api-m.paypal.com/v1/notifications/webhooks/WEBHOOK_ID' -Headers $h -Body $body -ContentType 'application/json'
+$plain = $null</pre>
+<p class="small">Il comando &egrave; l&rsquo;API ufficiale dei webhook di PayPal. Va eseguito solo da chi sa leggerne l&rsquo;esito; non &egrave; verificato in questo ambiente.</p>
+
+<h2>Riepilogo da stampare (checklist finale)</h2>
+<ul>
+  <li class="check">Conto PayPal Business verificato</li>
+  <li class="check">App <code>KeepStore-Live</code> creata in modalit&agrave; Live: Client ID e Secret annotati con cura</li>
+  <li class="check">Merchant ID annotato</li>
+  <li class="check">Webhook creato con l&rsquo;URL del dominio del cliente e gli otto eventi; Webhook ID annotato</li>
+  <li class="check">Gestionale: profilo creato, cinque spunte verdi</li>
+  <li class="check">Gestionale: azienda collegata al metodo &laquo;PayPal ON-LINE&raquo;, verifica verde</li>
+  <li class="check">Pagamento di prova con interruttori a 1: riuscito</li>
+  <li class="check">Interruttori a 0 su una riga: pagamento, annulla e chiusura browser provati</li>
+  <li class="check">Controlli del capitolo 8 eseguiti dopo qualche giorno</li>
+</ul>
+
+</body>
+</html>

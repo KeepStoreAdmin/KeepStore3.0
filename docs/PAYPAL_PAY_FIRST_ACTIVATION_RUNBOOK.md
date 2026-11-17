@@ -55,5 +55,5 @@ SELECT Id, PayPalCaptureId, UltimoEsito, UpdatedAt FROM paypal_checkout_tentativ
 - **E-mail:** parte solo se l'incasso lo chiude la pagina del cliente; se lo chiude il webhook (cliente uscito dal browser) l'ordine e pagato ma l'e-mail non parte (l'invio usa la sessione del cliente).
 - **Pixel pubblicitario:** non parte mai dopo l'ordine (difetto preesistente: la risposta e un redirect).
 - **Conservazione:** nessuna pulizia automatica delle righe vecchie di `paypal_checkout_tentativi`; da decidere prima di una lunga attivazione.
-- **Autorizzazioni abbandonate:** si liberano quando lo stesso cliente torna a pagare e comunque scadono da sole (tre giorni garantiti da PayPal); non c'e un lavoro periodico.
+- **Autorizzazioni abbandonate:** si liberano quando lo stesso cliente torna a pagare e comunque scadono da sole (tre giorni garantiti da PayPal); non c'e un lavoro periodico. **Giacenza finita dopo l'autorizzazione:** l'autorizzazione si annulla subito (a fine richiesta, il cliente puo attendere qualche secondo in piu); se l'annullo fallisce resta valido il caso precedente.
 - **Secret PayPal** in chiaro in `paypal_checkout_account` (debito noto, fuori da questo progetto).

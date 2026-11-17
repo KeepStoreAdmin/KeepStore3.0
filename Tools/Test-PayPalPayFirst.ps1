@@ -85,7 +85,7 @@ function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord,
     $finishRegion = ''
     if ($iFinishFn -ge 0) { $iNext = $ord.IndexOf('Private Sub RedirectToPayFirstDocument', $iFinishFn, [StringComparison]::Ordinal); if ($iNext -gt $iFinishFn) { $finishRegion = $ord.Substring($iFinishFn, $iNext - $iFinishFn) } }
     [void]$list.Add(@{ Name = 'G13 il pixel non parte nel pay-first (ne dopo il commit ne nella ripresa)'; Ok = (($ord.Contains('If Not payFirst AndAlso articoliIdGlobali <> "" Then facebook_pixel(articoliIdGlobali)')) -and ($finishRegion.Length -gt 0) -and ($finishRegion -notmatch 'facebook_pixel')) })
-    [void]$list.Add(@{ Name = 'G14 ordine.aspx non annulla mai un''autorizzazione'; Ok = ($ord -notmatch 'RecordVoiding|VoidAuthoriz') })
+    [void]$list.Add(@{ Name = 'G14 ordine.aspx annulla un''autorizzazione solo con il servizio (una volta, a fine richiesta) e mai con RecordVoiding generico'; Ok = (($ord -notmatch 'RecordVoiding(?!Unbound)') -and (([regex]::Matches($ord, 'VoidAuthorized\(')).Count -eq 1)) })
     [void]$list.Add(@{ Name = 'G15 nessun parametro della richiesta decide il pay-first (niente pp=1)'; Ok = ($ord -notmatch '"pp"') })
     $c1 = ([regex]::Matches($ord, 'RedirectToOrderConfirmation\(checkoutRequestId, orderIdentity\)')).Count
     $c2 = ([regex]::Matches($ord, 'RedirectAfterCommit\(checkoutRequestId, orderIdentity, payFirst\)')).Count
@@ -117,6 +117,28 @@ function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord,
     $iSweep = $pf.IndexOf('PayPalPayFirstRecovery.SweepOwner(', [StringComparison]::Ordinal)
     $iStart = $pf.IndexOf('PayPalPayFirstService.Start(payCtx', [StringComparison]::Ordinal)
     [void]$list.Add(@{ Name = 'G29 le autorizzazioni abbandonate dello stesso cliente si liberano prima di aprire un nuovo pagamento'; Ok = (($iSweep -gt 0) -and ($iStart -gt $iSweep)) })
+    # PAYPAL-VOID-ON-STOCK-1A: giacenza rifiutata dopo l'autorizzazione.
+    $mark = 'MarkPayFirstVoidAfterStock(payFirst, rollbackSucceeded, orderIdentity)'
+    $markCount = ([regex]::Matches($ord, [regex]::Escape($mark))).Count
+    $okBranches = ($markCount -eq 2)
+    foreach ($m in [regex]::Matches($ord, [regex]::Escape($mark))) {
+        $tail = $ord.Substring($m.Index, [Math]::Min(420, $ord.Length - $m.Index))
+        if (-not ($tail.Contains('PayFirstStockNote(payFirst)') -and ($tail.IndexOf('RedirectToStockFailure(checkoutRequestId)', [StringComparison]::Ordinal) -gt $tail.IndexOf('StoreInventoryFailure(', [StringComparison]::Ordinal)))) { $okBranches = $false }
+    }
+    [void]$list.Add(@{ Name = 'G30 giacenza rifiutata: entrambi i rami segnano l''annullo e avvisano il cliente prima del redirect'; Ok = $okBranches })
+    $iHandler = $ord.IndexOf('Handles Me.Unload', [StringComparison]::Ordinal)
+    $iVoid = $ord.IndexOf('PayPalPayFirstService.VoidAuthorized(', [StringComparison]::Ordinal)
+    $voidCount = ([regex]::Matches($ord, 'VoidAuthorized\(')).Count
+    $iLoad = $ord.IndexOf('PayPalPaymentAttempts.LoadForOwner(key, payFirstVoidCompanyId, payFirstVoidLoginId)', [StringComparison]::Ordinal)
+    $guard = ($iHandler -gt 0) -and $ord.Contains('attempt.DocumentiId > 0 OrElse attempt.Stato <> PayPalPaymentAttemptStates.Authorized')
+    [void]$list.Add(@{ Name = 'G31 l''annullo avviene solo a fine richiesta sul tentativo ESATTO ancora AUTHORIZED e senza documento'; Ok = (($voidCount -eq 1) -and ($iHandler -gt 0) -and ($iLoad -gt $iHandler) -and ($iVoid -gt $iLoad) -and $guard) })
+    $iLockStart = $ord.IndexOf('SyncLock Semaforo', [StringComparison]::Ordinal)
+    $iLockEnd = $ord.IndexOf('End SyncLock', $iLockStart + 1, [StringComparison]::Ordinal)
+    $inLock = if (($iLockStart -gt 0) -and ($iLockEnd -gt $iLockStart)) { $ord.Substring($iLockStart, $iLockEnd - $iLockStart) } else { 'X' }
+    [void]$list.Add(@{ Name = 'G32 nessuna chiamata PayPal di annullo dentro il lock applicativo'; Ok = (-not $inLock.Contains('VoidAuthorized(') -and -not $inLock.Contains('PayPalOrdersV2Client(')) })
+    $iRetired = $ord.IndexOf('If CheckoutFailureRecoveryService.IsRetiredRequest(HttpContext.Current, checkoutRequestId) Then', [StringComparison]::Ordinal)
+    $iRoute = $ord.IndexOf('If Not RoutePayFirst(orderIdentity', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G33 una richiesta ritirata non apre un nuovo pagamento PayPal (il controllo precede l''instradamento)'; Ok = (($iRetired -gt 0) -and ($iRoute -gt $iRetired)) })
     return $list}
 
 $pf = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code\PayPalPayFirst.vb'))
