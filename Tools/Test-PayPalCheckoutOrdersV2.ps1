@@ -32,7 +32,7 @@ $results += Assert-Check ($repository.Contains('UNIQUE') -or $repository.Contain
 $results += Assert-Check ($repository.Contains('String.Equals(storedState, "COMPLETED"') -and $repository.Contains('normalized <> "COMPLETED"')) '38 monotonic completed state'
 $results += Assert-Check ($state.Contains('If doc.Pagato = 1 Then') -and $state.Contains('ALREADY_COMPLETED')) '39 recheck completed no recapture'
 $results += Assert-Check ($state.Contains('GetOrder(tx.PayPalOrderId)') -and -not $state.Contains('CaptureOrder(')) '40 recheck REST GET only'
-$results += Assert-Check ($returnPage.Contains('CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)')) '41 deterministic capture retry'
+$results += Assert-Check ($returnPage.Contains('CaptureOrderVerified(doc, tx.PayPalOrderId, tx.CaptureRequestId, tx.Importo, tx.Valuta)')) '41 deterministic capture retry'
 $results += Assert-Check ($returnPage.Contains('ValidateSnapshot') -and $checkout.Contains('ValidateSnapshot')) '42 create and return authoritative validation'
 $results += Assert-Check ($webhook.Contains('VerifyWebhookSignature') -and $webhook.Contains('SIGNATURE_REJECTED')) '43 webhook signature verified'
 $results += Assert-Check ($webhook.Contains('LoadTransactionForExternalReference') -and $webhook.Contains('ApplyAuthoritativeState')) '44 webhook lookup before DML'
@@ -58,7 +58,7 @@ $results += Assert-Check ($client.Contains('BuildWebhookVerificationPayload') -a
 $results += Assert-Check ($webhook.Contains('Request.Headers("PAYPAL-TRANSMISSION-SIG"), raw)') -and -not $webhook.Contains('Request.Headers("PAYPAL-TRANSMISSION-SIG"), eventData)')) '57 raw event passed unchanged'
 $results += Assert-Check ($returnPage.Contains('Not PayPalOrdersV2Client.IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId) Then') -and $returnPage.IndexOf('IsReturnOrderTokenValid(rawOrderId, tx.PayPalOrderId)', [StringComparison]::Ordinal) -lt $returnPage.IndexOf('client.GetOrder', [StringComparison]::Ordinal)) '58 mandatory return token before API'
 $results += Assert-Check ($webhook.Contains('CHECKOUT.ORDER.APPROVED') -and $webhook.Contains('ProcessApprovedOrder')) '59 approved webhook recovery'
-$results += Assert-Check ($webhook.Contains('CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)')) '60 approved uses persisted capture request id'
+$results += Assert-Check ($webhook.Contains('CaptureOrderVerified(doc, tx.PayPalOrderId, tx.CaptureRequestId, tx.Importo, tx.Valuta)')) '60 approved uses persisted capture request id'
 $results += Assert-Check ($webhook.Contains('CHECKOUT.PAYMENT-APPROVAL.REVERSED') -and $webhook.Contains('.Status = "FAILED"')) '61 approval reversed fails closed'
 $verifyIndex = $webhook.IndexOf('If verification Is Nothing OrElse Not verification.Success', [StringComparison]::Ordinal)
 $firstDmlIndex = $webhook.IndexOf('ApplyAuthoritativeState', [StringComparison]::Ordinal)

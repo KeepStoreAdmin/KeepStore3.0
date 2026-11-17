@@ -90,6 +90,14 @@ Module PayPalOrdersV2Harness
             unit & If(extraUnit, "," & unit, "") & "],""links"":[{""rel"":""payer-action"",""href"":""" & approval & """}]}"
     End Function
 
+    ' PAYPAL-CAPTURE-REPRESENTATION-1A: uno snapshot NUOVO per ogni caso (prima i test 23-28 riusavano lo stesso oggetto e dal 23 in poi ereditavano la valuta errata: i controlli 24-28 passavano anche senza il controllo che dicono di provare).
+    Private Function FreshGet(ByVal cfg As PayPalCheckoutConfig) As PayPalOrderSnapshot
+        Dim f As New FakeTransport()
+        f.Add(200, OAuth())
+        f.Add(200, OrderJson(1, "APPROVED", "12.34", "EUR", cfg.PayeeEmail, cfg.MerchantId, "ORDER-123456"))
+        Return New PayPalOrdersV2Client(cfg, f).GetOrder("ORDER-123456").Snapshot
+    End Function
+
     Sub Main()
         Dim cfgA As PayPalCheckoutConfig = Config(1, "tenant-a@example.invalid", "TENANT A")
         Dim cfgB As PayPalCheckoutConfig = Config(2, "tenant-b@example.invalid", "TENANT B")
@@ -207,12 +215,12 @@ Module PayPalOrdersV2Harness
 
         Dim valid As PayPalOrderSnapshot = capture.Snapshot
         valid.Amount = 1D : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "22 amount mismatch")
-        valid = getResult.Snapshot : valid.CurrencyCode = "USD" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "23 currency mismatch")
-        valid = getResult.Snapshot : valid.PayeeEmail = "other@example.invalid" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "24 payee mismatch")
-        valid = getResult.Snapshot : valid.MerchantId = "OTHER" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "25 merchant mismatch")
-        valid = getResult.Snapshot : valid.CustomId = "KS-DOC-1-999" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "26 document mismatch")
-        valid = getResult.Snapshot : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "OTHER-ORDER", valid), "27 OrderId mismatch")
-        Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgB, "ORDER-123456", getResult.Snapshot), "28 tenant mismatch")
+        valid = FreshGet(cfgA) : valid.CurrencyCode = "USD" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "23 currency mismatch")
+        valid = FreshGet(cfgA) : valid.PayeeEmail = "other@example.invalid" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "24 payee mismatch")
+        valid = FreshGet(cfgA) : valid.MerchantId = "OTHER" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "25 merchant mismatch")
+        valid = FreshGet(cfgA) : valid.CustomId = "KS-DOC-1-999" : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "ORDER-123456", valid), "26 document mismatch")
+        valid = FreshGet(cfgA) : Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgA, "OTHER-ORDER", valid), "27 OrderId mismatch")
+        Check(Not PayPalOrdersV2Client.ValidateSnapshot(Doc(1), cfgB, "ORDER-123456", FreshGet(cfgA)), "28 tenant mismatch")
 
         Dim abaA As String = cfgA.PayeeEmail & "|" & cfgA.BrandName
         Dim abaB As String = cfgB.PayeeEmail & "|" & cfgB.BrandName

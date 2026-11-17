@@ -103,6 +103,9 @@ Public Class PayPalOrderSnapshot
     Public Property CaptureAmount As Decimal
     Public Property CaptureCurrencyCode As String
     Public Property CaptureAmountValid As Boolean
+    ' PAYPAL-CAPTURE-REPRESENTATION-1A: invoice_id e custom_id possono stare DENTRO la capture (esempio ufficiale vault), non solo nell'unita.
+    Public Property CaptureInvoiceId As String
+    Public Property CaptureCustomId As String
     Public Property ApprovalUrl As String
     ' PAYPAL-AUTHORIZE-CLIENT-1A (P1): importo di unita presente (anche se non valido), autorizzazioni dell'ordine.
     Public Property OrderAmountPresent As Boolean
@@ -231,8 +234,18 @@ Public Class PayPalOrdersV2Client
                                 ByVal returnUrl As String,
                                 ByVal cancelUrl As String) As PayPalOrdersV2Result
         If doc Is Nothing Then Return Failure("DOCUMENT_REQUIRED")
-        Return SendOrder("POST", "/v2/checkout/orders", requestId,
-                         BuildCreateOrderPayload(doc, returnUrl, cancelUrl), 201, True)
+        ' PAYPAL-CAPTURE-REPRESENTATION-1A: la creazione esige solo un id valido e il link di approvazione; i campi di unita della risposta, se presenti,
+        ' si confrontano in CheckCreatedOrder, e l'autorita completa resta il GET stretto che ogni chiamante fa PRIMA di catturare.
+        Dim created As PayPalOrdersV2Result = SendOrder("POST", "/v2/checkout/orders", requestId,
+                                                         BuildCreateOrderPayload(doc, returnUrl, cancelUrl), 201, preferRepresentation:=True, includeIssue:=True)
+        If created.Success AndAlso Not IsExternalIdValid(created.Snapshot.OrderId) Then
+            created.Success = False
+            created.ErrorCode = "ORDER_ID_INVALID"
+        ElseIf created.Success AndAlso String.IsNullOrEmpty(created.Snapshot.ApprovalUrl) Then
+            created.Success = False
+            created.ErrorCode = "APPROVAL_URL_MISSING"
+        End If
+        Return created
     End Function
 
     Public Function BuildCreateOrderPayload(ByVal doc As PayPalPaymentDocumentInfo,
@@ -264,7 +277,15 @@ Public Class PayPalOrdersV2Client
 
     Public Function CaptureOrder(ByVal orderId As String, ByVal requestId As String) As PayPalOrdersV2Result
         If Not IsExternalIdValid(orderId) Then Return Failure("ORDER_ID_INVALID")
-        Dim result As PayPalOrdersV2Result = SendOrder("POST", "/v2/checkout/orders/" & Uri.EscapeDataString(orderId) & "/capture", requestId, "{}", 201, True)
+        ' PAYPAL-CAPTURE-REPRESENTATION-1A: livello della CHIAMATA. La risposta documentata di capture porta id, stato e importo della cattura ma non intent, payee,
+        ' custom_id, invoice_id ne importo di unita: non si esigono qui. Cosa vale come «verificato» lo decide CaptureOrderVerified (controllo + GET stretto).
+        Dim result As PayPalOrdersV2Result = SendOrder("POST", "/v2/checkout/orders/" & Uri.EscapeDataString(orderId) & "/capture", requestId, "{}", 201,
+                                                       preferRepresentation:=True, includeIssue:=True)
+        If result.Success AndAlso Not String.Equals(orderId, result.Snapshot.OrderId, StringComparison.Ordinal) Then
+            result.Success = False
+            result.ErrorCode = "ORDER_ID_MISMATCH"
+            Return result
+        End If
         If result.Success AndAlso (result.Snapshot.CaptureCount <> 1 OrElse Not result.Snapshot.CaptureAmountValid OrElse
                                    Not IsExternalIdValid(result.Snapshot.CaptureId) OrElse
                                    Not IsCaptureStatusSupported(result.Snapshot.CaptureStatus)) Then
@@ -274,9 +295,41 @@ Public Class PayPalOrdersV2Client
         Return result
     End Function
 
+    ' Cattura e verifica: (1) CaptureOrder; (2) CheckCaptureResponse (id, stato, importo e valuta della cattura; i campi di unita, se presenti, devono coincidere);
+    ' (3) GET dell'ordine; (4) validatore STRETTO sul GET, esattamente una capture e lo stesso id della risposta. Successo = Snapshot e quello del GET.
+    ' Ogni fallimento DOPO l'esito HTTP della cattura: Success=False, StatusCode della cattura, mai NotSent (l'addebito puo essere avvenuto: IsOutcomeUncertain
+    ' e vero), Snapshot VUOTO (nessuno stato applicabile) e nel codice il motivo (CAPTURE_RESPONSE_* / CAPTURE_READBACK_*).
+    Public Function CaptureOrderVerified(ByVal doc As PayPalPaymentDocumentInfo,
+                                         ByVal orderId As String,
+                                         ByVal requestId As String,
+                                         ByVal attemptAmount As Decimal,
+                                         ByVal attemptCurrency As String) As PayPalOrdersV2Result
+        If doc Is Nothing OrElse _config Is Nothing Then Return Failure("DOCUMENT_REQUIRED")
+        If _config.AziendeId <> doc.AziendeId OrElse _config.PagamentiTipoId <> doc.PagamentiTipoId Then Return Failure("TENANT_MISMATCH")
+        Dim captured As PayPalOrdersV2Result = CaptureOrder(orderId, requestId)
+        If captured Is Nothing OrElse Not captured.Success Then Return WithheldOrder(captured, If(captured Is Nothing, "CAPTURE_NO_RESULT", captured.ErrorCode))
+        Dim reason As String = CheckCaptureResponse(doc, _config, orderId, captured.Snapshot, attemptAmount, attemptCurrency)
+        If reason.Length > 0 Then Return WithheldOrder(captured, "CAPTURE_RESPONSE_" & reason)
+        Dim readback As PayPalOrdersV2Result = GetOrder(orderId)
+        If readback Is Nothing OrElse Not readback.Success Then
+            Return WithheldOrder(captured, "CAPTURE_READBACK_GET_" & If(readback Is Nothing, 0, readback.StatusCode).ToString(CultureInfo.InvariantCulture))
+        End If
+        reason = CheckOrderAgainstAttempt(doc, _config, orderId, readback.Snapshot, attemptAmount, attemptCurrency)
+        If reason.Length = 0 AndAlso readback.Snapshot.CaptureCount <> 1 Then reason = "CAPTURE_COUNT"
+        If reason.Length = 0 AndAlso Not String.Equals(captured.Snapshot.CaptureId, readback.Snapshot.CaptureId, StringComparison.Ordinal) Then reason = "CAPTURE_ID"
+        If reason.Length > 0 Then Return WithheldOrder(captured, "CAPTURE_READBACK_" & reason)
+        Return New PayPalOrdersV2Result With {.Success = True, .StatusCode = captured.StatusCode, .Snapshot = readback.Snapshot}
+    End Function
+
+    ' Esito che non porta nulla di applicabile: stesso stato HTTP e stessa natura (NotSent) dell'origine, codice dato, snapshot vuoto.
+    Private Shared Function WithheldOrder(ByVal source As PayPalOrdersV2Result, ByVal code As String) As PayPalOrdersV2Result
+        Return New PayPalOrdersV2Result With {.Success = False, .StatusCode = If(source Is Nothing, 0, source.StatusCode), .ErrorCode = code,
+                                              .NotSent = source IsNot Nothing AndAlso source.NotSent, .Snapshot = New PayPalOrderSnapshot()}
+    End Function
+
     ' ---------------------------------------------------------------------------------------------------------------------------------
     ' PAYPAL-AUTHORIZE-CLIENT-1A (P1 del progetto pay-first, docs/PAYPAL_PAY_FIRST_DESIGN.md): autorizza, incassa l'autorizzazione, annulla.
-    ' Codice inerte: nessun chiamante finche non arriva P3. Il percorso CAPTURE di sopra non cambia.
+    ' Codice inerte: nessun chiamante finche non arriva P3. (Il percorso CAPTURE di sopra e stato reso robusto alla rappresentazione documentata da PAYPAL-CAPTURE-REPRESENTATION-1A.)
     ' ---------------------------------------------------------------------------------------------------------------------------------
     Public Function BuildCreateAuthorizeOrderPayload(ByVal attempt As PayPalAttemptInfo,
                                                      ByVal returnUrl As String,
@@ -482,21 +535,7 @@ Public Class PayPalOrdersV2Client
                                             ByVal cfg As PayPalCheckoutConfig,
                                             ByVal expectedOrderId As String,
                                             ByVal snapshot As PayPalOrderSnapshot) As Boolean
-        If doc Is Nothing OrElse cfg Is Nothing OrElse snapshot Is Nothing Then Return False
-        Return cfg.AziendeId = doc.AziendeId AndAlso cfg.PagamentiTipoId = doc.PagamentiTipoId AndAlso
-               snapshot.PurchaseUnitCount = 1 AndAlso snapshot.OrderAmountValid AndAlso
-               String.Equals(snapshot.OrderId, expectedOrderId, StringComparison.Ordinal) AndAlso
-               String.Equals(snapshot.Intent, "CAPTURE", StringComparison.OrdinalIgnoreCase) AndAlso
-               String.Equals(snapshot.ReferenceId, ExpectedReferenceId(doc), StringComparison.Ordinal) AndAlso
-               String.Equals(snapshot.CustomId, ExpectedCustomId(doc), StringComparison.Ordinal) AndAlso
-               String.Equals(snapshot.InvoiceId, ExpectedInvoiceId(doc), StringComparison.Ordinal) AndAlso
-               snapshot.Amount = Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) AndAlso
-               String.Equals(snapshot.CurrencyCode, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) AndAlso
-               String.Equals(snapshot.PayeeEmail, cfg.PayeeEmail, StringComparison.OrdinalIgnoreCase) AndAlso
-               String.Equals(snapshot.MerchantId, cfg.MerchantId, StringComparison.Ordinal) AndAlso
-               snapshot.CaptureCount <= 1 AndAlso
-               (snapshot.CaptureCount = 0 AndAlso Not String.Equals(snapshot.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase) OrElse
-                HasMatchingCapture(snapshot, doc.TotalDocument, cfg.CurrencyCode))
+        Return CheckOrderSnapshotStrict(doc, cfg, expectedOrderId, snapshot).Length = 0
     End Function
 
     Public Shared Function ValidateSnapshotAgainstAttempt(ByVal doc As PayPalPaymentDocumentInfo,
@@ -505,10 +544,110 @@ Public Class PayPalOrdersV2Client
                                                           ByVal snapshot As PayPalOrderSnapshot,
                                                           ByVal attemptAmount As Decimal,
                                                           ByVal attemptCurrency As String) As Boolean
-        Return ValidateSnapshot(doc, cfg, expectedOrderId, snapshot) AndAlso
-               attemptAmount = Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) AndAlso
-               String.Equals(attemptCurrency, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) AndAlso
-               (snapshot.CaptureCount = 0 OrElse HasMatchingCapture(snapshot, attemptAmount, attemptCurrency))
+        Return CheckOrderAgainstAttempt(doc, cfg, expectedOrderId, snapshot, attemptAmount, attemptCurrency).Length = 0
+    End Function
+
+    ' PAYPAL-CAPTURE-REPRESENTATION-1A: i due validatori stretti sono wrapper dei controlli a MOTIVO (vuoto = valido). Una sola implementazione: stesse condizioni,
+    ' stesso ordine della vecchia espressione booleana (provata con una griglia di equivalenza nell'harness).
+    Public Shared Function CheckOrderAgainstAttempt(ByVal doc As PayPalPaymentDocumentInfo,
+                                                    ByVal cfg As PayPalCheckoutConfig,
+                                                    ByVal expectedOrderId As String,
+                                                    ByVal snapshot As PayPalOrderSnapshot,
+                                                    ByVal attemptAmount As Decimal,
+                                                    ByVal attemptCurrency As String) As String
+        Dim reason As String = CheckOrderSnapshotStrict(doc, cfg, expectedOrderId, snapshot)
+        If reason.Length > 0 Then Return reason
+        If attemptAmount <> Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) Then Return "ATTEMPT_AMOUNT"
+        If Not String.Equals(attemptCurrency, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return "ATTEMPT_CURRENCY"
+        If snapshot.CaptureCount <> 0 AndAlso Not HasMatchingCapture(snapshot, attemptAmount, attemptCurrency) Then Return "CAPTURE"
+        Return String.Empty
+    End Function
+
+    Private Shared Function CheckOrderSnapshotStrict(ByVal doc As PayPalPaymentDocumentInfo,
+                                                     ByVal cfg As PayPalCheckoutConfig,
+                                                     ByVal expectedOrderId As String,
+                                                     ByVal snapshot As PayPalOrderSnapshot) As String
+        If doc Is Nothing OrElse cfg Is Nothing OrElse snapshot Is Nothing Then Return "INPUT"
+        If cfg.AziendeId <> doc.AziendeId OrElse cfg.PagamentiTipoId <> doc.PagamentiTipoId Then Return "TENANT"
+        If snapshot.PurchaseUnitCount <> 1 Then Return "UNIT_COUNT"
+        If Not snapshot.OrderAmountValid Then Return "ORDER_AMOUNT"
+        If Not String.Equals(snapshot.OrderId, expectedOrderId, StringComparison.Ordinal) Then Return "ORDER_ID"
+        If Not String.Equals(snapshot.Intent, "CAPTURE", StringComparison.OrdinalIgnoreCase) Then Return "INTENT"
+        If Not String.Equals(snapshot.ReferenceId, ExpectedReferenceId(doc), StringComparison.Ordinal) Then Return "REFERENCE_ID"
+        If Not String.Equals(snapshot.CustomId, ExpectedCustomId(doc), StringComparison.Ordinal) Then Return "CUSTOM_ID"
+        If Not String.Equals(snapshot.InvoiceId, ExpectedInvoiceId(doc), StringComparison.Ordinal) Then Return "INVOICE_ID"
+        If snapshot.Amount <> Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) Then Return "AMOUNT"
+        If Not String.Equals(snapshot.CurrencyCode, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return "CURRENCY"
+        If Not String.Equals(snapshot.PayeeEmail, cfg.PayeeEmail, StringComparison.OrdinalIgnoreCase) Then Return "PAYEE"
+        If Not String.Equals(snapshot.MerchantId, cfg.MerchantId, StringComparison.Ordinal) Then Return "MERCHANT"
+        If snapshot.CaptureCount > 1 Then Return "CAPTURE_COUNT"
+        If Not (snapshot.CaptureCount = 0 AndAlso Not String.Equals(snapshot.Status, "COMPLETED", StringComparison.OrdinalIgnoreCase) OrElse
+                HasMatchingCapture(snapshot, doc.TotalDocument, cfg.CurrencyCode)) Then Return "CAPTURE"
+        Return String.Empty
+    End Function
+
+    ' Campi di unita nelle risposte POST (create, capture): presente e diverso = rifiuto, assente (o stringa vuota) = ammesso. Nessun campo e obbligatorio qui:
+    ' l'autorita completa e il GET stretto. Tenant, importo del tentativo e fatti della cattura NON sono opzionali (controlli dei chiamanti).
+    Private Shared Function CheckOrderUnitFieldsIfPresent(ByVal doc As PayPalPaymentDocumentInfo,
+                                                          ByVal cfg As PayPalCheckoutConfig,
+                                                          ByVal snapshot As PayPalOrderSnapshot) As String
+        If snapshot.PurchaseUnitCount > 1 Then Return "UNIT_COUNT"
+        If FieldDiffers(snapshot.Intent, "CAPTURE", False, True) Then Return "INTENT"
+        If FieldDiffers(snapshot.ReferenceId, ExpectedReferenceId(doc), False, False) Then Return "REFERENCE_ID"
+        If FieldDiffers(snapshot.CustomId, ExpectedCustomId(doc), False, False) Then Return "CUSTOM_ID"
+        If FieldDiffers(snapshot.InvoiceId, ExpectedInvoiceId(doc), False, False) Then Return "INVOICE_ID"
+        If snapshot.OrderAmountPresent Then
+            If Not snapshot.OrderAmountValid OrElse snapshot.Amount <> Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) Then Return "AMOUNT"
+            If Not String.Equals(snapshot.CurrencyCode, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return "CURRENCY"
+        End If
+        If FieldDiffers(snapshot.PayeeEmail, cfg.PayeeEmail, False, True) Then Return "PAYEE"
+        If FieldDiffers(snapshot.MerchantId, cfg.MerchantId, False, False) Then Return "MERCHANT"
+        Return String.Empty
+    End Function
+
+    ' Risposta di capture: l'ordine atteso, una sola unita e UNA capture con id, stato, importo e valuta coerenti con il tentativo; il resto, se presente, coincide.
+    Public Shared Function CheckCaptureResponse(ByVal doc As PayPalPaymentDocumentInfo,
+                                                ByVal cfg As PayPalCheckoutConfig,
+                                                ByVal expectedOrderId As String,
+                                                ByVal snapshot As PayPalOrderSnapshot,
+                                                ByVal attemptAmount As Decimal,
+                                                ByVal attemptCurrency As String) As String
+        If doc Is Nothing OrElse cfg Is Nothing OrElse snapshot Is Nothing Then Return "INPUT"
+        If cfg.AziendeId <> doc.AziendeId OrElse cfg.PagamentiTipoId <> doc.PagamentiTipoId Then Return "TENANT"
+        If attemptAmount <> Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) Then Return "ATTEMPT_AMOUNT"
+        If Not String.Equals(attemptCurrency, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return "ATTEMPT_CURRENCY"
+        If Not IsExternalIdValid(expectedOrderId) OrElse Not String.Equals(snapshot.OrderId, expectedOrderId, StringComparison.Ordinal) Then Return "ORDER_ID"
+        If snapshot.PurchaseUnitCount <> 1 Then Return "UNIT_COUNT"
+        Dim reason As String = CheckOrderUnitFieldsIfPresent(doc, cfg, snapshot)
+        If reason.Length > 0 Then Return reason
+        If snapshot.CaptureCount <> 1 Then Return "CAPTURE_COUNT"
+        If Not IsExternalIdValid(snapshot.CaptureId) Then Return "CAPTURE_ID"
+        If Not IsCaptureStatusSupported(snapshot.CaptureStatus) Then Return "CAPTURE_STATUS"
+        If Not snapshot.CaptureAmountValid OrElse snapshot.CaptureAmount <> Math.Round(attemptAmount, 2, MidpointRounding.AwayFromZero) Then Return "CAPTURE_AMOUNT"
+        If Not String.Equals(snapshot.CaptureCurrencyCode, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return "CAPTURE_CURRENCY"
+        If FieldDiffers(snapshot.CaptureInvoiceId, ExpectedInvoiceId(doc), False, False) Then Return "CAPTURE_INVOICE_ID"
+        If FieldDiffers(snapshot.CaptureCustomId, ExpectedCustomId(doc), False, False) Then Return "CAPTURE_CUSTOM_ID"
+        Return String.Empty
+    End Function
+
+    ' Risposta di creazione (percorso CAPTURE): id valido e link di approvazione; i campi di unita presenti coincidono; nessuna capture ne autorizzazione.
+    Public Shared Function CheckCreatedOrder(ByVal doc As PayPalPaymentDocumentInfo,
+                                             ByVal cfg As PayPalCheckoutConfig,
+                                             ByVal snapshot As PayPalOrderSnapshot,
+                                             ByVal attemptAmount As Decimal,
+                                             ByVal attemptCurrency As String) As String
+        If doc Is Nothing OrElse cfg Is Nothing OrElse snapshot Is Nothing Then Return "INPUT"
+        If cfg.AziendeId <> doc.AziendeId OrElse cfg.PagamentiTipoId <> doc.PagamentiTipoId Then Return "TENANT"
+        If attemptAmount <> Math.Round(doc.TotalDocument, 2, MidpointRounding.AwayFromZero) Then Return "ATTEMPT_AMOUNT"
+        If Not String.Equals(attemptCurrency, cfg.CurrencyCode, StringComparison.OrdinalIgnoreCase) Then Return "ATTEMPT_CURRENCY"
+        If Not IsExternalIdValid(snapshot.OrderId) Then Return "ORDER_ID"
+        Dim reason As String = CheckOrderUnitFieldsIfPresent(doc, cfg, snapshot)
+        If reason.Length > 0 Then Return reason
+        Dim createdStatus As String = If(snapshot.Status, String.Empty).Trim().ToUpperInvariant()
+        If createdStatus.Length > 0 AndAlso createdStatus <> "CREATED" AndAlso createdStatus <> "PAYER_ACTION_REQUIRED" Then Return "STATE"
+        If snapshot.CaptureCount <> 0 OrElse snapshot.AuthorizationCount <> 0 Then Return "STATE"
+        If Not String.IsNullOrEmpty(snapshot.ApprovalUrl) Then Return String.Empty
+        Return "APPROVAL_URL"
     End Function
 
     ' Descrizione sicura di un esito negativo per il registro: stato HTTP e codice di errore (nome PayPal o codice interno su una riga).
@@ -788,6 +927,7 @@ Public Class PayPalOrdersV2Client
             .Prefer = If(preferRepresentation, "return=representation", String.Empty), .Body = body})
     End Function
 
+    ' requireRepresentation e preferRepresentation inviano entrambi "Prefer: return=representation"; dal 2026-11-17 nessuno dei due esige piu una risposta completa (la completezza si giudica nei Check*, non qui).
     Private Function SendOrder(ByVal method As String,
                                ByVal path As String,
                                ByVal requestId As String,
@@ -805,17 +945,8 @@ Public Class PayPalOrdersV2Client
         Dim result As New PayPalOrdersV2Result With {.StatusCode = response.StatusCode, .Snapshot = ParseSnapshot(response.Body)}
         Dim acceptedStatus As Boolean = response.StatusCode = expectedStatus OrElse (expectedStatus = 201 AndAlso response.StatusCode = 200)
         result.Success = acceptedStatus AndAlso result.Snapshot IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(result.Snapshot.OrderId)
-        If result.Success AndAlso requireRepresentation AndAlso Not HasAuthoritativeRepresentation(result.Snapshot) Then result.Success = False
         If Not result.Success Then result.ErrorCode = If(includeIssue, ReadSafeErrorWithIssue(response.Body, "PAYPAL_API_FAILED"), ReadSafeError(response.Body, "PAYPAL_API_FAILED"))
         Return result
-    End Function
-
-    Private Shared Function HasAuthoritativeRepresentation(ByVal snapshot As PayPalOrderSnapshot) As Boolean
-        Return snapshot IsNot Nothing AndAlso snapshot.Intent <> String.Empty AndAlso snapshot.ReferenceId <> String.Empty AndAlso
-               snapshot.PurchaseUnitCount = 1 AndAlso snapshot.OrderAmountValid AndAlso snapshot.CaptureCount <= 1 AndAlso
-               snapshot.CustomId <> String.Empty AndAlso snapshot.InvoiceId <> String.Empty AndAlso snapshot.Amount > 0D AndAlso
-               snapshot.CurrencyCode <> String.Empty AndAlso snapshot.PayeeEmail <> String.Empty AndAlso snapshot.MerchantId <> String.Empty AndAlso
-               (snapshot.CaptureCount = 0 OrElse snapshot.CaptureAmountValid)
     End Function
 
     Private Shared Function IsCaptureStatusSupported(ByVal value As String) As Boolean
@@ -859,6 +990,8 @@ Public Class PayPalOrdersV2Client
                 snapshot.CaptureId = ReadString(capture, "id")
                 snapshot.CaptureStatus = ReadString(capture, "status")
                 snapshot.CaptureAmountValid = ReadAmount(ReadDictionary(capture, "amount"), snapshot.CaptureAmount, snapshot.CaptureCurrencyCode)
+                snapshot.CaptureInvoiceId = ReadString(capture, "invoice_id")
+                snapshot.CaptureCustomId = ReadString(capture, "custom_id")
             End If
         End If
         Dim links As IList = ReadList(root, "links")

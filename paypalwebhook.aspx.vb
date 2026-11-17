@@ -85,8 +85,12 @@ Partial Class paypalwebhook
            Not String.Equals(authoritative.CaptureStatus, "PENDING", StringComparison.OrdinalIgnoreCase) Then
             If Not String.Equals(authoritative.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Finish(409, "ORDER_NOT_APPROVED") : Return
             If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then Finish(409, "CAPTURE_NOT_CURRENT") : Return
-            Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
-            If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, capture.Snapshot, tx.Importo, tx.Valuta) Then Finish(409, "CAPTURE_MISMATCH") : Return
+            Dim capture As PayPalOrdersV2Result = client.CaptureOrderVerified(doc, tx.PayPalOrderId, tx.CaptureRequestId, tx.Importo, tx.Valuta)
+            If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, capture.Snapshot, tx.Importo, tx.Valuta) Then
+                ' Il motivo resta nel registro (codice sicuro, nessun corpo); la risposta HTTP a PayPal non cambia.
+                PayPalPaymentState.LogCheckoutFailure("paypal-webhook", tx.DocumentiId, "Capture PayPal non verificata", PayPalOrdersV2Client.DescribeFailure(capture))
+                Finish(409, "CAPTURE_MISMATCH") : Return
+            End If
             authoritative = capture.Snapshot
         End If
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, authoritative, eventId) Then Finish(500, "STATE_UPDATE_FAILED") : Return

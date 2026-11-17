@@ -68,7 +68,7 @@ Partial Class paypalcheckout
             End If
             If String.Equals(details.Snapshot.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then
                 If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then Fail(documentId, "Capture PayPal non disponibile") : Return
-                Dim captured As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
+                Dim captured As PayPalOrdersV2Result = client.CaptureOrderVerified(doc, tx.PayPalOrderId, tx.CaptureRequestId, tx.Importo, tx.Valuta)
                 If captured Is Nothing OrElse Not captured.Success OrElse
                    Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, captured.Snapshot, tx.Importo, tx.Valuta) OrElse
                    Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, captured.Snapshot, String.Empty) Then
@@ -95,8 +95,11 @@ Partial Class paypalcheckout
             End If
         End If
         Dim response As PayPalOrdersV2Result = client.CreateOrder(doc, tx.CreateRequestId, returnUrl, cancelUrl)
-        If response Is Nothing OrElse Not response.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, response.Snapshot.OrderId, response.Snapshot, tx.Importo, tx.Valuta) OrElse Not PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(response.Snapshot.ApprovalUrl) Then
-            Fail(documentId, "Creazione pagamento PayPal non riuscita", PayPalOrdersV2Client.DescribeFailure(response)) : Return
+        ' La risposta di creazione porta solo cio che PayPal documenta (id, link di approvazione, campi di unita facoltativi): i campi presenti devono coincidere (CheckCreatedOrder);
+        ' l'autorita completa su payee, importi e identificativi e il GET stretto che ogni percorso fa prima di catturare.
+        Dim createCheck As String = If(response IsNot Nothing AndAlso response.Success, PayPalOrdersV2Client.CheckCreatedOrder(doc, cfg, response.Snapshot, tx.Importo, tx.Valuta), "CREATE_FAILED")
+        If createCheck.Length > 0 OrElse Not PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(response.Snapshot.ApprovalUrl) Then
+            Fail(documentId, "Creazione pagamento PayPal non riuscita", PayPalOrdersV2Client.DescribeFailure(response) & " check=" & If(createCheck.Length > 0, createCheck, "APPROVAL_HOST")) : Return
         End If
         If Not PayPalCheckoutRepository.RecordOrderCreated(tx, response.Snapshot) Then Fail(documentId, "Persistenza pagamento PayPal non riuscita") : Return
         RedirectTerminal(response.Snapshot.ApprovalUrl)

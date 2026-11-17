@@ -53,7 +53,7 @@ Partial Class paypalreturn
         If Not tx.IsCurrent Then RedirectResult(documentId, "ko") : Return
         If Not String.Equals(details.Snapshot.Status, "APPROVED", StringComparison.OrdinalIgnoreCase) Then Fail(documentId, "Ordine PayPal non approvato") : Return
         If Not PayPalCheckoutRepository.TryBeginCapture(tx) Then RedirectResult(documentId, "ko") : Return
-        Dim capture As PayPalOrdersV2Result = client.CaptureOrder(tx.PayPalOrderId, tx.CaptureRequestId)
+        Dim capture As PayPalOrdersV2Result = client.CaptureOrderVerified(doc, tx.PayPalOrderId, tx.CaptureRequestId, tx.Importo, tx.Valuta)
         If capture Is Nothing OrElse Not capture.Success OrElse Not PayPalOrdersV2Client.ValidateSnapshotAgainstAttempt(doc, cfg, tx.PayPalOrderId, capture.Snapshot, tx.Importo, tx.Valuta) Then Fail(documentId, "Capture PayPal non verificata", PayPalOrdersV2Client.DescribeFailure(capture)) : Return
         If Not PayPalCheckoutRepository.ApplyAuthoritativeState(tx, capture.Snapshot, String.Empty) Then Fail(documentId, "Aggiornamento pagamento non riuscito") : Return
         CloseWebLaunch(doc)
