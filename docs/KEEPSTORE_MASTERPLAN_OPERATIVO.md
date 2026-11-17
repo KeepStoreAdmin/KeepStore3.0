@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-MYACCOUNT-1A — 17/11/2026 — SOURCE (avanzamento e tracking dell'ordine nel dettaglio, stile Amazon)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#543](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/543).** Nel dettaglio ordine la fascia «Prossimi passi» (5 passi fissi, «in preparazione» sempre acceso) diventa «Stato dell'ordine»: barra a 4 passi (ricevuto, in lavorazione, pronto, spedito o consegnato) dallo stato reale `StatiId`, solo per i tipi ordine web, con il testo del cliente scritto nel gestionale; annullato senza barra. La scheda «Dove si trova il tuo ordine» mostra corriere e numeri di tracking con «Segui la spedizione». Elenco verticale su telefono, orizzontale da 576 px.
+
+**Fatti e causa.** Il gestionale salva il tracking senza cambiare lo stato (`frmDocumento2.vb:6383-6386`): in stato 4 606 su 643, in stato 5 28 su 3263, mai in 1/2/6; `DataTrasporto` e la data di creazione del documento (in stato 5 vale la data ordine): non e una data di spedizione. I codici reali sono separati anche da virgola e hanno caratteri di controllo ai bordi. Il dettaglio serve anche documenti non ordine.
+
+**Revisioni.** ChatGPT high: eseguita — accolto: niente «Spedito» dedotto dal tracking, niente data, contratto URL (userinfo, host); scartato: stato 6 contro «Paga adesso» (la policy non guarda il passo). Claude Opus: eseguita — accolto: parsing con `,` e controlli, barra solo per ordini, `Uri.EscapeDataString`, testi del database codificati, accessibilita, testo dell'hero; rimandato: `vettori.*` nella query e `SeparaTracking` della lista. Gate di certezza: PASS con limiti.
+
+**Prove.** `Test-OrderProgress.ps1` (modulo compilato con 11 stati, 28 forme di tracking, 38 URL, pin della pagina, 28 mutanti) e `Test-OrderProgressLayout.ps1` (Edge, 320-1280 px, 5 scenari: ha trovato un overflow a 768 px, risolto con la scheda a tutta larghezza); precompile e segreti PASS.
+
+**Limiti e residuo (NON AVVIATO).** Pagina con login non provata in browser reale; nessuna data di consegna prevista ne storico (si rimanda al corriere); il passo 4 vale anche per il ritiro («consegnato o spedito»); la lista ordini non cambia. **Alla consegna futura:** `App_Code/KeepStoreOrderProgress.vb` per primo, poi `documentidettaglio.aspx` e `.vb`, `Public/assets/keepstore/css/order-ui.css`. CONSEGNA SERVER SOSPESA.
 ## ORDER-REMOTE-PAYMENT-1A — 17/11/2026 — SOURCE («Paga adesso» in MyAccount per ordini cambiati o creati dal gestionale)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#542](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/542).** Il cliente vede in MyAccount > Ordini l'etichetta «Da pagare» e il pulsante «Paga adesso» (lista) e un riquadro in alto nel dettaglio (stile ONSUS piatto) quando (a) il PO ha cambiato nel gestionale in PayPal o carta Banca Sella il metodo di un ordine del sito che non aveva mai avviato un pagamento online, o (b) l'ordine e stato creato dal gestionale per un cliente registrato. Un ordine del sito col pagamento online fallito resta non ripagabile (decisione del PO).

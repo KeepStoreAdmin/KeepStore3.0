@@ -5,7 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-pay-now-1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-progress-1a" />
     <script src="https://ecomm.sella.it/pagam/JavaScript/js_GestPay.js" type="text/javascript"></script>
 </asp:Content>
 
@@ -28,7 +28,7 @@
 
     <section class="tf-sp-2 ks-order-detail">
         <div class="container">
-            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" OnSelecting="DocumentDataSource_Selecting" SelectCommand="SELECT vd.*, utenti.*, vettori.*, COALESCE(dpay.Pagato,0) AS DettaglioPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS DettaglioStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS DettaglioDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS DettaglioUltimoEsitoPagamentoWeb FROM ((vdocumenti vd LEFT JOIN utenti ON vd.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vd.`VettoriId` = vettori.`id`) LEFT JOIN documenti dpay ON dpay.`id` = vd.`Id` WHERE vd.Id = @DocumentId AND vd.UtentiId = @UtentiId AND vd.AziendeId = @AziendaId">
+            <asp:SqlDataSource ID="sdsTestata" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" OnSelecting="DocumentDataSource_Selecting" SelectCommand="SELECT vd.*, utenti.*, vettori.*, COALESCE(dpay.Pagato,0) AS DettaglioPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS DettaglioStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS DettaglioDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS DettaglioUltimoEsitoPagamentoWeb, CASE WHEN dtd.Web=1 AND dtd.Abilitato=1 AND dtd.ImpegnaQnt=1 THEN 1 ELSE 0 END AS DettaglioOrdineWeb FROM ((vdocumenti vd LEFT JOIN utenti ON vd.`UtentiId` = utenti.`Id`) LEFT JOIN vettori ON vd.`VettoriId` = vettori.`id`) LEFT JOIN documenti dpay ON dpay.`id` = vd.`Id` LEFT JOIN tipodocumenti dtd ON dtd.id = vd.TipoDocumentiId WHERE vd.Id = @DocumentId AND vd.UtentiId = @UtentiId AND vd.AziendeId = @AziendaId">
                 <SelectParameters>
                     <asp:Parameter Name="DocumentId" Type="Int32" DefaultValue="0" />
                     <asp:Parameter Name="UtentiId" Type="Int64" DefaultValue="0" />
@@ -157,30 +157,27 @@
                                     </div>
                                 </article>
 
-                                <article class="ks-confirm-card">
-                                    <h5 class="fw-bold">Prossimi passi</h5>
-                                    <ol class="ks-confirm-steps">
-                                        <li class="is-complete"><span>Ordine ricevuto</span></li>
-                                        <li class='<%# GetTimelineStepCssClass("payment", Eval("DettaglioPagato"), Eval("DettaglioStatoPagamentoWeb"), Eval("Tracking")) %>'><span><%# GetTimelinePaymentText(Eval("DettaglioPagato"), Eval("DettaglioStatoPagamentoWeb")) %></span></li>
-                                        <li class="is-current"><span>Preparazione ordine</span></li>
-                                        <li class='<%# GetTimelineStepCssClass("shipping", Eval("DettaglioPagato"), Eval("DettaglioStatoPagamentoWeb"), Eval("Tracking")) %>'><span><%# GetTimelineShippingText(Eval("Tracking")) %></span></li>
-                                        <li><span>Consegna</span></li>
+                                <article class="ks-confirm-card ks-order-progress-card" runat="server" visible='<%# IsOrderDocument(Eval("DettaglioOrdineWeb")) %>'>
+                                    <h5 class="fw-bold">Stato dell'ordine</h5>
+                                    <ol class="ks-order-progress" runat="server" visible='<%# ProgressShowBar(Eval("StatiId")) %>'>
+                                        <li class='<%# ProgressStepCss(Eval("StatiId"), 1) %>'<%# ProgressAriaCurrent(Eval("StatiId"), 1) %>><span class="ks-order-progress__dot" aria-hidden="true"></span><span class="ks-order-progress__label">Ordine ricevuto</span><span class="ks-order-progress__sr"><%# ProgressSrText(Eval("StatiId"), 1) %></span></li>
+                                        <li class='<%# ProgressStepCss(Eval("StatiId"), 2) %>'<%# ProgressAriaCurrent(Eval("StatiId"), 2) %>><span class="ks-order-progress__dot" aria-hidden="true"></span><span class="ks-order-progress__label">In lavorazione</span><span class="ks-order-progress__sr"><%# ProgressSrText(Eval("StatiId"), 2) %></span></li>
+                                        <li class='<%# ProgressStepCss(Eval("StatiId"), 3) %>'<%# ProgressAriaCurrent(Eval("StatiId"), 3) %>><span class="ks-order-progress__dot" aria-hidden="true"></span><span class="ks-order-progress__label">Pronto</span><span class="ks-order-progress__sr"><%# ProgressSrText(Eval("StatiId"), 3) %></span></li>
+                                        <li class='<%# ProgressStepCss(Eval("StatiId"), 4) %>'<%# ProgressAriaCurrent(Eval("StatiId"), 4) %>><span class="ks-order-progress__dot" aria-hidden="true"></span><span class="ks-order-progress__label">Spedito o consegnato</span><span class="ks-order-progress__sr"><%# ProgressSrText(Eval("StatiId"), 4) %></span></li>
                                     </ol>
+                                    <p class="ks-order-progress__cancelled" role="status" runat="server" visible='<%# ProgressIsCancelled(Eval("StatiId")) %>'>Annullato: questo ordine non verra elaborato.</p>
+                                    <p class="ks-order-progress__state"><strong><%# HtmlText(Eval("StatiDescrizione1")) %></strong> <span><%# HtmlText(Eval("StatiDescrizione2")) %></span></p>
                                     <p class="ks-muted">Conserva il numero ordine per eventuali comunicazioni con l'assistenza.</p>
                                 </article>
 
-                                <article class="ks-confirm-card">
-                                    <h5 class="fw-bold">Spedizione e tracking</h5>
+                                <article class="ks-confirm-card ks-order-tracking-card" runat="server" visible='<%# ShowTrackingCard(Eval("DettaglioOrdineWeb"), Eval("Tracking")) %>'>
+                                    <h5 class="fw-bold">Dove si trova il tuo ordine</h5>
                                     <div class="billing-info">
-                                        <p><span class="fw-semibold">Vettore:</span> <%# Eval("VettoriDescrizione") %></p>
+                                        <p><span class="fw-semibold">Corriere:</span> <%# HtmlText(Eval("VettoriDescrizione")) %></p>
                                         <p><%# HtmlText(Eval("VettoriInformazioni")) %></p>
-                                        <p>
-                                            <span class="fw-semibold">Tracking:</span>
-                                            <span class="ks-muted"><%# GetTrackingMessage(Eval("Tracking"), Eval("Link_Tracking")) %></span>
-                                        </p>
+                                        <%# TrackingHtml(Eval("Tracking"), Eval("Link_Tracking"), Eval("StatiId")) %>
                                     </div>
                                 </article>
-
                                 <article class="ks-confirm-card">
                                     <h5 class="fw-bold">Serve aiuto?</h5>
                                     <p class="ks-muted">Per assistenza indica sempre il numero ordine.</p>

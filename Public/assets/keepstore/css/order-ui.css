@@ -661,3 +661,202 @@ body.ks-page-order-detail .ks-doc-section .table-responsive {
         width: 100%;
     }
 }
+
+/* KS-MYACCOUNT-1A - avanzamento dell'ordine (4 passi, elenco verticale su telefono e orizzontale da 576 px) e tracking nel dettaglio ordine. Stile piatto ONSUS, nessun JS. */
+.ks-confirm-card.ks-order-progress-card{
+    grid-column: 1 / -1;
+}
+
+.ks-order-progress{
+    margin: 8px 0 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.ks-order-progress__step{
+    position: relative;
+    display: flex;
+    min-height: 40px;
+    padding: 8px 0 8px 34px;
+    align-items: center;
+    color: #666;
+    font-size: 15px;
+    line-height: 1.3;
+}
+
+.ks-order-progress__step::before{
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 11px;
+    width: 2px;
+    background: #e1e1e1;
+}
+
+.ks-order-progress__step:first-child::before{
+    top: 50%;
+}
+
+.ks-order-progress__step:last-child::before{
+    bottom: 50%;
+}
+
+.ks-order-progress__dot{
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    border: 2px solid #c8c8c8;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.ks-order-progress__step.is-done{
+    color: #20242c;
+}
+
+.ks-order-progress__step.is-done::before,
+.ks-order-progress__step.is-current::before{
+    background: var(--primary, #D80027);
+}
+
+.ks-order-progress__step.is-done .ks-order-progress__dot{
+    border-color: var(--primary, #D80027);
+    background: var(--primary, #D80027);
+}
+
+.ks-order-progress__step.is-current{
+    color: #20242c;
+    font-weight: 700;
+}
+
+.ks-order-progress__step.is-current::before{
+    background: linear-gradient(to bottom, var(--primary, #D80027) 50%, #e1e1e1 50%);
+}
+
+.ks-order-progress__step.is-current:last-child::before{
+    background: var(--primary, #D80027);
+}
+
+.ks-order-progress__step.is-current .ks-order-progress__dot{
+    border-color: var(--primary, #D80027);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(216, 0, 39, .18);
+}
+
+.ks-order-progress__label{
+    display: block;
+}
+
+.ks-order-progress__sr{
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.ks-order-progress__cancelled{
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    border-left: 4px solid #333e48;
+    background: #f5f5f5;
+    color: #20242c;
+    font-weight: 700;
+}
+
+.ks-order-progress__state{
+    margin: 0 0 8px;
+    color: #333e48;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.ks-order-tracking__list{
+    margin: 4px 0 8px;
+    padding: 0;
+    list-style: none;
+}
+
+.ks-order-tracking__list li{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 8px 0;
+    align-items: center;
+    border-top: 1px solid #ebebeb;
+}
+
+.ks-order-tracking__list li:first-child{
+    border-top: 0;
+}
+
+.ks-order-tracking__code{
+    min-width: 0;
+    color: #20242c;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.ks-order-tracking__btn{
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 576px){
+    .ks-order-progress{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0;
+    }
+
+    .ks-order-progress__step{
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding: 30px 8px 0 0;
+    }
+
+    .ks-order-progress__step::before{
+        top: 10px;
+        right: 0;
+        bottom: auto;
+        left: 0;
+        width: auto;
+        height: 2px;
+    }
+
+    .ks-order-progress__step:first-child::before{
+        top: 10px;
+        left: 8px;
+    }
+
+    .ks-order-progress__step:last-child::before{
+        right: auto;
+        bottom: auto;
+        width: 8px;
+    }
+
+    .ks-order-progress__step.is-current::before{
+        background: linear-gradient(to right, var(--primary, #D80027) 50%, #e1e1e1 50%);
+    }
+
+    .ks-order-progress__step.is-current:last-child::before{
+        background: var(--primary, #D80027);
+    }
+
+    .ks-order-progress__dot{
+        top: 2px;
+        left: 0;
+        margin-top: 0;
+    }
+}

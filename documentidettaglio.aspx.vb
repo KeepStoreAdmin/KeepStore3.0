@@ -285,50 +285,6 @@ Partial Class documentidettaglio
 
     ' Tracking: genera link multipli (separati da ";") applicando Link_Tracking (#ID#).
     ' Hardening: encoding HTML/attributo per evitare injection da input non previsto.
-    Protected Function SeparaTracking(ByVal trackingObj As Object, ByVal linkTrackingObj As Object) As String
-        Dim tracking As String = Convert.ToString(trackingObj)
-        Dim linkTracking As String = Convert.ToString(linkTrackingObj)
-
-        If String.IsNullOrEmpty(tracking) OrElse String.IsNullOrEmpty(linkTracking) Then
-            Return String.Empty
-        End If
-
-        Dim parts() As String = tracking.Split(";"c)
-        If parts Is Nothing OrElse parts.Length = 0 Then
-            Return String.Empty
-        End If
-
-        Dim sb As New StringBuilder()
-        For i As Integer = 0 To parts.Length - 1
-            Dim code As String = Convert.ToString(parts(i)).Trim()
-            If code = "" Then
-                Continue For
-            End If
-
-            Dim url As String = linkTracking.Replace("#ID#", HttpUtility.UrlEncode(code))
-
-            ' Permetti solo http/https; in caso contrario, mostra solo il testo.
-            Dim urlTrim As String = url.Trim().ToLowerInvariant()
-            Dim isHttp As Boolean = (urlTrim.StartsWith("http://") OrElse urlTrim.StartsWith("https://"))
-
-            If isHttp Then
-	                sb.Append("<a class=""link"" href=""")
-                sb.Append(HttpUtility.HtmlAttributeEncode(url))
-			    		    sb.Append(""" target=""_blank"" rel=""noopener noreferrer"">")
-                sb.Append(HttpUtility.HtmlEncode(code))
-                sb.Append("</a>")
-            Else
-                sb.Append(HttpUtility.HtmlEncode(code))
-            End If
-
-            If i < parts.Length - 1 Then
-	                sb.Append(" <span class=""ks-muted"">;</span> ")
-            End If
-        Next
-
-        Return sb.ToString()
-    End Function
-
     Protected Function FormatOrderStatus(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
         Dim stato1 As String = SafeStatusText(stato1Obj)
         Dim stato2 As String = SafeStatusText(stato2Obj)
@@ -338,6 +294,93 @@ Partial Class documentidettaglio
         Return (stato1 & " " & stato2).Trim()
     End Function
 
+    ' KS-MYACCOUNT-1A: avanzamento dell'ordine e tracking. Il passo dipende SOLO da StatiId (il tracking non prova la spedizione); nessuna data di spedizione (DataTrasporto non lo e);
+    ' ogni testo del database e codificato; i collegamenti al corriere passano da KeepStoreOrderProgress (schema, userinfo, host, codifica).
+    Protected Function IsOrderDocument(ByVal value As Object) As Boolean
+        Return SafeInt(value, 0) = 1
+    End Function
+
+    Private Function ProgressOf(ByVal statiObj As Object) As OrderProgress
+        Return KeepStoreOrderProgress.Resolve(SafeInt(statiObj, -1))
+    End Function
+
+    Protected Function ProgressShowBar(ByVal statiObj As Object) As Boolean
+        Dim p As OrderProgress = ProgressOf(statiObj)
+        Return p.Known AndAlso Not p.Cancelled
+    End Function
+
+    Protected Function ProgressIsCancelled(ByVal statiObj As Object) As Boolean
+        Return ProgressOf(statiObj).Cancelled
+    End Function
+
+    Protected Function ProgressStepCss(ByVal statiObj As Object, ByVal stepNumber As Integer) As String
+        Dim p As OrderProgress = ProgressOf(statiObj)
+        If Not p.Known OrElse p.Cancelled Then Return "ks-order-progress__step"
+        If stepNumber < p.StepNumber Then Return "ks-order-progress__step is-done"
+        If stepNumber = p.StepNumber Then Return "ks-order-progress__step is-current"
+        Return "ks-order-progress__step"
+    End Function
+
+    Protected Function ProgressAriaCurrent(ByVal statiObj As Object, ByVal stepNumber As Integer) As String
+        Dim p As OrderProgress = ProgressOf(statiObj)
+        If p.Known AndAlso Not p.Cancelled AndAlso stepNumber = p.StepNumber Then Return " aria-current=""step"""
+        Return ""
+    End Function
+
+    Protected Function ProgressSrText(ByVal statiObj As Object, ByVal stepNumber As Integer) As String
+        Dim p As OrderProgress = ProgressOf(statiObj)
+        If Not p.Known OrElse p.Cancelled Then Return ""
+        If stepNumber < p.StepNumber Then Return ", completato"
+        If stepNumber = p.StepNumber Then Return ", stato attuale"
+        Return ", da fare"
+    End Function
+
+    Protected Function ShowTrackingCard(ByVal orderObj As Object, ByVal trackingObj As Object) As Boolean
+        Return IsOrderDocument(orderObj) OrElse KeepStoreOrderProgress.ParseTracking(Convert.ToString(trackingObj)).Count > 0
+    End Function
+
+    Private Function NoTrackingMessage(ByVal statiObj As Object) As String
+        Select Case SafeInt(statiObj, -1)
+            Case 1, 2, 6
+                Return "Il numero di tracking comparira qui quando l'ordine sara affidato al corriere."
+            Case 5
+                Return "Pronto per la spedizione o il ritiro."
+            Case 4
+                Return "Spedito o consegnato secondo le modalita concordate. Il numero di tracking non e disponibile."
+            Case Else
+                Return "Nessun numero di tracking disponibile."
+        End Select
+    End Function
+
+    Protected Function TrackingHtml(ByVal trackingObj As Object, ByVal linkTrackingObj As Object, ByVal statiObj As Object) As String
+        If ProgressOf(statiObj).Cancelled Then Return ""
+        Dim tokens As System.Collections.Generic.List(Of TrackingToken) = KeepStoreOrderProgress.ParseTracking(Convert.ToString(trackingObj))
+        If tokens.Count = 0 Then
+            Return "<p class=""ks-muted"">" & HttpUtility.HtmlEncode(NoTrackingMessage(statiObj)) & "</p>"
+        End If
+        Dim template As String = Convert.ToString(linkTrackingObj)
+        Dim sb As New StringBuilder()
+        Dim anyLink As Boolean = False
+        sb.Append("<ul class=""ks-order-tracking__list"">")
+        For Each token As TrackingToken In tokens
+            sb.Append("<li><span class=""ks-order-tracking__code"">")
+            sb.Append(HttpUtility.HtmlEncode(token.Text))
+            sb.Append("</span>")
+            Dim url As String = If(token.Linkable, KeepStoreOrderProgress.BuildTrackingUrl(template, token.Text), "")
+            If url.Length > 0 Then
+                anyLink = True
+                sb.Append(" <a class=""tf-btn btn-small ks-order-tracking__btn"" href=""")
+                sb.Append(HttpUtility.HtmlAttributeEncode(url))
+                sb.Append(""" target=""_blank"" rel=""noopener noreferrer"">Segui la spedizione<span class=""ks-order-progress__sr""> numero ")
+                sb.Append(HttpUtility.HtmlEncode(token.Text))
+                sb.Append("</span></a>")
+            End If
+            sb.Append("</li>")
+        Next
+        sb.Append("</ul>")
+        If anyLink Then sb.Append("<p class=""ks-muted"">Il corriere aggiorna lo stato sul proprio sito: il collegamento si apre in una nuova scheda.</p>")
+        Return sb.ToString()
+    End Function
     Protected Function GetOrderHeroBadge() As String
         If IsPostOrderContext() Then Return "Ordine confermato"
         Return "Riepilogo ordine"
@@ -350,7 +393,7 @@ Partial Class documentidettaglio
 
     Protected Function GetOrderHeroText(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
         If IsPaymentConfirmed(pagatoObj, statoObj) Then
-            Return "Abbiamo ricevuto il pagamento. Trovi qui riepilogo, indirizzi e prossimi passi."
+            Return "Abbiamo ricevuto il pagamento. Trovi qui riepilogo, indirizzi, stato e tracking."
         End If
 
         If IsPostOrderContext() Then
@@ -411,42 +454,6 @@ Partial Class documentidettaglio
         If destinazione <> "" Then Return HtmlText(destinazione)
         If indirizzo <> "" Then Return HtmlText(indirizzo)
         Return "Indirizzo non disponibile"
-    End Function
-
-    Protected Function GetTrackingMessage(ByVal trackingObj As Object, ByVal linkTrackingObj As Object) As String
-        Dim tracking As String = SafeStatusText(trackingObj)
-        If tracking = "" Then Return "Tracking non ancora disponibile."
-
-        Dim rendered As String = SeparaTracking(trackingObj, linkTrackingObj)
-        If rendered <> "" Then Return rendered
-
-        Return HtmlText(tracking)
-    End Function
-
-    Protected Function GetTimelineStepCssClass(ByVal stepName As String, ByVal pagatoObj As Object, ByVal statoObj As Object, ByVal trackingObj As Object) As String
-        Dim stepValue As String = Convert.ToString(stepName).Trim().ToLowerInvariant()
-
-        If stepValue = "payment" Then
-            If IsPaymentConfirmed(pagatoObj, statoObj) Then Return "is-complete"
-            Return "is-current"
-        End If
-
-        If stepValue = "shipping" Then
-            If SafeStatusText(trackingObj) <> "" Then Return "is-complete"
-            Return ""
-        End If
-
-        Return ""
-    End Function
-
-    Protected Function GetTimelinePaymentText(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
-        If IsPaymentConfirmed(pagatoObj, statoObj) Then Return "Pagamento ricevuto"
-        Return "Pagamento in verifica"
-    End Function
-
-    Protected Function GetTimelineShippingText(ByVal trackingObj As Object) As String
-        If SafeStatusText(trackingObj) <> "" Then Return "Spedizione tracciata"
-        Return "Tracking non ancora disponibile"
     End Function
 
     Private Function IsPaymentConfirmed(ByVal pagatoObj As Object, ByVal statoObj As Object) As Boolean
