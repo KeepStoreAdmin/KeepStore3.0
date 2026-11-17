@@ -10,6 +10,7 @@ Option Explicit On
 Imports System
 Imports System.Collections.Generic
 Imports System.Configuration
+Imports System.Data
 Imports System.Globalization
 Imports System.Reflection
 Imports System.Web
@@ -55,6 +56,10 @@ Public Class FakeOrder
     Public AuthId As String = ""
     Public AuthStatus As String = ""
     Public AuthExpires As String = ""
+    Public CaptureId As String = ""
+    Public CaptureStatus As String = ""
+    Public CaptureAmount As String = ""
+    Public CaptureInvoice As String = ""
 End Class
 
 ' PayPal finto con stato: crea (idempotente per request id), GET, approva (azione del test), authorize (idempotente), annulla.
@@ -72,6 +77,13 @@ Public Class FakePayPal
     Public AuthorizeResponseAuthId As String = ""
     Public AmountOverrideAtGet As String = ""
     Public AfterAuthorize As Action = Nothing
+    Public AfterCapture As Action = Nothing
+    Public CaptureOutcome As String = "COMPLETED"
+    Public CaptureMinimalResponse As Boolean = False
+    Public RejectInvoiceOnCapture As Boolean = False
+    Public FailOAuth As Boolean = False
+    Public CaptureAmountAtGet As String = ""
+    Private ReadOnly _gate As New Object()
     Private _seq As Integer = 0
 
     Private Shared Function J(ByVal s As String) As String
@@ -111,22 +123,46 @@ Public Class FakePayPal
     Private Function OrderJson(ByVal o As FakeOrder, ByVal showAmountOverride As Boolean) As String
         Dim payments As String = ""
         If o.AuthId <> "" Then
-            payments = ",'payments':{'authorizations':[{'id':'" & o.AuthId & "','status':'" & o.AuthStatus & "','amount':{'currency_code':'" & o.Currency & "','value':'" & o.Amount & "'},'invoice_id':'" & o.Invoice & "','custom_id':'" & o.Custom & "','expiration_time':'" & o.AuthExpires & "'}]}"
+            Dim caps As String = ""
+            If o.CaptureId <> "" Then
+                Dim capAmount As String = If(showAmountOverride AndAlso CaptureAmountAtGet <> "", CaptureAmountAtGet, o.CaptureAmount)
+                caps = ",'captures':[{'id':'" & o.CaptureId & "','status':'" & o.CaptureStatus & "','amount':{'currency_code':'" & o.Currency & "','value':'" & capAmount & "'},'final_capture':true,'invoice_id':'" & o.CaptureInvoice & "'}]"
+            End If
+            payments = ",'payments':{'authorizations':[{'id':'" & o.AuthId & "','status':'" & o.AuthStatus & "','amount':{'currency_code':'" & o.Currency & "','value':'" & o.Amount & "'},'invoice_id':'" & o.Invoice & "','custom_id':'" & o.Custom & "','expiration_time':'" & o.AuthExpires & "'}]" & caps & "}"
         End If
         Dim amount As String = If(showAmountOverride AndAlso AmountOverrideAtGet <> "", AmountOverrideAtGet, o.Amount)
         Dim unit As String = "{'reference_id':'" & o.Reference & "','custom_id':'" & o.Custom & "','invoice_id':'" & o.Invoice & "','amount':{'currency_code':'" & o.Currency & "','value':'" & amount & "'},'payee':{'email_address':'" & o.Email & "','merchant_id':'" & Merchant & "'}" & payments & "}"
         Return J("{'id':'" & o.Id & "','intent':'AUTHORIZE','status':'" & o.Status & "','purchase_units':[" & unit & "],'links':[{'rel':'payer-action','href':'https://www.paypal.com/checkoutnow?token=" & o.Id & "'}]}")
     End Function
 
+    Private Function CaptureJson(ByVal o As FakeOrder) As String
+        If CaptureMinimalResponse Then Return J("{'id':'" & o.CaptureId & "','status':'" & o.CaptureStatus & "','links':[]}")
+        Return J("{'id':'" & o.CaptureId & "','status':'" & o.CaptureStatus & "','amount':{'value':'" & o.CaptureAmount & "','currency_code':'" & o.Currency & "'},'final_capture':true,'invoice_id':'" & o.CaptureInvoice & "','links':[{'rel':'up','href':'https://api-m.paypal.com/v2/payments/authorizations/" & o.AuthId & "','method':'GET'}]}")
+    End Function
     Private Function AuthorizeJson(ByVal o As FakeOrder) As String
         Dim authId As String = If(AuthorizeResponseAuthId <> "", AuthorizeResponseAuthId, o.AuthId)
         Return J("{'id':'" & o.Id & "','payment_source':{'paypal':{'account_status':'VERIFIED'}},'purchase_units':[{'reference_id':'" & o.Reference & "','payments':{'authorizations':[{'id':'" & authId & "','status':'CREATED','amount':{'currency_code':'" & o.Currency & "','value':'" & o.Amount & "'},'expiration_time':'" & o.AuthExpires & "'}]}}],'links':[]}")
     End Function
 
     Public Function Send(ByVal request As PayPalHttpRequestData) As PayPalHttpResponseData Implements IPayPalHttpTransport.Send
+        SyncLock _gate
+            Return SendCore(request)
+        End SyncLock
+    End Function
+
+    Public Sub CompleteCapture()
+        SyncLock _gate
+            For Each o As FakeOrder In Orders.Values
+                If o.CaptureStatus = "PENDING" Then o.CaptureStatus = "COMPLETED"
+            Next
+        End SyncLock
+    End Sub
+
+    Private Function SendCore(ByVal request As PayPalHttpRequestData) As PayPalHttpResponseData
         Dim path As String = New Uri(request.Url).AbsolutePath
         Dim kind As String
         If path = "/v1/oauth2/token" Then
+            If FailOAuth Then Return Resp(500, "")
             Return Resp(200, J("{'access_token':'fake-access','token_type':'Bearer','expires_in':3000}"))
         ElseIf request.Method = "POST" AndAlso path = "/v2/checkout/orders" Then
             kind = "create"
@@ -136,6 +172,8 @@ Public Class FakePayPal
             kind = "authorize"
         ElseIf request.Method = "POST" AndAlso path.EndsWith("/void", StringComparison.Ordinal) Then
             kind = "void"
+        ElseIf request.Method = "POST" AndAlso path.EndsWith("/capture", StringComparison.Ordinal) Then
+            kind = "capture"
         ElseIf request.Method = "GET" AndAlso path.StartsWith("/v2/payments/authorizations/", StringComparison.Ordinal) Then
             kind = "getauth"
         Else
@@ -191,6 +229,51 @@ Public Class FakePayPal
                     response = Resp(201, AuthorizeJson(o))
                     If AfterAuthorize IsNot Nothing Then AfterAuthorize()
                 End If
+            Case "capture"
+                Dim authId As String = path.Substring("/v2/payments/authorizations/".Length)
+                authId = authId.Substring(0, authId.IndexOf("/"c))
+                Dim owner As FakeOrder = Nothing
+                For Each o As FakeOrder In Orders.Values
+                    If o.AuthId = authId Then owner = o
+                Next
+                Dim key As String = "cap:" & request.RequestId
+                If owner Is Nothing Then
+                    response = Resp(404, J("{'name':'RESOURCE_NOT_FOUND','message':'x','debug_id':'d'}"))
+                ElseIf _byRequest.ContainsKey(key) Then
+                    response = Resp(201, CaptureJson(owner))
+                Else
+                    Dim serializer As New JavaScriptSerializer()
+                    Dim body As Dictionary(Of String, Object) = serializer.Deserialize(Of Dictionary(Of String, Object))(request.Body)
+                    Dim invoice As String = If(body.ContainsKey("invoice_id"), Convert.ToString(body("invoice_id")), "")
+                    Dim amountBody As Dictionary(Of String, Object) = CType(body("amount"), Dictionary(Of String, Object))
+                    If RejectInvoiceOnCapture AndAlso invoice <> "" Then
+                        response = Resp(422, J("{'name':'UNPROCESSABLE_ENTITY','message':'x','debug_id':'d','details':[{'issue':'DUPLICATE_INVOICE_ID'}]}"))
+                    ElseIf owner.AuthStatus <> "CREATED" Then
+                        response = Resp(422, J("{'name':'UNPROCESSABLE_ENTITY','message':'x','debug_id':'d','details':[{'issue':'AUTHORIZATION_VOIDED'}]}"))
+                    ElseIf CaptureOutcome = "DECLINED" Then
+                        response = Resp(422, J("{'name':'UNPROCESSABLE_ENTITY','message':'x','debug_id':'d','details':[{'issue':'INSTRUMENT_DECLINED'}]}"))
+                    Else
+                        owner.CaptureId = "KSFAKECAP" & Guid.NewGuid().ToString("N").Substring(0, 12).ToUpperInvariant()
+                        owner.CaptureStatus = CaptureOutcome
+                        owner.CaptureAmount = Convert.ToString(amountBody("value"))
+                        owner.CaptureInvoice = invoice
+                        owner.AuthStatus = "CAPTURED"
+                        _byRequest(key) = owner.Id
+                        response = Resp(201, CaptureJson(owner))
+                        If AfterCapture IsNot Nothing Then AfterCapture()
+                    End If
+                End If
+            Case "getauth"
+                Dim authId As String = path.Substring("/v2/payments/authorizations/".Length)
+                Dim found As FakeOrder = Nothing
+                For Each o As FakeOrder In Orders.Values
+                    If o.AuthId = authId Then found = o
+                Next
+                If found Is Nothing Then
+                    response = Resp(404, J("{'name':'RESOURCE_NOT_FOUND','message':'x','debug_id':'d'}"))
+                Else
+                    response = Resp(200, J("{'id':'" & found.AuthId & "','status':'" & found.AuthStatus & "','amount':{'value':'" & found.Amount & "','currency_code':'" & found.Currency & "'},'invoice_id':'" & found.Invoice & "','custom_id':'" & found.Custom & "','payee':{'email_address':'" & found.Email & "','merchant_id':'" & Merchant & "'},'expiration_time':'" & found.AuthExpires & "'}"))
+                End If
             Case "void"
                 Dim authId As String = path.Substring("/v2/payments/authorizations/".Length)
                 authId = authId.Substring(0, authId.IndexOf("/"c))
@@ -214,7 +297,9 @@ Public Module PayFirstHarness
     Private _cs As String = String.Empty
     Private _pass As Integer = 0
     Private _fail As Integer = 0
-    Private _docCursor As Integer = 9300
+    Private _docCursor As Integer = 9500
+    Private _docFixture As Integer = 9310
+    Private _typeId As Integer = 0
     Private Const LabUuid As String = "1167ebae-d0c0-11f1-b348-9c7bef540c10"
     Private Const Scope As String = "KS_TEST_PF_SCOPE"
     Private Const KeyA As String = "KS_TEST_PF_A"
@@ -396,6 +481,9 @@ Public Module PayFirstHarness
             RunRepository()
             RunStart()
             RunReturn()
+            RunFinish()
+            RunTransaction()
+            RunToken()
         Catch ex As FailFastException
         Catch ex As Exception
             _fail += 1
@@ -405,7 +493,7 @@ Public Module PayFirstHarness
             Try
                 Cleanup()
                 _failFast = False
-                Check("cleanup-no-residue", Scalar("SELECT (SELECT COUNT(*) FROM paypal_checkout_tentativi WHERE DatabaseScopeKey='" & Scope & "' OR AziendeId IN (9301,9302))+(SELECT COUNT(*) FROM paypal_checkout_azienda WHERE AziendeId IN (9301,9302))+(SELECT COUNT(*) FROM paypal_checkout_account WHERE CredentialKey='" & KeyA & "')+(SELECT COUNT(*) FROM pagamentitipo WHERE id IN (9301,9302))") = "0")
+                Check("cleanup-no-residue", Scalar("SELECT (SELECT COUNT(*) FROM paypal_checkout_tentativi WHERE DatabaseScopeKey='" & Scope & "' OR AziendeId IN (9301,9302))+(SELECT COUNT(*) FROM paypal_checkout_azienda WHERE AziendeId IN (9301,9302))+(SELECT COUNT(*) FROM paypal_checkout_account WHERE CredentialKey='" & KeyA & "')+(SELECT COUNT(*) FROM pagamentitipo WHERE id IN (9301,9302))+(SELECT COUNT(*) FROM documenti WHERE Id BETWEEN 9310 AND 9499)+(SELECT COUNT(*) FROM paypal_checkout_transazioni WHERE DocumentiId BETWEEN 9310 AND 9499 OR AziendeId IN (9301,9302))") = "0")
             Catch ex As Exception
                 Check("cleanup-exception-" & ex.GetType().Name, False)
             End Try
@@ -415,6 +503,10 @@ Public Module PayFirstHarness
     End Function
 
     Private Sub Cleanup()
+        Exec("DELETE FROM paypal_checkout_eventi WHERE TransazioniId IN (SELECT Id FROM paypal_checkout_transazioni WHERE DocumentiId BETWEEN 9310 AND 9499 OR AziendeId IN (9301,9302))")
+        Exec("DELETE FROM paypal_checkout_transazioni WHERE DocumentiId BETWEEN 9310 AND 9499 OR AziendeId IN (9301,9302)")
+        Exec("DELETE FROM documentipie WHERE DocumentiId BETWEEN 9310 AND 9499")
+        Exec("DELETE FROM documenti WHERE Id BETWEEN 9310 AND 9499")
         Exec("DELETE FROM paypal_checkout_tentativi WHERE DatabaseScopeKey='" & Scope & "' OR AziendeId IN (9301,9302)")
         Exec("DELETE FROM paypal_checkout_azienda WHERE AziendeId IN (9301,9302)")
         Exec("DELETE FROM paypal_checkout_account WHERE CredentialKey='" & KeyA & "'")
@@ -423,6 +515,7 @@ Public Module PayFirstHarness
 
     Private Sub Setup()
         _userId = Integer.Parse(Scalar("SELECT COALESCE(MIN(UtentiId),1) FROM documenti"), CultureInfo.InvariantCulture)
+        _typeId = Integer.Parse(Scalar("SELECT COALESCE(MIN(TipoDocumentiId),0) FROM documenti"), CultureInfo.InvariantCulture)
         For Each companyId As Integer In New Integer() {9301, 9302}
             Exec("INSERT INTO pagamentitipo (id,AziendeID,Descrizione,Informazioni,Abilitato,Web,Ordinamento,Predefinito,CostoPercentuale,CostoFisso,CostoMassimo,NumeroOrdini,Contrassegno,OnLine,Cassa,Banca) VALUES (" &
                  companyId & "," & companyId & ",'KS TEST PAYFIRST','fixture',1,1,1,0,0,0,5000,0,0,2,0,0)")
@@ -766,5 +859,348 @@ Public Module PayFirstHarness
         Dim afi2 As PayPalAttemptRecord = Latest(ctxFi)
         Dim rfi As PayFirstResult = ReturnIt(afi2, "return", afi2.PayPalOrderId, ctxFi, fin)
         Check("R20 ritorno con ordine gia creato: ripresa dell'incasso, nessuna chiamata PayPal", rfi.Outcome = PayFirstOutcome.Finish AndAlso fin.Requests.Count = 0)
+    End Sub
+    ' ----- fixture documento e riga PayPal: la stessa sequenza della transazione di ordine.aspx (tentativo -> documento -> riga PayPal) -----
+    Private Function NextDoc() As Integer
+        _docFixture += 1
+        Return _docFixture
+    End Function
+
+    Private Sub InsertDoc(ByVal conn As MySqlConnection, ByVal trns As MySqlTransaction, ByVal docId As Integer, ByVal total As String)
+        Using cmd As New MySqlCommand("INSERT INTO documenti (Id,AziendeId,UtentiId,PagamentiTipoId,TipoDocumentiId,Pagato,OrigineOrdine,DataDocumento,StatoPagamentoWeb) VALUES (" &
+                                      docId.ToString(CultureInfo.InvariantCulture) & ",9301," & _userId.ToString(CultureInfo.InvariantCulture) & ",9301," & _typeId.ToString(CultureInfo.InvariantCulture) & ",0,'WEB',NOW(),1)", conn, trns)
+            cmd.ExecuteNonQuery()
+        End Using
+        Using cmd As New MySqlCommand("INSERT INTO documentipie (DocumentiId,TotaleDocumento) VALUES (" & docId.ToString(CultureInfo.InvariantCulture) & "," & total & ")", conn, trns)
+            cmd.ExecuteNonQuery()
+        End Using
+    End Sub
+
+    ' Replica la parte pay-first della transazione di ordine.aspx. Restituisce il tentativo ricaricato (DOC_COMMITTED se tutto e andato a buon fine).
+    Private Function CommitPayFirst(ByVal a As PayPalAttemptRecord, ByVal total As String, ByVal docId As Integer, Optional ByVal afterInsert As Action = Nothing) As PayPalAttemptRecord
+        Using conn As New MySqlConnection(_cs)
+            conn.Open()
+            Using trns As MySqlTransaction = conn.BeginTransaction(IsolationLevel.Serializable)
+                Dim locked As PayPalAttemptRecord = PayPalPaymentAttempts.LockForDocument(conn, trns, a.Id, a.AziendeId, a.LoginId)
+                If locked Is Nothing OrElse locked.Stato <> "AUTHORIZED" Then
+                    trns.Rollback()
+                    Return PayPalPaymentAttempts.LoadForOwner(a.AttemptKey, a.AziendeId, a.LoginId)
+                End If
+                InsertDoc(conn, trns, docId, total)
+                If Not PayPalPaymentAttempts.BindDocument(conn, trns, a.Id, a.AziendeId, a.LoginId, docId) Then
+                    trns.Rollback()
+                    Return PayPalPaymentAttempts.LoadForOwner(a.AttemptKey, a.AziendeId, a.LoginId)
+                End If
+                PayPalCheckoutRepository.InsertAuthorizedTransaction(conn, trns, docId, locked)
+                If afterInsert IsNot Nothing Then afterInsert()
+                trns.Commit()
+            End Using
+        End Using
+        Return PayPalPaymentAttempts.LoadForOwner(a.AttemptKey, a.AziendeId, a.LoginId)
+    End Function
+
+    Private Function CommittedAttempt(ByVal fake As FakePayPal, ByRef docId As Integer) As PayPalAttemptRecord
+        Dim a As PayPalAttemptRecord = Authorized(NewCtx(), fake)
+        docId = NextDoc()
+        Dim b As PayPalAttemptRecord = CommitPayFirst(a, "12.34", docId)
+        If b Is Nothing OrElse b.Stato <> "DOC_COMMITTED" Then
+            Check("Z04 helper: the attempt reaches DOC_COMMITTED", False)
+            Throw New InvalidOperationException("COMMITTED")
+        End If
+        Return b
+    End Function
+
+    Private Sub Age(ByVal id As Long)
+        Exec("UPDATE paypal_checkout_tentativi SET UpdatedAt=NOW() - INTERVAL 10 MINUTE WHERE Id=" & id.ToString(CultureInfo.InvariantCulture))
+    End Sub
+
+    Private Function DocState(ByVal docId As Integer) As String
+        Return Scalar("SELECT CONCAT(COALESCE(Pagato,0),'|',COALESCE(StatoPagamentoWeb,0),'|',COALESCE(IdTransazione,'')) FROM documenti WHERE Id=" & docId.ToString(CultureInfo.InvariantCulture))
+    End Function
+
+    Private Function Reload(ByVal a As PayPalAttemptRecord) As PayPalAttemptRecord
+        Return PayPalPaymentAttempts.LoadForOwner(a.AttemptKey, a.AziendeId, a.LoginId)
+    End Function
+
+    Private Function FinishIt(ByVal a As PayPalAttemptRecord, ByVal fake As FakePayPal, Optional ByVal company As Integer = 9301) As PayFirstFinishResult
+        Return PayPalPayFirstFinishService.Run(Reload(a), Cfg(company), Client(fake))
+    End Function
+
+    ' ----- incasso dopo il commit -----
+    Private Sub RunFinish()
+        Dim f1 As New FakePayPal()
+        Dim d1 As Integer
+        Dim a1 As PayPalAttemptRecord = CommittedAttempt(f1, d1)
+        Dim r1 As PayFirstFinishResult = FinishIt(a1, f1)
+        Dim a1b As PayPalAttemptRecord = Reload(a1)
+        Check("F01 incasso dopo il commit: documento pagato, tentativo COMPLETED, prima chiusura", r1.Outcome = PayFirstFinishOutcome.Completed AndAlso r1.FirstCompletion AndAlso a1b.Stato = "COMPLETED" AndAlso
+              DocState(d1).StartsWith("1|2|TXN:", StringComparison.Ordinal) AndAlso a1b.PayPalCaptureId = f1.Orders(a1.PayPalOrderId).CaptureId)
+        Check("F02 una capture con il request id del tentativo, l'invoice del documento, final_capture e l'importo", f1.Count("capture") = 1 AndAlso f1.LastRequestId("capture") = a1.CaptureRequestId AndAlso
+              f1.LastBody("capture").Contains("""invoice_id"":""KS-INV-9301-" & d1.ToString(CultureInfo.InvariantCulture) & """") AndAlso f1.LastBody("capture").Contains("""final_capture"":true") AndAlso f1.LastBody("capture").Contains("12.34"))
+        Dim r1b As PayFirstFinishResult = FinishIt(a1, f1)
+        Check("F03 dopo il completamento: nessuna seconda capture e nessuna seconda prima chiusura", r1b.Outcome = PayFirstFinishOutcome.Completed AndAlso Not r1b.FirstCompletion AndAlso f1.Count("capture") = 1)
+
+        Dim f4 As New FakePayPal()
+        Dim d4 As Integer
+        Dim a4 As PayPalAttemptRecord = CommittedAttempt(f4, d4)
+        Dim results(1) As PayFirstFinishResult
+        Dim gate As New System.Threading.ManualResetEvent(False)
+        Dim threads(1) As System.Threading.Thread
+        For i As Integer = 0 To 1
+            Dim idx As Integer = i
+            threads(i) = New System.Threading.Thread(Sub()
+                                                         gate.WaitOne()
+                                                         results(idx) = FinishIt(a4, f4)
+                                                     End Sub)
+            threads(i).Start()
+        Next
+        gate.Set()
+        threads(0).Join()
+        threads(1).Join()
+        Dim firsts As Integer = 0
+        For Each r As PayFirstFinishResult In results
+            If r IsNot Nothing AndAlso r.FirstCompletion Then firsts += 1
+        Next
+        Check("F04 due richieste insieme: una sola capture e una sola prima chiusura", f4.Count("capture") = 1 AndAlso firsts = 1 AndAlso DocState(d4).StartsWith("1|2|", StringComparison.Ordinal))
+
+        Dim f5 As New FakePayPal()
+        Dim d5 As Integer
+        Dim a5 As PayPalAttemptRecord = CommittedAttempt(f5, d5)
+        f5.CaptureOutcome = "PENDING"
+        Dim r5 As PayFirstFinishResult = FinishIt(a5, f5)
+        Check("F05 capture PENDING: in verifica, tentativo CAPTURING, documento non pagato", r5.Outcome = PayFirstFinishOutcome.InVerification AndAlso r5.Reason = "CAPTURE_PENDING" AndAlso Reload(a5).Stato = "CAPTURING" AndAlso DocState(d5) = "0|1|")
+        Dim r5b As PayFirstFinishResult = FinishIt(a5, f5)
+        Check("F06 un rinfresco subito dopo non ripete la capture (locazione)", r5b.Outcome = PayFirstFinishOutcome.InVerification AndAlso f5.Count("capture") = 1)
+        Age(a5.Id)
+        f5.CompleteCapture()
+        Dim r5c As PayFirstFinishResult = FinishIt(a5, f5)
+        Check("F07 ripresa dopo il tempo: PayPal dice COMPLETED, si registra senza una seconda capture", r5c.Outcome = PayFirstFinishOutcome.Completed AndAlso r5c.FirstCompletion AndAlso f5.Count("capture") = 1 AndAlso DocState(d5).StartsWith("1|2|", StringComparison.Ordinal))
+
+        Dim f8 As New FakePayPal()
+        Dim d8 As Integer
+        Dim a8 As PayPalAttemptRecord = CommittedAttempt(f8, d8)
+        f8.CaptureOutcome = "DECLINED"
+        Dim r8 As PayFirstFinishResult = FinishIt(a8, f8)
+        Check("F08 capture rifiutata: nessun pagamento, documento non pagato con il motivo, autorizzazione annullata", r8.Outcome = PayFirstFinishOutcome.Refused AndAlso Not r8.FirstCompletion AndAlso
+              DocState(d8) = "0|3|" AndAlso Reload(a8).Stato = "VOIDED" AndAlso f8.Count("void") = 1 AndAlso f8.LastRequestId("void") = a8.VoidRequestId)
+
+        Dim f9 As New FakePayPal()
+        Dim d9 As Integer
+        Dim a9 As PayPalAttemptRecord = CommittedAttempt(f9, d9)
+        f9.LoseResponseOn = "capture"
+        Dim r9 As PayFirstFinishResult = FinishIt(a9, f9)
+        Check("F09 risposta di capture persa: il GET conferma, si registra, una sola capture", r9.Outcome = PayFirstFinishOutcome.Completed AndAlso f9.Count("capture") = 1 AndAlso DocState(d9).StartsWith("1|2|", StringComparison.Ordinal))
+
+        Dim f10 As New FakePayPal()
+        Dim d10 As Integer
+        Dim a10 As PayPalAttemptRecord = CommittedAttempt(f10, d10)
+        f10.FailOAuth = True
+        Dim r10 As PayFirstFinishResult = FinishIt(a10, f10)
+        Check("F10 chiamata non partita (accesso a PayPal non riuscito): in verifica, tentativo CAPTURING, nessuna capture", r10.Outcome = PayFirstFinishOutcome.InVerification AndAlso r10.Reason = "CAPTURE_NOT_SENT" AndAlso f10.Count("capture") = 0 AndAlso Reload(a10).Stato = "CAPTURING")
+        f10.FailOAuth = False
+        Age(a10.Id)
+        Dim r10b As PayFirstFinishResult = FinishIt(a10, f10)
+        Check("F11 ripresa dopo la chiamata non partita: incasso e pagamento", r10b.Outcome = PayFirstFinishOutcome.Completed AndAlso f10.Count("capture") = 1 AndAlso DocState(d10).StartsWith("1|2|", StringComparison.Ordinal))
+
+        Dim f11 As New FakePayPal()
+        Dim d11 As Integer
+        Dim a11 As PayPalAttemptRecord = CommittedAttempt(f11, d11)
+        f11.FailNext = "capture"
+        f11.FailStatus = 500
+        Dim r11 As PayFirstFinishResult = FinishIt(a11, f11)
+        Check("F12 capture non eseguita (500): in verifica, mai rifiutata", r11.Outcome = PayFirstFinishOutcome.InVerification AndAlso Reload(a11).Stato = "CAPTURING" AndAlso DocState(d11) = "0|1|")
+        Age(a11.Id)
+        Dim r11b As PayFirstFinishResult = FinishIt(a11, f11)
+        Check("F13 ripresa dopo il 500: stessa richiesta di capture, pagamento", r11b.Outcome = PayFirstFinishOutcome.Completed AndAlso f11.Count("capture") = 2 AndAlso f11.LastRequestId("capture") = a11.CaptureRequestId)
+
+        Dim f12 As New FakePayPal()
+        Dim d12 As Integer
+        Dim a12 As PayPalAttemptRecord = CommittedAttempt(f12, d12)
+        f12.CaptureMinimalResponse = True
+        Dim r12 As PayFirstFinishResult = FinishIt(a12, f12)
+        Check("F14 risposta di capture minima (solo id e stato, come negli esempi ufficiali): il GET dell'ordine decide e il documento e pagato", r12.Outcome = PayFirstFinishOutcome.Completed AndAlso DocState(d12).StartsWith("1|2|", StringComparison.Ordinal))
+
+        Dim f13 As New FakePayPal()
+        Dim d13 As Integer
+        Dim a13 As PayPalAttemptRecord = CommittedAttempt(f13, d13)
+        f13.CaptureAmountAtGet = "99.99"
+        Dim r13 As PayFirstFinishResult = FinishIt(a13, f13)
+        Check("F15 importo della capture riletto diverso dal tentativo: il documento NON si paga (rifiutato dal controllo dell'incasso, non solo dal repository)", r13.Outcome = PayFirstFinishOutcome.InVerification AndAlso r13.Reason = "APPLY_NOT_MATCHING" AndAlso DocState(d13) = "0|1|")
+
+        Dim f14 As New FakePayPal()
+        Dim d14 As Integer
+        Dim a14 As PayPalAttemptRecord = CommittedAttempt(f14, d14)
+        f14.RejectInvoiceOnCapture = True
+        Dim r14 As PayFirstFinishResult = FinishIt(a14, f14)
+        Check("F16 invoice rifiutata: si riprova senza invoice_id con un request id diverso e si incassa", r14.Outcome = PayFirstFinishOutcome.Completed AndAlso f14.Count("capture") = 2 AndAlso
+              f14.LastRequestId("capture") = PayPalPayFirstFinishService.CaptureNoInvoiceRequestId(a14) AndAlso Not f14.LastBody("capture").Contains("invoice_id") AndAlso DocState(d14).StartsWith("1|2|", StringComparison.Ordinal))
+
+        Dim f15 As New FakePayPal()
+        Dim d15 As Integer
+        Dim a15 As PayPalAttemptRecord = CommittedAttempt(f15, d15)
+        Exec("UPDATE documenti SET Pagato=1 WHERE Id=" & d15.ToString(CultureInfo.InvariantCulture))
+        Dim callsBefore As Integer = f15.Requests.Count
+        Dim r15 As PayFirstFinishResult = FinishIt(a15, f15)
+        Check("F17 documento gia pagato o non valido: nessuna capture, intervento manuale", r15.Outcome = PayFirstFinishOutcome.Manual AndAlso f15.Requests.Count = callsBefore)
+
+        Dim f16 As New FakePayPal()
+        Dim d16 As Integer
+        Dim a16 As PayPalAttemptRecord = CommittedAttempt(f16, d16)
+        Dim callsBefore16 As Integer = f16.Requests.Count
+        Dim r16 As PayFirstFinishResult = FinishIt(a16, f16, company:=9302)
+        Check("F18 configurazione di un'altra azienda: errore tecnico senza chiamate", r16.Outcome = PayFirstFinishOutcome.Technical AndAlso f16.Requests.Count = callsBefore16 AndAlso Reload(a16).Stato = "DOC_COMMITTED")
+
+        Dim f20 As New FakePayPal()
+        Dim d20 As Integer
+        Dim a20 As PayPalAttemptRecord = CommittedAttempt(f20, d20)
+        f20.AfterCapture = Sub() PayPalPaymentAttempts.RecordCaptureResult(a20.Id, a20.AziendeId, "KSCONCURRENTCAP", True, "")
+        Dim r20 As PayFirstFinishResult = FinishIt(a20, f20)
+        Check("F20 il tentativo viene chiuso da un altro processo durante l'incasso: il documento e pagato ma NESSUNA seconda prima chiusura (nessuna seconda e-mail)", r20.Outcome = PayFirstFinishOutcome.Completed AndAlso Not r20.FirstCompletion AndAlso DocState(d20).StartsWith("1|2|", StringComparison.Ordinal))
+        Dim f21 As New FakePayPal()
+        Dim d21 As Integer
+        Dim a21 As PayPalAttemptRecord = CommittedAttempt(f21, d21)
+        Dim began21 As PayPalBeginCaptureOutcome = PayPalPaymentAttempts.BeginCapture(a21.Id, a21.AziendeId)
+        Dim callsBefore21 As Integer = f21.Requests.Count
+        Dim r21 As PayFirstFinishResult = FinishIt(a21, f21)
+        Check("F21 incasso avviato da un altro processo da pochi secondi (locazione): nessuna lettura ne capture, in verifica", began21 = PayPalBeginCaptureOutcome.Started AndAlso r21.Outcome = PayFirstFinishOutcome.InVerification AndAlso
+              r21.Reason = "CAPTURE_IN_PROGRESS" AndAlso f21.Requests.Count = callsBefore21 AndAlso f21.Count("capture") = 0)
+        Dim f17 As New FakePayPal()
+        Dim d17 As Integer
+        Dim a17 As PayPalAttemptRecord = CommittedAttempt(f17, d17)
+        Exec("UPDATE paypal_checkout_tentativi SET Stato='CAPTURE_REFUSED',StatoPrecedente=NULL WHERE Id=" & a17.Id.ToString(CultureInfo.InvariantCulture))
+        Dim r17 As PayFirstFinishResult = FinishIt(a17, f17)
+        Dim r17b As PayFirstFinishResult = FinishIt(a17, f17)
+        Check("F19 rifiuto da completare: annullo una sola volta, poi nessun'altra chiamata", r17.Outcome = PayFirstFinishOutcome.Refused AndAlso Reload(a17).Stato = "VOIDED" AndAlso f17.Count("void") = 1 AndAlso f17.Count("capture") = 0 AndAlso r17b.Outcome = PayFirstFinishOutcome.InVerification AndAlso f17.Count("void") = 1)
+    End Sub
+
+    ' ----- transazione dell'ordine: tentativo -> documento -> riga PayPal -----
+    Private Sub RunTransaction()
+        Dim fake As New FakePayPal()
+        Dim d1 As Integer
+        Dim a1 As PayPalAttemptRecord = CommittedAttempt(fake, d1)
+        Dim row As String = Scalar("SELECT CONCAT(Stato,'|',Importo,'|',Valuta,'|',COALESCE(CurrentSlot,0),'|',TentativoNo,'|',PayPalOrderId,'|',CreateRequestId,'|',CaptureRequestId) FROM paypal_checkout_transazioni WHERE DocumentiId=" & d1.ToString(CultureInfo.InvariantCulture))
+        Check("T01 transazione riuscita: documento, tentativo DOC_COMMITTED e riga PayPal legata all'ordine del tentativo", a1.DocumentiId = d1 AndAlso row = "APPROVED|12.34|EUR|1|1|" & a1.PayPalOrderId & "|" & a1.CreateRequestId & "|" & a1.CaptureRequestId)
+
+        Dim a2 As PayPalAttemptRecord = Authorized(NewCtx(), New FakePayPal())
+        Dim d2 As Integer = NextDoc()
+        Dim b2 As PayPalAttemptRecord = CommitPayFirst(a2, "12.35", d2)
+        Check("T02 totale del documento diverso dall'importo autorizzato: rollback, tentativo ancora AUTHORIZED, nessun documento ne riga PayPal", b2.Stato = "AUTHORIZED" AndAlso b2.DocumentiId = 0 AndAlso
+              Scalar("SELECT COUNT(*) FROM documenti WHERE Id=" & d2.ToString(CultureInfo.InvariantCulture)) = "0" AndAlso Scalar("SELECT COUNT(*) FROM paypal_checkout_transazioni WHERE DocumentiId=" & d2.ToString(CultureInfo.InvariantCulture)) = "0")
+
+        Dim duplicateRejected As Boolean = False
+        Try
+            Using conn As New MySqlConnection(_cs)
+                conn.Open()
+                Using trns As MySqlTransaction = conn.BeginTransaction(IsolationLevel.Serializable)
+                    PayPalCheckoutRepository.InsertAuthorizedTransaction(conn, trns, d1, a1)
+                    trns.Commit()
+                End Using
+            End Using
+        Catch ex As MySqlException
+            duplicateRejected = True
+        End Try
+        Check("T03 una seconda riga PayPal per lo stesso documento e rifiutata dal database (la transazione dell'ordine farebbe rollback)", duplicateRejected)
+
+        Dim a3 As PayPalAttemptRecord = Authorized(NewCtx(), New FakePayPal())
+        Dim d3a As Integer = NextDoc()
+        Dim d3b As Integer = NextDoc()
+        Dim res3(1) As PayPalAttemptRecord
+        Dim gate3 As New System.Threading.ManualResetEvent(False)
+        Dim th3(1) As System.Threading.Thread
+        For i As Integer = 0 To 1
+            Dim idx As Integer = i
+            Dim doc As Integer = If(i = 0, d3a, d3b)
+            th3(i) = New System.Threading.Thread(Sub()
+                                                     gate3.WaitOne()
+                                                     res3(idx) = CommitPayFirst(a3, "12.34", doc)
+                                                 End Sub)
+            th3(i).Start()
+        Next
+        gate3.Set()
+        th3(0).Join()
+        th3(1).Join()
+        Dim docs3 As String = Scalar("SELECT COUNT(*) FROM documenti WHERE Id IN (" & d3a.ToString(CultureInfo.InvariantCulture) & "," & d3b.ToString(CultureInfo.InvariantCulture) & ")")
+        Dim rows3 As String = Scalar("SELECT COUNT(*) FROM paypal_checkout_transazioni WHERE DocumentiId IN (" & d3a.ToString(CultureInfo.InvariantCulture) & "," & d3b.ToString(CultureInfo.InvariantCulture) & ")")
+        Check("T04 doppio invio simultaneo: un solo documento, una sola riga PayPal, tentativo DOC_COMMITTED", docs3 = "1" AndAlso rows3 = "1" AndAlso Reload(a3).Stato = "DOC_COMMITTED")
+
+        ' La riga PayPal inserita nella transazione dei documenti non deve bloccare ne mandare in deadlock la riga PayPal di un ALTRO documento (stesso schema di
+        ' EnsureTransaction: lettura bloccante su una riga che non esiste, poi INSERT, sotto Serializable) mentre la transazione dell'ordine e ancora aperta.
+        ' (L'attesa sulla riga documenti, se l'altro percorso blocca il documento, e preesistente: ogni transazione d'ordine Serializable tiene intervalli di documenti.)
+        Dim a4 As PayPalAttemptRecord = Authorized(NewCtx(), New FakePayPal())
+        Dim a5 As PayPalAttemptRecord = Authorized(NewCtx(), New FakePayPal())
+        Dim d4 As Integer = NextDoc()
+        Dim other As Integer = NextDoc()
+        Dim entered As New System.Threading.ManualResetEvent(False)
+        Dim release As New System.Threading.ManualResetEvent(False)
+        Dim holder As PayPalAttemptRecord = Nothing
+        Dim holderError As String = ""
+        Dim t4 As New System.Threading.Thread(Sub()
+                                                  Try
+                                                      holder = CommitPayFirst(a4, "12.34", d4, Sub()
+                                                                                                   entered.Set()
+                                                                                                   release.WaitOne(60000)
+                                                                                               End Sub)
+                                                  Catch ex As Exception
+                                                      holderError = ex.GetType().Name
+                                                  End Try
+                                              End Sub)
+        t4.Start()
+        entered.WaitOne(30000)
+        Dim probeError As String = ""
+        Dim watch As Diagnostics.Stopwatch = Diagnostics.Stopwatch.StartNew()
+        Try
+            Using conn As New MySqlConnection(_cs)
+                conn.Open()
+                Using trns As MySqlTransaction = conn.BeginTransaction(IsolationLevel.Serializable)
+                    Using cmd As New MySqlCommand("SET SESSION innodb_lock_wait_timeout=5", conn, trns)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                    Using cmd As New MySqlCommand("SELECT Id FROM paypal_checkout_transazioni WHERE DocumentiId=" & other.ToString(CultureInfo.InvariantCulture) & " AND CurrentSlot=1 FOR UPDATE", conn, trns)
+                        cmd.ExecuteScalar()
+                    End Using
+                    PayPalCheckoutRepository.InsertAuthorizedTransaction(conn, trns, other, a5)
+                    trns.Commit()
+                End Using
+            End Using
+        Catch ex As Exception
+            probeError = ex.GetType().Name & ":" & ex.Message.Substring(0, Math.Min(60, ex.Message.Length))
+        End Try
+        watch.Stop()
+        release.Set()
+        t4.Join()
+        Console.WriteLine("DETAIL T05 probeError=" & probeError & " ms=" & watch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) & " holderError=" & holderError & " holderState=" & If(holder Is Nothing, "none", holder.Stato))
+        Check("T05 con la transazione dell'ordine aperta, la riga PayPal di un altro documento si inserisce subito (nessuna attesa, nessun deadlock)", probeError = "" AndAlso watch.ElapsedMilliseconds < 4000 AndAlso
+              holderError = "" AndAlso holder IsNot Nothing AndAlso holder.Stato = "DOC_COMMITTED" AndAlso Scalar("SELECT COUNT(*) FROM paypal_checkout_transazioni WHERE DocumentiId IN (" & d4.ToString(CultureInfo.InvariantCulture) & "," & other.ToString(CultureInfo.InvariantCulture) & ")") = "2")
+    End Sub
+    Private Sub InsertStandaloneDoc(ByVal docId As Integer)
+        Using conn As New MySqlConnection(_cs)
+            conn.Open()
+            Using trns As MySqlTransaction = conn.BeginTransaction()
+                InsertDoc(conn, trns, docId, "12.34")
+                trns.Commit()
+            End Using
+        End Using
+    End Sub
+    ' ----- token della ripresa (payload puro: il resto e MachineKey, controllato sul sorgente) -----
+    Private Sub RunToken()
+        Dim scope As String = New String("a"c, 64)
+        Dim identity As New OrderStorefrontIdentity With {.DatabaseScopeKey = scope, .CompanyId = 9301, .LoginId = 7301, .UtentiId = _userId, .PriceListId = 1}
+        Dim key As String = Next32()
+        Dim now As DateTime = DateTime.UtcNow
+        Dim payload As String = PayPalPayFirstToken.BuildPayload(key, identity, now)
+        Dim parsed As String = String.Empty
+        Check("K01 payload: andata e ritorno con lo stesso proprietario", payload.Length > 0 AndAlso PayPalPayFirstToken.TryParsePayload(payload, identity, now, parsed) AndAlso parsed = key)
+        Dim otherLogin As New OrderStorefrontIdentity With {.DatabaseScopeKey = scope, .CompanyId = 9301, .LoginId = 7399, .UtentiId = _userId, .PriceListId = 1}
+        Check("K02 un altro login non lo accetta", Not PayPalPayFirstToken.TryParsePayload(payload, otherLogin, now, parsed) AndAlso parsed = "")
+        Dim otherCompany As New OrderStorefrontIdentity With {.DatabaseScopeKey = scope, .CompanyId = 9302, .LoginId = 7301, .UtentiId = _userId, .PriceListId = 1}
+        Check("K03 un'altra azienda non lo accetta", Not PayPalPayFirstToken.TryParsePayload(payload, otherCompany, now, parsed))
+        Dim otherScope As New OrderStorefrontIdentity With {.DatabaseScopeKey = New String("b"c, 64), .CompanyId = 9301, .LoginId = 7301, .UtentiId = _userId, .PriceListId = 1}
+        Check("K04 un altro database non lo accetta", Not PayPalPayFirstToken.TryParsePayload(payload, otherScope, now, parsed))
+        Check("K05 oltre i 30 minuti non e piu valido", PayPalPayFirstToken.TryParsePayload(payload, identity, now.AddMinutes(29), parsed) AndAlso Not PayPalPayFirstToken.TryParsePayload(payload, identity, now.AddMinutes(31), parsed))
+        Check("K06 un payload dal futuro non e valido", Not PayPalPayFirstToken.TryParsePayload(PayPalPayFirstToken.BuildPayload(key, identity, now.AddMinutes(5)), identity, now, parsed))
+        Check("K07 payload malformati rifiutati", Not PayPalPayFirstToken.TryParsePayload("v2|" & key & "|" & scope & "|9301|7301|" & now.Ticks.ToString(CultureInfo.InvariantCulture), identity, now, parsed) AndAlso
+              Not PayPalPayFirstToken.TryParsePayload("v1|" & key & "|" & scope & "|9301|7301", identity, now, parsed) AndAlso Not PayPalPayFirstToken.TryParsePayload("v1|NOTAKEY|" & scope & "|9301|7301|" & now.Ticks.ToString(CultureInfo.InvariantCulture), identity, now, parsed) AndAlso
+              Not PayPalPayFirstToken.TryParsePayload("", identity, now, parsed))
+        Check("K08 una chiave del tentativo non valida non produce un payload", PayPalPayFirstToken.BuildPayload("../x", identity, now) = "" AndAlso PayPalPayFirstToken.BuildPayload(key, Nothing, now) = "")
     End Sub
 End Module

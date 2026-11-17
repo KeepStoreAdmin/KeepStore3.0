@@ -47,21 +47,64 @@ $cells = $row[0].Split("`t")
 if ($cells.Count -lt 3 -or $cells[0] -ne '1167ebae-d0c0-11f1-b348-9c7bef540c10' -or $cells[1] -ne $Schema) { Write-Output 'LAB_IDENTITY_MISMATCH: nessuna scrittura eseguita'; exit 1 }
 if ($cells[2] -ne '1') { Write-Output 'SKIP: manca la tabella paypal_checkout_tentativi sul LAB (la crea Test-PayPalAttemptRepositoryRealSchema.ps1)'; exit 0 }
 
-# --- controlli sul sorgente (glue delle pagine e inerzia) ---
+# --- controlli sul sorgente (glue delle pagine, ordine.aspx, inerzia del flag 1) ---
 $overall = 0
 function Test-Source([string]$Name, [bool]$Ok) { if ($Ok) { Write-Output ('PASS ' + $Name) } else { Write-Output ('FAIL ' + $Name); $script:overall = 1 } }
+
+function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord) {
+    $list = New-Object System.Collections.ArrayList
+    $lockStart = $ord.IndexOf('SyncLock Semaforo', [StringComparison]::Ordinal)
+    $lockEnd = $ord.LastIndexOf('End SyncLock', [StringComparison]::Ordinal)
+    $inLock = ''
+    if ($lockStart -ge 0 -and $lockEnd -gt $lockStart) { $inLock = $ord.Substring($lockStart, $lockEnd - $lockStart) }
+    $iRet = $ret.IndexOf('PayPalPayFirstGlue.RunReturn', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G01 paypalreturn: il ramo bozza precede il percorso del documento e usa RunReturn'; Ok = (($iRet -gt 0) -and ($iRet -lt $ret.IndexOf('QueryInt("id")', [StringComparison]::Ordinal))) })
+    [void]$list.Add(@{ Name = 'G02 paypalreturn: il ramo bozza si attiva solo con il parametro k'; Ok = ($ret -match 'Request\.QueryString\("k"\)') })
+    [void]$list.Add(@{ Name = 'G03 paypalpay: nessuna regola nella pagina, solo RunStart'; Ok = (($pay -match 'PayPalPayFirstGlue\.RunStart') -and ($pay -notmatch 'CreateAuthorizeOrder|AuthorizeOrder|VoidAuthorization|CaptureAuthorization')) })
+    [void]$list.Add(@{ Name = 'G04 il percorso di sempre resta: avvio PayPal sul documento e stato di pagamento iniziale'; Ok = (($ord.Contains('PayPalWebLaunchContext.Issue(HttpContext.Current, id, orderIdentity, checkoutRequestId)')) -and ($ord.Contains('/paypalcheckout.aspx?id=')) -and ($ord.Contains('InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)')) -and ($ord.Contains('PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)'))) })
+    [void]$list.Add(@{ Name = 'G05 il servizio di avvio e ritorno non incassa'; Ok = (($pf -notmatch 'CaptureAuthorization') -and ($pf -notmatch 'CaptureOrder')) })
+    [void]$list.Add(@{ Name = 'G06 l''annullo del servizio passa solo da RecordVoidingUnbound e da nessun RecordVoiding generico'; Ok = (($pf -match 'RecordVoidingUnbound') -and ($pf -notmatch 'RecordVoiding\(')) })
+    [void]$list.Add(@{ Name = 'G07 il contesto non legge mai la querystring e il servizio non usa pp=1'; Ok = (($pf -notmatch 'Request\.QueryString') -and ($pf -notmatch '"pp"')) })
+    $iApplies = $ord.IndexOf('PayPalPayFirstPolicy.Applies(', [StringComparison]::Ordinal)
+    $iRoute = $ord.IndexOf('If Not RoutePayFirst(orderIdentity', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G08 il gate (Applies e instradamento) sta PRIMA del lock applicativo'; Ok = (($lockStart -gt 0) -and ($iApplies -gt 0) -and ($iApplies -lt $lockStart) -and ($iRoute -gt 0) -and ($iRoute -lt $lockStart)) })
+    [void]$list.Add(@{ Name = 'G09 nessuna chiamata a PayPal ne instradamento dentro il lock applicativo'; Ok = (($inLock.Length -gt 0) -and ($inLock -notmatch 'PayPalPayFirstService|PayPalPayFirstFinishService|PayPalOrdersV2Client|CaptureAuthorization|VoidAuthorization|AuthorizeOrder|GetOrder\(|RoutePayFirst\(|StartPayFirst\(|HandlePayFirstFinishGet')) })
+    $iBegin = $ord.IndexOf('BeginTransaction(IsolationLevel.Serializable)', [StringComparison]::Ordinal)
+    $iLockDoc = $ord.IndexOf('PayPalPaymentAttempts.LockForDocument(', [StringComparison]::Ordinal)
+    $iFp = if ($iBegin -ge 0) { $ord.IndexOf('OrderDurableIdempotencyService.ComputeCartFingerprint(', $iBegin, [StringComparison]::Ordinal) } else { -1 }
+    [void]$list.Add(@{ Name = 'G10 LockForDocument e il primo comando della transazione (prima di fingerprint, claim e documento)'; Ok = (($iBegin -gt 0) -and ($iLockDoc -gt $iBegin) -and ($iFp -gt $iLockDoc)) })
+    $iDoc = $ord.IndexOf('"Carrello_Documento"', [StringComparison]::Ordinal)
+    $iSet = $ord.IndexOf('SetPayFirstDocumentStatus(conn, trns, id)', [StringComparison]::Ordinal)
+    $iBind = $ord.IndexOf('If Not PayPalPaymentAttempts.BindDocument(', [StringComparison]::Ordinal)
+    $iIns = $ord.IndexOf('PayPalCheckoutRepository.InsertAuthorizedTransaction(conn, trns, id, payAttempt)', [StringComparison]::Ordinal)
+    $iCommit = if ($iIns -ge 0) { $ord.IndexOf('trns.Commit()', $iIns, [StringComparison]::Ordinal) } else { -1 }
+    [void]$list.Add(@{ Name = 'G11 stato, legame con il tentativo e riga PayPal nella transazione, dopo il documento e prima del commit'; Ok = (($iDoc -gt 0) -and ($iSet -gt $iDoc) -and ($iBind -gt $iSet) -and ($iIns -gt $iBind) -and ($iCommit -gt $iIns)) })
+    $emailOk = ($ord -match "(?s)If payFirst Then\s*'[^\r\n]*\r?\n\s*CheckoutFailureRecoveryService\.TracePhase\([^)]*deferred-until-paid[^)]*\)\s*ElseIf") -and ($ord.Contains('If outcome.FirstCompletion Then SendPayFirstOrderEmail('))
+    [void]$list.Add(@{ Name = 'G12 l''e-mail dell''ordine parte solo dopo l''incasso COMPLETED e solo per chi lo chiude'; Ok = $emailOk })
+    $iFinishFn = $ord.IndexOf('Private Sub HandlePayFirstFinishGet', [StringComparison]::Ordinal)
+    $finishRegion = ''
+    if ($iFinishFn -ge 0) { $iNext = $ord.IndexOf('Private Sub RedirectToPayFirstDocument', $iFinishFn, [StringComparison]::Ordinal); if ($iNext -gt $iFinishFn) { $finishRegion = $ord.Substring($iFinishFn, $iNext - $iFinishFn) } }
+    [void]$list.Add(@{ Name = 'G13 il pixel non parte nel pay-first (ne dopo il commit ne nella ripresa)'; Ok = (($ord.Contains('If Not payFirst AndAlso articoliIdGlobali <> "" Then facebook_pixel(articoliIdGlobali)')) -and ($finishRegion.Length -gt 0) -and ($finishRegion -notmatch 'facebook_pixel')) })
+    [void]$list.Add(@{ Name = 'G14 ordine.aspx non annulla mai un''autorizzazione'; Ok = ($ord -notmatch 'RecordVoiding|VoidAuthoriz') })
+    [void]$list.Add(@{ Name = 'G15 nessun parametro della richiesta decide il pay-first (niente pp=1)'; Ok = ($ord -notmatch '"pp"') })
+    $c1 = ([regex]::Matches($ord, 'RedirectToOrderConfirmation\(checkoutRequestId, orderIdentity\)')).Count
+    $c2 = ([regex]::Matches($ord, 'RedirectAfterCommit\(checkoutRequestId, orderIdentity, payFirst\)')).Count
+    [void]$list.Add(@{ Name = 'G16 i rinvii dopo il commit riprendono l''incasso (replay, riconciliazione, effetti) e non la sola conferma'; Ok = (($c1 -eq 1) -and ($c2 -eq 4)) })
+    [void]$list.Add(@{ Name = 'G17 il flag 1 resta sul percorso di sempre (stato di pagamento iniziale nel ramo Else)'; Ok = ($ord -match "(?s)Else\s*InitializeWebPaymentStatus\(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo\)") })
+    [void]$list.Add(@{ Name = 'G18 coupon escluso con la stessa regola del codice esistente'; Ok = ($ord.Contains('PayPalPayFirstPolicy.HasCoupon(Convert.ToString(Session("Coupon_Codice_Controllo")), GetSessionInt("Coupon_idArticolo", 0))')) })
+    $iPf = $ord.IndexOf('HandlePayFirstFinishGet(orderIdentity)', [StringComparison]::Ordinal)
+    $iConf = $ord.IndexOf('HandleOrderConfirmationGet(orderIdentity)', [StringComparison]::Ordinal)
+    [void]$list.Add(@{ Name = 'G19 la ripresa pf e agganciata prima della conferma ed e solo GET'; Ok = (($iPf -gt 0) -and ($iConf -gt $iPf) -and ($finishRegion -match 'Request\.HttpMethod, "GET"')) })
+    [void]$list.Add(@{ Name = 'G20 una sola chiamata al servizio di incasso, nella ripresa'; Ok = ((([regex]::Matches($ord, 'PayPalPayFirstFinishService\.Run\(')).Count -eq 1) -and ($finishRegion -match 'PayPalPayFirstFinishService\.Run\(')) })
+    [void]$list.Add(@{ Name = 'G21 il glue riprende l''incasso con il token del tentativo'; Ok = (($pf -match 'PayPalPayFirstToken\.Create\(result\.AttemptKey, owner\)') -and ($pf -match 'Case PayFirstOutcome\.Finish, PayFirstOutcome\.Confirmation')) })
+    return $list
+}
+
 $pf = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'App_Code\PayPalPayFirst.vb'))
 $ret = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'paypalreturn.aspx.vb'))
 $pay = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'paypalpay.aspx.vb'))
 $ord = [IO.File]::ReadAllText((Join-Path $RepositoryRoot 'ordine.aspx.vb'))
-Test-Source 'G01 paypalreturn: il ramo bozza precede il percorso del documento e usa RunReturn' (($ret.IndexOf('PayPalPayFirstGlue.RunReturn', [StringComparison]::Ordinal) -gt 0) -and ($ret.IndexOf('PayPalPayFirstGlue.RunReturn', [StringComparison]::Ordinal) -lt $ret.IndexOf('QueryInt("id")', [StringComparison]::Ordinal)))
-Test-Source 'G02 paypalreturn: il ramo bozza si attiva solo con il parametro k' ($ret -match 'Request\.QueryString\("k"\)')
-Test-Source 'G03 paypalpay: nessuna regola nella pagina, solo RunStart' (($pay -match 'PayPalPayFirstGlue\.RunStart') -and ($pay -notmatch 'CreateAuthorizeOrder|AuthorizeOrder|VoidAuthorization|CaptureAuthorization'))
-Test-Source 'G04 P3a1 e inerte: ordine.aspx non emette il contesto e non lo legge' (($ord -notmatch 'PayPalPayFirst'))
-Test-Source 'G05 nessun incasso in P3a1: il servizio non chiama CaptureAuthorization' (($pf -notmatch 'CaptureAuthorization') -and ($pf -notmatch 'CaptureOrder'))
-Test-Source 'G06 l''annullo del servizio passa solo da RecordVoidingUnbound e da nessun RecordVoiding generico' (($pf -match 'RecordVoidingUnbound') -and ($pf -notmatch 'RecordVoiding\('))
-Test-Source 'G07 il contesto non legge mai la querystring e il servizio non usa pp=1' (($pf -notmatch 'Request\.QueryString') -and ($pf -notmatch '"pp"'))
-
+foreach ($c in @(Get-SourceChecks $pf $ret $pay $ord)) { Test-Source $c.Name $c.Ok }
 # --- compilazione ---
 $work = Join-Path ([IO.Path]::GetTempPath()) ('ks-paypal-payfirst-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $work -ErrorAction Stop | Out-Null
@@ -151,6 +194,24 @@ try {
             if ($OnlyMutants.Count -eq 0 -and $mutants.Count -lt 30) { Write-Output ('TOO_FEW_MUTANTS: ' + $mutants.Count); $overall = 1 }
             $survivors = 0
             foreach ($m in $mutants) {
+                if ($m.ContainsKey('Source') -and $m.Source) {
+                    $srcText = [IO.File]::ReadAllText((Join-Path $RepositoryRoot $m.File))
+                    $srcOcc = if ($m.ContainsKey('Occurrence')) { [int]$m.Occurrence } else { 1 }
+                    $srcIdx = -1
+                    $srcFrom = 0
+                    for ($n = 1; $n -le $srcOcc; $n++) { $srcIdx = $srcText.IndexOf($m.Find, $srcFrom, [StringComparison]::Ordinal); if ($srcIdx -lt 0) { break }; $srcFrom = $srcIdx + $m.Find.Length }
+                    if ($srcIdx -lt 0) { Write-Output ('  MUTANT ' + $m.Name + ': ANCORA NON TROVATA (test non valido)'); $survivors++; continue }
+                    $srcMut = $srcText.Substring(0, $srcIdx) + $m.Replace + $srcText.Substring($srcIdx + $m.Find.Length)
+                    $mpf = $pf; $mret = $ret; $mpay = $pay; $mord = $ord
+                    switch ($m.File) { 'App_Code\PayPalPayFirst.vb' { $mpf = $srcMut } 'paypalreturn.aspx.vb' { $mret = $srcMut } 'paypalpay.aspx.vb' { $mpay = $srcMut } 'ordine.aspx.vb' { $mord = $srcMut } }
+                    $firstFail = @(Get-SourceChecks $mpf $mret $mpay $mord | Where-Object { -not $_.Ok } | Select-Object -First 1)
+                    if ($firstFail.Count -eq 0) { Write-Output ('  SURVIVED ' + $m.Name); $survivors++; continue }
+                    $matchedSrc = $false
+                    foreach ($prefix in @($m.ExpectedKill)) { if ($firstFail[0].Name.StartsWith($prefix, [StringComparison]::Ordinal)) { $matchedSrc = $true } }
+                    if ($matchedSrc) { Write-Output ('  KILLED ' + $m.Name + ' by ' + $firstFail[0].Name.Substring(0, [Math]::Min(60, $firstFail[0].Name.Length))) }
+                    else { Write-Output ('  KILLED_BY_UNEXPECTED_CHECK ' + $m.Name + ': ' + $firstFail[0].Name.Substring(0, [Math]::Min(80, $firstFail[0].Name.Length)) + ' (atteso ' + (@($m.ExpectedKill) -join '|') + ')'); $survivors++ }
+                    continue
+                }
                 $copy = Join-Path $work ('app-' + $m.Name)
                 New-Item -ItemType Directory -Path $copy | Out-Null
                 Get-ChildItem -LiteralPath (Join-Path $RepositoryRoot 'App_Code') -Filter *.vb -File | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $copy }

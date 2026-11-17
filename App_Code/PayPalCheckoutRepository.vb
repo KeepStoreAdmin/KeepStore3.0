@@ -112,6 +112,34 @@ Public Module PayPalCheckoutRepository
         Return LoadTransactionForDocument(doc.DocumentId)
     End Function
 
+    ' PAYPAL-PAY-FIRST-ORDER-1A (P3a2): riga PayPal del documento creato dal pay-first, INSERITA NELLA TRANSAZIONE DEI DOCUMENTI (stessa connessione e stessa
+    ' transazione di ordine.aspx), cosi documento e riga nascono insieme o non nascono. L'ordine PayPal e quello del tentativo (gia approvato e autorizzato) e gli
+    ' id di richiesta sono quelli del tentativo. Nessuna lettura bloccante prima dell'INSERT (sotto Serializable sarebbe un gap lock in conflitto con EnsureTransaction
+    ' di altri documenti); un duplicato solleva l'eccezione del database e la transazione chiamante fa rollback.
+    Public Sub InsertAuthorizedTransaction(ByVal conn As MySqlConnection,
+                                           ByVal trns As MySqlTransaction,
+                                           ByVal documentId As Integer,
+                                           ByVal attempt As PayPalAttemptRecord)
+        If conn Is Nothing OrElse trns Is Nothing OrElse documentId <= 0 OrElse attempt Is Nothing OrElse String.IsNullOrEmpty(attempt.PayPalOrderId) OrElse
+           attempt.Importo <= 0D OrElse String.IsNullOrEmpty(attempt.CreateRequestId) OrElse String.IsNullOrEmpty(attempt.CaptureRequestId) Then
+            Throw New InvalidOperationException("PayPal pay-first: riga di transazione non valida")
+        End If
+        Using cmd As New MySqlCommand("INSERT INTO paypal_checkout_transazioni (DocumentiId,TentativoNo,CurrentSlot,AziendeId,PagamentiTipoId,PayPalAccountId,PayPalOrderId,Stato,Importo,Valuta,PayeeEmail,MerchantId,CreateRequestId,CaptureRequestId,UltimoEsito) " &
+                                      "VALUES (@doc,1,1,@azienda,@pagamento,@account,@order,'APPROVED',@importo,@valuta,@payee,@merchant,@createId,@captureId,'Autorizzato (pay-first)')", conn, trns)
+            cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = documentId
+            cmd.Parameters.Add("@azienda", MySqlDbType.Int32).Value = attempt.AziendeId
+            cmd.Parameters.Add("@pagamento", MySqlDbType.Int32).Value = attempt.PagamentiTipoId
+            cmd.Parameters.Add("@account", MySqlDbType.Int32).Value = attempt.PayPalAccountId
+            cmd.Parameters.Add("@order", MySqlDbType.VarChar, 100).Value = attempt.PayPalOrderId
+            cmd.Parameters.Add("@importo", MySqlDbType.Decimal).Value = Math.Round(attempt.Importo, 2, MidpointRounding.AwayFromZero)
+            cmd.Parameters.Add("@valuta", MySqlDbType.VarChar, 3).Value = attempt.Valuta
+            cmd.Parameters.Add("@payee", MySqlDbType.VarChar, 254).Value = attempt.PayeeEmail
+            cmd.Parameters.Add("@merchant", MySqlDbType.VarChar, 128).Value = attempt.MerchantId
+            cmd.Parameters.Add("@createId", MySqlDbType.VarChar, 80).Value = attempt.CreateRequestId
+            cmd.Parameters.Add("@captureId", MySqlDbType.VarChar, 80).Value = attempt.CaptureRequestId
+            If cmd.ExecuteNonQuery() <> 1 Then Throw New InvalidOperationException("PayPal pay-first: riga di transazione non inserita")
+        End Using
+    End Sub
     Public Function LoadTransactionForDocument(ByVal documentId As Integer) As PayPalCheckoutTransactionInfo
         If documentId <= 0 Then Return New PayPalCheckoutTransactionInfo()
         Return LoadTransaction("SELECT * FROM paypal_checkout_transazioni WHERE DocumentiId=@value AND CurrentSlot=1 LIMIT 1", documentId.ToString(CultureInfo.InvariantCulture), MySqlDbType.Int32)

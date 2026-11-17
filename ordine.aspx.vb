@@ -225,6 +225,159 @@ Private Sub RedirectToStockFailure(Optional ByVal requestId As String = "")
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.StockFailure)
 End Sub
 
+' ===== PAYPAL-PAY-FIRST-ORDER-1A (P3a2): l'ordine nasce solo dopo l'autorizzazione PayPal; l'incasso segue il commit, fuori dal lock =====
+
+' True = si prosegue con la creazione dell'ordine (tentativo AUTHORIZED e coerente con la bozza). False = la risposta e gia stata data (redirect o messaggio).
+' Instradamento unico per stato (la bozza resta in sessione dopo il commit: «indietro» o un rinfresco rientrano qui e non devono mai aprire un secondo pagamento).
+Private Function RoutePayFirst(ByVal identity As OrderStorefrontIdentity,
+                               ByVal requestId As String,
+                               ByVal payloadFingerprint As String,
+                               ByVal draft As CheckoutDraftState,
+                               ByRef attemptId As Long) As Boolean
+    attemptId = 0
+    Dim latest As PayPalAttemptRecord = PayPalPaymentAttempts.LoadLatestForDraft(identity.CompanyId, identity.LoginId, requestId)
+    Select Case PayPalPayFirstPolicy.RouteFor(latest)
+        Case PayFirstRoute.CreateOrder
+            If String.Equals(latest.PayloadFingerprint, payloadFingerprint, StringComparison.Ordinal) AndAlso
+               latest.Importo = Math.Round(draft.Total, 2, MidpointRounding.AwayFromZero) AndAlso latest.PagamentiTipoId = draft.PaymentMethodId AndAlso
+               latest.UtentiId = identity.UtentiId Then
+                attemptId = latest.Id
+                Return True
+            End If
+            ' Stessa bozza con contenuto cambiato: paypalpay annulla la vecchia autorizzazione e ne apre una nuova.
+            StartPayFirst(identity, requestId, payloadFingerprint, draft)
+        Case PayFirstRoute.Finish, PayFirstRoute.Confirmation
+            RedirectToPayFirstFinish(identity, latest.AttemptKey)
+        Case PayFirstRoute.Busy
+            ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgBusy)
+        Case PayFirstRoute.Manual
+            ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgManual)
+        Case Else
+            StartPayFirst(identity, requestId, payloadFingerprint, draft)
+    End Select
+    Return False
+End Function
+
+Private Sub StartPayFirst(ByVal identity As OrderStorefrontIdentity,
+                          ByVal requestId As String,
+                          ByVal payloadFingerprint As String,
+                          ByVal draft As CheckoutDraftState)
+    Dim context As New PayPalPayFirstContext With {
+        .DraftRequestId = requestId, .PayloadFingerprint = payloadFingerprint, .CheckoutToken = GetQueryString(CHECKOUT_TOKEN_QS_KEY, 1024),
+        .DatabaseScopeKey = identity.DatabaseScopeKey, .AziendeId = identity.CompanyId, .LoginId = identity.LoginId, .UtentiId = identity.UtentiId,
+        .PagamentiTipoId = draft.PaymentMethodId, .Amount = Math.Round(draft.Total, 2, MidpointRounding.AwayFromZero), .DraftExpiresUtc = draft.ExpiresUtc}
+    If Not PayPalPayFirstContext.Issue(New HttpSessionStateWrapper(Session), context) Then
+        ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgNotStarted)
+        Return
+    End If
+    Me.SafeRedirect("/paypalpay.aspx?r=" & HttpUtility.UrlEncode(requestId))
+End Sub
+
+Private Sub RedirectToPayFirstFinish(ByVal identity As OrderStorefrontIdentity, ByVal attemptKey As String)
+    Dim token As String = PayPalPayFirstToken.Create(attemptKey, identity)
+    Me.SafeRedirect(VirtualPathUtility.ToAbsolute("~/ordine.aspx") & "?" & PayPalPayFirstToken.QueryKey & "=" & HttpUtility.UrlEncode(token))
+End Sub
+
+' Dopo il commit (replay, riconciliazione, errore negli effetti): con il pay-first si riprende l'incasso, mai la sola conferma dell'ordine.
+Private Sub RedirectAfterCommit(ByVal requestId As String, ByVal identity As OrderStorefrontIdentity, ByVal payFirst As Boolean)
+    If payFirst Then
+        Dim latest As PayPalAttemptRecord = PayPalPaymentAttempts.LoadLatestForDraft(identity.CompanyId, identity.LoginId, requestId)
+        If latest IsNot Nothing Then
+            RedirectToPayFirstFinish(identity, latest.AttemptKey)
+            Return
+        End If
+    End If
+    RedirectToOrderConfirmation(requestId, identity)
+End Sub
+
+' LockForDocument ha trovato un tentativo non utilizzabile (o diverso dalla bozza): mai un annullo qui, si riprende dallo stato.
+Private Sub RedirectPayFirstAfterLockFailure(ByVal identity As OrderStorefrontIdentity, ByVal attempt As PayPalAttemptRecord)
+    If attempt IsNot Nothing Then
+        Select Case PayPalPayFirstPolicy.RouteFor(attempt)
+            Case PayFirstRoute.Finish, PayFirstRoute.Confirmation
+                RedirectToPayFirstFinish(identity, attempt.AttemptKey)
+                Return
+            Case PayFirstRoute.CreateOrder
+                ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgChanged)
+                Return
+        End Select
+    End If
+    ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgNotStarted)
+End Sub
+
+Private Sub SetPayFirstDocumentStatus(ByVal conn As MySqlConnection, ByVal trns As MySqlTransaction, ByVal documentId As Integer)
+    Using cmd As New MySqlCommand("UPDATE documenti SET StatoPagamentoWeb=1, DataStatoPagamentoWeb=CURRENT_TIMESTAMP, UltimoEsitoPagamentoWeb=@esito WHERE id=@id", conn, trns)
+        cmd.Parameters.Add("@esito", MySqlDbType.VarChar, 255).Value = "PayPal: autorizzato, incasso in corso"
+        cmd.Parameters.Add("@id", MySqlDbType.Int32).Value = documentId
+        If cmd.ExecuteNonQuery() <> 1 Then Throw New DataException("Pay-first: stato di pagamento non impostato.")
+    End Using
+End Sub
+
+' Ripresa dell'incasso (GET, fuori dal lock). Riprendibile: un rinfresco, «indietro» o un secondo invio ricadono qui e l'incasso non si ripete mai.
+Private Sub HandlePayFirstFinishGet(ByVal identity As OrderStorefrontIdentity)
+    Dim attemptKey As String = String.Empty
+    If Not String.Equals(Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) OrElse
+       Not PayPalPayFirstToken.TryValidate(GetExactCaseQueryString(PayPalPayFirstToken.QueryKey, 1024), identity, attemptKey) Then
+        ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgNotStarted)
+        Return
+    End If
+    Dim documentId As Integer = 0
+    Try
+        Dim attempt As PayPalAttemptRecord = PayPalPaymentAttempts.LoadForOwner(attemptKey, identity.CompanyId, identity.LoginId)
+        If attempt Is Nothing OrElse attempt.UtentiId <> identity.UtentiId Then
+            ReturnToCartWithReviewMessage(PayPalPayFirstService.MsgNotStarted)
+            Return
+        End If
+        documentId = attempt.DocumentiId
+        If PayPalPayFirstPolicy.RouteFor(attempt) = PayFirstRoute.Confirmation Then
+            RedirectToOrderConfirmation(attempt.DraftRequestId, identity)
+            Return
+        End If
+        Dim cfg As PayPalCheckoutConfig = PayPalCheckoutConfig.LoadForCompanyPayment(attempt.AziendeId, attempt.PagamentiTipoId)
+        If cfg Is Nothing OrElse Not PayPalCheckoutSafetyPolicy.CanUseLiveCheckout(HttpContext.Current, cfg) Then
+            PayPalPaymentState.LogCheckoutFailure("paypal-payfirst", documentId, "Configurazione PayPal Checkout non disponibile")
+            RedirectToPayFirstDocument(documentId)
+            Return
+        End If
+        Dim outcome As PayFirstFinishResult = PayPalPayFirstFinishService.Run(attempt, cfg, New PayPalOrdersV2Client(cfg))
+        If outcome.Outcome = PayFirstFinishOutcome.Completed Then
+            ' Una sola e-mail: la invia soltanto chi ha fatto la transizione a COMPLETED (al massimo una volta, come per ogni ordine).
+            If outcome.FirstCompletion Then SendPayFirstOrderEmail(identity, outcome.DocumentId, attempt.DraftRequestId)
+            RedirectToOrderConfirmation(attempt.DraftRequestId, identity)
+        Else
+            PayPalPaymentState.LogCheckoutFailure("paypal-payfirst", outcome.DocumentId, "Incasso non completato", outcome.Reason)
+            RedirectToPayFirstDocument(outcome.DocumentId)
+        End If
+    Catch ex As Exception
+        LogDurableCheckoutFailure(ex, "pay-first-finish")
+        RedirectToPayFirstDocument(documentId)
+    End Try
+End Sub
+
+Private Sub RedirectToPayFirstDocument(ByVal documentId As Integer)
+    If documentId > 0 Then
+        Me.SafeRedirect("/documentidettaglio.aspx?id=" & documentId.ToString(CultureInfo.InvariantCulture) & "&payreturn=ko")
+    Else
+        Me.SafeRedirect("/documenti.aspx")
+    End If
+End Sub
+
+' SendEmail usa la sessione (indirizzo scelto, utente): si ripristina dalla bozza, ancora in sessione, altrimenti si usa l'indirizzo predefinito.
+Private Sub SendPayFirstOrderEmail(ByVal identity As OrderStorefrontIdentity, ByVal documentId As Integer, ByVal requestId As String)
+    Try
+        Dim doc As PayPalPaymentDocumentInfo = PayPalPaymentState.LoadDocumentForUser(documentId, Convert.ToInt32(identity.UtentiId))
+        If doc Is Nothing OrElse Not doc.Exists Then Return
+        Dim draft As CheckoutDraftState = Nothing
+        If CheckoutDraftService.TryRead(HttpContext.Current, identity, requestId, String.Empty, draft) Then
+            Session("SCEGLIINDIRIZZO") = If(draft.ShippingAddressId > 0, CType(draft.ShippingAddressId, Object), Nothing)
+        End If
+        SendEmail(doc.DocumentNumber, If(doc.TipoDocumentiId = 2, "Preventivo", "Ordine"), documentId, String.Empty, identity)
+    Catch ex As Exception
+        LogDurableCheckoutFailure(ex, "pay-first-email")
+    End Try
+End Sub
+
+
 Private Sub RedirectToOrderConfirmation(ByVal requestId As String, ByVal identity As OrderStorefrontIdentity)
     Dim token As String = OrderConfirmationTokenService.CreateToken(requestId, identity)
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.OrderConfirmation, token)
@@ -774,6 +927,11 @@ If orderIdentity Is Nothing OrElse Not orderIdentity.IsComplete OrElse
     CheckoutTerminalOutcomeDispatcher.Dispatch(HttpContext.Current, CheckoutTerminalOutcome.LoginRequired)
     Exit Sub
 End If
+' PAYPAL-PAY-FIRST-ORDER-1A (P3a2): ripresa dell'incasso dopo il commit dell'ordine (token proprio, GET, fuori dal lock applicativo).
+If Not String.IsNullOrEmpty(GetExactCaseQueryString(PayPalPayFirstToken.QueryKey, 1024)) Then
+    HandlePayFirstFinishGet(orderIdentity)
+    Exit Sub
+End If
 If Not String.IsNullOrEmpty(GetExactCaseQueryString(ORDER_CONFIRMATION_TOKEN_QS_KEY, 1024)) Then
     HandleOrderConfirmationGet(orderIdentity)
     Exit Sub
@@ -798,6 +956,19 @@ CheckoutFailureRecoveryService.TracePhase(
 CheckoutFailureRecoveryService.TracePhase(
     HttpContext.Current, checkoutRequestId, "08-storefront-context", "resolved")
 
+
+        ' PAYPAL-PAY-FIRST-ORDER-1A (P3a2): politica bloccante PayPal (ConfermaOrdinePrimaPagamento = 0). Il gate sta PRIMA del lock applicativo: nessuna chiamata
+        ' HTTP dentro il lock. Con flag 1, preventivo, coupon o un altro metodo di pagamento questo blocco non fa nulla e il percorso resta quello di sempre.
+        ' Nessun parametro della richiesta (pp=1 o simili) decide: conta solo lo stato durevole del tentativo.
+        Dim payFirst As Boolean = False
+        Dim payFirstAttemptId As Long = 0
+        Dim payFirstDraft As CheckoutDraftState = Nothing
+        If CheckoutDraftService.TryRead(HttpContext.Current, orderIdentity, checkoutRequestId, checkoutDraftFingerprint, payFirstDraft) AndAlso
+           PayPalPayFirstPolicy.Applies(payFirstDraft.PaymentOnline, payFirstDraft.ConfirmBeforePayment, payFirstDraft.TipoDocumentiId,
+               PayPalPayFirstPolicy.HasCoupon(Convert.ToString(Session("Coupon_Codice_Controllo")), GetSessionInt("Coupon_idArticolo", 0))) Then
+            payFirst = True
+            If Not RoutePayFirst(orderIdentity, checkoutRequestId, checkoutPayloadFingerprint, payFirstDraft, payFirstAttemptId) Then Exit Sub
+        End If
 
         SyncLock Semaforo
 
@@ -861,7 +1032,7 @@ CheckoutFailureRecoveryService.TracePhase(
                            String.Equals(completedBeforeWork.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) Then
                             CheckoutFailureRecoveryService.TracePhase(
                                 HttpContext.Current, checkoutRequestId, "11-state-reconciliation", "completed")
-                            RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
+                            RedirectAfterCommit(checkoutRequestId, orderIdentity, payFirst)
                         Else
                             ReturnToCartAfterCompletedReplay(checkoutRequestId)
                         End If
@@ -1022,6 +1193,21 @@ CheckoutFailureRecoveryService.TracePhase(
                 ' Lock, rivalidazione commerciale e creazione documento condividono
                 ' la stessa connessione e la stessa transazione.
                 trns = conn.BeginTransaction(IsolationLevel.Serializable)
+                Dim payAttempt As PayPalAttemptRecord = Nothing
+                If payFirst Then
+                    ' LockForDocument e il PRIMO comando della transazione: un doppio invio aspetta qui, prima di tenere i documenti. Uno stato diverso da AUTHORIZED
+                    ' (un concorrente ha gia creato l'ordine, o l'autorizzazione non e piu valida) NON annulla nulla: rollback e si riprende dallo stato.
+                    payAttempt = PayPalPaymentAttempts.LockForDocument(conn, trns, payFirstAttemptId, orderIdentity.CompanyId, LoginId)
+                    If payAttempt Is Nothing OrElse payAttempt.Stato <> PayPalPaymentAttemptStates.Authorized OrElse
+                       Not String.Equals(payAttempt.PayloadFingerprint, checkoutPayloadFingerprint, StringComparison.Ordinal) OrElse
+                       payAttempt.Importo <> Math.Round(checkoutDraft.Total, 2, MidpointRounding.AwayFromZero) OrElse payAttempt.PagamentiTipoId <> Pagamento Then
+                        trns.Rollback()
+                        trns.Dispose()
+                        trns = Nothing
+                        RedirectPayFirstAfterLockFailure(orderIdentity, payAttempt)
+                        Exit Sub
+                    End If
+                End If
                 Dim cartFingerprint As String = OrderDurableIdempotencyService.ComputeCartFingerprint(
                     conn, trns, LoginId, True)
                 payloadFingerprint = OrderStorefrontContext.BuildCheckoutFingerprint(
@@ -1062,7 +1248,7 @@ CheckoutFailureRecoveryService.TracePhase(
                     trns.Dispose()
                     trns = Nothing
                     If durableClaim.DocumentiId > 0 AndAlso durableClaim.DocumentoMemorizzato > 0 Then
-                        RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
+                        RedirectAfterCommit(checkoutRequestId, orderIdentity, payFirst)
                     Else
                         DispatchDurableCheckoutFailure(
                             checkoutRequestId, CheckoutFailureReason.Collision, "10-idempotency-claim")
@@ -1242,9 +1428,19 @@ CheckoutFailureRecoveryService.TracePhase(
                     If cmdOrigin.ExecuteNonQuery() <> 1 Then Throw New DataException("Origine ordine WEB non persistita")
                 End Using
 
-                InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)
-                If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
-                    PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)
+                If payFirst Then
+                    ' Il documento nasce gia legato al tentativo: BindDocument rilegge documento e totale da se (al centesimo, half-up) e INSERT della riga PayPal nella
+                    ' stessa transazione. Qualunque falso o eccezione = rollback, carrello intatto, nessun addebito (l'autorizzazione resta e si riusa al nuovo invio).
+                    SetPayFirstDocumentStatus(conn, trns, id)
+                    If Not PayPalPaymentAttempts.BindDocument(conn, trns, payAttempt.Id, orderIdentity.CompanyId, LoginId, id) Then
+                        Throw New DataException("Pay-first: il tentativo non si lega al documento (totale o proprietario diversi).")
+                    End If
+                    PayPalCheckoutRepository.InsertAuthorizedTransaction(conn, trns, id, payAttempt)
+                Else
+                    InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)
+                    If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
+                        PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)
+                    End If
                 End If
 
                 OrderDurableIdempotencyService.Complete(
@@ -1265,22 +1461,26 @@ CheckoutFailureRecoveryService.TracePhase(
                 CheckoutFailureRecoveryService.TracePhase(
                     HttpContext.Current, checkoutRequestId, "17-commit", "completed")
 
-                If articoliIdGlobali <> "" Then facebook_pixel(articoliIdGlobali)
+                If Not payFirst AndAlso articoliIdGlobali <> "" Then facebook_pixel(articoliIdGlobali)
 
-                If lblOrderReceiptStatus IsNot Nothing Then
+                If Not payFirst AndAlso lblOrderReceiptStatus IsNot Nothing Then
                     lblOrderReceiptStatus.Text = "Ordine ricevuto"
                 End If
-                If HyperLink1 IsNot Nothing Then
+                If Not payFirst AndAlso HyperLink1 IsNot Nothing Then
                     HyperLink1.NavigateUrl = ResolveUrl("~/documenti.aspx")
                     HyperLink1.Text = "I miei ordini"
                 End If
-                If litOrderReceipt IsNot Nothing Then
+                If Not payFirst AndAlso litOrderReceipt IsNot Nothing Then
                     litOrderReceipt.Text = BuildOrderReceiptHtml(conn, id, Documento, NumDoc, DataDoc, If(TryCast(Session("Coupon_Codice_Controllo"), String), ""), orderIdentity)
                 End If
 
                 ' Email (ordine normale vs coupon)
                 Dim orderEmailSent As Boolean = False
-                If (If(TryCast(Session("Coupon_Codice_Controllo"), String), "")) = "" Then
+                If payFirst Then
+                    ' L'e-mail dell'ordine parte SOLO dopo l'incasso COMPLETED (ramo pf), mai prima.
+                    CheckoutFailureRecoveryService.TracePhase(
+                        HttpContext.Current, checkoutRequestId, "19-order-email", "deferred-until-paid")
+                ElseIf (If(TryCast(Session("Coupon_Codice_Controllo"), String), "")) = "" Then
                     CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "19-order-email", "entered")
                     orderEmailSent = SendEmail(NumDoc, Documento, id, "", orderIdentity)
@@ -1289,7 +1489,7 @@ CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "19-order-email", "entered")
                     orderEmailSent = SendEmail(NumDoc, Documento, id, If(TryCast(Session("NoteDocumento"), String), ""), orderIdentity)
                 End If
-                CheckoutFailureRecoveryService.TracePhase(
+                If Not payFirst Then CheckoutFailureRecoveryService.TracePhase(
                     HttpContext.Current, checkoutRequestId, "19-order-email", If(orderEmailSent, "completed", "failed"))
 
                 ' Reset session ordine
@@ -1348,7 +1548,10 @@ CheckoutFailureRecoveryService.TracePhase(
 
                 Else
                     ' Ordine normale: banca sella, PayPal o dettaglio documento
-                    If PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
+                    If payFirst Then
+                        RedirectToPayFirstFinish(orderIdentity, payAttempt.AttemptKey)
+                        Exit Sub
+                    ElseIf PagamentoOnLine = PAYMENT_ONLINE_PAYPAL Then
                         PayPalWebLaunchContext.Issue(HttpContext.Current, id, orderIdentity, checkoutRequestId)
                         Me.SafeRedirect("/paypalcheckout.aspx?id=" & id.ToString(CultureInfo.InvariantCulture))
                         Exit Sub
@@ -1447,14 +1650,14 @@ CheckoutFailureRecoveryService.TracePhase(
                     CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "19-post-commit-effects", "failed-order-confirmed", ex)
                     LogDurableCheckoutFailure(ex, "post-commit-effects")
-                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
+                    RedirectAfterCommit(checkoutRequestId, orderIdentity, payFirst)
                     Return
                 End If
 
                 If TryReconcileCompletedOrder(checkoutConnectionString, checkoutRequestId, orderIdentity, payloadFingerprint) Then
                     CheckoutFailureRecoveryService.TracePhase(
                         HttpContext.Current, checkoutRequestId, "17-commit", "reconciled-completed")
-                    RedirectToOrderConfirmation(checkoutRequestId, orderIdentity)
+                    RedirectAfterCommit(checkoutRequestId, orderIdentity, payFirst)
                     Return
                 End If
 

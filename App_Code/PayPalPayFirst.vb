@@ -158,6 +158,7 @@ Public NotInheritable Class PayPalPayFirstService
     Public Const MsgExpired As String = "La sessione di pagamento e scaduta prima della conferma. Non e stato addebitato nulla: rivedi il carrello e riprova."
     Public Const MsgBusy As String = "Stiamo verificando il pagamento PayPal. Riprova tra qualche minuto senza ripetere il pagamento."
     Public Const MsgManual As String = "Il pagamento di questo ordine richiede una verifica. Contatta l'assistenza prima di riprovare."
+    Public Const MsgChanged As String = "Il carrello e cambiato dopo l'autorizzazione PayPal. Rivedi il carrello e conferma di nuovo: nessun importo e stato addebitato e l'autorizzazione precedente viene annullata."
     Public Const MsgResubmit As String = "Il pagamento e stato autorizzato ma la sessione di conferma non e piu valida. Conferma di nuovo l'ordine dal carrello: non ti verra chiesto un nuovo pagamento."
 
     Private Shared Function Result(ByVal outcome As PayFirstOutcome, ByVal reason As String, Optional ByVal url As String = "", Optional ByVal message As String = "",
@@ -422,6 +423,88 @@ Public NotInheritable Class PayPalPayFirstService
     End Function
 End Class
 
+' Token del ramo pf (ripresa dell'incasso): MachineKey, scopo dedicato, tentativo + database + azienda + login + ora. Il payload e puro e si prova senza ASP.NET.
+Public NotInheritable Class PayPalPayFirstToken
+    Private Sub New()
+    End Sub
+
+    Private Const Purpose As String = "KeepStore.PayFirst.Finish.V1"
+    Public Const QueryKey As String = "pf"
+    Public Shared ReadOnly MaxAge As TimeSpan = TimeSpan.FromMinutes(30)
+    Private Shared ReadOnly KeyPattern As New System.Text.RegularExpressions.Regex("^[0-9a-f]{32}$", System.Text.RegularExpressions.RegexOptions.CultureInvariant)
+
+    Public Shared Function BuildPayload(ByVal attemptKey As String, ByVal identity As OrderStorefrontIdentity, ByVal nowUtc As DateTime) As String
+        Dim scope As String = String.Empty
+        If identity Is Nothing OrElse Not identity.IsComplete OrElse String.IsNullOrEmpty(attemptKey) OrElse Not KeyPattern.IsMatch(attemptKey) OrElse
+           Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(identity.DatabaseScopeKey, scope) Then Return String.Empty
+        Return "v1|" & attemptKey & "|" & scope & "|" & identity.CompanyId.ToString(CultureInfo.InvariantCulture) & "|" & identity.LoginId.ToString(CultureInfo.InvariantCulture) & "|" &
+               nowUtc.Ticks.ToString(CultureInfo.InvariantCulture)
+    End Function
+
+    Public Shared Function TryParsePayload(ByVal payload As String, ByVal identity As OrderStorefrontIdentity, ByVal nowUtc As DateTime, ByRef attemptKey As String) As Boolean
+        attemptKey = String.Empty
+        If identity Is Nothing OrElse Not identity.IsComplete OrElse String.IsNullOrEmpty(payload) Then Return False
+        Dim parts() As String = payload.Split("|"c)
+        If parts.Length <> 6 OrElse Not String.Equals(parts(0), "v1", StringComparison.Ordinal) OrElse Not KeyPattern.IsMatch(parts(1)) Then Return False
+        Dim scope As String = String.Empty
+        If Not OrderDurableIdempotencyService.TryNormalizePayloadFingerprint(parts(2), scope) OrElse Not String.Equals(scope, identity.DatabaseScopeKey, StringComparison.Ordinal) Then Return False
+        Dim company As Integer
+        Dim login As Long
+        Dim ticks As Long
+        If Not Integer.TryParse(parts(3), NumberStyles.None, CultureInfo.InvariantCulture, company) OrElse company <> identity.CompanyId Then Return False
+        If Not Long.TryParse(parts(4), NumberStyles.None, CultureInfo.InvariantCulture, login) OrElse login <> identity.LoginId Then Return False
+        If Not Long.TryParse(parts(5), NumberStyles.None, CultureInfo.InvariantCulture, ticks) Then Return False
+        Dim age As TimeSpan = nowUtc.Subtract(New DateTime(ticks, DateTimeKind.Utc))
+        If age < TimeSpan.FromMinutes(-1) OrElse age > MaxAge Then Return False
+        attemptKey = parts(1)
+        Return True
+    End Function
+
+    Public Shared Function Create(ByVal attemptKey As String, ByVal identity As OrderStorefrontIdentity) As String
+        Dim payload As String = BuildPayload(attemptKey, identity, DateTime.UtcNow)
+        If payload.Length = 0 Then Throw New InvalidOperationException("Pay-first finish token is not valid.")
+        Dim clearBytes() As Byte = Nothing
+        Dim protectedBytes() As Byte = Nothing
+        Try
+            clearBytes = System.Text.Encoding.UTF8.GetBytes(payload)
+            protectedBytes = System.Web.Security.MachineKey.Protect(clearBytes, Purpose)
+            If protectedBytes Is Nothing OrElse protectedBytes.Length = 0 Then Throw New InvalidOperationException("Pay-first finish token protection failed.")
+            Return Convert.ToBase64String(protectedBytes).Replace("+"c, "-"c).Replace("/"c, "_"c).TrimEnd("="c)
+        Finally
+            If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
+            If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
+        End Try
+    End Function
+
+    Public Shared Function TryValidate(ByVal token As String, ByVal identity As OrderStorefrontIdentity, ByRef attemptKey As String) As Boolean
+        attemptKey = String.Empty
+        If String.IsNullOrWhiteSpace(token) OrElse token.Length > 1024 Then Return False
+        Dim protectedBytes() As Byte = Nothing
+        Dim clearBytes() As Byte = Nothing
+        Try
+            Dim encoded As String = token.Trim().Replace("-"c, "+"c).Replace("_"c, "/"c)
+            Select Case encoded.Length Mod 4
+                Case 0
+                Case 2
+                    encoded &= "=="
+                Case 3
+                    encoded &= "="
+                Case Else
+                    Return False
+            End Select
+            protectedBytes = Convert.FromBase64String(encoded)
+            clearBytes = System.Web.Security.MachineKey.Unprotect(protectedBytes, Purpose)
+            If clearBytes Is Nothing OrElse clearBytes.Length = 0 Then Return False
+            Return TryParsePayload(System.Text.Encoding.UTF8.GetString(clearBytes), identity, DateTime.UtcNow, attemptKey)
+        Catch
+            attemptKey = String.Empty
+            Return False
+        Finally
+            If protectedBytes IsNot Nothing Then Array.Clear(protectedBytes, 0, protectedBytes.Length)
+            If clearBytes IsNot Nothing Then Array.Clear(clearBytes, 0, clearBytes.Length)
+        End Try
+    End Function
+End Class
 ' Colla delle pagine (paypalpay.aspx, paypalreturn.aspx): proprietario, messaggio nel carrello, redirect e URL canonici. Nessuna regola di business qui.
 Public NotInheritable Class PayPalPayFirstGlue
     Private Sub New()
@@ -454,9 +537,7 @@ Public NotInheritable Class PayPalPayFirstGlue
         CheckoutTerminalOutcomeDispatcher.Dispatch(context, CheckoutTerminalOutcome.CartReview)
     End Sub
 
-    ' P3a1: i percorsi verso il checkout (ordine.aspx) e verso la ripresa dell'incasso nascono con P3a2. Finche non esistono nessun tentativo arriva qui in
-    ' quegli stati; per sicurezza si torna al carrello senza toccare nulla.
-    Public Shared Sub Apply(ByVal context As HttpContext, ByVal result As PayFirstResult, ByVal payCtx As PayPalPayFirstContext)
+    Public Shared Sub Apply(ByVal context As HttpContext, ByVal result As PayFirstResult, ByVal payCtx As PayPalPayFirstContext, ByVal owner As OrderStorefrontIdentity)
         If result Is Nothing Then ReturnToCart(context, PayPalPayFirstService.MsgNotStarted) : Return
         Select Case result.Outcome
             Case PayFirstOutcome.ApprovalRedirect, PayFirstOutcome.ReturnRedirect
@@ -464,6 +545,10 @@ Public NotInheritable Class PayPalPayFirstGlue
             Case PayFirstOutcome.ProceedToOrder
                 If payCtx Is Nothing Then ReturnToCart(context, PayPalPayFirstService.MsgResubmit) : Return
                 Redirect(context, VirtualPathUtility.ToAbsolute("~/ordine.aspx") & "?t=" & HttpUtility.UrlEncode(payCtx.CheckoutToken))
+            Case PayFirstOutcome.Finish, PayFirstOutcome.Confirmation
+                ' Un tentativo con l'ordine gia creato o completato: si riprende l'incasso (ramo pf di ordine.aspx), mai un nuovo pagamento.
+                If owner Is Nothing OrElse String.IsNullOrEmpty(result.AttemptKey) Then ReturnToCart(context, PayPalPayFirstService.MsgBusy) : Return
+                Redirect(context, VirtualPathUtility.ToAbsolute("~/ordine.aspx") & "?" & PayPalPayFirstToken.QueryKey & "=" & HttpUtility.UrlEncode(PayPalPayFirstToken.Create(result.AttemptKey, owner)))
             Case Else
                 ReturnToCart(context, If(String.IsNullOrEmpty(result.Message), PayPalPayFirstService.MsgBusy, result.Message))
         End Select
@@ -481,7 +566,7 @@ Public NotInheritable Class PayPalPayFirstGlue
             ReturnToCart(context, PayPalPayFirstService.MsgNotStarted)
             Return
         End If
-        Apply(context, PayPalPayFirstService.Start(payCtx, cfg, New PayPalOrdersV2Client(cfg), UrlBuilder(context), DateTime.UtcNow), payCtx)
+        Apply(context, PayPalPayFirstService.Start(payCtx, cfg, New PayPalOrdersV2Client(cfg), UrlBuilder(context), DateTime.UtcNow), payCtx, owner)
     End Sub
 
     Public Shared Sub RunReturn(ByVal context As HttpContext, ByVal attemptKey As String, ByVal action As String, ByVal rawToken As String)
@@ -497,6 +582,6 @@ Public NotInheritable Class PayPalPayFirstGlue
             ReturnToCart(context, PayPalPayFirstService.MsgNotStarted)
             Return
         End If
-        Apply(context, PayPalPayFirstService.HandleReturn(attempt, action, rawToken, payCtx, cfg, New PayPalOrdersV2Client(cfg), UrlBuilder(context), DateTime.UtcNow), payCtx)
+        Apply(context, PayPalPayFirstService.HandleReturn(attempt, action, rawToken, payCtx, cfg, New PayPalOrdersV2Client(cfg), UrlBuilder(context), DateTime.UtcNow), payCtx, owner)
     End Sub
 End Class
