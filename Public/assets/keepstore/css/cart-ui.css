@@ -3884,3 +3884,206 @@
         transition: none;
     }
 }
+
+/* PAYPAL-FAILED-PAYMENT-GUIDE-1A - guida dopo un pagamento PayPal non riuscito (carrello). Mobile-first, nessun JS, nessun hover essenziale. */
+.ks-cart-page .ks-pay-guide{
+    margin: 20px 0 26px;
+}
+
+.ks-cart-page .ks-pay-guide__card{
+    padding: 20px;
+    border: 1px solid #f2c4c7;
+    border-left: 5px solid #d80027;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fff 0%, #fff8f8 100%);
+    color: #20242c;
+    box-shadow: 0 14px 38px rgba(77, 14, 24, .09);
+}
+
+.ks-cart-page .ks-pay-guide__card--wait{
+    border-color: #cbd5e1;
+    border-left-color: #334155;
+    background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+    box-shadow: 0 14px 38px rgba(30, 41, 59, .08);
+}
+
+.ks-cart-page .ks-pay-guide__head{
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.ks-cart-page .ks-pay-guide__icon{
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #d80027;
+    color: #fff;
+}
+
+.ks-cart-page .ks-pay-guide__card--wait .ks-pay-guide__icon{
+    background: #334155;
+}
+
+.ks-cart-page .ks-pay-guide__icon svg{
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.ks-cart-page .ks-pay-guide__intro{
+    min-width: 0;
+}
+
+.ks-cart-page .ks-pay-guide__eyebrow{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: #9f1239;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.4;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.ks-cart-page .ks-pay-guide__card--wait .ks-pay-guide__eyebrow{
+    color: #475569;
+}
+
+.ks-cart-page .ks-pay-guide h2{
+    margin: 0 0 6px;
+    color: #20242c;
+    font-size: 21px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.ks-cart-page .ks-pay-guide__lead{
+    margin: 0;
+    color: #3b4350;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.ks-cart-page .ks-pay-guide__logo{
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    object-fit: contain;
+}
+
+.ks-cart-page .ks-pay-guide__steps{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin: 18px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: ks-pay-guide-step;
+}
+
+.ks-cart-page .ks-pay-guide__steps li{
+    position: relative;
+    min-width: 0;
+    padding: 12px 14px 12px 54px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #fff;
+    counter-increment: ks-pay-guide-step;
+}
+
+.ks-cart-page .ks-pay-guide__steps li::before{
+    content: counter(ks-pay-guide-step);
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #d80027;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.ks-cart-page .ks-pay-guide__card--wait .ks-pay-guide__steps li::before{
+    background: #334155;
+}
+
+.ks-cart-page .ks-pay-guide__steps strong{
+    display: block;
+    color: #20242c;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.ks-cart-page .ks-pay-guide__steps span{
+    display: block;
+    margin-top: 2px;
+    color: #3b4350;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.ks-cart-page .ks-pay-guide__actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.ks-cart-page .ks-pay-guide__btn{
+    display: inline-flex;
+    min-height: 44px;
+    padding: 10px 20px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+@media (min-width: 768px){
+    .ks-cart-page .ks-pay-guide__card{
+        padding: 24px 26px;
+    }
+
+    .ks-cart-page .ks-pay-guide__head{
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 18px;
+    }
+
+    .ks-cart-page .ks-pay-guide__icon{
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+    }
+
+    .ks-cart-page .ks-pay-guide__steps{
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 575px){
+    .ks-cart-page .ks-pay-guide__actions{
+        flex-direction: column;
+    }
+
+    .ks-cart-page .ks-pay-guide__btn{
+        width: 100%;
+    }
+}

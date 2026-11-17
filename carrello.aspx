@@ -6,7 +6,7 @@
 
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261115-focus-fc1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261117-pay-guide-1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-cart-conversion1a" %>" defer></script>
 
@@ -90,6 +90,76 @@
                 <strong id="ksCartRecoveryTitle" data-ks-cart-recovery-title><asp:Literal ID="litCartRecoveryTitle" runat="server" /></strong>
                 <p data-ks-cart-recovery-message><asp:Literal ID="litCartRecoveryMessage" runat="server" /></p>
                 <asp:HyperLink ID="lnkCartRecoveryOrders" runat="server" Visible="false" NavigateUrl="~/documenti.aspx?t=4" CssClass="tf-btn btn-gray mt-2" Text="I miei ordini" />
+            </asp:Panel>
+
+            <asp:Panel ID="pnlPaymentGuide" runat="server" Visible="false" CssClass="ks-pay-guide">
+                <asp:PlaceHolder ID="phGuideRetry" runat="server" Visible="false">
+                    <section class="ks-pay-guide__card ks-pay-guide__card--retry" role="alert" aria-labelledby="ksPayGuideRetryTitle">
+                        <div class="ks-pay-guide__head">
+                            <span class="ks-pay-guide__icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /><path d="M14.2 13.4l3.6 3.6m0-3.6l-3.6 3.6" /></svg>
+                            </span>
+                            <div class="ks-pay-guide__intro">
+                                <span class="ks-pay-guide__eyebrow"><img class="ks-pay-guide__logo" src="/Public/assets/images/pagamenti/paypal.svg" alt="" width="16" height="16" />Pagamento PayPal</span>
+                                <h2 id="ksPayGuideRetryTitle">Il pagamento non è andato a buon fine</h2>
+                                <p class="ks-pay-guide__lead"><asp:Literal ID="litPaymentGuideMessageRetry" runat="server" /></p>
+                            </div>
+                        </div>
+                        <ol class="ks-pay-guide__steps">
+                            <li><strong>Il carrello è al sicuro</strong><span>Gli articoli sono ancora nel carrello: non devi rifare niente.</span></li>
+                            <li><strong>Scegli come pagare</strong><span>Puoi riprovare con PayPal oppure scegliere un altro metodo di pagamento.</span></li>
+                            <li><strong>Conferma</strong><span>Controlla il riepilogo e conferma il pagamento.</span></li>
+                        </ol>
+                        <div class="ks-pay-guide__actions">
+                            <a class="tf-btn ks-pay-guide__btn" href="carrello.aspx?payguide=1" data-ks-pay-guide-action="retry">Riprova il pagamento</a>
+                            <a class="tf-btn btn-gray ks-pay-guide__btn" href="carrello.aspx?payguide=1" data-ks-pay-guide-action="change">Cambia metodo di pagamento</a>
+                        </div>
+                    </section>
+                </asp:PlaceHolder>
+                <asp:PlaceHolder ID="phGuideWait" runat="server" Visible="false">
+                    <section class="ks-pay-guide__card ks-pay-guide__card--wait" role="status" aria-labelledby="ksPayGuideWaitTitle">
+                        <div class="ks-pay-guide__head">
+                            <span class="ks-pay-guide__icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+                            </span>
+                            <div class="ks-pay-guide__intro">
+                                <span class="ks-pay-guide__eyebrow"><img class="ks-pay-guide__logo" src="/Public/assets/images/pagamenti/paypal.svg" alt="" width="16" height="16" />Pagamento PayPal</span>
+                                <h2 id="ksPayGuideWaitTitle">Stiamo verificando il pagamento</h2>
+                                <p class="ks-pay-guide__lead"><asp:Literal ID="litPaymentGuideMessageWait" runat="server" /></p>
+                            </div>
+                        </div>
+                        <ol class="ks-pay-guide__steps">
+                            <li><strong>Stiamo controllando</strong><span>PayPal ci sta confermando l'esito del pagamento.</span></li>
+                            <li><strong>Non ripetere il pagamento</strong><span>Aspetta qualche minuto: lo stato si aggiorna da solo.</span></li>
+                            <li><strong>Controlla i tuoi ordini</strong><span>Se l'ordine è stato registrato lo trovi in «I miei ordini».</span></li>
+                        </ol>
+                        <div class="ks-pay-guide__actions">
+                            <a class="tf-btn btn-gray ks-pay-guide__btn" href="documenti.aspx?t=4">Vai a «I miei ordini»</a>
+                        </div>
+                    </section>
+                </asp:PlaceHolder>
+                <asp:PlaceHolder ID="phGuideContact" runat="server" Visible="false">
+                    <section class="ks-pay-guide__card ks-pay-guide__card--contact" role="alert" aria-labelledby="ksPayGuideContactTitle">
+                        <div class="ks-pay-guide__head">
+                            <span class="ks-pay-guide__icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M4 13a8 8 0 0 1 16 0" /><path d="M4 13v3a2 2 0 0 0 2 2h1v-6H6a2 2 0 0 0-2 1Z" /><path d="M20 13v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 1Z" /><path d="M18 18c0 1.7-1.6 3-4 3h-2" /></svg>
+                            </span>
+                            <div class="ks-pay-guide__intro">
+                                <span class="ks-pay-guide__eyebrow"><img class="ks-pay-guide__logo" src="/Public/assets/images/pagamenti/paypal.svg" alt="" width="16" height="16" />Pagamento PayPal</span>
+                                <h2 id="ksPayGuideContactTitle">Serve una verifica del pagamento</h2>
+                                <p class="ks-pay-guide__lead"><asp:Literal ID="litPaymentGuideMessageContact" runat="server" /></p>
+                            </div>
+                        </div>
+                        <ol class="ks-pay-guide__steps">
+                            <li><strong>Serve una verifica</strong><span>Controlliamo il pagamento insieme a te.</span></li>
+                            <li><strong>Aspetta la nostra risposta</strong><span>Non inviare un nuovo pagamento finché non ti rispondiamo.</span></li>
+                            <li><strong>Scrivici</strong><span>Indica la data e l'importo dell'ordine: ti rispondiamo il prima possibile.</span></li>
+                        </ol>
+                        <div class="ks-pay-guide__actions">
+                            <a class="tf-btn ks-pay-guide__btn" href="Contattaci.aspx">Contatta l'assistenza</a>
+                        </div>
+                    </section>
+                </asp:PlaceHolder>
             </asp:Panel>
 
             <asp:Panel ID="pnlCartPriceRevalidation" runat="server" CssClass="ks-alert ks-alert-warning ks-price-revalidation-alert" Visible="false">

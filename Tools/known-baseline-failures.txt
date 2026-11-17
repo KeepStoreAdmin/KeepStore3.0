@@ -32,3 +32,8 @@ Test-CheckoutDraftTelemetry # pretende CurrentVersion = 4 ma la bozza e alla ver
 Test-CheckoutTerminalOutcomes # pretende "If Vettore <= 0 Then" in ordine.aspx.vb, che ha "If Vettore = 0 Then" (verificato su 4fa056b2)
 Test-OrderDocumentNumberOut # preflight "LF line endings only": la copia di lavoro Windows e CRLF (verificato su 4fa056b2)
 Test-OrderConcurrencyLab # SESSION_A_NEVER_SIGNALLED sul LAB di questa macchina (verificato su 4fa056b2)
+Test-CartRecommendationsCommercial # richiede il parametro obbligatorio EvidenceDirectory: l'harness non lo passa (verificato su d4f5bdba)
+Test-KeepStoreTenantOnboarding # richiede parametri obbligatori (CanonicalUrl, HomePath, CatalogPath, ProductPath, PrivatePaths): non eseguibile dall'harness (verificato su d4f5bdba)
+Test-RegistrationPostSaveRouting # richiede il parametro obbligatorio EvidenceDirectory: l'harness non lo passa (verificato su d4f5bdba)
+Test-LabCartCheckoutSmoke # S01_LOGIN_SYNTHETIC_USER: serve il sito LAB acceso con l'utente sintetico (verificato su d4f5bdba, worktree pulito)
+Test-LabAvailabilityVisitorRule # V05_PRODUCT_SHOWS_WORDS synthetic=0: serve il sito LAB con i dati sintetici (verificato su d4f5bdba, worktree pulito)

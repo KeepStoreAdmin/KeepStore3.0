@@ -1507,10 +1507,31 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
             msg = Convert.ToString(Session(CartPriceRevalidationHelper.SessionMessageKey))
         End If
 
+        _paymentGuideMessage = msg
         pnlCartPriceRevalidation.Visible = Not String.IsNullOrWhiteSpace(msg)
         litCartPriceRevalidation.Text = msg
         Session(CartPriceRevalidationHelper.SessionMessageKey) = Nothing
         Session(CartPriceRevalidationHelper.SessionChangedKey) = Nothing
+    End Sub
+
+    ' PAYPAL-FAILED-PAYMENT-GUIDE-1A: messaggio del pay-first letto in ShowCartPriceRevalidationMessage; la guida si decide a carrello ormai legato (PreRenderComplete).
+    Private _paymentGuideMessage As String = ""
+
+    Private Sub ApplyPaymentGuide()
+        If pnlPaymentGuide Is Nothing OrElse phGuideRetry Is Nothing OrElse phGuideWait Is Nothing OrElse phGuideContact Is Nothing Then Return
+        pnlPaymentGuide.Visible = False
+        Dim kind As PaymentGuideKind = KeepStorePaymentGuide.Resolve(_paymentGuideMessage)
+        If kind = PaymentGuideKind.None OrElse GetSessionInt("LoginId", 0) <= 0 OrElse Not _cartHasItems Then Return
+        If Me.Repeater1.Items.Count = 0 AndAlso Me.gvArticoliGratis.Items.Count = 0 Then Return
+        Dim encoded As String = HttpUtility.HtmlEncode(_paymentGuideMessage.Trim())
+        litPaymentGuideMessageRetry.Text = encoded
+        litPaymentGuideMessageWait.Text = encoded
+        litPaymentGuideMessageContact.Text = encoded
+        phGuideRetry.Visible = (kind = PaymentGuideKind.Retry)
+        phGuideWait.Visible = (kind = PaymentGuideKind.Wait)
+        phGuideContact.Visible = (kind = PaymentGuideKind.Contact)
+        pnlPaymentGuide.Visible = True
+        pnlCartPriceRevalidation.Visible = False
     End Sub
 
     Private Sub ShowCartRecoveryMessage()
@@ -2918,6 +2939,11 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
         ApplyCheckoutStepUi()
     ElseIf String.Equals(Request.QueryString("pricechanged"), "1", StringComparison.OrdinalIgnoreCase) Then
         SetCheckoutStep("confirm")
+        If tOrdine IsNot Nothing Then tOrdine.Visible = True
+        ApplyCheckoutStepUi()
+    ElseIf String.Equals(Request.QueryString("payguide"), "1", StringComparison.OrdinalIgnoreCase) AndAlso isLogged AndAlso Not Page.IsPostBack Then
+        ' PAYPAL-FAILED-PAYMENT-GUIDE-1A: i pulsanti della guida aprono il passo di pagamento con una GET, come gli altri ritorni (nessun postback).
+        SetCheckoutStep("checkout")
         If tOrdine IsNot Nothing Then tOrdine.Visible = True
         ApplyCheckoutStepUi()
     End If
@@ -4659,6 +4685,12 @@ End Function
         Else
             Me.Panel_Unico.Visible = True
         End If
+
+        ' PAYPAL-FAILED-PAYMENT-GUIDE-1A: a carrello vuoto il passo di pagamento aperto dalla guida si richiude e la guida non compare.
+        If (Me.gvArticoliGratis.Items.Count = 0 AndAlso Me.Repeater1.Items.Count = 0 OrElse Not _cartHasItems) AndAlso String.Equals(Request.QueryString("payguide"), "1", StringComparison.OrdinalIgnoreCase) Then
+            tOrdine.Visible = False : SetCheckoutStep("cart") : ApplyCheckoutStepUi()
+        End If
+        ApplyPaymentGuide()
 
         If (controlla_articoli_quantita_zero() = 0) Then
             Qnt_Errata.Visible = True
