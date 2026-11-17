@@ -344,7 +344,7 @@ function Test-Surfaces([string]$store, [string]$lVb, [string]$lAspx, [string]$dV
     if ($card -notmatch 'aria-labelledby="ksPayNowTitle"' -or [regex]::Matches($card, '<h2 id="ksPayNowTitle">').Count -ne 1 -or $card -notmatch '<svg[^>]*aria-hidden="true"') { Show-Failure 'detail a11y'; return $false }
     if ($card -notmatch 'Eval\("TotaleDocumento", "\{0:C\}"\)' -or $card -notmatch 'Eval\("PagamentiTipoDescrizione"\)') { Show-Failure 'detail amount and method'; return $false }
     if ([regex]::Matches($card, 'ks-pay-now__btn').Count -lt 3) { Show-Failure 'detail buttons'; return $false }
-    if ($dAspx -notmatch 'order-ui\.css"\) %>\?v=20261117-pay-now-1a') { Show-Failure 'detail css buster'; return $false }
+    if ($dAspx -notmatch 'order-ui\.css"\) %>\?v=20261117-(pay-now|progress)-1a') { Show-Failure 'detail css buster'; return $false }
     if ($dAspx.Contains('I pulsanti di pagamento vengono mostrati solo')) { Show-Failure 'old jargon text'; return $false }
     # stili
     if ($cssText -notmatch '(?s)\.ks-pay-now__btn\s*\{[^}]*min-height:\s*44px') { Show-Failure 'css 44'; return $false }
@@ -400,7 +400,7 @@ $mutants = @(
     @{ Id = 'U01_LIST_BUTTON_ALWAYS_VISIBLE'; Target = 'listaspx'; Old = "Visible='<%# ListPayNowVisible(Eval(""id"")) %>' Text=""Paga adesso"""; New = 'Text="Paga adesso"' },
     @{ Id = 'U02_LIST_BADGE_REMOVED'; Target = 'listaspx'; Old = 'ID="lblListaDaPagare" runat="server" CssClass="ks-pay-now__badge" Text="Da pagare"'; New = 'ID="lblListaDaPagare" runat="server" CssClass="body-small" Text="Da pagare"' },
     @{ Id = 'U03_DETAIL_CARD_AT_THE_BOTTOM'; Target = 'detailaspx'; Old = '<span id="ksPayNow"></span>'; New = '' },
-    @{ Id = 'U04_DETAIL_CSS_BUSTER_UNCHANGED'; Target = 'detailaspx'; Old = 'order-ui.css") %>?v=20261117-pay-now-1a"'; New = 'order-ui.css") %>?v=20260609-order-confirmation-1a"' },
+    @{ Id = 'U04_DETAIL_CSS_BUSTER_UNCHANGED'; Target = 'detailaspx'; Old = 'order-ui.css") %>?v=20261117-progress-1a"'; New = 'order-ui.css") %>?v=20260609-order-confirmation-1a"' },
     @{ Id = 'U05_BUTTON_HEIGHT'; Target = 'css'; Old = '    min-height: 44px;
     align-items: center;
     justify-content: center;
