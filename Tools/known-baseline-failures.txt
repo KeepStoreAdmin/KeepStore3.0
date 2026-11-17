@@ -14,7 +14,6 @@ Test-HomeCatalogDiscovery # compilazione VB della harness: tipi non dichiarati (
 Test-HomeNavigationRealAssortment # pin "tutto il markup precedente e le card dei settori invariati" (verificato sulla stable 0e84c52c)
 Test-StorefrontPromotionParity # asserzioni su offerta deterministica e fallback della HOME (verificato sulla stable 0e84c52c)
 Test-CatalogMenuCacheConsumers # confronta SiteHeader.ascx.vb con la baseline storica 24a67012: 316 righe diverse gia sulla stable (verificato su f417809f)
-Test-AccountProfileTenantScope # richiede -EvidenceDirectory (cartella temporanea nuova): il runner non lo passa, esce con errore di parametro (verificato su 0af867d2)
 Test-AddressOwnerTenantBarrier # pin "UNCHANGED_FILE_Page.master.vb; UNCHANGED_FILE_StorefrontSeoTenantContext.vb" contro una baseline storica (verificato su 0af867d2, stessa lista di fallimenti prima e dopo il task)
 Test-TrackOrderTenantScope # pin "UNCHANGED_StorefrontSeoTenantContext.vb" contro una baseline storica (verificato su 0af867d2)
 Test-CatalogVariantFacetAlternatives # fallisce in 3 s anche su un worktree pulito della stable (esce con 1, senza node.exe nel PATH di questa macchina; il runner lo abbina per errore a main.js dal nome main.json); verificato su eaf66184
