@@ -49,11 +49,15 @@ try {
     try { $labMutexHeld = $labMutex.WaitOne(600000) } catch [System.Threading.AbandonedMutexException] { $labMutexHeld = $true }
     if (-not $labMutexHeld) { Write-Output 'LAB_BUSY_TIMEOUT: nessuna esecuzione'; exit 4 }
     $process = [Diagnostics.Process]::Start($info)
+    # Le letture partono PRIMA di scrivere lo script: con uno script lungo il client riempie il canale dell'output mentre il test sta ancora scrivendo l'input
+    # e i due si aspettano per sempre (blocco visto con le prove dei pagamenti, 25 documenti sintetici).
+    $outTask = $process.StandardOutput.ReadToEndAsync()
+    $errTask = $process.StandardError.ReadToEndAsync()
     $process.StandardInput.Write($prefix + $body)
     $process.StandardInput.Close()
-    $out = $process.StandardOutput.ReadToEnd()
-    $err = $process.StandardError.ReadToEnd()
     $process.WaitForExit()
+    $out = $outTask.Result
+    $err = $errTask.Result
     $code = $process.ExitCode
 } finally {
     if ($labMutexHeld) { try { $labMutex.ReleaseMutex() } catch { } }

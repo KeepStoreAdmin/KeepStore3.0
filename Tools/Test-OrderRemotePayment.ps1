@@ -2,7 +2,10 @@
 param([switch]$SkipMutations, [switch]$SkipLab)
 
 # ORDER-REMOTE-PAYMENT-1A - "Paga adesso" in MyAccount per (1) ordini del sito il cui metodo il PO cambia nel gestionale in PayPal o carta Banca Sella e (2) ordini creati dal
-# gestionale per un cliente registrato; divieto del PO: un ordine del sito con pagamento online FALLITO non si ripaga.
+# gestionale per un cliente registrato.
+# ORDER-WEB-LATER-PAYMENT-1A (chiarimento del PO 2026-11-17): un ordine del sito col pagamento online NON riuscito si ripaga da MyAccount quando il metodo ha
+# PermettiPagamentoSuccessivo=1; mai se l'ordine e nato da un pagamento anticipato (riga in paypal_checkout_tentativi). Una carta Banca Sella avviata da meno di 60 minuti
+# chiude OGNI metodo (anche Sella, anche con PayPal storico); l'avvio e una presa atomica eseguita PRIMA di chiamare il gateway e rilasciata se il gateway non da il link.
 # Oracolo 1: i VERI file App_Code/KeepStoreRemotePayment.vb e InternalOrderRemotePaymentPolicy.vb compilati (Strict) e provati con una tabella scritta a mano di scenari e con il
 #   rovesciamento di ogni condizione, una per volta, a partire da tre ordini ammessi (gestionale, INTERNO esplicito, sito con metodo cambiato).
 # Oracolo 2: la VERA query dei fatti (KeepStoreRemotePaymentStore.FactsSql) eseguita sul LAB (mirror del taikun) su ordini sintetici inseriti e rimossi dal test, poi decisa con la
@@ -54,7 +57,7 @@ Imports System.Globalization
 Public Class RemoteProbe
     Public Function Decide(ByVal origin As String, ByVal ordineWeb As Integer, ByVal docAgeDays As Integer, ByVal paid As Integer, ByVal docState As Integer, ByVal payState As Integer,
                            ByVal stateAgeMinutes As Integer, ByVal lastOutcome As String, ByVal online As Integer, ByVal allow As Integer, ByVal total As Decimal, ByVal valid As Boolean, ByVal sella As Boolean,
-                           ByVal ppAny As Boolean, ByVal ppOther As Boolean, ByVal marketplace As Boolean, ByVal owner As Boolean, ByVal tenant As Boolean) As Boolean
+                           ByVal ppAny As Boolean, ByVal ppOther As Boolean, ByVal marketplace As Boolean, ByVal owner As Boolean, ByVal tenant As Boolean, ByVal payFirst As Boolean) As Boolean
         Dim f As New RemotePaymentFacts()
         f.Origin = origin
         f.OrdineWeb = ordineWeb
@@ -74,6 +77,7 @@ Public Class RemoteProbe
         f.PayPalAny = ppAny
         f.PayPalOpenOther = ppOther
         f.Marketplace = marketplace
+        f.PayFirst = payFirst
         Return InternalOrderRemotePaymentPolicy.CanPayNow(f, owner, tenant)
     End Function
 
@@ -83,7 +87,7 @@ Public Class RemoteProbe
 
     Public Function DecideRow(ByVal origin As String, ByVal ordineWeb As Integer, ByVal docDate As String, ByVal todayText As String, ByVal nowText As String, ByVal paid As Integer,
                               ByVal docState As Integer, ByVal payState As Integer, ByVal stateDate As String, ByVal lastOutcome As String, ByVal online As Integer, ByVal allow As Integer, ByVal total As Decimal,
-                              ByVal valid As Boolean, ByVal sella As Boolean, ByVal ppAny As Boolean, ByVal ppOther As Boolean, ByVal marketplace As Boolean) As Boolean
+                              ByVal valid As Boolean, ByVal sella As Boolean, ByVal ppAny As Boolean, ByVal ppOther As Boolean, ByVal marketplace As Boolean, ByVal payFirst As Boolean) As Boolean
         Dim f As New RemotePaymentFacts()
         f.Origin = origin
         f.OrdineWeb = ordineWeb
@@ -103,6 +107,7 @@ Public Class RemoteProbe
         f.PayPalAny = ppAny
         f.PayPalOpenOther = ppOther
         f.Marketplace = marketplace
+        f.PayFirst = payFirst
         Return InternalOrderRemotePaymentPolicy.CanPayNow(f, True, True)
     End Function
 End Class
@@ -116,11 +121,11 @@ function New-RemoteProbe([string]$modText, [string]$polText) {
     if ($c.Errors.HasErrors) { throw ('REMOTE_COMPILE ' + (($c.Errors | Where-Object { -not $_.IsWarning } | Select-Object -First 3 | ForEach-Object { 'line ' + $_.Line + ': ' + $_.ErrorText }) -join ' | ')) }
     return [Activator]::CreateInstance($c.CompiledAssembly.GetType('RemoteProbe', $true))
 }
-# Tre ordini ammessi di partenza: G = gestionale (origine vuota, ordine non del sito, recente), I = INTERNO esplicito (anche vecchio), W = ordine del sito col metodo cambiato (stato 0, nessun tentativo)
+# Tre ordini ammessi di partenza: G = gestionale (origine vuota, ordine non del sito, recente), I = INTERNO esplicito (anche vecchio), W = ordine del sito (stato 0, nessun tentativo)
 $base = @{
-    G = @{ origin = ''; ow = 0; age = 10; paid = 0; ds = 1; ps = 0; sage = 99999; lo = ''; online = 2; allow = 1; total = [decimal]50; valid = $true; sella = $false; ppAny = $false; ppOther = $false; mk = $false; owner = $true; tenant = $true }
-    I = @{ origin = 'INTERNO'; ow = 0; age = 400; paid = 0; ds = 1; ps = 0; sage = 99999; lo = ''; online = 3; allow = 1; total = [decimal]50; valid = $true; sella = $false; ppAny = $false; ppOther = $false; mk = $false; owner = $true; tenant = $true }
-    W = @{ origin = 'WEB'; ow = 1; age = 5; paid = 0; ds = 1; ps = 0; sage = 99999; lo = ''; online = 3; allow = 1; total = [decimal]50; valid = $true; sella = $false; ppAny = $false; ppOther = $false; mk = $false; owner = $true; tenant = $true }
+    G = @{ origin = ''; ow = 0; age = 10; paid = 0; ds = 1; ps = 0; sage = 99999; lo = ''; online = 2; allow = 1; total = [decimal]50; valid = $true; sella = $false; ppAny = $false; ppOther = $false; mk = $false; owner = $true; tenant = $true; pf = $false }
+    I = @{ origin = 'INTERNO'; ow = 0; age = 400; paid = 0; ds = 1; ps = 0; sage = 99999; lo = ''; online = 3; allow = 1; total = [decimal]50; valid = $true; sella = $false; ppAny = $false; ppOther = $false; mk = $false; owner = $true; tenant = $true; pf = $false }
+    W = @{ origin = 'WEB'; ow = 1; age = 5; paid = 0; ds = 1; ps = 0; sage = 99999; lo = ''; online = 3; allow = 1; total = [decimal]50; valid = $true; sella = $false; ppAny = $false; ppOther = $false; mk = $false; owner = $true; tenant = $true; pf = $false }
 }
 # [nome, ordine di partenza, modifiche, atteso]
 $cases = @(
@@ -134,9 +139,19 @@ $cases = @(
     # origine
     @('G Amazon NO', 'G', @{ origin = 'AMAZON' }, $false), @('G eBay NO', 'G', @{ origin = 'EBAY' }, $false), @('G origine sconosciuta NO', 'G', @{ origin = 'XYZ' }, $false),
     @('G legato al marketplace NO', 'G', @{ mk = $true }, $false), @('G minuscolo interno ammesso', 'G', @{ origin = ' interno ' }, $true),
-    # ordine del sito: pagamento online mai partito
-    @('W stato 1 NO', 'W', @{ ps = 1 }, $false), @('W stato 3 (fallito) NO', 'W', @{ ps = 3 }, $false), @('W stato 4 (annullato) NO', 'W', @{ ps = 4 }, $false), @('W stato 5 NO', 'W', @{ ps = 5 }, $false),
-    @('W con un tentativo PayPal NO', 'W', @{ ppAny = $true }, $false), @('Origine vuota con Ordine_Web e stato 3 NO', 'W', @{ origin = ''; ps = 3 }, $false),
+    # ordine del sito: pagamento online non riuscito o mai concluso = ripagabile (chiarimento del PO); mai se nato da un pagamento anticipato
+    @('W stato 1 ammesso', 'W', @{ ps = 1 }, $true), @('W stato 3 (fallito) ammesso', 'W', @{ ps = 3 }, $true), @('W stato 4 (annullato) ammesso', 'W', @{ ps = 4 }, $true), @('W stato 5 ammesso', 'W', @{ ps = 5 }, $true),
+    @('W PayPal fallito con tentativo chiuso male ammesso', 'W', @{ online = 2; ps = 4; ppAny = $true }, $true), @('W PayPal in stato 1 col suo tentativo ammesso', 'W', @{ online = 2; ps = 1; ppAny = $true }, $true),
+    @('Origine vuota con Ordine_Web e stato 3 ammesso', 'W', @{ origin = ''; ps = 3 }, $true), @('W stato 3 a 90 giorni ammesso', 'W', @{ ps = 3; age = 90 }, $true),
+    @('W stato 3 a 91 giorni NO', 'W', @{ ps = 3; age = 91 }, $false), @('W stato 3 data futura NO', 'W', @{ ps = 3; age = -1 }, $false),
+    @('W nato da pagamento anticipato NO', 'W', @{ pf = $true }, $false), @('W anticipato con stato 3 NO', 'W', @{ pf = $true; ps = 3; online = 2; ppAny = $true }, $false),
+    @('Origine vuota del sito, anticipato NO', 'W', @{ origin = ''; pf = $true }, $false),
+    @('W stato 3 ma il metodo non permette il pagamento successivo NO', 'W', @{ ps = 3; allow = 0 }, $false), @('W stato 3 pagato NO', 'W', @{ ps = 3; paid = 1 }, $false),
+    @('W stato 3 documento annullato NO', 'W', @{ ps = 3; ds = 3 }, $false), @('W stato 2 NO', 'W', @{ ps = 2 }, $false), @('W stato 3 altra azienda NO', 'W', @{ ps = 3; tenant = $false }, $false),
+    @('W stato 3 con autorizzazione Sella NO', 'W', @{ ps = 3; sella = $true }, $false), @('W PayPal aperto su altro metodo NO', 'W', @{ ps = 1; ppAny = $true; ppOther = $true }, $false),
+    @('W carta avviata 10 minuti fa, riprova con carta NO', 'W', @{ ps = 5; lo = 'Pagamento con carta avviato'; sage = 10 }, $false),
+    @('W carta avviata 61 minuti fa ammesso', 'W', @{ ps = 5; lo = 'Pagamento con carta avviato'; sage = 61 }, $true),
+    @('W carta fallita (esito KO) riprova subito ammesso', 'W', @{ ps = 3; lo = 'BancaSella KO 1125'; sage = 1 }, $true),
     # gate comuni
     @('pagato NO', 'G', @{ paid = 1 }, $false), @('documento annullato NO', 'G', @{ ds = 3 }, $false), @('documento senza stato NO', 'G', @{ ds = 0 }, $false), @('stato pagamento 2 NO', 'G', @{ ps = 2 }, $false),
     @('metodo offline NO', 'G', @{ online = 0 }, $false), @('metodo 1 NO', 'G', @{ online = 1 }, $false), @('metodo 4 NO', 'G', @{ online = 4 }, $false), @('totale 0 NO', 'G', @{ total = [decimal]0 }, $false),
@@ -150,8 +165,12 @@ $cases = @(
     # Sella in corso (ultimo esito = avvio carta, nessun tentativo PayPal, metodo attuale PayPal)
     @('Sella avviata 10 minuti fa, ora PayPal NO', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 10 }, $false), @('Sella avviata 59 minuti fa NO', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 59 }, $false),
     @('Sella avviata 61 minuti fa ammesso', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 61 }, $true), @('Sella avviata senza data NO', 'G', @{ lo = 'Pagamento con carta avviato' }, $false),
-    @('Sella avviata ora e ripetuta con Sella ammessa', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 5; online = 3 }, $true),
-    @('Sella avviata ma c e un tentativo PayPal ammesso', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 5; ppAny = $true }, $true),
+    @('Sella avviata ora e ripetuta con Sella NO', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 5; online = 3 }, $false),
+    @('Sella avviata 59 minuti fa e ripetuta con Sella NO', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 59; online = 3 }, $false),
+    @('Sella avviata 61 minuti fa e ripetuta con Sella ammessa', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 61; online = 3 }, $true),
+    @('Sella avviata senza data e ripetuta con Sella NO', 'G', @{ lo = 'Pagamento con carta avviato'; online = 3 }, $false),
+    @('Sella avviata e c e un PayPal storico chiuso male: PayPal NO', 'G', @{ lo = 'Pagamento con carta avviato'; sage = 5; ppAny = $true }, $false),
+    @('I esplicito con Sella avviata 10 minuti fa NO', 'I', @{ lo = 'Pagamento con carta avviato'; sage = 10 }, $false),
     @('stato 1 senza avvio carta ammesso', 'G', @{ ps = 1; sage = 5 }, $true), @('esito diverso (maiuscolo) ammesso', 'G', @{ lo = 'PAGAMENTO CON CARTA AVVIATO'; sage = 5 }, $true),
     @('PayPal proprio in stato 1 ammesso', 'G', @{ ps = 1; sage = 5; ppAny = $true }, $true)
 )
@@ -160,7 +179,7 @@ function Test-DecisionMatrix([string]$modText, [string]$polText) {
     $ok = $true
     foreach ($c in $cases) {
         $f = @{}; foreach ($k in $base[$c[1]].Keys) { $f[$k] = $base[$c[1]][$k] }; foreach ($k in $c[2].Keys) { $f[$k] = $c[2][$k] }
-        $got = $probe.Decide([string]$f.origin, [int]$f.ow, [int]$f.age, [int]$f.paid, [int]$f.ds, [int]$f.ps, [int]$f.sage, [string]$f.lo, [int]$f.online, [int]$f.allow, [decimal]$f.total, [bool]$f.valid, [bool]$f.sella, [bool]$f.ppAny, [bool]$f.ppOther, [bool]$f.mk, [bool]$f.owner, [bool]$f.tenant)
+        $got = $probe.Decide([string]$f.origin, [int]$f.ow, [int]$f.age, [int]$f.paid, [int]$f.ds, [int]$f.ps, [int]$f.sage, [string]$f.lo, [int]$f.online, [int]$f.allow, [decimal]$f.total, [bool]$f.valid, [bool]$f.sella, [bool]$f.ppAny, [bool]$f.ppOther, [bool]$f.mk, [bool]$f.owner, [bool]$f.tenant, [bool]$f.pf)
         if ($got -ne $c[3]) { Show-Failure $c[0]; $ok = $false }
     }
     if ($probe.DecideNothing()) { Show-Failure 'nothing'; $ok = $false }
@@ -188,6 +207,8 @@ function Get-FactsSql([string]$text, [string]$constName) {
 }
 $factsSql = Get-FactsSql $storeText 'FactsSql'
 if (-not $factsSql) { throw 'FACTS_SQL_NOT_FOUND' }
+$script:payFirstSqlForLab = Get-FactsSql $storeText 'PayFirstSql'
+if (-not $script:payFirstSqlForLab) { throw 'PAY_FIRST_SQL_NOT_FOUND' }
 function New-LabScript([string]$sql) {
     $u = 5630; $a = 1
     $lo = 990101; $hi = 990199
@@ -197,49 +218,60 @@ function New-LabScript([string]$sql) {
         @(990105, 'NULL', 0, '200', 19, 0, $null, 0), @(990106, 'NULL', 0, $null, 19, 0, $null, 0), @(990107, 'NULL', 0, '-3', 19, 0, $null, 0), @(990108, "'WEB'", 1, '3', 19, 4, 600, 0),
         @(990109, 'NULL', 0, '5', 46, 0, $null, 0), @(990110, 'NULL', 0, '5', 19, 0, $null, 0), @(990111, 'NULL', 0, '5', 19, 4, 600, 0), @(990112, 'NULL', 0, '5', 19, 0, 10, 0),
         @(990113, 'NULL', 0, '5', 19, 0, 120, 0), @(990114, 'NULL', 0, '5', 19, 0, $null, 1), @(990115, 'NULL', 0, '5', 6, 0, $null, 0), @(990116, "'INTERNO'", 0, '400', 19, 0, $null, 0),
-        @(990117, "'AMAZON'", 0, '5', 19, 0, $null, 0), @(990118, 'NULL', 0, '5', 19, 0, $null, 0), @(990119, 'NULL', 0, '5', 19, 0, $null, 0), @(990120, 'NULL', 0, '5', 19, 0, $null, 0)
+        @(990117, "'AMAZON'", 0, '5', 19, 0, $null, 0), @(990118, 'NULL', 0, '5', 19, 0, $null, 0), @(990119, 'NULL', 0, '5', 19, 0, $null, 0), @(990120, 'NULL', 0, '5', 19, 0, $null, 0),
+        # ORDER-WEB-LATER-PAYMENT-1A: sito Sella fallita, sito PayPal stato 1 con riga CREATING, sito nato da pagamento anticipato, sito con carta avviata 10 minuti fa, sito Sella vecchio di 91 giorni
+        @(990121, "'WEB'", 1, '3', 46, 3, 600, 0), @(990122, "'WEB'", 1, '2', 19, 1, 600, 0), @(990123, "'WEB'", 1, '2', 19, 3, 600, 0), @(990124, "'WEB'", 1, '1', 46, 5, 10, 0),
+        @(990125, "'WEB'", 1, '91', 46, 3, 600, 0)
     )
     $sb = New-Object Text.StringBuilder
     $sbF = New-Object Text.StringBuilder
     $sbC = New-Object Text.StringBuilder
     [void]$sb.AppendLine("DELETE FROM bancasella_ordini_pagati WHERE DocumentiId BETWEEN $lo AND $hi;")
     [void]$sb.AppendLine("DELETE FROM paypal_checkout_transazioni WHERE DocumentiId BETWEEN $lo AND $hi;")
+    [void]$sb.AppendLine("DELETE FROM paypal_checkout_tentativi WHERE DocumentiId BETWEEN $lo AND $hi;")
     [void]$sb.AppendLine("DELETE FROM documentipie WHERE DocumentiId BETWEEN $lo AND $hi;")
     [void]$sb.AppendLine("DELETE FROM documenti WHERE id BETWEEN $lo AND $hi;")
     foreach ($d in $docs) {
         $date = if ($null -eq $d[3]) { 'NULL' } else { 'DATE_SUB(CURDATE(), INTERVAL ' + $d[3] + ' DAY)' }
         $stDate = if ($null -eq $d[6]) { 'NULL' } else { 'DATE_SUB(NOW(), INTERVAL ' + $d[6] + ' MINUTE)' }
         $user = if ($d[0] -eq 990119) { $u + 100000 } else { $u }
-        $esito = if ($d[0] -eq 990112 -or $d[0] -eq 990113) { "'Pagamento con carta avviato'" } else { 'NULL' }
+        $esito = if ($d[0] -eq 990112 -or $d[0] -eq 990113 -or $d[0] -eq 990124) { "'Pagamento con carta avviato'" } else { 'NULL' }
         [void]$sb.AppendLine("INSERT INTO documenti (Id,AziendeId,UtentiId,PagamentiTipoId,TipoDocumentiId,StatiId,Pagato,StatoPagamentoWeb,DataStatoPagamentoWeb,UltimoEsitoPagamentoWeb,OrigineOrdine,Ordine_Web,DataDocumento) VALUES ($($d[0]),$a,$user,$($d[4]),4,1,$($d[7]),$($d[5]),$stDate,$esito,$($d[1]),$($d[2]),$date);")
         [void]$sb.AppendLine("INSERT INTO documentipie (DocumentiId,TotaleDocumento) VALUES ($($d[0]),50.00);")
     }
     # tentativi PayPal: 990108 annullato stesso metodo (sito), 990109 in cattura con metodo attuale Sella, 990110 approvato con metodo diverso, 990111 annullato stesso metodo (riprova)
-    $tx = @(@(990108, 19, 'CANCELED'), @(990109, 19, 'CAPTURING'), @(990110, 12, 'APPROVED'), @(990111, 19, 'CANCELED'))
+    $tx = @(@(990108, 19, 'CANCELED'), @(990109, 19, 'CAPTURING'), @(990110, 12, 'APPROVED'), @(990111, 19, 'CANCELED'), @(990122, 19, 'CREATING'), @(990123, 19, 'APPROVED'))
     $n = 0
     foreach ($t in $tx) {
         $n++
         [void]$sb.AppendLine("INSERT INTO paypal_checkout_transazioni (Id,DocumentiId,TentativoNo,CurrentSlot,AziendeId,PagamentiTipoId,PayPalAccountId,PayPalOrderId,Stato,Importo,Valuta,PayeeEmail,MerchantId,CreateRequestId,CaptureRequestId) VALUES ($(990100 + $n),$($t[0]),1,1,$a,$($t[1]),1,'ORDER-REMOTE-$($t[0])','$($t[2])',50.00,'EUR','lab@example.invalid','MERCHANT_LAB','CREATE-REMOTE-$($t[0])','CAPTURE-REMOTE-$($t[0])');")
     }
+    # tentativo di pagamento anticipato legato al documento 990123 (l'ordine e nato dal pay-first)
+    [void]$sb.AppendLine("INSERT INTO paypal_checkout_tentativi (AttemptKey,AziendeId,LoginId,UtentiId,PagamentiTipoId,PayPalAccountId,DatabaseScopeKey,DraftRequestId,PayloadFingerprint,DraftExpiresAt,TentativoNo,CurrentSlot,Stato,Importo,Valuta,PayeeEmail,MerchantId,CreateRequestId,AuthorizeRequestId,CaptureRequestId,VoidRequestId,PayPalOrderId,DocumentiId) VALUES ('99012300aaaaaaaaaaaaaaaaaaaaaaaa',$a,1,$u,19,1,'lab-scope','99012301bbbbbbbbbbbbbbbbbbbbbbbb','lab-fingerprint',DATE_ADD(NOW(), INTERVAL 1 DAY),1,NULL,'VOIDED',50.00,'EUR','lab@example.invalid','MERCHANT_LAB','PF-CREATE-990123','PF-AUTH-990123','PF-CAPTURE-990123','PF-VOID-990123','ORDER-REMOTE-990123',990123);")
     [void]$sb.AppendLine("INSERT INTO bancasella_ordini_pagati (DocumentiId,numeroDocumento,codiceAutorizzazione) VALUES (990118,'990118/2026','AUTH-LAB-990118');")
     [void]$sb.AppendLine("INSERT INTO bancasella_ordini_pagati (DocumentiId,numeroDocumento,codiceAutorizzazione) VALUES (990120,'990120/2026','');")
     foreach ($d in $docs) {
         [void]$sbF.AppendLine("SELECT 'DOC=$($d[0])' AS marker;")
         [void]$sbF.AppendLine("SET @id=$($d[0]), @uid=$u, @azienda=$a;")
         [void]$sbF.AppendLine($sql + ';')
+        [void]$sbF.AppendLine($script:payFirstSqlForLab + ';')
     }
     [void]$sbF.AppendLine("SELECT COUNT(*) AS marketplace_probe FROM ks_amazon_orders WHERE document_id=-1;")
     [void]$sbF.AppendLine("SELECT COUNT(*) AS marketplace_probe_ebay FROM ks_ebay_orders WHERE document_id=-1;")
     [void]$sbC.AppendLine("DELETE FROM bancasella_ordini_pagati WHERE DocumentiId BETWEEN $lo AND $hi;")
     [void]$sbC.AppendLine("DELETE FROM paypal_checkout_transazioni WHERE DocumentiId BETWEEN $lo AND $hi;")
+    [void]$sbC.AppendLine("DELETE FROM paypal_checkout_tentativi WHERE DocumentiId BETWEEN $lo AND $hi;")
     [void]$sbC.AppendLine("DELETE FROM documentipie WHERE DocumentiId BETWEEN $lo AND $hi;")
     [void]$sbC.AppendLine("DELETE FROM documenti WHERE id BETWEEN $lo AND $hi;")
     return @{ Setup = $sb.ToString(); Facts = $sbF.ToString(); Cleanup = $sbC.ToString() }
 }
 $labExpected = @{
-    990101 = $true; 990102 = $true; 990103 = $true; 990104 = $false; 990105 = $false; 990106 = $false; 990107 = $false; 990108 = $false; 990109 = $false; 990110 = $false
+    990101 = $true; 990102 = $true; 990103 = $true; 990104 = $true; 990105 = $false; 990106 = $false; 990107 = $false; 990108 = $true; 990109 = $false; 990110 = $false
     990111 = $true; 990112 = $false; 990113 = $true; 990114 = $false; 990115 = $false; 990116 = $true; 990117 = $false; 990118 = $false; 990119 = $false; 990120 = $true
+    990121 = $true; 990122 = $true; 990123 = $false; 990124 = $false; 990125 = $false
 }
+# quanti tentativi di pagamento anticipato deve vedere la query vera per ogni documento del sito
+$labPayFirstExpected = @{ 990101 = 0; 990108 = 0; 990121 = 0; 990122 = 0; 990123 = 1; 990124 = 0 }
 function Invoke-LabSql([string]$text, [bool]$write) {
     $work = Join-Path ([IO.Path]::GetTempPath()) ('ks-remote-' + [Guid]::NewGuid().ToString('N').Substring(0, 8) + '.sql')
     try {
@@ -262,13 +294,15 @@ function Invoke-LabFacts([string]$sql, [Text.StringBuilder]$log) {
     }
 }function Convert-LabOutput([string[]]$lines) {
     # restituisce DocId -> hashtable colonna/valore; nessuna riga = NOROW
-    $result = @{}; $current = $null; $headers = $null; $expectRow = $false
+    $result = @{}; $current = $null; $headers = $null; $expectRow = $false; $expectPf = $false
     foreach ($line in $lines) {
         if ($line -match '^DOC=(\d+)$') { $current = [int]$Matches[1]; $headers = $null; $expectRow = $false; $result[$current] = 'NOROW'; continue }
         if ($null -eq $current) { continue }
         $cols = $line -split "`t"
         if ($cols[0] -eq 'id' -and $cols -contains 'RpOrigin') { $headers = $cols; $expectRow = $true; continue }
-        if ($expectRow -and $headers -and $cols.Count -eq $headers.Count) { $h = @{}; for ($i = 0; $i -lt $headers.Count; $i++) { $h[$headers[$i]] = $cols[$i] }; $result[$current] = $h; $expectRow = $false }
+        if ($expectRow -and $headers -and $cols.Count -eq $headers.Count) { $h = @{}; for ($i = 0; $i -lt $headers.Count; $i++) { $h[$headers[$i]] = $cols[$i] }; $result[$current] = $h; $expectRow = $false; continue }
+        if ($cols.Count -eq 1 -and $cols[0] -eq 'RpPayFirst') { $expectPf = $true; continue }
+        if ($expectPf) { $expectPf = $false; if ($result[$current] -is [hashtable] -and $cols.Count -eq 1 -and $cols[0] -match '^\d+$') { $result[$current]['RpPayFirst'] = $cols[0] } }
     }
     return $result
 }
@@ -287,7 +321,9 @@ function Test-LabScenarios([string]$sql, [Text.StringBuilder]$log, [string]$modu
             if ($docDate -eq 'NULL') { $docDate = '' }; if ($stateDate -eq 'NULL') { $stateDate = '' }
             $got = $probe.DecideRow([string]$row['RpOrigin'], [int]$row['RpOrdineWeb'], $docDate, $todayText, $nowText, [int]$row['RpPagato'], [int]$row['RpStatiId'], [int]$row['RpStato'], $stateDate, $(if ([string]$row['RpEsito'] -eq 'NULL') { '' } else { [string]$row['RpEsito'] }),
                 [int]$row['RpOnLine'], [int]$row['RpPermetti'], [decimal]::Parse([string]$row['RpTotale'], [Globalization.CultureInfo]::InvariantCulture), ([int]$row['RpValidType'] -eq 1), ([int]$row['RpSella'] -eq 1),
-                ([int]$row['RpPayPalAny'] -eq 1), ([int]$row['RpPayPalOther'] -eq 1), $false)
+                ([int]$row['RpPayPalAny'] -eq 1), ([int]$row['RpPayPalOther'] -eq 1), $false, ($row.ContainsKey('RpPayFirst') -and [int]$row['RpPayFirst'] -gt 0))
+            if (-not $row.ContainsKey('RpPayFirst')) { Show-Failure ('lab doc ' + $id + ' without the pay-first count'); $ok = $false }
+            elseif ($labPayFirstExpected.ContainsKey([int]$id) -and [int]$row['RpPayFirst'] -ne $labPayFirstExpected[[int]$id]) { Show-Failure ('lab doc ' + $id + ' pay-first count ' + $row['RpPayFirst']); $ok = $false }
         }
         if ($got -ne $labExpected[$id]) { Show-Failure ('lab doc ' + $id + ' got=' + $got); $ok = $false }
     }
@@ -300,13 +336,69 @@ if (-not $SkipLab) {
     Assert-Source (Test-LabScenarios $factsSql $labLog $moduleText $policyText) 'R03_THE_REAL_FACTS_QUERY_ON_THE_LAB_GIVES_THE_RIGHT_ANSWER_TO_EVERY_ORDER_SCENARIO'
 }
 
+# --- Oracolo 2b: presa atomica dell'avvio carta e rilascio (query VERE sul LAB) e numero d'errore vero di una tabella assente ----------------------------------
+function Test-LabSellaClaim([string]$claimSql, [string]$releaseSql) {
+    if (-not $claimSql -or -not $releaseSql) { Show-Failure 'claim sql missing'; return $false }
+    $u = 5630; $a = 1; $lo = 990131; $hi = 990139
+    $clean = "DELETE FROM documentipie WHERE DocumentiId BETWEEN $lo AND $hi;`nDELETE FROM documenti WHERE id BETWEEN $lo AND $hi;`n"
+    $sb = New-Object Text.StringBuilder
+    [void]$sb.Append($clean)
+    # id, stato pagamento, pagato, esito, minuti dall'esito (null = NULL)
+    $docs = @(@(990131, 5, 0, 'NULL', $null), @(990132, 1, 0, "'In attesa pagamento online'", 600), @(990133, 3, 1, 'NULL', $null), @(990134, 2, 0, 'NULL', $null),
+        @(990135, 5, 0, "'Pagamento con carta avviato'", 120), @(990136, 5, 0, "'Pagamento con carta avviato'", 30), @(990137, 5, 0, "'Pagamento con carta avviato'", $null), @(990138, 5, 0, 'NULL', $null))
+    foreach ($d in $docs) {
+        $st = if ($null -eq $d[4]) { 'NULL' } else { 'DATE_SUB(NOW(), INTERVAL ' + $d[4] + ' MINUTE)' }
+        [void]$sb.AppendLine("INSERT INTO documenti (Id,AziendeId,UtentiId,PagamentiTipoId,TipoDocumentiId,StatiId,Pagato,StatoPagamentoWeb,DataStatoPagamentoWeb,UltimoEsitoPagamentoWeb,OrigineOrdine,Ordine_Web,DataDocumento) VALUES ($($d[0]),$a,$u,46,4,1,$($d[2]),$($d[1]),$st,$($d[3]),'WEB',1,CURDATE());")
+    }
+    [void]$sb.AppendLine("SET @uid=$u, @azienda=$a, @outcome='Pagamento con carta avviato', @released='Pagamento con carta non avviato', @minutes=60;")
+    # passi: [etichetta, documento, 'claim' o 'release', utente (0 = quello giusto)]
+    $steps = @(@('A1', 990131, 'claim', 0), @('A2', 990131, 'claim', 0), @('A3', 990131, 'release', 0), @('A4', 990131, 'claim', 0), @('B1', 990132, 'claim', 0), @('C1', 990133, 'claim', 0), @('D1', 990134, 'claim', 0),
+        @('E1', 990135, 'claim', 0), @('F1', 990136, 'claim', 0), @('G1', 990137, 'claim', 0), @('H1', 990138, 'claim', 999999), @('I1', 990133, 'release', 0), @('J1', 990132, 'release', 999999), @('K1', 990138, 'release', 0))
+    foreach ($s in $steps) {
+        $uid = if ($s[3] -eq 0) { $u } else { $s[3] }
+        [void]$sb.AppendLine("SET @id=$($s[1]), @uid=$uid;")
+        [void]$sb.AppendLine($(if ($s[2] -eq 'claim') { $claimSql } else { $releaseSql }) + ';')
+        [void]$sb.AppendLine("SELECT CONCAT('STEP=$($s[0])=', ROW_COUNT()) AS step;")
+    }
+    [void]$sb.AppendLine("SELECT CONCAT('FINAL=', id, '=', COALESCE(StatoPagamentoWeb,0), '=', COALESCE(UltimoEsitoPagamentoWeb,'')) AS final FROM documenti WHERE id BETWEEN $lo AND $hi ORDER BY id;")
+    [void]$sb.Append($clean)
+    $out = (Invoke-LabSql $sb.ToString() $true) -join "`n"
+    if ($out -notmatch 'client exit=0' -or $out -match 'ERROR \d+') { $null = Invoke-LabSql $clean $true; Show-Failure ('claim lab ' + $out.Substring(0, [Math]::Min(300, $out.Length))); return $false }
+    # atteso: prima presa 1, seconda 0, rilascio 1, di nuovo 1; stato 1 ammesso; pagato 0; stato 2 no; esito vecchio di 120 minuti 1; di 30 minuti 0; senza data 0; altro utente 0; rilascio senza presa 0
+    $expected = @{ A1 = 1; A2 = 0; A3 = 1; A4 = 1; B1 = 1; C1 = 0; D1 = 0; E1 = 1; F1 = 0; G1 = 0; H1 = 0; I1 = 0; J1 = 0; K1 = 0 }
+    $ok = $true
+    foreach ($k in $expected.Keys) { if ($out -notmatch ('STEP=' + $k + '=' + $expected[$k] + '(\D|$)')) { Show-Failure ('claim step ' + $k); $ok = $false } }
+    # lo stato di pagamento non cambia mai; l'esito finale e quello atteso
+    foreach ($f in @('FINAL=990131=5=Pagamento con carta avviato', 'FINAL=990132=1=Pagamento con carta avviato', 'FINAL=990133=3=', 'FINAL=990134=2=', 'FINAL=990136=5=Pagamento con carta avviato', 'FINAL=990138=5=')) { if ($out -notmatch ([regex]::Escape($f) + '(\r|\n|$)')) { Show-Failure ('claim ' + $f); $ok = $false } }
+    return $ok
+}
+function Test-LabMissingTableNumber() {
+    $out = (Invoke-LabSql 'SELECT COUNT(*) FROM ks_tabella_che_non_esiste_990199 WHERE DocumentiId=-1;' $false) -join "`n"
+    return ($out -match 'ERROR 1146')
+}
+$claimSql = Get-FactsSql $storeText 'SellaStartSql'
+$releaseSql = Get-FactsSql $storeText 'SellaReleaseSql'
+if (-not $SkipLab) {
+    Assert-Source (Test-LabSellaClaim $claimSql $releaseSql) 'R05_THE_REAL_CARD_START_CLAIM_IS_ATOMIC_ON_THE_LAB_KEEPS_THE_PAYMENT_STATE_AND_CAN_BE_RELEASED'
+    Assert-Source (Test-LabMissingTableNumber) 'R06_A_MISSING_TABLE_REALLY_GIVES_MYSQL_ERROR_1146'
+}
+
 # --- Oracolo 3: le superfici --------------------------------------------------------------------------------------------------------------------------
 function Test-Surfaces([string]$store, [string]$lVb, [string]$lAspx, [string]$dVb, [string]$dAspx, [string]$pVb, [string]$sVb, [string]$rVb, [string]$stVb, [string]$cssText) {
     $sc = Strip-VbComments $store
     if ($sc -notmatch 'd\.id=@id AND d\.UtentiId=@uid AND d\.AziendeId=@azienda LIMIT 1') { Show-Failure 'facts owner filter'; return $false }
     if ($sc -notmatch "ro\.Stato NOT IN \('CANCELED','FAILED','DENIED','DECLINED','VOIDED','SUPERSEDED'\)" -or $sc -notmatch 'ro\.PagamentiTipoId<>d\.PagamentiTipoId OR COALESCE\(p\.OnLine,0\)<>2') { Show-Failure 'facts paypal other'; return $false }
     if ($sc -notmatch 'COALESCE\(d\.Ordine_Web,0\) RpOrdineWeb' -or $sc -notmatch 'CURDATE\(\) RpToday' -or $sc -notmatch 'NOW\(\) RpNow') { Show-Failure 'facts columns'; return $false }
-    if ($sc -notmatch 'AND COALESCE\(Pagato,0\)=0 AND COALESCE\(StatoPagamentoWeb,0\) IN \(0,3,4,5\)' -or $sc -notmatch 'UPDATE documenti SET DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb=@outcome WHERE' -or $sc -match 'UPDATE documenti SET StatoPagamentoWeb') { Show-Failure 'sella start sql'; return $false }
+    if ($sc -notmatch 'AND COALESCE\(Pagato,0\)=0 AND COALESCE\(StatoPagamentoWeb,0\) IN \(0,1,3,4,5\)' -or $sc -notmatch 'UPDATE documenti SET DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb=@outcome WHERE' -or $sc -match 'UPDATE documenti SET StatoPagamentoWeb') { Show-Failure 'sella start sql'; return $false }
+    if ($sc -notmatch 'cmd\.Parameters\.Add\("@minutes", MySqlDbType\.Int32\)\.Value = KeepStoreRemotePayment\.SellaStartGuardMinutes' -or $sc -notmatch 'Return cmd\.ExecuteNonQuery\(\) = 1') { Show-Failure 'sella claim result'; return $false }
+    if ($sc -notmatch 'Public Function MarkSellaStarted\(ByVal documentId As Integer, ByVal utentiId As Long, ByVal aziendaId As Integer\) As Boolean') { Show-Failure 'sella claim signature'; return $false }
+    $claimFn = [regex]::Match($sc, '(?s)Public Function MarkSellaStarted\(.*?End Function').Value
+    if ($claimFn -notmatch '(?s)Catch ex As Exception.*?Return False') { Show-Failure 'sella claim fails closed'; return $false }
+    # pagamento anticipato: Try locale, tabella assente = 0, ogni altro errore = -1 e fatti assenti; solo per gli ordini del sito
+    $pfFn = [regex]::Match($sc, '(?s)Private Function LoadPayFirst\(.*?End Function').Value
+    if ($pfFn -eq '' -or $pfFn -notmatch 'Catch ex As MySqlException When ex\.Number = 1146\s*\n\s*Return 0' -or $pfFn -notmatch '(?s)Catch ex As Exception\s*\n.*?Return -1') { Show-Failure 'pay-first load errors'; return $false }
+    if ($sc -notmatch 'WHERE DocumentiId=@id' -or $sc -notmatch 'If payFirst < 0 Then Return Nothing' -or $sc -notmatch 'facts\.PayFirst = payFirst > 0') { Show-Failure 'pay-first load use'; return $false }
+    if ($sc -notmatch 'If String\.Equals\(facts\.Origin, "WEB", StringComparison\.OrdinalIgnoreCase\) OrElse \(facts\.Origin\.Length = 0 AndAlso facts\.OrdineWeb <> 0\) Then\s*\n\s*Dim payFirst As Integer = LoadPayFirst\(conn, documentId\)') { Show-Failure 'pay-first only for site orders'; return $false }
     if ($sc -notmatch 'COALESCE\(d\.UltimoEsitoPagamentoWeb,''''\) RpEsito') { Show-Failure 'facts outcome'; return $false }
     if ($sc -notmatch 'HasMarketplaceLink\(conn, "ks_amazon_orders", documentId\) OrElse HasMarketplaceLink\(conn, "ks_ebay_orders", documentId\)') { Show-Failure 'marketplace'; return $false }
     if ($sc -notmatch 'Catch ex As Exception\s*\n\s*KeepStoreLog\.Error\("remote-payment", "LoadFacts[^\n]*\n\s*Return Nothing') { Show-Failure 'fail closed'; return $false }
@@ -323,9 +415,16 @@ function Test-Surfaces([string]$store, [string]$lVb, [string]$lAspx, [string]$dV
     $s = Strip-VbComments $sVb
     if ($s -notmatch 'Dim viaLaunch As Boolean = String\.Equals\(document\.OrigineOrdine, "WEB", StringComparison\.OrdinalIgnoreCase\) AndAlso\s*\n\s*PayPalWebLaunchContext\.Consume\(HttpContext\.Current, documentId, owner, "SELLA", requestedAmount\)') { Show-Failure 'sella viaLaunch'; return $false }
     if ($s -notmatch 'requestedAmount <> Math\.Round\(document\.TotalDocument, 2, MidpointRounding\.AwayFromZero\)') { Show-Failure 'sella amount'; return $false }
-    $iMark = $s.IndexOf('KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId)', [StringComparison]::Ordinal)
+    # la presa atomica sta PRIMA della chiamata al gateway, una sola volta; senza presa non si lancia; se il link non arriva la presa si rilascia
+    $iMark = $s.IndexOf('If Not KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId) Then', [StringComparison]::Ordinal)
+    $iEncrypt = $s.IndexOf('objCrypt.Encrypt(', [StringComparison]::Ordinal)
     $iRedirect = $s.IndexOf('Response.Redirect(urlPagamento, False)', [StringComparison]::Ordinal)
-    if ($iMark -lt 0 -or $iRedirect -lt 0 -or $iMark -ge $iRedirect) { Show-Failure 'sella marker before redirect'; return $false }
+    if ($iMark -lt 0 -or $iEncrypt -lt 0 -or $iRedirect -lt 0 -or -not ($iMark -lt $iEncrypt -and $iEncrypt -lt $iRedirect)) { Show-Failure 'sella claim before the gateway'; return $false }
+    if ([regex]::Matches($s, 'KeepStoreRemotePaymentStore\.MarkSellaStarted\(').Count -ne 1) { Show-Failure 'sella one claim'; return $false }
+    $afterMark = $s.Substring($iMark, $iEncrypt - $iMark)
+    if ($afterMark -notmatch '(?s)^If Not KeepStoreRemotePaymentStore\.MarkSellaStarted\([^\n]*\n\s*result = "[^"\n]+"\s*\n\s*Exit Sub\s*\n\s*End If\s*\n\s*sellaClaimed = True') { Show-Failure 'sella no launch without the claim'; return $false }
+    if ($s -notmatch 'sellaRedirected = True\s*\n\s*Response\.Redirect\(urlPagamento, False\)') { Show-Failure 'sella redirected flag'; return $false }
+    if ($s -notmatch '(?s)Finally\s*\n\s*If sellaClaimed AndAlso Not sellaRedirected Then KeepStoreRemotePaymentStore\.ReleaseSellaStart\(documentId, owner\.UtentiId, owner\.CompanyId\)\s*\n\s*End Try') { Show-Failure 'sella release'; return $false }
     $r = Strip-VbComments $rVb
     if ($r -notmatch 'Not \(doc\.RemoteManaged OrElse String\.Equals\(doc\.OrigineOrdine, "INTERNO"' -or $r -notmatch 'MaySupersede\(If\(doc\.RemoteManaged, "INTERNO", doc\.OrigineOrdine\)') { Show-Failure 'next attempt'; return $false }
     if ((Strip-VbComments $stVb) -notmatch 'Public Property RemoteManaged As Boolean') { Show-Failure 'remote managed property'; return $false }
@@ -361,9 +460,10 @@ $mutants = @(
     @{ Id = 'D01_WINDOW_91'; Target = 'module'; Old = 'Public Const WindowDays As Integer = 90'; New = 'Public Const WindowDays As Integer = 91' },
     @{ Id = 'D02_NO_MARKETPLACE_CHECK'; Target = 'module'; Old = 'If facts.Marketplace OrElse Not InWindow(facts) Then Return ""'; New = 'If Not InWindow(facts) Then Return ""' },
     @{ Id = 'D03_EMPTY_ORIGIN_IGNORES_ORDINE_WEB'; Target = 'module'; Old = 'If origin = String.Empty AndAlso facts.OrdineWeb = 0 Then'; New = 'If origin = String.Empty Then' },
-    @{ Id = 'D04_WEB_ALLOWS_ANY_PAYMENT_STATE'; Target = 'module'; Old = 'If facts.PaymentState <> 0 OrElse facts.PayPalAny OrElse Not InWindow(facts) Then Return ""'; New = 'If facts.PayPalAny OrElse Not InWindow(facts) Then Return ""' },
-    @{ Id = 'D05_WEB_ALLOWS_PAYPAL_HISTORY'; Target = 'module'; Old = 'If facts.PaymentState <> 0 OrElse facts.PayPalAny OrElse Not InWindow(facts) Then Return ""'; New = 'If facts.PaymentState <> 0 OrElse Not InWindow(facts) Then Return ""' },
-    @{ Id = 'D06_WEB_WITHOUT_WINDOW'; Target = 'module'; Old = 'If facts.PaymentState <> 0 OrElse facts.PayPalAny OrElse Not InWindow(facts) Then Return ""'; New = 'If facts.PaymentState <> 0 OrElse facts.PayPalAny Then Return ""' },
+    @{ Id = 'D04_WEB_PAY_FIRST_IGNORED'; Target = 'module'; Old = 'If facts.PayFirst OrElse Not InWindow(facts) Then Return ""'; New = 'If Not InWindow(facts) Then Return ""' },
+    @{ Id = 'D05_WEB_OLD_RULE_BACK_FAILED_PAYMENT_NOT_REPAYABLE'; Target = 'module'; Old = 'If facts.PayFirst OrElse Not InWindow(facts) Then Return ""'; New = 'If facts.PayFirst OrElse facts.PaymentState <> 0 OrElse Not InWindow(facts) Then Return ""' },
+    @{ Id = 'D06_WEB_WITHOUT_WINDOW'; Target = 'module'; Old = 'If facts.PayFirst OrElse Not InWindow(facts) Then Return ""'; New = 'If facts.PayFirst Then Return ""' },
+    @{ Id = 'D07_WEB_PAYPAL_HISTORY_CLOSES_AGAIN'; Target = 'module'; Old = 'If facts.PayFirst OrElse Not InWindow(facts) Then Return ""'; New = 'If facts.PayFirst OrElse facts.PayPalAny OrElse Not InWindow(facts) Then Return ""' },
     @{ Id = 'D08_FUTURE_DATE_ALLOWED'; Target = 'module'; Old = 'Return days >= 0.0 AndAlso days <= CDbl(WindowDays)'; New = 'Return days <= CDbl(WindowDays)' },
     @{ Id = 'D09_WINDOW_BOUNDARY_OFF_BY_ONE'; Target = 'module'; Old = 'Return days >= 0.0 AndAlso days <= CDbl(WindowDays)'; New = 'Return days >= 0.0 AndAlso days < CDbl(WindowDays)' },
     @{ Id = 'D10_OTHER_ORIGINS_OPEN'; Target = 'module'; Old = '        Return ""
@@ -381,7 +481,14 @@ $mutants = @(
     @{ Id = 'D16_NOTHING_ALLOWED'; Target = 'policy'; Old = 'If facts Is Nothing Then Return False
         Dim originClass'; New = 'If facts Is Nothing Then Return True
         Dim originClass' },
-    @{ Id = 'D17_SELLA_GUARD_IGNORES_PAYPAL_HISTORY'; Target = 'module'; Old = 'If facts.OnlineMethod <> 2 OrElse facts.PayPalAny Then Return False'; New = 'If facts.OnlineMethod <> 2 Then Return False' },
+    @{ Id = 'D17_SELLA_GUARD_SKIPPED_WITH_PAYPAL_HISTORY'; Target = 'module'; Old = '        If facts Is Nothing Then Return True
+        If Not String.Equals(If(facts.LastOutcome'; New = '        If facts Is Nothing Then Return True
+        If facts.PayPalAny Then Return False
+        If Not String.Equals(If(facts.LastOutcome' },
+    @{ Id = 'D20_SELLA_GUARD_ONLY_FOR_PAYPAL'; Target = 'module'; Old = '        If facts Is Nothing Then Return True
+        If Not String.Equals(If(facts.LastOutcome'; New = '        If facts Is Nothing Then Return True
+        If facts.OnlineMethod <> 2 Then Return False
+        If Not String.Equals(If(facts.LastOutcome' },
     @{ Id = 'D19_SELLA_GUARD_WITHOUT_THE_MARKER'; Target = 'module'; Old = 'If Not String.Equals(If(facts.LastOutcome, String.Empty).Trim(), SellaStartedOutcome, StringComparison.Ordinal) Then Return False'; New = '' },
     @{ Id = 'D18_WEB_MARKED_INTERNO_WITHOUT_ORIGIN_CHECK'; Target = 'module'; Old = 'If origin = "WEB" OrElse (origin = String.Empty AndAlso facts.OrdineWeb <> 0) Then'; New = 'If origin = "WEB" Then' },
     @{ Id = 'S01_PAYPAL_HISTORY_TERMINAL_LIST_WITHOUT_VOIDED'; Target = 'store'; Old = "'DECLINED','VOIDED','SUPERSEDED'"; New = "'DECLINED','SUPERSEDED'" },
@@ -390,6 +497,22 @@ $mutants = @(
     @{ Id = 'S04_NO_OWNER_FILTER'; Target = 'store'; Old = 'WHERE d.id=@id AND d.UtentiId=@uid AND d.AziendeId=@azienda LIMIT 1'; New = 'WHERE d.id=@id AND d.AziendeId=@azienda LIMIT 1' },
     @{ Id = 'S06_SELLA_START_CHANGES_THE_PAYMENT_STATE'; Target = 'store'; Old = 'UPDATE documenti SET DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb=@outcome'; New = 'UPDATE documenti SET StatoPagamentoWeb=1,DataStatoPagamentoWeb=CURRENT_TIMESTAMP,UltimoEsitoPagamentoWeb=@outcome' },
     @{ Id = 'S05_SELLA_AUTHORIZATION_IGNORED'; Target = 'store'; Old = "AND COALESCE(rb.codiceAutorizzazione,'')<>''"; New = '' },
+    @{ Id = 'S07_CLAIM_EXCLUDES_STATE_1'; Target = 'store'; Kind = 'claim'; Old = 'COALESCE(StatoPagamentoWeb,0) IN (0,1,3,4,5)'; New = 'COALESCE(StatoPagamentoWeb,0) IN (0,3,4,5)' },
+    @{ Id = 'S08_CLAIM_WITHOUT_THE_60_MINUTE_CONDITION'; Target = 'store'; Kind = 'claim'; Old = "AND NOT (COALESCE(UltimoEsitoPagamentoWeb,'')=@outcome AND (DataStatoPagamentoWeb IS NULL OR DataStatoPagamentoWeb > DATE_SUB(NOW(), INTERVAL @minutes MINUTE)))"; New = '' },
+    # (nessun mutante sulla data ignota della presa: in SQL il confronto con NULL e gia falso, togliere IS NULL non cambia il risultato: mutante equivalente)
+    @{ Id = 'S10_CLAIM_FOR_ANY_USER'; Target = 'store'; Kind = 'claim'; Old = 'UltimoEsitoPagamentoWeb=@outcome WHERE id=@id AND UtentiId=@uid AND AziendeId=@azienda " &'; New = 'UltimoEsitoPagamentoWeb=@outcome WHERE id=@id AND AziendeId=@azienda " &' },
+    @{ Id = 'S11_CLAIM_ON_A_PAID_ORDER'; Target = 'store'; Kind = 'claim'; Old = '"AND COALESCE(Pagato,0)=0 AND COALESCE(StatoPagamentoWeb,0) IN (0,1,3,4,5) " &'; New = '"AND COALESCE(StatoPagamentoWeb,0) IN (0,1,3,4,5) " &' },
+    @{ Id = 'S12_RELEASE_WITHOUT_THE_MARKER'; Target = 'store'; Kind = 'claim'; Old = "AND COALESCE(Pagato,0)=0 AND COALESCE(UltimoEsitoPagamentoWeb,'')=@outcome"; New = 'AND COALESCE(Pagato,0)=0' },
+    @{ Id = 'S13_PAY_FIRST_COUNT_OF_ANY_DOCUMENT'; Target = 'store'; Kind = 'payfirst'; Old = 'FROM paypal_checkout_tentativi WHERE DocumentiId=@id"'; New = 'FROM paypal_checkout_tentativi WHERE DocumentiId IS NULL"' },
+    @{ Id = 'S14_MISSING_TABLE_TREATED_AS_AN_ERROR'; Target = 'store'; Old = 'Catch ex As MySqlException When ex.Number = 1146'; New = 'Catch ex As MySqlException When ex.Number = 0' },
+    @{ Id = 'S15_ANY_PAY_FIRST_ERROR_MEANS_NOT_PAY_FIRST'; Target = 'store'; Old = '            Return -1'; New = '            Return 0' },
+    @{ Id = 'S16_PAY_FIRST_ERROR_NOT_CLOSING'; Target = 'store'; Old = 'If payFirst < 0 Then Return Nothing'; New = 'If payFirst < -5 Then Return Nothing' },
+    @{ Id = 'S17_CLAIM_RESULT_IGNORED'; Target = 'store'; Old = 'Return cmd.ExecuteNonQuery() = 1'; New = 'Return cmd.ExecuteNonQuery() >= 0' },
+    @{ Id = 'P08_SELLA_CLAIM_AFTER_THE_GATEWAY'; Target = 'sellavb'; Old = 'If Not KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId) Then'; New = 'Dim early As Object = objCrypt.Encrypt() : If Not KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId) Then' },
+    @{ Id = 'P09_SELLA_LAUNCH_WITHOUT_THE_CLAIM'; Target = 'sellavb'; Old = 'If Not KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId) Then'; New = 'If Not KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId) AndAlso False Then' },
+    @{ Id = 'P10_SELLA_CLAIM_NEVER_RELEASED'; Target = 'sellavb'; Old = 'If sellaClaimed AndAlso Not sellaRedirected Then KeepStoreRemotePaymentStore.ReleaseSellaStart(documentId, owner.UtentiId, owner.CompanyId)'; New = '' },
+    @{ Id = 'P11_SELLA_RELEASE_AFTER_A_REAL_REDIRECT'; Target = 'sellavb'; Old = '                sellaRedirected = True
+'; New = '' },
     @{ Id = 'P01_LIST_BACK_TO_ORIGIN_ONLY'; Target = 'listvb'; Old = 'KeepStoreRemotePaymentStore.LoadFacts(documentId, CurrentOrderIdentity.UtentiId, CurrentOrderIdentity.CompanyId)'; New = 'Nothing' },
     @{ Id = 'P02_PAYPAL_WEB_NO_LAUNCH_SEPARATION'; Target = 'ppvb'; Old = 'Dim viaLaunch As Boolean = isWeb AndAlso PayPalWebLaunchContext.BeginPayPal(HttpContext.Current, documentId, owner)'; New = 'Dim viaLaunch As Boolean = isWeb' },
     @{ Id = 'P03_PAYPAL_NO_REMOTE_MANAGED'; Target = 'ppvb'; Old = 'doc.RemoteManaged = True'; New = 'Dim unused As Boolean = True' },
@@ -435,7 +558,13 @@ foreach ($mu in $mutants) {
     if ($mu.Target -in @('module', 'policy')) { $still = (Test-DecisionMatrix $mm $mp) -and (Test-ModuleStructure $mm $mp) }
     elseif ($mu.Target -eq 'store') {
         $still = (Test-Surfaces $ms $listVb $listAspx $detailVb $detailAspx $ppVb $sellaVb $repoVb $stateVb $css)
-        if ($still -and -not $SkipLab) { $mutSql = Get-FactsSql $ms 'FactsSql'; $still = Test-LabScenarios $mutSql $labLog $moduleText $policyText; $labMutantsDone++ }
+        $kind = if ($mu.ContainsKey('Kind')) { [string]$mu.Kind } else { 'facts' }
+        if ($still -and -not $SkipLab) {
+            if ($kind -eq 'claim') { $still = Test-LabSellaClaim (Get-FactsSql $ms 'SellaStartSql') (Get-FactsSql $ms 'SellaReleaseSql') }
+            elseif ($kind -eq 'payfirst') { $script:payFirstSqlForLab = Get-FactsSql $ms 'PayFirstSql'; $still = Test-LabScenarios $factsSql $labLog $moduleText $policyText; $script:payFirstSqlForLab = Get-FactsSql $storeText 'PayFirstSql' }
+            else { $mutSql = Get-FactsSql $ms 'FactsSql'; $still = Test-LabScenarios $mutSql $labLog $moduleText $policyText }
+            $labMutantsDone++
+        }
     }
     else { $still = Test-Surfaces $ms $mlv $mla $mdv $mda $mpv $msv $mrv $stateVb $mcss }
     Assert-Detected $still $mu.Id

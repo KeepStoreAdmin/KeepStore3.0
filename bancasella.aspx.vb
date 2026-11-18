@@ -76,6 +76,9 @@ Partial Class BancaSella
         End If
 
         Dim cfg As Dictionary(Of String, Object) = rows(0)
+        ' ORDER-WEB-LATER-PAYMENT-1A: presa atomica dell'avvio carta (prima di chiamare il gateway) e suo rilascio se il link di pagamento non arriva.
+        Dim sellaClaimed As Boolean = False
+        Dim sellaRedirected As Boolean = False
 
         Try
             '=========================================================
@@ -128,6 +131,14 @@ Partial Class BancaSella
             '    L'errore 1142 "indirizzo IP non valido" arriva da qui
             '    se l'IP pubblico NON è autorizzato nel pannello Axerve.
             '=========================================================
+            ' ORDER-WEB-LATER-PAYMENT-1A: una sola carta per volta. La presa riesce solo se nessun avvio carta e nella guardia (60 minuti) e l'ordine non e pagato;
+            ' vale anche per il checkout appena concluso. Senza presa non si chiama il gateway.
+            If Not KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId) Then
+                result = "Pagamento con carta gia avviato per questo ordine oppure non disponibile. Se non lo hai completato potrai riprovare tra circa un'ora."
+                Exit Sub
+            End If
+            sellaClaimed = True
+
             EnsureBancaSellaTls12()
 
             Dim xmlOut As String = objCrypt.Encrypt(
@@ -188,10 +199,8 @@ Partial Class BancaSella
                     "&b=" &
                     HttpUtility.UrlEncode(encryptedData)
 
-                ' ORDER-REMOTE-PAYMENT-1A: la carta e stata avviata: si scrivono data e ultimo esito (stato invariato, nessuna tabella dei tentativi), cosi PayPal non la scavalca per un'ora.
-                KeepStoreRemotePaymentStore.MarkSellaStarted(documentId, owner.UtentiId, owner.CompanyId)
-
-                ' Redirect "pulito": non solleviamo ThreadAbortException
+                ' Redirect "pulito": non solleviamo ThreadAbortException. Da qui il cliente e sulla pagina della banca: la presa resta.
+                sellaRedirected = True
                 Response.Redirect(urlPagamento, False)
                 Context.ApplicationInstance.CompleteRequest()
             Else
@@ -216,6 +225,8 @@ result = "Errore Banca Sella. Codice: " & errorCode &
             '=========================================================
             result = "Errore inatteso nella gestione del pagamento. " &
                      ex.GetType().Name & ": " & ex.Message
+        Finally
+            If sellaClaimed AndAlso Not sellaRedirected Then KeepStoreRemotePaymentStore.ReleaseSellaStart(documentId, owner.UtentiId, owner.CompanyId)
         End Try
     End Sub
 
