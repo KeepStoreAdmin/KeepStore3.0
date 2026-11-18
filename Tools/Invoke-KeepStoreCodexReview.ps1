@@ -2,7 +2,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Folder,
     [string]$Reply,
-    [ValidateSet('medium', 'high', 'xhigh')][string]$Effort = 'high',
+    [ValidateSet('medium', 'high', 'xhigh')][string]$Effort = 'xhigh',
     [int]$TimeoutMinutes = 20,
     [string]$Questions = ''
 )

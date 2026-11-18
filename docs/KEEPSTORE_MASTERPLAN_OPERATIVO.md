@@ -1,5 +1,12 @@
 # KeepStore Masterplan Operativo
 
+## KS-GOV-WORKFLOW-2026-11-19 — 19/11/2026 — DOCS (nuovo metodo di lavoro: la catena vale per ogni task)
+
+**Esito: A (DOCS). Richiesta del PO del 2026-11-19, permanente.** Il Flusso di lavoro canonico di [AGENTS](../AGENTS.md) e stato sostituito. Per ogni task, problema o richiesta che cambia il prodotto, sempre in quest'ordine: (1) CODE verifica la richiesta e i fatti; (2) pacchetto = problema + audit con codice e dati; (3) ChatGPT con ragionamento approfondito (`xhigh`), e CODE attende la risposta; (4) Claude revisore, sempre Opus, in sola lettura, sul pacchetto e sulla risposta di ChatGPT; (5) CODE verifica ogni punto sul codice; (6) decisione scritta, e solo dopo il codice.
+
+**Che cosa cambia rispetto al 2026-11-16.** Non esiste piu il livello S senza catena: i livelli S, M, L restano solo etichetta di rischio e di tempo. Il revisore Claude e sempre Opus (prima Sonnet al livello M) e ChatGPT ragiona sempre a `xhigh` (prima `high` al livello M). Il pacchetto e «problema + audit», con l'eventuale soluzione scritta come ipotesi da smontare. Se un revisore non e disponibile il codice non si tocca (prima il livello M poteva proseguire). Esenti solo i lavori che non cambiano il prodotto: documenti, operazioni Git, risposte, ricognizioni.
+
+**File.** `AGENTS.md` (sezione del flusso e due rimandi), `docs/KEEPSTORE_START_HERE.md`, `Tools/templates/proposta.md` e `claude-reviewer-brief.md`, `Tools/Invoke-KeepStoreCodexReview.ps1` (valore predefinito `xhigh`). Nessun file del prodotto. Costo dichiarato: ogni correzione piccola richiede ora due revisioni (circa 10-15 minuti in piu).
 ## BANCASELLA-CALLBACK-AUTH-1A — 19/11/2026 — SOURCE (la conferma di pagamento della carta prova chi parla e non torna indietro)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#561](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/561), stable `c7fa96e1`.** Le due chiamate di ritorno della banca passano da `App_Code/BancaSellaCallback.vb`: negozio configurato (prima di `Decrypt`) e dell'azienda del documento, una transazione con blocco della riga, pagato una volta sola da `Pagato = 0`, mai un KO o un esito in sospeso sopra un pagato, riga per coppia (documento, codice), ritorno del cliente senza scritture e solo verso un host dell'azienda. Area CRITICAL: pagamenti.
