@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/bootstrap.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore.css") & "?v=20260918-runtime-asset-404-rev3" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/keepstore-overrides.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") & "?v=20261118-qa-1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") & "?v=20261115-focus-fc1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") & "?v=20261116-footer-touch44a" %>" />

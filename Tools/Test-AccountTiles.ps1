@@ -243,7 +243,7 @@ function Test-Pages([string]$aAspx, [string]$aVbText, [string]$lAspx, [string]$l
     $iFormEnd = $aAspx.IndexOf('</asp:FormView>', [StringComparison]::Ordinal)
     if ($iHero -lt 0 -or -not ($iHero -lt $iNotice -and $iNotice -lt $iTiles -and $iTiles -lt $iForm -and $iFormEnd -lt $iSoon)) { Show-Failure 'page slots outside the form view'; return $false }
     if ($aAspx -notmatch '<a id="lnkPayNotice" runat="server" class="[^"]*">Paga adesso</a>' -or $aAspx -match 'lnkPayNotice"[^>]*href') { Show-Failure 'notice link set by code'; return $false }
-    if ($aAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-account-1b') { Show-Failure 'account css'; return $false }
+    if ($aAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-qa-1a') { Show-Failure 'account css'; return $false }
     # lista
     if ($lVb -match 'separa_tracking' -or $lAspx -match 'separa_tracking') { Show-Failure 'old tracking helper'; return $false }
     if ($lVb -notmatch 'Return KeepStoreOrderProgress\.MiniProgressHtml\(SafeInt\(isOrderObj, 0\) = 1, SafeInt\(statiIdObj, 0\)\)' -or $lVb -notmatch 'Return KeepStoreOrderProgress\.TrackingLinksHtml\(tracking, template, SafeInt\(statiIdObj, 0\)\)') { Show-Failure 'list uses the safe module'; return $false }
@@ -255,7 +255,7 @@ function Test-Pages([string]$aAspx, [string]$aVbText, [string]$lAspx, [string]$l
     if ($lAspx -notmatch 'ID="hlListaPagaAdesso" runat="server"[^>]*NavigateUrl=''<%# Eval\("id", "documentidettaglio\.aspx\?id=\{0\}#ksPayNow"\) %>'' Visible=''<%# ListPayNowVisible\(Eval\("id"\)\) %>'' Text="Paga adesso"') { Show-Failure 'pay now button kept'; return $false }
     if ($lAspx -notmatch 'ID="lblListaDaPagare" runat="server" CssClass="ks-pay-now__badge" Text="Da pagare" Visible=''<%# ListPayNowVisible\(Eval\("id"\)\) %>''') { Show-Failure 'badge kept'; return $false }
     if ($lAspx -notmatch 'ID="idcoupon" runat="server"\s*\n\s*Visible=''<%# \(Convert\.ToString\(Request\.QueryString\("t"\)\) = Convert\.ToString\(Session\("IdDocumentoCoupon"\)\)\) %>''' -or $lAspx -notmatch 'ID="iddoc" runat="server"\s*\n\s*Visible=''<%# Not \(Convert\.ToString\(Request\.QueryString\("t"\)\) = Convert\.ToString\(Session\("IdDocumentoCoupon"\)\)\) %>''\s*\n\s*NavigateUrl=''<%# Eval\("id", "documentidettaglio\.aspx\?id=\{0\}"\) %>''') { Show-Failure 'coupon and document links kept'; return $false }
-    if ($lAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-account-1b' -or $lAspx -notmatch 'order-ui\.css"\) %>\?v=20261117-pay-now-1a') { Show-Failure 'list css'; return $false }
+    if ($lAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-qa-1a' -or $lAspx -notmatch 'order-ui\.css"\) %>\?v=20261117-pay-now-1a') { Show-Failure 'list css'; return $false }
     if ($lVb -notmatch 'If _payNowDecisions\.TryGetValue\(documentId, cached\) Then Return cached' -or $lVb -notmatch '_payNowDecisions\(documentId\) = decision') { Show-Failure 'one decision per document'; return $false }
     if ($lVb -notmatch 'Protected Function ListPayNowVisible\(ByVal documentIdObj As Object\) As Boolean\s*\n\s*Return CanShowPayNow\(SafeInt\(documentIdObj, 0\)\)') { Show-Failure 'list helper kept'; return $false }
     # stili
@@ -269,6 +269,139 @@ function Test-Pages([string]$aAspx, [string]$aVbText, [string]$lAspx, [string]$l
     return $true
 }
 Assert-Source (Test-Pages $accAspx $accVb $listAspx $listVb $css) 'T03_THE_DASHBOARD_USES_THE_VERIFIED_IDENTITY_AND_THE_LIST_RENDERS_ONE_SAFE_CARD_PER_ROW'
+
+# --- KS-QA-BROWSER-1A (difetti visti nel browser reale): date del connettore MySQL, pulsanti <input> invisibili, doppione del menu nel pannello -------------------
+$dates = Read-Repo 'App_Code/KeepStoreDates.vb'
+$accountCss = Read-Repo 'Public/assets/keepstore/css/account-ui.css'
+$sidebarVb = Read-Repo 'Public/ui/controls/AccountSidebar.ascx.vb'
+$detailAspx = Read-Repo 'documentidettaglio.aspx'
+$orderVb = Read-Repo 'ordine.aspx.vb'
+$loginAspx = Read-Repo 'login.aspx'
+$cartAspx = Read-Repo 'carrello.aspx'
+$datesProbe = @"
+Option Strict On
+Option Explicit On
+Imports System
+' Finto tipo del connettore: convertibile in data ma con ToString all'americana (mese/giorno), come MySqlDateTime.
+Public Class FakeConnectorDate
+    Implements IConvertible
+    Private ReadOnly _d As DateTime
+    Private ReadOnly _valid As Boolean
+    Public Sub New(ByVal d As DateTime, ByVal valid As Boolean)
+        _d = d : _valid = valid
+    End Sub
+    Public Overrides Function ToString() As String
+        Return _d.ToString("MM/dd/yyyy HH:mm:ss", Globalization.CultureInfo.InvariantCulture)
+    End Function
+    Public Function ToDateTime(ByVal provider As IFormatProvider) As DateTime Implements IConvertible.ToDateTime
+        If Not _valid Then Throw New InvalidCastException("zero date")
+        Return _d
+    End Function
+    Public Function GetTypeCode() As TypeCode Implements IConvertible.GetTypeCode
+        Return TypeCode.Object
+    End Function
+    Public Function ToBoolean(ByVal p As IFormatProvider) As Boolean Implements IConvertible.ToBoolean
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToByte(ByVal p As IFormatProvider) As Byte Implements IConvertible.ToByte
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToChar(ByVal p As IFormatProvider) As Char Implements IConvertible.ToChar
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToDecimal(ByVal p As IFormatProvider) As Decimal Implements IConvertible.ToDecimal
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToDouble(ByVal p As IFormatProvider) As Double Implements IConvertible.ToDouble
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToInt16(ByVal p As IFormatProvider) As Short Implements IConvertible.ToInt16
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToInt32(ByVal p As IFormatProvider) As Integer Implements IConvertible.ToInt32
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToInt64(ByVal p As IFormatProvider) As Long Implements IConvertible.ToInt64
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToSByte(ByVal p As IFormatProvider) As SByte Implements IConvertible.ToSByte
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToSingle(ByVal p As IFormatProvider) As Single Implements IConvertible.ToSingle
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToString1(ByVal p As IFormatProvider) As String Implements IConvertible.ToString
+        Return ToString()
+    End Function
+    Public Function ToType(ByVal t As Type, ByVal p As IFormatProvider) As Object Implements IConvertible.ToType
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToUInt16(ByVal p As IFormatProvider) As UShort Implements IConvertible.ToUInt16
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToUInt32(ByVal p As IFormatProvider) As UInteger Implements IConvertible.ToUInt32
+        Throw New InvalidCastException()
+    End Function
+    Public Function ToUInt64(ByVal p As IFormatProvider) As ULong Implements IConvertible.ToUInt64
+        Throw New InvalidCastException()
+    End Function
+End Class
+Public Class DatesProbe
+    Public Function Run() As String
+        Threading.Thread.CurrentThread.CurrentCulture = Globalization.CultureInfo.GetCultureInfo("it-IT")
+        Dim r As New Collections.Generic.List(Of String)()
+        r.Add(KeepStoreDates.ShortDate(New FakeConnectorDate(New DateTime(2026, 11, 6), True)))
+        r.Add(KeepStoreDates.ShortDate(New FakeConnectorDate(New DateTime(2026, 11, 18, 9, 30, 0), True)))
+        r.Add(KeepStoreDates.IsoText(New FakeConnectorDate(New DateTime(2026, 11, 6, 9, 5, 7), True)))
+        r.Add("[" & KeepStoreDates.ShortDate(New FakeConnectorDate(New DateTime(2026, 11, 6), False)) & "]")
+        r.Add(KeepStoreDates.ShortDate(New DateTime(2026, 3, 4)))
+        r.Add("[" & KeepStoreDates.ShortDate(DBNull.Value) & "]")
+        r.Add("[" & KeepStoreDates.ShortDate(Nothing) & "]")
+        r.Add("[" & KeepStoreDates.ShortDate(DateTime.MinValue) & "]")
+        r.Add(KeepStoreDates.ShortDate("2026-11-06 00:00:00"))
+        r.Add(KeepStoreDates.ShortDate("11/06/2026 00:00:00"))
+        r.Add("[" & KeepStoreDates.ShortDate("non una data") & "]")
+        r.Add("[" & KeepStoreDates.IsoText("") & "]")
+        Return String.Join("|", r.ToArray())
+    End Function
+End Class
+"@
+$datesExpected = '06/11/2026|18/11/2026|2026-11-06 09:05:07|[]|04/03/2026|[]|[]|[]|06/11/2026|06/11/2026|[]|[]'
+function Test-Dates([string]$datesText) {
+    try {
+        $p = New-Object CodeDom.Compiler.CompilerParameters
+        $p.GenerateInMemory = $true
+        $p.CompilerOptions = '/optionInfer+ /optionExplicit+ /optionStrict+ /imports:Microsoft.VisualBasic'
+        @('System.dll', 'System.Core.dll') | ForEach-Object { [void]$p.ReferencedAssemblies.Add($_) }
+        $c = (New-Object Microsoft.VisualBasic.VBCodeProvider).CompileAssemblyFromSource($p, [string[]]@($datesText, $datesProbe))
+        if ($c.Errors.HasErrors) { Show-Failure ('dates compile ' + $c.Errors[0].ErrorText); return $false }
+        $got = [Activator]::CreateInstance($c.CompiledAssembly.GetType('DatesProbe', $true)).Run()
+        if ($got -cne $datesExpected) { Show-Failure ('dates got ' + $got); return $false }
+        return $true
+    } catch { Show-Failure ('dates exception ' + $_.Exception.Message); return $false }
+}
+function Test-BrowserFindings([string]$aAspx, [string]$lAspx, [string]$dAspx, [string]$oVb, [string]$accCss, [string]$sbVb, [string]$lgAspx, [string]$cAspx) {
+    $o = Strip-VbComments $oVb
+    if ($aAspx -match '\{0:d\}' -or $lAspx -match 'DataDocumento", "\{0:d\}"' -or $dAspx -match 'DataDocumento", "\{0:d\}"') { Show-Failure 'raw date format left'; return $false }
+    foreach ($page in @($aAspx, $lAspx, $dAspx)) { if ($page -notmatch 'KeepStoreDates\.ShortDate\(Eval\("DataDocumento"\)\)') { Show-Failure 'page date helper'; return $false } }
+    if ([regex]::Matches($o, 'KeepStoreDates\.IsoText\(').Count -ne 4 -or $o -notmatch 'KeepStoreDates\.ShortDate\(drTestata\.Item\("DataDocumento"\)\)' -or $o -match 'DbText\((dr|drTestata), "DataDocumento"\)|dr\("DataDocumento"\)\.ToString\(\)') { Show-Failure 'order page date sources'; return $false }
+    if ($o -notmatch 'DateTime\.TryParseExact\(value\.Trim\(\), New String\(\) \{"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"\}, CultureInfo\.InvariantCulture') { Show-Failure 'order page exact parse'; return $false }
+    # pannello: niente tabella, niente schede doppie, menu laterale non mostrato
+    if ($aAspx -match '<asp:GridView|ks-dashboard-card|ks-order-table' -or $aAspx -notmatch '<asp:Repeater ID="rptRecentOrders"' -or $aAspx -notmatch 'id="pRecentEmpty" runat="server" visible="false"') { Show-Failure 'dashboard recent orders as cards'; return $false }
+    $area = [regex]::Match((Strip-VbComments $sbVb), '(?s)Private Function IsAccountArea\(.*?End Function').Value
+    if ($area -eq '' -or $area -match '"myaccount\.aspx"') { Show-Failure 'sidebar hidden on the dashboard'; return $false }
+    if ($accCss -notmatch 'body\.ks-page-account \.ks-account-aside:not\(:has\(\.ks-account-card\)\)\s*\{\s*display:\s*none') { Show-Failure 'empty aside collapsed'; return $false }
+    if ($accCss -notmatch '(?s)\.ks-account-nav-link\s*\{[^}]*min-height:\s*44px') { Show-Failure 'sidebar link target'; return $false }
+    # pulsanti <input>: il tema li rendeva trasparenti con spaziatura zero
+    if ($accCss -notmatch '(?s)\nform input\.tf-btn\.tf-btn\s*\{[^}]*min-height:\s*44px[^}]*background-color:\s*var\(--primary') { Show-Failure 'input buttons visible'; return $false }
+    # accesso: un solo pulsante principale, Invio invia, titolo vero, errore annunciato
+    if ($lgAspx -notmatch '<asp:Panel ID="pnlLogin" runat="server"[^>]*DefaultButton="btnLogin"' -or $lgAspx -notmatch '<h1 class="ks-login__title">Accedi</h1>' -or $lgAspx -notmatch 'CssClass="tf-btn ks-login__submit"' -or $lgAspx -match 'text-white') { Show-Failure 'login form'; return $false }
+    if ($lgAspx -notmatch '<div class="ks-login__message" role="alert">\s*<asp:Label ID="lblLogin"' -or $lgAspx -notmatch 'autocomplete="current-password"' -or $lgAspx -notmatch 'id="hlRegistrati" href="registrazione\.aspx"') { Show-Failure 'login message and links'; return $false }
+    if ($cAspx -notmatch '(?s)<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">\s*Carrello\s*</asp:Content>') { Show-Failure 'cart title'; return $false }
+    return $true
+}
+Assert-Source (Test-Dates $dates) 'T04_CONNECTOR_DATES_BECOME_DAY_MONTH_YEAR_AND_NEVER_SWAP_DAY_AND_MONTH'
+Assert-Source (Test-BrowserFindings $accAspx $listAspx $detailAspx $orderVb $accountCss $sidebarVb $loginAspx $cartAspx) 'T05_BROWSER_FINDINGS_STAY_FIXED_DATES_VISIBLE_INPUT_BUTTONS_NO_DUPLICATE_MENU_LOGIN_FORM'
 
 if ($SkipMutations) { Write-Output 'MUTATIONS_SKIPPED'; exit 0 }
 
@@ -333,6 +466,40 @@ $mutants = @(
     @{ Id = 'C03_THEME_MIN_WIDTH_BACK'; T = 'css'; Old = '    min-width: 0;' + "`n" + '    width: 100%;'; New = '    width: 100%;' },
     @{ Id = 'C04_ROWS_NOT_SCOPED'; T = 'css'; Old = '.ks-doc-list > tbody > tr.td-order-item {'; New = '.ks-doc-list tr {' }
 )
+# mutanti di KS-QA-BROWSER-1A
+$qaMutants = @(
+    @{ Id = 'Q01_DATE_FROM_THE_CONNECTOR_TEXT'; T = 'dates'; Old = 'If convertible IsNot Nothing AndAlso Not TypeOf value Is String Then'; New = 'If False Then' },
+    @{ Id = 'Q02_INVALID_DATE_SHOWN'; T = 'dates'; Old = '                result = DateTime.MinValue
+                Return False'; New = '                result = New DateTime(2000, 1, 1)
+                Return True' },
+    @{ Id = 'Q03_AMERICAN_FORMAT_OUTPUT'; T = 'dates'; Old = 'Return d.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)'; New = 'Return d.ToString("MM/dd/yyyy", CultureInfo.InvariantCulture)' },
+    @{ Id = 'Q04_LIST_DATE_RAW_AGAIN'; T = 'list'; Old = '<%#: KeepStoreDates.ShortDate(Eval("DataDocumento")) %>'; New = '<%# Eval("DataDocumento", "{0:d}") %>' },
+    @{ Id = 'Q05_ORDER_DATE_SOURCE_AS_TEXT'; T = 'order'; Old = 'DataDoc = KeepStoreDates.IsoText(dr("DataDocumento"))'; New = 'DataDoc = dr("DataDocumento").ToString()' },
+    @{ Id = 'Q06_INPUT_BUTTON_RULE_TOO_WEAK'; T = 'acccss'; Old = "`nform input.tf-btn.tf-btn {"; New = "`nform input.tf-btn-x {" },
+    @{ Id = 'Q07_SIDEBAR_BACK_ON_THE_DASHBOARD'; T = 'sidebar'; Old = '            Case "datiutente.aspx",
+                 "datiutente.aspx",'; New = '            Case "myaccount.aspx",
+                 "datiutente.aspx",' },
+    @{ Id = 'Q08_LOGIN_WITHOUT_ENTER_KEY'; T = 'login'; Old = ' DefaultButton="btnLogin"'; New = '' },
+    @{ Id = 'Q09_LOGIN_BUTTON_WHITE_TEXT_CLASS_BACK'; T = 'login'; Old = 'CssClass="tf-btn ks-login__submit"'; New = 'CssClass="tf-btn w-100 text-white"' },
+    @{ Id = 'Q10_DASHBOARD_TABLE_BACK'; T = 'acc'; Old = '<asp:Repeater ID="rptRecentOrders" runat="server" DataSourceID="sdsRecentOrders">'; New = '<asp:GridView ID="gvRecentOrders" runat="server"></asp:GridView><asp:Repeater ID="rptRecentOrders" runat="server" DataSourceID="sdsRecentOrders">' },
+    @{ Id = 'Q11_CART_WITHOUT_TITLE'; T = 'cart'; Old = '    Carrello'; New = '    ' }
+)
+foreach ($mu in $qaMutants) {
+    $qd = $dates; $qa = $accAspx; $ql = $listAspx; $qo = $orderVb; $qc = $accountCss; $qs = $sidebarVb; $qg = $loginAspx; $qk = $cartAspx
+    switch ($mu.T) {
+        'dates' { $qd = Mutate-Text $dates $mu.Old $mu.New $mu.Id }
+        'list' { $ql = Mutate-Text $listAspx $mu.Old $mu.New $mu.Id }
+        'order' { $qo = Mutate-Text $orderVb $mu.Old $mu.New $mu.Id }
+        'acccss' { $qc = Mutate-Text $accountCss $mu.Old $mu.New $mu.Id }
+        'sidebar' { $qs = Mutate-Text $sidebarVb $mu.Old $mu.New $mu.Id }
+        'login' { $qg = Mutate-Text $loginAspx $mu.Old $mu.New $mu.Id }
+        'acc' { $qa = Mutate-Text $accAspx $mu.Old $mu.New $mu.Id }
+        'cart' { $qk = Mutate-Text $cartAspx $mu.Old $mu.New $mu.Id }
+    }
+    if ($mu.T -eq 'dates') { $still = Test-Dates $qd } else { $still = Test-BrowserFindings $qa $ql $detailAspx $qo $qc $qs $qg $qk }
+    Assert-Detected $still $mu.Id
+}
+
 foreach ($mu in $mutants) {
     $mm = $module; $mp = $progress; $ma = $accAspx; $mav = $accVb; $ml = $listAspx; $mlv = $listVb; $mc = $css
     switch ($mu.T) {
@@ -347,4 +514,4 @@ foreach ($mu in $mutants) {
     if ($mu.T -eq 'module' -or $mu.T -eq 'progress') { $still = (Test-ModuleMatrix $mm $mp) -and (Test-ModuleStructure $mm) } else { $still = Test-Pages $ma $mav $ml $mlv $mc }
     Assert-Detected $still $mu.Id
 }
-Write-Output ('ACCOUNT_TILES_TEST_PASS mutants=' + $mutants.Count)
+Write-Output ('ACCOUNT_TILES_TEST_PASS mutants=' + ($mutants.Count + $qaMutants.Count))

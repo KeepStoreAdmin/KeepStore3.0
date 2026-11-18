@@ -5,7 +5,7 @@
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-account-1b" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-qa-1a" />
 </asp:Content>
 
 <asp:Content ID="MainContent" ContentPlaceHolderID="MainContent" runat="server">
@@ -37,7 +37,7 @@
                 <asp:SqlDataSource ID="sdsRecentOrders" runat="server"
                     ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
                     ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                    SelectCommand="SELECT vdocumenti.Id, vdocumenti.NDocumento, vdocumenti.DataDocumento, vdocumenti.TotaleDocumento, vdocumenti.StatiDescrizione1, vdocumenti.StatiDescrizione2, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione FROM vdocumenti LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id LEFT JOIN documenti dpay ON dpay.id = vdocumenti.Id WHERE vdocumenti.UtentiId = ?UtentiId AND vdocumenti.AziendeId = ?AziendaId AND EXISTS (SELECT 1 FROM tipodocumenti tdo WHERE tdo.id = vdocumenti.TipoDocumentiId AND tdo.Web = 1 AND tdo.Abilitato = 1 AND tdo.ImpegnaQnt = 1) ORDER BY vdocumenti.ID DESC LIMIT 5">
+                    SelectCommand="SELECT vdocumenti.Id, vdocumenti.NDocumento, vdocumenti.DataDocumento, vdocumenti.StatiId, vdocumenti.TotaleDocumento, vdocumenti.StatiDescrizione1, vdocumenti.StatiDescrizione2, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione FROM vdocumenti LEFT JOIN pagamentitipo ON vdocumenti.PagamentiTipoId = pagamentitipo.id LEFT JOIN documenti dpay ON dpay.id = vdocumenti.Id WHERE vdocumenti.UtentiId = ?UtentiId AND vdocumenti.AziendeId = ?AziendaId AND EXISTS (SELECT 1 FROM tipodocumenti tdo WHERE tdo.id = vdocumenti.TipoDocumentiId AND tdo.Web = 1 AND tdo.Abilitato = 1 AND tdo.ImpegnaQnt = 1) ORDER BY vdocumenti.ID DESC LIMIT 5">
                     <SelectParameters>
                         <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="Int32" />
                         <asp:SessionParameter Name="AziendaId" SessionField="AuthenticatedAziendaID" Type="Int32" />
@@ -69,124 +69,57 @@
                             </nav>
 
                             <asp:FormView ID="fvDashboardProfile" runat="server" DataSourceID="sdsDashboardProfile" RenderOuterTable="false" OnDataBound="fvDashboardProfile_DataBound">
-                                <ItemTemplate>                                    <div class="row g-3 g-xl-4 mb-4">
-                                        <div class="col-12 col-xl-6">
-                                            <div class="ks-dashboard-card h-100">
-                                                <div class="ks-dashboard-card-head">
-                                                    <div>
-                                                        <h4 class="fw-semibold mb-1">Profilo</h4>
-                                                        <p class="body-small text-main-2 mb-0">Dati essenziali del tuo account.</p>
-                                                    </div>
-                                                    <i class="icon-user"></i>
-                                                </div>
-
-                                                <dl class="ks-dashboard-list">
-                                                    <dt>Ragione Sociale / Cognome</dt>
-                                                    <dd><%#: SafeAccountText(Eval("RagioneSociale"), "Non specificato") %></dd>
-                                                    <dt>Nome</dt>
-                                                    <dd><%#: SafeAccountText(Eval("CognomeNome"), "Non specificato") %></dd>
-                                                    <dt>Email / Username</dt>
-                                                    <dd><%#: SafeAccountText(FirstValue(Eval("email"), Eval("Username")), "Non specificato") %></dd>
-                                                    <dt>Telefono</dt>
-                                                    <dd><%#: SafeAccountText(FirstValue(Eval("Cellulare"), Eval("Telefono")), "Non specificato") %></dd>
-                                                    <dt>Codice cliente</dt>
-                                                    <dd><%#: SafeAccountText(Eval("Codice"), "Non specificato") %></dd>
-                                                </dl>
-
-                                                <div class="ks-dashboard-actions">
-                                                    <a href="my-account-edit.aspx" class="tf-btn btn-line">Modifica dati</a>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-xl-6">
-                                            <div class="ks-dashboard-card h-100">
-                                                <div class="ks-dashboard-card-head">
-                                                    <div>
-                                                        <h4 class="fw-semibold mb-1">Indirizzi</h4>
-                                                        <p class="body-small text-main-2 mb-0">Indirizzo principale registrato.</p>
-                                                    </div>
-                                                    <i class="icon-map-pin"></i>
-                                                </div>
-
-                                                <address class="ks-dashboard-address">
-                                                    <span><%#: SafeAccountText(Eval("Indirizzo"), "Indirizzo non specificato") %></span>
-                                                    <span><%#: FormatCityLine(Eval("Cap"), Eval("Citta"), Eval("Provincia")) %></span>
-                                                    <span><%#: SafeAccountText(Eval("Nazione"), "Nazione non specificata") %></span>
-                                                </address>
-
-                                                <div class="ks-dashboard-actions">
-                                                    <a href="my-account-address.aspx" class="tf-btn btn-line">Gestisci indirizzi</a>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <ItemTemplate>
+                                    <div class="ks-account-strip">
+                                        <dl class="ks-account-strip__list">
+                                            <div><dt>Codice cliente</dt><dd><%#: SafeAccountText(Eval("Codice"), "n/d") %></dd></div>
+                                            <div><dt>Email</dt><dd><%#: SafeAccountText(FirstValue(Eval("email"), Eval("Username")), "n/d") %></dd></div>
+                                            <div><dt>Telefono</dt><dd><%#: SafeAccountText(FirstValue(Eval("Cellulare"), Eval("Telefono")), "n/d") %></dd></div>
+                                            <div><dt>Indirizzo principale</dt><dd><%#: SafeAccountText(Eval("Indirizzo"), "n/d") %>, <%#: FormatCityLine(Eval("Cap"), Eval("Citta"), Eval("Provincia")) %></dd></div>
+                                        </dl>
                                     </div>
                                 </ItemTemplate>
-
                             </asp:FormView>
 
-                            <div class="ks-dashboard-card mb-4">
-                                <div class="ks-dashboard-card-head">
-                                    <div>
-                                        <h4 class="fw-semibold mb-1">Ordini recenti</h4>
-                                        <p class="body-small text-main-2 mb-0">Ultimi ordini con stato ordine e stato pagamento separati.</p>
-                                    </div>
+                            <section class="ks-account-recent" aria-labelledby="ksAccountRecentTitle">
+                                <div class="ks-account-recent__head">
+                                    <h4 id="ksAccountRecentTitle" class="fw-semibold mb-0">Ordini recenti</h4>
                                     <a href="documenti.aspx" class="tf-btn btn-line">Vedi tutti gli ordini</a>
                                 </div>
 
-                                <div class="tf-order_history-table ks-dashboard-orders">
-                                    <asp:GridView ID="gvRecentOrders" runat="server"
-                                        AutoGenerateColumns="False"
-                                        DataKeyNames="Id"
-                                        DataSourceID="sdsRecentOrders"
-                                        EmptyDataText="Nessun ordine recente"
-                                        GridLines="None"
-                                        Width="100%"
-                                        CssClass="table_def ks-order-table"
-                                        UseAccessibleHeader="True"
-                                        OnPreRender="gvRecentOrders_PreRender">
-                                        <Columns>
-                                            <asp:TemplateField HeaderText="Numero">
-                                                <ItemTemplate>
-                                                    <span class="body-text-3 fw-semibold"><%#: Eval("NDocumento") %></span>
-                                                </ItemTemplate>
-                                            </asp:TemplateField>
-                                            <asp:TemplateField HeaderText="Data">
-                                                <ItemTemplate>
-                                                    <span class="body-text-3"><%# Eval("DataDocumento", "{0:d}") %></span>
-                                                </ItemTemplate>
-                                            </asp:TemplateField>
-                                            <asp:TemplateField HeaderText="Totale">
-                                                <ItemTemplate>
-                                                    <span class="body-text-3"><%# Eval("TotaleDocumento", "{0:C}") %></span>
-                                                </ItemTemplate>
-                                            </asp:TemplateField>
-                                            <asp:TemplateField HeaderText="Stato ordine">
-                                                <ItemTemplate>
-                                                    <span class="ks-status-badge ks-status-badge-order"><%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
-                                                </ItemTemplate>
-                                            </asp:TemplateField>
-                                            <asp:TemplateField HeaderText="Stato pagamento">
-                                                <ItemTemplate>
-                                                    <div class="ks-order-payment-state">
-                                                        <span class='<%# GetPaymentStatusCssClass(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %>'><%# GetPaymentStatusLabel(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %></span>
-                                                        <span class="body-small text-main-2"><%#: GetPaymentStatusDescription(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb"), Eval("ListaUltimoEsitoPagamentoWeb"), Eval("ListaPagamentoDescrizione")) %></span>
-                                                    </div>
-                                                </ItemTemplate>
-                                            </asp:TemplateField>
-                                            <asp:TemplateField HeaderText="Azione">
-                                                <ItemTemplate>
-                                                    <a href="<%# Eval("Id", "documentidettaglio.aspx?id={0}") %>" class="tf-btn btn-small d-inline-flex">
-                                                        <span class="text-white">Dettaglio</span>
-                                                    </a>
-                                                </ItemTemplate>
-                                            </asp:TemplateField>
-                                        </Columns>
-                                        <HeaderStyle CssClass="title-sidebar fw-medium" />
-                                        <RowStyle CssClass="td-order-item" />
-                                    </asp:GridView>
-                                </div>
-                            </div>
+                                <asp:Repeater ID="rptRecentOrders" runat="server" DataSourceID="sdsRecentOrders">
+                                    <ItemTemplate>
+                                        <article class="ks-doc-card ks-doc-card--compact">
+                                            <header class="ks-doc-card__head">
+                                                <div class="ks-doc-card__title">
+                                                    <a href='<%# Eval("Id", "documentidettaglio.aspx?id={0}") %>'>Ordine n. <%#: Eval("NDocumento") %></a>
+                                                </div>
+                                                <span class="ks-doc-card__date"><%#: KeepStoreDates.ShortDate(Eval("DataDocumento")) %></span>
+                                            </header>
+                                            <div class="ks-doc-card__body">
+                                                <div class="ks-doc-card__cell">
+                                                    <span class="ks-doc-card__k">Stato</span>
+                                                    <span class="ks-status-badge ks-status-badge-order"><%#: SafeAccountText(Eval("StatiDescrizione1"), "Non disponibile") %></span>
+                                                    <%# KeepStoreOrderProgress.MiniProgressHtml(True, RecentStateId(Eval("StatiId"))) %>
+                                                </div>
+                                                <div class="ks-doc-card__cell">
+                                                    <span class="ks-doc-card__k">Totale</span>
+                                                    <span class="ks-doc-card__total"><%# Eval("TotaleDocumento", "{0:C}") %></span>
+                                                </div>
+                                                <div class="ks-doc-card__cell">
+                                                    <span class="ks-doc-card__k">Pagamento</span>
+                                                    <span class='<%# GetPaymentStatusCssClass(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %>'><%#: GetPaymentStatusLabel(Eval("ListaPagato"), Eval("ListaStatoPagamentoWeb")) %></span>
+                                                    <span class="body-small text-main-2"><%#: SafeAccountText(Eval("ListaPagamentoDescrizione"), "") %></span>
+                                                </div>
+                                                <div class="ks-doc-card__cell ks-doc-card__cell--action">
+                                                    <a href='<%# Eval("Id", "documentidettaglio.aspx?id={0}") %>' class="tf-btn btn-small">Dettaglio</a>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </ItemTemplate>
+                                </asp:Repeater>
+                                <p id="pRecentEmpty" runat="server" visible="false" class="body-md-2 text-main-2 mb-0">Non hai ancora ordini. <a href="Default.aspx" class="link">Inizia dagli articoli in evidenza</a>.</p>
+                            </section>
 
                             <section class="ks-account-soon" aria-labelledby="ksAccountSoonTitle">
                                 <h4 id="ksAccountSoonTitle" class="fw-semibold mb-1">In arrivo</h4>

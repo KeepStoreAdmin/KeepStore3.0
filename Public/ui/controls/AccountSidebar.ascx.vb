@@ -116,7 +116,8 @@ Partial Class Public_ui_controls_AccountSidebar
 
     Private Function IsAccountArea(pageName As String) As Boolean
         Select Case (pageName & "").ToLowerInvariant()
-            Case "myaccount.aspx",
+            ' KS-QA-BROWSER-1A: nel pannello (myaccount.aspx) il menu non si mostra: i riquadri sono gia la navigazione.
+            Case "datiutente.aspx",
                  "datiutente.aspx",
                  "my-account-edit.aspx",
                  "my-account-address.aspx",

@@ -103,14 +103,14 @@ Partial Class myaccount
         Me.Title = Me.Title & " - Area personale"
     End Sub
 
-    Protected Sub gvRecentOrders_PreRender(ByVal sender As Object, ByVal e As System.EventArgs)
-        If gvRecentOrders.Rows.Count > 0 Then
-            gvRecentOrders.UseAccessibleHeader = True
-            If gvRecentOrders.HeaderRow IsNot Nothing Then
-                gvRecentOrders.HeaderRow.TableSection = System.Web.UI.WebControls.TableRowSection.TableHeader
-            End If
-        End If
+    ' KS-QA-BROWSER-1A: gli ordini recenti sono schede (la tabella a 6 colonne si sovrapponeva e su telefono mostrava solo due colonne).
+    Protected Sub rptRecentOrders_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles rptRecentOrders.PreRender
+        pRecentEmpty.Visible = (rptRecentOrders.Items.Count = 0)
     End Sub
+
+    Protected Function RecentStateId(ByVal value As Object) As Integer
+        Return SafeInt(value, 0)
+    End Function
 
     Protected Function GetDashboardGreeting(ByVal ragioneSocialeObj As Object,
                                             ByVal cognomeNomeObj As Object,

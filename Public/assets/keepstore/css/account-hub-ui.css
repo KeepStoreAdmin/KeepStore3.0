@@ -368,3 +368,81 @@ a.ks-account-tile:focus-visible {
         grid-template-columns: 1.1fr .8fr 1.3fr 1.2fr;
     }
 }
+
+/* ---------- KS-QA-BROWSER-1A: striscia dei dati dell'account e ordini recenti a schede nel pannello ---------- */
+.ks-account-strip {
+    margin-bottom: 24px;
+    padding: 14px 16px;
+    background: #f7f7f7;
+}
+
+.ks-account-strip__list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px 24px;
+    margin: 0;
+}
+
+.ks-account-strip__list dt {
+    color: #595959;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.ks-account-strip__list dd {
+    margin: 0;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.ks-account-recent {
+    margin-bottom: 8px;
+}
+
+.ks-account-recent__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ks-account-recent__head .tf-btn {
+    min-height: 44px;
+}
+
+.ks-doc-card--compact {
+    margin-bottom: 12px;
+}
+
+.ks-doc-card--compact .ks-doc-card__body {
+    padding-bottom: 0;
+}
+
+.ks-doc-card__cell--action {
+    justify-content: center;
+}
+
+.ks-doc-card__cell--action .tf-btn {
+    min-height: 44px;
+    min-width: 120px;
+}
+
+@media (min-width: 576px) {
+    .ks-account-strip__list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .ks-account-strip__list {
+        grid-template-columns: .8fr 1.4fr .9fr 1.6fr;
+    }
+
+    .ks-doc-card--compact .ks-doc-card__body {
+        grid-template-columns: 1.3fr .7fr 1.3fr auto;
+        align-items: center;
+    }
+}

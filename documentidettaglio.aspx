@@ -97,7 +97,7 @@
                             <div class="ks-confirm-overview" aria-label="Dati principali ordine">
                                 <div>
                                     <span>Data ordine</span>
-                                    <strong><%# Eval("DataDocumento", "{0:d}") %></strong>
+                                    <strong><%#: KeepStoreDates.ShortDate(Eval("DataDocumento")) %></strong>
                                 </div>
                                 <div>
                                     <span>Numero ordine</span>

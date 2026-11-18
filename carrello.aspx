@@ -5,6 +5,10 @@
 
 
 
+<asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
+    Carrello
+</asp:Content>
+
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261117-pay-guide-2a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>

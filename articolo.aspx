@@ -2,7 +2,7 @@
 <%@ Register Src="~/Public/ui/controls/Breadcrumb.ascx" TagPrefix="ks" TagName="Breadcrumb" %>
 
 <asp:Content ID="TitleContent1" ContentPlaceHolderID="TitleContent" runat="server">
-    <%= If(litNome IsNot Nothing AndAlso Not String.IsNullOrEmpty(litNome.Text), Server.HtmlEncode(litNome.Text), "Prodotto") %>
+    <%= If(litNome IsNot Nothing AndAlso Not String.IsNullOrEmpty(litNome.Text), Server.HtmlEncode(Server.HtmlDecode(litNome.Text)), "Prodotto") %>
 </asp:Content>
 
 <asp:Content ID="HeadContent1" ContentPlaceHolderID="HeadContent" runat="server">

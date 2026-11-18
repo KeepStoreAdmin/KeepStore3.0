@@ -248,3 +248,159 @@ body.ks-page-password .ks-account-main > table td:first-child {
         font-size: .875rem;
     }
 }
+
+/* ------------------------------------------------------------
+   KS-QA-BROWSER-1A - menu dell'area cliente (AccountSidebar.ascx)
+   Prima era senza stile: un elenco nudo accanto ai contenuti. Stile piatto: fondo bianco, ombra morbida, voce attiva col colore principale.
+   Nel pannello (myaccount.aspx) il menu non c'e: i riquadri sono gia la navigazione, quindi la colonna sparisce.
+   ------------------------------------------------------------ */
+body.ks-page-account .ks-account-aside:not(:has(.ks-account-card)) {
+  display: none;
+}
+
+.ks-account-card {
+  background: #fff;
+  box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .1);
+}
+
+.ks-account-card-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.ks-account-avatar {
+  display: flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--primary, #D80027);
+  color: #fff;
+  font-size: 20px;
+}
+
+.ks-account-card-head .text-muted {
+  color: #595959 !important;
+}
+
+.ks-account-card-body {
+  padding: 8px 0;
+}
+
+.ks-account-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ks-account-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border-left: 3px solid transparent;
+  color: var(--gray, #333e48);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+/* Le icone del menu usano glifi che il carattere del tema non ha tutte: si mostrano solo testo e stato. */
+.ks-account-nav-link > i {
+  display: none;
+}
+
+.ks-account-nav-link:hover,
+.ks-account-nav-link:focus-visible {
+  background: #f6f6f6;
+  color: var(--primary, #D80027);
+}
+
+.ks-account-nav-link.active,
+.ks-account-nav-link[aria-current="page"] {
+  border-left-color: var(--primary, #D80027);
+  background: #fdf1f3;
+  color: var(--primary, #D80027);
+  font-weight: 600;
+}
+
+@media (max-width: 991.98px) {
+  body.ks-page-account .ks-account-shell {
+    gap: 12px;
+  }
+
+  .ks-account-card-head {
+    display: none;
+  }
+
+  .ks-account-card-body {
+    padding: 0;
+  }
+
+  /* Su telefono e tablet il menu e una riga di voci che scorre in orizzontale. */
+  .ks-account-nav-list {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .ks-account-nav-list > li {
+    flex: 0 0 auto;
+  }
+
+  .ks-account-nav-link {
+    padding: 10px 14px;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+  }
+
+  .ks-account-nav-link.active,
+  .ks-account-nav-link[aria-current="page"] {
+    border-bottom-color: var(--primary, #D80027);
+  }
+}
+
+/* KS-QA-BROWSER-1A - pulsanti resi come <input> (asp:Button).
+   Il tema ha "form input[type=button|submit] { background-color: transparent; padding: 0 }" e tutta la pagina WebForms sta dentro un <form>:
+   quella regola vinceva su .tf-btn e il pulsante restava bianco con testo bianco e alto 28 px (Login, Filtra, Invia messaggio...).
+   Questo foglio e caricato da Page.master su ogni pagina ma PRIMA del tema: la classe ripetuta alza la specificita e la regola vale comunque. */
+form input.tf-btn.tf-btn {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  background-color: var(--primary, #D80027);
+  color: var(--white, #fff);
+  cursor: pointer;
+}
+
+form input.tf-btn.tf-btn:hover {
+  background-color: var(--gray, #333e48);
+}
+
+form input.tf-btn.tf-btn.btn-line,
+form input.tf-btn.tf-btn.btn-line-white {
+  border: 1px solid currentColor;
+  background-color: transparent;
+  color: var(--gray, #333e48);
+}
+
+form input.tf-btn.tf-btn.btn-line:hover {
+  background-color: var(--gray, #333e48);
+  color: var(--white, #fff);
+}
+
+form input.tf-btn.tf-btn.btn-gray,
+form input.tf-btn.tf-btn.btn-gray-2 {
+  background-color: #ececec;
+  color: var(--gray, #333e48);
+}
+
+form input.tf-btn.tf-btn:disabled,
+form input.tf-btn.tf-btn[disabled] {
+  opacity: .6;
+  cursor: not-allowed;
+}

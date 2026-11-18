@@ -77,7 +77,7 @@ function Render-Card([hashtable]$d) {
     $c = [regex]::Replace($c, '(?s)<asp:HyperLink ID="hlListaPagaAdesso".*?/>', $(if ($d.Pay) { '<a class="tf-btn btn-small d-inline-flex ks-pay-now__btn" href="#">Paga adesso</a>' } else { '' }))
     $map = [ordered]@{
         '<%#: Eval("TipoDocumentiDescrizione") %>' = $d.Type
-        '<%# Eval("DataDocumento", "{0:d}") %>' = '17/11/2026'
+        '<%#: KeepStoreDates.ShortDate(Eval("DataDocumento")) %>' = '17/11/2026'
         '<%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %>' = $d.State
         '<%# ListProgressHtml(Eval("ListaOrdineWeb"), Eval("StatiId")) %>' = $probe.Mini([bool]$d.IsOrder, [int]$d.StatiId)
         '<%# Eval("TotaleDocumento", "{0:C}") %>' = '1.234,56 &euro;'

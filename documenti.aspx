@@ -6,7 +6,7 @@
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-pay-now-1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-account-1b" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-qa-1a" />
     <style>
         .ks-myaccount .ks-document-date {
             min-width: 0;
@@ -355,7 +355,7 @@
                                     ToolTip='<%# "Visualizza Dettagli " & Eval("tipodocumentidescrizione") %>'>
                                 </asp:HyperLink>
                             </div>
-                            <span class="ks-doc-card__date"><%# Eval("DataDocumento", "{0:d}") %></span>
+                            <span class="ks-doc-card__date"><%#: KeepStoreDates.ShortDate(Eval("DataDocumento")) %></span>
                         </header>
 
                         <div class="ks-doc-card__body">

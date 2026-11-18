@@ -806,7 +806,7 @@ End Sub
                 documentId = Convert.ToInt32(reader("id"), CultureInfo.InvariantCulture)
                 documentType = Convert.ToInt32(reader("TipoDocumentiId"), CultureInfo.InvariantCulture)
                 documentNumber = Convert.ToInt64(reader("NDocumento"), CultureInfo.InvariantCulture)
-                documentDate = Convert.ToString(reader("DataDocumento"), CultureInfo.InvariantCulture)
+                documentDate = KeepStoreDates.IsoText(reader("DataDocumento"))
             End Using
         End Using
 
@@ -1458,7 +1458,7 @@ CheckoutFailureRecoveryService.TracePhase(
                         If dr.Read() Then
                             matchedDocuments += 1
                             id = Convert.ToInt32(dr("id"))
-                            DataDoc = dr("DataDocumento").ToString()
+                            DataDoc = KeepStoreDates.IsoText(dr("DataDocumento"))
                         End If
                         If dr.Read() Then matchedDocuments += 1
                         If matchedDocuments <> 1 OrElse id <= 0 Then
@@ -1976,7 +1976,7 @@ CheckoutFailureRecoveryService.TracePhase(
                 recipientName = DbText(drTestata, "cognomenome")
                 recipientEmail = DbText(drTestata, "Email")
                 numeroDocumento = DbText(drTestata, "NDocumento")
-                dataDocumento = DbText(drTestata, "DataDocumento")
+                dataDocumento = KeepStoreDates.IsoText(drTestata.Item("DataDocumento"))
                 dataDocumentoDisplay = FormatDocumentDate(dataDocumento)
                 clienteRiepilogo = JoinNonEmpty(" - ",
                                                JoinNonEmpty(", ", DbText(drTestata, "RagioneSociale"), DbText(drTestata, "cognomenome")),
@@ -1992,7 +1992,7 @@ CheckoutFailureRecoveryService.TracePhase(
                 pagamentoInformazioni = DbText(drTestata, "PagamentiTipoInformazioni")
 
                 StrCarrello = "<br><br><table cellpadding=3 cellspacing=3  border=0 bordercolor=silver style='font-family:arial;font-size:9pt;'>" &
-                        "<tr><td bgcolor=whitesmoke><b>" & documento & ":</td><td colspan=2><b>n° " & drTestata.Item("NDocumento") & " del " & drTestata.Item("DataDocumento") & "</td></tr>" &
+                        "<tr><td bgcolor=whitesmoke><b>" & documento & ":</td><td colspan=2><b>n° " & drTestata.Item("NDocumento") & " del " & KeepStoreDates.ShortDate(drTestata.Item("DataDocumento")) & "</td></tr>" &
                         "<tr><td bgcolor=whitesmoke valign=top>Cliente:</td><td>" & drTestata.Item("RagioneSociale") & "<br>" & drTestata.Item("Indirizzo") & "<br>" & drTestata.Item("citta") & "<br>" & drTestata.Item("Cap") & " " & drTestata.Item("provincia") & "</td><td>" & drTestata.Item("cognomenome") & "<br>Codice: " & drTestata.Item("codice") & "<br>P.Iva: " & drTestata.Item("piva") & "<br>C.F: " & drTestata.Item("codicefiscale") & "</td></tr>" &
                         "<tr><td bgcolor=whitesmoke valign=top>Recapiti:</td><td>Tel: " & drTestata.Item("Telefono") & "<br>Fax: " & drTestata.Item("Fax") & "</td><td>Cell: " & drTestata.Item("Cellulare") & "<br>Email: " & drTestata.Item("Email") & "</td></tr>"
 
@@ -2287,7 +2287,7 @@ CheckoutFailureRecoveryService.TracePhase(
                             numeroDocumentoTesto = DbText(dr, "NDocumento")
                         End If
                         If String.IsNullOrWhiteSpace(dataDisplay) Then
-                            dataDisplay = FormatDocumentDate(DbText(dr, "DataDocumento"))
+                            dataDisplay = FormatDocumentDate(KeepStoreDates.IsoText(dr.Item("DataDocumento")))
                         End If
                         statoDocumento = JoinNonEmpty(" - ", DbText(dr, "StatiDescrizione1"), DbText(dr, "StatiDescrizione2"))
                         receiptAziendaId = Convert.ToInt32(dr("AziendeId"), CultureInfo.InvariantCulture)
@@ -3057,6 +3057,14 @@ CheckoutFailureRecoveryService.TracePhase(
     Private Function FormatDocumentDate(ByVal value As String) As String
         If String.IsNullOrWhiteSpace(value) Then
             Return ""
+        End If
+
+        ' KS-QA-BROWSER-1A: le date arrivano come testo senza ambiguita (KeepStoreDates.IsoText). Prima il testo del connettore (mese/giorno) era letto
+        ' come giorno/mese: la conferma mostrava 11/18/2026 00:00:00 e, con giorno fino a 12, avrebbe scambiato giorno e mese.
+        Dim exact As DateTime
+        If DateTime.TryParseExact(value.Trim(), New String() {"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"}, CultureInfo.InvariantCulture, DateTimeStyles.None, exact) Then
+            If exact = DateTime.MinValue Then Return ""
+            Return exact.ToString(If(exact.TimeOfDay = TimeSpan.Zero, "dd/MM/yyyy", "dd/MM/yyyy HH:mm"), CultureInfo.InvariantCulture)
         End If
 
         Dim parsed As DateTime
