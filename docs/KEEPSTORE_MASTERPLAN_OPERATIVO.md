@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-QA-BROWSER-1B — 18/11/2026 — SOURCE (carrello, uscita e nome «La tua Dashboard» dopo il giro di prova del PO)
+
+**Esito: A (SOURCE, non pubblicato). Livello S (difetti riprodotti, presentazione). PR [#547](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/547), stable `641a345d2523c1c9b6cb1dc320c80621e887d754`.** Nessun dato commerciale toccato.
+
+**Fatti e causa.** (1) Contatore del carrello e dei preferiti invisibile su desktop sotto i 1400 px: i segnaposto avevano le classi `d-none d-xxl-flex`; lo script aggiornava un numero nascosto. (2) Giacenza doppia nel carrello: il code-behind rendeva visibile il campo tecnico `lblDispo` (vecchio ramo `DispoTipo = 2`) accanto al riquadro disponibilita. (3) Nota «Prezzi IVA inclusa / esclusa» presente ma a 7 punti (80 x 10 px): ora 13 px accanto al conteggio degli articoli. (4) `logout.aspx` era un titolo e una riga senza contenitore: rifatta; la chiusura della sessione era gia corretta (verificata nel browser: intestazione e carrello azzerati, `noindex`). (5) Nome dell'area cliente: «La tua Dashboard» (decisione del PO) in intestazione, menu del telefono, pie di pagina, briciole e titoli.
+
+**Revisioni.** ChatGPT: non richiesta. Claude: non richiesta. Gate di certezza: non applicabile (livello S).
+
+**Prove.** `Tools/Test-QaBrowser1B.ps1` rosso prima e verde dopo, 14 mutanti; browser reale a 1280 e 390 px con l'utente di prova; precompile e segreti PASS; 38 test correlati (`Test-FocusVisible` aggiornato per la nuova sigla di `cart-ui.css`); CI verde sullo SHA esatto.
+
+**Limiti e residuo (NON AVVIATO).** Dopo l'uscita, `myaccount.aspx` porta a `accessonegato.aspx` e non alla pagina di accesso: da trattare in `AUTH-STAY-SIGNED-IN-1A`. L'uscita avviene con una semplice GET. Coda delle richieste del PO del 2026-11-18 in Roadmap (voce 39). **Alla consegna futura:** `Public/ui/controls/SiteHeader.ascx`, `SiteFooter.ascx`, `AccountSidebar.ascx`, `carrello.aspx` e `.vb`, `css/cart-ui.css`, `logout.aspx`, `myaccount.aspx` e `.vb`, e le pagine con la briciola rinominata. CONSEGNA SERVER SOSPESA.
 ## KS-QA-BROWSER-1A — 18/11/2026 — SOURCE (giro di prova nel browser reale e correzione dei difetti trovati)
 
 **Esito: A (SOURCE, non pubblicato). Livello S (difetti riprodotti, presentazione). PR [#546](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/546).** Richiesta del PO (2026-11-18): provare il sito con e senza login, desktop e telefono, con l'utente di prova, fino all'ordine; rifare `login.aspx`. Prova fatta con Edge pilotato (`Tools/KeepStoreBrowserDriver.ps1`) sul sito locale `:8443` forzato a 127.0.0.1, database online su mandato esplicito del PO; inviato UN ordine di prova, n. 345 (bonifico, 44,49 euro).
