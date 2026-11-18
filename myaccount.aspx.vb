@@ -103,15 +103,6 @@ Partial Class myaccount
         Me.Title = Me.Title & " - La tua Dashboard"
     End Sub
 
-    ' KS-QA-BROWSER-1A: gli ordini recenti sono schede (la tabella a 6 colonne si sovrapponeva e su telefono mostrava solo due colonne).
-    Protected Sub rptRecentOrders_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles rptRecentOrders.PreRender
-        pRecentEmpty.Visible = (rptRecentOrders.Items.Count = 0)
-    End Sub
-
-    Protected Function RecentStateId(ByVal value As Object) As Integer
-        Return SafeInt(value, 0)
-    End Function
-
     Protected Function GetDashboardGreeting(ByVal ragioneSocialeObj As Object,
                                             ByVal cognomeNomeObj As Object,
                                             ByVal usernameObj As Object) As String
@@ -151,98 +142,6 @@ Partial Class myaccount
 
         If text = "" Then Return "Localita non specificata"
         Return text
-    End Function
-
-    Protected Function FormatOrderStatus(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
-        Dim stato1 As String = SafeStatusText(stato1Obj)
-        Dim stato2 As String = SafeStatusText(stato2Obj)
-
-        If stato1 = "" Then Return If(stato2 = "", "Non disponibile", stato2)
-        If stato2 = "" Then Return stato1
-        Return (stato1 & " " & stato2).Trim()
-    End Function
-
-    Protected Function GetPaymentStatusLabel(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
-        Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, -1)
-
-        If pagato = 1 OrElse stato = 2 Then Return "Pagato"
-
-        Select Case stato
-            Case 1
-                Return "In verifica PayPal"
-            Case 3
-                Return "Non completato"
-            Case 4
-                Return "Annullato dall'utente"
-            Case 5
-                Return "In verifica"
-            Case 0
-                Return "Non avviato"
-            Case Else
-                Return "Non verificabile"
-        End Select
-    End Function
-
-    Protected Function GetPaymentStatusCssClass(ByVal pagatoObj As Object, ByVal statoObj As Object) As String
-        Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, 0)
-        Dim baseClass As String = "ks-status-badge "
-
-        If pagato = 1 OrElse stato = 2 Then Return baseClass & "is-success"
-
-        Select Case stato
-            Case 1, 5
-                Return baseClass & "is-warning"
-            Case 3
-                Return baseClass & "is-danger"
-            Case 4
-                Return baseClass & "is-canceled"
-            Case Else
-                Return baseClass & "is-muted"
-        End Select
-    End Function
-
-    Protected Function GetPaymentStatusDescription(ByVal pagatoObj As Object,
-                                                   ByVal statoObj As Object,
-                                                   ByVal esitoObj As Object,
-                                                   ByVal pagamentoObj As Object) As String
-        Dim pagato As Integer = SafeInt(pagatoObj, 0)
-        Dim stato As Integer = SafeInt(statoObj, -1)
-        If pagato <> 1 AndAlso (stato < 0 OrElse stato > 5) Then Return "Stato del pagamento non verificabile."
-
-        Dim esito As String = SafePaymentMessage(esitoObj)
-        If esito <> "" Then Return esito
-
-        Dim pagamento As String = SafeStatusText(pagamentoObj)
-
-        If pagato = 1 OrElse stato = 2 Then Return "Pagamento confermato."
-
-        Select Case stato
-            Case 1
-                Return "Pagamento in attesa di conferma dal gateway."
-            Case 3
-                Return "Pagamento non completato."
-            Case 4
-                Return "Pagamento annullato dall'utente."
-            Case 5
-                Return "Pagamento in verifica."
-            Case Else
-                If pagamento <> "" Then Return "Metodo: " & pagamento
-                Return "Pagamento non ancora avviato."
-        End Select
-    End Function
-
-    Private Function SafePaymentMessage(ByVal value As Object) As String
-        Dim text As String = SafeStatusText(value)
-        If text = "" Then Return ""
-
-        Dim lower As String = text.ToLowerInvariant()
-        If lower.Contains("ec-token") OrElse lower.Contains("token=") OrElse lower.Contains("signature") OrElse lower.Contains("pwd") Then
-            Return "Dettaglio pagamento disponibile nel documento."
-        End If
-
-        Return TruncateText(text, 90)
     End Function
 
     Private Function SafeStatusText(ByVal value As Object) As String

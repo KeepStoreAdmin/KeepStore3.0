@@ -32,6 +32,7 @@ $facade = Read-RepoFile 'App_Code\TenantEmailDeliveryService.vb'
 $transport = Read-RepoFile 'App_Code\MailKitEmailTransport.vb'
 $documents = Read-RepoFile 'documenti.aspx.vb'
 $documentsMarkup = Read-RepoFile 'documenti.aspx'
+$documentsFilters = Read-RepoFile 'App_Code/KeepStoreAccountOrderFilters.vb'
 $documentDetail = Read-RepoFile 'documentidettaglio.aspx.vb'
 $canonicalProcedure = Read-RepoFile 'Database Taikun\Migrations\20260911_ORDER_INVENTORY_ATOMIC_RESERVATION_1A_forward.sql'
 
@@ -46,8 +47,8 @@ Assert-Source ($durable -match 'Public Property AziendaId As Integer') 'IDEMPOTE
 Assert-Source ($durable -match 'record\.AziendaId <> aziendaId') 'IDEMPOTENCY_REPLAY_COMPANY_GUARD'
 Assert-Source ($durable -match 'd\.AziendeId=\?aziendaId') 'IDEMPOTENCY_COMPLETION_DOCUMENT_COMPANY_GUARD'
 Assert-Source ($order -match 'vd\.AziendeId=\?aziendaId AND vd\.UtentiId=\?utentiId') 'CONFIRMATION_RECEIPT_OWNER_COMPANY_GUARD'
-Assert-Source ($documents -match 'vdocumenti.*AziendeId') 'DOCUMENT_LIST_COMPANY_GUARD'
-Assert-Source ($documentsMarkup -match 'vdocumenti.*AziendeId.*AziendaId') 'DOCUMENT_LIST_INITIAL_QUERY_COMPANY_GUARD'
+Assert-Source ($documentsFilters -match 'vdocumenti.*AziendeId.*=\?AziendaId' -and $documents -match 'identity\.CompanyId') 'DOCUMENT_LIST_COMPANY_GUARD'
+Assert-Source ($documentsMarkup -match 'WHERE 1=0' -and $documentsMarkup -notmatch 'SessionParameter') 'DOCUMENT_LIST_INITIAL_QUERY_CLOSED'
 Assert-Source ($documentDetail -match 'UtentiId=@uid AND AziendeId=@aziendaId') 'DOCUMENT_DETAIL_COMPANY_GUARD'
 Assert-Source ($canonicalProcedure -match 'SELECT MAX\(ndocumento\).*documenti' -or $canonicalProcedure -match '(?s)SELECT MAX\(ndocumento\).*FROM documenti') 'DOCUMENT_NUMBER_GLOBAL_SOURCE'
 $numberingSlice = [regex]::Match($canonicalProcedure, '(?s)SELECT MAX\(ndocumento\).*?INTO ndoc').Value

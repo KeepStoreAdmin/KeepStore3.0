@@ -120,10 +120,12 @@ Partial Class documenti
             End If
 
             If HasDocumentFiltersRequest() Then
-                ApplyFiltersFromRequest()
+                ApplyFilterControlsFromRequest()
             End If
         End If
 
+        ' KS-DASHBOARD-ORDERS-1B: comando e parametri a OGNI richiesta (anche il postback della paginazione): il comando non e persistito nel ViewState.
+        ConfigureSelectFromRequest()
     End Sub
 
     '==============================================================
@@ -183,55 +185,21 @@ Partial Class documenti
 
     Sub aggiungiStato(sender As Object, e As EventArgs)
         filtroStati.Items.Insert(0, New ListItem("Qualsiasi stato", "-1"))
-        TrySetListValue(filtroStati, SafeFilterValue(Request.QueryString("stato"), "-1"))
+        TrySetListValue(filtroStati, KeepStoreAccountOrderFilters.SafeStato(Request.QueryString("stato")).ToString(System.Globalization.CultureInfo.InvariantCulture))
     End Sub
 
     '==============================================================
-    ' FILTRO RAPIDO (ultima settimana, ultimo mese, ecc.)
+    ' FILTRI: tipo, stato, periodo e date arrivano SEMPRE dalla query string e si validano con il modulo puro.
+    ' Il SelectCommand NON e persistito nel ViewState (a ogni richiesta torna quello del markup, che non restituisce righe) mentre SelectParameters si:
+    ' per questo comando e parametri si impostano a ogni richiesta e i valori tipizzati entrano in sdsDocumenti_Selecting, mai nel ViewState.
     '==============================================================
-    Sub filtroDataRapido(sender As Object, e As EventArgs) Handles filtroTempo.SelectedIndexChanged
-
-        Dim v As Integer = filtroTempo.SelectedValue
-
-        dataFine.Text = Format(Date.Now, "dd-MM-yyyy")
-
-        If (v = -1) Then
-            dataInizio.Text = ""
-        End If
-
-        If (v = 7) Then
-            dataInizio.Text = Format(Date.Now.AddDays(-7), "dd-MM-yyyy")
-        End If
-
-        If (v = 30) Then
-            dataInizio.Text = Format(Date.Now.AddDays(-30), "dd-MM-yyyy")
-        End If
-
-        If (v = 60) Then
-            dataInizio.Text = Format(Date.Now.AddDays(-60), "dd-MM-yyyy")
-        End If
-
-        If (v = 90) Then
-            dataInizio.Text = Format(Date.Now.AddDays(-90), "dd-MM-yyyy")
-        End If
-
-        Session("filtroDocumentoDataInizio") = dataInizio.Text
-        Session("filtroDocumentoDataFine") = dataFine.Text
-
-        applicaFiltri(Nothing, Nothing)
-
-    End Sub
-
-    '==============================================================
-    ' APPLICA FILTRI (date + stato) → aggiorna sdsDocumenti
-    '==============================================================
-    
-    Private Function TryParseDDMMYYYY(ByVal raw As String, ByRef dt As DateTime) As Boolean
-        If raw Is Nothing Then Return False
-        raw = raw.Trim()
-        If raw = "" Then Return False
-        Return DateTime.TryParseExact(raw, "dd-MM-yyyy", System.Globalization.CultureInfo.GetCultureInfo("it-IT"), System.Globalization.DateTimeStyles.None, dt)
-    End Function
+    Private _listReady As Boolean = False
+    Private _listTipo As Integer = 0
+    Private _listStato As Integer = -1
+    Private _listHasDal As Boolean = False
+    Private _listHasAl As Boolean = False
+    Private _listDal As DateTime = DateTime.MinValue
+    Private _listAl As DateTime = DateTime.MinValue
 
     Private Function HasDocumentFiltersRequest() As Boolean
         Return Request.QueryString("stato") IsNot Nothing OrElse
@@ -240,140 +208,79 @@ Partial Class documenti
                Request.QueryString("al") IsNot Nothing
     End Function
 
-    Private Sub ApplyFiltersFromRequest()
-        Dim tipoDocumentoId As Integer = SafeTipoDocumentoId
-        Dim idStato As Integer = SafeFilterInt(Request.QueryString("stato"), -1)
-        Dim tempo As Integer = SafeTempoFilter(Request.QueryString("tempo"))
-        Dim hasInizio As Boolean = False
-        Dim inizio As DateTime
-        Dim fine As DateTime = DateTime.Now
+    Private Sub ReadRangeFromRequest(ByRef tempo As Integer, ByRef dal As DateTime, ByRef al As DateTime, ByRef hasDal As Boolean, ByRef hasAl As Boolean)
+        tempo = KeepStoreAccountOrderFilters.SafeTempo(Request.QueryString("tempo"))
+        KeepStoreAccountOrderFilters.ResolveRange(tempo, Request.QueryString("dal"), Request.QueryString("al"), DateTime.Now, dal, al, hasDal, hasAl)
+    End Sub
 
+    ' Primo caricamento: i controlli mostrano soltanto cio che sta nella query string; con un periodo rapido le date restano vuote.
+    Private Sub ApplyFilterControlsFromRequest()
+        Dim tempo As Integer, dal As DateTime, al As DateTime, hasDal As Boolean, hasAl As Boolean
+        ReadRangeFromRequest(tempo, dal, al, hasDal, hasAl)
         TrySetListValue(filtroTempo, tempo.ToString(System.Globalization.CultureInfo.InvariantCulture))
-
-        If tempo > 0 Then
-            inizio = DateTime.Now.AddDays(-tempo)
-            fine = DateTime.Now
-            hasInizio = True
-        Else
-            hasInizio = TryParseDDMMYYYY(Convert.ToString(Request.QueryString("dal")), inizio)
-
-            Dim tmpFine As DateTime
-            If TryParseDDMMYYYY(Convert.ToString(Request.QueryString("al")), tmpFine) Then
-                fine = tmpFine
-            End If
+        If tempo <= 0 Then
+            If hasDal Then dataInizio.Text = KeepStoreAccountOrderFilters.FormatFilterDate(dal)
+            If hasAl Then dataFine.Text = KeepStoreAccountOrderFilters.FormatFilterDate(al)
         End If
+    End Sub
 
-        If hasInizio Then
-            dataInizio.Text = inizio.ToString("dd-MM-yyyy")
-            dataFine.Text = fine.ToString("dd-MM-yyyy")
-            Session("filtroDocumentoDataInizio") = dataInizio.Text
-            Session("filtroDocumentoDataFine") = dataFine.Text
-        End If
-
-        ConfigureDocumentSelect(tipoDocumentoId, idStato, hasInizio, inizio, fine)
+    Private Sub ConfigureSelectFromRequest()
+        Dim tempo As Integer, dal As DateTime, al As DateTime, hasDal As Boolean, hasAl As Boolean
+        ReadRangeFromRequest(tempo, dal, al, hasDal, hasAl)
+        ConfigureDocumentSelect(SafeTipoDocumentoId, KeepStoreAccountOrderFilters.SafeStato(Request.QueryString("stato")), hasDal, dal, hasAl, al)
     End Sub
 
     Private Sub ConfigureDocumentSelect(ByVal tipoDocumentoId As Integer,
                                         ByVal idStato As Integer,
-                                        ByVal hasInizio As Boolean,
-                                        ByVal inizio As DateTime,
-                                        ByVal fine As DateTime)
-        ' Base query (con filtri aggiunti SOLO se validi)
-        Dim strSql As String = ""
-        strSql &= "SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, "
-        strSql &= "COALESCE(dpay.Pagato,0) AS ListaPagato, "
-        strSql &= "COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, "
-        strSql &= "dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, "
-        strSql &= "COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, "
-        strSql &= "COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, "
-        strSql &= "COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline, "
-        strSql &= "CASE WHEN ltd.Web=1 AND ltd.Abilitato=1 AND ltd.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ListaOrdineWeb "
-        strSql &= "FROM `vdocumenti` "
-        strSql &= "LEFT JOIN `tipodocumenti` ltd ON ltd.`id` = `vdocumenti`.`TipoDocumentiId` "
-        strSql &= "LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` "
-        strSql &= "LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` "
-        strSql &= "LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` "
-        strSql &= "LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` "
-        Dim utentiId As Long = CurrentOrderIdentity.UtentiId
-        Dim aziendaId As Integer = CurrentOrderIdentity.CompanyId
-        strSql &= "WHERE ((`vdocumenti`.`UtentiId`=" & utentiId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ") AND (`vdocumenti`.`AziendeId`=" & aziendaId.ToString(System.Globalization.CultureInfo.InvariantCulture) & ") AND (`vdocumenti`.`TipoDocumentiId`=" & tipoDocumentoId.ToString(System.Globalization.CultureInfo.InvariantCulture) & "))"
-
-        ' Stato
-        If idStato > -1 Then
-            strSql &= " AND (`vdocumenti`.`StatiId`=" & idStato.ToString(System.Globalization.CultureInfo.InvariantCulture) & ")"
-        End If
-
-        ' Date range (formato dd-MM-yyyy)
-        If hasInizio Then
-            strSql &= " AND (`vdocumenti`.`DataDocumento` >= '" & inizio.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) & "')"
-            strSql &= " AND (`vdocumenti`.`DataDocumento` <= '" & fine.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) & "')"
-        End If
-
-        strSql &= " ORDER BY `vdocumenti`.`ID` DESC"
-
-        sdsDocumenti.SelectCommand = strSql
-
+                                        ByVal hasDal As Boolean,
+                                        ByVal dal As DateTime,
+                                        ByVal hasAl As Boolean,
+                                        ByVal al As DateTime)
+        sdsDocumenti.SelectCommand = KeepStoreAccountOrderFilters.BuildListSql(idStato > -1, hasDal, hasAl)
         sdsDocumenti.SelectParameters.Clear()
+        _listTipo = tipoDocumentoId
+        _listStato = idStato
+        _listHasDal = hasDal
+        _listDal = dal
+        _listHasAl = hasAl
+        _listAl = al
+        _listReady = True
     End Sub
 
-Sub applicaFiltri(sender As Object, e As EventArgs)
+    ' Parametri tipizzati: utente e azienda SOLO dall'identita verificata dell'host; senza identita completa o senza configurazione la lettura e annullata.
+    Protected Sub sdsDocumenti_Selecting(ByVal sender As Object, ByVal e As System.Web.UI.WebControls.SqlDataSourceSelectingEventArgs) Handles sdsDocumenti.Selecting
+        Dim identity As OrderStorefrontIdentity = CurrentOrderIdentity
+        If Not _listReady OrElse identity Is Nothing OrElse Not identity.IsComplete Then
+            e.Cancel = True
+            Return
+        End If
+        Dim parameters As System.Data.Common.DbParameterCollection = e.Command.Parameters
+        parameters.Add(New MySqlParameter("?UtentiId", MySqlDbType.Int64) With {.Value = identity.UtentiId})
+        parameters.Add(New MySqlParameter("?AziendaId", MySqlDbType.Int32) With {.Value = identity.CompanyId})
+        parameters.Add(New MySqlParameter("?TipoDocumentiId", MySqlDbType.Int32) With {.Value = _listTipo})
+        If _listStato > -1 Then parameters.Add(New MySqlParameter("?Stato", MySqlDbType.Int32) With {.Value = _listStato})
+        If _listHasDal Then parameters.Add(New MySqlParameter("?Dal", MySqlDbType.Date) With {.Value = _listDal})
+        If _listHasAl Then parameters.Add(New MySqlParameter("?Al", MySqlDbType.Date) With {.Value = _listAl})
+    End Sub
 
-        Dim tipoDocumentoId As Integer = SafeTipoDocumentoId
+    ' Senza JavaScript il pulsante Filtra e i filtri a tendina inviano il form: si torna all'indirizzo canonico, cosi la paginazione conserva i filtri.
+    Sub applicaFiltri(sender As Object, e As EventArgs)
         Dim idStato As Integer = -1
-        If filtroStati IsNot Nothing Then
-            idStato = SafeFilterInt(Convert.ToString(filtroStati.SelectedValue), -1)
-        End If
-
-        Dim hasInizio As Boolean = False
-        Dim inizio As DateTime
-        If dataInizio IsNot Nothing Then
-            hasInizio = TryParseDDMMYYYY(Convert.ToString(dataInizio.Text), inizio)
-            If Not hasInizio Then dataInizio.Text = ""
-        End If
-
-        Dim fine As DateTime = DateTime.Now
-        If dataFine IsNot Nothing Then
-            Dim tmpFine As DateTime
-            If TryParseDDMMYYYY(Convert.ToString(dataFine.Text), tmpFine) Then
-                fine = tmpFine
-            End If
-            dataFine.Text = fine.ToString("dd-MM-yyyy")
-        End If
-
-        ConfigureDocumentSelect(tipoDocumentoId, idStato, hasInizio, inizio, fine)
-
-        GridView1.DataBind()
-        nDocTrovati = GridView1.Rows.Count.ToString()
-
+        If filtroStati IsNot Nothing Then idStato = KeepStoreAccountOrderFilters.SafeStato(filtroStati.SelectedValue)
+        Dim tempo As Integer = -1
+        If filtroTempo IsNot Nothing Then tempo = KeepStoreAccountOrderFilters.SafeTempo(filtroTempo.SelectedValue)
+        Response.Redirect(KeepStoreAccountOrderFilters.BuildListUrl(SafeTipoDocumentoId, idStato, tempo, dataInizio.Text, dataFine.Text))
     End Sub
 
-    Private Function SafeFilterInt(ByVal raw As String, ByVal fallback As Integer) As Integer
-        Dim parsed As Integer = fallback
-        If Integer.TryParse(Convert.ToString(raw), parsed) Then
-            If parsed >= -1 Then Return parsed
-        End If
-
-        Return fallback
-    End Function
-
-    Private Function SafeTempoFilter(ByVal raw As String) As Integer
-        Dim parsed As Integer = -1
-        If Not Integer.TryParse(Convert.ToString(raw), parsed) Then Return -1
-
-        Select Case parsed
-            Case -1, 7, 30, 60, 90
-                Return parsed
-            Case Else
-                Return -1
-        End Select
-    End Function
-
-    Private Function SafeFilterValue(ByVal raw As String, ByVal fallback As String) As String
-        Dim parsed As Integer = SafeFilterInt(raw, -1)
-        If parsed < -1 Then Return fallback
-        Return parsed.ToString(System.Globalization.CultureInfo.InvariantCulture)
-    End Function
-
+    ' «Altre date» si apre da solo soltanto se la query string porta date scelte dall'utente.
+    Protected ReadOnly Property MoreDatesOpenAttribute As String
+        Get
+            Dim tempo As Integer, dal As DateTime, al As DateTime, hasDal As Boolean, hasAl As Boolean
+            ReadRangeFromRequest(tempo, dal, al, hasDal, hasAl)
+            If tempo <= 0 AndAlso (hasDal OrElse hasAl) Then Return " open"
+            Return ""
+        End Get
+    End Property
     Private Sub TrySetListValue(ByVal list As ListControl, ByVal value As String)
         If list Is Nothing Then Exit Sub
         Dim item As ListItem = list.Items.FindByValue(value)
@@ -475,54 +382,10 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
     End Sub
 
     '==============================================================
-    ' PreRender dei campi data (ricarica filtro da Session)
-    '==============================================================
-    Protected Sub dataInizio_PreRender(sender As Object, e As System.EventArgs) Handles dataInizio.PreRender
-        If (dataInizio.Text = "") Then
-            If Session("filtroDocumentoDataInizio") <> "" Then
-                dataInizio.Text = Session("filtroDocumentoDataInizio")
-            Else
-                dataInizio.Text = ""
-            End If
-        End If
-    End Sub
-
-    Protected Sub dataFine_PreRender(sender As Object, e As System.EventArgs) Handles dataFine.PreRender
-        If (dataFine.Text = "") Then
-            If Session("filtroDocumentoDataInizio") <> "" Then
-                dataFine.Text = Session("filtroDocumentoDataFine")
-            Else
-                dataFine.Text = Format(Date.Now, "dd-MM-yyyy")
-            End If
-        End If
-    End Sub
-
-    '==============================================================
     ' Numero documenti trovati (per label nDocTrovati)
     '==============================================================
     Protected Sub sdsDocumenti_Selected(sender As Object, e As System.Web.UI.WebControls.SqlDataSourceStatusEventArgs) Handles sdsDocumenti.Selected
         nDocTrovati = e.AffectedRows.ToString()
-    End Sub
-
-    '==============================================================
-    ' Calendari
-    '==============================================================
-    Protected Sub Calendar1_SelectionChanged(sender As Object, e As System.EventArgs) Handles Calendar1.SelectionChanged
-        dataInizio.Text = Format(Calendar1.SelectedDate, "dd-MM-yyyy")
-        Calendar1.Visible = False
-    End Sub
-
-    Protected Sub Calendar2_SelectionChanged(sender As Object, e As System.EventArgs) Handles Calendar2.SelectionChanged
-        dataFine.Text = Format(Calendar2.SelectedDate, "dd-MM-yyyy")
-        Calendar2.Visible = False
-    End Sub
-
-    Protected Sub ib_calendarInizio_Click(sender As Object, e As System.Web.UI.ImageClickEventArgs) Handles ib_calendarInizio.Click
-        Calendar1.Visible = True
-    End Sub
-
-    Protected Sub ImageButton1_Click(sender As Object, e As System.Web.UI.ImageClickEventArgs) Handles ImageButton1.Click
-        Calendar2.Visible = True
     End Sub
 
     '==============================================================
@@ -625,15 +488,13 @@ Sub applicaFiltri(sender As Object, e As EventArgs)
         Return Convert.ToString(value).Trim() <> ""
     End Function
 
-    Protected Function FormatOrderStatus(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
-        Dim stato1 As String = SafeStatusText(stato1Obj)
-        Dim stato2 As String = SafeStatusText(stato2Obj)
-
-        If stato1 = "" Then Return If(stato2 = "", "Non disponibile", stato2)
-        If stato2 = "" Then Return stato1
-        Return (stato1 & " " & stato2).Trim()
+    Protected Function OrderStatusTitle(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
+        Return KeepStoreAccountOrderFilters.StatusTitle(stato1Obj, stato2Obj)
     End Function
 
+    Protected Function OrderStatusNote(ByVal stato1Obj As Object, ByVal stato2Obj As Object) As String
+        Return KeepStoreAccountOrderFilters.StatusNote(stato1Obj, stato2Obj)
+    End Function
     Protected Function GetPaymentMethodLabel(ByVal value As Object) As String
         Dim text As String = SafeStatusText(value)
         If text = "" Then Return "Non specificato"

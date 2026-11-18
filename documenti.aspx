@@ -1,41 +1,18 @@
 <%@ Page Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="documenti.aspx.vb" Inherits="documenti" Debug="false" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    I miei documenti
+    I miei ordini
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/order-ui.css") %>?v=20261117-pay-now-1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-qa-1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-hub-ui.css") %>?v=20261118-orders-1b" />
     <style>
         .ks-myaccount .ks-document-date {
             min-width: 0;
             flex: 1 1 150px;
         }
 
-        .ks-myaccount .ks-document-calendar {
-            box-sizing: border-box;
-            width: 44px;
-            height: 44px;
-            min-width: 44px;
-            min-height: 44px;
-            flex: 0 0 44px;
-            padding: 10px;
-            border: 1px solid #d9d9d9;
-            border-radius: 8px;
-            background-color: #fff;
-            cursor: pointer;
-        }
-
-        .ks-myaccount .ks-document-calendar:hover {
-            border-color: #181818;
-            background-color: #f5f5f5;
-        }
-
-        .ks-myaccount .ks-document-calendar:focus-visible {
-            outline: 2px solid #181818;
-            outline-offset: 3px;
-        }
     </style>
 <script type="text/javascript">
         function ksHideSpinnerAndShowContent() {
@@ -171,15 +148,11 @@
         </div>
         <% End If %>
 
-        <asp:SqlDataSource ID="sdsDocumenti" runat="server" 
-            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>" 
-            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>" 
-            SelectCommand="SELECT vdocumenti.*, utenti.*, vettori.Link_Tracking, COALESCE(dpay.Pagato,0) AS ListaPagato, COALESCE(dpay.StatoPagamentoWeb,0) AS ListaStatoPagamentoWeb, dpay.DataStatoPagamentoWeb AS ListaDataStatoPagamentoWeb, COALESCE(dpay.UltimoEsitoPagamentoWeb,'') AS ListaUltimoEsitoPagamentoWeb, COALESCE(pagamentitipo.Descrizione,'') AS ListaPagamentoDescrizione, COALESCE(pagamentitipo.OnLine,0) AS ListaPagamentiTipoOnline, CASE WHEN ltd.Web=1 AND ltd.Abilitato=1 AND ltd.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ListaOrdineWeb FROM `vdocumenti` LEFT JOIN `tipodocumenti` ltd ON ltd.`id` = `vdocumenti`.`TipoDocumentiId` LEFT JOIN `utenti` ON `vdocumenti`.`UtentiId` = `utenti`.`Id` LEFT JOIN (SELECT id, Link_Tracking FROM `vettori`) AS vettori ON `vdocumenti`.`VettoriId` = `vettori`.`id` LEFT JOIN `pagamentitipo` ON `vdocumenti`.`PagamentiTipoId` = `pagamentitipo`.`id` LEFT JOIN `documenti` dpay ON dpay.`id` = `vdocumenti`.`Id` WHERE ((`vdocumenti`.`UtentiId` = ?UtentiId) AND (`vdocumenti`.`AziendeId` = ?AziendaId) AND (`vdocumenti`.`TipoDocumentiId` = ?TipoDocumentiId)) ORDER BY `vdocumenti`.`ID` DESC">
-            <SelectParameters>
-                <asp:SessionParameter Name="UtentiId" SessionField="UtentiID" Type="int32" />
-                <asp:SessionParameter Name="AziendaId" SessionField="AziendaID" Type="int32" />
-                <asp:QueryStringParameter QueryStringField="t" Name="TipoDocumentiId" Type="Int16" />
-            </SelectParameters>
+        <%-- KS-DASHBOARD-ORDERS-1B: la query vera, i filtri e i parametri tipizzati (utente e azienda dell'identita verificata) li imposta il code-behind a ogni richiesta; questo ripiego non restituisce righe. --%>
+        <asp:SqlDataSource ID="sdsDocumenti" runat="server" EnableViewState="false"
+            ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
+            ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
+            SelectCommand="SELECT `vdocumenti`.`Id` FROM `vdocumenti` WHERE 1=0">
         </asp:SqlDataSource>
 
         <asp:SqlDataSource ID="sdsTipo" runat="server" 
@@ -206,7 +179,7 @@
                     <i class="icon icon-arrow-right"></i>
                     <a href="myaccount.aspx" class="text">Dashboard</a>
                     <i class="icon icon-arrow-right"></i>
-                    <span class="text">Documenti</span>
+                    <span class="text">I miei ordini</span>
                 </div>
             </div>
         </div>
@@ -220,8 +193,8 @@
 
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
-                                        <h3 class="fw-semibold mb-0">I miei documenti</h3>
-                                        <div class="body-small text-main-2">Consulta ordini, fatture e DDT.</div>
+                                        <h3 class="fw-semibold mb-0">I miei ordini</h3>
+                                        <div class="body-small text-main-2">Ordini, fatture e DDT in un solo posto.</div>
                                     </div>
                                     <asp:HyperLink 
                                         ID="hlBackMyAccount" 
@@ -248,74 +221,43 @@
 
                     <asp:Label runat="server" ID="lblInfo" Visible="false"></asp:Label>
 
-                    <div class="ks-doc-filters">
-                        <div class="row g-3">
-                            <div class="col-12 col-lg-6">
-                                <asp:Panel ID="Panel1" runat="server" Font-Size="Small" GroupingText="Ricerca rapida" CssClass="ks-fieldset">
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="body-small text-main-2">Visualizza</span>
-                                        <asp:DropDownList ID="filtroTempo" runat="server" OnSelectedIndexChanged="filtroDataRapido" AutoPostBack="false" CssClass="form-select form-select-sm" onchange="return ksApplyDocumentFilters();">
-                                            <asp:ListItem Value="-1" Selected="True">tutti i documenti</asp:ListItem>
-                                            <asp:ListItem Value="7">i documenti dell'ultima settimana</asp:ListItem>
-                                            <asp:ListItem Value="30">i documenti dell'ultimo mese</asp:ListItem>
-                                            <asp:ListItem Value="60">i documenti degli ultimi due mesi</asp:ListItem>
-                                            <asp:ListItem Value="90">i documenti degli ultimi tre mesi</asp:ListItem>
-                                        </asp:DropDownList>
-                                    </div>
-                                </asp:Panel>
+                    <div class="ks-doc-filters" role="group" aria-label="Filtra i documenti">
+                        <div class="ks-doc-filters__row">
+                            <div class="ks-doc-filters__field">
+                                <label class="body-small text-main-2" for="<%= filtroTempo.ClientID %>">Periodo</label>
+                                <asp:DropDownList ID="filtroTempo" runat="server" AutoPostBack="false" CssClass="form-select form-select-sm" onchange="return ksApplyDocumentFilters();">
+                                    <asp:ListItem Value="-1" Selected="True">Tutti i documenti</asp:ListItem>
+                                    <asp:ListItem Value="7">Ultima settimana</asp:ListItem>
+                                    <asp:ListItem Value="30">Ultimo mese</asp:ListItem>
+                                    <asp:ListItem Value="60">Ultimi due mesi</asp:ListItem>
+                                    <asp:ListItem Value="90">Ultimi tre mesi</asp:ListItem>
+                                </asp:DropDownList>
                             </div>
-
-                            <div class="col-12 col-lg-6">
-                                <asp:Panel ID="Panel2" runat="server" Font-Size="Small" GroupingText="Ricerca dettagliata" CssClass="ks-fieldset">
-                                    <div class="row g-2">
-                                        <div class="col-12 col-md-6">
-                                            <div class="body-small text-main-2 mb-1">Dal</div>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <asp:TextBox runat="server" ID="dataInizio" CssClass="tf-input ks-document-date" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ib_calendarInizio" ImageUrl="~/Public/assets/images/calendar.svg" CssClass="ks-document-calendar" AlternateText="Apri il calendario della data Dal" ToolTip="Seleziona la data iniziale (Dal)" />
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12 col-md-6">
-                                            <div class="body-small text-main-2 mb-1">Al</div>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <asp:TextBox runat="server" ID="dataFine" CssClass="tf-input ks-document-date" Width="150px"></asp:TextBox>
-                                                <asp:ImageButton runat="server" ID="ImageButton1" ImageUrl="~/Public/assets/images/calendar.svg" CssClass="ks-document-calendar" AlternateText="Apri il calendario della data Al" ToolTip="Seleziona la data finale (Al)" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-2">
-                                        <asp:Calendar ID="Calendar1" runat="server" Width="150px" Visible="false">
-                                            <SelectedDayStyle BackColor="#4E4E4E" />
-                                            <WeekendDayStyle BackColor="#C4C4C4" />
-                                        </asp:Calendar>
-                                        <asp:Calendar ID="Calendar2" runat="server" Width="150px" Visible="false">
-                                            <SelectedDayStyle BackColor="#4E4E4E" />
-                                            <WeekendDayStyle BackColor="#C4C4C4" />
-                                        </asp:Calendar>
-                                    </div>
-                                </asp:Panel>
+                            <div class="ks-doc-filters__field">
+                                <label class="body-small text-main-2" for="<%= filtroStati.ClientID %>">Stato</label>
+                                <asp:DropDownList ID="filtroStati" runat="server" AutoPostBack="False"
+                                    DataSourceID="sdsStatoOrdine" DataTextField="Descrizione1" DataValueField="id"
+                                    OnSelectedIndexChanged="applicaFiltri" OnDataBound="aggiungiStato" CssClass="form-select form-select-sm" onchange="return ksApplyDocumentFilters();">
+                                </asp:DropDownList>
                             </div>
                         </div>
-
-                        <div class="d-flex justify-content-end mt-3">
-                            <asp:Button ID="Button1" runat="server" Text="Filtra" OnClick="applicaFiltri" CssClass="tf-btn btn-fill" OnClientClick="return ksApplyDocumentFilters();" />
-                        </div>
+                        <details class="ks-doc-more-dates"<%= MoreDatesOpenAttribute %>>
+                            <summary class="body-small link">Altre date</summary>
+                            <div class="ks-doc-filters__row">
+                                <div class="ks-doc-filters__field">
+                                    <label class="body-small text-main-2" for="<%= dataInizio.ClientID %>">Dal</label>
+                                    <asp:TextBox runat="server" ID="dataInizio" TextMode="Date" CssClass="tf-input ks-document-date"></asp:TextBox>
+                                </div>
+                                <div class="ks-doc-filters__field">
+                                    <label class="body-small text-main-2" for="<%= dataFine.ClientID %>">Al</label>
+                                    <asp:TextBox runat="server" ID="dataFine" TextMode="Date" CssClass="tf-input ks-document-date"></asp:TextBox>
+                                </div>
+                                <asp:Button ID="Button1" runat="server" Text="Filtra" OnClick="applicaFiltri" CssClass="tf-btn btn-fill" OnClientClick="return ksApplyDocumentFilters();" />
+                            </div>
+                        </details>
                     </div>
 
-                    <div class="row align-items-center g-2 my-3">
-                        <div class="col-12 col-md-6">
-                            <span class="body-md-2"><span class="text-secondary fw-semibold"><%= nDocTrovati %></span> documenti trovati</span>
-                        </div>
-                        <div class="col-12 col-md-6 d-flex justify-content-md-end align-items-center gap-2">
-                            <span class="body-small text-main-2">Stato</span>
-                            <asp:DropDownList ID="filtroStati" runat="server" AutoPostBack="False"
-                                DataSourceID="sdsStatoOrdine" DataTextField="Descrizione1" DataValueField="id"
-                                OnSelectedIndexChanged="applicaFiltri" OnDataBound="aggiungiStato" CssClass="form-select form-select-sm" onchange="return ksApplyDocumentFilters();">
-                            </asp:DropDownList>
-                        </div>
-                    </div>
+                    <p class="body-md-2 ks-doc-count"><span class="text-secondary fw-semibold"><%= nDocTrovati %></span> documenti trovati</p>
 
 <div class="tf-order_history-table ks-doc-list-wrap">
     <asp:GridView ID="GridView1" runat="server"
@@ -361,7 +303,8 @@
                         <div class="ks-doc-card__body">
                             <div class="ks-doc-card__cell">
                                 <span class="ks-doc-card__k">Stato</span>
-                                <span class="ks-status-badge ks-status-badge-order"><%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
+                                <span class="ks-status-badge ks-status-badge-order"><%#: OrderStatusTitle(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
+                                <span class="ks-doc-card__status-note body-small text-main-2"><%#: OrderStatusNote(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %></span>
                                 <%# ListProgressHtml(Eval("ListaOrdineWeb"), Eval("StatiId")) %>
                             </div>
                             <div class="ks-doc-card__cell">

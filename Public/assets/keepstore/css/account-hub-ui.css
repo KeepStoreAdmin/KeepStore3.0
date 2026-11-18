@@ -194,6 +194,7 @@ a.ks-account-tile:focus-visible {
 }
 
 .ks-doc-card {
+    container-type: inline-size;
     padding: 16px;
     background: #fff;
     box-shadow: 5px 6px 30px 0 rgba(0, 0, 0, .1);
@@ -356,20 +357,24 @@ a.ks-account-tile:focus-visible {
     .ks-doc-card {
         padding: 20px 24px;
     }
+}
 
+/* KS-DASHBOARD-ORDERS-1B: le colonne della scheda seguono la larghezza della SCHEDA (contenitore), non della finestra:
+   accanto al menu dell'account la scheda e stretta anche su uno schermo largo. */
+@container (min-width: 520px) {
     .ks-doc-card__body {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 16px 24px;
     }
 }
 
-@media (min-width: 1200px) {
+@container (min-width: 820px) {
     .ks-doc-card__body {
         grid-template-columns: 1.1fr .8fr 1.3fr 1.2fr;
     }
 }
 
-/* ---------- KS-QA-BROWSER-1A: striscia dei dati dell'account e ordini recenti a schede nel pannello ---------- */
+/* ---------- KS-QA-BROWSER-1A: striscia dei dati dell'account nel pannello ---------- */
 .ks-account-strip {
     margin-bottom: 24px;
     padding: 14px 16px;
@@ -396,40 +401,6 @@ a.ks-account-tile:focus-visible {
     overflow-wrap: anywhere;
 }
 
-.ks-account-recent {
-    margin-bottom: 8px;
-}
-
-.ks-account-recent__head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 14px;
-}
-
-.ks-account-recent__head .tf-btn {
-    min-height: 44px;
-}
-
-.ks-doc-card--compact {
-    margin-bottom: 12px;
-}
-
-.ks-doc-card--compact .ks-doc-card__body {
-    padding-bottom: 0;
-}
-
-.ks-doc-card__cell--action {
-    justify-content: center;
-}
-
-.ks-doc-card__cell--action .tf-btn {
-    min-height: 44px;
-    min-width: 120px;
-}
-
 @media (min-width: 576px) {
     .ks-account-strip__list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -440,9 +411,87 @@ a.ks-account-tile:focus-visible {
     .ks-account-strip__list {
         grid-template-columns: .8fr 1.4fr .9fr 1.6fr;
     }
+}
 
-    .ks-doc-card--compact .ks-doc-card__body {
-        grid-template-columns: 1.3fr .7fr 1.3fr auto;
-        align-items: center;
-    }
+/* ---------- KS-DASHBOARD-ORDERS-1B: «I miei ordini»: stato in due righe, filtri compatti ---------- */
+.ks-myaccount .ks-doc-card .ks-status-badge-order {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+}
+
+.ks-doc-card__status-note {
+    display: block;
+    max-width: 100%;
+    color: #595959;
+    overflow-wrap: anywhere;
+}
+
+.ks-doc-card__status-note:empty {
+    display: none;
+}
+
+.ks-doc-filters {
+    margin: 0 0 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.ks-doc-filters__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px 16px;
+}
+
+.ks-doc-filters__field {
+    display: flex;
+    flex: 1 1 180px;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ks-doc-filters__field .form-select,
+.ks-doc-filters__field .ks-document-date {
+    width: 100%;
+    min-height: 44px;
+}
+
+.ks-doc-more-dates {
+    margin-top: 8px;
+}
+
+.ks-doc-more-dates > summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.ks-doc-more-dates > summary {
+    color: #181818;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.ks-doc-more-dates > summary::after {
+    content: "\25BE";
+    margin-left: 6px;
+}
+
+.ks-doc-more-dates[open] > summary::after {
+    content: "\25B4";
+}
+
+.ks-doc-more-dates .ks-doc-filters__row {
+    margin-top: 8px;
+}
+
+.ks-doc-more-dates .tf-btn {
+    min-height: 44px;
+}
+
+.ks-doc-count {
+    margin: 0 0 12px;
 }

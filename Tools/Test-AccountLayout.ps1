@@ -78,7 +78,8 @@ function Render-Card([hashtable]$d) {
     $map = [ordered]@{
         '<%#: Eval("TipoDocumentiDescrizione") %>' = $d.Type
         '<%#: KeepStoreDates.ShortDate(Eval("DataDocumento")) %>' = '17/11/2026'
-        '<%#: FormatOrderStatus(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %>' = $d.State
+        '<%#: OrderStatusTitle(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %>' = $d.State
+        '<%#: OrderStatusNote(Eval("StatiDescrizione1"), Eval("StatiDescrizione2")) %>' = $d.Note
         '<%# ListProgressHtml(Eval("ListaOrdineWeb"), Eval("StatiId")) %>' = $probe.Mini([bool]$d.IsOrder, [int]$d.StatiId)
         '<%# Eval("TotaleDocumento", "{0:C}") %>' = '1.234,56 &euro;'
         '<%# Eval("TotImponibile", "{0:C}") %>' = '1.011,93 &euro;'
@@ -98,15 +99,16 @@ function Render-Card([hashtable]$d) {
         '<%# Eval("id", "documentidettaglio.aspx?id={0}") %>' = '#'
     }
     foreach ($k in $map.Keys) { $c = $c.Replace($k, [string]$map[$k]) }
+    if ($d.ContainsKey('Open') -and $d.Open) { $c = $c.Replace('<details class="ks-order-details">', '<details class="ks-order-details" open>') }
     if ($c -match '<%|runat=|<asp:') { throw ('CARD_EXPRESSION_LEFT ' + $d.Number + ' ' + ([regex]::Match($c, '<%[^%]*%>|<asp:[^>]*>').Value)) }
     return ('<tr class="td-order-item"><td>' + $c + '</td></tr>')
 }
 $long = 'A' * 60
 $rows = @(
-    (Render-Card @{ Number = '1201'; Type = 'Ordine'; State = 'In lavorazione Il tuo ordine e stato processato e sara spedito al piu presto.'; IsOrder = $true; StatiId = 2; Tracking = ''; Pay = $true }),
-    (Render-Card @{ Number = '1187'; Type = 'Ordine'; State = 'Spedito Il tuo ordine e stato consegnato o spedito secondo le modalita concordate.'; IsOrder = $true; StatiId = 4; Tracking = ('3UW1WHC117829;' + $long); Pay = $false }),
-    (Render-Card @{ Number = '1150'; Type = 'Ordine'; State = 'Annullato'; IsOrder = $true; StatiId = 3; Tracking = 'ABC123'; Pay = $false }),
-    (Render-Card @{ Number = '88'; Type = 'Fattura Immediata'; State = 'Emessa'; IsOrder = $false; StatiId = 4; Tracking = ''; Pay = $false })
+    (Render-Card @{ Number = '1201'; Type = 'Ordine'; State = 'In lavorazione'; Note = 'Il tuo ordine e stato processato e sara spedito al piu presto, grazie per averci scelto.'; IsOrder = $true; StatiId = 2; Tracking = ''; Pay = $true; Open = $true }),
+    (Render-Card @{ Number = '1187'; Type = 'Ordine'; State = 'Spedito'; Note = 'Il tuo ordine e stato consegnato o spedito secondo le modalita concordate.'; IsOrder = $true; StatiId = 4; Tracking = ('3UW1WHC117829;' + $long); Pay = $false }),
+    (Render-Card @{ Number = '1150'; Type = 'Ordine'; State = 'Annullato'; Note = ''; IsOrder = $true; StatiId = 3; Tracking = 'ABC123'; Pay = $false }),
+    (Render-Card @{ Number = '88'; Type = 'Fattura Immediata'; State = 'Emessa'; Note = ''; IsOrder = $false; StatiId = 4; Tracking = ''; Pay = $false })
 ) -join ''
 $pager = '<tr class="nav ks-doc-list__pager" style="font-weight:bold;"><td><table><tr><td><span>1</span></td><td><a href="#">2</a></td><td><a href="#">3</a></td></tr></table></td></tr>'
 $listPage = '<div class="ks-myaccount"><section class="tf-sp-2"><div class="container"><div class="row"><div class="col-12"><div class="myaccount-content account-dashboard"><div class="tf-order_history-table ks-doc-list-wrap"><div><table class="table_def ks-order-table ks-doc-list" cellspacing="0" style="width:100%;border-collapse:collapse;"><thead></thead><tbody>' + $rows + $pager + '</tbody></table></div></div></div></div></div></div></section></div>'
@@ -117,7 +119,7 @@ $sheets = @('bootstrap.min.css', 'account-ui.css', 'styles.css', 'keepstore.css'
 $links = ($sheets | ForEach-Object { '<link rel="stylesheet" href="file:///' + ((Join-Path $cssDir $_) -replace '\\', '/') + '">' }) -join ''
 $work = Join-Path ([IO.Path]::GetTempPath()) ('ks-account-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force -Path $work | Out-Null
-$pages = @{ Dashboard = $dashPage; List = $listPage; Empty = $emptyPage }
+$pages = @{ Dashboard = $dashPage; List = $listPage; Empty = $emptyPage; ListNarrow = ('<div style="max-width:760px">' + $listPage + '</div>'); ListTiny = ('<div style="max-width:480px">' + $listPage + '</div>') }
 foreach ($name in $pages.Keys) {
     $html = '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' + $links + '</head><body>' + $pages[$name] + '</body></html>'
     [IO.File]::WriteAllText((Join-Path $work ($name + '.html')), $html, (New-Object Text.UTF8Encoding($false)))
@@ -155,7 +157,16 @@ $measureJs = @'
     if(cards[2].querySelector('.ks-mini-progress') || cards[2].querySelector('.ks-doc-card__tracking')) out.fails.push('CANCELLED_SHOWS_PROGRESS_OR_TRACKING');
     if(cards[3].querySelector('.ks-mini-progress')) out.fails.push('INVOICE_SHOWS_PROGRESS');
     if(cards[1].querySelectorAll('.ks-doc-card__tracking > li').length!==2 || cards[1].querySelectorAll('.ks-doc-card__track').length!==1) out.fails.push('TRACKING_ITEMS');
-    var body=cards[0].querySelector('.ks-doc-card__body'); var bc=getComputedStyle(body).gridTemplateColumns.split(' ').length; var bw=(window.innerWidth>=1200?4:(window.innerWidth>=768?2:1)); if(bc!==bw) out.fails.push('CARD_COLUMNS '+bc+' want '+bw);
+    // KS-DASHBOARD-ORDERS-1B: le colonne seguono la larghezza della SCHEDA (contenitore), non della finestra: >=820 px 4 colonne, >=520 px 2, sotto 1.
+    cards.forEach(function(card,i){ var cs=getComputedStyle(card); var cw=card.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight); var body=card.querySelector('.ks-doc-card__body'); var bc=getComputedStyle(body).gridTemplateColumns.split(' ').length; var bw=(cw>=820?4:(cw>=520?2:1)); if(bc!==bw) out.fails.push('CARD_COLUMNS '+i+' '+bc+' want '+bw+' at '+Math.round(cw));
+      var cells=Array.prototype.slice.call(card.querySelectorAll('.ks-doc-card__body > .ks-doc-card__cell'));
+      for(var a=0;a<cells.length;a++){ var ra=cells[a].getBoundingClientRect(); cells[a].querySelectorAll('*').forEach(function(ch){ if(ch.classList.contains('ks-mini-progress__sr')) return; var c=ch.getBoundingClientRect(); if(c.width>0 && c.height>0 && (c.right>ra.right+1 || c.left<ra.left-1)) out.fails.push('CELL_CONTENT_OVERFLOW '+i+' '+ch.tagName+'.'+String(ch.className).slice(0,30)); });
+        for(var b=a+1;b<cells.length;b++){ var rb=cells[b].getBoundingClientRect(); if(ra.left<rb.right-1 && rb.left<ra.right-1 && ra.top<rb.bottom-1 && rb.top<ra.bottom-1) out.fails.push('CELLS_OVERLAP '+i+' '+a+'/'+b); } }
+      var badge=card.querySelector('.ks-status-badge-order'); var note=card.querySelector('.ks-doc-card__status-note');
+      if(!badge) out.fails.push('STATUS_BADGE_MISSING '+i);
+      if(note && badge && note.textContent.trim()!=='' && note.getBoundingClientRect().top<badge.getBoundingClientRect().bottom-1) out.fails.push('STATUS_NOTE_NOT_BELOW_BADGE '+i);
+      if(note && badge && badge.contains(note)) out.fails.push('STATUS_NOTE_INSIDE_BADGE '+i); });
+    if(cards[0].querySelector('.ks-doc-card__status-note')===null) out.fails.push('STATUS_NOTE_MISSING');
     var pg=document.querySelectorAll('.ks-doc-list__pager table td'); if(pg.length!==3) out.fails.push('PAGER_CELLS '+pg.length); else { var t0=Math.round(pg[0].getBoundingClientRect().top), t2=Math.round(pg[2].getBoundingClientRect().top); if(t0!==t2) out.fails.push('PAGER_NOT_IN_A_ROW'); if(pg[2].getBoundingClientRect().left<=pg[0].getBoundingClientRect().left) out.fails.push('PAGER_STACKED'); }
     contrast('.ks-doc-card__k',4.5); contrast('.ks-doc-card__date',4.5); contrast('.ks-mini-progress__text',4.5); contrast('.ks-doc-card__track',4.5); contrast('.ks-doc-card__code',4.5);
   }
@@ -170,7 +181,7 @@ try {
     catch { Write-Output ('BROWSER_NON_ESEGUITO: ' + $_.Exception.Message); exit 2 }
     foreach ($width in @(320, 360, 390, 768, 1280)) {
         $null = Invoke-KsCdp $browser 'Emulation.setDeviceMetricsOverride' @{ width = $width; height = 900; deviceScaleFactor = 1; mobile = ($width -lt 768) }
-        foreach ($name in @('Dashboard', 'List', 'Empty')) {
+        foreach ($name in @('Dashboard', 'List', 'Empty', 'ListNarrow', 'ListTiny')) {
             Open-KsUrl $browser ('file:///' + ((Join-Path $work ($name + '.html')) -replace '\\', '/'))
             Start-Sleep -Milliseconds 400
             $res = (Invoke-KsJs $browser $measureJs) | ConvertFrom-Json
@@ -184,4 +195,4 @@ try {
     if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue }
 }
 if ($failures.Count -gt 0) { $failures | ForEach-Object { Write-Output ('FAIL ' + $_) }; throw 'ACCOUNT_LAYOUT_FAIL' }
-Write-Output 'ACCOUNT_LAYOUT_PASS widths=5 pages=3'
+Write-Output 'ACCOUNT_LAYOUT_PASS widths=5 pages=5'

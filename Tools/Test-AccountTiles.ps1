@@ -224,7 +224,6 @@ function Test-Pages([string]$aAspx, [string]$aVbText, [string]$lAspx, [string]$l
     $aVb = Strip-VbComments $aVbText; $lVb = Strip-VbComments $lVbText
     # pannello
     if ($aAspx -match 'TipoDocumentiId\s*=\s*\d' -or $aVb -match 'TipoDocumentiId\s*=\s*\d' -or $aAspx -match '[?&]t=\d' -or $aVb -match '[?&]t=\d') { Show-Failure 'fixed document type'; return $false }
-    if ($aAspx -notmatch 'EXISTS \(SELECT 1 FROM tipodocumenti tdo WHERE tdo\.id = vdocumenti\.TipoDocumentiId AND tdo\.Web = 1 AND tdo\.Abilitato = 1 AND tdo\.ImpegnaQnt = 1\) ORDER BY') { Show-Failure 'recent orders by order type'; return $false }
     if ($aAspx.Contains('ks-dashboard-quicklinks') -or $aAspx.Contains('Azioni rapide')) { Show-Failure 'old quick links'; return $false }
     if ($aVb -notmatch 'identity = OrderStorefrontContext\.Resolve\(HttpContext\.Current\)' -or $aVb -notmatch 'If identity IsNot Nothing AndAlso identity\.IsComplete Then') { Show-Failure 'verified identity'; return $false }
     if ($aVb -match 'Session\("UtentiID"\)|Session\("AziendaID"\)|Request\.QueryString|Request\.Form') { Show-Failure 'identity from session or client'; return $false }
@@ -243,19 +242,19 @@ function Test-Pages([string]$aAspx, [string]$aVbText, [string]$lAspx, [string]$l
     $iFormEnd = $aAspx.IndexOf('</asp:FormView>', [StringComparison]::Ordinal)
     if ($iHero -lt 0 -or -not ($iHero -lt $iNotice -and $iNotice -lt $iTiles -and $iTiles -lt $iForm -and $iFormEnd -lt $iSoon)) { Show-Failure 'page slots outside the form view'; return $false }
     if ($aAspx -notmatch '<a id="lnkPayNotice" runat="server" class="[^"]*">Paga adesso</a>' -or $aAspx -match 'lnkPayNotice"[^>]*href') { Show-Failure 'notice link set by code'; return $false }
-    if ($aAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-qa-1a') { Show-Failure 'account css'; return $false }
+    if ($aAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-orders-1b') { Show-Failure 'account css'; return $false }
     # lista
     if ($lVb -match 'separa_tracking' -or $lAspx -match 'separa_tracking') { Show-Failure 'old tracking helper'; return $false }
     if ($lVb -notmatch 'Return KeepStoreOrderProgress\.MiniProgressHtml\(SafeInt\(isOrderObj, 0\) = 1, SafeInt\(statiIdObj, 0\)\)' -or $lVb -notmatch 'Return KeepStoreOrderProgress\.TrackingLinksHtml\(tracking, template, SafeInt\(statiIdObj, 0\)\)') { Show-Failure 'list uses the safe module'; return $false }
-    if ($lVb -notmatch 'AS ListaOrdineWeb' -or $lAspx -notmatch 'CASE WHEN ltd\.Web=1 AND ltd\.Abilitato=1 AND ltd\.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ListaOrdineWeb') { Show-Failure 'order type in both queries'; return $false }
+    $listModule = [IO.File]::ReadAllText((Join-Path (Split-Path -Parent $PSScriptRoot) 'App_Code\KeepStoreAccountOrderFilters.vb'), [Text.Encoding]::UTF8); if ($listModule -notmatch 'CASE WHEN ltd\.Web=1 AND ltd\.Abilitato=1 AND ltd\.ImpegnaQnt=1 THEN 1 ELSE 0 END AS ListaOrdineWeb') { Show-Failure 'order type in the list query'; return $false }
     if ([regex]::Matches($lAspx, '<asp:TemplateField').Count -ne 1 -or $lAspx -notmatch 'ShowHeader="False"' -or [regex]::Matches($lAspx, '<article class="ks-doc-card">').Count -ne 1 -or $lAspx -match '<RowStyle[^>]*Height=') { Show-Failure 'one card per row'; return $false }
     if ($lAspx -notmatch '<%# ListProgressHtml\(Eval\("ListaOrdineWeb"\), Eval\("StatiId"\)\) %>' -or $lAspx -notmatch '<%# ListTrackingHtml\(Eval\("Tracking"\), Eval\("Link_Tracking"\), Eval\("StatiId"\)\) %>') { Show-Failure 'card helpers'; return $false }
     if ([regex]::Matches($lAspx, 'Eval\("Tracking"\)').Count -ne 1) { Show-Failure 'raw tracking in the list'; return $false }
-    if ($lAspx -notmatch '<%#: Eval\("VettoriDescrizione"\) %>' -or $lAspx -notmatch '<%#: Eval\("TipoDocumentiDescrizione"\) %>' -or $lAspx -notmatch '<%#: FormatOrderStatus\(') { Show-Failure 'db texts encoded'; return $false }
+    if ($lAspx -notmatch '<%#: Eval\("VettoriDescrizione"\) %>' -or $lAspx -notmatch '<%#: Eval\("TipoDocumentiDescrizione"\) %>' -or $lAspx -notmatch '<%#: OrderStatusTitle\(' -or $lAspx -notmatch '<%#: OrderStatusNote\(') { Show-Failure 'db texts encoded'; return $false }
     if ($lAspx -notmatch 'ID="hlListaPagaAdesso" runat="server"[^>]*NavigateUrl=''<%# Eval\("id", "documentidettaglio\.aspx\?id=\{0\}#ksPayNow"\) %>'' Visible=''<%# ListPayNowVisible\(Eval\("id"\)\) %>'' Text="Paga adesso"') { Show-Failure 'pay now button kept'; return $false }
     if ($lAspx -notmatch 'ID="lblListaDaPagare" runat="server" CssClass="ks-pay-now__badge" Text="Da pagare" Visible=''<%# ListPayNowVisible\(Eval\("id"\)\) %>''') { Show-Failure 'badge kept'; return $false }
     if ($lAspx -notmatch 'ID="idcoupon" runat="server"\s*\n\s*Visible=''<%# \(Convert\.ToString\(Request\.QueryString\("t"\)\) = Convert\.ToString\(Session\("IdDocumentoCoupon"\)\)\) %>''' -or $lAspx -notmatch 'ID="iddoc" runat="server"\s*\n\s*Visible=''<%# Not \(Convert\.ToString\(Request\.QueryString\("t"\)\) = Convert\.ToString\(Session\("IdDocumentoCoupon"\)\)\) %>''\s*\n\s*NavigateUrl=''<%# Eval\("id", "documentidettaglio\.aspx\?id=\{0\}"\) %>''') { Show-Failure 'coupon and document links kept'; return $false }
-    if ($lAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-qa-1a' -or $lAspx -notmatch 'order-ui\.css"\) %>\?v=20261117-pay-now-1a') { Show-Failure 'list css'; return $false }
+    if ($lAspx -notmatch 'account-hub-ui\.css"\) %>\?v=20261118-orders-1b' -or $lAspx -notmatch 'order-ui\.css"\) %>\?v=20261117-pay-now-1a') { Show-Failure 'list css'; return $false }
     if ($lVb -notmatch 'If _payNowDecisions\.TryGetValue\(documentId, cached\) Then Return cached' -or $lVb -notmatch '_payNowDecisions\(documentId\) = decision') { Show-Failure 'one decision per document'; return $false }
     if ($lVb -notmatch 'Protected Function ListPayNowVisible\(ByVal documentIdObj As Object\) As Boolean\s*\n\s*Return CanShowPayNow\(SafeInt\(documentIdObj, 0\)\)') { Show-Failure 'list helper kept'; return $false }
     # stili
@@ -383,11 +382,11 @@ function Test-Dates([string]$datesText) {
 function Test-BrowserFindings([string]$aAspx, [string]$lAspx, [string]$dAspx, [string]$oVb, [string]$accCss, [string]$sbVb, [string]$lgAspx, [string]$cAspx) {
     $o = Strip-VbComments $oVb
     if ($aAspx -match '\{0:d\}' -or $lAspx -match 'DataDocumento", "\{0:d\}"' -or $dAspx -match 'DataDocumento", "\{0:d\}"') { Show-Failure 'raw date format left'; return $false }
-    foreach ($page in @($aAspx, $lAspx, $dAspx)) { if ($page -notmatch 'KeepStoreDates\.ShortDate\(Eval\("DataDocumento"\)\)') { Show-Failure 'page date helper'; return $false } }
+    foreach ($page in @($lAspx, $dAspx)) { if ($page -notmatch 'KeepStoreDates\.ShortDate\(Eval\("DataDocumento"\)\)') { Show-Failure 'page date helper'; return $false } }
     if ([regex]::Matches($o, 'KeepStoreDates\.IsoText\(').Count -ne 4 -or $o -notmatch 'KeepStoreDates\.ShortDate\(drTestata\.Item\("DataDocumento"\)\)' -or $o -match 'DbText\((dr|drTestata), "DataDocumento"\)|dr\("DataDocumento"\)\.ToString\(\)') { Show-Failure 'order page date sources'; return $false }
     if ($o -notmatch 'DateTime\.TryParseExact\(value\.Trim\(\), New String\(\) \{"yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"\}, CultureInfo\.InvariantCulture') { Show-Failure 'order page exact parse'; return $false }
     # pannello: niente tabella, niente schede doppie, menu laterale non mostrato
-    if ($aAspx -match '<asp:GridView|ks-dashboard-card|ks-order-table' -or $aAspx -notmatch '<asp:Repeater ID="rptRecentOrders"' -or $aAspx -notmatch 'id="pRecentEmpty" runat="server" visible="false"') { Show-Failure 'dashboard recent orders as cards'; return $false }
+    if ($aAspx -match '<asp:GridView|<asp:Repeater|ks-dashboard-card|ks-order-table|sdsRecentOrders|rptRecentOrders|ks-doc-card') { Show-Failure 'dashboard without order lists'; return $false }
     $area = [regex]::Match((Strip-VbComments $sbVb), '(?s)Private Function IsAccountArea\(.*?End Function').Value
     if ($area -eq '' -or $area -match '"myaccount\.aspx"') { Show-Failure 'sidebar hidden on the dashboard'; return $false }
     if ($accCss -notmatch 'body\.ks-page-account \.ks-account-aside:not\(:has\(\.ks-account-card\)\)\s*\{\s*display:\s*none') { Show-Failure 'empty aside collapsed'; return $false }
@@ -435,7 +434,6 @@ $mutants = @(
     @{ Id = 'G07_TRACKING_URL_NOT_ENCODED'; T = 'progress'; Old = 'Append(System.Net.WebUtility.HtmlEncode(url))'; New = 'Append(url)' },
     @{ Id = 'G08_TRACKING_LINK_WITHOUT_REL'; T = 'progress'; Old = '""" target=""_blank"" rel=""noopener noreferrer"">Segui la spedizione'; New = '""" target=""_blank"">Segui la spedizione' },
     @{ Id = 'G09_UNSAFE_CODE_LINKED'; T = 'progress'; Old = 'Dim url As String = If(token.Linkable, BuildTrackingUrl(template, token.Text), "")'; New = 'Dim url As String = template.Replace("#ID#", token.Text)' },
-    @{ Id = 'A01_FIXED_ORDER_TYPE_BACK'; T = 'accaspx'; Old = 'AND tdo.ImpegnaQnt = 1) ORDER BY'; New = 'AND tdo.ImpegnaQnt = 1) AND vdocumenti.TipoDocumentiId = 4 ORDER BY' },
     @{ Id = 'A02_QUICK_LINKS_BACK'; T = 'accaspx'; Old = '<%= TilesHtml(True) %>'; New = '<%= TilesHtml(True) %><div class="ks-dashboard-quicklinks"></div>' },
     @{ Id = 'A03_NOTICE_VISIBLE_BY_DEFAULT'; T = 'accaspx'; Old = '<div id="pnlPayNotice" runat="server" visible="false" class="ks-account-notice">'; New = '<div id="pnlPayNotice" runat="server" class="ks-account-notice">' },
     @{ Id = 'A04_FIXED_LIST_LINK_BACK'; T = 'accaspx'; Old = '<a href="documenti.aspx" class="tf-btn btn-fill">I miei ordini</a>'; New = '<a href="documenti.aspx?t=4" class="tf-btn btn-fill">I miei ordini</a>' },
@@ -458,7 +456,6 @@ $mutants = @(
     @{ Id = 'L06_ROW_HEIGHT_BACK'; T = 'listaspx'; Old = '<RowStyle CssClass="td-order-item" />'; New = '<RowStyle CssClass="td-order-item" Height="25px" />' },
     @{ Id = 'L07_CARRIER_NOT_ENCODED'; T = 'listaspx'; Old = '<%#: Eval("VettoriDescrizione") %>'; New = '<%# Eval("VettoriDescrizione") %>' },
     @{ Id = 'L08_DOCUMENT_LINK_CHANGED'; T = 'listaspx'; Old = "NavigateUrl='<%# Eval(""id"", ""documentidettaglio.aspx?id={0}"") %>'"; New = "NavigateUrl='<%# Eval(""id"", ""documentidettaglio.aspx?doc={0}"") %>'" },
-    @{ Id = 'L09_ORDER_TYPE_COLUMN_DROPPED'; T = 'listvb'; Old = 'AS ListaOrdineWeb'; New = 'AS ListaAltro' },
     @{ Id = 'L10_DECISION_NOT_CACHED'; T = 'listvb'; Old = '        _payNowDecisions(documentId) = decision'; New = '' },
     @{ Id = 'L11_TRACKING_IGNORES_THE_STATE'; T = 'listvb'; Old = 'TrackingLinksHtml(tracking, template, SafeInt(statiIdObj, 0))'; New = 'TrackingLinksHtml(tracking, template, 4)' },
     @{ Id = 'C01_TILE_TOO_SMALL'; T = 'css'; Old = '    min-height: 96px;'; New = '    min-height: 40px;' },
@@ -481,7 +478,7 @@ $qaMutants = @(
                  "datiutente.aspx",' },
     @{ Id = 'Q08_LOGIN_WITHOUT_ENTER_KEY'; T = 'login'; Old = ' DefaultButton="btnLogin"'; New = '' },
     @{ Id = 'Q09_LOGIN_BUTTON_WHITE_TEXT_CLASS_BACK'; T = 'login'; Old = 'CssClass="tf-btn ks-login__submit"'; New = 'CssClass="tf-btn w-100 text-white"' },
-    @{ Id = 'Q10_DASHBOARD_TABLE_BACK'; T = 'acc'; Old = '<asp:Repeater ID="rptRecentOrders" runat="server" DataSourceID="sdsRecentOrders">'; New = '<asp:GridView ID="gvRecentOrders" runat="server"></asp:GridView><asp:Repeater ID="rptRecentOrders" runat="server" DataSourceID="sdsRecentOrders">' },
+    @{ Id = 'Q10_DASHBOARD_ORDER_LIST_BACK'; T = 'acc'; Old = '<nav class="ks-account-hub" aria-label="Servizi dell''account">'; New = '<asp:Repeater ID="rptRecentOrders" runat="server"></asp:Repeater><nav class="ks-account-hub" aria-label="Servizi dell''account">' },
     @{ Id = 'Q11_CART_WITHOUT_TITLE'; T = 'cart'; Old = '    Carrello'; New = '    ' }
 )
 foreach ($mu in $qaMutants) {
