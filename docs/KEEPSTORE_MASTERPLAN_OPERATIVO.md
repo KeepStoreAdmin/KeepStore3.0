@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-CATALOG-COMPACT-1A + PDP-PRINT-A4-1A — 18/11/2026 — SOURCE (titoli senza sfondo rosso, schede compatte, stampa A4 della scheda)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#556](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/556), stable `b037554e`.** Segnalazione del PO (titolo «Tipologia» e nome articolo in rosso con testo nero, troppo vuoto nelle schede e in «Visti di recente», stampa sformata).
+
+**Causa misurata (sito pubblicato, Chrome del PO, sola lettura):** il foglio dell'azienda `Public/style/style_1.css` (vecchio sito, non versionato) ha la regola globale `h1 { background-color: var(--main-color-1) }`; in piu gli h1 del catalogo cadevano su un carattere con grazie (`"Inter", serif` senza Inter caricato). Il contratto delle card (`theme-overrides.css`) riserva due righe alla categoria e tre al nome anche se corti. Rimedio: `body h1` senza sfondo in `ks-ui.css` (robusto per ogni cliente), titoli ridisegnati, nuovo `catalog-compact.css` solo dentro `#ksCatalogPage` (categoria a una riga, nome 2-3 righe, prezzi allineati in basso; «Visti di recente» in pila senza i 20 px).
+
+**Stampa:** `@page` A4, testata con filetto, foto e dati affiancati, riquadro prezzo, informazioni a due colonne, blocchi interi (gruppi, voci, prezzo), sezioni che continuano a righe intere; gruppo «Prezzi e promozione» nascosto (doppione; si perde il solo «prezzo di listino»). PDF veri di Edge: descrizione corta = 1 pagina, lunga = 2.
+
+**Revisioni.** ChatGPT (su uno stato precedente): accolti `background-color` al posto di `none`, `.row` ristretto, colore dal tema; smentito il prezzo disallineato dopo la correzione. Claude: accolti recenti con DOM piatto, `!important` contro `mt-1`, due test esistenti da aggiornare, sezioni non interamente «avoid».
+
+**Prove.** `Tools/Test-CatalogCompact1A.ps1` (27 mutanti, browser con regola del cliente iniettata, PDF A4 e completezza della stampa); test dei buster verdi; `Test-FocusVisible` e `Test-FooterAccordion` instabili in parallelo, verdi da soli. **Limiti:** foglio del cliente fuori dal repository; Safari e stampanti reali non provati; un tenant con testo chiaro sugli h1 non e coperto. **Alla consegna futura:** `ks-ui.css`, `catalog-compact.css` (nuovo), `product-ui.css`, `Page.master`, `articoli.aspx`, `articolo.aspx`. CONSEGNA SERVER SOSPESA.
 ## KS-DASHBOARD-ORDERS-1B — 18/11/2026 — SOURCE (Dashboard a riquadri e «I miei ordini» corretto)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#554](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/554), stable `92ffe4ae27a2992f26d1236c9df969d4e00f118f`.** Scelta del PO («Riquadri + ordini»): la Dashboard non ha piu l'elenco «Ordini recenti» (doppione); «I miei ordini» (`documenti.aspx`) ha lo stato in due righe (titolo nel badge, nota sotto), colonne della scheda dalla larghezza della scheda (`@container`), filtri compatti con date native, etichette associate, URL canonico anche senza JavaScript.
