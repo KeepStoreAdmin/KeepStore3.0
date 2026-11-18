@@ -92,7 +92,7 @@ function Test-PageWiring([string]$aspx) {
     $j = $aspx.IndexOf('js/ks-pdp-buybar.js')
     return ($i -gt 0 -and $j -gt $i -and
             $aspx -match 'js/ks-pdp-buybar\.js"\) %>\?v=20261114-pdp-buybar1a' -and
-            $aspx -match 'css/product-ui\.css"\) %>\?v=(?:20261114-(?:pdp-buybar1a|deadcode-c1a)|20261115-palette-aa1a|20261115-focus-fc1a|20261115-focus-obscured1a|20261118-pdp-sections1a|20261118-pdp-tools1a)')
+            $aspx -match 'css/product-ui\.css"\) %>\?v=(?:20261114-(?:pdp-buybar1a|deadcode-c1a)|20261115-palette-aa1a|20261115-focus-fc1a|20261115-focus-obscured1a|20261118-pdp-sections1a|20261118-pdp-tools1a|20261118-pdp-print-a4)')
 }
 
 # ---- 1) sorgente reale --------------------------------------------------------

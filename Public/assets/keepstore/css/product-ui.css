@@ -1287,7 +1287,11 @@
 
 /* Il nome del prodotto e il titolo principale della pagina (h1) ma conserva la misura che aveva. */
 .ks-product-page h1.product-info-name {
+  background: none;
+  color: #181818;
+  font-family: Arial, Helvetica, sans-serif;
   font-size: 22px;
+  font-weight: 700;
   line-height: 1.25;
 }
 
@@ -1804,7 +1808,13 @@ body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px)
   }
 }
 
-/* PDP-TOOLS-1A stampa: la scheda cosi com'e, senza navigazione ne acquisto */
+/* KS-PDP-PRINT-A4-1A: la scheda stampata e una pagina A4 ordinata: testata con filetto rosso, foto e dati essenziali affiancati,
+   descrizione e informazioni a due colonne, nessun blocco spezzato fra una pagina e l'altra. Niente carosello, acquisto o menu. */
+@page {
+  size: A4 portrait;
+  margin: 11mm 12mm;
+}
+
 @media print {
   .tf-header,
   .tf-footer,
@@ -1825,6 +1835,13 @@ body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px)
   .box-total-btn,
   .tf-zoom-main,
   .container-swiper,
+  .tf-product-media-thumbs,
+  .ks-pdp-info-group[data-ks-info-group="prezzi"],
+  .tf-product-info-choose-option .shipping-to,
+  .tf-product-info-choose-option > :not(.product-delivery),
+  .product-info-rate-wrap .star-review,
+  .ks-pdp-section__lead,
+  .ks-pdp-section__heading,
   #goTop,
   .ks-pdp-buybar,
   .ks-cart-feedback-toast,
@@ -1837,18 +1854,43 @@ body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px)
     display: none !important;
   }
 
-  .ks-pdp-print-head { display: block; margin: 0 0 12px; padding: 0 0 8px; border-bottom: 2px solid #000; }
-
-  .ks-pdp-print-head__company { margin: 0; font-size: 16pt; font-weight: 700; }
-
-  .ks-pdp-print-head__meta { margin: 0; font-size: 9pt; }
-
+  html,
   body,
-  .ks-product-page { background: #fff !important; color: #000 !important; }
+  .ks-product-page {
+    background: #fff !important;
+    color: #111 !important;
+  }
 
-  body { padding-bottom: 0 !important; }
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 9.5pt;
+    line-height: 1.4;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
-  .ks-product-page * { box-shadow: none !important; }
+  .ks-product-page,
+  .ks-product-page * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .ks-product-page {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .ks-product-page .container {
+    width: auto !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .ks-product-page .tf-sp-2,
+  .ks-product-page .tf-sp-4 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
 
   .ks-product-page .sticky-top,
   .ks-product-page .ks-pdp-buybox-sticky,
@@ -1856,36 +1898,280 @@ body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px)
     position: static !important;
   }
 
-  .ks-product-page .tf-product-media-main .swiper-wrapper { transform: none !important; display: block !important; }
+  /* Testata: azienda a sinistra, indirizzo e data a destra, filetto rosso. */
+  .ks-pdp-print-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0 8mm;
+    margin: 0 0 5mm;
+    padding: 0 0 2mm;
+    border-bottom: 1.5pt solid var(--primary, #D80027);
+    break-after: avoid;
+  }
 
-  .ks-product-page .tf-product-media-main .swiper-slide { width: 70mm !important; margin: 0 !important; }
+  .ks-pdp-print-head__company {
+    grid-row: 1 / span 2;
+    margin: 0;
+    font-size: 15pt;
+    font-weight: 700;
+  }
 
-  .ks-product-page .tf-product-media-main .swiper-slide:not(:first-child) { display: none !important; }
+  .ks-pdp-print-head__meta {
+    margin: 0;
+    color: #444;
+    font-size: 8pt;
+    text-align: right;
+  }
 
-  .ks-product-page .tf-product-media-main img { max-width: 70mm !important; height: auto !important; opacity: 1 !important; }
+  /* Blocco principale: foto a sinistra, dati e prezzo a destra. */
+  .ks-product-page .tf-main-product > .container > .row {
+    display: grid !important;
+    grid-template-columns: 56mm minmax(0, 1fr);
+    align-items: start;
+    gap: 0 7mm;
+    margin: 0 !important;
+  }
 
-  .ks-product-page .tf-sp-2,
-  .ks-product-page .tf-sp-4 { padding-top: 0 !important; padding-bottom: 8px !important; }
+  .ks-product-page .tf-main-product > .container > .row > [class*="col-"] {
+    flex: none !important;
+    width: auto !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
 
-  .ks-product-page h1.product-info-name { font-size: 16pt; }
+  .ks-product-page .tf-product-media-main .swiper-wrapper {
+    display: block !important;
+    transform: none !important;
+  }
 
-  .ks-pdp-section { margin-top: 10px; padding-top: 8px; border-top: 1px solid #999; }
+  .ks-product-page .tf-product-media-main .swiper-slide {
+    width: 56mm !important;
+    margin: 0 !important;
+  }
 
-  .ks-pdp-section__title { font-size: 13pt; }
+  .ks-product-page .tf-product-media-main .swiper-slide:not(:first-child) {
+    display: none !important;
+  }
 
-  .ks-pdp-section,
-  .ks-pdp-info-group,
-  .ks-pdp-info-group .list-feature li,
-  .ks-review-item,
+  .ks-product-page .tf-product-media-main img {
+    max-width: 56mm !important;
+    max-height: 56mm !important;
+    height: auto !important;
+    object-fit: contain;
+    opacity: 1 !important;
+    border: 0.5pt solid #ccc;
+  }
+
+  .ks-product-page .tf-product-info-list {
+    display: block !important;
+  }
+
+  .ks-product-page .tf-product-info-wrap,
+  .ks-product-page .tf-product-info-content,
+  .ks-product-page .infor-heading,
+  .ks-product-page .tab-main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ks-product-page .tf-product-info-choose-option .product-delivery {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ks-product-page .tf-product-info-choose-option .product-delivery > * {
+    margin: 0 0 1mm !important;
+  }
+
+  .ks-product-page .infor-heading .caption {
+    margin: 0 0 1mm;
+    color: #555 !important;
+    font-size: 8.5pt;
+  }
+
+  .ks-product-page h1.product-info-name {
+    margin: 0 0 2mm;
+    background: none !important;
+    color: #111 !important;
+    font-size: 15pt;
+    line-height: 1.25;
+  }
+
+  .ks-product-page .product-info-rate-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1mm 6mm;
+    margin: 0 0 3mm;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ks-product-page .product-info-rate-wrap .caption {
+    margin: 0;
+    font-size: 8.5pt;
+  }
+
+  .ks-product-page .infor-bottom {
+    margin: 0 0 3mm;
+    font-size: 9pt;
+  }
+
+  .ks-product-page .infor-bottom h6 {
+    margin: 0 0 1mm;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
   .ks-product-page .tf-product-info-choose-option {
+    margin: 0;
+    padding: 2.5mm 4mm;
+    border: 0.75pt solid #bbb;
+    border-left: 3pt solid var(--primary, #D80027);
     break-inside: avoid;
   }
 
-  .ks-pdp-section__head { break-after: avoid; }
+  .ks-product-page .tf-product-info-choose-option .price-text {
+    color: #111 !important;
+    font-size: 20pt;
+    font-weight: 700;
+    line-height: 1.1;
+  }
 
-  .ks-product-page a { color: #000 !important; text-decoration: none !important; }
+  .ks-product-page .tf-product-info-choose-option p {
+    margin: 1mm 0 0;
+    font-size: 8.5pt;
+  }
 
-  .ks-pdp-ext-link::after { content: ""; }
+  /* Sezioni: titolo con filetto, testo compatto, un blocco non si spezza. */
+  .ks-product-page .ks-pdp-section {
+    margin: 4mm 0 0;
+    padding: 0;
+    border: 0;
+    break-inside: auto;
+  }
 
-  .ks-product-page details > summary { list-style: none; }
+  /* Le sezioni possono continuare nella pagina dopo, a righe intere; restano interi i gruppi, le voci, il riquadro prezzo e la testata. */
+  .ks-product-page .ks-pdp-section__head {
+    margin: 0 0 2mm;
+    padding: 0 0 1mm;
+    border-bottom: 0.75pt solid #111;
+    break-after: avoid;
+  }
+
+  .ks-product-page .ks-pdp-section__title {
+    margin: 0;
+    color: #111 !important;
+    font-size: 10.5pt;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .ks-product-page .ks-pdp-section__body,
+  .ks-product-page .ks-product-description {
+    margin: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    font-size: 8.8pt;
+    line-height: 1.3;
+    orphans: 3;
+    widows: 3;
+  }
+
+  .ks-product-page .ks-product-description * {
+    max-width: 100% !important;
+    color: #111 !important;
+    font-size: 8.8pt !important;
+    line-height: 1.3 !important;
+  }
+
+  .ks-product-page .ks-product-description p,
+  .ks-product-page .ks-product-description li {
+    margin: 0 0 1.5mm;
+    break-inside: avoid;
+  }
+
+  .ks-product-page .ks-product-description img {
+    max-height: 60mm;
+    width: auto;
+  }
+
+  .ks-product-page .ks-pdp-info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5mm 5mm;
+  }
+
+  .ks-product-page .ks-pdp-info-group {
+    margin: 0;
+    padding: 0;
+    border: 0.5pt solid #ccc;
+    break-inside: avoid;
+  }
+
+  .ks-product-page .ks-pdp-info-group__title {
+    margin: 0;
+    padding: 0.9mm 2.5mm;
+    background: #eee !important;
+    color: #111 !important;
+    font-size: 8pt;
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .ks-product-page .ks-pdp-info-group .list-feature {
+    margin: 0;
+    padding: 0 2.5mm;
+    list-style: none;
+  }
+
+  .ks-product-page .ks-pdp-info-group .list-feature li {
+    display: flex;
+    gap: 3mm;
+    padding: 0.6mm 0;
+    border-bottom: 0.5pt solid #ddd;
+    break-inside: avoid;
+  }
+
+  .ks-product-page .ks-pdp-info-group .list-feature li:last-child {
+    border-bottom: 0;
+  }
+
+  .ks-product-page .ks-pdp-info-group .name-feature {
+    flex: 0 0 28mm;
+    margin: 0;
+    font-size: 8pt;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .ks-product-page .ks-pdp-info-group .property {
+    margin: 0;
+    min-width: 0;
+    font-size: 8pt;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .ks-review-item {
+    break-inside: avoid;
+  }
+
+  .ks-product-page a {
+    color: #111 !important;
+    text-decoration: none !important;
+  }
+
+  .ks-pdp-ext-link::after {
+    content: "";
+  }
+
+  .ks-product-page details > summary {
+    list-style: none;
+  }
 }

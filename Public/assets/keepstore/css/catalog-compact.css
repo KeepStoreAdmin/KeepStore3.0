@@ -1,0 +1,78 @@
+/* KS-CATALOG-COMPACT-1A: titolo del catalogo e schede prodotto piu compatte.
+   - Il titolo (tipologia, categoria o settore) e un titolo vero: sans-serif, scuro, con un filetto rosso; non un blocco colorato.
+   - La scheda non riserva piu due righe alla categoria (una sola, con i puntini) e tre al nome (da due a tre): meno vuoto fra categoria, nome e prezzo.
+   - I prezzi di una stessa riga restano allineati in basso. */
+#ksCatalogPage .ks-catalog-heading,
+.ks-catalog-titlebar .ks-catalog-heading {
+  margin: 0;
+  padding: 2px 0 2px 14px;
+  border-left: 4px solid var(--primary, #D80027);
+  background: none;
+  color: #181818;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+@media (max-width: 575.98px) {
+  #ksCatalogPage .ks-catalog-heading,
+  .ks-catalog-titlebar .ks-catalog-heading {
+    font-size: 21px;
+  }
+}
+
+#ksCatalogPage .ks-card-category {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 1lh !important;
+  -webkit-line-clamp: 1 !important;
+}
+
+#ksCatalogPage .ks-card-title {
+  height: auto !important;
+  min-height: 2lh !important;
+  max-height: 3lh !important;
+}
+
+#ksCatalogPage article.card-product,
+#ksCatalogPage .ks-recent-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Schede della griglia (box-title con nome e prezzo): il prezzo scende in basso, cosi quelli di una riga restano allineati. */
+#ksCatalogPage article.card-product:not(.ks-recent-card) .card-product-info {
+  display: grid !important;
+  flex: 1 1 auto !important;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+#ksCatalogPage article.card-product:not(.ks-recent-card) .box-title {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#ksCatalogPage article.card-product:not(.ks-recent-card) .box-title .price-wrap {
+  margin-top: auto !important;
+}
+
+#ksCatalogPage article.card-product:not(.ks-recent-card) .box-infor-detail {
+  margin-top: 0;
+}
+
+/* Visti di recente (server e JavaScript): categoria, nome, codice e prezzo in pila, senza i 20 px fra una riga e l'altra. */
+#ksCatalogPage article.card-product.ks-recent-card .card-product-info,
+#ksCatalogPage div.ks-recent-card .card-product-info {
+  display: flex !important;
+  flex-direction: column;
+  gap: 4px !important;
+}
+
+#ksCatalogPage article.card-product.ks-recent-card .price-wrap,
+#ksCatalogPage div.ks-recent-card .price-wrap {
+  margin-top: 0 !important;
+}

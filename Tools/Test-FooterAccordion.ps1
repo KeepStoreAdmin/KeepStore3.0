@@ -100,7 +100,7 @@ function Eval-Static([string]$master, [string]$mainJs, [string]$uiCss, [string]$
     Chk ($master -match '<script src="<%= ThemeManager\.Asset\("js/ks-footer-accordion\.js"\) %>\?v=20261116-footer-accordion1a"></script>') 'MASTER_LOADS_THE_SCRIPT_WITH_A_VERSION'
     Chk (($master.IndexOf('js/ks-footer-accordion.js') -gt $master.IndexOf('js/main.js')) -and ($master.IndexOf('js/main.js') -gt 0)) 'MASTER_LOADS_THE_SCRIPT_AFTER_MAIN_JS'
     Chk (-not $master.Contains('main.js") %>?v=20260929-cart-authoritative-guard-1b-rev1"')) 'MASTER_BUMPED_THE_MAIN_JS_VERSION'
-    Chk ($master -match 'css/ks-ui\.css"\) & "\?v=20261118-pdp-tools1a"') 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
+    Chk ($master -match 'css/ks-ui\.css"\) & "\?v=20261118-h1-legacy1a"') 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
     Chk ($uiCss -match '(?s)@media \(max-width: 767px\)\s*\{\s*\.ft-link-wrap \.footer-heading-mobile\s*\{[^}]*min-height: 44px') 'KS_UI_CSS_HAS_THE_44_PX_ROW_UNDER_768'
     Chk ($uiCss.Contains('.footer-heading-mobile .ft-heading-toggle') -and $uiCss.Contains('@media (forced-colors: active)')) 'KS_UI_CSS_HAS_THE_BUTTON_RESET_AND_THE_FORCED_COLORS_RULE'
     if ($null -eq $baseMain) { Chk $false 'MAIN_JS_BASE_COMMIT_NOT_AVAILABLE_THE_CUT_CANNOT_BE_PROVED' }
@@ -651,7 +651,7 @@ try {
     $tag = 'ThemeManager.Asset("js/ks-footer-accordion.js") %>?v=20261116-footer-accordion1a"></script>'
     Assert-StaticMut 'S1_master_without_the_script_tag' (Mutate-Text $master ('<script src="<%= ' + $tag) '' 'S1') $mainJs $uiCss 'MASTER_LOADS_THE_SCRIPT'
     Assert-StaticMut 'S2_main_js_version_not_bumped' (Mutate-Text $master 'js/main.js") %>?v=20261116-footer-accordion1a"' 'js/main.js") %>?v=20260929-cart-authoritative-guard-1b-rev1"' 'S2') $mainJs $uiCss 'MASTER_BUMPED_THE_MAIN_JS_VERSION'
-    Assert-StaticMut 'S3_ks_ui_link_without_a_version' (Mutate-Text $master 'ThemeManager.Asset("css/ks-ui.css") & "?v=20261118-pdp-tools1a" %>' 'ThemeManager.Asset("css/ks-ui.css") %>' 'S3') $mainJs $uiCss 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
+    Assert-StaticMut 'S3_ks_ui_link_without_a_version' (Mutate-Text $master 'ThemeManager.Asset("css/ks-ui.css") & "?v=20261118-h1-legacy1a" %>' 'ThemeManager.Asset("css/ks-ui.css") %>' 'S3') $mainJs $uiCss 'MASTER_VERSIONS_THE_KS_UI_CSS_LINK'
     Assert-StaticMut 'S4_main_js_cut_removes_one_call_too_many' $master (Mutate-Text $mainJs 'infiniteSlide();' '' 'S4') $uiCss 'MAIN_JS_DIFF_IS_EXACTLY'
     Assert-StaticMut 'S5_main_js_still_calls_handleFooter' $master (Mutate-Text $mainJs 'totalPriceVariant();' 'totalPriceVariant();handleFooter();' 'S5') $uiCss 'MAIN_JS_HAS_NO_OLD_FOOTER_ACCORDION'
     Assert-StaticMut 'S6_ks_ui_without_the_forced_colors_block' $master $mainJs (Mutate-Text $uiCss '@media (forced-colors: active){' '@media (min-width: 1px){' 'S6') 'KS_UI_CSS_HAS_THE_BUTTON_RESET'

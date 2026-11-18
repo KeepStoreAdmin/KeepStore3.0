@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261115-focus-fc1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261114-filter-buttons1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261115-focus-fc1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-compact.css") %>?v=20261118-compact1a" />
     <style>
         #ksCatalogPage .ks-catalog-guide-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px 14px; max-width: 100%; white-space: normal; text-align: center; }
         #ksCatalogPage .ks-catalog-guide-link:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; transition: none; }
@@ -25,11 +26,11 @@
 <asp:Content ID="MainContent1" ContentPlaceHolderID="MainContent" runat="server">
     <asp:HiddenField ID="hfCartMutationRequestId" runat="server" />
 
-    <asp:Panel ID="ksPageTitle" runat="server" CssClass="py-3">
+    <asp:Panel ID="ksPageTitle" runat="server" CssClass="py-3 ks-catalog-titlebar">
         <div class="container">
             <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-end justify-content-between gap-3">
                 <div class="d-flex flex-column gap-2">
-                    <h1 class="title h4 mb-0 text-break"><asp:Literal ID="litCatalogHeading" runat="server" Mode="Encode" EnableViewState="false" /></h1>
+                    <h1 class="title h4 mb-0 text-break ks-catalog-heading"><asp:Literal ID="litCatalogHeading" runat="server" Mode="Encode" EnableViewState="false" /></h1>
                     <div class="d-none">
                         <asp:Label ID="lblRicerca" runat="server" Visible="false" Text="Risultati ricerca:" />
                         <asp:Label ID="lblRisultati" runat="server" />

@@ -122,13 +122,13 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($f.css -notmatch 'body\.ks-pdp-buybar-on #goTop \{ bottom: calc\(var\(--ks-pdp-buybar-h, 72px\) \+ 76px\); \}') { $fail.Add('A10 goTop non spostato sopra il pulsante con la barra d''acquisto') }
     if ($f.uicss -notmatch '(?s)@media print \{\s*\.ks-wa-contact \{ display: none !important; \}') { $fail.Add('A10 pulsante fisso in stampa') }
     # A11 stampa: blocco dedicato in coda, niente selettore nudo header, galleria ferma, elementi fissi e di acquisto nascosti
-    $print = Get-Between $f.css '/* PDP-TOOLS-1A stampa: la scheda cosi com''e, senza navigazione ne acquisto */' "`0"
-    if ($print -notmatch '^[^\r\n]*\r?\n@media print \{') { $fail.Add('A11 blocco di stampa assente') }
+    $print = Get-Between $f.css '/* KS-PDP-PRINT-A4-1A:' "`0"
+    if ($print -notmatch '(?s)@page \{[^}]*size: A4 portrait;[^}]*\}\s*@media print \{') { $fail.Add('A11 blocco di stampa assente') }
     foreach ($sel in '.tf-header', '.tf-footer', '.ks-pdp-toc', '.ks-pdp-tools', '.product-box-btn', '.product-quantity', '.ks-review-form-wrap', '.ks-product-list-section', '#goTop', '.ks-pdp-buybar', '.ks-cart-feedback-toast', '#preload', '.offcanvas', '.modal', '.ks-wa-contact') { if ($print -notmatch ('(?m)^\s*' + [regex]::Escape($sel) + '\s*[,{]')) { $fail.Add('A11 in stampa resta ' + $sel) } }
     if ($print -match '(?m)^\s*(header|footer|nav)\s*[,{]') { $fail.Add('A11 selettore nudo che toglie i titoli delle sezioni') }
-    if ($print -notmatch '\.swiper-wrapper \{ transform: none !important;') { $fail.Add('A11 galleria spostata fuori pagina') }
+    if ($print -notmatch '\.swiper-wrapper \{[^}]*transform: none !important;') { $fail.Add('A11 galleria spostata fuori pagina') }
     if ($print -notmatch 'position: static !important') { $fail.Add('A11 elementi sticky in stampa') }
-    if ($print -notmatch '\.ks-pdp-print-head \{ display: block') { $fail.Add('A11 intestazione di stampa non mostrata') }
+    if ($print -notmatch '\.ks-pdp-print-head \{[^}]*display: grid') { $fail.Add('A11 intestazione di stampa non mostrata') }
     if ($f.css -notmatch '(?m)^\.ks-pdp-print-head \{ display: none; \}') { $fail.Add('A11 intestazione di stampa visibile a schermo') }
     if ($print -notmatch 'break-inside: avoid') { $fail.Add('A11 righe tagliate fra due pagine') }
     if ($a -notmatch '<div class="ks-pdp-print-head" aria-hidden="true">') { $fail.Add('A11 intestazione di stampa nella pagina') }
@@ -144,8 +144,8 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($j -notmatch 'showManualCopy\(\)') { $fail.Add('A12 copia fallita senza campo da copiare a mano') }
     if ($j -match 'fetch\(|XMLHttpRequest|sendBeacon|document\.write|innerHTML') { $fail.Add('A12 script con rete o HTML dinamico') }
     if ($a -notmatch 'js/ks-pdp-tools\.js"\) %>\?v=20261118-pdp-tools1a"') { $fail.Add('A12 script non caricato') }
-    if ($a -notmatch 'css/product-ui\.css"\) %>\?v=20261118-pdp-tools1a"') { $fail.Add('A12 sigla del foglio di stile') }
-    if ($m -notmatch 'css/ks-ui\.css"\) & "\?v=20261118-pdp-tools1a"') { $fail.Add('A12 sigla di ks-ui.css') }
+    if ($a -notmatch 'css/product-ui\.css"\) %>\?v=20261118-pdp-print-a4"') { $fail.Add('A12 sigla del foglio di stile') }
+    if ($m -notmatch 'css/ks-ui\.css"\) & "\?v=20261118-h1-legacy1a"') { $fail.Add('A12 sigla di ks-ui.css') }
 
     if (-not $Quiet) { foreach ($x in $fail) { Write-Host ('  FAIL ' + $x) } }
     return ($fail.Count -eq 0)
@@ -262,14 +262,14 @@ $mutants = @(
     @{ Id = 'M24_GOTOP_NOT_RAISED'; File = 'css'; Old = 'body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px); }'; New = '' },
     @{ Id = 'M25_PRINT_KEEPS_TOOLS'; File = 'css'; Old = "  .ks-pdp-tools,`r`n"; New = '' },
     @{ Id = 'M26_PRINT_BARE_HEADER'; File = 'css'; Old = "  .tf-header,`r`n"; New = "  header,`r`n  .tf-header,`r`n" },
-    @{ Id = 'M27_PRINT_GALLERY_SHIFTED'; File = 'css'; Old = '.swiper-wrapper { transform: none !important;'; New = '.swiper-wrapper {' },
+    @{ Id = 'M27_PRINT_GALLERY_SHIFTED'; File = 'css'; Old = "    transform: none !important;`r`n"; New = '' },
     @{ Id = 'M28_PRINT_TOAST'; File = 'css'; Old = "  .ks-cart-feedback-toast,`r`n"; New = '' },
     @{ Id = 'M29_PRINT_HEAD_ON_SCREEN'; File = 'css'; Old = '.ks-pdp-print-head { display: none; }'; New = '.ks-pdp-print-head { display: block; }' },
     @{ Id = 'M30_EXTRA_QUERY'; File = 'vb'; Old = '"SELECT NormeGaranzia FROM articoli WHERE id = @id LIMIT 1"'; New = '"SELECT NormeGaranzia, LinkProduttore FROM articoli WHERE id = @id LIMIT 1"' },
     @{ Id = 'M31_JS_NETWORK'; File = 'js'; Old = 'window.print()'; New = "fetch('/x'); window.print()" },
     @{ Id = 'M32_ABORT_AS_ERROR'; File = 'js'; Old = "if (error && error.name === 'AbortError') { return; }"; New = '' },
     @{ Id = 'M33_PRINT_OPENS_SHARE'; File = 'js'; Old = "details:not([open]):not([data-ks-pdp-share])"; New = "details:not([open])" },
-    @{ Id = 'M34_OLD_BUSTER'; File = 'aspx'; Old = 'css/product-ui.css") %>?v=20261118-pdp-tools1a"'; New = 'css/product-ui.css") %>?v=20261118-pdp-sections1a"' },
+    @{ Id = 'M34_OLD_BUSTER'; File = 'aspx'; Old = 'css/product-ui.css") %>?v=20261118-pdp-print-a4"'; New = 'css/product-ui.css") %>?v=20261118-pdp-sections1a"' },
     @{ Id = 'M35_MASTER_NAMES_TABLE'; File = 'mastervb'; Old = 'Private Sub BindWhatsAppContact'; New = "' social_buttons`r`n    Private Sub BindWhatsAppContact" }
 )
 $behaviourMutants = @(

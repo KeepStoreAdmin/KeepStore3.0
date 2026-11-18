@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") & "?v=20261118-qa-1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") & "?v=20261115-focus-fc1a" %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") & "?v=20261118-pdp-tools1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") & "?v=20261118-h1-legacy1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />

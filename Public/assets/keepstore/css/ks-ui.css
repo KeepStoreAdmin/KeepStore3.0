@@ -130,3 +130,9 @@ html:has(.ks-wa-contact) {
 @media print {
   .ks-wa-contact { display: none !important; }
 }
+
+/* KS-CATALOG-COMPACT-1A: i fogli di stile dei singoli clienti (Public/style/*.css) possono colorare ogni h1 con uno sfondo pieno; i titoli del negozio sono titoli, senza sfondo. */
+body h1,
+body .h1 {
+  background-color: transparent;
+}
