@@ -688,8 +688,9 @@ Public Module ProductPromotionEligibilityResolver
     Private Function ReadDate(ByVal value As Object) As Nullable(Of Date)
         If value Is Nothing OrElse value Is DBNull.Value Then Return Nothing
         If TypeOf value Is Date Then Return DirectCast(value, Date)
+        ' PDP-SECTIONS-RESTYLE-1A: il connettore restituisce un tipo data proprio; riletto come testo scambiava giorno e mese nella validita mostrata.
         Dim parsed As Date
-        If Date.TryParse(Convert.ToString(value), CultureInfo.InvariantCulture, DateTimeStyles.None, parsed) Then Return parsed
+        If KeepStoreDates.TryToDate(value, parsed) Then Return parsed
         Return Nothing
     End Function
 End Module

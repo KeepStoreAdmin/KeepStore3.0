@@ -10,7 +10,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261115-focus-obscured1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261118-pdp-sections1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -115,9 +115,9 @@
                                                 Categoria:
                                                 <asp:HyperLink ID="lnkCategory" runat="server" CssClass="link text-secondary" NavigateUrl="/articoli.aspx" Text="Catalogo" />
                                             </p>
-                                            <h5 class="product-info-name fw-semibold">
+                                            <h1 class="product-info-name fw-semibold">
                                                 <asp:Literal ID="litNome" runat="server" />
-                                            </h5>
+                                            </h1>
 
                                             <ul class="product-info-rate-wrap">
                                                 <li>
@@ -262,10 +262,6 @@
                                                         <p class="ks-pdp-shipping-status fw-semibold">Tariffe non disponibili per questo articolo.</p>
                                                     </asp:PlaceHolder>
                                                 </asp:PlaceHolder>
-                                                <p>Le opzioni e il costo definitivo vengono mostrati nel carrello.</p>
-                                                <asp:PlaceHolder ID="phShippingWeight" runat="server" Visible="false">
-                                                    <p><asp:Literal ID="litShippingWeight" runat="server" /></p>
-                                                </asp:PlaceHolder>
                                             </div>
                                         </div>
 
@@ -278,89 +274,101 @@
             </div>
         </section>
 
-        <section class="tf-sp-4">
+        <section class="tf-sp-4 ks-pdp-sections" data-ks-pdp-sections>
             <div class="container">
-                <div class="flat-animate-tab flat-title-tab-product-des">
-                    <div class="flat-title-tab text-center">
-                        <ul class="menu-tab-line" role="tablist">
-                            <li class="nav-tab-item" role="presentation">
-                                <a href="#prd-usually" class="tab-link product-title fw-semibold active" data-bs-toggle="tab" role="tab">Spesso acquistati insieme</a>
-                            </li>
-                            <li class="nav-tab-item" role="presentation">
-                                <a href="#prd-des" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Descrizione</a>
-                            </li>
-                            <li class="nav-tab-item" role="presentation">
-                                <a href="#prd-infor" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Informazioni prodotto</a>
-                            </li>
-                            <li class="nav-tab-item" role="presentation">
-                                <a href="#prd-review" class="tab-link product-title fw-semibold" data-bs-toggle="tab" role="tab">Recensioni</a>
-                            </li>
-                        </ul>
-                    </div>
+                <nav class="ks-pdp-toc" aria-label="Sezioni della scheda" data-ks-pdp-toc>
+                    <ul class="ks-pdp-toc__list">
+                        <% If phBundleSection.Visible Then %><li><a class="ks-pdp-toc__link" href="#prd-usually">Spesso acquistati insieme</a></li><% End If %>
+                        <% If phDescSection.Visible Then %><li><a class="ks-pdp-toc__link" href="#prd-des">Descrizione</a></li><% End If %>
+                        <li><a class="ks-pdp-toc__link" href="#prd-infor">Informazioni prodotto</a></li>
+                        <li><a class="ks-pdp-toc__link" href="#prd-review">Recensioni</a></li>
+                        <% If phSimilar.Visible Then %><li><a class="ks-pdp-toc__link" href="#prd-similar">Articoli simili</a></li><% End If %>
+                        <% If phRelated.Visible Then %><li><a class="ks-pdp-toc__link" href="#prd-related">Prodotti correlati</a></li><% End If %>
+                    </ul>
+                </nav>
 
-                    <div class="tab-content">
-                        <div class="tab-pane active show" id="prd-usually" role="tabpanel">
-                            <div class="tab-main tab-usually flex-md-wrap">
-                                <asp:Repeater ID="rptBundle" runat="server">
-                                    <ItemTemplate>
-                                        <div class="card-usually hover-img">
-                                            <a href='<%# Eval("Url") %>' class="image img-style">
-                                                <img src='<%# Eval("Img") %>' data-src='<%# Eval("Img") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>' class="lazyload" />
-                                            </a>
-                                            <div class="content">
-                                                <div class="checkbox-item-wrap">
-                                                    <label>
-                                                        <input type="checkbox" class="checkbox-item" checked="checked" disabled="disabled" />
-                                                        <span class="btn-checkbox"></span>
-                                                    </label>
-                                                </div>
-                                                <div class="box-name">
-                                                    <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                                    <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold ks-card-title ks-pdp-card-title">
-                                                        <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
-                                                    </a>
-                                                    <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
-                                                    <%# Eval("AvailabilityHtml") %>
-                                                </div>
+                <asp:PlaceHolder ID="phBundleSection" runat="server" Visible="false">
+                    <section class="ks-pdp-section" id="prd-usually" aria-labelledby="prdUsuallyTitle" tabindex="-1">
+                        <header class="ks-pdp-section__head">
+                            <h2 class="ks-pdp-section__title" id="prdUsuallyTitle">Spesso acquistati insieme</h2>
+                            <p class="ks-pdp-section__lead">Gli articoli che i clienti abbinano a questo prodotto: li aggiungi al carrello con un solo clic.</p>
+                        </header>
+                        <div class="ks-pdp-section__body flat-title-tab-product-des">
+                        <div class="tab-main tab-usually flex-md-wrap">
+                            <asp:Repeater ID="rptBundle" runat="server">
+                                <ItemTemplate>
+                                    <div class="card-usually hover-img">
+                                        <a href='<%# Eval("Url") %>' class="image img-style">
+                                            <img src='<%# Eval("Img") %>' data-src='<%# Eval("Img") %>' alt='<%# Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>' class="lazyload" />
+                                        </a>
+                                        <div class="content">
+                                            <div class="checkbox-item-wrap">
+                                                <label>
+                                                    <input type="checkbox" class="checkbox-item" checked="checked" disabled="disabled" />
+                                                    <span class="btn-checkbox"></span>
+                                                </label>
+                                            </div>
+                                            <div class="box-name">
+                                                <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
+                                                <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold ks-card-title ks-pdp-card-title">
+                                                    <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
+                                                </a>
+                                                <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
+                                                <%# Eval("AvailabilityHtml") %>
                                             </div>
                                         </div>
-                                    </ItemTemplate>
-                                    <SeparatorTemplate>
-                                        <span class="icon"><i class="icon-plus fs-28"></i></span>
-                                    </SeparatorTemplate>
-                                </asp:Repeater>
-                                <asp:PlaceHolder ID="phBundleEmpty" runat="server" Visible="false">
-                                    <p class="body-text-3 text-main-2">Non ci sono ancora articoli abbinabili per questo prodotto.</p>
-                                </asp:PlaceHolder>
-                                <div class="box-total-btn">
-                                    <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
-                                    <button type="submit" id="MainContent_btnBundleAddToCart" <%= PdpBundleNativeCartAttributes %> class="tf-btn text-white js-ks-cart-context" aria-label="Acquista i prodotti selezionati" title="Acquista i prodotti selezionati">
-                                        Acquista selezionati
-                                        <i class="icon-cart-2" aria-hidden="true"></i>
-                                    </button>
-                                </div>
+                                    </div>
+                                </ItemTemplate>
+                                <SeparatorTemplate>
+                                    <span class="icon"><i class="icon-plus fs-28"></i></span>
+                                </SeparatorTemplate>
+                            </asp:Repeater>
+                            <div class="box-total-btn">
+                                <p class="body-text-3 text-center">Totale selezione: <span class="text-primary"><asp:Literal ID="litBundleTotal" runat="server" /></span></p>
+                                <button type="submit" id="MainContent_btnBundleAddToCart" <%= PdpBundleNativeCartAttributes %> class="tf-btn text-white js-ks-cart-context" aria-label="Acquista i prodotti selezionati" title="Acquista i prodotti selezionati">
+                                    Acquista selezionati
+                                    <i class="icon-cart-2" aria-hidden="true"></i>
+                                </button>
                             </div>
                         </div>
-
-                        <div class="tab-pane" id="prd-des" role="tabpanel">
-                            <div class="tab-main tab-des ks-product-description">
-                                <asp:Literal ID="litLongDesc" runat="server" />
-                            </div>
                         </div>
+                    </section>
+                </asp:PlaceHolder>
 
-                        <div class="tab-pane" id="prd-infor" role="tabpanel">
-                            <div class="tab-main tab-info">
+                <asp:PlaceHolder ID="phDescSection" runat="server">
+                    <section class="ks-pdp-section" id="prd-des" aria-labelledby="prdDesTitle" tabindex="-1">
+                        <header class="ks-pdp-section__head">
+                            <h2 class="ks-pdp-section__title" id="prdDesTitle">Descrizione</h2>
+                            <p class="ks-pdp-section__lead">Che cos'&egrave; e a cosa serve.</p>
+                        </header>
+                        <div class="ks-pdp-section__body flat-title-tab-product-des">
+                        <div class="tab-main tab-des ks-product-description">
+                            <asp:Literal ID="litLongDesc" runat="server" />
+                        </div>
+                        </div>
+                    </section>
+                </asp:PlaceHolder>
+
+                <section class="ks-pdp-section" id="prd-infor" aria-labelledby="prdInforTitle" tabindex="-1">
+                    <header class="ks-pdp-section__head">
+                        <h2 class="ks-pdp-section__title" id="prdInforTitle">Informazioni prodotto</h2>
+                        <p class="ks-pdp-section__lead">Codici, prezzi, disponibilit&agrave;, spedizione e garanzia.</p>
+                    </header>
+                    <div class="ks-pdp-section__body flat-title-tab-product-des">
+                        <div class="tab-main tab-info ks-pdp-info">
+                            <div class="ks-pdp-info-group" data-ks-info-group="identita">
+                                <h3 class="ks-pdp-info-group__title">Identificazione</h3>
                                 <ul class="list-feature">
-                                    <asp:PlaceHolder ID="phCategoryInfo" runat="server" Visible="false">
-                                        <li>
-                                            <p class="name-feature">Categoria</p>
-                                            <p class="property"><asp:Literal ID="litCategoryInfo" runat="server" /></p>
-                                        </li>
-                                    </asp:PlaceHolder>
                                     <asp:PlaceHolder ID="phBrandInfo" runat="server" Visible="false">
                                         <li>
                                             <p class="name-feature">Marca</p>
                                             <p class="property"><asp:Literal ID="litMarcaInfo" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phCategoryInfo" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Categoria</p>
+                                            <p class="property"><asp:Literal ID="litCategoryInfo" runat="server" /></p>
                                         </li>
                                     </asp:PlaceHolder>
                                     <li>
@@ -373,24 +381,50 @@
                                             <p class="property"><asp:Literal ID="litEan4" runat="server" /></p>
                                         </li>
                                     </asp:PlaceHolder>
-                                    <asp:PlaceHolder ID="phAvailabilityInfo" runat="server" Visible="false">
-                                        <li>
-                                            <p class="name-feature">Disponibilita</p>
-                                            <p class="property"><asp:Literal ID="litAvailabilityInfo" runat="server" /></p>
-                                        </li>
-                                    </asp:PlaceHolder>
+                                </ul>
+                            </div>
+                            <div class="ks-pdp-info-group" data-ks-info-group="prezzi">
+                                <h3 class="ks-pdp-info-group__title">Prezzi e promozione</h3>
+                                <ul class="list-feature">
                                     <li>
                                         <p class="name-feature">Prezzo</p>
-                                        <p class="property"><asp:Literal ID="litPriceInfo" runat="server" /></p>
+                                        <p class="property ks-pdp-info-price"><asp:Literal ID="litPriceInfo" runat="server" /></p>
+                                    </li>
+                                    <li>
+                                        <p class="name-feature">Prezzo di listino</p>
+                                        <p class="property"><asp:Literal ID="litOfficialListPrice" runat="server" Mode="Encode" /></p>
                                     </li>
                                     <li>
                                         <p class="name-feature">IVA</p>
                                         <p class="property"><asp:Literal ID="litIvaInfo" runat="server" /></p>
                                     </li>
+                                    <asp:Literal ID="litPromotionInfo" runat="server" EnableViewState="false" />
+                                </ul>
+                            </div>
+                            <div class="ks-pdp-info-group" data-ks-info-group="spedizione">
+                                <h3 class="ks-pdp-info-group__title">Disponibilit&agrave; e spedizione</h3>
+                                <ul class="list-feature">
+                                    <asp:PlaceHolder ID="phAvailabilityInfo" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Disponibilit&agrave;</p>
+                                            <p class="property"><asp:Literal ID="litAvailabilityInfo" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phShippingWeight" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Peso articolo</p>
+                                            <p class="property"><asp:Literal ID="litShippingWeight" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
                                     <li>
-                                        <p class="name-feature">Visite</p>
-                                        <p class="property"><asp:Literal ID="litVisitsInfo" runat="server" Mode="Encode" /></p>
+                                        <p class="name-feature">Spedizione</p>
+                                        <p class="property" data-ks-shipping-note>Le opzioni e il costo definitivo vengono mostrati nel carrello.</p>
                                     </li>
+                                </ul>
+                            </div>
+                            <div class="ks-pdp-info-group" data-ks-info-group="garanzia">
+                                <h3 class="ks-pdp-info-group__title">Garanzia</h3>
+                                <ul class="list-feature">
                                     <li>
                                         <p class="name-feature">Garanzia</p>
                                         <div class="property ks-pdp-warranty-info">
@@ -403,102 +437,113 @@
                                             </asp:PlaceHolder>
                                         </div>
                                     </li>
+                                </ul>
+                            </div>
+                            <div class="ks-pdp-info-group" data-ks-info-group="altro">
+                                <h3 class="ks-pdp-info-group__title">Altre informazioni</h3>
+                                <ul class="list-feature">
                                     <li>
-                                        <p class="name-feature">Prezzo di Listino</p>
-                                        <p class="property"><asp:Literal ID="litOfficialListPrice" runat="server" Mode="Encode" /></p>
+                                        <p class="name-feature">Visite</p>
+                                        <p class="property"><asp:Literal ID="litVisitsInfo" runat="server" Mode="Encode" /></p>
                                     </li>
                                 </ul>
                             </div>
                         </div>
+                    </div>
+                </section>
 
-                        <div class="tab-pane" id="prd-review" role="tabpanel">
-                            <div class="ks-review-widget">
-                            <div class="tab-main tab-review flex-lg-nowrap">
-                                <div class="tab-rating-wrap">
-                                    <div class="rating-percent">
-                                        <p class="rate-percent"><asp:Literal ID="litReviewAverage" runat="server" Text="0" /> <span>/ 5</span></p>
-                                        <ul class="list-star justify-content-center">
-                                            <li><i class="icon-star text-main-4"></i></li>
-                                            <li><i class="icon-star text-main-4"></i></li>
-                                            <li><i class="icon-star text-main-4"></i></li>
-                                            <li><i class="icon-star text-main-4"></i></li>
-                                            <li><i class="icon-star text-main-4"></i></li>
-                                        </ul>
-                                        <p class="text-cl-3"><asp:Literal ID="litReviewCountText" runat="server" Text="Ancora nessuna valutazione." /></p>
-                                    </div>
-                                    <ul class="rating-progress-list">
-                                        <asp:Literal ID="litReviewDistribution" runat="server" />
+                <section class="ks-pdp-section" id="prd-review" aria-labelledby="prdReviewTitle" tabindex="-1">
+                    <header class="ks-pdp-section__head">
+                        <h2 class="ks-pdp-section__title" id="prdReviewTitle">Recensioni</h2>
+                        <p class="ks-pdp-section__lead">Il parere di chi ha gi&agrave; acquistato.</p>
+                    </header>
+                    <div class="ks-pdp-section__body flat-title-tab-product-des">
+                        <div class="ks-review-widget">
+                        <div class="tab-main tab-review flex-lg-nowrap">
+                            <div class="tab-rating-wrap">
+                                <div class="rating-percent">
+                                    <p class="rate-percent"><asp:Literal ID="litReviewAverage" runat="server" Text="0" /> <span>/ 5</span></p>
+                                    <ul class="list-star justify-content-center">
+                                        <li><i class="icon-star text-main-4"></i></li>
+                                        <li><i class="icon-star text-main-4"></i></li>
+                                        <li><i class="icon-star text-main-4"></i></li>
+                                        <li><i class="icon-star text-main-4"></i></li>
+                                        <li><i class="icon-star text-main-4"></i></li>
                                     </ul>
+                                    <p class="text-cl-3"><asp:Literal ID="litReviewCountText" runat="server" Text="Ancora nessuna valutazione." /></p>
                                 </div>
-                                <div class="tab-review-wrap">
-                                    <div class="review-list-wrap">
-                                        <asp:Literal ID="litReviewMessage" runat="server" EnableViewState="false" />
-                                        <asp:PlaceHolder ID="phReviewEmpty" runat="server" Visible="false">
-                                            <div class="alert alert-light mb-3">
-                                                Non ci sono ancora recensioni per questo prodotto. Puoi essere il primo a lasciare una valutazione utile agli altri clienti.
-                                            </div>
-                                        </asp:PlaceHolder>
-                                        <asp:Repeater ID="rptProductReviews" runat="server">
-                                            <ItemTemplate>
-                                                <div class="ks-review-item">
-                                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
-                                                        <div class="d-flex align-items-center gap-2">
-                                                            <strong><%# Eval("RatingText") %></strong>
-                                                            <ul class="list-star ks-review-stars mb-0"><%# Eval("StarsHtml") %></ul>
-                                                        </div>
-                                                        <span class="caption text-main-2"><%# Eval("DateText") %></span>
-                                                    </div>
-                                                    <p class="body-md-2 fw-semibold mb-1"><%# Eval("TitleText") %></p>
-                                                    <p class="body-text-3 mb-1"><%# Eval("BodyText") %></p>
-                                                    <p class="caption text-main-2 mb-0">
-                                                        <%# Eval("AuthorText") %>
-                                                        <%# If(Convert.ToBoolean(Eval("Verified")), " - Acquisto verificato", String.Empty) %>
-                                                    </p>
-                                                </div>
-                                            </ItemTemplate>
-                                        </asp:Repeater>
-                                        <div class="reply-comment style-1 ks-review-form-wrap">
-                                            <h6 class="mb-2">Lascia una recensione</h6>
-                                            <p class="body-text-3 text-main-2 mb-3">La recensione viene salvata su KeepStore, verificata con controlli anti-spam e pubblicata nella scheda prodotto.</p>
-                                            <div class="ks-review-form">
-                                                <label class="body-text-3 fw-semibold" for="<%= ddlReviewRating.ClientID %>">Valutazione</label>
-                                                <asp:DropDownList ID="ddlReviewRating" runat="server" CssClass="form-select">
-                                                    <asp:ListItem Value="5" Text="5 stelle" />
-                                                    <asp:ListItem Value="4" Text="4 stelle" />
-                                                    <asp:ListItem Value="3" Text="3 stelle" />
-                                                    <asp:ListItem Value="2" Text="2 stelle" />
-                                                    <asp:ListItem Value="1" Text="1 stella" />
-                                                </asp:DropDownList>
-                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewName.ClientID %>">Nome</label>
-                                                <asp:TextBox ID="txtReviewName" runat="server" CssClass="form-control" MaxLength="120" placeholder="Il tuo nome" />
-                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewEmail.ClientID %>">Email</label>
-                                                <asp:TextBox ID="txtReviewEmail" runat="server" CssClass="form-control" MaxLength="180" TextMode="Email" placeholder="Email non visibile pubblicamente" />
-                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewTitle.ClientID %>">Titolo</label>
-                                                <asp:TextBox ID="txtReviewTitle" runat="server" CssClass="form-control" MaxLength="160" placeholder="Sintesi della recensione" />
-                                                <label class="body-text-3 fw-semibold" for="<%= txtReviewText.ClientID %>">Commento</label>
-                                                <asp:TextBox ID="txtReviewText" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="4" MaxLength="1000" placeholder="Scrivi una nota utile sul prodotto" />
-                                                <asp:LinkButton ID="btnReviewSubmit" runat="server" CssClass="tf-btn btn-line" OnClick="btnReviewSubmit_Click" CausesValidation="false">
-                                                    <span>Salva recensione</span>
-                                                </asp:LinkButton>
-                                            </div>
-                                            <a class="link text-secondary d-inline-flex mt-3" href="Contattaci.aspx">Hai dubbi prima dell'acquisto? Contatta l'assistenza</a>
+                                <ul class="rating-progress-list">
+                                    <asp:Literal ID="litReviewDistribution" runat="server" />
+                                </ul>
+                            </div>
+                            <div class="tab-review-wrap">
+                                <div class="review-list-wrap">
+                                    <asp:Literal ID="litReviewMessage" runat="server" EnableViewState="false" />
+                                    <asp:PlaceHolder ID="phReviewEmpty" runat="server" Visible="false">
+                                        <div class="alert alert-light mb-3">
+                                            Non ci sono ancora recensioni per questo prodotto. Puoi essere il primo a lasciare una valutazione utile agli altri clienti.
                                         </div>
+                                    </asp:PlaceHolder>
+                                    <asp:Repeater ID="rptProductReviews" runat="server">
+                                        <ItemTemplate>
+                                            <div class="ks-review-item">
+                                                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <strong><%# Eval("RatingText") %></strong>
+                                                        <ul class="list-star ks-review-stars mb-0"><%# Eval("StarsHtml") %></ul>
+                                                    </div>
+                                                    <span class="caption text-main-2"><%# Eval("DateText") %></span>
+                                                </div>
+                                                <p class="body-md-2 fw-semibold mb-1"><%# Eval("TitleText") %></p>
+                                                <p class="body-text-3 mb-1"><%# Eval("BodyText") %></p>
+                                                <p class="caption text-main-2 mb-0">
+                                                    <%# Eval("AuthorText") %>
+                                                    <%# If(Convert.ToBoolean(Eval("Verified")), " - Acquisto verificato", String.Empty) %>
+                                                </p>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:Repeater>
+                                    <div class="reply-comment style-1 ks-review-form-wrap">
+                                        <h3 class="ks-pdp-review-form-title mb-2">Lascia una recensione</h3>
+                                        <p class="body-text-3 text-main-2 mb-3">La recensione viene salvata su KeepStore, verificata con controlli anti-spam e pubblicata nella scheda prodotto.</p>
+                                        <div class="ks-review-form">
+                                            <label class="body-text-3 fw-semibold" for="<%= ddlReviewRating.ClientID %>">Valutazione</label>
+                                            <asp:DropDownList ID="ddlReviewRating" runat="server" CssClass="form-select">
+                                                <asp:ListItem Value="5" Text="5 stelle" />
+                                                <asp:ListItem Value="4" Text="4 stelle" />
+                                                <asp:ListItem Value="3" Text="3 stelle" />
+                                                <asp:ListItem Value="2" Text="2 stelle" />
+                                                <asp:ListItem Value="1" Text="1 stella" />
+                                            </asp:DropDownList>
+                                            <label class="body-text-3 fw-semibold" for="<%= txtReviewName.ClientID %>">Nome</label>
+                                            <asp:TextBox ID="txtReviewName" runat="server" CssClass="form-control" MaxLength="120" placeholder="Il tuo nome" />
+                                            <label class="body-text-3 fw-semibold" for="<%= txtReviewEmail.ClientID %>">Email</label>
+                                            <asp:TextBox ID="txtReviewEmail" runat="server" CssClass="form-control" MaxLength="180" TextMode="Email" placeholder="Email non visibile pubblicamente" />
+                                            <label class="body-text-3 fw-semibold" for="<%= txtReviewTitle.ClientID %>">Titolo</label>
+                                            <asp:TextBox ID="txtReviewTitle" runat="server" CssClass="form-control" MaxLength="160" placeholder="Sintesi della recensione" />
+                                            <label class="body-text-3 fw-semibold" for="<%= txtReviewText.ClientID %>">Commento</label>
+                                            <asp:TextBox ID="txtReviewText" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="4" MaxLength="1000" placeholder="Scrivi una nota utile sul prodotto" />
+                                            <asp:LinkButton ID="btnReviewSubmit" runat="server" CssClass="tf-btn btn-line" OnClick="btnReviewSubmit_Click" CausesValidation="false">
+                                                <span>Salva recensione</span>
+                                            </asp:LinkButton>
+                                        </div>
+                                        <a class="link text-secondary d-inline-flex mt-3" href="Contattaci.aspx">Hai dubbi prima dell'acquisto? Contatta l'assistenza</a>
                                     </div>
                                 </div>
-                            </div>
                             </div>
                         </div>
+                        </div>
                     </div>
-                </div>
+                </section>
             </div>
         </section>
     </asp:Panel>
 
     <asp:PlaceHolder ID="phSimilar" runat="server" Visible="false">
-        <section class="tf-sp-2 pt-0 ks-product-list-section ks-similar-products-section">
+        <section id="prd-similar" tabindex="-1" class="tf-sp-2 pt-0 ks-product-list-section ks-similar-products-section">
             <div class="container">
                 <div class="flat-title">
-                    <h5 class="fw-semibold">Scopri articoli simili</h5>
+                    <div class="ks-pdp-section__heading"><h2 class="ks-pdp-section__title">Scopri articoli simili</h2><p class="ks-pdp-section__lead">Alternative della stessa categoria, da confrontare prima di scegliere.</p></div>
                     <div class="box-btn-slide relative">
                         <div class="swiper-button-prev nav-swiper nav-prev-products">
                             <i class="icon-arrow-left-lg"></i>
@@ -597,10 +642,10 @@
     </asp:PlaceHolder>
 
     <asp:PlaceHolder ID="phRelated" runat="server" Visible="false">
-        <section class="tf-sp-2 pt-0 ks-product-list-section ks-related-products-section">
+        <section id="prd-related" tabindex="-1" class="tf-sp-2 pt-0 ks-product-list-section ks-related-products-section">
             <div class="container">
                 <div class="flat-title">
-                    <h5 class="fw-semibold">Prodotti correlati a questo articolo</h5>
+                    <div class="ks-pdp-section__heading"><h2 class="ks-pdp-section__title">Prodotti correlati a questo articolo</h2><p class="ks-pdp-section__lead">Accessori e articoli che si abbinano a questo prodotto.</p></div>
                     <div class="box-btn-slide relative">
                         <div class="swiper-button-prev nav-swiper nav-prev-products">
                             <i class="icon-arrow-left-lg"></i>
@@ -719,10 +764,10 @@
     </asp:PlaceHolder>
 
     <asp:PlaceHolder ID="phRecentlyViewed" runat="server" Visible="false">
-        <section class="tf-sp-2 ks-product-list-section ks-recently-viewed-section">
+        <section id="prd-recent" tabindex="-1" class="tf-sp-2 ks-product-list-section ks-recently-viewed-section">
             <div class="container">
                 <div class="flat-title">
-                    <h5 class="fw-semibold">Visti di recente</h5>
+                    <div class="ks-pdp-section__heading"><h2 class="ks-pdp-section__title">Visti di recente</h2><p class="ks-pdp-section__lead">Gli ultimi articoli che hai guardato.</p></div>
                     <div class="box-btn-slide relative">
                         <div class="swiper-button-prev nav-swiper nav-prev-products">
                             <i class="icon-arrow-left-lg"></i>
@@ -873,6 +918,7 @@
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-buybar.js") %>?v=20261114-pdp-buybar1a"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-pdp-sections.js") %>?v=20261118-pdp-sections1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>

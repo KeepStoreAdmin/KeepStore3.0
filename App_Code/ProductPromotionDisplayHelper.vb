@@ -52,6 +52,8 @@ Public Class ProductPromotionDisplayModel
     Public Property BestQuantityTierEndsOn As Nullable(Of Date)
     Public Property Offers As List(Of ProductPromotionOffer)
     Public Property Html As String
+    ' PDP-SECTIONS-RESTYLE-1A: righe "Promozione" per "Informazioni prodotto", prodotte insieme a Html con lo stesso criterio netto/lordo.
+    Public Property InfoHtml As String
 End Class
 
 ' The display core accepts an explicit, reusable commercial resolution source.
@@ -170,7 +172,33 @@ Public Module ProductPromotionDisplayHelper
                                    ProductPromotionDisplayResolutionState.ResolvedWithOffers,
                                    ProductPromotionDisplayResolutionState.ResolvedWithoutOffers)
         model.Html = RenderHtml(model, useNetPrices)
+        model.InfoHtml = RenderInfoHtml(model, useNetPrices)
         Return model
+    End Function
+
+    ' Una riga per ciascuna offerta risolta, con i dati di QUELLA offerta. Stessa condizione di RenderHtml: senza offerte risolte non esce nulla.
+    Private Function RenderInfoHtml(ByVal model As ProductPromotionDisplayModel,
+                                    ByVal useNetPrices As Boolean) As String
+        If model Is Nothing OrElse
+           model.ResolutionState <> ProductPromotionDisplayResolutionState.ResolvedWithOffers OrElse
+           Not model.HasOffers Then Return String.Empty
+
+        Dim sb As New StringBuilder()
+        Dim primaryImmediateRendered As Boolean = False
+        For Each offer As ProductPromotionOffer In model.Offers
+            Dim offerPrice As Decimal = DisplayPrice(offer.PriceNet, offer.PriceGross, useNetPrices)
+            Dim isPrimaryImmediate As Boolean = offer.AppliesToDefaultQuantity AndAlso
+                                                  Not primaryImmediateRendered AndAlso
+                                                  offerPrice = DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)
+            If isPrimaryImmediate Then primaryImmediateRendered = True
+            sb.Append(KeepStorePdpInfo.PromoRowHtml(offer.AppliesToDefaultQuantity,
+                                                    isPrimaryImmediate,
+                                                    offer.Label,
+                                                    KeepStorePdpInfo.DiscountText(offer.DiscountPercent),
+                                                    FormatMoney(offerPrice),
+                                                    FormatOfferValidity(offer.StartsOn, offer.EndsOn)))
+        Next
+        Return sb.ToString()
     End Function
 
     Private Sub LoadOffers(ByVal eligibility As ProductPromotionEligibilityResult,

@@ -1276,3 +1276,365 @@
 @media (forced-colors: active) {
   .ks-pdp-buybar__cta { border: 1px solid ButtonText; }
 }
+
+/* ==========================================================================
+   PDP-SECTIONS-RESTYLE-1A - sezioni sempre visibili con indice (niente schede),
+   "Informazioni prodotto" a gruppi, offerte ridisegnate, caroselli con intestazione.
+   ========================================================================== */
+.ks-pdp-sections .container {
+  position: relative;
+}
+
+/* Il nome del prodotto e il titolo principale della pagina (h1) ma conserva la misura che aveva. */
+.ks-product-page h1.product-info-name {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+/* Indice delle sezioni: resta in alto mentre si scorrono le sezioni; sotto l'intestazione del sito quando questa ricompare. */
+.ks-pdp-toc {
+  position: -webkit-sticky;
+  position: sticky;
+  top: var(--ks-pdp-header-offset, 0px);
+  z-index: 20;
+  margin: 0 0 8px;
+  border-bottom: 1px solid #dfe3e8;
+  background: #fff;
+  box-shadow: 0 6px 12px -10px rgba(17, 24, 39, 0.45);
+}
+
+.ks-pdp-toc__list {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ks-pdp-toc__list::-webkit-scrollbar {
+  display: none;
+}
+
+.ks-pdp-toc__list > li {
+  flex: 0 0 auto;
+}
+
+.ks-pdp-toc__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-bottom: 3px solid transparent;
+  color: #333e48;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ks-pdp-toc__link:hover {
+  color: var(--primary, #D80027);
+}
+
+.ks-pdp-toc__link[aria-current="true"] {
+  border-bottom-color: var(--primary, #D80027);
+  color: var(--primary, #D80027);
+}
+
+.ks-pdp-toc__link:focus-visible {
+  outline: 2px solid var(--focus-ring, #B8001F);
+  outline-offset: -2px;
+}
+
+/* Sezione: titolo evidente, una riga che dice che cosa contiene, corpo in un riquadro. */
+.ks-pdp-section,
+.ks-product-list-section[id^="prd-"] {
+  scroll-margin-top: calc(var(--ks-pdp-toc-height, 52px) + 12px);
+}
+
+.ks-pdp-section {
+  margin-top: 28px;
+}
+
+.ks-pdp-section:focus {
+  outline: 0;
+}
+
+.ks-pdp-section__head,
+.ks-pdp-section__heading {
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 4px solid var(--primary, #D80027);
+}
+
+.ks-pdp-section__head {
+  margin-bottom: 14px;
+}
+
+.ks-pdp-section__title {
+  margin: 0;
+  color: #1f2933;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.ks-pdp-section__lead {
+  margin: 4px 0 0;
+  color: #595959;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.ks-pdp-section__body.flat-title-tab-product-des {
+  border-color: #dfe3e8;
+  background: #fff;
+}
+
+.ks-pdp-review-form-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Caroselli (simili, correlati, visti di recente): stessa intestazione delle sezioni, frecce a destra. */
+.ks-product-list-section .flat-title {
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* Informazioni prodotto: gruppi con titolo, due colonne su schermi larghi. */
+.ks-pdp-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+
+.ks-pdp-info-group {
+  min-width: 0;
+  border: 1px solid #e6e9ed;
+  background: #fff;
+}
+
+.ks-pdp-info-group__title {
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e6e9ed;
+  background: #f5f6f8;
+  color: #1f2933;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.ks-pdp-info .list-feature {
+  margin: 0;
+  padding: 0;
+}
+
+.ks-pdp-info .list-feature > li {
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #eef0f2;
+}
+
+.ks-pdp-info .list-feature > li:last-child {
+  border-bottom: 0;
+}
+
+.ks-pdp-info .list-feature .name-feature {
+  flex: 0 0 38%;
+  max-width: 180px;
+  min-width: 0;
+  margin: 0;
+  color: #595959;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ks-pdp-info .list-feature .property {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: #1f2933;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.ks-pdp-info .ks-pdp-info-price {
+  color: var(--primary, #D80027);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ks-pdp-info-promo__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.ks-pdp-info-promo__discount {
+  padding: 1px 8px;
+  background: var(--primary, #D80027);
+  color: #fff;
+  font-weight: 700;
+}
+
+.ks-pdp-info-promo__dates,
+.ks-pdp-info-promo__applied {
+  color: #595959;
+}
+
+.ks-pdp-info-promo__dates {
+  flex: 1 0 100%;
+  font-size: 13px;
+}
+
+@media (min-width: 992px) {
+  .ks-pdp-info {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+
+  .ks-pdp-section__title {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .ks-pdp-toc {
+    margin-right: -15px;
+    margin-left: -15px;
+  }
+
+  .ks-pdp-toc__list {
+    padding: 0 8px;
+  }
+
+  .ks-pdp-section {
+    margin-top: 22px;
+  }
+
+  .ks-pdp-section__title {
+    font-size: 21px;
+  }
+
+  .ks-pdp-section__body.flat-title-tab-product-des .tab-main {
+    padding: 16px 14px;
+  }
+}
+
+/* Offerte nel riquadro d'acquisto: uno scontrino semplice (sconto, condizione, validita), senza riquadri annidati. */
+.ks-product-page .ks-product-promos {
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid #dfe3e8;
+  border-radius: 0;
+  background: none;
+}
+
+.ks-product-page .ks-product-promos__lede,
+.ks-product-page .ks-product-promos__count {
+  display: none;
+}
+
+.ks-product-page .ks-product-promos__eyebrow {
+  color: #595959;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.ks-product-page .ks-product-promos__list {
+  gap: 8px;
+}
+
+.ks-product-page .ks-product-promos__item,
+.ks-product-page .ks-product-promos__item--tier {
+  gap: 4px;
+  padding: 10px 12px;
+  border: 0;
+  border-left: 3px solid var(--primary, #D80027);
+  border-radius: 0;
+  background: #fdf1f3;
+}
+
+.ks-product-page .ks-product-promos__item-head {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.ks-product-page .ks-product-promos__discount {
+  order: -1;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 0;
+  background: var(--primary, #D80027);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ks-product-page .ks-product-promos__label {
+  color: #1f2933;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ks-product-page .ks-product-promos__item-body {
+  display: block;
+}
+
+.ks-product-page .ks-product-promos__condition,
+.ks-product-page .ks-product-promos__applied,
+.ks-product-page .ks-product-promos__price {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #333e48;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-align: left;
+  text-transform: none;
+}
+
+.ks-product-page .ks-product-promos__price strong {
+  color: var(--primary, #D80027);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ks-product-page .ks-product-promos__dates {
+  color: #595959;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (forced-colors: active) {
+  .ks-pdp-toc__link[aria-current="true"] {
+    border-bottom-color: Highlight;
+  }
+
+  .ks-pdp-info-promo__discount,
+  .ks-product-page .ks-product-promos__discount {
+    border: 1px solid CanvasText;
+  }
+}

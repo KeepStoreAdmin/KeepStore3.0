@@ -468,7 +468,8 @@ Partial Class articolo
         rptBundle.DataSource = bundleItems
         rptBundle.DataBind()
 
-        phBundleEmpty.Visible = (bundleItems.Count <= 1)
+        ' PDP-SECTIONS-RESTYLE-1A: la sezione (e la voce d'indice) esiste solo se c'e almeno un articolo da abbinare a questo.
+        phBundleSection.Visible = (bundleItems.Count > 1)
         litBundleTotal.Text = Server.HtmlEncode(FormatBundleTotal(bundleItems))
         StoreBundleCartItems(bundleItems)
     End Sub
@@ -1612,6 +1613,8 @@ Partial Class articolo
 
         phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
         litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
+        ' Stesso modello del riquadro: le righe "Promozione" di "Informazioni prodotto" sono gia codificate dal modulo che le compone.
+        litPromotionInfo.Text = If(promotionModel IsNot Nothing AndAlso promotionModel.HasOffers, If(promotionModel.InfoHtml, String.Empty), String.Empty)
 
         Dim isRefurbished As Boolean = (GetRowInt(row, "Ricondizionato", 0) = 1)
         phRefurbished.Visible = isRefurbished
@@ -1637,6 +1640,8 @@ Partial Class articolo
         ' Descrizione lunga (preferisco HTML)
         Dim longValue As String = FirstNonEmpty(GetRowString(row, "DescrizioneHTML"), GetRowString(row, "DescrizioneLunga"), GetRowString(row, "Descrizione2"))
         litLongDesc.Text = NormalizeDescriptionHtml(longValue)
+        ' PDP-SECTIONS-RESTYLE-1A: senza descrizione la sezione e la sua voce d'indice non si mostrano.
+        phDescSection.Visible = Not String.IsNullOrWhiteSpace(litLongDesc.Text)
 
         ' Disponibilità (Arrivo)
         Dim availabilityModel As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
@@ -1685,7 +1690,7 @@ Partial Class articolo
         litShippingWeight.Text = String.Empty
         If showWeight Then
             Dim weightText As String = shippingInfo.WeightValue.Value.ToString("0.###", ItCulture)
-            litShippingWeight.Text = Server.HtmlEncode("Peso articolo: " & weightText & " " & shippingInfo.WeightUnit)
+            litShippingWeight.Text = Server.HtmlEncode(weightText & " " & shippingInfo.WeightUnit)
         End If
 
         If shippingInfo.IsFreeShipping Then Return
@@ -3043,6 +3048,8 @@ Partial Class articolo
     End Function
 
     Protected Sub btnReviewSubmit_Click(sender As Object, e As EventArgs)
+        ' PDP-SECTIONS-RESTYLE-1A: se la recensione viene rifiutata la pagina resta dove si trova il messaggio (prima tornava in cima).
+        Me.MaintainScrollPositionOnPostBack = True
         Dim message As String = ""
         Dim rating As Integer = 0
         Dim reviewerName As String = ""
