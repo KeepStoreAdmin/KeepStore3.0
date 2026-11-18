@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/account-ui.css") & "?v=20261118-qa-1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/documents-ui.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/auth-ui.css") & "?v=20261115-focus-fc1a" %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") & "?v=20261116-footer-touch44a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-ui.css") & "?v=20261118-pdp-tools1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/nice-select.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/swiper-bundle.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/animate.css") %>" />
@@ -47,6 +47,8 @@
             <span class="border-progress"></span>
             <span class="icon icon-arrow-right"></span>
         </button>
+
+        <asp:HyperLink ID="lnkWhatsAppContact" runat="server" Visible="false" EnableViewState="false" CssClass="ks-wa-contact" Target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.1 7.9c.3-.3.8-.2 1 .2l.8 1.6c.1.3.1.6-.1.8l-.6.7c.6 1.2 1.5 2.100 2.700 2.700l.7-.6c.2-.2.5-.2.8-.1l1.600.8c.4.2.5.7.2 1-.6.7-1.500 1-2.400.8-2.900-.6-5.300-3-5.900-5.900-.2-.9.1-1.800.800-2.400z" fill="currentColor"/></svg></asp:HyperLink>
 
         <div class="preload preload-container ks-preload" id="preload" aria-hidden="true">
             <div class="preload-logo ks-preload__logo">

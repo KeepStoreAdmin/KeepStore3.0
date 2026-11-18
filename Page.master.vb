@@ -157,6 +157,35 @@ Partial Class PageMaster
                path.EndsWith("/password.aspx")
     End Function
 
+    ' PDP-TOOLS-1A: contatto WhatsApp fisso del sito. Si mostra solo se l'azienda dell'host ha un numero valido E la regola del pulsante
+    ' attiva nei dati dell'azienda; mai nelle pagine di ordine e pagamento. Ogni errore lascia il pulsante nascosto.
+    Private Sub BindWhatsAppContact()
+        Try
+            If lnkWhatsAppContact Is Nothing Then Return
+            If IsCheckoutFlowPath(CurrentScriptPathLower()) Then Return
+            Dim tenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If tenant Is Nothing OrElse tenant.CompanyId <= 0 Then Return
+            Dim channel As ContactChannel = KeepStoreContactChannels.ForCompany(tenant.CompanyId)
+            If channel Is Nothing OrElse Not channel.WidgetEnabled OrElse channel.WhatsAppNumber = "" Then Return
+            Dim href As String = KeepStoreShareLinks.WhatsAppChatUrl(channel.WhatsAppNumber, KeepStoreShareLinks.SiteContactMessage(tenant.CanonicalHost))
+            If href = "" Then Return
+            Dim label As String = If(channel.CallToAction <> "", channel.CallToAction, "Scrivici") & " su WhatsApp"
+            lnkWhatsAppContact.NavigateUrl = href
+            lnkWhatsAppContact.Attributes("aria-label") = label
+            lnkWhatsAppContact.ToolTip = label
+            lnkWhatsAppContact.CssClass = "ks-wa-contact" & If(channel.Position = "left", " ks-wa-contact--left", "")
+            lnkWhatsAppContact.Visible = True
+        Catch
+            If lnkWhatsAppContact IsNot Nothing Then lnkWhatsAppContact.Visible = False
+        End Try
+    End Sub
+
+    Private Shared Function IsCheckoutFlowPath(ByVal absolutePath As String) As Boolean
+        Dim path As String = Convert.ToString(absolutePath).ToLowerInvariant()
+        Return path.EndsWith("/ordine.aspx") OrElse path.EndsWith("/ordine_coupon.aspx") OrElse path.EndsWith("/pagamento.aspx") OrElse
+               path.EndsWith("/bancasella.aspx") OrElse path.Contains("/bancasella/") OrElse path.Contains("/paypal")
+    End Function
+
     Private Function CurrentLoginIdSafe() As Integer
         Dim loginId As Integer = 0
         Try
@@ -768,6 +797,7 @@ Dim IvaTipo As Integer
         End If
         ' Tema grafico: tagging per CSS token/switch (non altera la logica business)
         ApplyThemeTagging()
+        BindWhatsAppContact()
 
         Dim nativeCartToken As String = CatalogAsyncCartSupport.GetOrCreateCsrfToken(HttpContext.Current)
         litNativeCartSecurityFields.Text =

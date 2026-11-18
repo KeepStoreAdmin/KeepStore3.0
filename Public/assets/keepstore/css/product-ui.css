@@ -1638,3 +1638,254 @@
     border: 1px solid CanvasText;
   }
 }
+
+/* PDP-TOOLS-1A: strumenti della scheda (richiedi informazioni, richiesta di avviso, condividi, stampa) in fondo al riquadro d'acquisto */
+.ks-pdp-print-head { display: none; }
+
+.ks-pdp-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e4e4e4;
+}
+
+.ks-pdp-tool {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d0d0d0;
+  background: #fff;
+  color: #181818;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.ks-pdp-tool:hover {
+  border-color: #181818;
+  background: #f6f6f6;
+  color: #181818;
+}
+
+.ks-pdp-tool__icon {
+  flex: 0 0 20px;
+  color: var(--primary, #D80027);
+}
+
+.ks-pdp-tool__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.ks-pdp-tool__hint {
+  color: #595959;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ks-pdp-tool__hint:empty { display: none; }
+
+.ks-pdp-tool--notify {
+  border-color: #181818;
+  background: #fff8e6;
+}
+
+.ks-pdp-tool--notify:hover { background: #ffefc4; }
+
+.ks-pdp-share > summary { list-style: none; }
+
+.ks-pdp-share > summary::-webkit-details-marker { display: none; }
+
+.ks-pdp-share[open] { grid-column: 1 / -1; }
+
+.ks-pdp-share[open] > summary {
+  border-color: #181818;
+  background: #f6f6f6;
+}
+
+.ks-pdp-share__panel {
+  padding: 12px;
+  border: 1px solid #181818;
+  border-top: 0;
+  background: #fff;
+}
+
+.ks-pdp-share__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.ks-pdp-share__link,
+.ks-pdp-share__copy {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #d0d0d0;
+  background: #fff;
+  color: #181818;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ks-pdp-share__link:hover,
+.ks-pdp-share__copy:hover {
+  border-color: #181818;
+  background: #f6f6f6;
+  color: #181818;
+}
+
+.ks-pdp-share__copy {
+  border-color: #181818;
+}
+
+.ks-pdp-share__url {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 10px;
+  border: 1px solid #181818;
+  font-size: 13px;
+}
+
+.ks-pdp-share__url[hidden] { display: none; }
+
+.ks-pdp-share__status {
+  display: block;
+  margin-top: 6px;
+  color: #176b3a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ks-pdp-share__status:empty { display: none; }
+
+.ks-pdp-ext-link {
+  color: #0b57d0;
+  font-weight: 600;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.ks-pdp-ext-link::after {
+  content: " \2197";
+  text-decoration: none;
+}
+
+/* Con la barra d'acquisto fissa (telefono) il contatto WhatsApp sale sopra la barra e il pulsante "torna su" sopra il contatto. */
+body.ks-pdp-buybar-on .ks-wa-contact { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 12px); }
+
+body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px); }
+
+@media (forced-colors: active) {
+  .ks-pdp-tool,
+  .ks-pdp-share__link,
+  .ks-pdp-share__copy {
+    border-color: ButtonText;
+  }
+}
+
+/* PDP-TOOLS-1A stampa: la scheda cosi com'e, senza navigazione ne acquisto */
+@media print {
+  .tf-header,
+  .tf-footer,
+  .tf-breadcrumb-wrap,
+  .ks-pdp-breadcrumb,
+  .ks-pdp-toc,
+  .ks-pdp-tools,
+  .product-box-btn,
+  .product-quantity,
+  .product-color,
+  .ks-pdp-cart-state,
+  .ks-review-form-wrap,
+  .ks-product-list-section,
+  .ks-brand-strip,
+  .ks-product-iconbox-section,
+  #prd-usually,
+  #prd-review:not(:has(.ks-review-item)),
+  .box-total-btn,
+  .tf-zoom-main,
+  .container-swiper,
+  #goTop,
+  .ks-pdp-buybar,
+  .ks-cart-feedback-toast,
+  #preload,
+  .offcanvas,
+  .offcanvas-backdrop,
+  .modal,
+  .modal-backdrop,
+  .ks-wa-contact {
+    display: none !important;
+  }
+
+  .ks-pdp-print-head { display: block; margin: 0 0 12px; padding: 0 0 8px; border-bottom: 2px solid #000; }
+
+  .ks-pdp-print-head__company { margin: 0; font-size: 16pt; font-weight: 700; }
+
+  .ks-pdp-print-head__meta { margin: 0; font-size: 9pt; }
+
+  body,
+  .ks-product-page { background: #fff !important; color: #000 !important; }
+
+  body { padding-bottom: 0 !important; }
+
+  .ks-product-page * { box-shadow: none !important; }
+
+  .ks-product-page .sticky-top,
+  .ks-product-page .ks-pdp-buybox-sticky,
+  .ks-product-page .tf-product-media-wrap {
+    position: static !important;
+  }
+
+  .ks-product-page .tf-product-media-main .swiper-wrapper { transform: none !important; display: block !important; }
+
+  .ks-product-page .tf-product-media-main .swiper-slide { width: 70mm !important; margin: 0 !important; }
+
+  .ks-product-page .tf-product-media-main .swiper-slide:not(:first-child) { display: none !important; }
+
+  .ks-product-page .tf-product-media-main img { max-width: 70mm !important; height: auto !important; opacity: 1 !important; }
+
+  .ks-product-page .tf-sp-2,
+  .ks-product-page .tf-sp-4 { padding-top: 0 !important; padding-bottom: 8px !important; }
+
+  .ks-product-page h1.product-info-name { font-size: 16pt; }
+
+  .ks-pdp-section { margin-top: 10px; padding-top: 8px; border-top: 1px solid #999; }
+
+  .ks-pdp-section__title { font-size: 13pt; }
+
+  .ks-pdp-section,
+  .ks-pdp-info-group,
+  .ks-pdp-info-group .list-feature li,
+  .ks-review-item,
+  .ks-product-page .tf-product-info-choose-option {
+    break-inside: avoid;
+  }
+
+  .ks-pdp-section__head { break-after: avoid; }
+
+  .ks-product-page a { color: #000 !important; text-decoration: none !important; }
+
+  .ks-pdp-ext-link::after { content: ""; }
+
+  .ks-product-page details > summary { list-style: none; }
+}

@@ -1653,6 +1653,7 @@ Partial Class articolo
         litAvailabilityInfo.Text = availabilityHtml
 
         BindProductShippingInfo(_id, _listino)
+        BindExternalProductLinks(row)
 
         ' Varianti (Taglia/Colore)
         Dim currentTcid As Integer = GetRowInt(row, "TCid", _tcid)
@@ -1666,6 +1667,116 @@ Partial Class articolo
 
         ' Quantità desiderata e stato carrello corrente.
         BindPdpCartState(_id, currentTcid, True)
+        BindProductTools(nome, codice, If(price.CurrentPrice.HasValue AndAlso price.CurrentPrice.Value > 0D, FormatMoney(price.CurrentPrice.Value) & " " & ChrW(&H20AC), String.Empty))
+    End Sub
+
+    ' PDP-TOOLS-1A: sito del produttore e scheda tecnica dalla riga gia caricata (la vista li espone: nessuna query in piu); si mostrano
+    ' solo gli indirizzi che il modulo accetta (http/https verso un nome di dominio: il segnaposto "http://" non passa).
+    Private Sub BindExternalProductLinks(row As DataRow)
+        Dim manufacturerUrl As String = KeepStoreShareLinks.ExternalUrl(GetRowString(row, "LinkProduttore"))
+        Dim brochureUrl As String = KeepStoreShareLinks.ExternalUrl(GetRowString(row, "Brochure"))
+        ' Una scheda tecnica uguale al sito del produttore non si ripete.
+        If String.Equals(brochureUrl, manufacturerUrl, StringComparison.OrdinalIgnoreCase) Then brochureUrl = ""
+        phManufacturerLink.Visible = (manufacturerUrl <> "")
+        phBrochureLink.Visible = (brochureUrl <> "")
+        If manufacturerUrl <> "" Then
+            lnkManufacturer.NavigateUrl = manufacturerUrl
+            lnkManufacturer.Text = Server.HtmlEncode(KeepStoreShareLinks.ExternalHost(manufacturerUrl))
+        End If
+        If brochureUrl <> "" Then
+            lnkBrochure.NavigateUrl = brochureUrl
+            lnkBrochure.Text = Server.HtmlEncode("Apri il documento (" & KeepStoreShareLinks.ExternalHost(brochureUrl) & ")")
+        End If
+    End Sub
+
+    Private _pdpShareUrl As String = String.Empty
+    Private _pdpShareTitle As String = String.Empty
+
+    Protected ReadOnly Property PdpShareUrlAttribute As String
+        Get
+            Return EncodeAttr(_pdpShareUrl)
+        End Get
+    End Property
+
+    Protected ReadOnly Property PdpShareTitleAttribute As String
+        Get
+            Return EncodeAttr(_pdpShareTitle)
+        End Get
+    End Property
+
+    ' PDP-TOOLS-1A: strumenti del riquadro d'acquisto. Azienda, indirizzo canonico e contatti vengono dall'identita dell'host; il numero
+    ' WhatsApp dal canale di quella azienda. Nessun valore arriva dall'utente. Senza indirizzo canonico (host non riconosciuto) restano
+    ' la stampa e il rimando all'assistenza. La richiesta di avviso e un messaggio al negozio, non un'iscrizione: lo dice anche il testo.
+    Private Sub BindProductTools(ByVal productName As String, ByVal productCode As String, ByVal priceText As String)
+        Dim tenant As StorefrontSeoTenantIdentity = Nothing
+        Try
+            tenant = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+        Catch
+            tenant = Nothing
+        End Try
+
+        Dim shareUrl As String = String.Empty
+        Dim supportEmail As String = String.Empty
+        Dim channel As ContactChannel = ContactChannel.None
+        If tenant IsNot Nothing Then
+            Dim relativePath As String = ResolveUrl("~/articolo.aspx?id=" & _id.ToString(CultureInfo.InvariantCulture) &
+                                                    If(_tcidPresent, "&TCid=" & _tcid.ToString(CultureInfo.InvariantCulture), String.Empty))
+            shareUrl = KeepStoreShareLinks.ExternalUrl(StorefrontCanonicalHostPolicy.BuildCanonicalUrl(tenant, relativePath))
+            supportEmail = If(tenant.SupportEmail, String.Empty)
+            channel = KeepStoreContactChannels.ForCompany(tenant.CompanyId)
+            litPrintCompany.Text = If(tenant.CompanyName, String.Empty)
+        End If
+        litPrintUrl.Text = shareUrl
+        litPrintDate.Text = DateTime.Now.ToString("dd/MM/yyyy", ItCulture)
+
+        ' Condividi: solo con un indirizzo canonico valido.
+        _pdpShareUrl = shareUrl
+        _pdpShareTitle = productName
+        phToolShare.Visible = (shareUrl <> "")
+        litShareLinks.Text = KeepStoreShareLinks.ShareLinksHtml(shareUrl, productName)
+
+        ' Richiedi informazioni: WhatsApp con l'articolo nel messaggio, altrimenti la pagina dei contatti.
+        Dim priceLabel As String = String.Empty
+        If _priceDisplayContext IsNot Nothing Then priceLabel = If(_priceDisplayContext.IsVatIncluded, "IVA inclusa", If(_priceDisplayContext.IsVatExcluded, "IVA esclusa", String.Empty))
+        Dim infoMessage As String = KeepStoreShareLinks.ProductInfoMessage(productName, productCode, priceText, priceLabel, shareUrl)
+        Dim infoHref As String = If(infoMessage <> "", KeepStoreShareLinks.WhatsAppChatUrl(channel.WhatsAppNumber, infoMessage), String.Empty)
+        If infoHref <> "" Then
+            SetExternalToolLink(lnkToolInfo, infoHref)
+            litToolInfoHint.Text = "su WhatsApp"
+        Else
+            lnkToolInfo.NavigateUrl = ResolveUrl("~/Contattaci.aspx")
+            litToolInfoHint.Text = "scrivi all'assistenza"
+        End If
+
+        ' Richiesta di avviso: solo se l'articolo non e disponibile; WhatsApp, altrimenti e-mail dell'azienda; senza recapiti non si mostra.
+        Dim unavailable As Boolean = (_pdpStructuredAvailability IsNot Nothing AndAlso Not _pdpStructuredAvailability.IsAvailable)
+        Dim incoming As Boolean = (unavailable AndAlso _pdpStructuredAvailability.IncomingQty > 0D)
+        Dim notifyHref As String = String.Empty
+        Dim notifyChannel As String = String.Empty
+        Dim notifyMessage As String = KeepStoreShareLinks.ProductAvailabilityMessage(productName, productCode, shareUrl, incoming)
+        If unavailable AndAlso notifyMessage <> "" Then
+            notifyHref = KeepStoreShareLinks.WhatsAppChatUrl(channel.WhatsAppNumber, notifyMessage)
+            notifyChannel = "su WhatsApp"
+            If notifyHref = "" AndAlso supportEmail.Trim() <> "" Then
+                notifyHref = KeepStoreShareLinks.MailShareHref(supportEmail, "Richiesta di avviso: " & productName, notifyMessage)
+                notifyChannel = "per e-mail"
+            End If
+        End If
+        phToolNotify.Visible = unavailable AndAlso notifyHref <> ""
+        If phToolNotify.Visible Then
+            SetExternalToolLink(lnkToolNotify, notifyHref)
+            litToolNotifyHint.Text = If(incoming, "quando arriva", "quando torna disponibile") & ", " & notifyChannel
+            lnkToolNotify.ToolTip = "La richiesta arriva al negozio: non è un avviso automatico."
+        End If
+    End Sub
+
+    ' Collegamento verso un altro sito: nuova scheda senza accesso alla pagina di partenza. Un mailto: resta nella scheda corrente.
+    Private Shared Sub SetExternalToolLink(ByVal link As HyperLink, ByVal href As String)
+        link.NavigateUrl = href
+        If href.StartsWith("https://", StringComparison.Ordinal) Then
+            link.Target = "_blank"
+            link.Attributes("rel") = "noopener noreferrer"
+        End If
     End Sub
 
     Private Sub BindProductShippingInfo(articleId As Integer, listino As Integer)

@@ -87,3 +87,46 @@
     background-color: CanvasText;
   }
 }
+
+/* PDP-TOOLS-1A: contatto WhatsApp fisso del sito (il numero e la regola vengono dai dati dell'azienda). Sta nell'angolo, sotto il pulsante
+   "torna su" (che occupa 90-128 px dal fondo) e sotto pannelli laterali e messaggio del carrello. */
+.ks-wa-contact {
+  position: fixed;
+  right: 33px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: #128C7E;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+.ks-wa-contact:hover {
+  background: #0e6f64;
+  color: #fff;
+  transform: translateY(-2px);
+}
+.ks-wa-contact--left {
+  right: auto;
+  left: 33px;
+}
+html:has(.ks-wa-contact) {
+  scroll-padding-bottom: 88px;
+}
+@media (max-width: 767px) {
+  .ks-wa-contact { right: 13px; }
+  .ks-wa-contact--left { right: auto; left: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ks-wa-contact { transition: none; }
+  .ks-wa-contact:hover { transform: none; }
+}
+@media print {
+  .ks-wa-contact { display: none !important; }
+}

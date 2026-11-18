@@ -10,7 +10,7 @@
 
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261118-pdp-sections1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261118-pdp-tools1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -53,6 +53,11 @@
     </asp:PlaceHolder>
 
     <asp:Panel ID="pnlProduct" runat="server" CssClass="ks-product-page ks-product-detail-page">
+        <div class="ks-pdp-print-head" aria-hidden="true">
+            <p class="ks-pdp-print-head__company"><asp:Literal ID="litPrintCompany" runat="server" Mode="Encode" EnableViewState="false" /></p>
+            <p class="ks-pdp-print-head__meta"><asp:Literal ID="litPrintUrl" runat="server" Mode="Encode" EnableViewState="false" /></p>
+            <p class="ks-pdp-print-head__meta">Scheda stampata il <asp:Literal ID="litPrintDate" runat="server" Mode="Encode" EnableViewState="false" /></p>
+        </div>
         <section class="tf-sp-2">
             <div class="tf-main-product section-image-zoom">
                 <div class="container">
@@ -265,6 +270,25 @@
                                             </div>
                                         </div>
 
+                                        <nav class="ks-pdp-tools" aria-label="Strumenti della scheda">
+                                            <asp:HyperLink ID="lnkToolInfo" runat="server" CssClass="ks-pdp-tool" EnableViewState="false"><svg class="ks-pdp-tool__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><path d="M4 5h16v11H9l-5 4z"/><path d="M9 9h6M9 12h4"/></svg><span class="ks-pdp-tool__text"><span class="ks-pdp-tool__label">Richiedi informazioni</span><span class="ks-pdp-tool__hint"><asp:Literal ID="litToolInfoHint" runat="server" Mode="Encode" EnableViewState="false" /></span></span></asp:HyperLink>
+                                            <asp:PlaceHolder ID="phToolNotify" runat="server" Visible="false">
+                                                <asp:HyperLink ID="lnkToolNotify" runat="server" CssClass="ks-pdp-tool ks-pdp-tool--notify" EnableViewState="false"><svg class="ks-pdp-tool__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21h4"/></svg><span class="ks-pdp-tool__text"><span class="ks-pdp-tool__label">Chiedi di essere avvisato</span><span class="ks-pdp-tool__hint"><asp:Literal ID="litToolNotifyHint" runat="server" Mode="Encode" EnableViewState="false" /></span></span></asp:HyperLink>
+                                            </asp:PlaceHolder>
+                                            <asp:PlaceHolder ID="phToolShare" runat="server" Visible="false">
+                                                <details class="ks-pdp-share" data-ks-pdp-share>
+                                                    <summary class="ks-pdp-tool"><svg class="ks-pdp-tool__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></svg><span class="ks-pdp-tool__text"><span class="ks-pdp-tool__label">Condividi</span></span></summary>
+                                                    <div class="ks-pdp-share__panel">
+                                                        <ul class="ks-pdp-share__list"><asp:Literal ID="litShareLinks" runat="server" EnableViewState="false" /></ul>
+                                                        <button type="button" class="ks-pdp-share__copy" data-ks-pdp-copy>Copia link</button>
+                                                        <input type="text" class="ks-pdp-share__url" readonly="readonly" hidden="hidden" data-ks-pdp-share-url aria-label="Indirizzo della scheda" value="<%= PdpShareUrlAttribute %>" data-ks-share-title="<%= PdpShareTitleAttribute %>" />
+                                                        <span class="ks-pdp-share__status" role="status" aria-live="polite" data-ks-pdp-share-status></span>
+                                                    </div>
+                                                </details>
+                                            </asp:PlaceHolder>
+                                            <button type="button" class="ks-pdp-tool" data-ks-pdp-print><svg class="ks-pdp-tool__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8"/><path d="M7 14h10v6H7z"/></svg><span class="ks-pdp-tool__text"><span class="ks-pdp-tool__label">Stampa la scheda</span></span></button>
+                                        </nav>
+
                                     </div>
                                 </div>
                             </div>
@@ -379,6 +403,18 @@
                                         <li>
                                             <p class="name-feature">EAN/GTIN</p>
                                             <p class="property"><asp:Literal ID="litEan4" runat="server" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phManufacturerLink" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Sito del produttore</p>
+                                            <p class="property"><asp:HyperLink ID="lnkManufacturer" runat="server" EnableViewState="false" Target="_blank" rel="noopener noreferrer nofollow" CssClass="ks-pdp-ext-link" /></p>
+                                        </li>
+                                    </asp:PlaceHolder>
+                                    <asp:PlaceHolder ID="phBrochureLink" runat="server" Visible="false">
+                                        <li>
+                                            <p class="name-feature">Scheda tecnica</p>
+                                            <p class="property"><asp:HyperLink ID="lnkBrochure" runat="server" EnableViewState="false" Target="_blank" rel="noopener noreferrer nofollow" CssClass="ks-pdp-ext-link" /></p>
                                         </li>
                                     </asp:PlaceHolder>
                                 </ul>
@@ -919,6 +955,7 @@
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-buybar.js") %>?v=20261114-pdp-buybar1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-sections.js") %>?v=20261118-pdp-sections1a"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-pdp-tools.js") %>?v=20261118-pdp-tools1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
 </asp:Content>
