@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## PAYMENT-PAY-FIRST-BY-FLAG-1A (T1) — 18/11/2026 — SOURCE (il flag del metodo decide: mai un ordine creato contro il flag)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#558](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/558), stable `31613121`.** Con `pagamentitipo.ConfermaOrdinePrimaPagamento = 0` su un metodo per cui il sito non sa pagare prima (carta Banca Sella, contanti, bonifico) l'ordine non viene creato: il carrello rifiuta il metodo con un messaggio e `ordine.aspx` rifiuta in modo chiuso, senza documento ne merce impegnata. PayPal resta sul suo percorso; con flag 1 (tutti i metodi sul LAB) nulla cambia. Area CRITICAL toccata: checkout.
+
+**Fatti e causa.** Il gate guardava il gateway (`PayPalPayFirstPolicy.Applies` vuole `OnLine = 2`); con Banca Sella e flag 0 l'ordine nasceva prima del pagamento col testo «enforcement non ancora attivo»; il carrello leggeva il flag per solo id e su errore assumeva «ordine subito»; la bozza non veniva riletta se il flag cambiava. Banca Sella ha nel sito solo Encrypt/Decrypt (niente annullo, storno, lettura) e ogni suo passo presuppone un documento.
+
+**Revisioni.** ChatGPT (xhigh): accolti lettura permissiva, bozza obsoleta, rifiuto dopo la riconciliazione dei replay, oracolo limitato a ordini senza coupon; la delega di `Applies` evitata (funzione non toccata, equivalenza provata). Claude (Opus): accolti lettura su `pagamentitipo` per id e azienda (la vista non espone il flag), motivo dedicato con ritorno al passo di pagamento, punto esatto in `ordine.aspx`; confermati i 124 mutanti PayPal. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-OrderBeforePaymentPolicy.ps1` rosso prima e verde dopo: 336 celle, 33 mutanti, lettore sul LAB (14 controlli, flag 0 in transazione annullata); `Test-PayPalPayFirst` verde (124); precompile, segreti e CI verdi sullo SHA.
+
+**Limiti e residuo (NON AVVIATO).** Non e ancora «paga con carta, poi nasce l'ordine»: `BANCASELLA-PAY-FIRST-1A` (S2S, tentativi, decisione del PO sul profilo dell'esercente). `BANCASELLA-CALLBACK-AUTH-1A`: conferma della banca senza confronto di negozio, importo e azienda, KO dopo OK, redirect `http://`. Altri rilievi: avvio carta deciso dallo ShopId di sessione, preventivo con carta, `InviaEmailOrdinePrimaPagamento` mai applicato. **Alla consegna futura:** `App_Code/KeepStoreOrderBeforePaymentPolicy.vb` e `CheckoutFailureRecoveryService.vb` per primi, poi `carrello.aspx.vb` e `ordine.aspx.vb` insieme. CONSEGNA SERVER SOSPESA.
 ## KS-CATALOG-COMPACT-1A + PDP-PRINT-A4-1A — 18/11/2026 — SOURCE (titoli senza sfondo rosso, schede compatte, stampa A4 della scheda)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#556](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/556), stable `b037554e`.** Segnalazione del PO (titolo «Tipologia» e nome articolo in rosso con testo nero, troppo vuoto nelle schede e in «Visti di recente», stampa sformata).
