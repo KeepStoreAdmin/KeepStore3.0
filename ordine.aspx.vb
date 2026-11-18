@@ -631,7 +631,7 @@ End Sub
         If pagamentoOnline <> 0 Then
             If confermaOrdinePrimaPagamento = 0 Then
                 statoPagamentoWeb = 1
-                ultimoEsito = "Policy bloccante configurata; enforcement non ancora attivo"
+                ultimoEsito = "In attesa pagamento online (preventivo o coupon)"
             ElseIf permettiPagamentoSuccessivo = 1 Then
                 statoPagamentoWeb = 5
                 ultimoEsito = "Pagamento online successivo disponibile"
@@ -1130,6 +1130,24 @@ CheckoutFailureRecoveryService.TracePhase(
                         DispatchDurableCheckoutFailure(checkoutRequestId, draftFailure, "ValidateDraft")
                     End If
                     Exit Sub
+                End If
+
+                ' PAYMENT-PAY-FIRST-BY-FLAG-1A: il flag del metodo decide. Qui arrivano solo le creazioni nuove (i replay completati sono gia riconciliati sopra) e non
+                ' c'e nessuna chiamata HTTP. Lettura autorevole per id e azienda: errore = rifiuto; valori diversi dalla bozza = nuova conferma; flag 0 su un metodo
+                ' per cui il sito non sa pagare prima = nessun documento. Con un tentativo PayPal gia autorizzato (payFirst) la bozza e gia eseguita nella forma piu stretta.
+                If Not payFirst Then
+                    Dim paymentPolicy As PaymentPolicySnapshot = Nothing
+                    Dim paymentPolicyRead As Boolean = KeepStoreOrderBeforePaymentPolicy.TryRead(conn, Nothing, orderIdentity.CompanyId, checkoutDraft.PaymentMethodId, paymentPolicy)
+                    Dim paymentPolicyOutcome As PaymentPolicyGateOutcome = KeepStoreOrderBeforePaymentPolicy.Evaluate(
+                        paymentPolicyRead, paymentPolicy, checkoutDraft.PaymentOnline, checkoutDraft.ConfirmBeforePayment, checkoutDraft.TipoDocumentiId,
+                        PayPalPayFirstPolicy.HasCoupon(Convert.ToString(Session("Coupon_Codice_Controllo"), CultureInfo.InvariantCulture), GetSessionInt("Coupon_idArticolo", 0)))
+                    If paymentPolicyOutcome <> PaymentPolicyGateOutcome.Allowed Then
+                        Dim paymentPolicyReason As CheckoutFailureReason = CheckoutFailureReason.TechnicalTransient
+                        If paymentPolicyOutcome = PaymentPolicyGateOutcome.NotAllowed Then paymentPolicyReason = CheckoutFailureReason.PaymentMethodNotAllowed
+                        If paymentPolicyOutcome = PaymentPolicyGateOutcome.Changed Then paymentPolicyReason = CheckoutFailureReason.CartChanged
+                        DispatchDurableCheckoutFailure(checkoutRequestId, paymentPolicyReason, "ValidatePaymentPolicy")
+                        Exit Sub
+                    End If
                 End If
 
                 Dim currentCommercialProfile As String = CheckoutDraftService.ComputeCommercialProfileFingerprint(

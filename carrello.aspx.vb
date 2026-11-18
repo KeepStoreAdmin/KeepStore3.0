@@ -517,6 +517,23 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
             HttpContext.Current, normalizedRequestId, "ValidatePayment", "passed", Nothing,
             "not-claimed", "none", "ValidatePayment")
 
+        ' PAYMENT-PAY-FIRST-BY-FLAG-1A: tipo di pagamento e flag della bozza vengono da una lettura autorevole per id e azienda (errore = nessuna bozza,
+        ' mai valori presunti). Con flag 0 su un metodo per cui il sito non sa pagare prima, l'ordine non parte: il cliente sceglie un altro metodo.
+        Dim paymentPolicy As PaymentPolicySnapshot = Nothing
+        If Not KeepStoreOrderBeforePaymentPolicy.TryRead(connection, Nothing, identity.CompanyId, paymentId, paymentPolicy) Then
+            failureReason = CheckoutFailureReason.TechnicalTransient
+            Return False
+        End If
+        Session("Ordine_Pagamento_OnLine") = paymentPolicy.OnLine
+        Session("Ordine_ConfermaOrdinePrimaPagamento") = paymentPolicy.ConfirmBeforePayment
+        Session("Ordine_PermettiPagamentoSuccessivo") = paymentPolicy.AllowLaterPayment
+        Session("Ordine_InviaEmailOrdinePrimaPagamento") = paymentPolicy.SendEmailBeforePayment
+        If KeepStoreOrderBeforePaymentPolicy.Decide(paymentPolicy.OnLine, paymentPolicy.ConfirmBeforePayment, tipoDocumento,
+               PayPalPayFirstPolicy.HasCoupon(Convert.ToString(Session("Coupon_Codice_Controllo")), GetSessionInt("Coupon_idArticolo", 0))) = OrderBeforePaymentDecision.NotSupported Then
+            failureReason = CheckoutFailureReason.PaymentMethodNotAllowed
+            Return False
+        End If
+
         Dim shippingCost As Decimal = ParseDecimalForDb(Session("Ordine_SpeseSped"), 0D)
         Dim insuranceCost As Decimal = ParseDecimalForDb(Session("Ordine_SpeseAss"), 0D)
         Dim paymentCost As Decimal = ParseDecimalForDb(Session("Ordine_SpesePag"), 0D)
@@ -3102,7 +3119,8 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
         Select Case failure.Reason
             Case CheckoutFailureReason.ShippingAddressInvalid,
                  CheckoutFailureReason.ShippingMethodMissing,
-                 CheckoutFailureReason.PaymentMethodMissing
+                 CheckoutFailureReason.PaymentMethodMissing,
+                 CheckoutFailureReason.PaymentMethodNotAllowed
                 SetCheckoutStep("checkout")
                 If tOrdine IsNot Nothing Then tOrdine.Visible = True
                 ShowCheckoutSubmitError(failure.Message, False)
