@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canali social - disegno della schermata del gestionale</title>
+<style>
+  body { margin: 0; padding: 16px; background: #d9d9d9; font-family: Tahoma, "Segoe UI", Arial, sans-serif; font-size: 13px; color: #111; }
+  .note { max-width: 1180px; margin: 0 auto 10px; color: #333; }
+  .win { max-width: 1180px; margin: 0 auto; background: #fff; border: 1px solid #4a4a4a; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  .title { display: flex; align-items: center; justify-content: space-between; background: #8a8a8a; color: #fff; padding: 6px 10px; font-size: 17px; font-weight: bold; }
+  .title span.ctl { font-weight: normal; letter-spacing: 14px; }
+  .group { margin: 8px; border: 1px solid #b5b5b5; padding: 14px 10px 8px; position: relative; background: #f4f4f4; }
+  .group > .cap { position: absolute; top: -9px; left: 8px; background: #f4f4f4; padding: 0 4px; font-size: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-bottom: 6px; }
+  .row label { display: inline-flex; align-items: center; gap: 6px; }
+  input[type=text], select { height: 22px; border: 1px solid #7f9db9; padding: 0 4px; font: inherit; background: #fff; }
+  .w1 { width: 240px; } .w2 { width: 330px; } .w3 { width: 90px; } .w4 { width: 110px; }
+  .swatch { display: inline-block; width: 22px; height: 22px; border: 1px solid #555; background: #128C7E; vertical-align: middle; }
+  .btn-mini { height: 22px; border: 1px solid #7f7f7f; background: #e6e6e6; padding: 0 6px; }
+  table.grid { border-collapse: collapse; width: calc(100% - 16px); margin: 0 8px; }
+  table.grid th { background: linear-gradient(#fdfdfd, #e3e3e3); border: 1px solid #b5b5b5; padding: 4px 6px; font-weight: normal; text-align: center; white-space: nowrap; }
+  table.grid td { border: 1px solid #e1e1e1; padding: 4px 6px; white-space: nowrap; }
+  table.grid td.c { text-align: center; } table.grid td.n { text-align: right; }
+  tr.filter td { background: #f7f3d9; color: #999; }
+  tr.sel td { background: #ffff00; color: #0000c8; }
+  .chk { display: inline-block; width: 12px; height: 12px; border: 1px solid #6b6b6b; background: #fff; line-height: 11px; font-size: 11px; text-align: center; color: #0a3fa8; }
+  .nav { margin: 6px 8px; color: #333; }
+  .ribbon { display: flex; gap: 2px; background: #3c3c3c; padding: 4px; margin-top: 6px; }
+  .ribbon span { color: #fff; padding: 7px 14px; border: 1px solid #5a5a5a; background: #4a4a4a; font-weight: bold; }
+  .ribbon span.off { color: #9a9a9a; font-weight: normal; }
+  .legend { max-width: 1180px; margin: 12px auto 0; background: #fff; border: 1px solid #b5b5b5; padding: 10px 14px; line-height: 1.5; }
+  .legend b { color: #0a3fa8; }
+</style>
+</head>
+<body>
+<p class="note">Disegno indicativo della schermata <b>Canali social</b> del gestionale (stile delle griglie Janus gia in uso). I valori sono esempi inventati. Spiegazioni e codice: <a href="KEEPSTORE_SOCIAL_CHANNELS_GESTIONALE_ENZO.md">KEEPSTORE_SOCIAL_CHANNELS_GESTIONALE_ENZO.md</a>.</p>
+<div class="win">
+  <div class="title"><span>Canali social</span><span class="ctl">_ &#9633; &#10005;</span></div>
+
+  <div class="group"><span class="cap">Azienda</span>
+    <div class="row"><select class="w2"><option>AZIENDA UNO S.R.L.</option><option>Azienda Due</option></select>
+      <span style="color:#555">Tutto cio che vedi sotto riguarda solo l'azienda scelta.</span></div>
+  </div>
+
+  <div class="group"><span class="cap">Pulsante di contatto sul sito</span>
+    <div class="row">
+      <label><span class="chk">&#10003;</span> Attivo</label>
+      <label>Testo di invito <input type="text" class="w1" value="Inviaci un messaggio"></label>
+      <label>Posizione <select class="w4"><option>Destra</option><option>Sinistra</option></select></label>
+      <label>Colore <input type="text" class="w3" value="#128C7E"> <span class="swatch"></span> <span class="btn-mini">...</span></label>
+    </div>
+    <div class="row">
+      <label>Messaggio iniziale <input type="text" class="w2" value="Buongiorno, vi scrivo dal sito"></label>
+      <label>Orari di risposta <input type="text" class="w1" value="Lun-Ven 9-13 e 15-19"></label>
+    </div>
+    <div class="row">
+      <label><span class="chk">&#10003;</span> Mostra su telefono</label>
+      <label><span class="chk">&#10003;</span> Mostra su computer</label>
+    </div>
+  </div>
+
+  <table class="grid">
+    <tr><th></th><th>Canale</th><th>Codice</th><th>Valore</th><th>Abilitato</th><th>Ordine</th><th>Pulsante fisso</th><th>Piede</th><th>Scheda articolo</th><th>Etichetta</th></tr>
+    <tr class="filter"><td></td><td colspan="9">USA QUESTA RIGA PER FILTRARE I TUOI DATI</td></tr>
+    <tr class="sel"><td class="c"><span class="chk"></span></td><td>WhatsApp</td><td>whatsapp</td><td>393331234567</td><td class="c"><span class="chk">&#10003;</span></td><td class="n">1</td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk">&#10003;</span></td><td>Assistenza vendite</td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>Messenger</td><td>facebook</td><td>nomepagina</td><td class="c"><span class="chk">&#10003;</span></td><td class="n">2</td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td></td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>Telegram</td><td>telegram</td><td></td><td class="c"><span class="chk"></span></td><td class="n">3</td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk"></span></td><td></td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>Telefonata</td><td>call</td><td>+39081123456</td><td class="c"><span class="chk">&#10003;</span></td><td class="n">4</td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk"></span></td><td>Chiama il negozio</td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>E-mail</td><td>email</td><td>info@esempio.it</td><td class="c"><span class="chk">&#10003;</span></td><td class="n">5</td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk">&#10003;</span></td><td></td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>Instagram</td><td>instagram</td><td>nomeazienda</td><td class="c"><span class="chk">&#10003;</span></td><td class="n">11</td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td></td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>TikTok</td><td>tiktok</td><td></td><td class="c"><span class="chk"></span></td><td class="n">20</td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td></td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>YouTube</td><td>youtube</td><td></td><td class="c"><span class="chk"></span></td><td class="n">21</td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td></td></tr>
+    <tr><td class="c"><span class="chk"></span></td><td>LinkedIn</td><td>linkedin</td><td></td><td class="c"><span class="chk"></span></td><td class="n">22</td><td class="c"><span class="chk"></span></td><td class="c"><span class="chk">&#10003;</span></td><td class="c"><span class="chk"></span></td><td></td></tr>
+  </table>
+  <div class="nav">Elemento: &#124;&#9664; &#9664; <input type="text" style="width:40px" value="1"> di 18 &#9654; &#9654;&#124;</div>
+  <div class="ribbon"><span>Nuovo</span><span>Modifica</span><span>Elimina</span><span>Esporta</span><span>Prova</span><span class="off">Salva</span><span class="off">Annulla</span></div>
+</div>
+
+<div class="legend">
+  <b>Azienda</b>: scegli l'azienda da gestire. &nbsp; <b>Pulsante di contatto</b>: acceso o spento, frase di invito, messaggio gia scritto, orari, lato dello schermo, colore.<br>
+  <b>Griglia</b>: una riga per canale. <b>Valore</b> = solo numero o nome utente (WhatsApp: prefisso internazionale senza +, esempio 393331234567).<br>
+  <b>Pulsante fisso</b> = compare nel pulsante in basso sul sito. <b>Piede</b> = compare fra i profili in fondo al sito. <b>Scheda articolo</b> = offerto in «Richiedi informazioni».<br>
+  <b>Prova</b> apre il collegamento del canale selezionato. <b>Salva</b> e <b>Annulla</b> si accendono dopo Nuovo o Modifica; il sito mostra le modifiche entro 10 minuti.
+</div>
+</body>
+</html>
