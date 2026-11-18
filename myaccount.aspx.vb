@@ -100,7 +100,7 @@ Partial Class myaccount
     End Sub
 
     Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        Me.Title = Me.Title & " - Area personale"
+        Me.Title = Me.Title & " - La tua Dashboard"
     End Sub
 
     ' KS-QA-BROWSER-1A: gli ordini recenti sono schede (la tabella a 6 colonne si sovrapponeva e su telefono mostrava solo due colonne).
@@ -116,7 +116,7 @@ Partial Class myaccount
                                             ByVal cognomeNomeObj As Object,
                                             ByVal usernameObj As Object) As String
         Dim displayName As String = SafeStatusText(FirstValue(ragioneSocialeObj, cognomeNomeObj, usernameObj))
-        If displayName = "" Then Return "Benvenuto nella tua area personale"
+        If displayName = "" Then Return "Benvenuto nella tua Dashboard"
         Return "Ciao, " & displayName
     End Function
 

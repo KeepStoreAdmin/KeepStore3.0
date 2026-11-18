@@ -10,7 +10,7 @@
 </asp:Content>
 
 <asp:Content ID="ContentHead" ContentPlaceHolderID="HeadContent" runat="server">
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261117-pay-guide-2a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/cart-ui.css") & "?v=20261118-vat-note-1a" %>" />
             <script src="<%= ThemeManager.Asset("js/cart-ui.js") & "?v=20260914-cart-history-stockerror-minicart-ux-1a-rev2" %>" defer></script>
     <script src="<%= ThemeManager.Asset("js/checkout-ui.js") & "?v=20261001-cart-conversion1a" %>" defer></script>
 
@@ -86,8 +86,8 @@
                 <div class="body-text-3 ks-cart-heading-meta">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825" CssClass="ks-cart-heading-count" data-ks-cart-heading-count="true"></asp:Label>
                     <asp:Label ID="lblPresenti" runat="server" Text=""></asp:Label>
+                    <asp:Label ID="lblPrezzi" runat="server" Text="" CssClass="ks-cart-price-note"></asp:Label>
                 </div>
-                <asp:Label ID="lblPrezzi" runat="server" Text="*Prezzi" Font-Size="7pt" Font-Names="arial" CssClass="ks-cart-price-note"></asp:Label>
             </div>
 
             <asp:Panel ID="pnlCartRecovery" runat="server" ClientIDMode="Static" CssClass="ks-alert ks-cart-recovery" hidden="hidden" role="status" aria-live="polite" aria-labelledby="ksCartRecoveryTitle" tabindex="-1" data-ks-cart-recovery="true">

@@ -1011,7 +1011,7 @@ setInputFilter(document.getElementById("hexTextBox"), function(value) {
         <b>Registrazione conclusa con successo!</b><br /><br />
          <u>Ti abbiamo inviato una mail di conferma registrazione.</u>
         <br /><br /><br />
-        Ora puoi accedere all'area My Account per effettuare gli ordini.<br /><br />
+        Ora puoi accedere alla tua Dashboard per effettuare gli ordini.<br /><br />
         </td>
     </tr>   
     <tr>

@@ -114,7 +114,7 @@
                     <div class="tf-breadcrumb-list">
                         <a href="Default.aspx" class="text">Home</a>
                         <i class="icon icon-arrow-right"></i>
-                        <a href="myaccount.aspx" class="text">Account</a>
+                        <a href="myaccount.aspx" class="text">Dashboard</a>
                         <i class="icon icon-arrow-right"></i>
                         <span class="text">Indirizzi</span>
                     </div>

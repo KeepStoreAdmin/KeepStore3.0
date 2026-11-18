@@ -16,7 +16,7 @@
                 <div class="tf-breadcrumb-list">
                     <a href="default.aspx" class="text">Home</a>
                     <i class="icon icon-arrow-right"></i>
-                    <a href="myaccount.aspx" class="text">Account</a>
+                    <a href="myaccount.aspx" class="text">Dashboard</a>
                     <i class="icon icon-arrow-right"></i>
                     <asp:HyperLink ID="hlDocumenti" runat="server" CssClass="text" NavigateUrl="documenti.aspx?t=4">Ordini</asp:HyperLink>
                     <i class="icon icon-arrow-right"></i>

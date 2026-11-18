@@ -35,7 +35,7 @@
                             <h6 class="ft-heading footer-heading-mobile fw-semibold">Area cliente</h6>
                             <div class="tf-collapse-content">
                                 <ul class="ft-menu-list">
-                                    <li><a class="link" href="myaccount.aspx">Il mio account</a></li>
+                                    <li><a class="link" href="myaccount.aspx">La tua Dashboard</a></li>
                                     <li><a class="link" href="pay_your_orders.aspx">I miei ordini</a></li>
                                     <li><a class="link" href="track-your-order.aspx">Traccia il tuo ordine</a></li>
                                 </ul>

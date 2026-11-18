@@ -204,7 +204,7 @@
                 <div class="tf-breadcrumb-list">
                     <a href="Default.aspx" class="text">Home</a>
                     <i class="icon icon-arrow-right"></i>
-                    <a href="myaccount.aspx" class="text">Account</a>
+                    <a href="myaccount.aspx" class="text">Dashboard</a>
                     <i class="icon icon-arrow-right"></i>
                     <span class="text">Documenti</span>
                 </div>
@@ -227,7 +227,7 @@
                                         ID="hlBackMyAccount" 
                                         runat="server"
                                         NavigateUrl="myaccount.aspx"
-                                        CssClass="tf-btn btn-line">&laquo; Torna a My Account</asp:HyperLink>
+                                        CssClass="tf-btn btn-line">&laquo; Torna alla Dashboard</asp:HyperLink>
                                 </div>
 
                     <div class="ks-doc-typebar">

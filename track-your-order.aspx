@@ -86,7 +86,7 @@
                             </div>
 
                             <div class="mt-3 text-main-2">
-                                Se hai un account, puoi consultare tutti gli ordini nella tua <a class="text-secondary link" href="myaccount.aspx">Area personale</a>.
+                                Se hai un account, puoi consultare tutti gli ordini nella tua <a class="text-secondary link" href="myaccount.aspx">Dashboard</a>.
                             </div>
                         </asp:Panel>
 

@@ -82,7 +82,7 @@ function Test-RequiredLinks([string]$text) {
     foreach ($pair in @(
         @('condizioni-vendita.aspx', 'Condizioni di vendita'), @('condizioni-vendita.aspx#diritto-recesso', 'Diritto di recesso'),
         @('faq.aspx', 'Domande frequenti'), @('privacy.aspx', 'Privacy'), @('Contattaci.aspx', 'Contatti'),
-        @('myaccount.aspx', 'Il mio account'), @('pay_your_orders.aspx', 'I miei ordini'), @('track-your-order.aspx', 'Traccia il tuo ordine'),
+        @('myaccount.aspx', 'La tua Dashboard'), @('pay_your_orders.aspx', 'I miei ordini'), @('track-your-order.aspx', 'Traccia il tuo ordine'),
         @('articoli.aspx?inpromo=1', 'Offerte'))) {
         if ($text -notmatch ('<a class="[^"]*" href="' + [regex]::Escape($pair[0]) + '">' + [regex]::Escape($pair[1]) + '</a>')) { return $false }
     }

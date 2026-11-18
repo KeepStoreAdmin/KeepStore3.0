@@ -55,7 +55,7 @@ $s0 = $acc.IndexOf('<section class="ks-account-soon"', [StringComparison]::Ordin
 $s1 = $acc.IndexOf('</section>', $s0, [StringComparison]::Ordinal)
 if ($a0 -lt 0 -or $a1 -le $a0 -or $s0 -lt 0 -or $s1 -le $s0) { throw 'DASHBOARD_MARKUP_NOT_FOUND' }
 $dash = $acc.Substring($a0, $a1 - $a0) + $acc.Substring($s0, $s1 + 10 - $s0)
-$dash = $dash.Replace('<asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua area personale" />', 'Ciao, Azienda Di Prova Con Una Ragione Sociale Molto Lunga S.R.L.')
+$dash = $dash.Replace('<asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua Dashboard" />', 'Ciao, Azienda Di Prova Con Una Ragione Sociale Molto Lunga S.R.L.')
 $dash = $dash.Replace('<asp:Literal ID="litPayNotice" runat="server" />', 'Hai un ordine da pagare')
 $dash = $dash.Replace('<div id="pnlPayNotice" runat="server" visible="false" class="ks-account-notice">', '<div class="ks-account-notice">')
 $dash = $dash.Replace('<a id="lnkPayNotice" runat="server" class="tf-btn btn-fill ks-account-notice__btn">', '<a href="#" class="tf-btn btn-fill ks-account-notice__btn">')

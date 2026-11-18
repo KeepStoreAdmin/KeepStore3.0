@@ -7,8 +7,8 @@
                 <i class="icon-user"></i>
             </div>
             <div>
-                <div class="fw-semibold">Area Cliente</div>
-                <div class="text-muted small">Gestisci il tuo account</div>
+                <div class="fw-semibold">La tua Dashboard</div>
+                <div class="text-muted small">Ordini, documenti e dati</div>
             </div>
         </div>
     </div>

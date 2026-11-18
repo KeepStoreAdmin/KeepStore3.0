@@ -186,7 +186,7 @@
                                         runat="server"
                                         NavigateUrl="myaccount.aspx"
                                         CssClass="tf-btn-icon type-2 style-white">
-                                        &laquo; Torna alla pagina My Account
+                                        &laquo; Torna alla Dashboard
                                     </asp:HyperLink>
                                 </div>
                             </asp:Panel>

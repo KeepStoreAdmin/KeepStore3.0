@@ -1,7 +1,7 @@
 <%@ Page Title="" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="myaccount.aspx.vb" Inherits="myaccount" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
-    Area personale
+    La tua Dashboard
 </asp:Content>
 
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
@@ -17,7 +17,7 @@
                     <div class="tf-breadcrumb-list">
                         <a href="Default.aspx" class="text">Home</a>
                         <i class="icon icon-arrow-right"></i>
-                        <span class="text">Account</span>
+                        <span class="text">Dashboard</span>
                     </div>
                 </div>
             </div>
@@ -49,7 +49,7 @@
                         <div class="myaccount-content account-dashboard">
                             <div class="ks-dashboard-hero">
                                 <div>
-                                    <h3 class="fw-semibold mb-2"><asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua area personale" /></h3>
+                                    <h3 class="fw-semibold mb-2"><asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua Dashboard" /></h3>
                                     <p class="body-md-2 text-main-2 mb-0">Da qui puoi controllare ordini, documenti, dati account e indirizzi.</p>
                                 </div>
                                 <a href="documenti.aspx" class="tf-btn btn-fill">I miei ordini</a>

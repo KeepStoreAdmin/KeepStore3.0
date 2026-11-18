@@ -42,7 +42,7 @@
                             <span class="body-small">
                                 <asp:MultiView ID="mvLogin" runat="server">
                                     <asp:View ID="vwLoginOff" runat="server">
-                                        <span id="lblLogin" runat="server">Il mio account</span>
+                                        <span id="lblLogin" runat="server">La tua Dashboard</span>
                                     </asp:View>
                                     <asp:View ID="vwLoginOn" runat="server">
                                         <span><span>Ciao</span>, <asp:Label ID="lblUtente" runat="server" /></span>
@@ -110,7 +110,7 @@
                             <li class="nav-account">
                                 <a id="lnkAccountMobile" runat="server" href="/login.aspx" class="link nav-icon-item">
                                     <span><i class="icon icon-user"></i></span>
-                                    <p class="body-small">Account</p>
+                                    <p class="body-small">Dashboard</p>
                                 </a>
                             </li>
                             <li class="nav-cart">
@@ -192,13 +192,13 @@
                             <li>
                                 <a href="wishlist.aspx" class="link link-fill nav-icon-item relative">
                                     <i class="icon-hearth text-main fs-26 link"></i>
-                                    <span class="count-box style-pst-2 d-none d-xxl-flex"><asp:Label ID="lblWishlistCount" runat="server" Text="0" Visible="true" /></span>
+                                    <span class="count-box style-pst-2"><asp:Label ID="lblWishlistCount" runat="server" Text="0" Visible="true" /></span>
                                 </a>
                             </li>
                             <li class="nav-shop-cart">
                                 <a href="carrello.aspx" class="link link-fill nav-icon-item relative" data-bs-toggle="offcanvas" data-bs-target="#ksMiniCartCanvas" aria-controls="ksMiniCartCanvas" aria-label="Apri carrello">
                                     <i class="icon-cart text-main fs-26 link"></i>
-                                    <span class="count-box style-pst-2 d-none d-xxl-flex" data-ks-cart-count><asp:Label ID="lblCarrelloCount" runat="server" Text="0" /></span>
+                                    <span class="count-box style-pst-2" data-ks-cart-count><asp:Label ID="lblCarrelloCount" runat="server" Text="0" /></span>
                                 </a>
                             </li>
                             <li class="d-none"><asp:Label ID="lblCarrelloTotale" runat="server" Text="0,00" /></li>
@@ -241,7 +241,7 @@
             </div>
         <div class="mb-bottom">
             <ul class="nav-ul-mb ks-mobile-utility-nav">
-                <li class="nav-mb-item"><a id="lnkAccountMobileButton" href="myaccount.aspx" runat="server" class="mb-menu-link"><span>Area personale</span></a></li>
+                <li class="nav-mb-item"><a id="lnkAccountMobileButton" href="myaccount.aspx" runat="server" class="mb-menu-link"><span>La tua Dashboard</span></a></li>
                 <li class="nav-mb-item"><a href="wishlist.aspx" class="mb-menu-link"><span>Wishlist</span></a></li>
                 <li class="nav-mb-item"><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="mb-menu-link"><span>Confronta prodotti</span></a></li>
             </ul>

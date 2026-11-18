@@ -2957,12 +2957,12 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
     Private Sub ConfigureCartDataSources()
         IvaTipo = GetSessionInt("IvaTipo", 0)
         If IvaTipo = 1 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Esclusa"
+            Me.lblPrezzi.Text = "Prezzi IVA esclusa"
         ElseIf IvaTipo = 2 Then
             If SafeDbl(Session("Iva_Utente"), -1) > -1 Then
-                Me.lblPrezzi.Text = "*Prezzi Iva Inclusa - (IVA Utente al " & Convert.ToString(Session("Iva_Utente")) & "%)"
+                Me.lblPrezzi.Text = "Prezzi IVA inclusa (IVA al " & Convert.ToString(Session("Iva_Utente")) & "%)"
             Else
-                Me.lblPrezzi.Text = "*Prezzi Iva Inclusa"
+                Me.lblPrezzi.Text = "Prezzi IVA inclusa"
             End If
         End If
     End Sub
@@ -3298,7 +3298,6 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
 
     ElseIf DispoTipo = 2 Then
         img.Visible = False
-        dispo.Visible = True
     End If
     End If
         Next
@@ -4593,7 +4592,6 @@ End Function
             End If
         ElseIf DispoTipo = 2 Then
             If img IsNot Nothing Then img.Visible = False
-            If dispo IsNot Nothing Then dispo.Visible = True
         End If
 
     Next
