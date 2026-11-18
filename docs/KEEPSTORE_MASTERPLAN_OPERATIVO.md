@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## KS-DASHBOARD-ORDERS-1B — 18/11/2026 — SOURCE (Dashboard a riquadri e «I miei ordini» corretto)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#554](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/554), stable `92ffe4ae27a2992f26d1236c9df969d4e00f118f`.** Scelta del PO («Riquadri + ordini»): la Dashboard non ha piu l'elenco «Ordini recenti» (doppione); «I miei ordini» (`documenti.aspx`) ha lo stato in due righe (titolo nel badge, nota sotto), colonne della scheda dalla larghezza della scheda (`@container`), filtri compatti con date native, etichette associate, URL canonico anche senza JavaScript.
+
+**Difetto misurato (non solo ipotizzato):** sul sito di prova (utente PROVA, 43 ordini annullati) `?t=4&stato=3` e pagina 2 = **errore 500 «Parameter '?UtentiId' must be defined»**: `SelectParameters` si persiste nel ViewState, `SelectCommand` no. Ora comando e parametri tipizzati (utente e azienda dall'identita verificata) si impostano a ogni richiesta in `sdsDocumenti_Selecting`; il ripiego del markup restituisce zero righe; date solo dalla query string (via le date residue dalla sessione e il «oggi» riempito d'ufficio); «dal» e «al» indipendenti.
+
+**Revisioni (livello L).** ChatGPT (`high`): accolto livello L, parsing delle date, conteggio, accessibilita; scartato «non dimostrato» (smentito dalla misura) e l'ipotesi identita A / sessione B (irraggiungibile: redirect). Claude (Opus): accolti i blocchi su date dalla sessione, ripiego aperto, test fuori manifest, oracolo; corretto il suo errore su `SelectCommand` persistito (la misura mostra il contrario).
+
+**Prove.** `Tools/Test-AccountOrders1B.ps1` rosso prima, 46 mutanti, LAB con il connettore reale (19 controlli: isolamento utente e azienda, filtri, estremi, una riga per documento); `Test-AccountLayout` 5 pagine x 5 larghezze (anche schede strette, mutante CSS rilevato); `Test-AccountTiles` 67 mutanti; 10 test correlati verdi; sito di prova a 1366 e 390 px; precompile, segreti, CI verdi.
+
+**Limiti e residuo.** Safari/iOS non verificabile; `Test-MyAccountRecentOrdersTenant` cancellato (oggetto rimosso); `Run-KeepStoreRelatedTests.ps1` si ferma su un test cancellato (da correggere). **Alla consegna futura:** `App_Code/KeepStoreAccountOrderFilters.vb` per primo, poi `documenti.aspx(.vb)`, `myaccount.aspx(.vb)`, `account-hub-ui.css`. CONSEGNA SERVER SOSPESA.
 ## KS-GOV-SOCIAL-CHANNELS-DESIGN-1A — 18/11/2026 — DOCS (canali social: schermata del gestionale per Enzo, adeguamento del database, coda del PO)
 
 **Esito: A (DOCS). Task documentale, nessuna catena.** Richiesta del PO del 2026-11-18: ridare vita a `social_buttons` e `social_buttons_rules` con standard attuali e progettare la schermata del gestionale (stile griglia Janus) per azienda. Consegnati [KEEPSTORE_SOCIAL_CHANNELS_GESTIONALE_ENZO.md](KEEPSTORE_SOCIAL_CHANNELS_GESTIONALE_ENZO.md) (guida per chi la usa, campi nuovi dichiarati per esteso, script forward/verify/rollback, quattro stored, codice della maschera `frmCanaliSocial` sul modello di `frmVettoriCosti`) e [il disegno](KEEPSTORE_SOCIAL_CHANNELS_SCREEN_MOCK.html). **Nulla applicato a database reali.**
