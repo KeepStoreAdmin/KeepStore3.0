@@ -8,9 +8,9 @@ Partial Class paypalreturn
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs) Handles Me.Load
         If IsPostBack Then Return
         ' PAYPAL-PAY-FIRST-PAGES-1A (P3a1): rientro di un pagamento aperto PRIMA dell'ordine (parametro k = chiave del tentativo, nessun documento).
-        Dim attemptKey As String = Convert.ToString(Request.QueryString("k")).Trim()
+        Dim attemptKey As String = QueryText(Request.QueryString, "k")
         If attemptKey.Length > 0 Then
-            PayPalPayFirstGlue.RunReturn(HttpContext.Current, attemptKey, Convert.ToString(Request.QueryString("action")).Trim(), Convert.ToString(Request.QueryString("token")))
+            PayPalPayFirstGlue.RunReturn(HttpContext.Current, attemptKey, QueryText(Request.QueryString, "action"), Convert.ToString(Request.QueryString("token")))
             Return
         End If
         Dim documentId As Integer = QueryInt("id")
@@ -20,7 +20,7 @@ Partial Class paypalreturn
         If doc Is Nothing OrElse Not doc.Exists Then RedirectTerminal("accessonegato.aspx") : Return
         If doc.Pagato = 1 Then CloseWebLaunch(doc) : RedirectResult(documentId, "ok") : Return
         If doc.PaymentOnline <> PayPalPaymentState.PAYPAL_ONLINE_VALUE Then Fail(documentId, "Metodo di pagamento non coerente") : Return
-        Dim actionName As String = Convert.ToString(Request.QueryString("action")).Trim()
+        Dim actionName As String = QueryText(Request.QueryString, "action")
         Dim rawOrderId As String = Convert.ToString(Request.QueryString("token"))
         Dim tx As PayPalCheckoutTransactionInfo = PayPalCheckoutRepository.LoadTransactionForOrder(rawOrderId)
         If tx Is Nothing OrElse Not tx.Exists OrElse tx.DocumentiId <> documentId OrElse tx.AziendeId <> doc.AziendeId OrElse
@@ -85,6 +85,14 @@ Partial Class paypalreturn
         Dim parsed As Integer
         Integer.TryParse(Convert.ToString(Request.QueryString(key)), parsed)
         Return parsed
+    End Function
+
+    ' Un parametro assente e Nothing: Convert.ToString(String) lo restituisce tale e quale e un metodo chiamato sopra farebbe cadere la pagina.
+    Private Shared Function QueryText(ByVal query As System.Collections.Specialized.NameValueCollection, ByVal key As String) As String
+        If query Is Nothing Then Return String.Empty
+        Dim value As String = query(key)
+        If value Is Nothing Then Return String.Empty
+        Return value.Trim()
     End Function
 
     Private Sub RedirectTerminal(ByVal url As String)

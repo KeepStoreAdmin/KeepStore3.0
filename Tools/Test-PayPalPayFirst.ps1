@@ -59,7 +59,7 @@ function Get-SourceChecks([string]$pf, [string]$ret, [string]$pay, [string]$ord,
     if ($lockStart -ge 0 -and $lockEnd -gt $lockStart) { $inLock = $ord.Substring($lockStart, $lockEnd - $lockStart) }
     $iRet = $ret.IndexOf('PayPalPayFirstGlue.RunReturn', [StringComparison]::Ordinal)
     [void]$list.Add(@{ Name = 'G01 paypalreturn: il ramo bozza precede il percorso del documento e usa RunReturn'; Ok = (($iRet -gt 0) -and ($iRet -lt $ret.IndexOf('QueryInt("id")', [StringComparison]::Ordinal))) })
-    [void]$list.Add(@{ Name = 'G02 paypalreturn: il ramo bozza si attiva solo con il parametro k'; Ok = ($ret -match 'Request\.QueryString\("k"\)') })
+    [void]$list.Add(@{ Name = 'G02 paypalreturn: il ramo bozza si attiva solo con il parametro k'; Ok = ($ret -match 'QueryText\(Request\.QueryString, "k"\)') })
     [void]$list.Add(@{ Name = 'G03 paypalpay: nessuna regola nella pagina, solo RunStart'; Ok = (($pay -match 'PayPalPayFirstGlue\.RunStart') -and ($pay -notmatch 'CreateAuthorizeOrder|AuthorizeOrder|VoidAuthorization|CaptureAuthorization')) })
     [void]$list.Add(@{ Name = 'G04 il percorso di sempre resta: avvio PayPal sul documento e stato di pagamento iniziale'; Ok = (($ord.Contains('PayPalWebLaunchContext.Issue(HttpContext.Current, id, orderIdentity, checkoutRequestId)')) -and ($ord.Contains('/paypalcheckout.aspx?id=')) -and ($ord.Contains('InitializeWebPaymentStatus(conn, trns, id, PagamentoOnLine, ConfermaOrdinePrimaPagamento, PermettiPagamentoSuccessivo)')) -and ($ord.Contains('PayPalPaymentState.MarkPending(id, "PayPal: in attesa di avvio pagamento", conn, trns)'))) })
     [void]$list.Add(@{ Name = 'G05 il servizio di avvio e ritorno non incassa'; Ok = (($pf -notmatch 'CaptureAuthorization') -and ($pf -notmatch 'CaptureOrder')) })
