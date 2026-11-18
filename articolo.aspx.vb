@@ -3022,20 +3022,26 @@ Partial Class articolo
             Dim reviews As List(Of ReviewItem) = LoadProductReviews(_id)
             Dim counts As Integer() = New Integer(5) {}
             Dim totalRating As Integer = 0
+            Dim verifiedCount As Integer = 0
 
             For Each item As ReviewItem In reviews
                 If item.Rating >= 1 AndAlso item.Rating <= 5 Then
                     counts(item.Rating) += 1
                     totalRating += item.Rating
                 End If
+                If item.Verified Then verifiedCount += 1
             Next
 
             Dim reviewCount As Integer = reviews.Count
             If reviewCount > 0 Then
+                ' PDP-REVIEW-STARS-1A: stelle della media (anche in testata) e conteggio senza diciture di verifica non vere.
                 Dim average As Decimal = Convert.ToDecimal(totalRating) / Convert.ToDecimal(reviewCount)
+                Dim starsHtml As String = KeepStorePdpInfo.ReviewStarsHtml(average)
                 litReviewAverage.Text = average.ToString("0.0", ItCulture)
-                litReviewCountText.Text = If(reviewCount = 1, "1 recensione verificata da KeepStore.", reviewCount.ToString(ItCulture) & " recensioni verificate da KeepStore.")
-                litHeaderReviewText.Text = litReviewCountText.Text
+                litReviewStars.Text = starsHtml
+                litHeaderReviewStars.Text = starsHtml
+                litReviewCountText.Text = KeepStorePdpInfo.ReviewCountText(reviewCount, verifiedCount)
+                litHeaderReviewText.Text = average.ToString("0.0", ItCulture) & " su 5 - " & KeepStorePdpInfo.ReviewCountText(reviewCount, 0)
             Else
                 litReviewAverage.Text = "0"
                 litReviewCountText.Text = "Ancora nessuna valutazione."
@@ -3062,6 +3068,9 @@ Partial Class articolo
     End Sub
 
     Private Sub SetReviewDefaults()
+        Dim emptyStars As String = KeepStorePdpInfo.ReviewStarsHtml(0D)
+        litReviewStars.Text = emptyStars
+        litHeaderReviewStars.Text = emptyStars
         litReviewAverage.Text = "0"
         litReviewCountText.Text = "Ancora nessuna valutazione."
         litReviewDistribution.Text = BuildReviewDistributionHtml(New Integer(5) {}, 0)
@@ -3299,12 +3308,8 @@ Partial Class articolo
     End Function
 
     Private Function BuildReviewStarsHtml(rating As Integer) As String
-        Dim sb As New StringBuilder()
-        For i As Integer = 1 To 5
-            Dim css As String = If(i <= rating, "text-main-4", "text-main-3")
-            sb.Append("<li><i class=""icon-star ").Append(css).Append("""></i></li>")
-        Next
-        Return sb.ToString()
+        ' PDP-REVIEW-STARS-1A: le stelle ottenute erano grigie e le altre gialle; ora le compone il modulo provato.
+        Return KeepStorePdpInfo.ReviewStarsHtml(rating)
     End Function
 
     Private Function BuildReviewMessage(cssName As String, text As String) As String

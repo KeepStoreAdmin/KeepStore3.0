@@ -51,6 +51,30 @@ Public Module KeepStorePdpInfo
         Return "-" & percent.ToString("0.##", Globalization.CultureInfo.InvariantCulture) & "%"
     End Function
 
+    ' PDP-REVIEW-STARS-1A. Cinque stelle: quelle ottenute nel colore delle stelle del tema, le altre grigie (prima erano invertite).
+    ' La media si arrotonda alla stella intera piu vicina (4,5 = cinque); valori fuori scala restano fra 0 e 5.
+    Private Const StarOn As String = "<li><i class=""icon-star""></i></li>"
+    Private Const StarOff As String = "<li><i class=""icon-star text-main-4""></i></li>"
+
+    Public Function ReviewStarsHtml(ByVal rating As Decimal) As String
+        Dim full As Integer = CInt(Math.Round(Math.Max(0D, Math.Min(5D, rating)), MidpointRounding.AwayFromZero))
+        Dim sb As New StringBuilder()
+        For i As Integer = 1 To 5
+            sb.Append(If(i <= full, StarOn, StarOff))
+        Next
+        Return sb.ToString()
+    End Function
+
+    ' Conteggio delle recensioni: dice «acquisto verificato» solo per quelle che il dato segna come verificate.
+    Public Function ReviewCountText(ByVal total As Integer, ByVal verified As Integer) As String
+        If total <= 0 Then Return "Ancora nessuna valutazione."
+        Dim text As String = If(total = 1, "1 recensione", total.ToString(Globalization.CultureInfo.InvariantCulture) & " recensioni")
+        Dim shown As Integer = Math.Min(verified, total)
+        If shown <= 0 Then Return text
+        If total = 1 Then Return text & ", con acquisto verificato"
+        Return text & ", " & shown.ToString(Globalization.CultureInfo.InvariantCulture) & " con acquisto verificato"
+    End Function
+
     Private Function Clean(ByVal value As String) As String
         If value Is Nothing Then Return ""
         Return value.Trim()

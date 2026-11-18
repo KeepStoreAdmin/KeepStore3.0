@@ -146,14 +146,8 @@
                                                     </li>
                                                 </asp:PlaceHolder>
                                                 <li class="star-review">
-                                                    <ul class="list-star">
-                                                        <li><i class="icon-star text-main-4"></i></li>
-                                                        <li><i class="icon-star text-main-4"></i></li>
-                                                        <li><i class="icon-star text-main-4"></i></li>
-                                                        <li><i class="icon-star text-main-4"></i></li>
-                                                        <li><i class="icon-star text-main-4"></i></li>
-                                                    </ul>
-                                                    <p class="caption text-main-2"><asp:Literal ID="litHeaderReviewText" runat="server" Text="Nessuna recensione" /></p>
+                                                    <ul class="list-star"><asp:Literal ID="litHeaderReviewStars" runat="server" EnableViewState="false" /></ul>
+                                                    <a class="caption text-main-2 link ks-pdp-review-link" href="#prd-review"><asp:Literal ID="litHeaderReviewText" runat="server" Text="Nessuna recensione" /></a>
                                                 </li>
                                             </ul>
                                         </div>
@@ -491,7 +485,7 @@
                 <section class="ks-pdp-section" id="prd-review" aria-labelledby="prdReviewTitle" tabindex="-1">
                     <header class="ks-pdp-section__head">
                         <h2 class="ks-pdp-section__title" id="prdReviewTitle">Recensioni</h2>
-                        <p class="ks-pdp-section__lead">Il parere di chi ha gi&agrave; acquistato.</p>
+                        <p class="ks-pdp-section__lead">Il parere dei clienti.</p>
                     </header>
                     <div class="ks-pdp-section__body flat-title-tab-product-des">
                         <div class="ks-review-widget">
@@ -499,13 +493,7 @@
                             <div class="tab-rating-wrap">
                                 <div class="rating-percent">
                                     <p class="rate-percent"><asp:Literal ID="litReviewAverage" runat="server" Text="0" /> <span>/ 5</span></p>
-                                    <ul class="list-star justify-content-center">
-                                        <li><i class="icon-star text-main-4"></i></li>
-                                        <li><i class="icon-star text-main-4"></i></li>
-                                        <li><i class="icon-star text-main-4"></i></li>
-                                        <li><i class="icon-star text-main-4"></i></li>
-                                        <li><i class="icon-star text-main-4"></i></li>
-                                    </ul>
+                                    <ul class="list-star justify-content-center"><asp:Literal ID="litReviewStars" runat="server" EnableViewState="false" /></ul>
                                     <p class="text-cl-3"><asp:Literal ID="litReviewCountText" runat="server" Text="Ancora nessuna valutazione." /></p>
                                 </div>
                                 <ul class="rating-progress-list">
