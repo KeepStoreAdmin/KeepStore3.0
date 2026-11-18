@@ -1,5 +1,20 @@
 # KeepStore Masterplan Operativo
 
+## BANCASELLA-CALLBACK-AUTH-1A — 19/11/2026 — SOURCE (la conferma di pagamento della carta prova chi parla e non torna indietro)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#561](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/561), stable `c7fa96e1`.** Le due chiamate di ritorno della banca passano da `App_Code/BancaSellaCallback.vb`: negozio configurato (prima di `Decrypt`) e dell'azienda del documento, una transazione con blocco della riga, pagato una volta sola da `Pagato = 0`, mai un KO o un esito in sospeso sopra un pagato, riga per coppia (documento, codice), ritorno del cliente senza scritture e solo verso un host dell'azienda. Area CRITICAL: pagamenti.
+
+**Fatti e causa.** `comunication.aspx` prendeva il negozio dalla querystring senza confronto, aggiornava `documenti` per solo id, un KO dopo un OK riscriveva lo stato, conteggio e inserimento erano separati. Misure sul LAB: 125 pagamenti, le due aziende condividono un negozio, importo inviato diverso dal totale di oggi in 5 avvii su 12, trigger `DocumentiDestinazioni_upd` su ogni UPDATE, `Pagato` vale 0, -1, 1, 2.
+
+**Revisioni.** ChatGPT (xhigh): accolti rilettura sotto blocco, monotonia, negozio prima della decifratura; il rifiuto su importo e valuta scartato (falsi rifiuti certi: due percorsi con importi legittimi diversi, nessun valore durevole dell'avvio), la correlazione dei tentativi rimandata. Claude (Opus): accolti confronto per sola azienda, riga per coppia anche su documento gia pagato, host di ritorno validato (il redirect relativo avrebbe rotto la seconda azienda), indice mai sul solo codice. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-BancaSellaCallback.ps1` rosso sulle pagine vecchie, verde dopo: 48 mutanti, percorso produttivo sul LAB (23 controlli, quattro conferme concorrenti con riga bloccata, 6 mutazioni del livello dati, LAB ripristinato); precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Comportamento di `Decrypt` con un negozio diverso da quello che ha cifrato non dimostrabile; nessuna prova con la banca; `BANCASELLA-ATTEMPTS-1A` (importo e tentativi), `BANCASELLA-PAY-FIRST-1A`. **Alla consegna futura:** `App_Code/BancaSellaCallback.vb` per primo, poi `BancaSella/comunication.aspx.vb` e `BancaSella/responseClient.aspx.vb` insieme; dopo, una prova di pagamento e la lettura di `bancasella_log`. CONSEGNA SERVER SOSPESA.
+
+## PAYPAL-RETURN-NULL-QUERY-1A — 19/11/2026 — SOURCE (il ritorno da PayPal non cade piu)
+
+**Esito: A (SOURCE, DA PUBBLICARE). Livello S. PR [#560](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/560), stable `222d85a5`.** Segnalazione del PO dal sito: tornando indietro da PayPal senza pagare compariva la pagina di errore generica. **Causa:** `Convert.ToString(Request.QueryString("k")).Trim()` in `paypalreturn.aspx.vb` solleva `NullReferenceException` quando `k` manca; `k` esiste solo nel rientro del «paga prima», quindi cadeva OGNI rientro di un ordine gia creato, anche a pagamento approvato (approvazione non incassata). Introdotto con la PR 534. **Rimedio:** lettore `QueryText` che non restituisce mai Nothing. **Prove:** `Tools/Test-PayPalReturnQueryNull.ps1` (riproduce il difetto, 7 mutanti), `Test-PayPalPayFirst` verde (124). Revisioni: non richieste (livello S). **Alla consegna:** solo `paypalreturn.aspx.vb`. **Limite:** i registri del server non sono stati letti; gli ordini PayPal approvati dal 17/11 e rimasti non pagati vanno controllati dal PO.
 ## PAYMENT-PAY-FIRST-BY-FLAG-1A (T1) — 18/11/2026 — SOURCE (il flag del metodo decide: mai un ordine creato contro il flag)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#558](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/558), stable `31613121`.** Con `pagamentitipo.ConfermaOrdinePrimaPagamento = 0` su un metodo per cui il sito non sa pagare prima (carta Banca Sella, contanti, bonifico) l'ordine non viene creato: il carrello rifiuta il metodo con un messaggio e `ordine.aspx` rifiuta in modo chiuso, senza documento ne merce impegnata. PayPal resta sul suo percorso; con flag 1 (tutti i metodi sul LAB) nulla cambia. Area CRITICAL toccata: checkout.
