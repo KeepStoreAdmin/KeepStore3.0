@@ -101,7 +101,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($f.js -notmatch "goingUp \? headerHeight\(\) : 0") { $fail.Add('A11 scarto del salto senza direzione') }
     if ($f.js -notmatch "setProperty\('--ks-pdp-header-offset', headerBottom\(\) \+ 'px'\)") { $fail.Add('A11 posizione dell''intestazione non pubblicata') }
     if ($f.js -notmatch "behavior: 'instant'") { $fail.Add('A11 salto non immediato') }
-    if ($a -notmatch 'css/product-ui\.css"\) %>\?v=20261118-pdp-print-a4"') { $fail.Add('A11 sigla del foglio di stile') }
+    if ($a -notmatch 'css/product-ui\.css"\) %>\?v=20261119-compact-1b"') { $fail.Add('A11 sigla del foglio di stile') }
     if ($a -notmatch 'js/ks-pdp-sections\.js"\) %>\?v=20261118-pdp-sections1a"') { $fail.Add('A11 script non caricato') }
     if ((Get-Between $f.css 'PDP-SECTIONS-RESTYLE-1A' "`0") -match 'border-radius:\s*[1-9]') { $fail.Add('A11 angoli arrotondati nel blocco nuovo') }
 
@@ -171,7 +171,7 @@ $mutants = @(
     @{ Id = 'M15_SMALL_TOC_TARGET'; File = 'css'; Old = "  min-height: 48px;`r`n  padding: 0 14px;"; New = "  min-height: 32px;`r`n  padding: 0 14px;" },
     @{ Id = 'M16_H5_NAME'; File = 'aspx'; Old = '<h1 class="product-info-name fw-semibold">'; New = '<h5 class="product-info-name fw-semibold">' },
     @{ Id = 'M17_NO_SCROLL_MARGIN'; File = 'css'; Old = 'scroll-margin-top: calc(var(--ks-pdp-toc-height, 52px) + 12px);'; New = 'scroll-margin-top: 0;' },
-    @{ Id = 'M18_OLD_BUSTER'; File = 'aspx'; Old = 'css/product-ui.css") %>?v=20261118-pdp-print-a4"'; New = 'css/product-ui.css") %>?v=20261115-focus-obscured1a"' },
+    @{ Id = 'M18_OLD_BUSTER'; File = 'aspx'; Old = 'css/product-ui.css") %>?v=20261119-compact-1b"'; New = 'css/product-ui.css") %>?v=20261115-focus-obscured1a"' },
     @{ Id = 'M19_WEIGHT_LABEL_TWICE'; File = 'vb'; Old = 'Server.HtmlEncode(weightText & " " & shippingInfo.WeightUnit)'; New = 'Server.HtmlEncode("Peso articolo: " & weightText & " " & shippingInfo.WeightUnit)' }
 )
 $behaviourMutants = @(

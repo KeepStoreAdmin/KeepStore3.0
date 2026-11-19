@@ -3363,6 +3363,14 @@ body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
   .ks-header-ui .ks-dept-link[aria-current] { border-bottom-color: Highlight; }
 }
 
+/* ===== UX-COMPACT-SPACING-SITEWIDE-1B - telefono: meno vuoto sopra e sotto il contenuto (richiesta del PO del 2026-11-19). =====
+   SOLO nelle pagine elencate: contatti; area personale, documenti, dati account, cambio password, lista desideri, dati utente;
+   indirizzi. Mai una regola su tutte le sezioni: scheda prodotto, carrello, ricevuta e dettaglio ordine restano come sono. */
+@media (max-width: 767.98px) {
+  .ks-contact > section.tf-sp-2,
+  .ks-myaccount > section.tf-sp-2,
+  .ks-address-page > section.tf-sp-2 { padding-top: 24px; padding-bottom: 32px; }
+}
 /* ===== KS-A04-HOME-VETRINA-1A - HOME piu corta su telefono: rail orizzontali, scheda offerta compatta. Desktop invariato. ===== */
 @media (max-width: 767.98px) {
   /* Reparti: una fila scorrevole di riquadri compatti (prima 6 righe da due colonne). */
@@ -3722,10 +3730,12 @@ body.ks-page-home .ks-home-main .ks-home-hero-eyebrow.caption {
 /* ===== UX-COMPACT-SPACING-SITEWIDE-1A - schede delle griglie della HOME senza spazi riservati vuoti (richiesta del PO del 2026-11-19). =====
    Via le due altezze riservate del prezzo (riga e contenitore) e i margini doppi; il titolo conserva le sue tre righe, cosi i prezzi
    restano allineati nella fila; la disponibilita sta in fondo alla scheda. */
-body.ks-page-home #ksHomePage .ks-grid-card .card-product-info { display: flex; flex-direction: column; flex: 1 1 auto; }
+body.ks-page-home #ksHomePage .ks-grid-card .card-product-info { display: flex; flex-direction: column; flex: 1 1 auto; padding-top: 0; }
 body.ks-page-home #ksHomePage .ks-grid-card .card-product-info .box-title { display: flex; flex-direction: column; flex: 1 1 auto; gap: 6px; }
 body.ks-page-home #ksHomePage .ks-grid-card .ks-card-category { margin-bottom: 4px; }
 body.ks-page-home #ksHomePage .ks-grid-card .name-product { margin-bottom: 0; }
 body.ks-page-home #ksHomePage .ks-grid-card .ks-home-price-stack--compact { min-height: 0; }
 body.ks-page-home #ksHomePage .ks-grid-card .price-wrap.ks-home-price-slot--compact { height: auto; min-height: 0; }
 body.ks-page-home #ksHomePage .ks-grid-card .box-title > .ks-availability { flex: 0 0 auto; margin-top: auto; }
+/* UX-COMPACT-SPACING-SITEWIDE-1B: 10 px fra immagine e testo (prima 20 di gap + 10 di padding); vale anche per i visti di recente della HOME. */
+body.ks-page-home #ksHomePage .ks-grid-card { gap: 10px; }

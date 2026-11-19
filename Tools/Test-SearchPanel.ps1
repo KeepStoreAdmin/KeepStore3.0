@@ -114,7 +114,7 @@ function Test-MobileCss([string]$css) {
             $css -match '(?s)\.ks-header-ui \.ks-mobile-search-area \.ks-search-shell \.ks-search-category-select \{[^}]*min-height: 40px;[^}]*border-radius: 999px;')
 }
 function Test-Busters([string]$master) {
-    return ($master -match 'js/ks-page-flags\.js"\) %>\?v=20261114-(?:search-panel1a|deadcode-c1a)' -and $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-(?:home-cards|palette-aa|focus-fc)1a)"')
+    return ($master -match 'js/ks-page-flags\.js"\) %>\?v=20261114-(?:search-panel1a|deadcode-c1a)' -and $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-(?:home-cards|palette-aa|focus-fc)1a|20261119-compact-1a)"')
 }
 function Test-ServerLabel([string]$vb) {
     $recent = [regex]::Match($vb, '(?s)Private Function BuildRecentResult\(.*?End Function').Value

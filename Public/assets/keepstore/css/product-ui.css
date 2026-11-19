@@ -439,9 +439,11 @@
   min-width: 0;
 }
 
+/* UX-COMPACT-SPACING-SITEWIDE-1B: 10 px fra immagine e testo (prima 20 + 10), 6 px fra le righe, 10 px prima del pulsante. */
 .ks-product-list-section .card-product {
   display: flex;
   flex-direction: column;
+  gap: 10px;
   height: 100%;
   min-width: 0;
   width: 100%;
@@ -460,13 +462,14 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
+  gap: 10px;
   min-width: 0;
-  padding-top: 10px;
+  padding-top: 0;
   width: 100%;
 }
 
-.ks-product-list-section .box-title {
-  gap: 4px;
+.ks-product-list-section .card-product-info .box-title {
+  gap: 6px;
   max-width: 100%;
   min-width: 0;
   width: 100%;
@@ -1091,8 +1094,8 @@
     object-position: center;
   }
 
-  .ks-product-list-section .card-product-info {
-    padding-top: 10px;
+  .ks-product-list-section.tf-sp-2 {
+    padding-bottom: 32px;
   }
 
   .ks-product-list-section .ks-pdp-cart-action {

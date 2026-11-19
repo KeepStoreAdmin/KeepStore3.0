@@ -5,7 +5,7 @@ param([switch]$SkipLab, [switch]$SkipMutants, [string]$ThemeCssPath = '')
 # nelle schede. Contratti geometrici misurati nel browser, sui riquadri degli elementi:
 #  - la riga della categoria e alta UNA riga (regola condivisa .ks-card-category), anche quando la categoria e lunga o manca;
 #  - nelle schede delle griglie della HOME: 2-8 px fra categoria e titolo, 2-8 px fra titolo e prezzo, nessuna altezza riservata
-#    attorno al prezzo (ne sul prezzo ne sul suo contenitore), disponibilita ancorata in fondo;
+#    attorno al prezzo (ne sul prezzo ne sul suo contenitore), disponibilita ancorata in fondo, 6-14 px fra immagine e categoria;
 #  - nella stessa fila: schede alte uguali, titoli, prezzi e disponibilita allineati.
 # (A) pagina di prova statica con i fogli VERI nell'ordine di Page.master e i casi difficili (prezzo barrato lungo, prezzo a quantita,
 #     categoria lunga, categoria assente, targhetta), a 390 / 768 / 1024 / 1280 px; (B) mutazioni del foglio di stile eseguite nel browser;
@@ -76,12 +76,12 @@ function New-Fixture([string]$themeText, [string]$name) {
 }
 
 $measure = "(function(){var out=[];var cards=document.querySelectorAll('.ks-home-product-grid .ks-grid-card');for(var i=0;i<cards.length;i++){var c=cards[i],rc=c.getBoundingClientRect();" +
-    "var cat=c.querySelector('.ks-card-category'),ti=c.querySelector('.ks-card-title'),st=c.querySelector('.ks-home-price-stack'),pw=c.querySelector('.price-wrap'),tier=c.querySelector('.ks-home-promo-tier'),av=c.querySelector('.box-title > .ks-availability');" +
-    "if(!cat||!ti||!st||!pw||!av){out.push({missing:true});continue;}" +
+    "var wr=c.querySelector('.card-product-wrapper'),cat=c.querySelector('.ks-card-category'),ti=c.querySelector('.ks-card-title'),st=c.querySelector('.ks-home-price-stack'),pw=c.querySelector('.price-wrap'),tier=c.querySelector('.ks-home-promo-tier'),av=c.querySelector('.box-title > .ks-availability');" +
+    "if(!wr||!cat||!ti||!st||!pw||!av){out.push({missing:true});continue;}" +
     "var g=document.createRange();g.selectNodeContents(pw);var rects=g.getClientRects(),lt=1e9,lb=-1e9;for(var k=0;k<rects.length;k++){if(rects[k].height>0){lt=Math.min(lt,rects[k].top);lb=Math.max(lb,rects[k].bottom);}}" +
     "var rcat=cat.getBoundingClientRect(),rti=ti.getBoundingClientRect(),rst=st.getBoundingClientRect(),rpw=pw.getBoundingClientRect(),rav=av.getBoundingClientRect(),rtier=tier?tier.getBoundingClientRect():null;" +
     "var tierOuter=0;if(tier){var ts=getComputedStyle(tier);tierOuter=rtier.height+(parseFloat(ts.marginTop)||0)+(parseFloat(ts.marginBottom)||0);}" +
-    "out.push({missing:false,top:Math.round(rc.top),h:Math.round(rc.height),lh:parseFloat(getComputedStyle(cat).lineHeight)||0,catH:rcat.height,catTitle:rti.top-rcat.bottom,titleTop:Math.round(rti.top-rc.top),titlePrice:rst.top-rti.bottom," +
+    "out.push({missing:false,top:Math.round(rc.top),h:Math.round(rc.height),lh:parseFloat(getComputedStyle(cat).lineHeight)||0,imgCat:rcat.top-wr.getBoundingClientRect().bottom,catH:rcat.height,catTitle:rti.top-rcat.bottom,titleTop:Math.round(rti.top-rc.top),titlePrice:rst.top-rti.bottom," +
     "priceTop:Math.round(rst.top-rc.top),priceExtra:rpw.height-(lb-lt),stackExtra:rst.height-rpw.height-tierOuter,priceAvail:rav.top-rst.bottom,availBottom:Math.round(rav.bottom-rc.top),inside:(rpw.right<=rc.right+1&&rav.bottom<=rc.bottom+1),tier:!!tier});}" +
     "return JSON.stringify({cards:out,scroll:document.documentElement.scrollWidth-window.innerWidth});})()"
 
@@ -94,6 +94,7 @@ function Test-Cards($r, [string]$tag, [int]$minimum, [bool]$rows) {
         $n++
         if ($c.missing) { $fail.Add($tag + ' scheda ' + $n + ' senza un elemento atteso'); continue }
         if ($c.lh -le 0 -or $c.catH -gt ($c.lh + 1.5) -or $c.catH -lt ($c.lh - 1.5)) { $fail.Add($tag + ' scheda ' + $n + ' categoria non alta una riga: ' + [Math]::Round($c.catH, 1) + ' px (riga ' + [Math]::Round($c.lh, 1) + ')') }
+        if ($c.imgCat -lt 6 -or $c.imgCat -gt 14) { $fail.Add($tag + ' scheda ' + $n + ' spazio fra immagine e categoria: ' + [Math]::Round($c.imgCat, 1) + ' px') }
         if ($c.catTitle -lt 2 -or $c.catTitle -gt 8) { $fail.Add($tag + ' scheda ' + $n + ' spazio fra categoria e titolo: ' + [Math]::Round($c.catTitle, 1) + ' px') }
         if ($c.titlePrice -lt 2 -or $c.titlePrice -gt 8) { $fail.Add($tag + ' scheda ' + $n + ' spazio fra titolo e prezzo: ' + [Math]::Round($c.titlePrice, 1) + ' px') }
         if ($c.priceExtra -gt 6) { $fail.Add($tag + ' scheda ' + $n + ' altezza riservata sul prezzo: ' + [Math]::Round($c.priceExtra, 1) + ' px') }
@@ -128,7 +129,9 @@ $mutants = @(
     @{ Id = 'M05_TITLE_MARGIN_BACK'; Old = $P + '.name-product { margin-bottom: 0; }'; New = $P + '.name-product { margin-bottom: 10px; }' },
     @{ Id = 'M06_FOOTER_NOT_ANCHORED'; Old = $P + '.box-title > .ks-availability { flex: 0 0 auto; margin-top: auto; }'; New = $P + '.box-title > .ks-availability { flex: 0 0 auto; margin-top: 0; }' },
     @{ Id = 'M07_GAP_WIDER'; Old = 'flex: 1 1 auto; gap: 6px; }'; New = 'flex: 1 1 auto; gap: 16px; }' },
-    @{ Id = 'M08_CATEGORY_MARGIN_BACK'; Old = $P + '.ks-card-category { margin-bottom: 4px; }'; New = $P + '.ks-card-category { margin-bottom: 14px; }' }
+    @{ Id = 'M08_CATEGORY_MARGIN_BACK'; Old = $P + '.ks-card-category { margin-bottom: 4px; }'; New = $P + '.ks-card-category { margin-bottom: 14px; }' },
+    @{ Id = 'M09_IMAGE_TEXT_PADDING_BACK'; Old = 'flex: 1 1 auto; padding-top: 0; }'; New = 'flex: 1 1 auto; }' },
+    @{ Id = 'M10_IMAGE_TEXT_GAP_BACK'; Old = 'body.ks-page-home #ksHomePage .ks-grid-card { gap: 10px; }'; New = 'body.ks-page-home #ksHomePage .ks-grid-card { gap: 20px; }' }
 )
 
 $exitCode = 0

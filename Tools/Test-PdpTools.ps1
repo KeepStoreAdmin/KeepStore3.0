@@ -144,7 +144,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($j -notmatch 'showManualCopy\(\)') { $fail.Add('A12 copia fallita senza campo da copiare a mano') }
     if ($j -match 'fetch\(|XMLHttpRequest|sendBeacon|document\.write|innerHTML') { $fail.Add('A12 script con rete o HTML dinamico') }
     if ($a -notmatch 'js/ks-pdp-tools\.js"\) %>\?v=20261118-pdp-tools1a"') { $fail.Add('A12 script non caricato') }
-    if ($a -notmatch 'css/product-ui\.css"\) %>\?v=20261118-pdp-print-a4"') { $fail.Add('A12 sigla del foglio di stile') }
+    if ($a -notmatch 'css/product-ui\.css"\) %>\?v=20261119-compact-1b"') { $fail.Add('A12 sigla del foglio di stile') }
     if ($m -notmatch 'css/ks-ui\.css"\) & "\?v=20261118-h1-legacy1a"') { $fail.Add('A12 sigla di ks-ui.css') }
 
     if (-not $Quiet) { foreach ($x in $fail) { Write-Host ('  FAIL ' + $x) } }
@@ -269,7 +269,7 @@ $mutants = @(
     @{ Id = 'M31_JS_NETWORK'; File = 'js'; Old = 'window.print()'; New = "fetch('/x'); window.print()" },
     @{ Id = 'M32_ABORT_AS_ERROR'; File = 'js'; Old = "if (error && error.name === 'AbortError') { return; }"; New = '' },
     @{ Id = 'M33_PRINT_OPENS_SHARE'; File = 'js'; Old = "details:not([open]):not([data-ks-pdp-share])"; New = "details:not([open])" },
-    @{ Id = 'M34_OLD_BUSTER'; File = 'aspx'; Old = 'css/product-ui.css") %>?v=20261118-pdp-print-a4"'; New = 'css/product-ui.css") %>?v=20261118-pdp-sections1a"' },
+    @{ Id = 'M34_OLD_BUSTER'; File = 'aspx'; Old = 'css/product-ui.css") %>?v=20261119-compact-1b"'; New = 'css/product-ui.css") %>?v=20261118-pdp-sections1a"' },
     @{ Id = 'M35_MASTER_NAMES_TABLE'; File = 'mastervb'; Old = 'Private Sub BindWhatsAppContact'; New = "' social_buttons`r`n    Private Sub BindWhatsAppContact" }
 )
 $behaviourMutants = @(

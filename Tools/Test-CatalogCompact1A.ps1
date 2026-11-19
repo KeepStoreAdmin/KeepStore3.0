@@ -46,7 +46,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
         foreach ($m in [regex]::Matches($c, '(?m)^([^\s/@}][^{]*)\{')) { if (-not ($m.Groups[1].Value -match '#ksCatalogPage|\.ks-catalog-titlebar')) { $fail.Add('A2 selettore fuori dal catalogo: ' + $m.Groups[1].Value.Trim()) } }
     }
     # A3 scheda: titolo e stampa
-    if ($f.pdpAspx -notmatch 'css/product-ui\.css"\) %>\?v=20261118-pdp-print-a4"') { $fail.Add('A3 buster di product-ui.css') }
+    if ($f.pdpAspx -notmatch 'css/product-ui\.css"\) %>\?v=20261119-compact-1b"') { $fail.Add('A3 buster di product-ui.css') }
     if ($f.product -notmatch '\.ks-product-page h1\.product-info-name\s*\{[^}]*background:\s*none[^}]*color:\s*#181818[^}]*font-family:\s*Arial') { $fail.Add('A3 titolo della scheda') }
     $pr = $f.product.Substring([Math]::Max(0, $f.product.LastIndexOf('@page')))
     if ($pr -notmatch '@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*11mm 12mm;') { $fail.Add('A3 @page A4') }
@@ -197,7 +197,7 @@ $srcMutants = @(
     @{ Id = 'S11_LINK_REMOVED'; File = 'catAspx'; Old = '    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-compact.css") %>?v=20261118-compact1a" />'; New = '' },
     @{ Id = 'S12_TITLE_CLASS_REMOVED'; File = 'catAspx'; Old = ' text-break ks-catalog-heading">'; New = ' text-break">' },
     @{ Id = 'S14_PRICE_GROUP_PRINTED_TWICE'; File = 'product'; Old = '  .ks-pdp-info-group[data-ks-info-group="prezzi"],'; New = '' },
-    @{ Id = 'S13_PDP_BUSTER_OLD'; File = 'pdpAspx'; Old = 'product-ui.css") %>?v=20261118-pdp-print-a4'; New = 'product-ui.css") %>?v=20261118-pdp-tools1a' }
+    @{ Id = 'S13_PDP_BUSTER_OLD'; File = 'pdpAspx'; Old = 'product-ui.css") %>?v=20261119-compact-1b'; New = 'product-ui.css") %>?v=20261118-pdp-tools1a' }
 )
 foreach ($m in $srcMutants) {
     $copy = @{}; foreach ($k in $files.Keys) { $copy[$k] = $files[$k] }
