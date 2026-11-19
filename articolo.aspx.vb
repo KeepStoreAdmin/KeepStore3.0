@@ -2492,7 +2492,7 @@ Partial Class articolo
 
         If inOfferta AndAlso prezzoOld.HasValue AndAlso prezzoOld.Value > 0D AndAlso prezzo.HasValue AndAlso prezzoOld.Value > prezzo.Value Then
             Dim oldText As String = FormatMoney(prezzoOld.Value)
-            Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span><span class=""old-price body-md-2 text-main-2 fw-normal"">" & Server.HtmlEncode(oldText) & "</span>"
+            Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span> <span class=""old-price body-md-2 text-main-2 fw-normal"">" & Server.HtmlEncode(oldText) & "</span>"
         End If
 
         Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span>"

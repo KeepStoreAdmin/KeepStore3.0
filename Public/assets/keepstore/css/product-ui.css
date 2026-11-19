@@ -380,6 +380,14 @@
   min-width: 0;
 }
 
+/* PDP-BUNDLE-PRICE-GAP-1A: prezzo e prezzo precedente affiancati con la stessa distanza del riquadro di acquisto (erano attaccati). */
+.ks-product-page .card-usually p.price-text {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 .ks-product-page .tab-usually > .icon {
   align-self: center;
   flex: 0 0 auto;
