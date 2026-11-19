@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-STAY-SIGNED-IN-2A (fase 1) — 19/11/2026 — SOURCE (servizio e tabella di «Resta collegato», inerti)
+
+**Esito: A (SOURCE, non pubblicato, inerte). Livello L. PR [#566](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/566), stable `e3d9eec7`.** Decisione del PO del 2026-11-19: «Si, 30 giorni» (tabella nuova, 30 giorni dall'ultimo uso). Fase 1: `App_Code/KeepStoreStaySignedIn.vb` senza chiamanti e [script della tabella](STAY_SIGNED_IN_DEVICES_TABLE.md) `login_remembered_devices`. Nessun file esistente cambia: il cliente non vede nulla. Area CRITICAL: autenticazione.
+
+**Fatti e causa.** Sessione in memoria (30 minuti, persa a ogni riavvio); identita solo in sessione; due punti di accesso con chiavi diverse; `DataPassword` senza ora in 14.918 righe su 14.923; la password web si cambia anche dal gestionale; nessuna FK ne trigger su `login`.
+
+**Revisioni.** ChatGPT (xhigh): accolti codice stabile al posto della rotazione (risposta persa = dispositivo scollegato per sempre), legame di utente, azienda e database nell'impronta, rinnovo anche durante l'uso, ciclo di vita (uscita, cambio di account). Claude (Opus): accolti hash del token legato a database e azienda e in `ascii_bin`, rinnovo al massimo ogni 24 ore, inerzia finche la tabella manca (errore = non disponibile, sospensione), limite di 10 dispositivi, divisione in due fasi; rimandati alla fase 2 il costruttore unico della sessione, il punto di ripristino e le esclusioni. Gate di certezza: PASS per la fase 1.
+
+**Prove.** `Tools/Test-StaySignedIn.ps1` rosso senza il servizio e verde dopo: 56 mutanti; LAB con la tabella creata leggendo lo script della pagina docs (35 controlli, 16 mutazioni del livello dati); precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Fase 2 (casella, master, uscita, cambio password, interruttore, mappa dello standard dei segreti); cookie copiato valido fino a scadenza o revoca; password A -> B -> A con la stessa data non rilevato; in coda `registrazione.aspx.vb:1708` (cambio di nome utente e password senza chiedere la vecchia) e `CanOrder` del modulo di accesso del master. **Al PO:** creare la tabella su `taikun` con lo script della pagina (verifica prima e dopo). **Alla consegna futura:** solo `App_Code/KeepStoreStaySignedIn.vb` (inerte). CONSEGNA SERVER SOSPESA.
 ## AUTH-SESSION-EXPIRED-NOTICE-1A — 19/11/2026 — SOURCE (a sessione scaduta il cliente legge perche e torna dov'era)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#564](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/564), stable `3340bc9a`.** Prima parte di `AUTH-STAY-SIGNED-IN-1A`, primo task col metodo del 2026-11-19. `accessonegato.aspx` ha titolo «Accedi per continuare», dice che serve l'accesso e che la sessione puo essere scaduta per inattivita o per un aggiornamento del sito, e promette il ritorno solo quando esiste; preferiti e dettaglio ordine passano di li ricordando la pagina. Nessun cookie, nessuna tabella, nessuna credenziale nuova.
