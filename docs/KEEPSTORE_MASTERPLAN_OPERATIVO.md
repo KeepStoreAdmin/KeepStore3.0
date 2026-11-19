@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-SESSION-EXPIRED-NOTICE-1A — 19/11/2026 — SOURCE (a sessione scaduta il cliente legge perche e torna dov'era)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#564](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/564), stable `3340bc9a`.** Prima parte di `AUTH-STAY-SIGNED-IN-1A`, primo task col metodo del 2026-11-19. `accessonegato.aspx` ha titolo «Accedi per continuare», dice che serve l'accesso e che la sessione puo essere scaduta per inattivita o per un aggiornamento del sito, e promette il ritorno solo quando esiste; preferiti e dettaglio ordine passano di li ricordando la pagina. Nessun cookie, nessuna tabella, nessuna credenziale nuova.
+
+**Fatti e causa.** Sessione in memoria, 30 minuti; il messaggio «sessione scaduta» di `login.aspx` non e mai acceso da nessun codice; la pagina unica diceva «Accesso non consentito»; i preferiti mandavano alla home e il dettaglio ordine alla lista perdendo l'ordine. La pagina unica costruiva gia il pulsante «Accedi» con il ritorno validato.
+
+**Revisioni.** ChatGPT (xhigh): accolti copertura di preferiti e dettaglio ordine, testo meno assoluto, nessuna trasformazione dei rifiuti 403/421 in «scaduta»; rimandati POST scaduti, asincroni e checkout (dichiarati). Claude (Opus): accolto che il punto unico esisteva gia, quindi ipotesi di CODE ritirata (cookie di indizio e helper in dieci pagine); scartato l'intervento su `wishlist_add`; rimandati `no-store` delle pagine private e cookie di sessione all'uscita. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-SessionExpiredNotice.ps1` rosso prima e verde dopo: 15 mutanti e prova reale sul sito locale senza accesso (tre pagine riservate, apertura diretta, ritorno esterno rifiutato, id non valido non ricordato); precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Testo condizionale (non si distingue «scaduta» da «mai entrato»); dati non salvati persi; «Resta collegato» attende la decisione del PO (tabella, durata, revoca al cambio password: `DataPassword` salva solo il giorno); `AUTH-PRIVATE-PAGES-NO-STORE-1A`. **Alla consegna futura:** `accessonegato.aspx` e `accessonegato.aspx.vb` insieme, `wishlist.aspx.vb`, `documentidettaglio.aspx.vb`. CONSEGNA SERVER SOSPESA.
 ## KS-GOV-WORKFLOW-2026-11-19 — 19/11/2026 — DOCS (nuovo metodo di lavoro: la catena vale per ogni task)
 
 **Esito: A (DOCS). Richiesta del PO del 2026-11-19, permanente.** Il Flusso di lavoro canonico di [AGENTS](../AGENTS.md) e stato sostituito. Per ogni task, problema o richiesta che cambia il prodotto, sempre in quest'ordine: (1) CODE verifica la richiesta e i fatti; (2) pacchetto = problema + audit con codice e dati; (3) ChatGPT con ragionamento approfondito (`xhigh`), e CODE attende la risposta; (4) Claude revisore, sempre Opus, in sola lettura, sul pacchetto e sulla risposta di ChatGPT; (5) CODE verifica ogni punto sul codice; (6) decisione scritta, e solo dopo il codice.
