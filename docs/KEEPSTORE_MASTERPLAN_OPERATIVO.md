@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## HOME-DEAL-PROGRESS-1A — 19/11/2026 — SOURCE (barra delle vendite e scheda compatta nelle occasioni della HOME)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#583](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/583), stable `003a3431`.** Ripristino autorizzato dal PO («Ti autorizzo a ripristinare questa funzione») con la sua scelta «Tutte le vendite»: ogni occasione con vendite mostra la barra «Venduti negli ultimi 12 mesi» e viene prima delle altre. A lavoro in corso il PO ha chiesto anche di togliere lo spazio inutile nella scheda: fatto. Nessun prezzo, promozione o ordine modificato.
+
+**Fatti e causa.** La barra fu tolta il 2026-10-22 (somme senza filtro per azienda). Misura sul LAB: contando solo gli ordini nati dal sito, 3 articoli in offerta con vendite e 0 delle 6 schede mostrate: per questo UNA domanda al PO. I venduti sono ora la misura commerciale che la HOME ha gia (`BuildHomeCommercialActivitySql`: azienda dell'host, 12 mesi, uscite non annullate, il maggiore fra ordinato e scaricato), letta una volta per gli articoli candidati (50-350 ms per 400 articoli sul LAB; HOME calda 0,59 s). Spazi vuoti misurati nel browser: due righe fisse della categoria, 66 px attorno a un prezzo di 32, 34 px del prezzo a quantita, margini doppi.
+
+**Revisioni.** ChatGPT (xhigh): accolti definizione dei venduti, disponibilita netta, giacenza non ricostruibile, zero = nessuna barra. Claude (Opus): accolti «per articolo e non per variante», numeri solo con `DisplayMode = 2`, test vecchio da ritirare; scartato «contava gli annullati» (non verificabile). Sulla parte degli spazi ripetuto il solo passaggio di Claude (Opus): accolti due bloccanti (specificita rispetto a `theme-overrides.css`, `!important` dei `gap-xl-*`) e lo spazio delle anteprime da 768 px. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-HomeDealProgress.ps1`, visto rosso sui sorgenti della stable: funzioni compilate, 21 mutanti rilevati, sito LAB (venduti uguali a un calcolo indipendente per ogni scheda; ospite a gradini di 10 punti senza numeri di giacenza; utente collegato con percentuale esatta), browser a 390 e 1280 px (barra, altezze uguali, spazi fra gli elementi). Scheda da 932 a circa 800-835 px a 1280 px e da 759 a 664 px a 390 px. Ritirato `Tools/Test-HomeSalesPublicClaims.ps1`; `Test-HomePerfCaches` nei fallimenti noti (file della PR 551). Precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** «Venduti» non e un dato contabile certificato; con numeri piccoli il gradino restringe l'intervallo della giacenza; la scheda con prezzo a quantita ha la disponibilita piu in basso delle altre; immagine alta 286 px e anteprime non toccate (da proporre al PO); la finestra «anteprima rapida» ha ancora un testo fisso «Venduti: 0 / Disponibili: 0» nel markup (da verificare); stessa barra nell'elenco delle offerte (`CATALOG-DEAL-PROGRESS-1B`); **richiesta del PO del 19/11/2026: scheda compatta e controlli sugli spazi su TUTTO il sito (`UX-COMPACT-SPACING-SITEWIDE-1A`, prossimo).** **Alla consegna futura:** `Default.aspx`, `Default.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-RESET-ISSUE-LOCK-1C — 19/11/2026 — SOURCE (emissione dei codici di recupero sotto blocco)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#579](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/579), stable `3e744168`.** Mandato del PO del 2026-11-19 («Procedi con il caso recupero password e chiudi il task»). Chiude la richiesta sui dati di accesso (con #571, #573, #576). Area CRITICAL: autenticazione.
