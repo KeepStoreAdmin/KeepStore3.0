@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## UX-COMPACT-SPACING-SITEWIDE-1B (seconda tranche) — 19/11/2026 — SOURCE (schede dei correlati, griglie HOME, pagine di servizio su telefono)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#587](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/587), stable `1cd25e1c`.** Il PO: «Si, prosegui». Schede dei correlati della scheda prodotto e griglie della HOME con 10 px fra immagine e testo (prima 30); su telefono meno vuoto sopra e sotto il contenuto in contatti, area personale e pagine di servizio. Solo stile.
+
+**Fatti e causa.** Censimento con utente collegato e carrello pieno su 11 pagine. Correlati: `gap: 20px` di `.card-product` + `padding-top: 10px`, e la regola da 4 px fra le righe gia scritta in `product-ui.css` perdeva per specificita contro `styles.css` (righe a 10 px). `.tf-sp-2` da 50/50 px a ogni larghezza. Verificati e lasciati: MiniCart (gia compatto, misurato sul pannello reale), blocchi grandi della scheda prodotto e colonne di documenti e contatti (colonne affiancate, `display: contents`: non spazio riservato).
+
+**Revisioni.** ChatGPT (xhigh): accolti ambito degli spazi di sezione per elenco esplicito, distanza completa nelle griglie HOME, prova reale del MiniCart, contratto del pulsante; smentito un punto dell'audit di CODE (la regola che azzera gli spazi nella scheda prodotto vale solo per la stampa). Claude (Opus): accolti la via minima senza `!important`, le tre pagine in piu raggiunte dal selettore dell'area personale (password, lista desideri, dati utente: dichiarate), il fondo delle sezioni dei correlati. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-RelatedCardsCompactSpacing.ps1`, visto rosso sulla stable (154 difetti): pagina di prova con i fogli veri nell'ordine di `articolo.aspx`, 9 mutanti, sito LAB (14 schede e spazi dei contatti). `Test-CardCompactSpacing` esteso (10 mutanti). Corretto `Test-SearchPanel`, rimasto rosso dopo la PR 585 (errore di CODE: non era nell'elenco dei test rieseguiti). Schede dei correlati da 423 a 380 px (390 px) e da 409 a 364 px (1280 px). 22 test collegati, precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Due `<br>` in fondo a `carrello.aspx` (circa 35 px, pagina CRITICAL: serve il si del PO); touch sopra 768 px, stati vuoti e di errore, larghezze intermedie non provati; altezze minime di allineamento lasciate (titolo su tre righe, `datiutente` 520 px); ridisegno della scheda prodotto in `PDP-LAYOUT-ORDER-1A`. **Alla consegna futura (insieme alla PR 585):** `articolo.aspx`, `Public/assets/keepstore/css/product-ui.css`, `Public/assets/keepstore/css/theme-overrides.css`. CONSEGNA SERVER SOSPESA.
+
 ## UX-COMPACT-SPACING-SITEWIDE-1A (prima tranche) — 19/11/2026 — SOURCE (schede prodotto compatte e controlli sugli spazi)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#585](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/585), stable `359eb080`.** Richiesta del PO («Devi adeguare con questa tipologia i controlli sugli spazi, per tutto il sito»). La riga della categoria delle schede occupa una riga (prima due, una vuota) su HOME, scheda prodotto ed elenchi; le griglie della HOME perdono le altezze riservate attorno al prezzo. Solo stile: nessun dato, prezzo o markup cambiato.
