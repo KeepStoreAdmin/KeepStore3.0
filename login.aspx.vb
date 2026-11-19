@@ -76,6 +76,9 @@ Partial Class Login
     '================================================================
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         If PageMaster.IsLoginPostRejected(Context) Then Return
+        ' AUTH-STAY-SIGNED-IN-2B: la casella "Resta collegato" esiste solo a funzione accesa (chiave di configurazione e tabella).
+        phStaySignedIn.Visible = KeepStoreStaySignedInWeb.IsActive()
+        chkStaySignedIn.InputAttributes("aria-describedby") = "ksStaySignedInHint"
         If Not IsPostBack Then
 
             ' Se è già loggato, non ha senso stare sulla pagina di login
@@ -136,6 +139,11 @@ Partial Class Login
 
             ' Registra l'accesso riuscito prima delle operazioni accessorie.
             LoginAccessAuditRecorder.TryRecordSuccessfulLogin(HttpContext.Current, CurrentLoginIdSafe())
+
+            ' "Resta collegato": il dispositivo gia ricordato da questo browser si annulla sempre; con la casella se ne ricorda uno nuovo.
+            KeepStoreStaySignedInWeb.AfterSignIn(HttpContext.Current,
+                StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")), CurrentLoginIdSafe(),
+                phStaySignedIn.Visible AndAlso chkStaySignedIn.Checked)
 
             ' Sincronizza il carrello separatamente: un errore non annulla l'audit o il login.
             Try

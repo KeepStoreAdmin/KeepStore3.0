@@ -69,6 +69,31 @@
                             <p class="text-main-2 mt-2">È un cookie di prima parte, limitato al sito che lo crea: viene trasmesso soltanto su connessioni HTTPS (<strong>Secure</strong>) e non è accessibile agli script del browser (<strong>HttpOnly</strong>). Utilizza <strong>SameSite=Lax</strong> e <strong>Path=/</strong>, senza un attributo <strong>Domain</strong> esplicito, come previsto dal prefisso <strong>__Host-</strong>.</p>
                         </section>
 
+                        <section class="mt-4" aria-labelledby="staySignedInCookieTitle">
+                            <h5 id="staySignedInCookieTitle" class="mb-2">Cookie tecnico «Resta collegato»</h5>
+                            <p class="text-main-2">Il cookie <span class="text-break">__Host-KeepStoreStay</span> viene creato soltanto se, nella pagina di accesso, scegli l’opzione «Resta collegato su questo dispositivo». Ti permette di ritrovarti collegato nelle visite successive senza digitare di nuovo la password.</p>
+
+                            <div class="border rounded p-3 mt-3 mb-3">
+                                <dl class="row mb-0 text-main-2">
+                                    <dt class="col-sm-4 mb-1">Nome</dt>
+                                    <dd class="col-sm-8 mb-3 text-break">__Host-KeepStoreStay</dd>
+                                    <dt class="col-sm-4 mb-1">Tipologia</dt>
+                                    <dd class="col-sm-8 mb-3">Cookie tecnico / funzionale, creato su tua richiesta</dd>
+                                    <dt class="col-sm-4 mb-1">Finalità</dt>
+                                    <dd class="col-sm-8 mb-3">Riconoscere il dispositivo e mantenere l’accesso al tuo account</dd>
+                                    <dt class="col-sm-4 mb-1">Durata</dt>
+                                    <dd class="col-sm-8 mb-3">Fino a 30 giorni dall’ultima visita da collegato</dd>
+                                    <dt class="col-sm-4 mb-1">Prima / terza parte</dt>
+                                    <dd class="col-sm-8 mb-3">Prima parte</dd>
+                                    <dt class="col-sm-4 mb-1">Consenso</dt>
+                                    <dd class="col-sm-8 mb-0">Non richiesto: è necessario a un servizio che chiedi tu, spuntando l’opzione</dd>
+                                </dl>
+                            </div>
+
+                            <p class="text-main-2">Nel browser il cookie contiene esclusivamente un codice casuale: non contiene la password, il nome utente, l’email né altri dati personali. Sui nostri sistemi ne viene conservata soltanto un’impronta non reversibile, insieme alla data dell’ultimo utilizzo. Non viene utilizzato per profilazione, pubblicità, analytics o tracciamento tra siti diversi.</p>
+                            <p class="text-main-2 mt-2">Il dispositivo viene scollegato e il cookie eliminato quando scegli «Esci». Smette inoltre di valere quando la password dell’account viene cambiata, quando l’account viene disabilitato e dopo 30 giorni senza visite. È trasmesso soltanto su connessioni HTTPS (<strong>Secure</strong>), non è accessibile agli script del browser (<strong>HttpOnly</strong>) e utilizza <strong>SameSite=Lax</strong> e <strong>Path=/</strong>, senza attributo <strong>Domain</strong>. Non usare questa opzione su computer o telefoni condivisi con altre persone.</p>
+                        </section>
+
                         <h5 class="mt-4 mb-2">Conservazione</h5>
                         <p class="text-main-2">I dati sono conservati per il tempo necessario alle finalità e agli obblighi di legge.</p>
                         <p class="text-main-2 mt-2">La persistenza tecnica del carrello anonimo è limitata a 30 giorni dall’ultima attività effettiva sul carrello, salvo precedente svuotamento o trasferimento all’account.</p>

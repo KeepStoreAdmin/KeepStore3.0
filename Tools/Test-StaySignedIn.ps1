@@ -28,19 +28,21 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     $m = $f.module; $d = $f.doc
     if ($m -eq '') { $fail.Add('B0 modulo assente') }
     else {
-        # B1 inerte: nessun chiamante nel prodotto
+        # B1 chiamanti: solo quelli previsti dalla fase 2 (AUTH-STAY-SIGNED-IN-2B, Tools/Test-StaySignedInPages.ps1)
+        $expectedCallers = @('KeepStoreStaySignedInWeb.vb', 'Page.master.vb', 'login.aspx.vb', 'logout.aspx.vb', 'password.aspx.vb', 'registrazione.aspx.vb', 'my-account-edit.aspx.vb', 'datiutente.aspx.vb', 'privacy.aspx')
         $callers = @(Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
             Where-Object { @('.vb', '.aspx', '.ascx', '.master', '.asax') -contains $_.Extension.ToLowerInvariant() } |
             Where-Object { $_.FullName -notmatch '\\(\.claude|\.ai-review|\.git|Tools|obj|Bin|Public|App_Data|Database Taikun)\\' -and $_.Name -ne 'KeepStoreStaySignedIn.vb' } |
             Where-Object { (Select-String -LiteralPath $_.FullName -Pattern 'KeepStoreStaySignedIn|StaySignedInOutcome|__Host-KeepStoreStay' -SimpleMatch:$false -Quiet) })
-        if ($callers.Count -gt 0) { $fail.Add('B1 il servizio ha chiamanti: ' + (($callers | ForEach-Object { $_.Name }) -join ', ')) }
+        $unexpected = @($callers | Where-Object { $expectedCallers -notcontains $_.Name })
+        if ($unexpected.Count -gt 0) { $fail.Add('B1 chiamanti non previsti: ' + (($unexpected | ForEach-Object { $_.Name }) -join ', ')) }
         # B2 modulo autonomo e silenzioso
         if ($m -match 'HttpContext|Session\(|ConfigurationManager|Response\.|Request\.') { $fail.Add('B2 modulo non autonomo') }
         if ($m -match 'KeepStoreLog|Trace\.|Console\.|Debug\.') { $fail.Add('B2 il modulo scrive registri') }
         if ($m -match '(?i)\bMD5\b|\bSHA1\b|DESCrypto|RijndaelManaged|New Random\(') { $fail.Add('B2 primitive non ammesse') }
         if ($m -notmatch 'Using generator As New RNGCryptoServiceProvider\(\)') { $fail.Add('B2 codice non casuale crittografico') }
         # B3 il tempo e quello del database
-        if ($m -match 'DateTime\.(Now|UtcNow)' -and ([regex]::Matches($m, 'DateTime\.UtcNow')).Count -ne 2) { $fail.Add('B3 orologio del sito usato fuori dalla sospensione') }
+        if ($m -match 'DateTime\.(Now|UtcNow)' -and ([regex]::Matches($m, 'DateTime\.UtcNow')).Count -ne 4) { $fail.Add('B3 orologio del sito usato fuori dalla sospensione e dalla sonda della tabella') }
         if ($m -match 'DateTime\.Now') { $fail.Add('B3 ora locale') }
         if ($m -notmatch 'ExpiresUtc > UTC_TIMESTAMP\(\)' -or $m -notmatch 'UTC_TIMESTAMP\(\) \+ INTERVAL \?giorni DAY') { $fail.Add('B3 scadenza non calcolata dal database') }
         # B4 mai il codice in chiaro nel database, sempre parametri

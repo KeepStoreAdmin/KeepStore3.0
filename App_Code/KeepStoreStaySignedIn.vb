@@ -50,6 +50,25 @@ Public NotInheritable Class StaySignedInRow
     Public Property NeedsRenew As Boolean
 End Class
 
+' Fase 2: che cosa fare del dispositivo ricordato in questa richiesta.
+Public Enum StaySignedInRestoreStep
+    None = 0
+    Restore = 1
+    Regenerate = 2
+    Blocked = 3
+End Enum
+
+' Fase 2: le chiavi di sessione che l'accesso scrive e la rivalidazione del master non idrata.
+Public NotInheritable Class StaySignedInProfile
+    Public Property Email As Object
+    Public Property DisplayName As Object
+    Public Property LastAccess As Object
+    Public Property PriceListEnabled As Integer
+    Public Property MailHtml As Object
+    Public Property PasswordDate As Object
+    Public Property CanOrder As Object
+End Class
+
 Public NotInheritable Class KeepStoreStaySignedIn
     Private Sub New()
     End Sub
@@ -195,6 +214,109 @@ Public NotInheritable Class KeepStoreStaySignedIn
         Return StaySignedInOutcome.Restored
     End Function
 
+    ' Fase 2, decisione pura: il ripristino si tenta solo su una GET, fuori da accesso, uscita, ordine e pagamento, con la funzione accesa.
+    ' Il ripristino avviene SOLO in una sessione il cui identificativo e stato creato dal sito (richiesta senza cookie di sessione):
+    ' se il browser porta un cookie di sessione, prima si cambia sessione (Regenerate); se il cambio e gia stato tentato e il cookie
+    ' di sessione c'e ancora, non si ripristina (Blocked).
+    Public Shared Function DecideRestoreStep(ByVal enabled As Boolean, ByVal httpMethod As String, ByVal scriptPathLower As String,
+                                             ByVal isCheckoutPath As Boolean, ByVal hasDeviceCookie As Boolean,
+                                             ByVal hasSessionCookie As Boolean, ByVal hasHopCookie As Boolean,
+                                             ByVal skippedInThisSession As Boolean) As StaySignedInRestoreStep
+        If Not enabled OrElse Not hasDeviceCookie OrElse skippedInThisSession Then Return StaySignedInRestoreStep.None
+        If Not String.Equals(httpMethod, "GET", StringComparison.Ordinal) Then Return StaySignedInRestoreStep.None
+        Dim path As String = If(scriptPathLower, String.Empty)
+        If path.Length = 0 OrElse isCheckoutPath OrElse path.EndsWith("/logout.aspx", StringComparison.Ordinal) OrElse
+           path.EndsWith("/login.aspx", StringComparison.Ordinal) OrElse path.EndsWith("/accessonegato.aspx", StringComparison.Ordinal) Then
+            Return StaySignedInRestoreStep.None
+        End If
+        If hasSessionCookie Then Return If(hasHopCookie, StaySignedInRestoreStep.Blocked, StaySignedInRestoreStep.Regenerate)
+        Return StaySignedInRestoreStep.Restore
+    End Function
+
+    ' Destinazione del cambio di sessione: solo un percorso locale del sito, mai un altro host.
+    Public Shared Function LocalRedirectTarget(ByVal rawUrl As String) As String
+        Dim value As String = If(rawUrl, String.Empty)
+        If value.Length = 0 OrElse value.Chars(0) <> "/"c Then Return "/"
+        If value.Length > 1 AndAlso (value.Chars(1) = "/"c OrElse value.Chars(1) = "\"c) Then Return "/"
+        For Each ch As Char In value
+            If Convert.ToInt32(ch) < 32 OrElse ch = "\"c Then Return "/"
+        Next
+        Return value
+    End Function
+
+    ' ---------------------------------------------------------------- disponibilita della tabella (fase 2)
+
+    Public Const AvailabilityMinutes As Integer = 5
+    Private Shared ReadOnly AvailabilityLock As New Object()
+    Private Shared _availabilityUntilUtc As DateTime = DateTime.MinValue
+    Private Shared _available As Boolean = False
+
+    Public Shared Sub ResetAvailability()
+        SyncLock AvailabilityLock
+            _availabilityUntilUtc = DateTime.MinValue
+            _available = False
+        End SyncLock
+    End Sub
+
+    ' La tabella esiste con tutte le colonne che il servizio usa. Il risultato vale 5 minuti; ogni errore = non disponibile.
+    Public Shared Function IsAvailable(ByVal connectionString As String) As Boolean
+        If String.IsNullOrWhiteSpace(connectionString) Then Return False
+        SyncLock AvailabilityLock
+            If DateTime.UtcNow < _availabilityUntilUtc Then Return _available
+        End SyncLock
+        Dim found As Boolean = False
+        Try
+            Using connection As New MySqlConnection(connectionString)
+                connection.Open()
+                Using command As New MySqlCommand("SELECT id, LoginId, AziendeId, TokenHash, CredentialStamp, CreatedUtc, LastUsedUtc, ExpiresUtc, RevokedUtc, RevokeReason " &
+                                                  "FROM login_remembered_devices LIMIT 0", connection)
+                    Using reader As MySqlDataReader = command.ExecuteReader()
+                        found = reader.FieldCount = 10
+                    End Using
+                End Using
+            End Using
+        Catch
+            found = False
+        End Try
+        SyncLock AvailabilityLock
+            _available = found
+            _availabilityUntilUtc = DateTime.UtcNow.AddMinutes(AvailabilityMinutes)
+        End SyncLock
+        Return found
+    End Function
+
+    ' Le chiavi di sessione dell'accesso per l'utente GIA verificato (accesso, azienda e utente devono coincidere). Nothing = non piu valido.
+    Public Shared Function LoadSessionProfile(ByVal connectionString As String, ByVal loginId As Integer, ByVal companyId As Integer, ByVal userId As Integer) As StaySignedInProfile
+        If String.IsNullOrWhiteSpace(connectionString) OrElse loginId <= 0 OrElse companyId <= 0 OrElse userId <= 0 Then Return Nothing
+        Try
+            Using connection As New MySqlConnection(connectionString)
+                connection.Open()
+                Const sql As String = "SELECT DISTINCT email, CognomeNome, UltimoAccesso, COALESCE(AbilitaListino,0), genera_html_mail, DataPassword, CanOrder FROM vlogin " &
+                                      "WHERE id=?loginId AND AziendeId=?aziendaId AND UtentiId=?utentiId AND Abilitato=1 AND UtentiAbilitato=1 LIMIT 2"
+                Using command As New MySqlCommand(sql, connection)
+                    command.Parameters.Add("?loginId", MySqlDbType.Int32).Value = loginId
+                    command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = companyId
+                    command.Parameters.Add("?utentiId", MySqlDbType.Int32).Value = userId
+                    Using reader As MySqlDataReader = command.ExecuteReader()
+                        If Not reader.Read() Then Return Nothing
+                        Dim profile As New StaySignedInProfile()
+                        profile.Email = reader(0)
+                        profile.DisplayName = reader(1)
+                        profile.LastAccess = reader(2)
+                        profile.PriceListEnabled = Convert.ToInt32(reader(3), CultureInfo.InvariantCulture)
+                        profile.MailHtml = reader(4)
+                        profile.PasswordDate = reader(5)
+                        profile.CanOrder = reader(6)
+                        If reader.Read() Then Return Nothing
+                        Return profile
+                    End Using
+                End Using
+            End Using
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
     ' ---------------------------------------------------------------- sospensione dopo un errore del database
 
     Public Shared Function IsSuspended() As Boolean
@@ -220,7 +342,7 @@ Public NotInheritable Class KeepStoreStaySignedIn
     ' L'accesso com'e nel database, per quell'azienda. Una riga esatta, altrimenti Nothing.
     Public Shared Function LoadAccount(ByVal connection As MySqlConnection, ByVal loginId As Integer, ByVal companyId As Integer) As StaySignedInAccount
         If loginId <= 0 OrElse companyId <= 0 Then Return Nothing
-        Const sql As String = "SELECT id, COALESCE(UtentiId,0), COALESCE(AziendeId,0), COALESCE(UserName,''), COALESCE(Password,''), " &
+        Const sql As String = "SELECT DISTINCT id, COALESCE(UtentiId,0), COALESCE(AziendeId,0), COALESCE(UserName,''), COALESCE(Password,''), " &
                               "COALESCE(DATE_FORMAT(DataPassword,'%Y-%m-%d %H:%i:%s'),''), COALESCE(Abilitato,0), COALESCE(UtentiAbilitato,0) " &
                               "FROM vlogin WHERE id=?loginId AND AziendeId=?aziendaId LIMIT 2"
         Dim found As StaySignedInAccount = Nothing

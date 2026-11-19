@@ -119,6 +119,38 @@
             text-decoration: underline;
         }
 
+        .ks-login__stay {
+            margin: 0 0 6px;
+        }
+
+        .ks-login__stay input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin: 0 10px 0 0;
+            vertical-align: middle;
+            accent-color: #D80027;
+        }
+
+        .ks-login__stay label {
+            display: inline-block;
+            max-width: calc(100% - 40px);
+            min-height: 44px;
+            padding: 12px 0;
+            line-height: 20px;
+            vertical-align: middle;
+            color: #1f2933;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .ks-login__stay-hint {
+            margin: 0 0 8px;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
         .ks-login__submit.tf-btn {
             width: 100%;
             min-height: 52px;
@@ -238,6 +270,13 @@
                             ErrorMessage="Inserisci la password"
                             ValidationGroup="LoginAccesso"></asp:RequiredFieldValidator>
                     </fieldset>
+
+                    <asp:PlaceHolder ID="phStaySignedIn" runat="server" Visible="false">
+                        <div class="ks-login__stay">
+                            <asp:CheckBox ID="chkStaySignedIn" runat="server" Text="Resta collegato su questo dispositivo" />
+                            <p id="ksStaySignedInHint" class="ks-login__stay-hint">Non dovrai accedere di nuovo per 30 giorni dall'ultima visita. Non usarlo su computer o telefoni condivisi.</p>
+                        </div>
+                    </asp:PlaceHolder>
 
                     <div class="ks-login__row">
                         <a id="hlRemind" href="remind.aspx">Password dimenticata?</a>

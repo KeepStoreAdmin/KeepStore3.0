@@ -1701,7 +1701,17 @@ REM next
 				enable_mod_panel(Panel.Accesso)
 				
             ElseIf imgModAccesso.Text = "SALVA" Then
-				
+
+                ' AUTH-STAY-SIGNED-IN-2B: una sessione nata da un dispositivo ricordato non cambia nome utente, password o e-mail:
+                ' serve un accesso nuovo con la password.
+                If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) Then
+                    enable_Accesso(False)
+                    CaricaDati()
+                    Me.Page.ClientScript.RegisterStartupScript(Me.GetType(), "ksFreshSignIn",
+                        "alert(" & System.Web.HttpUtility.JavaScriptStringEncode(KeepStoreStaySignedInWeb.FreshSignInMessage, True) & ");", True)
+                    Return
+                End If
+
 				enable_Accesso(False)
 				
                 Dim sqlDatiAccesso As String = ""

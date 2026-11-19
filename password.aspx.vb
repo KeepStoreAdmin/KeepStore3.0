@@ -62,6 +62,8 @@ Partial Class password
 
                 ShowPasswordMessage("Password aggiornata correttamente.", True)
                 Session("DataPassword") = DateTime.Today
+                ' "Resta collegato": con la password nuova tutti i dispositivi ricordati di questo accesso si scollegano.
+                KeepStoreStaySignedInWeb.PasswordChanged(HttpContext.Current, loginIdValue)
                 tbPasswordAttuale.Text = ""
                 tbPasswordNuova.Text = ""
                 tbPasswordConferma.Text = ""

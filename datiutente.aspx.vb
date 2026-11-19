@@ -468,6 +468,14 @@ Partial Class datiutente
             Return
         End If
 
+        ' AUTH-STAY-SIGNED-IN-2B: l'e-mail serve a recuperare la password; da un dispositivo ricordato non si cambia.
+        If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) AndAlso tbEmailEdit IsNot Nothing AndAlso
+           Not String.Equals(TextBoxText(tbEmailEdit).Trim(), Convert.ToString(Session("LoginEmail")).Trim(), StringComparison.OrdinalIgnoreCase) Then
+            lblEsito.Text = KeepStoreStaySignedInWeb.FreshSignInMessage
+            e.Cancel = True
+            Return
+        End If
+
         Try
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()

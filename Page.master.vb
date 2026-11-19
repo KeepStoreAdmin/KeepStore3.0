@@ -312,9 +312,14 @@ Partial Class PageMaster
             If StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")) > 0 Then
                 RejectStorefrontAuthentication()
             End If
-            ClearStorefrontAuthenticationState()
-            RestoreAnonymousPriceDisplayState()
-            Return
+            ' AUTH-STAY-SIGNED-IN-2B: senza accesso si prova il dispositivo ricordato; se non vale si resta anonimi come sempre.
+            If Not TryBeginDeviceRestore(companyId) Then
+                ClearStorefrontAuthenticationState()
+                RestoreAnonymousPriceDisplayState()
+                Return
+            End If
+            ' Da qui vale la rivalidazione di ogni richiesta collegata, sull'accesso e sull'utente appena verificati.
+            loginId = CurrentLoginIdSafe()
         End If
 
         Dim authenticatedCompanyId As Integer = 0
@@ -336,6 +341,7 @@ Partial Class PageMaster
 
         ' Every authenticated request revalidates the account, including marked
         ' sessions. Only an identical scope may reuse this request's result.
+        Dim validationFailedTechnically As Boolean = False
         Try
             Dim connectionString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
             Using authenticationConnection As New MySqlConnection(connectionString)
@@ -379,10 +385,134 @@ Partial Class PageMaster
                 End Using
             End Using
         Catch ex As Exception
+            validationFailedTechnically = True
             KeepStoreLog.Error("storefront-auth-scope", "Authenticated storefront scope validation failed closed.", Nothing, HttpContext.Current)
         End Try
 
+        ' Un dispositivo ricordato che non supera la rivalidazione non deve bloccare il sito: si resta anonimi, senza errore.
+        If _deviceRestoreAccount IsNot Nothing Then
+            AbortDeviceRestore(companyId, validationFailedTechnically)
+            Return
+        End If
         RejectStorefrontAuthentication()
+    End Sub
+
+    ' ==========================================================
+    ' AUTH-STAY-SIGNED-IN-2B: "Resta collegato" (dispositivo ricordato)
+    ' ==========================================================
+    Private _deviceRestoreAccount As StaySignedInAccount = Nothing
+    Private _deviceRestoreRenewed As Boolean = False
+
+    ' True = in sessione ci sono l'accesso e l'utente verificati dal dispositivo; la rivalidazione che segue decide se valgono.
+    Private Function TryBeginDeviceRestore(ByVal companyId As Integer) As Boolean
+        _deviceRestoreAccount = Nothing
+        _deviceRestoreRenewed = False
+        Try
+            Dim current As HttpContext = HttpContext.Current
+            Dim cookieValue As String = KeepStoreStaySignedInWeb.ReadCookie(current)
+            If cookieValue.Length = 0 Then Return False
+            Dim scriptPath As String = CurrentScriptPathLower()
+            Dim hasHop As Boolean = KeepStoreStaySignedInWeb.HasHopCookie(current)
+            Dim restoreStep As StaySignedInRestoreStep = KeepStoreStaySignedIn.DecideRestoreStep(
+                KeepStoreStaySignedInWeb.IsEnabled(), Request.HttpMethod, scriptPath, IsCheckoutFlowPath(scriptPath), True,
+                KeepStoreStaySignedInWeb.HasSessionCookie(current), hasHop, KeepStoreStaySignedInWeb.IsSkippedInThisSession(current))
+            If restoreStep = StaySignedInRestoreStep.None Then Return False
+            If hasHop Then KeepStoreStaySignedInWeb.ClearHopCookie(current)
+            If restoreStep = StaySignedInRestoreStep.Blocked OrElse Not KeepStoreStaySignedInWeb.IsActive() Then Return False
+
+            Dim account As StaySignedInAccount = Nothing
+            Dim renewed As Boolean = False
+            Dim outcome As StaySignedInOutcome = KeepStoreStaySignedIn.TryRestore(
+                KeepStoreStaySignedInWeb.ConnectionText(), KeepStoreStaySignedInWeb.DatabaseScope(), companyId, cookieValue, account, renewed)
+            If outcome = StaySignedInOutcome.Unavailable Then Return False
+            If outcome <> StaySignedInOutcome.Restored OrElse account Is Nothing Then
+                KeepStoreStaySignedInWeb.ClearCookie(current)
+                Return False
+            End If
+
+            If restoreStep = StaySignedInRestoreStep.Regenerate Then
+                ' Il browser porta un identificativo di sessione non creato ora dal sito: si cambia sessione e si ripete la stessa pagina.
+                ' Nessun dato dell'account viene scritto in questa sessione.
+                Session.Abandon()
+                KeepStoreStaySignedInWeb.ExpireSessionCookie(current)
+                KeepStoreStaySignedInWeb.SetHopCookie(current)
+                If renewed Then KeepStoreStaySignedInWeb.WriteCookie(current, cookieValue)
+                Response.Redirect(KeepStoreStaySignedIn.LocalRedirectTarget(Request.RawUrl), True)
+                Return False
+            End If
+
+            ClearStorefrontAuthenticationState()
+            Me.Session("LoginId") = account.LoginId
+            Me.Session("LoginID") = account.LoginId
+            Me.Session("UtentiId") = account.UtentiId
+            Me.Session("UtentiID") = account.UtentiId
+            _deviceRestoreAccount = account
+            _deviceRestoreRenewed = renewed
+            Return True
+        Catch abortEx As System.Threading.ThreadAbortException
+            Throw
+        Catch ex As Exception
+            _deviceRestoreAccount = Nothing
+            KeepStoreLog.Error("stay-signed-in", "Device restore failed closed. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+            Return False
+        End Try
+    End Function
+
+    ' La rivalidazione ha rifiutato il dispositivo ricordato: stato anonimo, nessun 403. Rifiuto definitivo = dispositivo annullato e cookie
+    ' cancellato; errore tecnico = il cookie resta, ma in questa sessione non si riprova.
+    Private Sub AbortDeviceRestore(ByVal companyId As Integer, ByVal technicalFailure As Boolean)
+        _deviceRestoreAccount = Nothing
+        _deviceRestoreRenewed = False
+        ClearStorefrontAuthenticationState()
+        RestoreAnonymousPriceDisplayState()
+        Dim current As HttpContext = HttpContext.Current
+        KeepStoreStaySignedInWeb.SkipInThisSession(current)
+        If technicalFailure Then Return
+        Dim cookieValue As String = KeepStoreStaySignedInWeb.ReadCookie(current)
+        KeepStoreStaySignedIn.Revoke(KeepStoreStaySignedInWeb.ConnectionText(), KeepStoreStaySignedInWeb.DatabaseScope(), companyId, cookieValue, "account")
+        KeepStoreStaySignedInWeb.ClearCookie(current)
+    End Sub
+
+    ' Dopo la rivalidazione riuscita: le chiavi che l'accesso scrive e la rivalidazione non idrata, il registro dell'accesso e il carrello.
+    Private Sub CompleteDeviceRestore(ByVal companyId As Integer)
+        Dim current As HttpContext = HttpContext.Current
+        Dim account As StaySignedInAccount = _deviceRestoreAccount
+        If account Is Nothing Then
+            If String.Equals(Request.HttpMethod, "GET", StringComparison.Ordinal) AndAlso CurrentLoginIdSafe() > 0 Then
+                KeepStoreStaySignedInWeb.TouchIfDue(current, companyId, CurrentLoginIdSafe())
+            End If
+            Return
+        End If
+        If CurrentLoginIdSafe() <> account.LoginId OrElse
+           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID")) <> companyId OrElse
+           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("UtentiId")) <> account.UtentiId Then
+            AbortDeviceRestore(companyId, True)
+            Return
+        End If
+        Dim profile As StaySignedInProfile = KeepStoreStaySignedIn.LoadSessionProfile(
+            KeepStoreStaySignedInWeb.ConnectionText(), account.LoginId, companyId, account.UtentiId)
+        If profile Is Nothing Then
+            AbortDeviceRestore(companyId, True)
+            Return
+        End If
+        _deviceRestoreAccount = Nothing
+        Me.Session("AbilitaListino") = profile.PriceListEnabled
+        Me.Session("LoginEmail") = profile.Email
+        Me.Session("LoginNomeCognome") = profile.DisplayName
+        If Not IsDBNull(profile.LastAccess) Then Me.Session("LoginUltimoAccesso") = profile.LastAccess
+        Me.Session("genera_html_mail") = profile.MailHtml
+        Me.Session("DataPassword") = profile.PasswordDate
+        Me.Session("CanOrder") = If(IsDBNull(profile.CanOrder), CType(1, Object), profile.CanOrder)
+        KeepStoreStaySignedInWeb.MarkRestored(current)
+        If _deviceRestoreRenewed Then KeepStoreStaySignedInWeb.WriteCookie(current, KeepStoreStaySignedInWeb.ReadCookie(current))
+        _deviceRestoreRenewed = False
+
+        LoginAccessAuditRecorder.TryRecordSuccessfulLogin(current, account.LoginId)
+        Try
+            AggiornaDati()
+        Catch ex As Exception
+            KeepStoreLog.Error("login-cart-sync", "Device restore cart synchronization failed. Error type: " & ex.GetType().Name & ".", Nothing, current)
+        End Try
     End Sub
 
     '==========================================================
@@ -1462,6 +1592,7 @@ End Function
         StorefrontPriceDisplayContextProvider.SetTenantDefaults(HttpContext.Current, _priceDisplayCompanyId,
             _priceDisplayDefaultListId, CInt(_priceDisplayTenantMode))
         EnsureAuthenticatedStorefrontScope(resolvedTenant.CompanyId, resolvedTenant.DefaultPriceListId)
+        CompleteDeviceRestore(resolvedTenant.CompanyId)
         ImpostaTemplate()
     End Sub
 

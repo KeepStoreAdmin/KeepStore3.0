@@ -79,6 +79,15 @@ Partial Class my_account_edit
                     updated.Cellulare = SubmittedText(txtCellulare)
                     updated.Fax = SubmittedText(txtFax)
 
+                    ' AUTH-STAY-SIGNED-IN-2B: l'e-mail serve a recuperare la password; da un dispositivo ricordato non si cambia.
+                    ' (Marcatore di sessione letto direttamente: stessa chiave di KeepStoreStaySignedInWeb.RestoredSessionKey.)
+                    Dim restoredFromDevice As Object = Session("KeepStore:StaySignedIn:Restored")
+                    If TypeOf restoredFromDevice Is Boolean AndAlso CBool(restoredFromDevice) AndAlso
+                       Not String.Equals(If(updated.Email, String.Empty).Trim(), If(current.Email, String.Empty).Trim(), StringComparison.OrdinalIgnoreCase) Then
+                        ShowMessage("Per sicurezza, per modificare i dati di accesso devi prima accedere di nuovo con la password. Esci e accedi di nuovo, poi ripeti la modifica.", False)
+                        Return
+                    End If
+
                     Dim validationMessage As String = ""
                     If Not ValidateProfileInput(updated, validationMessage) Then
                         ShowMessage(validationMessage, False)

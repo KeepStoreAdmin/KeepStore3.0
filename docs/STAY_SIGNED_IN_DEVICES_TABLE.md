@@ -73,4 +73,17 @@ Il sito pulisce da solo le righe scadute di un cliente quando quel cliente ricor
 - La tabella va creata in ogni database che usa il sito (programma di allineamento).
 
 ## 8. Stato dell'attivazione
-Fase 1 (questa): servizio e tabella, **nessun effetto per i clienti**. Fase 2 (task successivo): casella «Resta collegato» nella pagina di accesso, ripristino dell'accesso, uscita, cambio password. Finche la tabella non esiste il sito si comporta come oggi, senza errori.
+Fase 1 (PR 566): servizio e tabella. Fase 2 (`AUTH-STAY-SIGNED-IN-2B`): casella Â«Resta collegato su questo dispositivoÂ» nella pagina di accesso, rientro automatico, uscita, cambio password. **La funzione resta spenta finche non valgono tutte e due le condizioni:**
+
+1. la tabella di questa pagina esiste nel database del sito (script del paragrafo 3);
+2. nel `web.config` del sito, dentro `<appSettings>`, c'e la riga `<add key="KeepStore.StaySignedIn.Enabled" value="true" />`.
+
+Senza la riga, o con `value="false"`, il sito si comporta come prima: nessuna casella, nessun rientro automatico. Uscita e cambio password scollegano comunque i dispositivi gia ricordati. Per spegnere in emergenza basta mettere `false`: chi e gia collegato resta collegato fino alla scadenza della sessione, poi deve accedere con la password.
+
+Che cosa fa il sito quando la funzione e accesa:
+
+- il dispositivo viene ricordato solo se il cliente spunta la casella; il cookie `__Host-KeepStoreStay` esiste solo su HTTPS;
+- al rientro il sito crea sempre una sessione nuova (se il browser ne porta una vecchia fa prima un passaggio sulla stessa pagina) e ricontrolla account, azienda, utente e listino come a ogni richiesta;
+- il rientro automatico non avviene nelle pagine di ordine e pagamento, di accesso e di uscita, ne sulle richieste di invio dati;
+- da una sessione nata dal dispositivo ricordato non si cambiano nome utente, password ed e-mail: il sito chiede di accedere di nuovo con la password;
+- ogni rientro aggiorna ultimo accesso e numero di accessi, come un accesso.
