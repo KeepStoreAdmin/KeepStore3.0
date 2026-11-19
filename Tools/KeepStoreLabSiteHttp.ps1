@@ -118,4 +118,46 @@ function Test-ResponseContains([string]$html, [string]$needle) {
     }
     return $false
 }
+# Tutti i campi del modulo: input (non pulsanti), opzione scelta di ogni select, textarea; poi quelli indicati.
+function New-FullFormFile([string]$html, [hashtable]$set) {
+    $fields = @{}
+    foreach ($mm in [regex]::Matches($html, '<input\b[^>]*>')) {
+        $tag = $mm.Value
+        $n = [regex]::Match($tag, '\bname="([^"]*)"'); if (-not $n.Success) { continue }
+        $t = [regex]::Match($tag, '\btype="([^"]*)"'); $type = if ($t.Success) { $t.Groups[1].Value.ToLowerInvariant() } else { 'text' }
+        if (@('submit', 'button', 'image', 'file', 'reset') -contains $type) { continue }
+        if (@('checkbox', 'radio') -contains $type -and $tag -notmatch '\bchecked\b') { continue }
+        $v = [regex]::Match($tag, '\bvalue="([^"]*)"')
+        $fields[[Net.WebUtility]::HtmlDecode($n.Groups[1].Value)] = if ($v.Success) { [Net.WebUtility]::HtmlDecode($v.Groups[1].Value) } elseif (@('checkbox', 'radio') -contains $type) { 'on' } else { '' }
+    }
+    foreach ($mm in [regex]::Matches($html, '(?s)<select\b[^>]*\bname="([^"]*)"[^>]*>(.*?)</select>')) {
+        $o = [regex]::Match($mm.Groups[2].Value, '<option\b[^>]*\bselected\b[^>]*\bvalue="([^"]*)"|<option\b[^>]*\bvalue="([^"]*)"[^>]*\bselected\b')
+        if (-not $o.Success) { $o = [regex]::Match($mm.Groups[2].Value, '<option\b[^>]*\bvalue="([^"]*)"') }
+        if ($o.Success) { $val = if ($o.Groups[1].Success -and $o.Groups[1].Value -ne '') { $o.Groups[1].Value } else { $o.Groups[2].Value }; $fields[[Net.WebUtility]::HtmlDecode($mm.Groups[1].Value)] = [Net.WebUtility]::HtmlDecode($val) }
+    }
+    foreach ($mm in [regex]::Matches($html, '(?s)<textarea\b[^>]*\bname="([^"]*)"[^>]*>(.*?)</textarea>')) { $fields[[Net.WebUtility]::HtmlDecode($mm.Groups[1].Value)] = [Net.WebUtility]::HtmlDecode($mm.Groups[2].Value.Trim()) }
+    foreach ($k in $set.Keys) { $fields[$k] = [string]$set[$k] }
+    $pairs = New-Object Collections.Generic.List[string]
+    foreach ($k in $fields.Keys) { $pairs.Add(([Uri]::EscapeDataString($k)) + '=' + ([Uri]::EscapeDataString([string]$fields[$k]))) }
+    $f = Join-Path $tmp ('f' + [Guid]::NewGuid().ToString('N') + '.txt')
+    [IO.File]::WriteAllText($f, ($pairs -join '&'), $utf8)
+    return $f
+}
+function Get-PostTarget([string]$html, [string]$suffix) {
+    $mm = [regex]::Match($html, '__doPostBack\((?:&#39;|'')([^&'']*' + [regex]::Escape($suffix) + ')(?:&#39;|'')')
+    if ($mm.Success) { return $mm.Groups[1].Value } else { return '' }
+}
+# Invia "Dati account" con i valori indicati (chiavi = suffisso del nome del campo). Restituisce la risposta.
+function Send-AccountEdit([string]$jar, [hashtable]$values) {
+    $page = Invoke-Http '/my-account-edit.aspx' $jar
+    $set = @{ '__EVENTTARGET' = (Get-PostTarget $page.Body 'btnSave'); '__EVENTARGUMENT' = '' }
+    foreach ($k in $values.Keys) { $n = Get-FieldName $page.Body $k; if ($n -eq '') { $n = 'ctl00$MainContent$' + $k }; $set[$n] = $values[$k] }
+    $f = New-FullFormFile $page.Body $set
+    try { return (Invoke-Http '/my-account-edit.aspx' $jar $f '/my-account-edit.aspx') } finally { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+}
+# Impronta di un codice di recupero come la calcola il sito (SHA-256 del testo UTF-8, esadecimale minuscolo).
+function Get-Sha256Hex([string]$text) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return (-join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text)) | ForEach-Object { $_.ToString('x2') })) } finally { $sha.Dispose() }
+}
 function Close-LabSite { Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue }

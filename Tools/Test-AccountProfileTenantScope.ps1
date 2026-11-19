@@ -37,6 +37,8 @@ db.exec(`CREATE TABLE utenti(Id INTEGER PRIMARY KEY,AziendeId INTEGER,Abilitato 
 CREATE TABLE login(id INTEGER PRIMARY KEY,UtentiId INTEGER,Abilitato INTEGER,UserName TEXT,Email TEXT,CognomeNome TEXT,UltimoAccesso TEXT,Password TEXT COLLATE NOCASE);
 CREATE VIEW vlogin AS SELECT l.*,u.AziendeId,u.CognomeNome AS UtentiCognomeNome,u.Abilitato AS UtentiAbilitato FROM login l LEFT JOIN utenti u ON l.UtentiId=u.Id;
 CREATE TABLE logoperazioni(id INTEGER PRIMARY KEY,UtentiId INTEGER);
+CREATE TABLE login_password_reset_tokens(id INTEGER PRIMARY KEY,LoginId INTEGER,TokenHash TEXT,UsedAt TEXT,RevokedAt TEXT);
+INSERT INTO login_password_reset_tokens VALUES(1,101,'SYNTHETIC-ACTIVE-101',NULL,NULL),(2,101,'SYNTHETIC-USED-101','2026-01-01 00:00:00',NULL),(3,101,'SYNTHETIC-REVOKED-101',NULL,'2026-01-01 00:00:00'),(4,202,'SYNTHETIC-ACTIVE-202',NULL,NULL),(5,303,'SYNTHETIC-ACTIVE-303',NULL,NULL);
 CREATE TRIGGER synthetic_user_update AFTER UPDATE ON utenti BEGIN INSERT INTO logoperazioni(UtentiId) VALUES(NEW.Id); END;`);
 for(const [company,user,login] of [[1,701,101],[2,702,202]]){
 db.prepare('INSERT INTO utenti VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(user,company,1,user,'SYNTHETIC-COMPANY-'+company,'SYNTHETIC-NAME-'+company,'SYNTHETIC-VAT','SYNTHETIC-TAX','fixture'+company+'@example.invalid','SYNTHETIC-ADDRESS','00100','SYNTHETIC-CITY','RM','IT','+39 123','456','789');
@@ -51,6 +53,7 @@ return q;}
 function request(x){switch(x.op){
 case 'reset':return reset();case 'begin':db.exec('BEGIN');return {ok:true};case 'commit':db.exec('COMMIT');return {ok:true};case 'rollback':db.exec('ROLLBACK');return {ok:true};
 case 'snapshot':return {users:db.prepare('SELECT * FROM utenti ORDER BY Id').all(),logins:db.prepare('SELECT id,UtentiId,Abilitato,UserName,Email,CognomeNome,UltimoAccesso FROM login ORDER BY id').all(),logs:db.prepare('SELECT * FROM logoperazioni ORDER BY id').all()};
+case 'codes':return {codes:db.prepare('SELECT id,LoginId,UsedAt,RevokedAt FROM login_password_reset_tokens ORDER BY id').all()};
 case 'mutate':{
  const id=x.id; switch(x.kind){case 'disable-login':db.prepare('UPDATE login SET Abilitato=0 WHERE id=?').run(id);break;case 'disable-user':db.prepare('UPDATE utenti SET Abilitato=0 WHERE Id=?').run(x.user);break;case 'reassign-owner':db.prepare('UPDATE login SET UtentiId=? WHERE id=?').run(x.otherUser,id);break;case 'move-company':db.prepare('UPDATE utenti SET AziendeId=? WHERE Id=?').run(x.otherCompany,x.user);break;case 'delete-login':db.prepare('DELETE FROM login WHERE id=?').run(id);break;case 'delete-user':db.prepare('DELETE FROM utenti WHERE Id=?').run(x.user);break;default:throw Error('UNKNOWN_MUTATION');}return {ok:true};}
 case 'query':{const q=translate(x.sql),statement=db.prepare(q);statement.setAllowUnknownNamedParameters(true);const p={};for(const [k,v]of Object.entries(x.parameters))p[k.replace(/^[@?]/,'')]=v;
@@ -339,9 +342,12 @@ Public Class Runner
             Case "before-lock-disable","before-lock-reassign" : Fixture.BeforeBegin=If(scenario="before-lock-disable","disable-login","reassign-owner")
             Case "during-marker","during-owner","during-company","during-listino" : Fixture.During=scenario.Substring(7)
             Case "second-update-error" : Fixture.FailureUpdate=2
+            Case "third-update-error" : Fixture.FailureUpdate=3
+            Case "third-zero","third-two" : Fixture.OverrideUpdate=3:Fixture.OverrideCount=If(scenario.EndsWith("zero"),0,2)
             Case "first-zero","first-two","first-negative","second-zero","second-two" : Fixture.OverrideUpdate=If(scenario.StartsWith("first"),1,2):Fixture.OverrideCount=If(scenario.EndsWith("zero"),0,If(scenario.EndsWith("negative"),-1,2))
         End Select
         Dim before=Fixture.Send("snapshot")
+        Dim codesBefore=Fixture.Send("codes")
         If scenario="stale-session-email" Then session("LoginEmail")="updated" & company.ToString() & "@example.invalid"
         Dim instance As Object=If(candidate,DirectCast(New ProfileCandidate(),Object),New ProfileBaseline())
         instance.hidUtentiId.Value=If(scenario="hidden-owner",If(company=1,702,701).ToString(),Fixture.UserId.ToString())
@@ -373,7 +379,7 @@ Public Class Runner
             {"Reads",Fixture.Reads},{"Writes",Fixture.Writes},{"Opens",Fixture.Opens},{"Begins",Fixture.Begins},{"Commits",Fixture.Commits},{"Rollbacks",Fixture.Rollbacks},
             {"Sql",Fixture.SqlLog.ToArray()},{"Success",instance.pnlMessage.CssClass="alert alert-success mb-4"},{"Message",instance.litMessage.Text},
             {"Email",instance.txtEmail.Text},{"ProfileVisible",instance.pnlProfile.Visible},{"Status",context.Response.StatusCode},{"Location",context.Response.RedirectLocation},
-            {"LoginEmail",Convert.ToString(session("LoginEmail"))},{"CurrentPasswordField",instance.txtCurrentPassword.Text},{"MatchedConnection",Fixture.MatchedConnection},{"SettingsPreserved",Fixture.SettingsPreserved},{"LoginId",Convert.ToString(session("LoginId"))},{"UserId",Convert.ToString(session("UtentiId"))},{"Listino",Convert.ToString(session("Listino"))}}
+            {"CodesBefore",codesBefore},{"Codes",Fixture.Send("codes")},{"LoginEmail",Convert.ToString(session("LoginEmail"))},{"CurrentPasswordField",instance.txtCurrentPassword.Text},{"MatchedConnection",Fixture.MatchedConnection},{"SettingsPreserved",Fixture.SettingsPreserved},{"LoginId",Convert.ToString(session("LoginId"))},{"UserId",Convert.ToString(session("UtentiId"))},{"Listino",Convert.ToString(session("Listino"))}}
         Fixture.DatabaseScope="SYNTHETIC-DATABASE-SCOPE"
         Return Fixture.Json.Serialize(result)
     End Function
@@ -407,7 +413,8 @@ try{
     foreach($company in @(1,2)){foreach($mode in @($false,$true)){
         foreach($case in @('save','unchanged','hidden-owner')){
             $b=Run $false $company $case $mode;$r=Run $true $company $case $mode
-            Check ($company.ToString()+$mode+$case+' preserves success and complete data') ($r.Success -and $r.Commits -eq 1 -and $r.Writes -eq 2 -and ($r.After|ConvertTo-Json -Depth 8 -Compress) -ceq ($b.After|ConvertTo-Json -Depth 8 -Compress))
+            Check ($company.ToString()+$mode+$case+' preserves success and complete data') ($r.Success -and $r.Commits -eq 1 -and $r.Writes -eq $(if($case -eq 'unchanged'){2}else{3}) -and ($r.After|ConvertTo-Json -Depth 8 -Compress) -ceq ($b.After|ConvertTo-Json -Depth 8 -Compress))
+            Check ($company.ToString()+$mode+$case+' recovery codes revoked last, inside the transaction, only when the e-mail changes') ($(if($case -eq 'unchanged'){@($r.Sql|Where-Object{$_.Sql -match 'login_password_reset_tokens'}).Count -eq 0}else{$r.Sql[3].Sql -ceq 'UPDATE login_password_reset_tokens SET RevokedAt = CURRENT_TIMESTAMP WHERE LoginId = @LoginId AND UsedAt IS NULL AND RevokedAt IS NULL' -and $r.Sql[3].Transaction -and @($r.Sql|Where-Object{$_.Sql -match 'login_password_reset_tokens'}).Count -eq 1}))
             Check ($company.ToString()+$mode+$case+' lock before two updates and same query budget') ($r.Sql[0].Sql -match 'FOR UPDATE$' -and $r.Sql[0].Transaction -and $r.Sql[1].Transaction -and $r.Sql[2].Transaction -and $r.Reads -eq $b.Reads -and $r.Reads -eq 2 -and $r.MatchedConnection -and $r.SettingsPreserved)
             Check ($company.ToString()+$mode+$case+' commercial session preserved') ($r.LoginId -eq $b.LoginId -and $r.UserId -eq $b.UserId -and $r.Listino -eq $b.Listino)
             foreach($q in $r.Sql){foreach($p in $q.Types.PSObject.Properties){Check ($case+' typed '+$p.Name) ($p.Value -eq $(if($p.Name -in @('@LoginId','@UtentiId','@AziendaId')){'Int32'}else{'VarChar'}))}}
@@ -452,6 +459,27 @@ try{
         $r=Run $true $company 'unchanged'
         Check ($company.ToString()+' unchanged e-mail needs no password and adds no predicate') ($r.Success -and $r.Writes -eq 2 -and @($r.Sql|Where-Object{$_.Sql -match 'CurrentPassword'}).Count -eq 0)
     }
+    # AUTH-RESET-EMAIL-RACE-1C: pending recovery codes of the authorized login die with the e-mail change, atomically.
+    # The revoke statement has no company predicate on purpose: it acts on the login already authorized under the row lock (replay stays on the first three statements).
+    function CodeRow($r,[int]$id,[string]$set){@($r.$set.codes|Where-Object{$_.id -eq $id})[0]}
+    foreach($company in @(1,2)){
+        $own=if($company -eq 1){1}else{4};$other=if($company -eq 1){4}else{1}
+        $r=Run $true $company 'save'
+        Check ($company.ToString()+' active code of the login revoked on e-mail change') ($r.Success -and (CodeRow $r $own 'CodesBefore').RevokedAt -eq $null -and (CodeRow $r $own 'Codes').RevokedAt -ne $null -and (CodeRow $r $own 'Codes').UsedAt -eq $null)
+        Check ($company.ToString()+' used, already revoked and foreign codes untouched') ((CodeRow $r 2 'Codes').RevokedAt -eq $(if($company -eq 1){$null}else{$null}) -and (CodeRow $r 2 'Codes').UsedAt -ceq '2026-01-01 00:00:00' -and (CodeRow $r 3 'Codes').RevokedAt -ceq '2026-01-01 00:00:00' -and (CodeRow $r $other 'Codes').RevokedAt -eq $null -and (CodeRow $r 5 'Codes').RevokedAt -eq $null)
+        foreach($case in @('unchanged','wrong-password','empty-password','third-update-error','second-update-error','invalid-email')){
+            $r=Run $true $company $case
+            Check ($company.ToString()+$case+' leaves every recovery code as it was') (($r.CodesBefore|ConvertTo-Json -Depth 6 -Compress) -ceq ($r.Codes|ConvertTo-Json -Depth 6 -Compress))
+        }
+        $r=Run $true $company 'third-update-error'
+        Check ($company.ToString()+' failure while revoking rolls back the whole e-mail change') (!$r.Success -and $r.Commits -eq 0 -and $r.Rollbacks -eq 1 -and $r.Writes -eq 3 -and $r.LoginEmail -eq '' -and ($r.Before|ConvertTo-Json -Depth 8 -Compress) -ceq ($r.After|ConvertTo-Json -Depth 8 -Compress))
+        foreach($case in @('third-zero','third-two')){
+            $r=Run $true $company $case
+            Check ($company.ToString()+$case+' any number of revoked codes is a success') ($r.Success -and $r.Commits -eq 1 -and $r.Writes -eq 3)
+        }
+    }
+    $r=Run $true 1 'same-owner-second-login'
+    Check 'second login of the same owner revokes only its own codes' ($r.Success -and (CodeRow $r 5 'Codes').RevokedAt -ne $null -and (CodeRow $r 1 'Codes').RevokedAt -eq $null)
     $b=Run $false 1 'same-owner-second-login';$r=Run $true 1 'same-owner-second-login'
     Check 'multiple login rows per same owner retain exact current login' ($r.Success -and ($r.After|ConvertTo-Json -Depth 8 -Compress) -ceq ($b.After|ConvertTo-Json -Depth 8 -Compress))
     foreach($company in @(1,2)){

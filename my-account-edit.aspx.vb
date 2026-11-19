@@ -146,6 +146,15 @@ Partial Class my_account_edit
                         If cmdLogin.ExecuteNonQuery() <> 1 Then Throw New InvalidOperationException("Login update was not authorized.")
                     End Using
 
+                    If emailChanged Then
+                        ' AUTH-RESET-EMAIL-RACE-1C: i codici di recupero della password gia inviati al vecchio indirizzo smettono di valere,
+                        ' nella stessa transazione del cambio. Zero o piu righe; un errore annulla tutto il cambio.
+                        Using cmdCodes As New MySqlCommand("UPDATE login_password_reset_tokens SET RevokedAt = CURRENT_TIMESTAMP WHERE LoginId = @LoginId AND UsedAt IS NULL AND RevokedAt IS NULL", conn, tr)
+                            cmdCodes.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = loginId
+                            cmdCodes.ExecuteNonQuery()
+                        End Using
+                    End If
+
                     RequireProfileScope(scope)
                     tr.Commit()
                     If emailChanged Then Session("LoginEmail") = updated.Email
