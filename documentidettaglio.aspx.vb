@@ -45,7 +45,31 @@ Partial Class documentidettaglio
         MyBase.OnInit(e)
         ' The master has normalized the storefront. Authorize before restored
         ' control state, Load or postback events can use a requested document.
-        If Not AuthorizeDocumentRequest() Then DenyDocumentAccess()
+        If Not AuthorizeDocumentRequest() Then
+            If IsOrderIdentityMissing() Then RequireSignInForDocument() Else DenyDocumentAccess()
+        End If
+    End Sub
+
+    ' AUTH-SESSION-EXPIRED-NOTICE-1A: senza identita (mai entrato o sessione scaduta) il cliente va alla pagina che spiega e fa accedere, e dopo
+    ' l'accesso torna a QUESTO ordine. Un solo esito per chi non e collegato, qualunque sia l'id: nessuna differenza fra ordine esistente e no.
+    ' Per chi e collegato l'esito resta quello di DenyDocumentAccess.
+    Private Function IsOrderIdentityMissing() As Boolean
+        Return CurrentOrderIdentity Is Nothing OrElse Not CurrentOrderIdentity.IsComplete
+    End Function
+
+    Private Sub RequireSignInForDocument()
+        _documentDenied = True
+        _documentAuthorized = False
+        FormView1.Visible = False
+        FormView2.Visible = False
+        GridView1.Visible = False
+        GridView2.Visible = False
+        Lista_Articoli.Visible = False
+        litGoogleSurveyOptIn.Text = String.Empty
+        Response.Clear()
+        Response.SuppressContent = True
+        If GetRequestedDocumentId() > 0 Then Session("Page") = Me.Request.Url.ToString()
+        Response.Redirect(ResolveUrl("~/accessonegato.aspx"), True)
     End Sub
 
     Private Function AuthorizeDocumentRequest() As Boolean

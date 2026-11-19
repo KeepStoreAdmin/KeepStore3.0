@@ -37,8 +37,10 @@ End Function
         KeepStoreSecurity.RequireHttps(Request, Response, enableHsts:=True)
         If Not IsPostBack Then CartMutationIdempotencyService.ClearProgressiveRequestIds(HttpContext.Current, "wishlist:")
 
+        ' AUTH-SESSION-EXPIRED-NOTICE-1A: senza identita (mai entrato o sessione scaduta) si va alla pagina che spiega e fa accedere, ricordando i preferiti.
         If Session("UtentiId") < 1 Then
-            Response.Redirect("default.aspx")
+            Session("Page") = Me.Request.Url.ToString()
+            Response.Redirect("accessonegato.aspx", True)
         End If
 
         Session.Item("Pagina_visitata_Articoli") = Me.Request.Url.ToString 'Aggiorno l'ultima pagina visitata in Articoli

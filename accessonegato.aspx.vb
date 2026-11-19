@@ -42,7 +42,11 @@ Partial Class accessonegato
                 PostLoginReturnUrlPolicy.RememberContext(HttpContext.Current, returnUrl)
                 hlLogin.NavigateUrl = PostLoginReturnUrlPolicy.BuildLoginUrl(HttpContext.Current, returnUrl)
 
-                If Not PostLoginReturnUrlPolicy.IsProtectedDestination(HttpContext.Current, returnUrl) Then
+                ' La promessa "tornerai alla pagina che stavi aprendo" vale solo per una pagina riservata che la politica del ritorno ammette.
+                Dim returnsToProtectedPage As Boolean = PostLoginReturnUrlPolicy.IsProtectedDestination(HttpContext.Current, returnUrl)
+                phReturnPromise.Visible = returnsToProtectedPage
+
+                If Not returnsToProtectedPage Then
                     hlReturn.NavigateUrl = returnUrl
                     hlReturn.Visible = True
                 Else
@@ -51,6 +55,7 @@ Partial Class accessonegato
             Else
                 hlLogin.NavigateUrl = PostLoginReturnUrlPolicy.BuildLoginUrl(HttpContext.Current, Nothing)
                 hlReturn.Visible = False
+                phReturnPromise.Visible = False
             End If
         End If
     End Sub
