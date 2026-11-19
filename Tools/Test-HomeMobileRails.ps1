@@ -89,7 +89,7 @@ function Test-BestSwiper([string]$aspx) {
     return ($aspx -match 'data-pagination-lg="4" data-grid="1" data-grid-mobile="1">')
 }
 function Test-Busters([string]$master) {
-    return ($master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:home-vetrina2a|deadcode-c1a)|20261115-(?:home-cards|palette-aa|focus-fc)1a)"' -and $master -match 'js/carousel\.js"\) %>\?v=20261114-home-vetrina1a')
+    return ($master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:home-vetrina2a|deadcode-c1a)|20261115-(?:home-cards|palette-aa|focus-fc)1a|20261119-compact-1a)"' -and $master -match 'js/carousel\.js"\) %>\?v=20261114-home-vetrina1a')
 }
 
 $css = Read-Repo 'Public\assets\keepstore\css\theme-overrides.css'

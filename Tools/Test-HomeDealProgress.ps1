@@ -264,7 +264,7 @@ if (-not $SkipBrowser -and -not $SkipLab) {
         "var cards=s.querySelectorAll('.swiper-slide > .ks-deal-card');out.cards=[];for(var i=0;i<cards.length;i++){var cd=cards[i];out.heights.push(Math.round(cd.getBoundingClientRect().height));" +
         "var q=function(x){var e=cd.querySelector(x);return e?e.getBoundingClientRect():null;};var cat=q('.ks-card-category'),ti=q('.name-product'),pw=q('.price-wrap'),np=q('.new-price'),tier=q('.ks-home-promo-tier'),av=q('.ks-availability'),sv=q('.box-sale-tag');" +
         "if(cat&&ti&&pw&&np&&av){var ce=cd.querySelector('.ks-card-category');var lh=parseFloat(getComputedStyle(ce).lineHeight)||14;var above=tier?tier.bottom:pw.bottom;" +
-        "out.cards.push({catLines:Math.round(cat.height/lh),catText:Math.round(ce.scrollHeight/lh),catTitle:Math.round(ti.top-cat.bottom),titlePrice:Math.round(pw.top-ti.bottom),priceExtra:Math.round(pw.height-np.height),priceAvail:Math.round(av.top-above),availSave:sv?Math.round(sv.top-av.bottom):0});}}" +
+        "out.cards.push({catLines:Math.round(cat.height/lh),catText:Math.max(1,Math.round((function(){var g=document.createRange();g.selectNodeContents(ce);return g.getBoundingClientRect().height;})()/lh)),catTitle:Math.round(ti.top-cat.bottom),titlePrice:Math.round(pw.top-ti.bottom),priceExtra:Math.round(pw.height-(function(){var g=document.createRange();g.selectNodeContents(cd.querySelector('.price-wrap'));var q=g.getClientRects(),a=1e9,z=-1e9;for(var k=0;k<q.length;k++){if(q[k].height>0){a=Math.min(a,q[k].top);z=Math.max(z,q[k].bottom);}}return z-a;})()),priceAvail:Math.round(av.top-above),availSave:sv?Math.round(sv.top-av.bottom):0});}}" +
         "var tr=s.querySelectorAll('.ks-deal-progress__track');for(var j=0;j<tr.length;j++){var t=tr[j],b=t.querySelector('.ks-deal-progress__bar'),c=t.closest('.ks-deal-card');" +
         "var rt=t.getBoundingClientRect(),rb=b.getBoundingClientRect(),rc=c.getBoundingClientRect(),box=t.closest('.ks-deal-progress').getBoundingClientRect();" +
         "out.bars.push({now:parseInt(t.getAttribute('aria-valuenow'),10),track:rt.width,bar:rb.width,th:rt.height,inside:(box.left>=rc.left-1&&box.right<=rc.right+1&&box.top>=rc.top-1&&box.bottom<=rc.bottom+1)," +
@@ -292,7 +292,7 @@ if (-not $SkipBrowser -and -not $SkipLab) {
                 if ($x.color -eq $x.bg -or $x.color -match 'rgba\(0, 0, 0, 0\)') { $browserFail.Add($tag + ' barra senza colore') }
             }
             $gaps = @($r.cards)
-            if ($gaps.Count -lt 1) { $browserFail.Add($tag + ' schede non misurabili') }
+            if ($gaps.Count -lt 1 -or $gaps.Count -ne @($r.heights).Count) { $browserFail.Add($tag + ' schede senza un elemento atteso: misurate ' + $gaps.Count + ' su ' + @($r.heights).Count) }
             foreach ($g in $gaps) {
                 if ($g.catLines -gt $g.catText) { $browserFail.Add($tag + ' riga della categoria con spazio vuoto: ' + $g.catLines + ' righe per ' + $g.catText) }
                 if ($g.catTitle -lt 2 -or $g.catTitle -gt 12) { $browserFail.Add($tag + ' spazio fra categoria e titolo: ' + $g.catTitle + ' px') }

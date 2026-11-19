@@ -172,7 +172,7 @@ function Test-AspxGuide([string]$text, [string]$cssText) {
     if ($cssText -notmatch '(?m)^\.ks-cart-page \.ks-pay-guide__btn\s*\{') { Show-Failure 'css btn'; return $false }
     if ($cssText -notmatch '(?s)\.ks-pay-guide__btn\s*\{[^}]*min-height:\s*44px') { Show-Failure 'css 44px'; return $false }
     if ($cssText -notmatch '(?s)@media \(max-width: 575px\)\s*\{[^@]*\.ks-pay-guide__actions[^}]*\{[^}]*flex-direction:\s*column') { Show-Failure 'css mobile column'; return $false }
-    if ($text -match 'cart-ui\.css"\)\s*&\s*"\?v=20261115-focus-fc1a"') { Show-Failure 'css cache buster unchanged'; return $false }
+    if ($text -match 'cart-ui\.css"\)\s*&\s*"\?v=20261119-compact-1a"') { Show-Failure 'css cache buster unchanged'; return $false }
     return $true
 }
 function Test-VbGuide([string]$text) {
@@ -228,7 +228,7 @@ $mutants = @(
     @{ Id = 'A05_WAIT_IS_AN_ALERT'; Kind = 'aspxwait'; Old = 'role="status"'; New = 'role="alert"' },
     @{ Id = 'A06_CHARGE_CLAIM_IN_CONTACT'; Kind = 'aspxfirst'; Pattern = '<asp:PlaceHolder ID="phGuideContact"[^>]*>'; New = '<asp:PlaceHolder ID="phGuideContact" runat="server" Visible="false"><p>Nessun addebito.</p>' },
     @{ Id = 'A07_WAIT_SAYS_PAY_AGAIN'; Kind = 'aspxfirst'; Pattern = '<asp:PlaceHolder ID="phGuideWait"[^>]*>'; New = '<asp:PlaceHolder ID="phGuideWait" runat="server" Visible="false"><p>Paga di nuovo.</p>' },
-    @{ Id = 'A08_CSS_CACHE_BUSTER_UNCHANGED'; Kind = 'aspxfirst'; Pattern = 'cart-ui\.css"\) & "\?v=[^"]+"'; New = 'cart-ui.css") & "?v=20261115-focus-fc1a"' },
+    @{ Id = 'A08_CSS_CACHE_BUSTER_UNCHANGED'; Kind = 'aspxfirst'; Pattern = 'cart-ui\.css"\) & "\?v=[^"]+"'; New = 'cart-ui.css") & "?v=20261119-compact-1a"' },
     @{ Id = 'B01_PAYGUIDE_WITHOUT_LOGIN'; Kind = 'vb'; Old = 'AndAlso isLogged AndAlso Not Page.IsPostBack Then'; New = 'AndAlso Not Page.IsPostBack Then' },
     @{ Id = 'B07_PAYGUIDE_ALSO_ON_POSTBACK'; Kind = 'vb'; Old = 'AndAlso isLogged AndAlso Not Page.IsPostBack Then'; New = 'AndAlso isLogged Then' },
     @{ Id = 'B02_GUIDE_WITH_EMPTY_CART'; Kind = 'vb'; Old = ' OrElse Not _cartHasItems'; New = '' },
@@ -250,7 +250,7 @@ foreach ($mu in $mutants) {
             $head = $aspx.Substring(0, $s); $tail = $aspx.Substring($s)
             $ma = $head + (Mutate-Text $tail $mu.Old $mu.New $mu.Id)
         }
-        'aspxcache' { $ma = Mutate-Text $aspx '?v=20261115-focus-fc1a' '?v=20261115-focus-fc1a' $mu.Id }
+        'aspxcache' { $ma = Mutate-Text $aspx '?v=20261119-compact-1a' '?v=20261119-compact-1a' $mu.Id }
         'vb' { $mv = Mutate-Text $vb $mu.Old $mu.New $mu.Id }
         'css' { $mc = Mutate-Text $css $mu.Old $mu.New $mu.Id }
     }

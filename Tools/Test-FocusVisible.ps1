@@ -63,7 +63,7 @@ $injectedCss = (([regex]::Matches($flagsBlock.Groups[1].Value, "'((?:[^'\\]|\\.)
 Assert-Source ($injectedCss.Length -gt 500 -and $injectedCss.Contains('.ks-search-host input[type="text"]')) 'JS_INJECTED_CSS_EXTRACTED'
 
 function Test-Busters([string]$m, [string]$catalogPage, [string]$productPage, [string]$cartPage) {
-    $tag = '20261115-focus-fc1a'
+    $tag = '20261119-compact-1a'
     return ($m -match ('css/styles\.css"\) & "\?v=' + $tag + '"') -and $m -match ('css/theme-overrides\.css"\) & "\?v=' + $tag + '"') -and $m -match ('css/auth-ui\.css"\) & "\?v=' + $tag + '"') -and $m -match ('css/minicart-ui\.css"\) & "\?v=' + $tag + '"') -and
         $catalogPage -match ('css/catalog-ui\.css"\)[^\r\n]*\?v=' + $tag) -and $catalogPage -match ('css/catalog-product-flow\.css"\)[^\r\n]*\?v=' + $tag) -and
         $productPage -match ('css/product-ui\.css"\)[^\r\n]*\?v=(?:' + $tag + '|20261115-focus-obscured1a|20261118-pdp-sections1a|20261118-pdp-tools1a|20261118-pdp-print-a4)') -and $cartPage -match ('css/cart-ui\.css"\)[^\r\n]*\?v=(?:' + $tag + '|20261117-pay-guide-[12]a|20261118-vat-note-1a)'))
@@ -382,7 +382,7 @@ try {
     if ($withoutFallback.Count -gt 0) { throw ('FOCUS_RING_USED_WITHOUT_FALLBACK_IN=' + (($withoutFallback | Select-Object -Unique) -join ',')) }
     Write-Output 'PASS EVERY_USE_OF_THE_TOKEN_HAS_A_FALLBACK'
     Assert-Source (Test-Busters $master $catalogAspx $productAspx $cartAspx) 'PAGES_LOAD_THE_SHEETS_WITH_THE_NEW_BUSTER'
-    if (Test-Busters (Mutate-Text $master '"?v=20261115-focus-fc1a"' '"?v=20261115-palette-aa1a"' 'M15') $catalogAspx $productAspx $cartAspx) { throw 'MUTATION_NOT_DETECTED=M15_master_buster_not_bumped' }
+    if (Test-Busters (Mutate-Text $master '"?v=20261119-compact-1a"' '"?v=20261115-palette-aa1a"' 'M15') $catalogAspx $productAspx $cartAspx) { throw 'MUTATION_NOT_DETECTED=M15_master_buster_not_bumped' }
     Write-Output 'PASS MUTATION_DETECTED M15_master_buster_not_bumped'
 
     Write-Output 'FOCUS_VISIBLE_ALL_PASS'

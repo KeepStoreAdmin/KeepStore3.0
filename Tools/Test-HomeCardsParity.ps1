@@ -267,7 +267,7 @@ function Test-NoLeakToDeals([string]$c) {
     $bad = $selectors | Where-Object { $_ -match 'ks-deal' -or ($_ -notmatch 'ks-grid-card|ks-recent-card') }
     return (@($bad).Count -eq 0) -and ($b -notmatch 'ks-deal')
 }
-function Test-Buster([string]$m) { return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-palette-aa1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-focus-fc1a"')) }
+function Test-Buster([string]$m) { return ($m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-home-cards1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261115-palette-aa1a"') -or $m.Contains('ThemeManager.Asset("css/theme-overrides.css") & "?v=20261119-compact-1a"')) }
 
 Assert-Source (Test-TileRule $css) 'CSS_TILE_SQUARE_ONE_FRAME_NO_FIXED_HEIGHT'
 Assert-Source (Test-ActionTiers $css) 'CSS_ACTION_TIERS_FROM_GEOMETRY_204_156'
@@ -379,7 +379,7 @@ $m = Mutate-Text $css 'body.ks-page-home #HomeRecentlyViewedSection .ks-recent-c
 Assert-Detected (Test-RecentRules $m) 'C18_RECENT_TILE_NOT_SQUARE'
 $m = Mutate-Text $css 'body.ks-page-home #ksHomePage .ks-grid-card { padding: 12px; }' 'body.ks-page-home #ksHomePage .ks-grid-card, body.ks-page-home #ksHomePage .ks-deal-card { padding: 12px; }' 'C19'
 Assert-Detected (Test-NoLeakToDeals $m) 'C19_DEAL_CARD_RESTYLED_BY_MISTAKE'
-$m = Mutate-Text $master 'v=20261115-focus-fc1a' 'v=20261114-deadcode-c1a' 'C20'
+$m = Mutate-Text $master 'v=20261119-compact-1a' 'v=20261114-deadcode-c1a' 'C20'
 Assert-Detected (Test-Buster $m) 'C20_STALE_CSS_CACHE_BUSTER'
 
 Write-Output 'HOME_CARDS_PARITY_ALL_PASS'

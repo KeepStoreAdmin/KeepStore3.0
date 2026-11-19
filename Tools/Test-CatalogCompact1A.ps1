@@ -171,8 +171,8 @@ $cssMutants = @(
     @{ Id = 'B07_HEADING_SERIF'; File = 'catalog-compact.css'; Old = 'font-family: Arial, Helvetica, sans-serif;'; New = 'font-family: "Inter", serif;' },
     @{ Id = 'B10_PRICE_AUTO_WITHOUT_IMPORTANT'; File = 'catalog-compact.css'; Old = 'margin-top: auto !important;'; New = 'margin-top: auto;' },
     @{ Id = 'B11_RECENT_OLD_GAP'; File = 'catalog-compact.css'; Old = 'gap: 4px !important;'; New = 'gap: 20px !important;' },
-    @{ Id = 'B12_RECENT_PRICE_PUSHED_DOWN'; File = 'catalog-compact.css'; Old = 'margin-top: 0 !important;'; New = 'margin-top: 80px !important;' },
-    @{ Id = 'B08_COMPACT_SHEET_NOT_SCOPED'; File = 'catalog-compact.css'; Old = '#ksCatalogPage .ks-card-category {'; New = '.nothing-here .ks-card-category {' }
+    @{ Id = 'B12_RECENT_PRICE_PUSHED_DOWN'; File = 'catalog-compact.css'; Old = 'margin-top: 0 !important;'; New = 'margin-top: 80px !important;' }
+    # B08 (regola della categoria non limitata al catalogo) ritirato con UX-COMPACT-SPACING-SITEWIDE-1A: la regola condivisa e gia di una riga, il mutante non cambia piu la geometria.
 )
 $orig = @{ 'ks-ui.css' = Norm ([IO.File]::ReadAllText((Join-Path $cssDir 'ks-ui.css'), $utf8)); 'catalog-compact.css' = $files.compact }
 $bad = 0
