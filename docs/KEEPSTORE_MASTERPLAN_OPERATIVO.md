@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## PHOTO-HOME-HOVER-SHARP-1A — 20/11/2026 — SOURCE (seconda immagine delle schede della HOME nitida)
+
+**Esito: A (SOURCE, non pubblicato). Livello S. PR [#597](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/597), stable `ab057c57`.** Primo task del sistema per le foto. La seconda immagine delle schede della HOME (visibile al passaggio del mouse) non resta piu la miniatura da 150 px: al primo passaggio si carica la foto piena. I telefoni non scaricano nulla in piu.
+
+**Fatti e causa.** `RenderGridCard` passava la seconda immagine a `ProductImageThumb`, che sceglie la miniatura `_nomefile` (150 px misurati sul server) per un riquadro da 206-244 px ingrandito del 5%.
+
+**Revisioni.** ChatGPT (xhigh): accolti i due bloccanti (il caricamento differito rimetteva la miniatura: si aggiornano insieme `src` e `data-src`; nessun ripiego se la foto piena non arriva: si precarica a parte e si sostituisce solo a caricamento riuscito). Claude (Opus): accolti la registrazione unica a livello di modulo, il tocco vero nel test, l'attributo solo quando la foto piena e diversa, la nuova sigla dello script. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-PhotoHomeHoverSharp.ps1`, visto rosso prima del codice: pagina di prova con script e fogli veri, mouse e tocco veri via protocollo del browser, 8 controlli di comportamento, 11 mutanti (7 dello script eseguiti nel browser). `Test-HomeCardsParity`, `Test-GuideNoShift` (nuova sigla) e gli altri test collegati verdi; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Provato con immagini di prova, non con le foto del server; la foto piena pesa quanto l'originale finche non ci sono le copie derivate (`PHOTO-DERIVED-COPIES-1A`); da tastiera nulla cambia. **Alla consegna futura:** `Default.aspx`, `Default.aspx.vb`, `Public/assets/keepstore/js/home-default.js`. CONSEGNA SERVER SOSPESA.
+
 ## PRODUCT-PHOTOS-SYSTEM-1A — 20/11/2026 — DOCS (foto dei prodotti piu nitide e belle: il sistema)
 
 **Esito: A (solo documenti, nessun file del prodotto). Lavoro esente. Documento: [sistema per le foto](KEEPSTORE_PRODUCT_PHOTOS_SYSTEM_2026_11_20.md).** Richiesta del PO: «Esiste un sistema per rendere la visualizzazione delle foto nel sito piu brillanti e piu belle? [...] confrontati con ChatGPT, fate ricerca e poi procedete».
