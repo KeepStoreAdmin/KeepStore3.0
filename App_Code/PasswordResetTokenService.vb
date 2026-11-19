@@ -53,16 +53,15 @@ Public Module PasswordResetTokenService
                     Return
                 End If
 
-                Dim ipHash As String = HashOptional(GetClientIp(page))
-                Dim userAgentHash As String = HashOptional(Convert.ToString(page.Request.UserAgent))
+                Dim ipHash As Object = HashOptional(GetClientIp(page))
+                Dim userAgentHash As Object = HashOptional(Convert.ToString(page.Request.UserAgent))
                 Dim clearToken As String = GenerateToken()
                 Dim tokenHash As String = Sha256Hex(clearToken)
 
-                Using tx As MySqlTransaction = conn.BeginTransaction()
-                    RevokeActiveTokens(conn, tx, loginId)
-                    InsertToken(conn, tx, loginId, tokenHash, ipHash, userAgentHash)
-                    tx.Commit()
-                End Using
+                ' AUTH-RESET-ISSUE-LOCK-1C: il codice nasce solo se, sotto blocco, l'accesso ha ancora l'e-mail a cui verra spedito.
+                If Not PasswordResetTokenIssuance.TryIssue(conn, loginId, destinationEmail, tokenHash, ipHash, userAgentHash) Then
+                    Return
+                End If
 
                 Try
                     SendResetEmail(page, destinationEmail, displayName, clearToken, companyInfo)
@@ -337,27 +336,6 @@ Public Module PasswordResetTokenService
         Using cmd As New MySqlCommand("UPDATE login_password_reset_tokens SET RevokedAt=NOW() WHERE LoginId=@loginId AND UsedAt IS NULL AND RevokedAt IS NULL", conn, tx)
             cmd.CommandType = CommandType.Text
             cmd.Parameters.AddWithValue("@loginId", loginId)
-            cmd.ExecuteNonQuery()
-        End Using
-    End Sub
-
-    Private Sub InsertToken(ByVal conn As MySqlConnection,
-                            ByVal tx As MySqlTransaction,
-                            ByVal loginId As Integer,
-                            ByVal tokenHash As String,
-                            ByVal ipHash As Object,
-                            ByVal userAgentHash As Object)
-
-        Const sql As String = "INSERT INTO login_password_reset_tokens " &
-                              "(LoginId, TokenHash, CreatedAt, ExpiresAt, UsedAt, RevokedAt, RequestIpHash, UserAgentHash, CreatedBy) " &
-                              "VALUES (@loginId, @tokenHash, NOW(), DATE_ADD(NOW(), INTERVAL 30 MINUTE), NULL, NULL, @ipHash, @userAgentHash, 'web_remind')"
-
-        Using cmd As New MySqlCommand(sql, conn, tx)
-            cmd.CommandType = CommandType.Text
-            cmd.Parameters.AddWithValue("@loginId", loginId)
-            cmd.Parameters.AddWithValue("@tokenHash", tokenHash)
-            cmd.Parameters.AddWithValue("@ipHash", ipHash)
-            cmd.Parameters.AddWithValue("@userAgentHash", userAgentHash)
             cmd.ExecuteNonQuery()
         End Using
     End Sub

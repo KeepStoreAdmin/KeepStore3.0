@@ -168,11 +168,66 @@ Assert-Check ($registration -notmatch 'If[^\r\n]*(?:AziendaEmail|SupportEmail)' 
               $runtimeHarness -match 'CUTOVER_EMPTY_LEGACY_BRAND_RENDER_') '57_ACCOUNT_LEGACY_EMAIL_OPTIONAL_BRANDING'
 $baselineReset = (@(& git -C $repo show 'e71e1420aabafab45612180f160cb467f74b6bc1:App_Code/PasswordResetTokenService.vb') -join "`n").TrimEnd("`r", "`n")
 if ($LASTEXITCODE -ne 0) { throw 'RESET_CONTRACT_BASE_UNAVAILABLE' }
-$expectedReset = $baselineReset.Replace('companyInfo.AziendaId <= 0 OrElse aziendaEmail = "" Then', 'companyInfo.AziendaId <= 0 Then')
-Assert-Check ($passwordReset.Replace("`r`n", "`n").TrimEnd("`r", "`n") -ceq $expectedReset) '58_RESET_ONLY_LEGACY_EMAIL_GATE_CHANGED_ENTIRE_TOKEN_FLOW_IDENTICAL'
+# Trasformazioni DICHIARATE della base (ognuna deve trovare esattamente una occorrenza); tutto il resto del servizio resta identico.
+# 1 = cutover delle e-mail (storica); 2-4 = AUTH-RESET-ISSUE-LOCK-1C: impronte facoltative come oggetti, emissione tramite
+# PasswordResetTokenIssuance.TryIssue (blocco dell'accesso e confronto dell'e-mail), rimozione del vecchio inserimento.
+$resetTransforms = @(
+    @{ Old = 'companyInfo.AziendaId <= 0 OrElse aziendaEmail = "" Then'; New = 'companyInfo.AziendaId <= 0 Then' },
+    @{ Old = (@'
+                Dim ipHash As String = HashOptional(GetClientIp(page))
+                Dim userAgentHash As String = HashOptional(Convert.ToString(page.Request.UserAgent))
+'@ + "`n"); New = (@'
+                Dim ipHash As Object = HashOptional(GetClientIp(page))
+                Dim userAgentHash As Object = HashOptional(Convert.ToString(page.Request.UserAgent))
+'@ + "`n") },
+    @{ Old = (@'
+                Using tx As MySqlTransaction = conn.BeginTransaction()
+                    RevokeActiveTokens(conn, tx, loginId)
+                    InsertToken(conn, tx, loginId, tokenHash, ipHash, userAgentHash)
+                    tx.Commit()
+                End Using
+'@ + "`n"); New = (@'
+                ' AUTH-RESET-ISSUE-LOCK-1C: il codice nasce solo se, sotto blocco, l'accesso ha ancora l'e-mail a cui verra spedito.
+                If Not PasswordResetTokenIssuance.TryIssue(conn, loginId, destinationEmail, tokenHash, ipHash, userAgentHash) Then
+                    Return
+                End If
+'@ + "`n") },
+    @{ Old = (@'
+    Private Sub InsertToken(ByVal conn As MySqlConnection,
+                            ByVal tx As MySqlTransaction,
+                            ByVal loginId As Integer,
+                            ByVal tokenHash As String,
+                            ByVal ipHash As Object,
+                            ByVal userAgentHash As Object)
+
+        Const sql As String = "INSERT INTO login_password_reset_tokens " &
+                              "(LoginId, TokenHash, CreatedAt, ExpiresAt, UsedAt, RevokedAt, RequestIpHash, UserAgentHash, CreatedBy) " &
+                              "VALUES (@loginId, @tokenHash, NOW(), DATE_ADD(NOW(), INTERVAL 30 MINUTE), NULL, NULL, @ipHash, @userAgentHash, 'web_remind')"
+
+        Using cmd As New MySqlCommand(sql, conn, tx)
+            cmd.CommandType = CommandType.Text
+            cmd.Parameters.AddWithValue("@loginId", loginId)
+            cmd.Parameters.AddWithValue("@tokenHash", tokenHash)
+            cmd.Parameters.AddWithValue("@ipHash", ipHash)
+            cmd.Parameters.AddWithValue("@userAgentHash", userAgentHash)
+            cmd.ExecuteNonQuery()
+        End Using
+    End Sub
+'@ + "`n`n"); New = '' }
+)
+$expectedReset = $baselineReset
+$resetTransformsExact = $true
+foreach ($transform in $resetTransforms) {
+    $oldText = ([string]$transform.Old).Replace("`r`n", "`n"); $newText = ([string]$transform.New).Replace("`r`n", "`n")
+    if (([regex]::Matches($expectedReset, [regex]::Escape($oldText))).Count -ne 1) { $resetTransformsExact = $false }
+    $expectedReset = $expectedReset.Replace($oldText, $newText)
+}
+Assert-Check ($resetTransformsExact -and $passwordReset.Replace("`r`n", "`n").TrimEnd("`r", "`n") -ceq $expectedReset.TrimEnd("`r", "`n")) '58_RESET_ONLY_LEGACY_EMAIL_GATE_CHANGED_ENTIRE_TOKEN_FLOW_IDENTICAL'
+$resetIssuance = Read-Repo 'App_Code\PasswordResetTokenIssuance.vb'
+Assert-Check ($passwordReset -notmatch 'INSERT INTO login_password_reset_tokens' -and ([regex]::Matches($resetIssuance, 'INSERT INTO login_password_reset_tokens')).Count -eq 1 -and $resetIssuance -match 'FOR UPDATE') '58B_RESET_TOKEN_INSERT_ONLY_IN_LOCKED_ISSUANCE'
 Assert-Check ($runtimeHarness -match 'CUTOVER_CONTACT_FAIL_CLOSED_ZERO_SMTP_' -and
               $runtimeHarness -match 'CUTOVER_RESET_TOKEN_ONLY_TO_CUSTOMER' -and
               $runtimeHarness -match 'CUTOVER_CONTACT_PRIMARY_DEDUP_CASE_INSENSITIVE') '59_CUTOVER_FAKE_MATRIX_COVERAGE'
 
-if ($checks -ne 68) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
+if ($checks -ne 69) { throw ('UNEXPECTED_CHECK_COUNT=' + $checks) }
 Write-Output ('TENANT_EMAIL_ALL_CALLERS_MIGRATION_PASS checks=' + $checks)
