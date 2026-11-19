@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-RESET-EMAIL-RACE-1C (parte a) — 19/11/2026 — SOURCE (codici di recupero annullati al cambio dell'e-mail)
+
+**Esito: A per la parte a (SOURCE, non pubblicato). Livello L. PR [#576](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/576), stable `d3b7024e`.** Richiesta del PO del 2026-11-19 («annullare i codici di recupero al cambio dell'e-mail»). Area CRITICAL: autenticazione.
+
+**Fatti e causa (misurati sul sito LAB con il test rosso).** Dopo il cambio dell'e-mail un codice di recupero gia inviato al vecchio indirizzo restava valido: la pagina di recupero aperta prima del cambio e inviata dopo cambiava la password. `CompleteReset` controlla solo stato e scadenza del codice; la tabella non conserva l'indirizzo di invio.
+
+**Revisioni.** ChatGPT (xhigh): accolti revoca nella transazione con il filtro sull'accesso autorizzato, nessun vincolo sul numero di righe, codici letti a parte nel test del profilo; il suo rilievo sulla collazione (lettere accentate nel confronto SQL dell'emissione) e confermato da Claude e va nel task successivo. Claude (Opus): accolti divisione in due parti, nessuna tolleranza se la revoca fallisce, scenari «terza scrittura» nel test del profilo, prova con un codice vero e pagina di recupero aperta prima; indicati stalli rari e accesso «fratello» (dichiarati). Gate di certezza: PASS per la parte a.
+
+**Prove.** `Tools/Test-EmailChangeRevokesResetCodes.ps1`: sorgenti, 9 mutanti, 11 controlli reali sul sito LAB; `Tools/Test-AccountProfileTenantScope.ps1` 682 controlli (erano 639), 8 mutazioni di comportamento rilevate; `Test-EmailChangePassword` verde con il LAB; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Corsa nell'emissione (`AUTH-RESET-ISSUE-LOCK-1C`); tabella dei codici assente = il cambio dell'e-mail fallisce (controllo alla consegna); gestionale fuori dal sito; accesso «fratello»; stallo raro fra completamento del recupero e cambio (una operazione annullata, il cliente riprova). **Alla consegna (con 1A e 1B):** `my-account-edit.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-EMAIL-CHANGE-PASSWORD-1B — 19/11/2026 — SOURCE (password attuale per cambiare l'e-mail di accesso)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#573](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/573), stable `aa2d8f21`.** Mandato del PO del 2026-11-19 («Si, procedi»). Con 1A (#571) chiude la richiesta «vecchia password richiesta per cambiare i dati di accesso» per il browser collegato. Area CRITICAL: autenticazione.
