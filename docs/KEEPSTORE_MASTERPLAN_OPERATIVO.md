@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-RESET-ISSUE-LOCK-1C — 19/11/2026 — SOURCE (emissione dei codici di recupero sotto blocco)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#579](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/579), stable `3e744168`.** Mandato del PO del 2026-11-19 («Procedi con il caso recupero password e chiudi il task»). Chiude la richiesta sui dati di accesso (con #571, #573, #576). Area CRITICAL: autenticazione.
+
+**Fatti e causa.** `RequestReset` leggeva l'accesso e la sua e-mail fuori da ogni transazione e inseriva il codice senza ricontrollare: un cambio dell'e-mail fra le due operazioni lasciava un codice valido verso il vecchio indirizzo. Misure sul LAB: `login.email` e `utf8mb4_0900_ai_ci` (non distingue gli accenti), isolamento `REPEATABLE-READ`, attesa dei blocchi 50 secondi. Trovato in verifica: senza User-Agent la richiesta falliva sempre (`DBNull` convertito in `String`, provato con una prova compilata).
+
+**Revisioni.** ChatGPT (xhigh): accolti contratto sugli indirizzi vuoti, prova del blocco non basata sui tempi, prova di atomicita, sostituzioni contate nel controllo 58. Claude (Opus): accolti errori propagati, attesa del blocco di 5 secondi ripristinata, caso sincrono con attesa scaduta, impronta duplicata per l'atomicita, regola severa per dichiarare ucciso un mutante del LAB, impronte facoltative come oggetti; scartato con prova l'uso di `performance_schema` (privilegi assenti). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-ResetIssueLock.ps1` + `Tools/ResetIssueLockLabHarness.vb`: 5 mutanti dei sorgenti, 20 controlli sul LAB con il modulo reale e due connessioni, 12 mutazioni del modulo eseguite sul LAB e tutte rilevate; `Tools/Test-TenantEmailAllCallersMigration.ps1` 69 controlli (controllo 58 con quattro sostituzioni dichiarate e contate); sito LAB compilato; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Pagina di richiesta non provata via HTTP (per non inviare e-mail); posta tardiva al vecchio indirizzo con codice gia annullato; gestionale fuori dal sito; il completamento del recupero non ricontrolla le abilitazioni; accesso «fratello»; limite alla frequenza delle richieste. **Alla consegna (con gli altri file dei dati di accesso):** `App_Code/PasswordResetTokenIssuance.vb` (nuovo, per primo), `App_Code/PasswordResetTokenService.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-RESET-EMAIL-RACE-1C (parte a) — 19/11/2026 — SOURCE (codici di recupero annullati al cambio dell'e-mail)
 
 **Esito: A per la parte a (SOURCE, non pubblicato). Livello L. PR [#576](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/576), stable `d3b7024e`.** Richiesta del PO del 2026-11-19 («annullare i codici di recupero al cambio dell'e-mail»). Area CRITICAL: autenticazione.
