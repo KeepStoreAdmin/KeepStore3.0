@@ -54,6 +54,11 @@
                                             <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" TextMode="Email" MaxLength="50" />
                                         </div>
                                         <div class="col-12 col-md-6">
+                                            <label class="body-small text-main-2" for="<%= txtCurrentPassword.ClientID %>">Password attuale</label>
+                                            <asp:TextBox ID="txtCurrentPassword" runat="server" CssClass="form-control" TextMode="Password" autocomplete="off" aria-describedby="ksCurrentPasswordHint" />
+                                            <div id="ksCurrentPasswordHint" class="body-small text-main-2 mt-1">Serve solo se cambi l'e-mail: per sicurezza chiediamo la password con cui accedi.</div>
+                                        </div>
+                                        <div class="col-12 col-md-6">
                                             <label class="body-small text-main-2" for="<%= txtCodice.ClientID %>">Codice cliente</label>
                                             <asp:TextBox ID="txtCodice" runat="server" CssClass="form-control" ReadOnly="true" />
                                         </div>

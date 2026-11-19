@@ -106,11 +106,9 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($w -notmatch 'Public Shared Function RequiresFreshSignIn\(ByVal context As HttpContext\) As Boolean\s+Return SessionFlag\(context, RestoredSessionKey\)') { $fail.Add('S11 marcatore') }
     # (registrazione.aspx.vb: da AUTH-CREDENTIALS-OLD-PASSWORD-1A la pagina non scrive piu i dati di accesso per nessuna sessione; vedi Tools/Test-CredentialsOldPassword.ps1)
     if ($f.reg -match '(?i)UPDATE\s+LOGIN\s+SET\s*"\s*\r?\n[^\r\n]*username' -or $f.reg -match '(?i)"\s*password\s*=\s*\?password') { $fail.Add('S11 registrazione: la pagina scrive ancora nome utente o password') }
-    $editGuard = $f.edit.IndexOf('If TypeOf restoredFromDevice Is Boolean AndAlso CBool(restoredFromDevice) AndAlso'); $editSql = $f.edit.IndexOf('"UPDATE utenti u " &')
-    if ($f.edit -notmatch 'Dim restoredFromDevice As Object = Session\("KeepStore:StaySignedIn:Restored"\)' -or $w -notmatch 'Public Const RestoredSessionKey As String = "KeepStore:StaySignedIn:Restored"') { $fail.Add('S11 dettagli account: stessa chiave del marcatore') }
-    if ($editGuard -lt 0 -or $editSql -lt 0 -or $editGuard -gt $editSql) { $fail.Add('S11 dettagli account: e-mail') }
-    $datiGuard = $f.dati.IndexOf('If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) AndAlso tbEmailEdit IsNot Nothing AndAlso'); $datiSql = $f.dati.IndexOf('Dim ownerUtentiId As Integer = ResolveUtentiIdForLogin(conn, tr, loginId)')
-    if ($datiGuard -lt 0 -or $datiSql -lt 0 -or $datiGuard -gt $datiSql) { $fail.Add('S11 dati utente: e-mail') }
+    # (my-account-edit e datiutente: da AUTH-EMAIL-CHANGE-PASSWORD-1B il cambio dell'e-mail chiede la password attuale a OGNI sessione, e la vecchia pagina non scrive piu l'e-mail; vedi Tools/Test-EmailChangePassword.ps1)
+    if ($f.edit -notmatch 'If emailChanged Then sqlUtente &= " AND BINARY l\.Pass" & "word = BINARY @CurrentPassword"') { $fail.Add('S11 dettagli account: e-mail senza password attuale') }
+    if ($f.dati -match '(?i)u\.Email\s*=\s*@Email|"UPDATE login "') { $fail.Add('S11 dati utente: la vecchia pagina scrive ancora l''e-mail') }
     # S12 privacy
     if ($f.privacy -notmatch '__Host-KeepStoreStay' -or $f.privacy -notmatch 'creato soltanto se, nella pagina di accesso, scegli') { $fail.Add('S12 scheda privacy del cookie') }
     # S13 lettura dell'account: la vista restituisce una riga per indirizzo, servono righe distinte
@@ -228,8 +226,8 @@ $mutants = @(
     @{ Id = 'M44_CART_BREAKS_RESTORE'; File = 'master'; Old = '        Try' + "`r`n" + '            AggiornaDati()' + "`r`n" + '        Catch ex As Exception' + "`r`n" + '            KeepStoreLog.Error("login-cart-sync", "Device restore cart'; New = '        AggiornaDati()' + "`r`n" + '        Try' + "`r`n" + '        Catch ex As Exception' + "`r`n" + '            KeepStoreLog.Error("login-cart-sync", "Device restore cart' },
     @{ Id = 'M45_COMPLETE_WITHOUT_USER_CHECK'; File = 'master'; Old = ' OrElse' + "`r`n" + '           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("UtentiId")) <> account.UtentiId Then'; New = ' Then' },
     @{ Id = 'M46_REG_WRITES_SECRET'; File = 'reg'; Old = '    Protected Sub imgModAccesso_Click('; New = ('    Private Const KsMutantSql As String = " pass' + 'word = ?pass' + 'word "' + "`r`n" + '    Protected Sub imgModAccesso_Click(') },
-    @{ Id = 'M47_EDIT_NO_GUARD'; File = 'edit'; Old = 'If TypeOf restoredFromDevice Is Boolean AndAlso CBool(restoredFromDevice) AndAlso'; New = 'If False AndAlso' },
-    @{ Id = 'M48_DATI_NO_GUARD'; File = 'dati'; Old = 'If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) AndAlso tbEmailEdit IsNot Nothing AndAlso'; New = 'If False AndAlso tbEmailEdit IsNot Nothing AndAlso' }
+    @{ Id = 'M47_EDIT_NO_PREDICATE'; File = 'edit'; Old = 'If emailChanged Then sqlUtente &= '; New = 'If False Then sqlUtente &= ' },
+    @{ Id = 'M48_DATI_WRITES_EMAIL'; File = 'dati'; Old = '"u.Fax = @Fax " & _'; New = '"u.Fax = @Fax, u.Email = @Email " & _' }
 )
 if (-not $SkipMutants) {
     $survived = New-Object Collections.Generic.List[string]
@@ -433,7 +431,7 @@ try {
     if ($page.Status -eq 200 -and $emailField -ne '' -and $saveTarget -ne '') {
         $f = New-FormFile $page.Body @{ '__EVENTTARGET' = $saveTarget; '__EVENTARGUMENT' = ''; $emailField = 'ks.test.changed@example.invalid' }
         $r = Invoke-Http '/my-account-edit.aspx' $jarB $f '/my-account-edit.aspx'
-        Check ($r.Status -eq 200 -and $r.Body -match 'accedere di nuovo con la password') 'E21 cambio e-mail da sessione ripristinata: rifiutato con spiegazione'
+        Check ($r.Status -eq 200 -and $r.Body -match 'La password attuale non e corretta') 'E21 cambio e-mail da sessione ripristinata senza password: rifiutato con spiegazione'
     } else { Check $false 'E21 modulo dei dettagli account non leggibile' }
     Check ((Get-Scalar 'SELECT COUNT(*) AS ksval FROM login l INNER JOIN ks_test_stay_pages_backup b ON b.id=l.id INNER JOIN utenti u ON u.id=l.UtentiId WHERE l.Email<=>b.em AND u.Email<=>b.uem;') -eq '1') 'E22 e-mail invariata'
 

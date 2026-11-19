@@ -414,7 +414,7 @@ Partial Class datiutente
         Dim row As FormViewRow = fvUtente.Row
 
         ' Controlli anagrafica principale
-        Dim tbEmailEdit As TextBox = FindTextBox(row, "tbEmailEdit", "txtEmail")
+        ' AUTH-EMAIL-CHANGE-PASSWORD-1B: questa pagina non legge e non scrive piu l'e-mail (si cambia in "Dati account", con la password attuale).
         Dim tbIndirizzoEdit As TextBox = FindTextBox(row, "tbIndirizzoEdit", "txtIndirizzo")
         Dim tbCapEdit As TextBox = FindTextBox(row, "tbCapEdit", "txtCap")
         Dim tbCittaEdit As TextBox = FindTextBox(row, "tbCittaEdit", "txtCitta")
@@ -440,8 +440,7 @@ Partial Class datiutente
         End If
 
         Dim validationMessage As String = ""
-        If Not ValidateMainProfileInput(tbEmailEdit,
-                                        tbIndirizzoEdit,
+        If Not ValidateMainProfileInput(tbIndirizzoEdit,
                                         tbCapEdit,
                                         tbCittaEdit,
                                         tbProvinciaEdit,
@@ -468,14 +467,6 @@ Partial Class datiutente
             Return
         End If
 
-        ' AUTH-STAY-SIGNED-IN-2B: l'e-mail serve a recuperare la password; da un dispositivo ricordato non si cambia.
-        If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) AndAlso tbEmailEdit IsNot Nothing AndAlso
-           Not String.Equals(TextBoxText(tbEmailEdit).Trim(), Convert.ToString(Session("LoginEmail")).Trim(), StringComparison.OrdinalIgnoreCase) Then
-            lblEsito.Text = KeepStoreStaySignedInWeb.FreshSignInMessage
-            e.Cancel = True
-            Return
-        End If
-
         Try
             Using conn As New MySqlConnection(ConnString)
                 conn.Open()
@@ -497,8 +488,7 @@ Partial Class datiutente
                         "u.Nazione = @Nazione, " & _
                         "u.Telefono = @Telefono, " & _
                         "u.Cellulare = @Cellulare, " & _
-                        "u.Fax = @Fax, " & _
-                        "u.Email = @Email " & _
+                        "u.Fax = @Fax " & _
                         "WHERE u.id = @UtentiId AND l.id = @LoginId"
 
                     Using cmd As New MySqlCommand(sqlUtente, conn, tr)
@@ -510,7 +500,6 @@ Partial Class datiutente
                         cmd.Parameters.AddWithValue("@Telefono", TextBoxText(tbTelefonoEdit))
                         cmd.Parameters.AddWithValue("@Cellulare", TextBoxText(tbCellulareEdit))
                         cmd.Parameters.AddWithValue("@Fax", TextBoxText(tbFaxEdit))
-                        cmd.Parameters.AddWithValue("@Email", TextBoxText(tbEmailEdit))
                         cmd.Parameters.AddWithValue("@UtentiId", utentiId)
                         cmd.Parameters.AddWithValue("@LoginId", loginId)
 
@@ -519,22 +508,7 @@ Partial Class datiutente
                         End If
                     End Using
 
-                    ' 2) Aggiorno anche la Email nella tabella login (se esiste)
-                    If tbEmailEdit IsNot Nothing Then
-                        Dim sqlLogin As String = _
-                            "UPDATE login " & _
-                            "SET Email = @Email " & _
-                            "WHERE id = @LoginId AND UtentiId = @UtentiId"
-
-                        Using cmdLogin As New MySqlCommand(sqlLogin, conn, tr)
-                            cmdLogin.Parameters.AddWithValue("@Email", TextBoxText(tbEmailEdit))
-                            cmdLogin.Parameters.AddWithValue("@LoginId", loginId)
-                            cmdLogin.Parameters.AddWithValue("@UtentiId", utentiId)
-                            If cmdLogin.ExecuteNonQuery() <> 1 Then
-                                Throw New InvalidOperationException("datiutente login update failed")
-                            End If
-                        End Using
-                    End If
+                    ' 2) (L'e-mail di accesso non si aggiorna piu da questa pagina.)
 
                     ' 3) Aggiorno / creo Destinazione Alternativa selezionata
                     AggiornaDestinazioneAlternativa(conn, tr, utentiId,
@@ -563,8 +537,7 @@ Partial Class datiutente
         End Try
     End Sub
 
-    Private Function ValidateMainProfileInput(ByVal tbEmail As TextBox,
-                                              ByVal tbIndirizzo As TextBox,
+    Private Function ValidateMainProfileInput(ByVal tbIndirizzo As TextBox,
                                               ByVal tbCap As TextBox,
                                               ByVal tbCitta As TextBox,
                                               ByVal tbProvincia As TextBox,
@@ -574,16 +547,6 @@ Partial Class datiutente
                                               ByVal tbFax As TextBox,
                                               ByRef message As String) As Boolean
         message = ""
-
-        Dim email As String = TextBoxText(tbEmail)
-        If String.IsNullOrWhiteSpace(email) OrElse Not LooksLikeEmail(email) Then
-            message = "Inserisci un indirizzo email valido."
-            Return False
-        End If
-        If email.Length > MaxEmailLength Then
-            message = "L'indirizzo email non puo superare " & MaxEmailLength.ToString() & " caratteri."
-            Return False
-        End If
 
         Dim indirizzo As String = TextBoxText(tbIndirizzo)
         Dim cap As String = TextBoxText(tbCap)

@@ -321,7 +321,8 @@
                                             </div>
                                             <div class="col-12 col-md-6">
                                                 <label class="form-label" for="txtEmail">Email</label>
-                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" Text='<%# Bind("email") %>' />
+                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" ReadOnly="true" Text='<%# Eval("email") %>' />
+                                                <div class="form-text">L'e-mail si cambia in <a href="my-account-edit.aspx">Dati account</a>, con la password attuale.</div>
                                             </div>
                                         </div>
                                     </div>
@@ -683,7 +684,8 @@
                                             </div>
                                             <div class="col-12 col-md-6">
                                                 <label class="form-label" for="txtEmail">Email</label>
-                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" Text='<%# Bind("email") %>' />
+                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" ReadOnly="true" Text='<%# Eval("email") %>' />
+                                                <div class="form-text">L'e-mail si cambia in <a href="my-account-edit.aspx">Dati account</a>, con la password attuale.</div>
                                             </div>
                                         </div>
                                     </div>
@@ -1049,7 +1051,8 @@
                                             </div>
                                             <div class="col-12 col-md-6">
                                                 <label class="form-label" for="txtEmail">Email</label>
-                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" Text='<%# Bind("email") %>' />
+                                                <asp:TextBox ID="txtEmail" runat="server" CssClass="form-control" ReadOnly="true" Text='<%# Eval("email") %>' />
+                                                <div class="form-text">L'e-mail si cambia in <a href="my-account-edit.aspx">Dati account</a>, con la password attuale.</div>
                                             </div>
                                         </div>
                                     </div>

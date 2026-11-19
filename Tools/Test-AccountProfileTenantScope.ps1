@@ -34,21 +34,23 @@ $nodeCode=@'
 const {DatabaseSync}=require('node:sqlite'),readline=require('node:readline');let db;
 function reset(){if(db)db.close();db=new DatabaseSync(':memory:');
 db.exec(`CREATE TABLE utenti(Id INTEGER PRIMARY KEY,AziendeId INTEGER,Abilitato INTEGER,Codice INTEGER,RagioneSociale TEXT,CognomeNome TEXT,Piva TEXT,CodiceFiscale TEXT,Email TEXT,Indirizzo TEXT,Cap TEXT,Citta TEXT,Provincia TEXT,Nazione TEXT,Telefono TEXT,Cellulare TEXT,Fax TEXT);
-CREATE TABLE login(id INTEGER PRIMARY KEY,UtentiId INTEGER,Abilitato INTEGER,UserName TEXT,Email TEXT,CognomeNome TEXT,UltimoAccesso TEXT);
+CREATE TABLE login(id INTEGER PRIMARY KEY,UtentiId INTEGER,Abilitato INTEGER,UserName TEXT,Email TEXT,CognomeNome TEXT,UltimoAccesso TEXT,Password TEXT COLLATE NOCASE);
 CREATE VIEW vlogin AS SELECT l.*,u.AziendeId,u.CognomeNome AS UtentiCognomeNome,u.Abilitato AS UtentiAbilitato FROM login l LEFT JOIN utenti u ON l.UtentiId=u.Id;
 CREATE TABLE logoperazioni(id INTEGER PRIMARY KEY,UtentiId INTEGER);
 CREATE TRIGGER synthetic_user_update AFTER UPDATE ON utenti BEGIN INSERT INTO logoperazioni(UtentiId) VALUES(NEW.Id); END;`);
 for(const [company,user,login] of [[1,701,101],[2,702,202]]){
 db.prepare('INSERT INTO utenti VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(user,company,1,user,'SYNTHETIC-COMPANY-'+company,'SYNTHETIC-NAME-'+company,'SYNTHETIC-VAT','SYNTHETIC-TAX','fixture'+company+'@example.invalid','SYNTHETIC-ADDRESS','00100','SYNTHETIC-CITY','RM','IT','+39 123','456','789');
-db.prepare('INSERT INTO login VALUES(?,?,?,?,?,?,?)').run(login,user,1,'SYNTHETIC-LOGIN-'+company,'fixture'+company+'@example.invalid','SYNTHETIC-LOGIN-NAME','2026-10-24 10:00:00');}
-db.prepare('INSERT INTO login SELECT 303,UtentiId,Abilitato,UserName,Email,CognomeNome,UltimoAccesso FROM login WHERE id=101').run();return {ok:true};}
+db.prepare('INSERT INTO login VALUES(?,?,?,?,?,?,?,?)').run(login,user,1,'SYNTHETIC-LOGIN-'+company,'fixture'+company+'@example.invalid','SYNTHETIC-LOGIN-NAME','2026-10-24 10:00:00','SyntheticCurrent1');}
+db.prepare('INSERT INTO login SELECT 303,UtentiId,Abilitato,UserName,Email,CognomeNome,UltimoAccesso,Password FROM login WHERE id=101').run();return {ok:true};}
 function translate(sql){let q=sql.replace(/ FOR UPDATE\s*$/i,'');
+// MySQL BINARY operand = exact byte comparison; SQLite: explicit binary collation on that operand (the column is NOCASE).
+q=q.replace(/\bBINARY (\S+)/g,'($1 COLLATE BINARY)');
 const m=q.match(/^UPDATE (\w+) (\w+) INNER JOIN (\w+) (\w+) ON (.*?) SET (.*?) WHERE (.*)$/i);
 if(m){const set=m[6].replace(new RegExp('\\b'+m[2]+'\\.(\\w+)(?=\\s*=)','g'),'$1');q=`UPDATE ${m[1]} AS ${m[2]} SET ${set} FROM ${m[3]} AS ${m[4]} WHERE (${m[5]}) AND (${m[7]})`;}
 return q;}
 function request(x){switch(x.op){
 case 'reset':return reset();case 'begin':db.exec('BEGIN');return {ok:true};case 'commit':db.exec('COMMIT');return {ok:true};case 'rollback':db.exec('ROLLBACK');return {ok:true};
-case 'snapshot':return {users:db.prepare('SELECT * FROM utenti ORDER BY Id').all(),logins:db.prepare('SELECT * FROM login ORDER BY id').all(),logs:db.prepare('SELECT * FROM logoperazioni ORDER BY id').all()};
+case 'snapshot':return {users:db.prepare('SELECT * FROM utenti ORDER BY Id').all(),logins:db.prepare('SELECT id,UtentiId,Abilitato,UserName,Email,CognomeNome,UltimoAccesso FROM login ORDER BY id').all(),logs:db.prepare('SELECT * FROM logoperazioni ORDER BY id').all()};
 case 'mutate':{
  const id=x.id; switch(x.kind){case 'disable-login':db.prepare('UPDATE login SET Abilitato=0 WHERE id=?').run(id);break;case 'disable-user':db.prepare('UPDATE utenti SET Abilitato=0 WHERE Id=?').run(x.user);break;case 'reassign-owner':db.prepare('UPDATE login SET UtentiId=? WHERE id=?').run(x.otherUser,id);break;case 'move-company':db.prepare('UPDATE utenti SET AziendeId=? WHERE Id=?').run(x.otherCompany,x.user);break;case 'delete-login':db.prepare('DELETE FROM login WHERE id=?').run(id);break;case 'delete-user':db.prepare('DELETE FROM utenti WHERE Id=?').run(x.user);break;default:throw Error('UNKNOWN_MUTATION');}return {ok:true};}
 case 'query':{const q=translate(x.sql),statement=db.prepare(q);statement.setAllowUnknownNamedParameters(true);const p={};for(const [k,v]of Object.entries(x.parameters))p[k.replace(/^[@?]/,'')]=v;
@@ -340,11 +342,14 @@ Public Class Runner
             Case "first-zero","first-two","first-negative","second-zero","second-two" : Fixture.OverrideUpdate=If(scenario.StartsWith("first"),1,2):Fixture.OverrideCount=If(scenario.EndsWith("zero"),0,If(scenario.EndsWith("negative"),-1,2))
         End Select
         Dim before=Fixture.Send("snapshot")
+        If scenario="stale-session-email" Then session("LoginEmail")="updated" & company.ToString() & "@example.invalid"
         Dim instance As Object=If(candidate,DirectCast(New ProfileCandidate(),Object),New ProfileBaseline())
         instance.hidUtentiId.Value=If(scenario="hidden-owner",If(company=1,702,701).ToString(),Fixture.UserId.ToString())
         instance.txtEmail.Text=If(scenario="unchanged","fixture" & company.ToString() & "@example.invalid","updated" & company.ToString() & "@example.invalid")
         instance.txtTelefono.Text=If(scenario="unchanged","+39 123","+39 987")
         instance.txtCellulare.Text=If(scenario="unchanged","456",""):instance.txtFax.Text=If(scenario="unchanged","789","")
+        ' AUTH-EMAIL-CHANGE-PASSWORD-1B: synthetic current password; an unchanged e-mail must not need it.
+        instance.txtCurrentPassword.Text=If(scenario="unchanged" OrElse scenario="empty-password" OrElse scenario="stale-session-email","",If(scenario="wrong-password","SyntheticWrong1",If(scenario="case-password","syntheticcurrent1",If(scenario="padded-password"," SyntheticCurrent1","SyntheticCurrent1"))))
         ' Blank address inputs keep existing values through the real MergeText contract.
         If scenario="invalid-email" Then instance.txtEmail.Text="SYNTHETIC-NOT-EMAIL"
         If scenario="invalid-phone" Then instance.txtTelefono.Text="SYNTHETIC-NOT-PHONE"
@@ -368,7 +373,7 @@ Public Class Runner
             {"Reads",Fixture.Reads},{"Writes",Fixture.Writes},{"Opens",Fixture.Opens},{"Begins",Fixture.Begins},{"Commits",Fixture.Commits},{"Rollbacks",Fixture.Rollbacks},
             {"Sql",Fixture.SqlLog.ToArray()},{"Success",instance.pnlMessage.CssClass="alert alert-success mb-4"},{"Message",instance.litMessage.Text},
             {"Email",instance.txtEmail.Text},{"ProfileVisible",instance.pnlProfile.Visible},{"Status",context.Response.StatusCode},{"Location",context.Response.RedirectLocation},
-            {"MatchedConnection",Fixture.MatchedConnection},{"SettingsPreserved",Fixture.SettingsPreserved},{"LoginId",Convert.ToString(session("LoginId"))},{"UserId",Convert.ToString(session("UtentiId"))},{"Listino",Convert.ToString(session("Listino"))}}
+            {"LoginEmail",Convert.ToString(session("LoginEmail"))},{"CurrentPasswordField",instance.txtCurrentPassword.Text},{"MatchedConnection",Fixture.MatchedConnection},{"SettingsPreserved",Fixture.SettingsPreserved},{"LoginId",Convert.ToString(session("LoginId"))},{"UserId",Convert.ToString(session("UtentiId"))},{"Listino",Convert.ToString(session("Listino"))}}
         Fixture.DatabaseScope="SYNTHETIC-DATABASE-SCOPE"
         Return Fixture.Json.Serialize(result)
     End Function
@@ -432,6 +437,21 @@ try{
             Check ($company.ToString()+$mode+$case+' validation message retained without writes') (!$r.Success -and $r.Message -ceq $b.Message -and $r.Writes -eq 0 -and $r.Commits -eq 0)
         }
     }}
+    # AUTH-EMAIL-CHANGE-PASSWORD-1B: the e-mail changes only with the exact current password, checked by the writing statement itself.
+    Check 'e-mail change predicate is exact and inside the first update' ($candidate -match 'If emailChanged Then sqlUtente &= " AND BINARY l\.Pass" & "word = BINARY @CurrentPassword"')
+    foreach($company in @(1,2)){
+        foreach($case in @('wrong-password','case-password','padded-password','empty-password','stale-session-email')){
+            $r=Run $true $company $case
+            $expectedWrites=if($case -in @('empty-password','stale-session-email')){0}else{1}
+            Check ($company.ToString()+$case+' e-mail change refused without the exact current password') (!$r.Success -and $r.Message -match 'password attuale' -and $r.Commits -eq 0 -and $r.Writes -eq $expectedWrites -and ($r.Before|ConvertTo-Json -Depth 8 -Compress) -ceq ($r.After|ConvertTo-Json -Depth 8 -Compress))
+            Check ($company.ToString()+$case+' password field cleared and session e-mail not refreshed on refusal') ($r.CurrentPasswordField -eq '' -and ($case -eq 'stale-session-email' -or $r.LoginEmail -eq ''))
+        }
+        $r=Run $true $company 'save'
+        Check ($company.ToString()+' session e-mail refreshed after commit and password field cleared') ($r.Success -and $r.LoginEmail -ceq ('updated'+$company+'@example.invalid') -and $r.CurrentPasswordField -eq '')
+        Check ($company.ToString()+' current password travels only as a typed parameter of the first update') (@($r.Sql|Where-Object{$_.Parameters.PSObject.Properties.Name -contains '@CurrentPassword'}).Count -eq 1 -and $r.Sql[1].Sql -match 'BINARY @CurrentPassword$')
+        $r=Run $true $company 'unchanged'
+        Check ($company.ToString()+' unchanged e-mail needs no password and adds no predicate') ($r.Success -and $r.Writes -eq 2 -and @($r.Sql|Where-Object{$_.Sql -match 'CurrentPassword'}).Count -eq 0)
+    }
     $b=Run $false 1 'same-owner-second-login';$r=Run $true 1 'same-owner-second-login'
     Check 'multiple login rows per same owner retain exact current login' ($r.Success -and ($r.After|ConvertTo-Json -Depth 8 -Compress) -ceq ($b.After|ConvertTo-Json -Depth 8 -Compress))
     foreach($company in @(1,2)){

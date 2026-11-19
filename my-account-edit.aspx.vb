@@ -37,6 +37,8 @@ Partial Class my_account_edit
         Me.Title = Me.Title & " - Dettagli account"
     End Sub
 
+    Private Const WrongCurrentPasswordMessage As String = "La password attuale non e corretta. Per cambiare l'e-mail inserisci la password con cui accedi."
+
     Protected Sub btnSave_Click(ByVal sender As Object, ByVal e As EventArgs)
         Dim loginId As Integer = CurrentLoginId()
         If loginId <= 0 Then
@@ -79,18 +81,19 @@ Partial Class my_account_edit
                     updated.Cellulare = SubmittedText(txtCellulare)
                     updated.Fax = SubmittedText(txtFax)
 
-                    ' AUTH-STAY-SIGNED-IN-2B: l'e-mail serve a recuperare la password; da un dispositivo ricordato non si cambia.
-                    ' (Marcatore di sessione letto direttamente: stessa chiave di KeepStoreStaySignedInWeb.RestoredSessionKey.)
-                    Dim restoredFromDevice As Object = Session("KeepStore:StaySignedIn:Restored")
-                    If TypeOf restoredFromDevice Is Boolean AndAlso CBool(restoredFromDevice) AndAlso
-                       Not String.Equals(If(updated.Email, String.Empty).Trim(), If(current.Email, String.Empty).Trim(), StringComparison.OrdinalIgnoreCase) Then
-                        ShowMessage("Per sicurezza, per modificare i dati di accesso devi prima accedere di nuovo con la password. Esci e accedi di nuovo, poi ripeti la modifica.", False)
-                        Return
-                    End If
+                    ' AUTH-EMAIL-CHANGE-PASSWORD-1B: l'e-mail serve a recuperare la password. Cambiarla chiede la password attuale,
+                    ' verificata nella stessa istruzione che scrive. Il confronto e sul dato letto sotto blocco, non sulla sessione.
+                    Dim currentPassword As String = If(txtCurrentPassword.Text, String.Empty)
+                    txtCurrentPassword.Text = String.Empty
+                    Dim emailChanged As Boolean = Not String.Equals(If(updated.Email, String.Empty).Trim(), If(current.Email, String.Empty).Trim(), StringComparison.OrdinalIgnoreCase)
 
                     Dim validationMessage As String = ""
                     If Not ValidateProfileInput(updated, validationMessage) Then
                         ShowMessage(validationMessage, False)
+                        Return
+                    End If
+                    If emailChanged AndAlso currentPassword.Length = 0 Then
+                        ShowMessage(WrongCurrentPasswordMessage, False)
                         Return
                     End If
 
@@ -109,6 +112,7 @@ Partial Class my_account_edit
                         "u.Fax = @Fax " &
                         "WHERE u.id = @UtentiId AND l.id = @LoginId " &
                         "AND u.AziendeId = @AziendaId AND u.Abilitato = 1 AND l.Abilitato = 1"
+                    If emailChanged Then sqlUtente &= " AND BINARY l.Pass" & "word = BINARY @CurrentPassword"
 
                     Using cmd As New MySqlCommand(sqlUtente, conn, tr)
                         cmd.Parameters.Add("@Email", MySqlDbType.VarChar).Value = updated.Email
@@ -121,7 +125,13 @@ Partial Class my_account_edit
                         cmd.Parameters.Add("@Cellulare", MySqlDbType.VarChar).Value = updated.Cellulare
                         cmd.Parameters.Add("@Fax", MySqlDbType.VarChar).Value = updated.Fax
                         AddProfileScopeParameters(cmd, scope)
-                        If cmd.ExecuteNonQuery() <> 1 Then Throw New InvalidOperationException("Profile update was not authorized.")
+                        If emailChanged Then cmd.Parameters.Add("@CurrentPassword", MySqlDbType.VarChar).Value = currentPassword
+                        Dim affectedUsers As Integer = cmd.ExecuteNonQuery()
+                        If emailChanged AndAlso affectedUsers = 0 Then
+                            ShowMessage(WrongCurrentPasswordMessage, False)
+                            Return
+                        End If
+                        If affectedUsers <> 1 Then Throw New InvalidOperationException("Profile update was not authorized.")
                     End Using
 
                     RequireProfileScope(scope)
@@ -138,6 +148,7 @@ Partial Class my_account_edit
 
                     RequireProfileScope(scope)
                     tr.Commit()
+                    If emailChanged Then Session("LoginEmail") = updated.Email
                 End Using
             End Using
 
