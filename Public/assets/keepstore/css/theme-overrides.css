@@ -3363,6 +3363,8 @@ body.ks-page-home .ks-ai130-shell { grid-template-columns: minmax(0, 1fr); }
   .ks-header-ui .ks-dept-link[aria-current] { border-bottom-color: Highlight; }
 }
 
+/* CART-BOTTOM-BLANK-LINES-1A: a carrello vuoto il riquadro tiene 32 px dal piede (prima lo facevano due righe vuote nel markup). */
+.ks-cart-page .ks-cart-empty-card { margin-bottom: 32px; }
 /* ===== UX-COMPACT-SPACING-SITEWIDE-1B - telefono: meno vuoto sopra e sotto il contenuto (richiesta del PO del 2026-11-19). =====
    SOLO nelle pagine elencate: contatti; area personale, documenti, dati account, cambio password, lista desideri, dati utente;
    indirizzi. Mai una regola su tutte le sezioni: scheda prodotto, carrello, ricevuta e dettaglio ordine restano come sono. */

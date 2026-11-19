@@ -1606,8 +1606,6 @@
 <asp:validationsummary id="ValidationSummary1" runat="server" HeaderText="Attenzione!" ShowMessageBox="True" ShowSummary="False"></asp:validationsummary>
 		                
     <!--<script type="text/javascript" language="Javascript" src="Public/script/slide.js"> </script> -->
-<br />
-    <br />
 	<!-- Controllo se esiste l'immagine -->
 
 <asp:Panel ID="pLegacyCheckoutBindings" runat="server" Visible="false" style="display:none;">
