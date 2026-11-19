@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-EMAIL-CHANGE-PASSWORD-1B — 19/11/2026 — SOURCE (password attuale per cambiare l'e-mail di accesso)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#573](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/573), stable `aa2d8f21`.** Mandato del PO del 2026-11-19 («Si, procedi»). Con 1A (#571) chiude la richiesta «vecchia password richiesta per cambiare i dati di accesso» per il browser collegato. Area CRITICAL: autenticazione.
+
+**Fatti e causa (misurati sul sito LAB con il test rosso).** `my-account-edit.aspx.vb` e `datiutente.aspx.vb` scrivevano `login.Email` e `utenti.Email` senza password; l'e-mail con codice fiscale o partita IVA (mostrati nella stessa pagina) e cio che serve al recupero della password.
+
+**Revisioni.** ChatGPT (xhigh): accolti password grezza senza tagli, pulizia completa della vecchia pagina (validazione e confronto con la sessione), adeguamento del test esistente; il suo «bloccante» sulla corsa con il recupero e RIMANDATO a 1C con prova (servono casella vecchia e codice fiscale, cioe i mezzi con cui il recupero era gia possibile). Claude (Opus): accolti controllo dopo la validazione dei dati, 0 righe = password errata perche la riga e gia bloccata, colonna di prova non sensibile alle maiuscole per non far sopravvivere il mutante sul confronto esatto, campo senza validatori e senza invito al riempimento automatico. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-EmailChangePassword.ps1`: sorgenti, 15 mutanti, 16 controlli reali sul sito LAB; `Tools/Test-AccountProfileTenantScope.ps1` adeguato, 639 controlli (erano 604), 9 mutazioni di comportamento rilevate (si esegue con un `node.exe` 22+ nel PATH); `Test-StaySignedInPages` adeguato e verde con il LAB; campo nel browser a 390 e 1280 px; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Codici di recupero gia inviati validi fino a scadenza e corsa con il recupero (`AUTH-RESET-EMAIL-RACE-1C`); riempimento automatico del browser non escludibile; nessun limite ai tentativi; unicita dell'e-mail non controllata; blocco delle righe non provato dall'ambiente SQLite. **Alla consegna (insieme a 1A):** `my-account-edit.aspx`, `my-account-edit.aspx.vb`, `datiutente.aspx`, `datiutente.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-CREDENTIALS-OLD-PASSWORD-1A — 19/11/2026 — SOURCE (dati di accesso: mai la password verso il browser)
 
 **Esito: A per il task 1A (SOURCE, non pubblicato). Livello L. PR [#571](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/571), stable `a3109e01`.** Richiesta del PO del 2026-11-19 («vecchia password richiesta per cambiare i dati di accesso»). Area CRITICAL: autenticazione. **Il requisito generale resta aperto fino a `AUTH-EMAIL-CHANGE-PASSWORD-1B`.**
