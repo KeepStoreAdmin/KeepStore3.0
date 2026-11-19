@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## PRODUCT-PHOTOS-SYSTEM-1A — 20/11/2026 — DOCS (foto dei prodotti piu nitide e belle: il sistema)
+
+**Esito: A (solo documenti, nessun file del prodotto). Lavoro esente. Documento: [sistema per le foto](KEEPSTORE_PRODUCT_PHOTOS_SYSTEM_2026_11_20.md).** Richiesta del PO: «Esiste un sistema per rendere la visualizzazione delle foto nel sito piu brillanti e piu belle? [...] confrontati con ChatGPT, fate ricerca e poi procedete».
+
+**Fatti e causa.** 14 foto reali misurate (780-1.523 px, 25-639 KB, sfondi misti, prodotto dal 34% al 100% dell'inquadratura); servite a piena grandezza senza scelta della misura. Miniature `_nomefile` da 150 px gia sul server, usate dalla HOME come seconda immagine in riquadri da 200-290 px (sfocata). Esperimento su 6 foto a densita 1 e 2: la copia della misura esatta e sfocata sui telefoni; la copia doppia e uguale all'originale con un peso 13 volte minore (1.964 -> 146 KB); la copia doppia con nitidezza leggera e visibilmente piu definita. Ingrandimento della scheda prodotto dichiarato sempre 800 x 800.
+
+**Revisioni.** ChatGPT (xhigh): accolti tre bloccanti (nessun ritocco automatico di sfondo, ritaglio o colore; limiti e isolamento per azienda del gestore delle copie; nessun download dal server di indirizzi esterni), la richiesta di una prova concreta prima di decidere (fatta: l'esperimento), le correzioni all'audit (riquadri gia bianchi in HOME e catalogo, miniature esistenti, ingrandimento con misure false, cambio della foto che deve aggiornare anche l'elenco delle misure). Scartato «iniziare senza nitidezza» come regola: l'esperimento mostra il beneficio; resta l'obbligo di provarla contro gli aloni. Claude: non richiesta (lavoro esente).
+
+**Prove.** Nessun test (documenti). Immagini del confronto in `.ai-review/product-photos-system-1a/` (locali).
+
+**Limiti e residuo (NON AVVIATO).** Campione di un solo negozio; 5 foto sul PC di sviluppo; durata della memoria delle foto nel browser = impostazione del server (PO ed Enzo). Task nell'ordine del documento: `PHOTO-HOME-HOVER-SHARP-1A`, `PHOTO-ZOOM-REAL-SIZE-1A`, `PHOTO-DERIVED-COPIES-1A` (livello L), `PHOTO-QUALITY-REPORT-1A`, `PHOTO-APPROVED-ENHANCE-1A`. CONSEGNA SERVER SOSPESA.
+
 ## PDP-BUNDLE-PRICE-GAP-1A — 20/11/2026 — SOURCE (prezzi separati in «Spesso acquistati insieme»)
 
 **Esito: A (SOURCE, non pubblicato). Livello S. PR [#594](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/594), stable `97e78e39`.** Il PO: «il prezzo standard ed il prezzo promo, sono attaccati, senza spazio». Ora i due prezzi sono separati di 12 px (a capo se lo spazio non basta) e il testo ha uno spazio fra i due importi. Nessun importo, promozione, colore o misura cambia.
