@@ -3053,7 +3053,13 @@ Partial Public Class _Default
         sb.Append("<div class='card-product-wrapper'>")
         sb.Append("<a href='").Append(ProductUrl(row("id"))).Append("' class='product-img'>")
         sb.Append("<img class='img-product lazyload' decoding='async' src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' data-src='").Append(EncodeAttr(StorefrontProductImageSlots.CoverUrl(row))).Append("' alt='").Append(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))).Append("'>")
-        sb.Append("<img class='img-hover lazyload' loading='lazy' decoding='async' src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' data-src='").Append(EncodeAttr(ProductImageThumb(StorefrontProductImageSlots.HoverUrl(row)))).Append("' alt='' aria-hidden='true'>")
+        ' PHOTO-HOME-HOVER-SHARP-1A: la seconda immagine parte dalla miniatura (leggera); la foto piena viaggia in un attributo solo quando e
+        ' diversa, e home-default.js la carica al primo passaggio del mouse (i telefoni non scaricano nulla in piu).
+        Dim hoverFull As String = StorefrontProductImageSlots.HoverUrl(row)
+        Dim hoverShown As String = ProductImageThumb(hoverFull)
+        sb.Append("<img class='img-hover lazyload' loading='lazy' decoding='async' src='").Append(EncodeAttr(hoverShown)).Append("' data-src='").Append(EncodeAttr(hoverShown))
+        If Not String.Equals(hoverFull, hoverShown, StringComparison.Ordinal) Then sb.Append("' data-ks-hover-full='").Append(EncodeAttr(hoverFull))
+        sb.Append("' alt='' aria-hidden='true'>")
         sb.Append("</a>")
         Dim informativeOnly As Boolean = row.Table.Columns.Contains("HomeInformativeOnly") AndAlso
                                        Not IsDBNull(row("HomeInformativeOnly")) AndAlso Convert.ToBoolean(row("HomeInformativeOnly"))

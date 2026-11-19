@@ -255,7 +255,7 @@ $js = Read-Repo 'Public/assets/keepstore/js/home-default.js'
 $aspx = Read-Repo 'Default.aspx'
 Assert-Source (Test-JsWiring $js) 'HOME_DEFAULT_JS_MARKS_GUIDE_FAILED_IN_FINALLY'
 Assert-Source (Test-NoscriptBlock $aspx) 'DEFAULT_ASPX_NOSCRIPT_BLOCK_RESTORES_FALLBACK'
-Assert-Source ($aspx -match 'js/home-default\.js"\) & "\?v=20261116-guide-cls1a"') 'HOME_DEFAULT_JS_BUSTER_BUMPED'
+Assert-Source ($aspx -match 'js/home-default\.js"\) & "\?v=20261120-hover-full1a"') 'HOME_DEFAULT_JS_BUSTER_BUMPED'
 Assert-Source (-not $js.Contains('window.setTimeout(function () { var r = document.getElementById(''KsLocalAiSearch130'')')) 'NO_TIME_BASED_WATCHDOG'
 if (-not $SkipMutations) {
     Assert-Detected (Test-JsWiring (Mutate-Text $js "      else root.setAttribute('data-ks-guide-failed', '1');" '      else { }' 'J1')) 'J1_FAILED_NEVER_SET'

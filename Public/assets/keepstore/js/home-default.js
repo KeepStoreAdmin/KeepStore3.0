@@ -246,3 +246,44 @@
     window.__ksHomeResizeTimer = window.setTimeout(initHome, 180);
   });
 })();
+
+// PHOTO-HOME-HOVER-SHARP-1A. Nelle schede della HOME la seconda immagine parte dalla miniatura; al PRIMO passaggio del mouse (o della
+// penna) si precarica la foto piena indicata dal server in data-ks-hover-full e, solo se arriva, la si mostra aggiornando insieme src e
+// data-src (cosi il caricamento differito non rimette la miniatura). Con il tocco non si carica nulla. Registrazione unica.
+(function () {
+  'use strict';
+
+  if (window.__ksHomeHoverFullBound) return;
+  window.__ksHomeHoverFullBound = true;
+
+  function isLocalUrl(value) {
+    return typeof value === 'string' && value.charAt(0) === '/' && value.charAt(1) !== '/';
+  }
+
+  document.addEventListener('pointerover', function (e) {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+    var wrap = e.target && e.target.closest ? e.target.closest('.ks-grid-card .card-product-wrapper') : null;
+    if (!wrap) return;
+    var img = wrap.querySelector('img.img-hover[data-ks-hover-full]');
+    if (!img || img.getAttribute('data-ks-hover-state')) return;
+    var full = img.getAttribute('data-ks-hover-full');
+    if (!isLocalUrl(full)) {
+      img.setAttribute('data-ks-hover-state', 'blocked');
+      return;
+    }
+    img.setAttribute('data-ks-hover-state', 'pending');
+    var loader = new Image();
+    img.__ksHoverLoader = loader;
+    loader.onload = function () {
+      img.setAttribute('data-src', full);
+      img.src = full;
+      img.setAttribute('data-ks-hover-state', 'done');
+      img.__ksHoverLoader = null;
+    };
+    loader.onerror = function () {
+      img.setAttribute('data-ks-hover-state', 'failed');
+      img.__ksHoverLoader = null;
+    };
+    loader.src = full;
+  }, true);
+})();
