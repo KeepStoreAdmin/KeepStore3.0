@@ -206,6 +206,68 @@
             body.ks-page-home .ks-home-main .ks-home-direct-category-link { transition: none; }
         }
     </style>
+    <style id="ksHomeDealProgressStyles">
+        /* HOME-DEAL-PROGRESS-1A: barra delle vendite nelle occasioni. */
+        body.ks-page-home .ks-home-deals .ks-deal-card .product-progress-sale.ks-deal-progress {
+            display: grid;
+            gap: 6px;
+            margin-top: 0;
+            min-height: 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
+        body.ks-page-home .ks-home-deals .ks-deal-progress__head,
+        body.ks-page-home .ks-home-deals .ks-deal-progress__numbers {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+            margin: 0;
+        }
+        body.ks-page-home .ks-home-deals .ks-deal-progress__head strong { color: var(--primary, #D80027); font-weight: 700; }
+        body.ks-page-home .ks-home-deals .ks-deal-progress__numbers p { margin: 0; color: #555; }
+        body.ks-page-home .ks-home-deals .ks-deal-progress__numbers .fw-bold { color: #111; }
+        body.ks-page-home .ks-home-deals .ks-deal-card .ks-deal-progress .ks-deal-progress__track {
+            height: 8px;
+            border-radius: 999px;
+            background: #e9ecef;
+            overflow: hidden;
+        }
+        body.ks-page-home .ks-home-deals .ks-deal-card .ks-deal-progress .ks-deal-progress__bar {
+            height: 100%;
+            border-radius: 999px;
+            background: var(--primary, #D80027);
+        }
+        body.ks-page-home .ks-home-deals .swiper-wrapper { align-items: stretch; }
+        body.ks-page-home .ks-home-deals .swiper-slide { height: auto; display: flex; }
+        body.ks-page-home .ks-home-deals .swiper-slide > .ks-deal-card { flex: 1 1 auto; height: auto; }
+        /* Scheda compatta (richiesta del PO del 2026-11-19): nessuno spazio riservato vuoto fra categoria, titolo, prezzo e disponibilita.
+           Questo blocco si carica PRIMA di theme-overrides.css: ogni regola ha un selettore piu specifico di quella che sostituisce.
+           Effetto voluto: in una fila la scheda con il prezzo a quantita ha la disponibilita piu in basso delle altre; il piede resta in fondo. */
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .card-product-info { gap: 8px !important; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--gallery { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-thumbs { margin: 8px 0 4px; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--category { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--category .ks-card-category { height: auto !important; min-height: 0 !important; margin: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .name-product { margin-bottom: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--price .ks-home-price-stack { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--price .ks-deal-price-amount-slot { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--price .ks-deal-price-tier-slot { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .price-wrap.ks-home-price-slot { height: auto; min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--availability { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--availability .ks-availability { margin-top: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--countdown { min-height: 0; }
+        body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .box-infor-detail { gap: 12px !important; padding-top: 4px; }
+        @media (min-width: 768px) {
+            body.ks-page-home #ksHomePage .ks-home-deals .ks-deal-card .ks-deal-slot--gallery { min-height: 56px; }
+        }
+        /* Fine scheda compatta */
+        @media (forced-colors: active) {
+            body.ks-page-home .ks-home-deals .ks-deal-card .ks-deal-progress .ks-deal-progress__track { border: 1px solid CanvasText; }
+            body.ks-page-home .ks-home-deals .ks-deal-card .ks-deal-progress .ks-deal-progress__bar { background: Highlight; }
+        }
+    </style>
     <style id="ksHomeOffersHandoffStyles">
         body.ks-page-home .ks-home-main .ks-home-offers-catalog-link {
             min-width: 44px;

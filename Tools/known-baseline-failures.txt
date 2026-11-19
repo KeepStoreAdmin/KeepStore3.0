@@ -21,7 +21,6 @@ Test-PayPalWebhookFlow # caso WEBHOOK_CASE_FAILED_complete_fixture_handler_HTTP_
 Test-HomeAdaptiveExperience # pin "tutto il VB esistente, query, renderer commerciali e #413 invariati" contro una baseline storica (verificato su b223e959)
 Test-HomeBestSellerClaim # pin "intero VB identico senza commenti" contro la baseline storica 3566479c (verificato su b223e959)
 Test-HomeCommercialMerchandising # cerca il metodo GetPureTopSellingPool, che non esiste piu in Default.aspx.vb (task superato, verificato su b223e959)
-Test-HomeSalesPublicClaims # pin "tutto il sorgente fuori dai due metodi di rendering identico" contro una baseline storica (verificato su b223e959)
 Test-HomeVetrinaWebEligibility # pin "tutto il VB fuori dal caricatore e da BindHome invariato" contro una baseline storica (verificato su b223e959)
 Test-StorefrontPricingAccountIsolation # asserzione VISIBLE_PRICE_LISTINO_FAIL_CLOSED fallisce gia sulla stable (verificato su b223e959)
 Test-StorefrontPromotionBulkPerformance # 18 su 19: "full-pool resolution is retained only when promotion authorization is required" fallisce gia sulla stable (verificato su b223e959)
@@ -39,3 +38,4 @@ Test-LabCartCheckoutSmoke # S01_LOGIN_SYNTHETIC_USER: serve il sito LAB acceso c
 Test-LabAvailabilityVisitorRule # V05_PRODUCT_SHOWS_WORDS synthetic=0: serve il sito LAB con i dati sintetici (verificato su d4f5bdba, worktree pulito)
 Test-AccountOrderContinuity # richiede -EvidenceDirectory (nuova cartella in TEMP); e con la cartella fallisce gia sulla stable con OUTSIDE_PAYMENT_PRESENTATION_CHANGED documenti.aspx.vb: il confronto con una base vecchia (verificato su 8541cf57, worktree pulito) | dopo KS-DASHBOARD-ORDERS-1B (2026-11-18) fallisce prima, con METHOD_NOT_UNIQUE GetPaymentStatusLabel in myaccount.aspx.vb (funzioni dell elenco recente rimosse)
 Test-PersistentCartLoginMerge # richiede il parametro obbligatorio -ScratchConfigPath (configurazione fuori dal repository): senza, PowerShell si ferma prima di ogni controllo; i file che legge (login.aspx.vb, logout.aspx.vb, Page.master.vb) non sono cambiati in KS-QA-BROWSER-1A
+Test-HomePerfCaches # CACHE_HELPER_USED_ONLY_BY_THE_TWO_REVIEWED_CALLERS: App_Code/KeepStoreContactChannels.vb usa la cache dalla PR 551 (3e59d2ff), gia sulla stable 632e2bb6

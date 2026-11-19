@@ -402,7 +402,11 @@ Partial Public Class _Default
 
         ' Rotazione: dai candidati GIA idonei, distinti e ordinati dalla regola commerciale si estrae un sottoinsieme diverso a ogni richiesta
         ' (i mostrati l'ultima volta vanno in coda). Prezzi e promozioni restano quelli del resolver autorevole.
+        Using HomeServerStageTiming.Measure(_homeTiming, "pool.deals.sold")
+            ApplyDealSoldUnits(dealPool)
+        End Using
         dealPool = RotateHomePool("deals", dealPool, 6, usedBusinessKeys, usedDisplayKeys)
+        dealPool = PrioritizeSoldDeals(dealPool)
         Dim dealRows As DataTable = TakeDiverseRows(6, usedBusinessKeys, usedDisplayKeys, dealPool)
         RememberHomeSelection("deals", dealRows)
         rptDealOfDay.DataSource = dealRows
@@ -938,6 +942,60 @@ Partial Public Class _Default
         Return SortAuthorizedDealRows(authorized, limit)
     End Function
 
+    ' HOME-DEAL-PROGRESS-1A (decisione del PO del 2026-11-19: "tutte le vendite"). I venduti di un'occasione sono la STESSA misura commerciale
+    ' usata per "I piu scelti dai clienti" (BuildHomeCommercialActivitySql): per articolo, il maggiore fra quantita ordinate e quantita
+    ' scaricate, ultimi 12 mesi, azienda dell'host, stati non annullati. Una sola lettura per tutti gli articoli candidati; ogni errore
+    ' lascia i venduti a zero (nessuna barra), senza fermare la HOME. Restituisce False se la lettura non e riuscita.
+    Private Function ApplyDealSoldUnits(ByVal pool As DataTable) As Boolean
+        If IsTableEmpty(pool) OrElse Not pool.Columns.Contains("QtaVenduta") Then Return False
+        Dim ids As New List(Of Integer)()
+        Dim seen As New HashSet(Of Integer)()
+        For Each row As DataRow In pool.Rows
+            Dim id As Integer = SafeInt(row("id"))
+            If id > 0 AndAlso seen.Add(id) AndAlso ids.Count < DealSoldUnitsMaxArticles Then ids.Add(id)
+        Next
+        If ids.Count = 0 Then Return False
+        Dim idList As String = String.Join(",", ids.ConvertAll(Function(value As Integer) value.ToString(CultureInfo.InvariantCulture)).ToArray())
+        Dim sold As New Dictionary(Of Integer, Decimal)()
+        Try
+            Using conn As New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+                conn.Open()
+                Using cmd As New MySqlCommand("SELECT x.ArticoliId, x.CommercialScore FROM (" & BuildHomeCommercialActivitySql(idList) & ") x", conn)
+                    cmd.Parameters.Add("@commercialCompany", MySqlDbType.Int32).Value = GetCurrentAziendaId()
+                    cmd.Parameters.Add("@commercialStart", MySqlDbType.Date).Value = Date.Today.AddMonths(-12)
+                    cmd.Parameters.Add("@commercialEnd", MySqlDbType.Date).Value = Date.Today.AddDays(1)
+                    Using reader As MySqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            If reader.IsDBNull(0) OrElse reader.IsDBNull(1) Then Continue While
+                            sold(Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture)) = Convert.ToDecimal(reader.GetValue(1), CultureInfo.InvariantCulture)
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            KeepStoreLog.Error("home-deal-progress", "Deal sold units unavailable. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+            Return False
+        End Try
+        pool.Columns("QtaVenduta").ReadOnly = False
+        For Each row As DataRow In pool.Rows
+            Dim units As Decimal = 0D
+            If sold.TryGetValue(SafeInt(row("id")), units) AndAlso units > 0D Then row("QtaVenduta") = units Else row("QtaVenduta") = 0D
+        Next
+        Return True
+    End Function
+
+    ' Prima le occasioni che hanno vendite; dentro ciascun gruppo resta l'ordine ricevuto (regola commerciale e rotazione).
+    Private Function PrioritizeSoldDeals(ByVal pool As DataTable) As DataTable
+        If IsTableEmpty(pool) OrElse Not pool.Columns.Contains("QtaVenduta") Then Return pool
+        Dim result As DataTable = pool.Clone()
+        For Each wanted As Boolean In New Boolean() {True, False}
+            For Each row As DataRow In pool.Rows
+                If (ToDecimal(row("QtaVenduta")) > 0D) = wanted Then result.ImportRow(row)
+            Next
+        Next
+        Return result
+    End Function
+
     Private Function SortAuthorizedDealRows(ByVal source As DataTable, ByVal limit As Integer) As DataTable
         Dim result As DataTable = If(source IsNot Nothing, source.Clone(), EmptyProductsTable())
         If source Is Nothing OrElse source.Rows.Count = 0 OrElse limit <= 0 Then Return result
@@ -1015,7 +1073,7 @@ Partial Public Class _Default
                "AND MOD(10-MOD(" & String.Join("+", checksumTerms.ToArray()) & ",10),10)=CAST(SUBSTRING(currentFiscal.FiscalVat,11,1) AS UNSIGNED)"
     End Function
 
-    Private Function BuildHomeCommercialActivitySql() As String
+    Private Function BuildHomeCommercialActivitySql(Optional ByVal articleIdList As String = "") As String
         ' Ranking index, not certified sales. Fiscal scope affects only aggregate activity.
         ' The direction lookup is configuration, never the document's name or a type-ID list.
         Return "SELECT q.ArticoliId, GREATEST(SUM(q.QtaOrdini),SUM(q.QtaScarichi)) AS CommercialScore, MAX(q.LastActivity) AS LastCommercialActivity " &
@@ -1032,6 +1090,7 @@ Partial Public Class _Default
                "AND (COALESCE(td.GestioneStato,0)=0 OR ds.id IS NOT NULL) AND (ds.id IS NULL OR (COALESCE(ds.Abilitato,0)=1 AND LOWER(TRIM(COALESCE(ds.Descrizione1,''))) NOT LIKE 'annull%')) " &
                "AND d.DataDocumento>=@commercialStart AND d.DataDocumento<@commercialEnd " &
                "AND COALESCE(dr.ArticoliId,0)>0 AND COALESCE(dr.Qnt,0)>0 AND COALESCE(dr.TipoRiga,'A')='A' " &
+               If(String.IsNullOrEmpty(articleIdList), String.Empty, "AND dr.ArticoliId IN (" & articleIdList & ") ") &
                "AND (COALESCE(td.ImpegnaQnt,0)=1 OR COALESCE(td.Segno,0)<0) " &
                "AND NOT EXISTS (SELECT 1 FROM tipodocumenticontabili tc WHERE tc.TipoDocumentiId=td.id " &
                "AND (COALESCE(tc.NotaCreditoClienti,0)=1 OR COALESCE(tc.NotaCreditoFornitori,0)=1)) " &
@@ -2921,6 +2980,67 @@ Partial Public Class _Default
         Return AvailabilityDisplayHelper.BuildHtml(row, HttpContext.Current)
     End Function
 
+    Private Const DealSoldUnitsMaxArticles As Integer = 400
+    Private Const DealProgressHeading As String = "Venduti negli ultimi 12 mesi"
+
+#Region "DealProgressPure"
+    ' Percentuale della barra: venduti / (venduti + disponibili netti). Zero venduti = nessuna barra (0).
+    ' exact = True solo per chi puo vedere i numeri di giacenza: valore intero fra 1 e 99.
+    ' exact = False (ospiti e vista sintetica): gradini di 10 punti fra 10 e 90, cosi dalla barra non si ricava la giacenza.
+    Friend Shared Function DealProgressPercent(ByVal sold As Decimal, ByVal available As Decimal, ByVal exact As Boolean) As Integer
+        If sold <= 0D Then Return 0
+        Dim stock As Decimal = Math.Max(0D, available)
+        Dim raw As Decimal = (100D * sold) / (sold + stock)
+        If exact Then
+            If stock <= 0D Then Return 100
+            Return CInt(Math.Max(1D, Math.Min(99D, Math.Floor(raw))))
+        End If
+        Dim stepped As Integer = CInt(Math.Round(raw / 10D, MidpointRounding.AwayFromZero)) * 10
+        Return Math.Max(10, Math.Min(90, stepped))
+    End Function
+
+    ' Quantita mostrata: numero intero (le frazioni si troncano), separatore delle migliaia italiano.
+    Friend Shared Function DealProgressUnits(ByVal value As Decimal) As String
+        Dim whole As Decimal = Math.Floor(Math.Max(0D, value))
+        Return whole.ToString("#,##0", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))
+    End Function
+#End Region
+
+    ' Barra delle vendite dell'occasione. Compare SOLO con venduti reali maggiori di zero; i numeri di disponibilita e la percentuale
+    ' esatta solo a chi puo vedere i numeri di giacenza (AvailabilityDisplayModel.DisplayMode = 2).
+    Private Function RenderDealProgress(ByVal row As DataRow) As String
+        If row Is Nothing OrElse Not row.Table.Columns.Contains("QtaVenduta") Then Return String.Empty
+        Dim sold As Decimal = Math.Floor(ToDecimal(row("QtaVenduta")))
+        If sold <= 0D Then Return String.Empty
+        Dim model As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromDataItem(row, HttpContext.Current)
+        If model Is Nothing Then Return String.Empty
+        Dim exact As Boolean = model.DisplayMode = 2
+        Dim available As Decimal = Math.Max(0D, model.AvailableQty)
+        Dim percent As Integer = DealProgressPercent(sold, available, exact)
+        If percent <= 0 Then Return String.Empty
+        Dim percentText As String = percent.ToString(CultureInfo.InvariantCulture)
+        Dim soldText As String = DealProgressUnits(sold)
+        Dim productName As String = HttpUtility.HtmlDecode(Convert.ToString(ProductTitle(row("Descrizione1"), row("Descrizione2"), row("id"))))
+        Dim valueText As String = If(exact,
+            percentText & "% venduto: " & soldText & " venduti, " & DealProgressUnits(available) & " disponibili",
+            soldText & " venduti negli ultimi 12 mesi")
+        Dim sb As New StringBuilder()
+        sb.Append("<div class='product-progress-sale ks-deal-slot ks-deal-slot--progress ks-deal-progress'>")
+        sb.Append("<div class='ks-deal-progress__head'><span>").Append(DealProgressHeading).Append("</span>")
+        If exact Then sb.Append("<strong>").Append(percentText).Append("%</strong>")
+        sb.Append("</div>")
+        sb.Append("<div class='progress-sold progress ks-deal-progress__track' role='progressbar' aria-valuemin='0' aria-valuemax='100' aria-valuenow='").Append(percentText)
+        sb.Append("' aria-valuetext='").Append(EncodeAttr(valueText)).Append("' aria-label='").Append(EncodeAttr("Vendite di " & productName)).Append("'>")
+        sb.Append("<div class='progress-bar ks-deal-progress__bar' style='width:").Append(percentText).Append("%'></div>")
+        sb.Append("</div>")
+        sb.Append("<div class='box-quantity ks-deal-progress__numbers'>")
+        sb.Append("<p class='text-avaiable caption'>Venduti: <span class='fw-bold'>").Append(soldText).Append("</span></p>")
+        If exact Then sb.Append("<p class='text-avaiable caption'>Disponibili: <span class='fw-bold'>").Append(DealProgressUnits(available)).Append("</span></p>")
+        sb.Append("</div>")
+        sb.Append("</div>")
+        Return sb.ToString()
+    End Function
+
     Protected Function RenderDealCard(ByVal dataItem As Object) As String
         Dim rowView As DataRowView = TryCast(dataItem, DataRowView)
         If rowView Is Nothing Then Return String.Empty
@@ -2973,9 +3093,11 @@ Partial Public Class _Default
         sb.Append("<div class='ks-deal-slot ks-deal-slot--savings'")
         If String.IsNullOrEmpty(savingsHtml) Then sb.Append(" aria-hidden='true'")
         sb.Append(">").Append(savingsHtml).Append("</div>")
-        If Not String.IsNullOrEmpty(countdownHtml) Then
+        Dim progressHtml As String = RenderDealProgress(row)
+        If Not String.IsNullOrEmpty(countdownHtml) OrElse Not String.IsNullOrEmpty(progressHtml) Then
             sb.Append("<div class='box-infor-detail gap-xl-20 ks-deal-card__footer'>")
-            sb.Append("<div class='ks-deal-slot ks-deal-slot--countdown'>").Append(countdownHtml).Append("</div>")
+            If Not String.IsNullOrEmpty(countdownHtml) Then sb.Append("<div class='ks-deal-slot ks-deal-slot--countdown'>").Append(countdownHtml).Append("</div>")
+            sb.Append(progressHtml)
             sb.Append("</div>")
         End If
         sb.Append("</div>")
