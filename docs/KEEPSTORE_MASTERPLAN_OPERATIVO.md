@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-CREDENTIALS-OLD-PASSWORD-1A — 19/11/2026 — SOURCE (dati di accesso: mai la password verso il browser)
+
+**Esito: A per il task 1A (SOURCE, non pubblicato). Livello L. PR [#571](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/571), stable `a3109e01`.** Richiesta del PO del 2026-11-19 («vecchia password richiesta per cambiare i dati di accesso»). Area CRITICAL: autenticazione. **Il requisito generale resta aperto fino a `AUTH-EMAIL-CHANGE-PASSWORD-1B`.**
+
+**Fatti e causa (misurati sul sito LAB con il test rosso).** `registrazione.aspx.vb` scriveva la password attuale nell'attributo `value` dei due campi (quindi nel sorgente e nel `__VIEWSTATE`) per ogni cliente collegato; il riquadro «DATI ACCESSO» faceva `UPDATE login` di nome utente, password ed e-mail senza password attuale, senza validazione lato server e senza transazione; il pulsante REGISTRATI inviato a mano da un collegato riscriveva l'e-mail.
+
+**Revisioni.** ChatGPT (xhigh): accolti validazione lato server assente, scritture non atomiche, nome utente manomettibile; la sua richiesta di proteggere nello stesso task anche gli altri due cambi di e-mail e RIMANDATA a 1B con prova (harness di `Test-AccountProfileTenantScope`). Claude (Opus): accolti «togliere solo il valore azzererebbe la password», sola lettura vera al primo caricamento, rimozione dell'attributo a ogni rendering; nel secondo passaggio sul piano ridotto ha trovato il secondo percorso di scrittura (REGISTRATI), accolto. Scelta di CODE: riquadro di sola lettura invece di un nuovo modulo di salvataggio. Gate di certezza: PASS per 1A.
+
+**Prove.** `Tools/Test-CredentialsOldPassword.ps1`: sorgenti, 16 mutanti, 14 controlli reali sul sito LAB (password assente da pagina e ViewState, richieste costruite a mano con dati invariati, pagina anonima intatta); `Tools/KeepStoreLabSiteHttp.ps1` (aiuti condivisi); `Test-StaySignedInPages` adeguato; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** E-mail ancora modificabile senza password in `my-account-edit` e `datiutente` (1B); nessuna registrazione completa automatica di un cliente nuovo; password in chiaro nel database (standard dei segreti). **Alla consegna (consigliata presto, da sola):** `registrazione.aspx`, `registrazione.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-STAY-SIGNED-IN-2B (fase 2) â€” 19/11/2026 â€” SOURCE (Â«Resta collegatoÂ»: casella, rientro, uscita, cambio password)
 
 **Esito: A (SOURCE, non pubblicato, spenta per default). Livello L. PR [#568](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/568), stable `f45fef6f`.** Mandato del PO del 2026-11-19 (Â«Si, procediÂ»). Si accende solo con la tabella `login_remembered_devices` E con `KeepStore.StaySignedIn.Enabled=true` nel `web.config` ([stato e istruzioni](STAY_SIGNED_IN_DEVICES_TABLE.md)). Area CRITICAL: autenticazione.
