@@ -104,8 +104,8 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($done -notmatch 'Try\s+AggiornaDati\(\)\s+Catch ex As Exception') { $fail.Add('S10 il carrello non annulla il ripristino') }
     # S11 dati di accesso: da una sessione ripristinata serve un accesso nuovo
     if ($w -notmatch 'Public Shared Function RequiresFreshSignIn\(ByVal context As HttpContext\) As Boolean\s+Return SessionFlag\(context, RestoredSessionKey\)') { $fail.Add('S11 marcatore') }
-    $regSave = Get-Block $f.reg 'ElseIf imgModAccesso.Text = "SALVA" Then' 'sqlDatiAccesso = " UPDATE LOGIN SET "'
-    if ($regSave -notmatch 'If KeepStoreStaySignedInWeb\.RequiresFreshSignIn\(HttpContext\.Current\) Then[\s\S]*?Return\s+End If') { $fail.Add('S11 registrazione: nome utente e password') }
+    # (registrazione.aspx.vb: da AUTH-CREDENTIALS-OLD-PASSWORD-1A la pagina non scrive piu i dati di accesso per nessuna sessione; vedi Tools/Test-CredentialsOldPassword.ps1)
+    if ($f.reg -match '(?i)UPDATE\s+LOGIN\s+SET\s*"\s*\r?\n[^\r\n]*username' -or $f.reg -match '(?i)"\s*password\s*=\s*\?password') { $fail.Add('S11 registrazione: la pagina scrive ancora nome utente o password') }
     $editGuard = $f.edit.IndexOf('If TypeOf restoredFromDevice Is Boolean AndAlso CBool(restoredFromDevice) AndAlso'); $editSql = $f.edit.IndexOf('"UPDATE utenti u " &')
     if ($f.edit -notmatch 'Dim restoredFromDevice As Object = Session\("KeepStore:StaySignedIn:Restored"\)' -or $w -notmatch 'Public Const RestoredSessionKey As String = "KeepStore:StaySignedIn:Restored"') { $fail.Add('S11 dettagli account: stessa chiave del marcatore') }
     if ($editGuard -lt 0 -or $editSql -lt 0 -or $editGuard -gt $editSql) { $fail.Add('S11 dettagli account: e-mail') }
@@ -227,7 +227,7 @@ $mutants = @(
     @{ Id = 'M43_NO_MARKER'; File = 'master'; Old = '        KeepStoreStaySignedInWeb.MarkRestored(current)' + "`r`n"; New = '' },
     @{ Id = 'M44_CART_BREAKS_RESTORE'; File = 'master'; Old = '        Try' + "`r`n" + '            AggiornaDati()' + "`r`n" + '        Catch ex As Exception' + "`r`n" + '            KeepStoreLog.Error("login-cart-sync", "Device restore cart'; New = '        AggiornaDati()' + "`r`n" + '        Try' + "`r`n" + '        Catch ex As Exception' + "`r`n" + '            KeepStoreLog.Error("login-cart-sync", "Device restore cart' },
     @{ Id = 'M45_COMPLETE_WITHOUT_USER_CHECK'; File = 'master'; Old = ' OrElse' + "`r`n" + '           StorefrontCommercialIsolationPolicy.PositiveInteger(Session("UtentiId")) <> account.UtentiId Then'; New = ' Then' },
-    @{ Id = 'M46_REG_NO_GUARD'; File = 'reg'; Old = 'If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) Then'; New = 'If False Then' },
+    @{ Id = 'M46_REG_WRITES_SECRET'; File = 'reg'; Old = '    Protected Sub imgModAccesso_Click('; New = ('    Private Const KsMutantSql As String = " pass' + 'word = ?pass' + 'word "' + "`r`n" + '    Protected Sub imgModAccesso_Click(') },
     @{ Id = 'M47_EDIT_NO_GUARD'; File = 'edit'; Old = 'If TypeOf restoredFromDevice Is Boolean AndAlso CBool(restoredFromDevice) AndAlso'; New = 'If False AndAlso' },
     @{ Id = 'M48_DATI_NO_GUARD'; File = 'dati'; Old = 'If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) AndAlso tbEmailEdit IsNot Nothing AndAlso'; New = 'If False AndAlso tbEmailEdit IsNot Nothing AndAlso' }
 )

@@ -727,7 +727,7 @@
                                     <asp:Label ID="lblUser" runat="server" Font-Bold="True" style="background-color:Red; font-weight:bold; color:White; font-size:9pt;"></asp:Label>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr id="rowAccessoPassword" runat="server">
                                 <td style="padding:5px;">
                                     <b>password</b> * 
                                 </td>
@@ -736,7 +736,7 @@
                                     <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:RegularExpressionValidator CssClass="ks-registration-validation" ID="RegularExpressionValidator2" runat="server" ControlToValidate="tbPassword" Display="Dynamic" ErrorMessage="la password deve avere tra 8 e 25 caratteri" SetFocusOnError="True" ValidationExpression="^[\s\S]{8,25}$" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RegularExpressionValidator>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr id="rowAccessoPasswordConferma" runat="server">
                                  <td style="padding:5px;">
                                     <b>conferma password</b> * 
                                 </td>
@@ -755,7 +755,7 @@
                                     <asp:Label ID="lblEmail" runat="server" Font-Bold="True" ForeColor="Red"></asp:Label>
                                 </td>
                             </tr>
-                            <tr>
+                            <tr id="rowAccessoEmailConferma" runat="server">
                                  <td style="padding:5px;">
                                     <b>conferma email</b> * 
                                 </td>
@@ -764,6 +764,11 @@
                                     <asp:RequiredFieldValidator CssClass="ks-registration-validation" ID="RequiredFieldValidator5" runat="server" ControlToValidate="tbEmailConferma" Display="Dynamic" ErrorMessage="Campo Obbligatorio" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:RequiredFieldValidator><asp:CompareValidator CssClass="ks-registration-validation" ID="CompareValidator2" runat="server" ControlToCompare="tbEmail" ControlToValidate="tbEmailConferma" Display="Dynamic" ErrorMessage="Le Email devono coincidere" SetFocusOnError="True" ValidationGroup="registrazione_Accesso" style="background-color:Red; font-weight:bold; padding-left:3px; padding-right:3px; color:White; font-size:9pt;"></asp:CompareValidator>
                                 </td>
                             </tr>
+							<tr id="rowAccessoLinks" runat="server" visible="false"><td colspan="2" style="padding:10px 5px;">
+								Per sicurezza i dati di accesso non si modificano da questa pagina.
+								<a href="password.aspx" style="font-weight:bold; text-decoration:underline; margin-left:8px;">Cambia password</a>
+								<a href="my-account-edit.aspx" style="font-weight:bold; text-decoration:underline; margin-left:16px;">Modifica e-mail</a>
+							</td></tr>
 							<tr><td colspan="2" align="right">
 								<asp:Button ID="imgModAccesso" runat="server" Text="MODIFICA" Height="25px" CausesValidation="true" BackColor="red" ForeColor="White"/></td>
                             </tr>

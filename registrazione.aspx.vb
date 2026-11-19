@@ -412,7 +412,6 @@ Partial Class registrazione
             Me.lblSito.Text = Session("AziendaNome")
             If login Then
 				
-                Me.imgModAccesso.Visible = True
                 'Me.imgModDatiAnagrafici.Visible = True
                 Me.imgModIndirizzoP.Visible = True
                 Me.imgModIndirizzoS.Visible = True
@@ -1187,8 +1186,6 @@ Partial Class registrazione
 
                 Username.Text = dr.Item("username").ToString
 
-                Password.Attributes("value") = dr.Item("password").ToString
-                PasswordConferma.Attributes("value") = dr.Item("password").ToString
                 Email.Text = dr.Item("email").ToString
                 EmailConferma.Text = dr.Item("email").ToString
 
@@ -1668,8 +1665,8 @@ REM next
 				conn.Open()
 
 				If Not Me.Session("LoginId") Is Nothing Then
-					'Caso di Aggiornamento
-					AggiornaDati()
+					' AUTH-CREDENTIALS-OLD-PASSWORD-1A: chi e gia collegato non ha questo pulsante; una richiesta costruita a mano
+					' non aggiorna nulla (prima riscriveva anche l'e-mail di accesso senza chiedere la password).
 					
 				Else
 				
@@ -1691,67 +1688,43 @@ REM next
 
     End Sub
 
-    Protected Sub imgModAccesso_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles imgModAccesso.Click
-
+    ' AUTH-CREDENTIALS-OLD-PASSWORD-1A: per chi e gia collegato il riquadro "DATI ACCESSO" e di sola lettura. La password di accesso non
+    ' viene MAI mandata al browser (ne nel campo ne nello stato della pagina) e questa pagina non scrive piu nome utente, password o e-mail:
+    ' la password si cambia in password.aspx, che chiede quella attuale; l'e-mail in "Dati account".
+    Private Function IsSignedInForAccessPanel() As Boolean
+        Dim loginIdValue As Integer = 0
         Try
-            Me.tbUsername.Enabled = False
-
-            If imgModAccesso.Text = "MODIFICA" Then
-
-				enable_mod_panel(Panel.Accesso)
-				
-            ElseIf imgModAccesso.Text = "SALVA" Then
-
-                ' AUTH-STAY-SIGNED-IN-2B: una sessione nata da un dispositivo ricordato non cambia nome utente, password o e-mail:
-                ' serve un accesso nuovo con la password.
-                If KeepStoreStaySignedInWeb.RequiresFreshSignIn(HttpContext.Current) Then
-                    enable_Accesso(False)
-                    CaricaDati()
-                    Me.Page.ClientScript.RegisterStartupScript(Me.GetType(), "ksFreshSignIn",
-                        "alert(" & System.Web.HttpUtility.JavaScriptStringEncode(KeepStoreStaySignedInWeb.FreshSignInMessage, True) & ");", True)
-                    Return
-                End If
-
-				enable_Accesso(False)
-				
-                Dim sqlDatiAccesso As String = ""
-                sqlDatiAccesso = " UPDATE LOGIN SET "
-                sqlDatiAccesso &= " username = ?username, "
-                sqlDatiAccesso &= " password = ?password, "
-                sqlDatiAccesso &= " Email = ?email "
-                sqlDatiAccesso &= " WHERE ID=?LoginID"
-
-                conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-                cmd.Connection = conn
-                conn.Open()
-
-                cmd.CommandType = CommandType.Text
-                cmd.Parameters.AddWithValue("?username", tbUsername.Text.Replace("'", "''"))
-                cmd.Parameters.AddWithValue("?password", tbPassword.Text)
-                cmd.Parameters.AddWithValue("?email", tbEmail.Text.Trim.Replace("'", "''"))
-                cmd.Parameters.AddWithValue("?LoginID", Session("LoginID"))
-                cmd.CommandText = sqlDatiAccesso
-
-                cmd.ExecuteNonQuery()
-
-                sqlDatiAccesso = " UPDATE Utenti SET "
-                sqlDatiAccesso &= " email = ?email "
-                sqlDatiAccesso &= " WHERE ID=?utentiid"
-
-                cmd.CommandType = CommandType.Text
-                cmd.CommandText = sqlDatiAccesso
-                cmd.Parameters.AddWithValue("?email", tbEmail.Text.Trim.Replace("'", "''"))
-                cmd.Parameters.AddWithValue("?utentiid", Session("utentiid"))
-                cmd.ExecuteNonQuery()
-
-                CaricaDati()
-
-            End If
-
-        Catch ex As Exception
-
+            Integer.TryParse(Convert.ToString(Me.Session("LoginId")), loginIdValue)
+        Catch
+            loginIdValue = 0
         End Try
+        Return loginIdValue > 0
+    End Function
 
+    Private Sub ApplySignedInAccessPanel()
+        Dim signedIn As Boolean = IsSignedInForAccessPanel()
+        Me.tbPassword.Attributes.Remove("value")
+        Me.tbPasswordConferma.Attributes.Remove("value")
+        Me.imgModAccesso.Visible = False
+        Me.rowAccessoPassword.Visible = Not signedIn
+        Me.rowAccessoPasswordConferma.Visible = Not signedIn
+        Me.rowAccessoEmailConferma.Visible = Not signedIn
+        Me.rowAccessoLinks.Visible = signedIn
+        If signedIn Then
+            Me.tbUsername.Enabled = False
+            Me.tbEmail.Enabled = False
+            Me.tbPassword.Text = String.Empty
+            Me.tbPasswordConferma.Text = String.Empty
+        End If
+    End Sub
+
+    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
+        ApplySignedInAccessPanel()
+    End Sub
+
+    Protected Sub imgModAccesso_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles imgModAccesso.Click
+        ' Il riquadro dei dati di accesso e di sola lettura: una richiesta arrivata comunque a questo pulsante non apre e non salva nulla.
+        ApplySignedInAccessPanel()
     End Sub
 
 	Protected Sub enable_Accesso(ByVal enable As boolean)
@@ -2802,7 +2775,6 @@ REM next
 				enable_FatturaElettronica(True)
 			Case Panel.Accesso
 				BindLstDestinazione()
-				enable_Accesso(True)
             Case Panel.Fatturazione
 				BindLstDestinazione()
 				enable_IndirizzoP(True)
