@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CATALOG-DEAL-PROGRESS-1B — 19/11/2026 — SOURCE (barra delle vendite nelle schede in offerta dell'elenco)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#591](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/591), stable `c7b45f38`.** Mandato del PO: «Stessa tipologia lo devi riportare anche nella sezione OFFERTE». Nell'elenco le schede con un'offerta attiva e almeno un pezzo venduto mostrano «Venduti negli ultimi 12 mesi», numero e barra, sopra il prezzo. Nessun prezzo, promozione o ordine modificato.
+
+**Fatti e causa.** La scheda visibile dell'elenco e `Public/ui/controls/ProductCard.ascx` (creata in `lvProdotti_ItemDataBound`), non quella scritta nella pagina. Prima pagina delle offerte sul LAB: 8 schede su 12 con vendite. La misura dei venduti stava solo in `Default.aspx.vb`: ora ha UNA definizione in `App_Code/StorefrontSoldUnits.vb` (modulo puro) con il lettore `StorefrontSoldUnitsReader.vb`; la HOME tiene due adattatori. Tempo della pagina sul LAB invariato (0,50 s prima e dopo).
+
+**Revisioni.** ChatGPT (xhigh): accolti il bloccante sulla superficie reale, il lettore con tempo massimo e risultato vuoto su errore, l'ambito fiscale corretto nel calcolo indipendente dei test. Claude (Opus): accolti la barra PRIMA del prezzo (dopo, alzava il prezzo solo nelle schede con la barra), il modulo diviso in parte pura e lettore, gli eventi dichiarati sulla lista con raccolta svuotata a ogni legame, la disponibilita riusata dal modello. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-CatalogDealProgress.ps1`, visto rosso prima del codice: modulo compilato, 18 mutanti, sito LAB (offerte e catalogo, ospite e utente collegato: barra e «Venduti» uguali al calcolo indipendente per ogni scheda), browser a 390 e 1280 px (barra sopra il prezzo; schede, prezzi e pulsanti della fila allineati). `Test-HomeDealProgress` adeguato (21 mutanti). 27 test collegati senza fallimenti nuovi; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Nessuna barra sugli articoli con varianti (venduti per articolo, disponibilita della variante); barra anche sulle schede con soli sconti a quantita; nessun riordino «prima chi vende» nell'elenco; modalita elenco, 360/430 px e stati di errore non provati nel browser. **Alla consegna futura:** `App_Code/StorefrontSoldUnits.vb` e `App_Code/StorefrontSoldUnitsReader.vb` (PRIMA), `Default.aspx.vb`, `articoli.aspx`, `articoli.aspx.vb`, `Public/ui/controls/ProductCard.ascx(.vb)`, `Public/assets/keepstore/css/catalog-compact.css`. CONSEGNA SERVER SOSPESA.
+
 ## CART-BOTTOM-BLANK-LINES-1A — 19/11/2026 — SOURCE (via le due righe vuote in fondo al carrello)
 
 **Esito: A (SOURCE, non pubblicato). Livello L per etichetta (pagina del carrello), modifica di sola presentazione. PR [#589](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/589), stable `50d2b22b`.** Decisione del PO: «Si, toglile». In fondo al carrello non ci sono piu le due righe vuote: 48 px in meno prima del piede di pagina.
