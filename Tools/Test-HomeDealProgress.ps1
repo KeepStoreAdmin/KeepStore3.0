@@ -17,7 +17,8 @@ $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
 if ($CodeBehindPath -eq '') { $CodeBehindPath = Join-Path $root 'Default.aspx.vb' }
 if ($PagePath -eq '') { $PagePath = Join-Path $root 'Default.aspx' }
-$files = @{ vb = [IO.File]::ReadAllText($CodeBehindPath, $utf8); page = [IO.File]::ReadAllText($PagePath, $utf8) }
+$purePath = Join-Path $root 'App_Code\StorefrontSoldUnits.vb'
+$files = @{ vb = [IO.File]::ReadAllText($CodeBehindPath, $utf8); page = [IO.File]::ReadAllText($PagePath, $utf8); pure = $(if (Test-Path -LiteralPath $purePath) { [IO.File]::ReadAllText($purePath, $utf8) } else { '' }) }
 
 function Get-Block([string]$text, [string]$start, [string]$end) {
     $i = $text.IndexOf($start, [StringComparison]::Ordinal); if ($i -lt 0) { return '' }
@@ -40,7 +41,8 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if (-not $apply.Contains('ids.ConvertAll(Function(value As Integer) value.ToString(CultureInfo.InvariantCulture))')) { $fail.Add('S01 elenco di soli numeri interi') }
     if ($apply -notmatch 'Catch ex As Exception\s+KeepStoreLog\.Error\("home-deal-progress", "Deal sold units unavailable\. Error type: " & ex\.GetType\(\)\.Name & "\.", Nothing, HttpContext\.Current\)\s+Return False\s+End Try') { $fail.Add('S01 un errore lascia la HOME in piedi e non scrive dati nel registro') }
     # S02 il filtro per articoli sta dentro la query dell'indice e nessun altro lo usa
-    if (-not $index.Contains('If(String.IsNullOrEmpty(articleIdList), String.Empty, "AND dr.ArticoliId IN (" & articleIdList & ") ") &')) { $fail.Add('S02 filtro per articoli nella query') }
+    if (-not $f.pure.Contains('If(String.IsNullOrEmpty(articleIdList), String.Empty, "AND dr.ArticoliId IN (" & articleIdList & ") ") &')) { $fail.Add('S02 filtro per articoli nella query') }
+    if (-not $index.Contains('Return StorefrontSoldUnits.BuildCommercialActivitySql(articleIdList)')) { $fail.Add('S02 la HOME usa la definizione condivisa') }
     if (([regex]::Matches($vb, 'BuildHomeCommercialActivitySql\((?!\)|Optional)')).Count -ne 1) { $fail.Add('S02 un solo chiamante con il filtro') }
     # S03 lettura prima della rotazione, poi "prima chi vende"
     $iApply = $vb.IndexOf('ApplyDealSoldUnits(dealPool)'); $iOrder = $vb.IndexOf('dealPool = RotateHomePool("deals", dealPool, 6, usedBusinessKeys, usedDisplayKeys)' + "`r`n" + '        dealPool = PrioritizeSoldDeals(dealPool)' + "`r`n")
@@ -89,18 +91,19 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
 # (B) Funzioni pure e ordine "prima chi vende", compilati dal sorgente reale.
 function Test-Compiled([hashtable]$f, [switch]$Quiet) {
     $fail = New-Object Collections.Generic.List[string]
-    $pure = Get-Block $f.vb '#Region "DealProgressPure"' '#End Region'
+    $pure = $f.pure
     $order = Get-Block $f.vb 'Private Function PrioritizeSoldDeals(' 'End Function'
     if ($pure -eq '' -or $order -eq '') { if (-not $Quiet) { Write-Host '  FAIL C00 funzioni non trovate' }; return $false }
     $ns = 'KsDeal' + [Guid]::NewGuid().ToString('N')
-    $code = "Imports System`r`nImports System.Data`r`nNamespace $ns`r`nPublic Class Probe`r`n" +
-        "Private Shared Function IsTableEmpty(ByVal t As DataTable) As Boolean`r`nReturn t Is Nothing OrElse t.Rows.Count = 0`r`nEnd Function`r`n" +
+    $module = ($pure -replace 'Public NotInheritable Class StorefrontSoldUnits', ("Namespace $ns`r`nPublic NotInheritable Class StorefrontSoldUnits")) + "`r`nEnd Namespace`r`n"
+    $code = $module + "Namespace $ns`r`nPublic Class Probe`r`n" +
+        "Private Shared Function IsTableEmpty(ByVal t As System.Data.DataTable) As Boolean`r`nReturn t Is Nothing OrElse t.Rows.Count = 0`r`nEnd Function`r`n" +
         "Private Shared Function ToDecimal(ByVal v As Object) As Decimal`r`nIf v Is Nothing OrElse v Is DBNull.Value Then Return 0D`r`nReturn Convert.ToDecimal(v)`r`nEnd Function`r`n" +
-        $pure + "`r`n" + $order.Replace('Private Function PrioritizeSoldDeals(', 'Public Shared Function Order(') + "`r`n" +
-        "Public Shared Function Pct(ByVal s As Decimal, ByVal a As Decimal, ByVal e As Boolean) As Integer`r`nReturn DealProgressPercent(s, a, e)`r`nEnd Function`r`n" +
-        "Public Shared Function Units(ByVal v As Decimal) As String`r`nReturn DealProgressUnits(v)`r`nEnd Function`r`n" +
+        $order.Replace('Private Function PrioritizeSoldDeals(', 'Public Shared Function Order(').Replace('As DataTable', 'As System.Data.DataTable').Replace('As DataRow', 'As System.Data.DataRow') + "`r`n" +
+        "Public Shared Function Pct(ByVal s As Decimal, ByVal a As Decimal, ByVal e As Boolean) As Integer`r`nReturn StorefrontSoldUnits.Percent(s, a, e)`r`nEnd Function`r`n" +
+        "Public Shared Function Units(ByVal v As Decimal) As String`r`nReturn StorefrontSoldUnits.Units(v)`r`nEnd Function`r`n" +
         "End Class`r`nEnd Namespace`r`n"
-    try { $types = Add-Type -TypeDefinition $code -Language VisualBasic -ReferencedAssemblies 'System.Data', 'System.Xml' -PassThru -ErrorAction Stop }
+    try { $types = Add-Type -TypeDefinition $code -Language VisualBasic -ReferencedAssemblies 'System.Data', 'System.Xml', 'System.Web' -PassThru -ErrorAction Stop }
     catch { if (-not $Quiet) { Write-Host ('  FAIL C00 compilazione: ' + $_.Exception.Message) }; return $false }
     $t = @($types | Where-Object { $_.Name -eq 'Probe' })[0]
     # sold, available, exact, expected
@@ -137,30 +140,32 @@ $mutants = @(
     @{ Id = 'M01_GUEST_EXACT'; Old = 'Dim exact As Boolean = model.DisplayMode = 2'; New = 'Dim exact As Boolean = True' },
     @{ Id = 'M02_GUEST_SEES_STOCK'; Old = 'If exact Then sb.Append("<p class=''text-avaiable caption''>Disponibili: '; New = 'sb.Append("<p class=''text-avaiable caption''>Disponibili: ' },
     @{ Id = 'M03_BAR_AT_ZERO'; Old = 'If sold <= 0D Then Return String.Empty'; New = 'If sold < 0D Then Return String.Empty' },
-    @{ Id = 'M04_PERCENT_AT_ZERO'; Old = 'If sold <= 0D Then Return 0'; New = 'If sold < 0D Then Return 0' },
+    @{ Id = 'M04_PERCENT_AT_ZERO'; F = 'pure'; Old = 'If sold <= 0D Then Return 0'; New = 'If sold < 0D Then Return 0' },
     @{ Id = 'M05_GROSS_STOCK'; Old = 'Math.Max(0D, model.AvailableQty)'; New = 'Math.Max(0D, ToDecimal(row("Giacenza")))' },
     @{ Id = 'M06_ORDER_NOT_APPLIED'; Old = '        dealPool = PrioritizeSoldDeals(dealPool)' + $nl; New = '' },
     @{ Id = 'M07_ORDER_INVERTED'; Old = 'New Boolean() {True, False}'; New = 'New Boolean() {False, True}' },
     @{ Id = 'M08_NO_ACCESSIBLE_NAME'; Old = "sb.Append(""' aria-valuetext='"").Append(EncodeAttr(valueText)).Append(""' aria-label='"").Append(EncodeAttr(""Vendite di "" & productName)).Append(""'>"")"; New = "sb.Append(""' aria-valuetext='"").Append(EncodeAttr(valueText)).Append(""'>"")" },
     @{ Id = 'M09_BAR_ON_OTHER_CARDS'; Old = '        Dim progressHtml As String = RenderDealProgress(row)'; New = '        Dim progressHtml As String = RenderDealProgress(row)' + $nl + '        Dim extraHtml As String = RenderDealProgress(row)' },
-    @{ Id = 'M10_NO_STEPS_LIMIT'; Old = 'Return Math.Max(10, Math.Min(90, stepped))'; New = 'Return stepped' },
-    @{ Id = 'M11_GUEST_GETS_EXACT_VALUE'; Old = '        If exact Then' + $nl + '            If stock <= 0D Then Return 100'; New = '        If True Then' + $nl + '            If stock <= 0D Then Return 100' },
-    @{ Id = 'M12_EXACT_ZERO_PERCENT'; Old = 'Return CInt(Math.Max(1D, Math.Min(99D, Math.Floor(raw))))'; New = 'Return CInt(Math.Min(99D, Math.Floor(raw)))' },
-    @{ Id = 'M13_ROUND_UP'; Old = 'Math.Min(99D, Math.Floor(raw))'; New = 'Math.Min(99D, Math.Ceiling(raw))' },
+    @{ Id = 'M10_NO_STEPS_LIMIT'; F = 'pure'; Old = 'Return Math.Max(10, Math.Min(90, stepped))'; New = 'Return stepped' },
+    @{ Id = 'M11_GUEST_GETS_EXACT_VALUE'; F = 'pure'; Old = '        If exact Then' + $nl + '            If stock <= 0D Then Return 100'; New = '        If True Then' + $nl + '            If stock <= 0D Then Return 100' },
+    @{ Id = 'M12_EXACT_ZERO_PERCENT'; F = 'pure'; Old = 'Return CInt(Math.Max(1D, Math.Min(99D, Math.Floor(raw))))'; New = 'Return CInt(Math.Min(99D, Math.Floor(raw)))' },
+    @{ Id = 'M13_ROUND_UP'; F = 'pure'; Old = 'Math.Min(99D, Math.Floor(raw))'; New = 'Math.Min(99D, Math.Ceiling(raw))' },
     @{ Id = 'M14_OTHER_COMPANY'; Old = '") x", conn)' + $nl + '                    cmd.Parameters.Add("@commercialCompany", MySqlDbType.Int32).Value = GetCurrentAziendaId()'; New = '") x", conn)' + $nl + '                    cmd.Parameters.Add("@commercialCompany", MySqlDbType.Int32).Value = 1' },
     @{ Id = 'M15_ALL_TIME'; Old = 'Date.Today.AddMonths(-12)' + $nl + '                    cmd.Parameters.Add("@commercialEnd"'; New = 'Date.Today.AddYears(-20)' + $nl + '                    cmd.Parameters.Add("@commercialEnd"' },
     @{ Id = 'M16_ERROR_STOPS_HOME'; Old = 'Nothing, HttpContext.Current)' + $nl + '            Return False' + $nl + '        End Try' + $nl + '        pool.Columns("QtaVenduta")'; New = 'Nothing, HttpContext.Current)' + $nl + '            Throw' + $nl + '        End Try' + $nl + '        pool.Columns("QtaVenduta")' },
     @{ Id = 'M17_NO_ARTICLE_FILTER'; Old = 'BuildHomeCommercialActivitySql(idList)'; New = 'BuildHomeCommercialActivitySql()' },
     @{ Id = 'M18_SALES_IN_GENERAL_QUERY'; Old = 'sql.Append("0 AS QtaVenduta, 0 AS VendutiAnno, ")'; New = 'sql.Append("a.QtaVenduta AS QtaVenduta, 0 AS VendutiAnno, ")' },
-    @{ Id = 'M19_THOUSANDS_INVARIANT'; Old = 'System.Globalization.CultureInfo.GetCultureInfo("it-IT")'; New = 'System.Globalization.CultureInfo.InvariantCulture' },
-    @{ Id = 'M20_STEP_ROUNDING_DOWN'; Old = 'CInt(Math.Round(raw / 10D, MidpointRounding.AwayFromZero)) * 10'; New = 'CInt(Math.Floor(raw / 10D)) * 10' },
+    @{ Id = 'M19_THOUSANDS_INVARIANT'; F = 'pure'; Old = 'System.Globalization.CultureInfo.GetCultureInfo("it-IT")'; New = 'System.Globalization.CultureInfo.InvariantCulture' },
+    @{ Id = 'M20_STEP_ROUNDING_DOWN'; F = 'pure'; Old = 'CInt(Math.Round(raw / 10D, MidpointRounding.AwayFromZero)) * 10'; New = 'CInt(Math.Floor(raw / 10D)) * 10' },
     @{ Id = 'M21_FOOTER_ONLY_WITH_COUNTDOWN'; Old = 'If Not String.IsNullOrEmpty(countdownHtml) OrElse Not String.IsNullOrEmpty(progressHtml) Then'; New = 'If Not String.IsNullOrEmpty(countdownHtml) Then' }
 )
 if (-not $SkipMutants) {
     $survived = New-Object Collections.Generic.List[string]
     foreach ($mu in $mutants) {
-        if ((Count-Of $files.vb $mu.Old) -ne 1) { $survived.Add($mu.Id + ' (ancora non unica)'); continue }
-        $m = @{ vb = $files.vb.Replace($mu.Old, $mu.New); page = $files.page }
+        $key = if ($mu.ContainsKey('F')) { $mu.F } else { 'vb' }
+        if ((Count-Of $files[$key] $mu.Old) -ne 1) { $survived.Add($mu.Id + ' (ancora non unica)'); continue }
+        $m = @{ vb = $files.vb; page = $files.page; pure = $files.pure }
+        $m[$key] = $files[$key].Replace($mu.Old, $mu.New)
         $killed = -not (Test-Source $m -Quiet)
         if (-not $killed) { $killed = -not (Test-Compiled $m -Quiet) }
         if (-not $killed) { $survived.Add($mu.Id) }
@@ -210,11 +215,23 @@ if (-not $SkipLab) {
         $company = Get-Scalar "SELECT id AS ksval FROM aziende WHERE LOWER(TRIM(COALESCE(url1,''))) LIKE '%www.taikun.it%' OR LOWER(TRIM(COALESCE(url2,''))) LIKE '%www.taikun.it%' ORDER BY id LIMIT 1;"
         Check ($company -match '^\d+$') 'L03 azienda dell''host trovata nel database LAB'
         $in = (@($cards | ForEach-Object { $_.Id }) -join ',')
+        function Get-Vat([string]$raw) { $v = $raw.Trim(); if ($v.Length -ge 2 -and $v.Substring(0, 2).ToUpperInvariant() -eq 'IT') { $v = $v.Substring(2) }; return $v }
+        function Test-Vat([string]$v) {
+            if ($v -notmatch '^\d{11}$' -or $v -eq '00000000000') { return $false }
+            $sum = 0; for ($k = 0; $k -lt 10; $k++) { $d = [int]$v.Substring($k, 1); if (($k % 2) -eq 1) { $sum += [int]('0246813579'.Substring($d, 1)) } else { $sum += $d } }
+            return (((10 - ($sum % 10)) % 10) -eq [int]$v.Substring(10, 1))
+        }
+        $vats = @{}
+        foreach ($line in @(Invoke-Sql "SELECT CONCAT('ksvat|', id, '|', TRIM(COALESCE(Piva,''))) AS r FROM aziende;")) { $mm = [regex]::Match([string]$line, '^ksvat\|(\d+)\|(.*)$'); if ($mm.Success) { $vats[[int]$mm.Groups[1].Value] = (Get-Vat $mm.Groups[2].Value) } }
+        $scope = New-Object Collections.Generic.List[int]; $scope.Add([int]$company)
+        $own = if ($vats.ContainsKey([int]$company)) { $vats[[int]$company] } else { '' }
+        if (Test-Vat $own) { foreach ($k in $vats.Keys) { if ($k -gt 0 -and $k -ne [int]$company -and $vats[$k] -eq $own) { $scope.Add($k) } } }
+        $scopeList = ($scope -join ',')
         $sql = "SELECT CONCAT('ksrow|', t.ArticoliId, '|', FLOOR(GREATEST(SUM(t.o), SUM(t.s)))) AS r FROM (" +
                "SELECT dr.ArticoliId, IF(td.ImpegnaQnt = 1, dr.Qnt, 0) AS o, IF(td.Segno < 0, dr.Qnt, 0) AS s " +
                "FROM documenti d JOIN documentirighe dr ON dr.DocumentiId = d.id JOIN tipodocumenti td ON td.id = d.TipoDocumentiId JOIN movimentitipo mt ON mt.id = td.MovimentiTipoId " +
                "LEFT JOIN documentistati ds ON ds.id = d.StatiId " +
-               "WHERE d.AziendeId IN (SELECT x.id FROM (SELECT a2.id FROM aziende a1 JOIN aziende a2 ON a2.id = a1.id OR (CHAR_LENGTH(TRIM(a1.Piva)) >= 11 AND REPLACE(UPPER(TRIM(a2.Piva)), 'IT', '') = REPLACE(UPPER(TRIM(a1.Piva)), 'IT', '')) WHERE a1.id = $company) x) " +
+               "WHERE d.AziendeId IN ($scopeList) " +
                "AND UPPER(TRIM(mt.Descrizione)) = 'USCITA' AND dr.ArticoliId IN ($in) AND dr.Qnt > 0 AND COALESCE(dr.TipoRiga, 'A') = 'A' " +
                "AND d.DataDocumento >= CURDATE() - INTERVAL 12 MONTH AND d.DataDocumento < CURDATE() + INTERVAL 1 DAY " +
                "AND (td.ImpegnaQnt = 1 OR td.Segno < 0) " +

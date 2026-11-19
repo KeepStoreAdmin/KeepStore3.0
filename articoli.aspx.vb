@@ -129,7 +129,19 @@ Partial Class Articoli
         Public Property ShowMultiSelect As Boolean
         Public Property QuantityText As String
         Public Property ActionDataAttributes As String
+        Public Property Availability As AvailabilityDisplayModel
+        Public Property IsArticleLevelRow As Boolean
     End Class
+
+    ' CATALOG-DEAL-PROGRESS-1B: schede in offerta raccolte durante il legame della lista; i venduti si leggono una volta sola.
+    Private Class CatalogSalesCandidate
+        Public Property Card As Public_ui_controls_ProductCard
+        Public Property ArticleId As Integer
+        Public Property Availability As AvailabilityDisplayModel
+        Public Property ProductName As String
+    End Class
+
+    Private ReadOnly catalogSalesCandidates As New List(Of CatalogSalesCandidate)()
 
     Protected Function CatalogEmptySearchHasQuery() As Boolean
         Return CatalogEmptySearchQueryRaw() <> ""
@@ -1716,7 +1728,46 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
             replacement.Controls.Add(card)
             inlineCard.Visible = False
             productCardReplaceRenderedCount += 1
+            ' Barra delle vendite: solo schede con un'offerta attiva e a livello di articolo (venduti per articolo, disponibilita della riga).
+            If model.IsOnSale AndAlso model.IsArticleLevelRow AndAlso model.ProductId > 0 AndAlso model.Availability IsNot Nothing Then
+                catalogSalesCandidates.Add(New CatalogSalesCandidate() With {.Card = card, .ArticleId = model.ProductId, .Availability = model.Availability, .ProductName = model.ProductName})
+            End If
         End If
+    End Sub
+
+    ' Ogni legame della lista riparte da una raccolta vuota (la lista puo legarsi piu volte nella stessa richiesta).
+    Protected Sub lvProdotti_DataBinding(ByVal sender As Object, ByVal e As EventArgs)
+        catalogSalesCandidates.Clear()
+    End Sub
+
+    Protected Sub lvProdotti_DataBound(ByVal sender As Object, ByVal e As EventArgs)
+        ApplyCatalogSalesProgress()
+    End Sub
+
+    ' UNA lettura per legame, solo per le schede in offerta ancora nella pagina. Nessuna scheda, promozioni in errore o lettura
+    ' fallita: nessuna barra, la pagina resta com'e.
+    Private Sub ApplyCatalogSalesProgress()
+        Try
+            If catalogSalesCandidates.Count = 0 OrElse catalogPromotionTechnicalError Then Exit Sub
+            If Not EnsureCatalogPriceDisplayContext() Then Exit Sub
+            Dim ids As New List(Of Integer)()
+            For Each candidate As CatalogSalesCandidate In catalogSalesCandidates
+                If candidate.Card IsNot Nothing AndAlso candidate.Card.Parent IsNot Nothing Then ids.Add(candidate.ArticleId)
+            Next
+            If ids.Count = 0 Then Exit Sub
+            Dim sold As Dictionary(Of Integer, Decimal) = StorefrontSoldUnitsReader.Load(
+                ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString,
+                _priceDisplayContext.CompanyId, ids, HttpContext.Current)
+            If sold.Count = 0 Then Exit Sub
+            For Each candidate As CatalogSalesCandidate In catalogSalesCandidates
+                Dim units As Decimal = 0D
+                If candidate.Card Is Nothing OrElse candidate.Card.Parent Is Nothing Then Continue For
+                If Not sold.TryGetValue(candidate.ArticleId, units) OrElse units <= 0D Then Continue For
+                candidate.Card.SalesProgressHtml = StorefrontSoldUnits.RenderCompact(units, Math.Max(0D, candidate.Availability.AvailableQty), candidate.Availability.DisplayMode = 2, candidate.ProductName)
+            Next
+        Finally
+            catalogSalesCandidates.Clear()
+        End Try
     End Sub
 
     Private Sub ApplyMultiSelectCheckboxMicrocopy(ByVal root As Control)
@@ -4170,6 +4221,8 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         model.IsAvailable = availability.IsAvailable
         model.AvailabilityText = availability.Text
         model.AvailabilityHtml = availability.Html
+        model.Availability = availability
+        model.IsArticleLevelRow = (CatalogTcId(dataItem, False) <= 0)
         model.IsDemoMode = True
         model.CartUrl = CatalogCartAddUrl(dataItem)
         model.WishlistUrl = CatalogWishlistAddUrl(dataItem)

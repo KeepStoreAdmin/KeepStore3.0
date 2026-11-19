@@ -14,6 +14,8 @@ Partial Class Public_ui_controls_ProductCard
     Public Property OldPriceText As String
     Public Property BadgeText As String
     Public Property PromoSummaryHtml As String
+    ' HTML gia codificato della barra delle vendite (StorefrontSoldUnits.RenderCompact); vuoto = nessuna barra.
+    Public Property SalesProgressHtml As String
     Public Property IsOnSale As Boolean
     Public Property IsAvailable As Boolean = True
     Public Property AvailabilityText As String
@@ -149,6 +151,12 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property SafeBadgeText As String
         Get
             Return EncodeText(If(String.IsNullOrWhiteSpace(BadgeText), "Promo", BadgeText))
+        End Get
+    End Property
+
+    Protected ReadOnly Property RenderSalesProgress As Boolean
+        Get
+            Return Not String.IsNullOrWhiteSpace(SalesProgressHtml)
         End Get
     End Property
 

@@ -33,7 +33,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($f.ks -notmatch '(?m)^body h1,\s*\nbody \.h1 \{\s*\n\s*background-color: transparent;\s*\n\}') { $fail.Add('A1 regola h1 senza sfondo in ks-ui.css') }
     if ($f.master -notmatch 'css/ks-ui\.css"\) & "\?v=20261118-h1-legacy1a"') { $fail.Add('A1 buster di ks-ui.css') }
     # A2 catalogo: foglio, classi, buster
-    if ($f.catAspx -notmatch 'css/catalog-compact\.css"\) %>\?v=20261118-compact1a"') { $fail.Add('A2 link del foglio compatto') }
+    if ($f.catAspx -notmatch 'css/catalog-compact\.css"\) %>\?v=20261119-sales-1b"') { $fail.Add('A2 link del foglio compatto') }
     if ($f.catAspx -notmatch '<asp:Panel ID="ksPageTitle" runat="server" CssClass="py-3 ks-catalog-titlebar">' -or $f.catAspx -notmatch '<h1 class="title h4 mb-0 text-break ks-catalog-heading">') { $fail.Add('A2 classi del titolo') }
     $c = $f.compact
     if ($c -eq '') { $fail.Add('A2 foglio compatto assente') }
@@ -194,7 +194,7 @@ $srcMutants = @(
     @{ Id = 'S08_SWIPER_NOT_RESET'; File = 'product'; Old = "    display: block !important;`n    transform: none !important;"; New = '    display: block !important;' },
     @{ Id = 'S09_H1_RED_AGAIN'; File = 'product'; Old = "  background: none;`n  color: #181818;"; New = '  color: #181818;' },
     @{ Id = 'S10_MASTER_BUSTER_OLD'; File = 'master'; Old = '?v=20261118-h1-legacy1a"'; New = '?v=20261118-pdp-tools1a"' },
-    @{ Id = 'S11_LINK_REMOVED'; File = 'catAspx'; Old = '    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-compact.css") %>?v=20261118-compact1a" />'; New = '' },
+    @{ Id = 'S11_LINK_REMOVED'; File = 'catAspx'; Old = '    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-compact.css") %>?v=20261119-sales-1b" />'; New = '' },
     @{ Id = 'S12_TITLE_CLASS_REMOVED'; File = 'catAspx'; Old = ' text-break ks-catalog-heading">'; New = ' text-break">' },
     @{ Id = 'S14_PRICE_GROUP_PRINTED_TWICE'; File = 'product'; Old = '  .ks-pdp-info-group[data-ks-info-group="prezzi"],'; New = '' },
     @{ Id = 'S13_PDP_BUSTER_OLD'; File = 'pdpAspx'; Old = 'product-ui.css") %>?v=20261119-compact-1b'; New = 'product-ui.css") %>?v=20261118-pdp-tools1a' }

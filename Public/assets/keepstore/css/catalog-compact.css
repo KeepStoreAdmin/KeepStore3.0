@@ -76,3 +76,43 @@
 #ksCatalogPage div.ks-recent-card .price-wrap {
   margin-top: 0 !important;
 }
+
+/* CATALOG-DEAL-PROGRESS-1B: barra delle vendite nelle schede in offerta, sopra il prezzo (i prezzi della fila restano allineati). */
+#ksCatalogPage .ks-card-sales {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+  color: #555;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+#ksCatalogPage .ks-card-sales__head {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+#ksCatalogPage .ks-card-sales__head strong {
+  color: #111;
+  font-weight: 700;
+}
+
+#ksCatalogPage .ks-card-sales__track {
+  background: #e9ecef;
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+
+#ksCatalogPage .ks-card-sales__bar {
+  background: var(--primary, #D80027);
+  border-radius: 999px;
+  height: 100%;
+}
+
+@media (forced-colors: active) {
+  #ksCatalogPage .ks-card-sales__track { border: 1px solid CanvasText; }
+  #ksCatalogPage .ks-card-sales__bar { background: Highlight; }
+}

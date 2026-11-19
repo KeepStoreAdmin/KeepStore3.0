@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-ui.css") %>?v=20261119-compact-1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261114-filter-buttons1a" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-product-flow.css") %>?v=20261119-compact-1a" />
-    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-compact.css") %>?v=20261118-compact1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-compact.css") %>?v=20261119-sales-1b" />
     <style>
         #ksCatalogPage .ks-catalog-guide-link { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 10px 14px; max-width: 100%; white-space: normal; text-align: center; }
         #ksCatalogPage .ks-catalog-guide-link:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; transition: none; }
@@ -344,7 +344,7 @@
                     <asp:PlaceHolder ID="phProductCardPreview" runat="server" Visible="false" />
 
                     <div class="gridLayout-wrapper">
-                        <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli" OnPagePropertiesChanging="lvProdotti_PagePropertiesChanging" OnPreRender="lvProdotti_PreRender">
+                        <asp:ListView ID="lvProdotti" runat="server" DataSourceID="sdsArticoli" OnPagePropertiesChanging="lvProdotti_PagePropertiesChanging" OnPreRender="lvProdotti_PreRender" OnDataBinding="lvProdotti_DataBinding" OnDataBound="lvProdotti_DataBound">
                             <LayoutTemplate>
                                 <div id="gridLayout" class="tf-grid-layout lg-col-4 md-col-3 sm-col-2 flat-grid-product wrapper-shop layout-tabgrid-1">
                                     <asp:PlaceHolder ID="itemPlaceholder" runat="server" />

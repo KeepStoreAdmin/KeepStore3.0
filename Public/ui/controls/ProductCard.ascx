@@ -75,6 +75,9 @@
                     <%= SafeProductName %>
                 </a>
             </div>
+            <% If RenderSalesProgress Then %>
+            <%= SalesProgressHtml %>
+            <% End If %>
             <p class="price-wrap fw-medium" role="group" aria-label="Prezzo prodotto">
                 <span class="new-price price-text fw-medium"><%= SafePriceText %></span>
                 <asp:PlaceHolder ID="phOldPrice" runat="server">
