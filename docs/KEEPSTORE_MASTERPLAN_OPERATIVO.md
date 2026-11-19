@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## UX-COMPACT-SPACING-SITEWIDE-1A (prima tranche) — 19/11/2026 — SOURCE (schede prodotto compatte e controlli sugli spazi)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#585](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/585), stable `359eb080`.** Richiesta del PO («Devi adeguare con questa tipologia i controlli sugli spazi, per tutto il sito»). La riga della categoria delle schede occupa una riga (prima due, una vuota) su HOME, scheda prodotto ed elenchi; le griglie della HOME perdono le altezze riservate attorno al prezzo. Solo stile: nessun dato, prezzo o markup cambiato.
+
+**Fatti e causa.** Censimento misurato nel browser su 7 pagine a 390 e 1280 px. Cause: `.ks-card-category` con due righe fisse (14 px vuoti nella HOME, 22 nella scheda prodotto); nelle griglie della HOME due riserve annidate sul prezzo (52 px sulla riga, 78 px sul contenitore) e margini sommati al `gap` (20 px fra titolo e prezzo). Catalogo e offerte erano gia compatti.
+
+**Revisioni.** ChatGPT (xhigh): accolti le due riserve annidate e l'oracolo per componente (il calcolo generico del «vuoto» resta diagnostica); scartato il falso negativo su `catText` nella forma descritta. Claude (Opus): accolti piede ancorato in fondo (`.box-title` era una griglia), indirizzo di versione aggiornato in tutti i test che lo fissano, soglie numeriche, pagina di prova con i casi difficili, larghezze 768 e 1024; scartato un foglio CSS nuovo. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-CardCompactSpacing.ps1`, visto rosso sulla stable (260 difetti): pagina di prova con i fogli veri nell'ordine di `Page.master`, 8 schede con prezzo barrato lungo, prezzo a quantita, categoria lunga o assente, targhetta; 390 / 768 / 1024 / 1280 px; 8 mutanti del foglio eseguiti nel browser; sito LAB. `Test-HomeDealProgress` piu severo. 19 test collegati verdi; un mutante di `Test-CatalogCompact1A` ritirato perche equivalente. Precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Non e ancora tutto il sito: blocchi grandi della scheda prodotto (con `PDP-LAYOUT-ORDER-1A`), contatti, area personale, carrello pieno, MiniCart, schede «visti di recente» generate da JavaScript (`UX-COMPACT-SPACING-SITEWIDE-1B`). Sul LAB mancano le immagini. **Alla consegna futura:** `Page.master`, `articoli.aspx`, `Public/assets/keepstore/css/theme-overrides.css` (insieme: nuovo indirizzo di versione). CONSEGNA SERVER SOSPESA.
+
 ## HOME-DEAL-PROGRESS-1A — 19/11/2026 — SOURCE (barra delle vendite e scheda compatta nelle occasioni della HOME)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#583](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/583), stable `003a3431`.** Ripristino autorizzato dal PO («Ti autorizzo a ripristinare questa funzione») con la sua scelta «Tutte le vendite»: ogni occasione con vendite mostra la barra «Venduti negli ultimi 12 mesi» e viene prima delle altre. A lavoro in corso il PO ha chiesto anche di togliere lo spazio inutile nella scheda: fatto. Nessun prezzo, promozione o ordine modificato.

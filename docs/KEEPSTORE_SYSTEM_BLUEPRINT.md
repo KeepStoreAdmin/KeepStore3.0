@@ -676,7 +676,7 @@ Manifest runtime: 10 file modificati, 141 inserimenti, 67 rimozioni, added/delet
 
 Contratto tecnico product card:
 
-- Classi semantiche condivise `.ks-card-category` e `.ks-card-title`, applicate soltanto alle product card.
+- Classi semantiche condivise `.ks-card-category` e `.ks-card-title`, applicate soltanto alle product card. Dal 2026-11-19 (`UX-COMPACT-SPACING-SITEWIDE-1A`) la categoria occupa **una** riga con puntini e il titolo conserva tre righe riservate; contratti geometrici in `Tools/Test-CardCompactSpacing.ps1`.
 - Categoria sopra il titolo, massimo e spazio riservato per 2 righe; titolo massimo e spazio riservato per 3 righe. La geometria usa `2lh` e `3lh`, quindi segue il line-height reale delle varianti HOME/catalogo/PDP.
 - Testo completo nel DOM; vietati `CompactText`/`Substring` sui contenuti categoria/titolo card. Categoria assente = area vuota, senza fallback inventato.
 - Coperti rendering server, snapshot server-generated e fallback JavaScript, HOME Grid/Deal/Row/Big/Recent, quattro viste catalogo/ProductCard/Recent e PDP frequent/similar/related/recent.
