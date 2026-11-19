@@ -1,5 +1,16 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-STAY-SIGNED-IN-2B (fase 2) â€” 19/11/2026 â€” SOURCE (Â«Resta collegatoÂ»: casella, rientro, uscita, cambio password)
+
+**Esito: A (SOURCE, non pubblicato, spenta per default). Livello L. PR [#568](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/568), stable `f45fef6f`.** Mandato del PO del 2026-11-19 (Â«Si, procediÂ»). Si accende solo con la tabella `login_remembered_devices` E con `KeepStore.StaySignedIn.Enabled=true` nel `web.config` ([stato e istruzioni](STAY_SIGNED_IN_DEVICES_TABLE.md)). Area CRITICAL: autenticazione.
+
+**Fatti e causa.** Un solo accesso vivo (`login.aspx.vb`; `PageMaster.Login` non si raggiunge); la rivalidazione del master non idrata sette chiavi di sessione; `vlogin` ha una riga per indirizzo: il servizio della fase 1 rifiutava chi ne ha piu di uno (corretto con `SELECT DISTINCT`); ASP.NET aggiunge il cookie della sessione nuova anche ai cookie della richiesta (si legge l'intestazione inviata).
+
+**Revisioni.** ChatGPT (xhigh): accolti identita legata all'utente verificato, sessione nuova al rientro, uscita prima del master, accesso recente per i dati di accesso; smentito con prova Â«`ScadenzaPassword` mai valorizzataÂ» (errore mio, r. 1411). Claude (Opus): accolti nessun 403 e nessun ciclo se la rivalidazione rifiuta, chiave obbligatoria (niente attivazione implicita), chiavi dopo la rivalidazione, arresto che non blocca la revoca; scartati con prova sospensione Â«globaleÂ» e `payguide`. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-StaySignedInPages.ps1`: decisione pura, sorgenti, 48 mutanti, 36 controlli reali sul sito LAB (HTTPS, 127.0.0.1): cookie, rientro, identificativo di sessione portato dal browser mai collegato, POST e pagine escluse, cambio e-mail rifiutato, uscita, credenziali cambiate fuori dal sito, listino non valido senza 403, cambio password con due dispositivi. Fase 1 verde (56 mutanti); casella nel browser a 390 e 1280 px; precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Cookie copiato valido fino a scadenza o revoca; A -> B -> A non rilevato; le sessioni aperte non si chiudono al cambio password; `Test-AccountProfileTenantScope` qui non arriva in fondo (manca node.exe). In coda: vecchia password in `registrazione.aspx.vb`, sessione nuova all'accesso con password, `wishlist.aspx` 500 sul LAB. **Al PO:** tabella su `taikun`, poi la riga nel `web.config`. **Alla consegna:** `App_Code/KeepStoreStaySignedIn.vb`, `App_Code/KeepStoreStaySignedInWeb.vb`, `Page.master.vb`, `login.aspx`, `login.aspx.vb`, `logout.aspx.vb`, `password.aspx.vb`, `registrazione.aspx.vb`, `my-account-edit.aspx.vb`, `datiutente.aspx.vb`, `privacy.aspx`. CONSEGNA SERVER SOSPESA.
 ## AUTH-STAY-SIGNED-IN-2A (fase 1) — 19/11/2026 — SOURCE (servizio e tabella di «Resta collegato», inerti)
 
 **Esito: A (SOURCE, non pubblicato, inerte). Livello L. PR [#566](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/566), stable `e3d9eec7`.** Decisione del PO del 2026-11-19: «Si, 30 giorni» (tabella nuova, 30 giorni dall'ultimo uso). Fase 1: `App_Code/KeepStoreStaySignedIn.vb` senza chiamanti e [script della tabella](STAY_SIGNED_IN_DEVICES_TABLE.md) `login_remembered_devices`. Nessun file esistente cambia: il cliente non vede nulla. Area CRITICAL: autenticazione.
