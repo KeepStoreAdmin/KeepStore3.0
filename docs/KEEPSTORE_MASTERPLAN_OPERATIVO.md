@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CART-BOTTOM-BLANK-LINES-1A — 19/11/2026 — SOURCE (via le due righe vuote in fondo al carrello)
+
+**Esito: A (SOURCE, non pubblicato). Livello L per etichetta (pagina del carrello), modifica di sola presentazione. PR [#589](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/589), stable `50d2b22b`.** Decisione del PO: «Si, toglile». In fondo al carrello non ci sono piu le due righe vuote: 48 px in meno prima del piede di pagina.
+
+**Fatti e causa.** Due `<br />` in `carrello.aspx` dopo il pannello del carrello, sempre presenti. Distanza dal piede prima / dopo: carrello vuoto 48 / 32 px; con un articolo 80 / 32 px su telefono e 104 / 56 px su schermo grande. Trovato nella prova nel browser: a carrello vuoto le due righe facevano per caso da margine (tolte, il riquadro toccava il piede): aggiunta la regola `.ks-cart-page .ks-cart-empty-card { margin-bottom: 32px; }` in `theme-overrides.css`.
+
+**Revisioni.** ChatGPT (xhigh): accolti misura fino al piede, verifica dello stato del carrello, confronto esatto del tratto finale della pagina. Claude (Opus): confermata l'assenza di dipendenze (nessun indice posizionale sui controlli, nessun selettore o script che li usa, fine riga LF conservati), accolti il conteggio corretto del riepilogo degli errori e il confronto completo facoltativo con la base. I test storici su `carrello.aspx` erano gia rossi e nei fallimenti noti: nessuno cambia stato. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-CartBottomBlankLines.ps1`, visto rosso sulla stable: tratto finale della pagina esatto (controlli, attributi, ordine), 8 mutanti, sito LAB a 390 e 1280 px con carrello vuoto e con un articolo (stato verificato). `git diff --numstat` sulla base: 0 righe aggiunte, 2 tolte. 12 test collegati, precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Bozza di ordine, esito e stampa non provati nel browser (stesso contenitore). **Alla consegna futura:** `carrello.aspx`, `Public/assets/keepstore/css/theme-overrides.css` (con gli altri file delle PR 583, 585, 587). CONSEGNA SERVER SOSPESA.
+
 ## UX-COMPACT-SPACING-SITEWIDE-1B (seconda tranche) — 19/11/2026 — SOURCE (schede dei correlati, griglie HOME, pagine di servizio su telefono)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#587](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/587), stable `1cd25e1c`.** Il PO: «Si, prosegui». Schede dei correlati della scheda prodotto e griglie della HOME con 10 px fra immagine e testo (prima 30); su telefono meno vuoto sopra e sotto il contenuto in contatti, area personale e pagine di servizio. Solo stile.
