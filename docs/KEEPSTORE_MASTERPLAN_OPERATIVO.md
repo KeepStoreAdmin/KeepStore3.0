@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## PDP-BUNDLE-PRICE-GAP-1A — 20/11/2026 — SOURCE (prezzi separati in «Spesso acquistati insieme»)
+
+**Esito: A (SOURCE, non pubblicato). Livello S. PR [#594](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/594), stable `97e78e39`.** Il PO: «il prezzo standard ed il prezzo promo, sono attaccati, senza spazio». Ora i due prezzi sono separati di 12 px (a capo se lo spazio non basta) e il testo ha uno spazio fra i due importi. Nessun importo, promozione, colore o misura cambia.
+
+**Fatti e causa.** Riprodotto sul LAB a 390 e 1280 px: «19,9929,00», distanza 0 px. `BuildPriceHtml` (`articolo.aspx.vb`) univa i due elementi senza separatore; riquadro di acquisto e correlati non mostravano il difetto perche il loro contenitore e gia in riga con una distanza, il paragrafo della sezione no.
+
+**Revisioni.** ChatGPT (xhigh): accolti l'elenco completo dei quattro chiamanti, la distanza coerente (12 px, non gli 8 della bozza), geometria severa e correlati obbligatori nel test. Claude (Opus): confermato che lo spazio non cambia nulla negli altri tre chiamanti; accolti lo stile calcolato nel test e il caso forzato a capo; scartato il cambio della sigla del foglio (mai pubblicata). Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-PdpBundlePriceGap.ps1`, visto rosso sulla stable: sorgenti, 5 mutanti, sito LAB a 390 e 1280 px (stile calcolato, distanza, a capo sotto il prezzo, 9 coppie dei correlati invariate). 9 test collegati, precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Testo nascosto «prezzo precedente» per la sintesi vocale: nel task `STYLE-PRICE-STATES-1A`. **Alla consegna futura:** `articolo.aspx.vb`, `Public/assets/keepstore/css/product-ui.css`. CONSEGNA SERVER SOSPESA.
+
 ## UX-STYLE-DIRECTION-1A — 19/11/2026 — DOCS (linea di stile del negozio, decisa con ChatGPT)
 
 **Esito: A (solo documenti, nessun file del prodotto). Livello: non applicabile (lavoro esente). Documento: [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md).** Mandato del PO: «Devi ragionare con ChatGPT e risolvere queste difformita, e decidere l'andamento dello style». La linea e scritta come regole verificabili e come ordine dei prossimi task grafici.
