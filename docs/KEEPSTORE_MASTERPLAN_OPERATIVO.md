@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## UX-STYLE-DIRECTION-1A — 19/11/2026 — DOCS (linea di stile del negozio, decisa con ChatGPT)
+
+**Esito: A (solo documenti, nessun file del prodotto). Livello: non applicabile (lavoro esente). Documento: [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md).** Mandato del PO: «Devi ragionare con ChatGPT e risolvere queste difformita, e decidere l'andamento dello style». La linea e scritta come regole verificabili e come ordine dei prossimi task grafici.
+
+**Fatti e causa.** Misura degli stili calcolati su HOME, elenco delle offerte, scheda prodotto e carrello (390 e 1280 px): prezzi di tre stili (rosso 28 px nelle occasioni, nero 22 px in griglie ed elenco, rosso 30-32 px nella scheda prodotto), titolo delle schede blu ovunque tranne nei correlati, sei raggi diversi, «Inter» dichiarato nel carrello ma non caricato, scheda prodotto alta circa 9.200 px su telefono con tre sezioni sempre aperte. Riferimenti del PO letti come struttura: ONSUS, Bytecno (HOME e scheda prodotto), Unieuro, Stay On.
+
+**Revisioni.** ChatGPT (xhigh): accolti il prezzo rosso legato allo stato commerciale vero (uno sconto solo a quantita non colora il prezzo), l'elenco esplicito delle riserve di spazio ammesse e vietate, le condizioni per le sezioni a scomparsa (l'indice apre la sezione prima del salto), la fotografia di base riproducibile prima di unificare, le eccezioni nominate ai raggi; smentite due frasi della bozza («nessun salto del testo», «nessuno spazio riservato»). Claude: non richiesta (lavoro esente, nessun codice). Gate di certezza: non applicabile.
+
+**Prove.** Nessun test (documenti). Verificati sul codice i rilievi di ChatGPT: prezzo nero delle griglie della HOME, «in offerta» che comprende gli sconti a quantita (`articoli.aspx.vb`), nomi reali dei produttori delle schede, caratteri caricati.
+
+**Limiti e residuo (NON AVVIATO).** Misure a campione; menu su telefono dei riferimenti non ancora osservato nel browser; caratteri reali su Android e iOS non misurati. Due scelte lasciate al PO (fondo della HOME, colore del titolo delle schede), con proposta che non cambia cio che oggi si vede. Prossimi task nell'ordine del documento: `STYLE-BASELINE-1A`, `STYLE-PRICE-STATES-1A`, `STYLE-TYPE-TITLES-1A`, `HOME-MOBILE-MENU-1A`, `PDP-LAYOUT-ORDER-1A`, `PAYMENT-LOGOS-1A`. CONSEGNA SERVER SOSPESA.
+
 ## CATALOG-DEAL-PROGRESS-1B — 19/11/2026 — SOURCE (barra delle vendite nelle schede in offerta dell'elenco)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#591](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/591), stable `c7b45f38`.** Mandato del PO: «Stessa tipologia lo devi riportare anche nella sezione OFFERTE». Nell'elenco le schede con un'offerta attiva e almeno un pezzo venduto mostrano «Venduti negli ultimi 12 mesi», numero e barra, sopra il prezzo. Nessun prezzo, promozione o ordine modificato.
