@@ -2216,8 +2216,18 @@
 }
 
 .ks-rv-name a{
+    display: inline;
     color: #222222;
     text-decoration: none;
+}
+
+.ks-rv-section .ks-rv-name a:focus-visible{
+    outline: none;
+}
+
+.ks-rv-name:has(a:focus-visible){
+    outline: 3px solid currentColor;
+    outline-offset: 2px;
 }
 
 .ks-rv-name a:hover{
@@ -2226,6 +2236,7 @@
 
 .ks-rv-price{
     margin-top: 14px;
+    margin-bottom: 14px;
     color: #222222;
     font-size: 16px;
     font-weight: 700;

@@ -98,7 +98,7 @@ $mutants = @(
     @{ Id = 'M11_OLD_NAME_FOOTER'; File = 'footer'; Old = 'href="myaccount.aspx">La tua Dashboard</a>'; New = 'href="myaccount.aspx">Il mio account</a>' },
     @{ Id = 'M12_LOGOUT_NO_TITLE'; File = 'logout'; Old = '<h1 class="ks-logout__title">'; New = '<h2 class="ks-logout__title">' },
     @{ Id = 'M13_LOGOUT_NO_ABANDON'; File = 'logoutVb'; Old = 'Session.Abandon()'; New = '' },
-    @{ Id = 'M14_LOGOUT_NO_LOGIN_LINK'; File = 'logout'; Old = 'id="hlLogoutLogin"'; New = 'id="hlOther"' },    @{ Id = 'M09_OLD_BUSTER'; File = 'aspx'; Old = 'cart-ui.css") & "?v=20261118-vat-note-1a"'; New = 'cart-ui.css") & "?v=20261117-pay-guide-2a"' }
+    @{ Id = 'M14_LOGOUT_NO_LOGIN_LINK'; File = 'logout'; Old = 'id="hlLogoutLogin"'; New = 'id="hlOther"' },    @{ Id = 'M09_OLD_BUSTER'; File = 'aspx'; Old = 'cart-ui.css") & "?v=20261120-recent-1b"'; New = 'cart-ui.css") & "?v=20261117-pay-guide-2a"' }
 )
 $bad = 0
 foreach ($mu in $mutants) {
