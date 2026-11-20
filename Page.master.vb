@@ -1361,6 +1361,16 @@ End Function
         Catch
             ' no-op
         End Try
+
+        ' Colore di accento per vetrina (tenant-accent.css): il body porta l'azienda risolta per host. Errore o azienda ignota = attributo assente.
+        Try
+            Dim accentTenant As StorefrontSeoTenantIdentity = StorefrontSeoTenantContext.Resolve(HttpContext.Current)
+            If PageBody IsNot Nothing AndAlso accentTenant IsNot Nothing AndAlso accentTenant.CompanyId > 0 Then
+                PageBody.Attributes("data-ks-company") = accentTenant.CompanyId.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            End If
+        Catch
+            ' no-op
+        End Try
     End Sub
 
     Private Sub ApplySupportEmail()

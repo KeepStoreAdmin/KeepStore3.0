@@ -1,0 +1,160 @@
+/* ==========================================================================
+   Colore di accento della vetrina: UNA sola variabile, --ks-accent, un valore per azienda.
+   Richiesta del PO del 2026-11-20. Caricato per ultimo da Page.master.
+   Il body porta data-ks-company = id dell'azienda risolta per host.
+
+   PER CAMBIARE IL COLORE DI UNA VETRINA SI MODIFICA SOLO IL VALORE DI UNA DELLE DUE RIGHE QUI SOTTO.
+   ========================================================================== */
+body { --ks-accent: #D80027; }
+body[data-ks-company="1"] { --ks-accent: #D80027; }
+body[data-ks-company="2"] { --ks-accent: #FF8C00; }
+
+/* --------------------------------------------------------------------------
+   Colori ricavati dal solo accento (niente da modificare qui).
+   --ks-accent-hover : accento piu scuro per hover e anello di focus
+   --ks-on-accent    : testo sopra un fondo d'accento (bianco su accento scuro, nero su accento chiaro)
+   --ks-accent-text  : accento usato come colore di testo su fondo chiaro (scurito solo se troppo chiaro)
+   --ks-accent-hover-text : lo stesso per il testo in hover o attivo
+   --ks-price-accent : rosso dei prezzi e degli errori, FISSO: non segue l'accento
+   -------------------------------------------------------------------------- */
+body {
+    --ks-accent-hover: var(--ks-accent);
+    --ks-on-accent: #fff;
+    --ks-accent-text: var(--ks-accent);
+    --ks-accent-hover-text: var(--ks-accent-hover);
+    --ks-price-accent: #D80027;
+}
+@supports (color: color-mix(in srgb, red 80%, oklch(from red 0.19 calc(c * 0.5) h))) and (color: oklch(from red clamp(0, (0.65 - l) * 1000, 1) 0 0)) and (color: oklch(from red min(l, 0.555) c h)) {
+    body {
+        --ks-accent-hover: color-mix(in srgb, var(--ks-accent) 80%, oklch(from var(--ks-accent) 0.19 calc(c * 0.5) h));
+        --ks-on-accent: oklch(from var(--ks-accent) clamp(0, (0.65 - l) * 1000, 1) 0 0);
+        --ks-accent-text: oklch(from var(--ks-accent) min(l, 0.555) c h);
+        --ks-accent-hover-text: oklch(from var(--ks-accent-hover) min(l, 0.5) c h);
+    }
+}
+
+/* Gli stili esistenti usano gia --primary e i suoi fratelli: da qui in poi seguono l'accento. */
+body {
+    --primary: var(--ks-accent);
+    --primary-2: var(--ks-accent);
+    --primary-hover: var(--ks-accent-hover);
+    --focus-ring: var(--ks-accent-hover);
+}
+
+/* --------------------------------------------------------------------------
+   Prezzi, offerte, sconti, totali ed errori: restano del colore di prima.
+   Dentro questi contenitori le variabili tornano al rosso fisso.
+   -------------------------------------------------------------------------- */
+.new-price,
+.box-sale-tag,
+.box-sale-wrap,
+.ks-product-promos,
+.ks-catalog-promos,
+.ks-home-promo-tier,
+.ks-pdp-info-price,
+.ks-pdp-info-promo__discount,
+.ks-card-sales__bar,
+.ks-mini-cart-total,
+.ks-order-inventory-alert,
+.product-info-price,
+.price-text,
+.box-total-btn > p {
+    --primary: var(--ks-price-accent);
+    --primary-2: var(--ks-price-accent);
+    --primary-hover: #B8001F;
+    --focus-ring: #B8001F;
+    --ks-accent-text: var(--ks-price-accent);
+    --ks-accent-hover-text: #B8001F;
+}
+
+/* --------------------------------------------------------------------------
+   Leggibilita. Con un accento chiaro il testo bianco sopra l'accento e il testo
+   color accento su fondo chiaro non si leggono: si usano i colori ricavati.
+   Con il rosso storico queste regole danno gli stessi colori di prima.
+   -------------------------------------------------------------------------- */
+
+/* Testo color accento su fondo chiaro */
+.text-primary {
+    color: var(--ks-accent-text) !important;
+}
+.main-nav-menu .nav-item.active .item-link,
+.main-nav-menu .nav-item.active .item-link .icon,
+body.ks-page-home .ks-home-collection-card span,
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-summary .ks-taxonomy-disclosure-label-closed,
+#ksCatalogPage .ks-catalog-category-nav .ks-taxonomy-disclosure-summary .icon-arrow-down,
+#ksCatalogPage .ks-catalog-pager__current,
+.ks-home-category-initial,
+.rating-percent .rate-percent {
+    color: var(--ks-accent-text);
+}
+
+.header-bottom .main-nav-menu .nav-item.active .item-link,
+.header-bottom .main-nav-menu .nav-item:hover .item-link,
+.header-bottom .main-nav-menu .nav-item .item-link.link:hover {
+    color: var(--ks-accent-hover-text) !important;
+}
+
+/* Testo sopra un fondo d'accento (a riposo; in hover il fondo dei pulsanti diventa scuro e il testo resta bianco) */
+.tf-btn.text-white:not(.btn-gray):not(.btn-gray-2):not(.btn-line):not(.btn-line-white):not(:hover),
+.ks-home-hero-actions .tf-btn:not(.btn-line):not(.btn-line-white):not(:hover),
+.ks-guide-primary,
+.ks-guide-primary:hover,
+#ksCatalogPage .facet-price .ks-catalog-price-apply,
+#ksCatalogPage .ks-multi-footer__cta,
+#ksCatalogPage .ks-multi-footer__cta:visited,
+#ksCatalogPage .ks-multi-footer__cta:hover,
+#ksCatalogPage .ks-multi-footer__cta:active,
+#ksCatalogPage .ks-multi-footer__cta:focus,
+.form-search-product .btn-submit-form:not(:hover),
+.tf-header .nav-icon .count-box,
+.ks-compact-buy-cta,
+.ks-compact-buy-cta:hover,
+.ks-compact-buy-cta:focus,
+.ks-compact-buy-cta:active,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:hover,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:focus,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:active,
+#ksCatalogPage article.card-product .ks-compact-buy-cta,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:hover,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:focus,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:active {
+    color: var(--ks-on-accent) !important;
+}
+
+/* Hover scritto a mano in rosso scuro: segue l'accento */
+#ksCatalogPage .facet-price .ks-catalog-price-apply:hover:not(:disabled) {
+    background: var(--ks-accent-hover);
+    border-color: var(--ks-accent-hover);
+}
+.ks-compact-buy-cta:hover,
+.ks-compact-buy-cta:focus,
+.ks-compact-buy-cta:active,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:hover,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:focus,
+body.ks-page-home .ks-home-main .ks-compact-buy-cta:active,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:hover,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:focus,
+#ksCatalogPage article.card-product .ks-compact-buy-cta:active {
+    background: var(--ks-accent-hover) !important;
+    border-color: var(--ks-accent-hover) !important;
+}
+
+/* Tendina della ricerca: i suoi stili arrivano da uno script dopo questo foglio, quindi qui il selettore pesa di piu.
+   Il prezzo e il cartellino dell'offerta nella tendina non si toccano. */
+body .ks-suggest .ks-suggest-all {
+    background: var(--ks-accent);
+    color: var(--ks-on-accent);
+}
+body .ks-suggest .ks-suggest-all:hover {
+    background: var(--ks-accent-hover);
+    color: var(--ks-on-accent);
+}
+body .ks-suggest .ks-suggest-note a {
+    color: var(--ks-accent-hover-text);
+}
+body .ks-suggest .ks-suggest-chip:focus-visible,
+body .ks-suggest .ks-suggest-all:focus-visible,
+body .ks-suggest .ks-suggest-note a:focus-visible {
+    outline-color: var(--ks-accent-hover);
+}

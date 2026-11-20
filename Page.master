@@ -36,6 +36,7 @@
     <asp:PlaceHolder ID="phHeadDynamic" runat="server" />
     <asp:ContentPlaceHolder ID="HeadContent" runat="server" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261119-compact-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/tenant-accent.css") & "?v=20261120-accent-1a" %>" />
     <noscript><style>#preload{display:none!important}</style></noscript>
 </head>
 

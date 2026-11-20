@@ -71,9 +71,9 @@ function Test-Busters([string]$m, [string]$catalogPage, [string]$productPage, [s
 $productAspx = Read-Repo 'articolo.aspx'
 $cartAspx = Read-Repo 'carrello.aspx'
 
-# Ordine reale dei fogli (Page.master righe 18-38, piu i fogli delle pagine, theme-overrides.css per ultimo).
+# Ordine reale dei fogli (Page.master righe 18-38, piu i fogli delle pagine, theme-overrides.css e, per ultimo, tenant-accent.css).
 $sheetOrder = @('bootstrap.min.css', 'keepstore.css', 'keepstore-overrides.css', 'account-ui.css', 'documents-ui.css', 'auth-ui.css', 'ks-ui.css', 'nice-select.css', 'swiper-bundle.min.css', 'animate.css', 'styles.css', 'minicart-ui.css',
-    'catalog-ui.css', 'catalog-filters-ui.css', 'catalog-product-flow.css', 'product-ui.css', 'order-ui.css', 'cart-ui.css', 'theme-overrides.css')
+    'catalog-ui.css', 'catalog-filters-ui.css', 'catalog-product-flow.css', 'product-ui.css', 'order-ui.css', 'cart-ui.css', 'theme-overrides.css', 'tenant-accent.css')
 foreach ($n in $sheetOrder) { if (-not (Test-Path -LiteralPath (Join-Path $cssDir $n))) { throw ('STYLESHEET_MISSING=' + $n) } }
 
 # --- Pagina di prova: frammenti del markup reale, ogni bersaglio ha data-probe ----------------------------------------------------------
@@ -156,7 +156,7 @@ function Write-Doc([string]$directory, [string]$name, [string]$bodyHtml, [hashta
 # --- Lettura degli stili dell'elemento che ha il focus (o di un elemento dato) ---------------------------------------------------------------
 $setupJs = @'
 (function(){
-  function parse(c){var m=c.match(/rgba?\(([^)]+)\)/); if(!m) return null; var p=m[1].split(',').map(function(x){return parseFloat(x)}); return {r:p[0],g:p[1],b:p[2],a:(p.length>3?p[3]:1)};}
+  function parse(c){var m=c.match(/^rgba?\(([^)]+)\)/); if(!m){ if(!c||c==='transparent') return null; var cv=document.createElement('canvas'); cv.width=cv.height=1; var cx=cv.getContext('2d'); cx.fillStyle='rgba(0,0,0,0)'; cx.fillStyle=c; cx.fillRect(0,0,1,1); var d=cx.getImageData(0,0,1,1).data; return {r:d[0],g:d[1],b:d[2],a:d[3]/255}; } var p=m[1].split(',').map(function(x){return parseFloat(x)}); return {r:p[0],g:p[1],b:p[2],a:(p.length>3?p[3]:1)};}
   function lin(v){v/=255; return v<=0.04045? v/12.92 : Math.pow((v+0.055)/1.055,2.4);}
   function lum(c){return 0.2126*lin(c.r)+0.7152*lin(c.g)+0.0722*lin(c.b);}
   function ratio(a,b){var x=lum(a),y=lum(b); return (Math.max(x,y)+0.05)/(Math.min(x,y)+0.05);}
@@ -347,7 +347,7 @@ try {
     Write-Output 'PASS TOKEN_REMOVED_THE_FALLBACK_KEEPS_THE_RING'
 
     # --- Guardia statica: nessun outline con alfa < 1 nei selettori :focus* dei fogli runtime; token definito e usato con fallback ------------------------
-    $runtimeSheets = @('styles.css', 'theme-overrides.css', 'catalog-ui.css', 'catalog-filters-ui.css', 'catalog-product-flow.css', 'cart-ui.css', 'minicart-ui.css', 'product-ui.css', 'auth-ui.css', 'ks-ui.css', 'keepstore-overrides.css', 'keepstore.css', 'order-ui.css', 'account-ui.css', 'documents-ui.css', 'datiutente-ui.css')
+    $runtimeSheets = @('styles.css', 'theme-overrides.css', 'catalog-ui.css', 'catalog-filters-ui.css', 'catalog-product-flow.css', 'cart-ui.css', 'minicart-ui.css', 'product-ui.css', 'auth-ui.css', 'ks-ui.css', 'keepstore-overrides.css', 'keepstore.css', 'order-ui.css', 'account-ui.css', 'documents-ui.css', 'datiutente-ui.css', 'tenant-accent.css')
     function Test-FocusRingGuard([string]$name, [string]$text) {
         $bad = New-Object System.Collections.Generic.List[string]
         $text = [regex]::Replace($text, '(?s)/\*.*?\*/', '')
