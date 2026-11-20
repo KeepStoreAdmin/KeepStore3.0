@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CART-INSURANCE-UNCHECK-ORDER-1A — 20/11/2026 — SOURCE (nessun importo di assicurazione per un vettore che non la offre)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (importi del checkout). PR [#609](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/609), stable `9fd36912`.** Task in coda da `CART-SHIPPING-NUMERIC-READ-1A`; avvio confermato dal PO il 20/11/2026 («OK PROCEDI»).
+
+**Difetto riprodotto (sito LAB).** Vettore senza assicurazione (percentuale 0) con minimo 4,125: la casella restava cliccabile perché `ApplyCartAddressEditorLock`, chiamata in `Page_PreRenderComplete` dopo `LeggiVettori`, la riattivava sempre; `AggiornaSpeseAssicurazione` copiava l'importo prima della deselezione. Un clic: riepilogo con Assicurazione 4,13 e Totale da 9,00 a 14,04 con la casella non spuntata; casella mandata spuntata: stessa cifra fino alla conferma. `lblSpeseAss` alimenta totali, sessione, bozza e ordine. **Dati di oggi:** nessun vettore Web con percentuale 0 e minimo > 0 (danno latente); un vettore senza assicurazione con minimo 0.
+
+**Soluzione (`carrello.aspx.vb`, 11 righe).** In `ApplyCarrierCharges`, punto unico del calcolo: se l'assicurazione non è disponibile (lettura fallita o percentuale 0) l'importo offerto è 0,00, quindi nessuna casella mandata dal browser può creare un addebito; due campi di richiesta conservano la disponibilità e `ApplyCartAddressEditorLock` attiva la casella solo se il vettore letto la offre. Nessun cambiamento per i vettori con assicurazione.
+
+**Revisioni.** ChatGPT (xhigh): accolti il canale del denaro (etichetta, sessione, bozza, ordine) e lo stato «non ancora letto»; messo in coda il riepilogo vecchio dopo una consegna invalidata. Claude (Opus): accolti il ciclo di pagina, l'oracolo sulla conferma (la bozza è in sessione), il controllo positivo; scartati filtro del flag della bozza (nessun lettore) e deselezione dentro il calcolo (toglierebbe una scelta legittima nei passaggi intermedi). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`: casi I1 (casella spenta, 0,00), I2 (casella forzata e conferma: 0,00, totale invariato), I3 (vettore con assicurazione: scelta conservata fino alla conferma), C4 esteso; rossi prima. 12 mutazioni uccise, una ricrea il codice di prima e mostra 4,13 alla conferma. 21 test collegati senza nuovi fallimenti, precompile, segreti, CI verdi. Valori del vettore ripristinati sul LAB.
+
+**Limiti e coda (NON AVVIATI).** `CART-SUMMARY-AFTER-INVALID-DELIVERY-1A` (S: riepilogo con spedizione e assicurazione vecchie dopo una consegna invalidata; nessun ordine viene sigillato). Griglia promo e vettore speciale provati solo come sorgente (stessa funzione). Recupero della bozza che rimette il vettore: annotato. **Alla consegna futura:** `carrello.aspx`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-TENANT-ACCENT-1B — 20/11/2026 — SOURCE (accento della vetrina su carrello, area cliente e documenti)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#607](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/607), stable `bef62787`.** Richiesta del PO del 20/11/2026 («Sì, completa»): l'accento per vetrina (`--ks-accent`) anche su carrello, checkout, area cliente e documenti.
