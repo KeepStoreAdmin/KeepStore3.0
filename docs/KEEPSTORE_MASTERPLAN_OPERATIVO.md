@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CART-RECENT-PRICE-1A — 20/11/2026 — SOURCE (prezzi giusti nei «Visti di recente» del carrello)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#599](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/599), stable `71308236`.** Richiesta del PO del 20/11/2026 («i prezzi ... sballano»). Nel riquadro del carrello il tester 15499 mostrava «35.502,00» invece di 35,50 e la risma 21906, in offerta, «0,00» invece di 5,00.
+
+**Fatti e causa.** `PrepareCartRecommendationRows` leggeva netto e lordo (numeri del database) con `SafeDbl`, che passa da testo e da una regola per il testo scritto a mano: un solo separatore seguito da tre cifre = migliaia. Ogni prezzo con esattamente tre decimali era moltiplicato per mille (sul LAB 152 articoli nel lordo e 962 nel netto, su 4.318). Correzione: le due letture usano `TryReadDatabaseDecimal`, gia nel file; netto illeggibile = scheda saltata, lordo illeggibile = zero come prima.
+
+**Revisioni.** ChatGPT (xhigh): accolti i tre bloccanti (correzione locale e non nella funzione comune, che alimenta anche totali e ordine; offerta reale della risma misurata; test sul percorso reale). Claude (Opus): accolti la regola del lordo assente, l'oracolo allineato alla regola delle offerte, l'offerta di prova tenuta valida sul LAB, il mutante equivalente tolto; scartato il cookie scritto a mano. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-CartRecentPrice.ps1`, visto rosso prima del codice: browser sul sito LAB, ogni prezzo uguale a un calcolo indipendente in SQL, 4 mutazioni eseguite sul sito LAB e uccise. Test del carrello collegati, precompile, segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Provato per il cliente non collegato (IVA inclusa). `CART-SHIPPING-NUMERIC-READ-1A` (L): stessa lettura su assicurazione e contrassegno della spedizione (`carrello.aspx.vb` r. 4675-4686 e 4681->3732; oggi nessun vettore ha valori con tre decimali) e misura di `export_amazon.aspx.vb` r. 47-55. `CART-RECENT-LAYOUT-1B`: allineamento delle schede. **Alla consegna futura:** `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## PHOTO-HOME-HOVER-SHARP-1A — 20/11/2026 — SOURCE (seconda immagine delle schede della HOME nitida)
 
 **Esito: A (SOURCE, non pubblicato). Livello S. PR [#597](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/597), stable `ab057c57`.** Primo task del sistema per le foto. La seconda immagine delle schede della HOME (visibile al passaggio del mouse) non resta piu la miniatura da 150 px: al primo passaggio si carica la foto piena. I telefoni non scaricano nulla in piu.
