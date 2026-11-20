@@ -782,6 +782,11 @@ Private Sub ClearCurrentDeliverySelection()
     Next
     If rbSpedizioneGratis IsNot Nothing Then RbSetChecked(rbSpedizioneGratis, False)
     If tbVettoriId IsNot Nothing Then tbVettoriId.Text = "0"
+    _carrierCodKnown = False
+    _carrierCodPercent = 0D
+    _carrierCodFixed = 0D
+    _carrierCodMinimum = 0D
+    _carrierChargesInvalid = False
 End Sub
 
 Private Function TryRebuildAndValidateCurrentDeliverySelection(ByVal requireExistingSelection As Boolean,
@@ -854,6 +859,10 @@ Private Function TryRebuildAndValidateCurrentDeliverySelection(ByVal requireExis
             End If
         Else
             LeggiVettori(False)
+        End If
+        If _carrierChargesInvalid Then
+            ClearCurrentDeliverySelection()
+            Return False
         End If
         If SafeIntFromDb(tbVettoriId.Text, 0) <> requestedId Then
             ClearCurrentDeliverySelection()
@@ -1374,6 +1383,76 @@ Private _specialFreeShippingAppliedThisRequest As Boolean
 
 Private Cookie As String = ""
 Private RitiroSede As Boolean = False
+
+' Spese del vettore scelto (assicurazione e contrassegno), lette dal database come NUMERI: mai dal testo di etichette o
+' caselle, dove un valore con tre decimali verrebbe scambiato per migliaia. Valgono per la sola richiesta in corso.
+Private Structure CarrierCharges
+    Public InsurancePercent As Decimal
+    Public InsuranceMinimum As Decimal
+    Public CodPercent As Decimal
+    Public CodFixed As Decimal
+    Public CodMinimum As Decimal
+End Structure
+Private _carrierCodKnown As Boolean
+Private _carrierCodPercent As Decimal
+Private _carrierCodFixed As Decimal
+Private _carrierCodMinimum As Decimal
+Private _carrierChargesInvalid As Boolean
+
+' NULL nel database = zero. Chiave assente, tipo non numerico, valore fuori scala o negativo = lettura fallita (mai zero in silenzio).
+Private Function TryReadCarrierCharge(ByVal raw As Object, ByRef value As Decimal) As Boolean
+    value = 0D
+    If raw Is Nothing Then Return False
+    If raw Is DBNull.Value Then Return True
+    Dim parsed As Decimal
+    If Not TryReadDatabaseDecimal(raw, parsed) OrElse parsed < 0D Then Return False
+    value = parsed
+    Return True
+End Function
+
+Private Function TryReadCarrierKey(ByVal values As System.Collections.Specialized.IOrderedDictionary,
+                                   ByVal name As String, ByRef value As Decimal) As Boolean
+    value = 0D
+    If values Is Nothing OrElse Not values.Contains(name) Then Return False
+    Return TryReadCarrierCharge(values(name), value)
+End Function
+
+Private Function TryReadGridCarrierCharges(ByVal grid As GridView, ByVal rowIndex As Integer,
+                                           ByRef charges As CarrierCharges) As Boolean
+    charges = New CarrierCharges()
+    If grid Is Nothing OrElse rowIndex < 0 OrElse rowIndex >= grid.DataKeys.Count Then Return False
+    Dim values As System.Collections.Specialized.IOrderedDictionary = grid.DataKeys(rowIndex).Values
+    Return TryReadCarrierKey(values, "AssicurazionePercentuale", charges.InsurancePercent) AndAlso
+           TryReadCarrierKey(values, "AssicurazioneMinimo", charges.InsuranceMinimum) AndAlso
+           TryReadCarrierKey(values, "ContrassegnoPercentuale", charges.CodPercent) AndAlso
+           TryReadCarrierKey(values, "ContrassegnoFisso", charges.CodFixed) AndAlso
+           TryReadCarrierKey(values, "ContrassegnoMinimo", charges.CodMinimum)
+End Function
+
+' Unico punto che applica le spese del vettore scelto. Restituisce True se l'assicurazione e disponibile.
+' Lettura fallita: nessun importo, contrassegno non noto e consegna non convalidabile (_carrierChargesInvalid).
+Private Function ApplyCarrierCharges(ByVal readOk As Boolean, ByVal charges As CarrierCharges) As Boolean
+    If Not readOk Then
+        charges = New CarrierCharges()
+        _carrierChargesInvalid = True
+    End If
+    _carrierCodKnown = readOk
+    _carrierCodPercent = charges.CodPercent
+    _carrierCodFixed = charges.CodFixed
+    _carrierCodMinimum = charges.CodMinimum
+    RitiroSede = (charges.CodPercent = 0D)
+
+    Dim minimum As Double = CDbl(charges.InsuranceMinimum)
+    Dim insurance As Double = (CDbl(charges.InsurancePercent) * SafeMoney(lblImponibile.Text, 0)) / 100
+    If insurance < minimum Then insurance = minimum
+    lblAssicurazione.Text = FormatCurrencyIt(insurance)
+
+    ' Le caselle nascoste non portano piu valori: nessun calcolo le legge e quello che torna dal browser non conta.
+    tbContrFisso.Text = ""
+    tbContrPerc.Text = ""
+    tbContrMinimo.Text = ""
+    Return charges.InsurancePercent <> 0D
+End Function
 
 'Enum Lst
 Private Enum Lst
@@ -3472,13 +3551,7 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
 
     Dim i As Integer
     Dim rb As Control
-    Dim AsssicurazionePercentuale As Double
-    Dim AssicurazioneMinimo As Double
-    Dim TotAssicurazione As Double
     Dim lbl As Label
-    Dim lblContrPerc As Label
-    Dim lblContrFisso As Label
-    Dim lblContrMinimo As Label
     Dim lblCosto As Label
     Dim sel As Boolean = False
 
@@ -3525,43 +3598,17 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
                 lbl = TryCast(gvVettori.Rows(i).FindControl("lblId"), Label)
                 If lbl IsNot Nothing Then Me.tbVettoriId.Text = lbl.Text
 
-                'Assicurazione
-                lbl = TryCast(gvVettori.Rows(i).FindControl("lblAssPerc"), Label)
-                AsssicurazionePercentuale = SafeDblFromText(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
-
-                lbl = TryCast(gvVettori.Rows(i).FindControl("lblAssicurazioneMinimo"), Label)
-                AssicurazioneMinimo = SafeMoney(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
-
-                Dim imponibileValTmp As Double = SafeMoney(Me.lblImponibile.Text, 0)
-                TotAssicurazione = (AsssicurazionePercentuale * imponibileValTmp) / 100
-
-                If TotAssicurazione < AssicurazioneMinimo Then
-                    TotAssicurazione = AssicurazioneMinimo
-                End If
-                Me.lblAssicurazione.Text = FormatCurrencyIt(TotAssicurazione)
-
-                'Contrassegno
-                lblContrPerc = TryCast(gvVettori.Rows(i).FindControl("lblContrPerc"), Label)
-                lblContrFisso = TryCast(gvVettori.Rows(i).FindControl("lblContrFisso"), Label)
-                lblContrMinimo = TryCast(gvVettori.Rows(i).FindControl("lblContrMinimo"), Label)
-
-                Me.tbContrFisso.Text = If(lblContrFisso IsNot Nothing, lblContrFisso.Text, "")
-                Me.tbContrPerc.Text = If(lblContrPerc IsNot Nothing, lblContrPerc.Text, "")
-                Me.tbContrMinimo.Text = If(lblContrMinimo IsNot Nothing, lblContrMinimo.Text, "")
+                'Assicurazione e contrassegno: numeri del database (chiavi della griglia), mai testo
+                Dim charges As CarrierCharges
+                Dim insuranceAvailable As Boolean = ApplyCarrierCharges(TryReadGridCarrierCharges(gvVettori, i, charges), charges)
 
                 AggiornaSpeseAssicurazione()
 
-                If AsssicurazionePercentuale = 0 Then
+                If Not insuranceAvailable Then
                     Me.cbAssicurazione.Checked = False
                     Me.cbAssicurazione.Enabled = False
                 Else
                     Me.cbAssicurazione.Enabled = True
-                End If
-
-                If SafeDblFromText(Me.tbContrPerc.Text, 0) = 0 Then
-                    RitiroSede = True
-                Else
-                    RitiroSede = False
                 End If
 
             End If
@@ -3600,43 +3647,17 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
                 lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblId"), Label)
                 If lbl IsNot Nothing Then Me.tbVettoriId.Text = lbl.Text
 
-                'Assicurazione
-                lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblAssPerc"), Label)
-                AsssicurazionePercentuale = SafeDblFromText(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
-
-                lbl = TryCast(gvVettoriPromo.Rows(i).FindControl("lblAssicurazioneMinimo"), Label)
-                AssicurazioneMinimo = SafeMoney(If(lbl IsNot Nothing, lbl.Text, "0"), 0)
-
-                Dim imponibileValTmp As Double = SafeMoney(Me.lblImponibile.Text, 0)
-                TotAssicurazione = (AsssicurazionePercentuale * imponibileValTmp) / 100
-                If TotAssicurazione < AssicurazioneMinimo Then
-                    TotAssicurazione = AssicurazioneMinimo
-                End If
-
-                Me.lblAssicurazione.Text = FormatCurrencyIt(TotAssicurazione)
-
-                'Contrassegno
-                lblContrPerc = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrPerc"), Label)
-                lblContrFisso = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrFisso"), Label)
-                lblContrMinimo = TryCast(gvVettoriPromo.Rows(i).FindControl("lblContrMinimo"), Label)
-
-                Me.tbContrFisso.Text = If(lblContrFisso IsNot Nothing, lblContrFisso.Text, "")
-                Me.tbContrPerc.Text = If(lblContrPerc IsNot Nothing, lblContrPerc.Text, "")
-                Me.tbContrMinimo.Text = If(lblContrMinimo IsNot Nothing, lblContrMinimo.Text, "")
+                'Assicurazione e contrassegno: numeri del database (chiavi della griglia), mai testo
+                Dim charges As CarrierCharges
+                Dim insuranceAvailable As Boolean = ApplyCarrierCharges(TryReadGridCarrierCharges(gvVettoriPromo, i, charges), charges)
 
                 AggiornaSpeseAssicurazione()
 
-                If AsssicurazionePercentuale = 0 Then
+                If Not insuranceAvailable Then
                     Me.cbAssicurazione.Checked = False
                     Me.cbAssicurazione.Enabled = False
                 Else
                     Me.cbAssicurazione.Enabled = True
-                End If
-
-                If SafeDblFromText(Me.tbContrPerc.Text, 0) = 0 Then
-                    RitiroSede = True
-                Else
-                    RitiroSede = False
                 End If
 
             End If
@@ -3731,11 +3752,18 @@ End Sub
 
         If lblContrassegno IsNot Nothing AndAlso Val(lblContrassegno.Text) = 1 Then
 
-            Percentuale = SafeDblFromText(Me.tbContrPerc.Text, 0)
-            Fisso = SafeMoney(Me.tbContrFisso.Text, 0)
-            Minimo = SafeMoney(Me.tbContrMinimo.Text, 0)
+            ' Spese del contrassegno del vettore scelto in questa richiesta; non note = contrassegno non selezionabile.
+            If _carrierCodKnown Then
+                Percentuale = CDbl(_carrierCodPercent)
+                Fisso = CDbl(_carrierCodFixed)
+                Minimo = CDbl(_carrierCodMinimum)
+            Else
+                Percentuale = 0
+                Fisso = 0
+                Minimo = 0
+            End If
 
-            If RitiroSede = True Then
+            If RitiroSede = True OrElse Not _carrierCodKnown Then
                 If rb IsNot Nothing Then
                     RbSetChecked(rb, False)
                     RbSetEnabled(rb, False)
@@ -4674,18 +4702,18 @@ Private Function ApplySpecialFreeShippingSelection() As Boolean
                 lblSpeseSped.Text = FormatCurrencyIt(0D)
                 tbVettoriId.Text = carrierId.ToString(CultureInfo.InvariantCulture)
                 rbSpedizioneGratis.Value = carrierId.ToString(CultureInfo.InvariantCulture)
-                Dim percentage As Double = SafeDbl(reader("AssicurazionePercentuale"), 0)
-                Dim minimum As Double = SafeDbl(reader("AssicurazioneMinimo"), 0)
-                Dim insurance As Double = (percentage * SafeMoney(lblImponibile.Text, 0)) / 100
-                If insurance < minimum Then insurance = minimum
-                lblAssicurazione.Text = FormatCurrencyIt(insurance)
-                tbContrFisso.Text = Convert.ToString(reader("ContrassegnoFisso"), CultureInfo.CurrentCulture)
-                tbContrPerc.Text = Convert.ToString(reader("ContrassegnoPercentuale"), CultureInfo.CurrentCulture)
-                tbContrMinimo.Text = Convert.ToString(reader("ContrassegnoMinimo"), CultureInfo.CurrentCulture)
-                If percentage = 0 Then cbAssicurazione.Checked = False
-                cbAssicurazione.Enabled = percentage <> 0
+                Dim charges As New CarrierCharges()
+                Dim readOk As Boolean =
+                    TryReadCarrierCharge(reader("AssicurazionePercentuale"), charges.InsurancePercent) AndAlso
+                    TryReadCarrierCharge(reader("AssicurazioneMinimo"), charges.InsuranceMinimum) AndAlso
+                    TryReadCarrierCharge(reader("ContrassegnoPercentuale"), charges.CodPercent) AndAlso
+                    TryReadCarrierCharge(reader("ContrassegnoFisso"), charges.CodFixed) AndAlso
+                    TryReadCarrierCharge(reader("ContrassegnoMinimo"), charges.CodMinimum)
+                Dim insuranceAvailable As Boolean = ApplyCarrierCharges(readOk, charges)
+                If Not insuranceAvailable Then cbAssicurazione.Checked = False
+                cbAssicurazione.Enabled = insuranceAvailable
                 AggiornaSpeseAssicurazione()
-                RitiroSede = SafeDbl(reader("ContrassegnoPercentuale"), 0) = 0
+                If Not readOk Then Return False
             End Using
         End Using
     End Using

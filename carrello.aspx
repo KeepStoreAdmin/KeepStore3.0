@@ -694,7 +694,7 @@
 <!--<div id="infobar" style="width:100%; color:White; font-weight:bold; height:50px; background-image:url('Public/Images/StepCarrello1.png'); background-size:100%; background-repeat:no-repeat;"></div>-->
 <asp:GridView ID="gvVettoriPromo" runat="server"
         AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettoriPromo"
-        GridLines="None" Width="100%" DataKeyNames="id" CssClass="ks-checkout-grid ks-option-list ks-promo-options">
+        GridLines="None" Width="100%" DataKeyNames="id,AssicurazionePercentuale,AssicurazioneMinimo,ContrassegnoPercentuale,ContrassegnoFisso,ContrassegnoMinimo" CssClass="ks-checkout-grid ks-option-list ks-promo-options">
             <Columns>
                 <asp:TemplateField ShowHeader="False">
                     <ItemTemplate>
@@ -818,7 +818,7 @@
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
         </asp:GridView>
         <div id="gvVettori_tooltip">
-        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" GridLines="None" Width="100%" DataKeyNames="id" ShowHeader="False" CssClass="ks-checkout-grid ks-option-list">
+        <asp:GridView ID="gvVettori" runat="server" AutoGenerateColumns="False" CellPadding="1" DataSourceID="sdsVettori" GridLines="None" Width="100%" DataKeyNames="id,AssicurazionePercentuale,AssicurazioneMinimo,ContrassegnoPercentuale,ContrassegnoFisso,ContrassegnoMinimo" ShowHeader="False" CssClass="ks-checkout-grid ks-option-list">
             <HeaderStyle Font-Bold="False" Font-Size="8pt" HorizontalAlign="Left" ForeColor="#2050AF" />
             <AlternatingRowStyle BackColor="WhiteSmoke" BorderStyle="None" />
             <Columns>
