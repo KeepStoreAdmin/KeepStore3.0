@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-TENANT-ACCENT-1A — 20/11/2026 — SOURCE (un solo colore di accento per vetrina)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#605](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/605), stable `57e35296`.** Richiesta del PO del 20/11/2026: «Un solo colore di accento per vetrina», variabile `--ks-accent` con un valore per azienda; Azienda 1 mantiene il rosso, Azienda 2 usa `#FF8C00`; prezzi ed errori invariati.
+
+**Fatti.** 331 punti rossi negli stili condivisi; quasi tutti passano da `--primary` (anche come ripiego `var(--primary, #hex)`), prezzi compresi. `#FF8C00` su bianco ha contrasto 2,33:1.
+
+**Soluzione.** `Page.master.vb`: `data-ks-company` sul `body` (azienda per host). Nuovo `Public/assets/keepstore/css/tenant-accent.css`, ultimo foglio di `Page.master`: righe 9 e 10 = le due righe modificabili; hover, testo sopra l'accento e accento come testo ricavati dal browser dalla sola variabile (`color-mix`, colori relativi `oklch`, con `@supports` e ripiego); `--primary` e fratelli seguono l'accento; prezzi, offerte, sconti, totali ed errori tornano al rosso fisso sui loro contenitori. Nessun altro foglio o script toccato. Decisione esplicita del PO: valori per azienda in un file condiviso (deroga alla regola MULTITENANT limitata a questo file, senza nomi di cliente).
+
+**Revisioni.** ChatGPT (xhigh): accolti prezzi che seguono l'accento per vie indirette, rossi diversi nel carrello, stili della ricerca iniettati da script, `.text-white !important`. Claude (Opus): accolti variabili rimesse sui contenitori dei prezzi, `@supports` sulle espressioni esatte, confronto sui canali sRGB, nessuna modifica allo script della ricerca; smentito con misura «Azienda 1 cambia». Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-TenantAccent.ps1` (rosso prima): sito LAB, due host, colori di tutti gli elementi con il foglio spento e acceso. Azienda 1: zero colori cambiati su HOME, catalogo, scheda articolo, carrello, login. Azienda 2: nessun prezzo o errore cambiato, nessun rosso residuo nel perimetro, testo leggibile, tendina della ricerca, focus con Tab vero. 6 mutazioni uccise. `Test-FocusVisible` aggiornato (elenco fogli, colori moderni). Smoke serve foglio e azienda sui due host. CI verde.
+
+**Limiti e coda (NON AVVIATI).** `STYLE-TENANT-ACCENT-1B`: su Azienda 2 carrello, checkout, area cliente e ordini hanno ancora rossi scritti a mano. Azienda 1: in hover pulsante d'acquisto compatto e due dettagli della tendina passano da `#B90021`/`#B0001F` a `#B8001F`. Browser senza colori relativi: testo bianco sull'accento chiaro. **Alla consegna futura:** `Page.master`, `Page.master.vb`, `Public/assets/keepstore/css/tenant-accent.css`. CONSEGNA SERVER SOSPESA.
+
 ## CART-SHIPPING-NUMERIC-READ-1A — 20/11/2026 — SOURCE (assicurazione e contrassegno del vettore letti come numeri)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#603](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/603), stable `7e79207c`.** Seguito della richiesta del PO del 20/11/2026 sui prezzi «che sballano» nel carrello; il PO: «Si, procedi».
