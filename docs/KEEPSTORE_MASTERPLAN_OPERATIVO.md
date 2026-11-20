@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CHECKOUT-SEND-RESEAL-DIVERGENCE-1A — 20/11/2026 — SOURCE (l'ordine non parte con condizioni diverse dalla conferma mostrata)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (invio dell'ordine). PR [#615](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/615), stable `21819c73`.** Difetto segnalato dai revisori in `CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A`; correzione chiesta dal PO il 20/11/2026 («Sì, procedi»).
+
+**Difetto riprodotto (sito LAB, senza creare ordini).** Conferma in contrassegno, totale 12,50; il vettore smette di accettare il contrassegno; «Invia ordine» arrivava a `ordine.aspx` con pagamento carta di credito e totale 9,00, senza nuova conferma. Causa: `SendOrder` risigilla la bozza dallo stato ricalcolato nella stessa richiesta e la confronta solo con se stessa (`TryCaptureAuthoritativeCheckoutDraft` r. 567-571), mai con ciò che il cliente ha visto.
+
+**Soluzione (`carrello.aspx.vb`).** La pagina di conferma salva nel ViewState l'impronta della bozza che mostra (`draft.Fingerprint`, unica per sigillatura; scritta solo in `BindCheckoutConfirmSummary`, e il valore arrivato dal browser è catturato prima di ogni riscrittura). All'invio: la bozza in sessione deve essere quella mostrata dalla pagina che invia (altra scheda, doppio invio) e la nuova sigillatura deve avere lo stesso contenuto commerciale (scelte, politica di pagamento, carrello, ogni importo: `HasSameCheckoutConditions`). Altrimenti niente invio: conferma aggiornata, messaggio dedicato, condizioni di vendita da riaccettare. Invio normale invariato.
+
+**Revisioni.** ChatGPT (xhigh): accolti il legame tra conferma mostrata e bozza e il confronto completo (non solo pagamento e totale). Claude (Opus): accolti l'impronta giusta (`Fingerprint`, non `PayloadFingerprint`), il punto unico di scrittura, il messaggio senza redirect, la casella delle condizioni deselezionata; verificata sul codice la stabilità dei campi confrontati. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`: nella sola copia LAB `ordine.aspx` è sostituita da una pagina di prova (nessun ordine, nessuna e-mail), ripristinata e verificata. S1 invio normale: passa con pagamento e totale mostrati. S2 contrassegno non più accettato: fermato, conferma aggiornata, secondo invio coerente. S3 doppio invio dalla stessa conferma: il secondo è fermato. 23 mutazioni uccise (tre passate, nuovi filtri `-Cases` e `-MutantFilter`). 21 test collegati senza nuovi fallimenti, precompile, segreti, CI verdi.
+
+**Limiti e coda (NON AVVIATI).** `CHECKOUT-PAYMENT-FALLBACK-ORDER-1A` (M): il ripiego di `LeggiPagamenti` sceglie il primo pagamento prima di spegnere il contrassegno (oggi il contrassegno non è offerto sul Web: latente). Non provati: buono sconto (possibile falso blocco con «spedizione omaggio»: il cliente reinvia), scadenza della bozza, preventivo, mobile; la pagina di prova legge la bozza dalla sessione, non col gettone. **Alla consegna futura:** `carrello.aspx`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A — 20/11/2026 — SOURCE (dopo la conferma il cliente può cambiare vettore e pagamento)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (checkout). PR [#613](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/613), stable `e0bc49bf`.** Difetto riprodotto durante `CART-SUMMARY-AFTER-INVALID-DELIVERY-1A`; correzione chiesta dal PO il 20/11/2026 («Sì, procedi»).
