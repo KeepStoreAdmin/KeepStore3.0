@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CART-RECENT-LAYOUT-1B — 20/11/2026 — SOURCE (schede dei «Visti di recente» del carrello allineate)
+
+**Esito: A (SOURCE, non pubblicato). Livello S. PR [#601](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/601), stable `8f556bf7`.** Seconda parte della richiesta del PO del 20/11/2026 («i prezzi ... sono disallineati con gli altri»).
+
+**Fatti e causa.** Il titolo della scheda vuole due righe (`-webkit-line-clamp: 2`), ma il collegamento al suo interno e reso blocco in linea dal foglio generale (`styles.css` r. 490): il taglio non agiva. Misure a 1280 px: titoli di 44/65/86 px, prezzi a 284/305/326 px; sotto 768 px prezzo a 0 px dal pulsante. Correzione in `cart-ui.css`: collegamento del titolo in linea, 14 px sotto il prezzo, contorno da tastiera sul titolo intero (prima tagliato dal titolo stesso).
+
+**Revisioni.** ChatGPT (xhigh): accolti la distanza zero sul telefono, i controlli falsamente verdi del test, i due test che fissano la sigla; scartato l'attributo `title`. Claude (Opus): accolti il contorno sul titolo al posto dell'offset negativo (sarebbe stato tagliato di 1 px), il Tab vero con `:focus-visible` asserito, le fasce a 800 e 700 px, i confronti su tutte le schede. Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-CartRecentLayout.ps1`, visto rosso prima: pagina vera del sito LAB a 1280, 800, 700 e 390 px, 6 mutazioni eseguite nel browser e uccise ciascuna dal proprio controllo. `Test-FocusVisible`, `Test-QaBrowser1B` (nuova sigla) e gli altri collegati verdi; precompile, segreti e CI verdi.
+
+**Limiti (NON AVVIATO).** Scheda senza marca, categoria e codice non provata (assente nei dati; richiede markup). L'area cliccabile del titolo e il solo testo (immagine e pulsante portano allo stesso indirizzo). **Alla consegna futura:** `Public/assets/keepstore/css/cart-ui.css`, `carrello.aspx` (insieme a `carrello.aspx.vb` della PR 599). CONSEGNA SERVER SOSPESA.
+
 ## CART-RECENT-PRICE-1A — 20/11/2026 — SOURCE (prezzi giusti nei «Visti di recente» del carrello)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#599](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/599), stable `71308236`.** Richiesta del PO del 20/11/2026 («i prezzi ... sballano»). Nel riquadro del carrello il tester 15499 mostrava «35.502,00» invece di 35,50 e la risma 21906, in offerta, «0,00» invece di 5,00.
