@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CART-SUMMARY-AFTER-INVALID-DELIVERY-1A — 20/11/2026 — SOURCE (riepilogo senza gli importi del vettore non più valido)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (checkout). PR [#611](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/611), stable `1d04071f`.** Task in coda da `CART-INSURANCE-UNCHECK-ORDER-1A`; avvio confermato dal PO il 20/11/2026 («ok procedi»).
+
+**Difetto riprodotto (sito LAB).** Vettore scelto con assicurazione spuntata, poi tolto dal Web: «Vai alla conferma» non prosegue (giusto) ma il riepilogo mostra ancora Spedizione 6,56, Assicurazione 4,50, Totale 14,49, con la casella spuntata e attiva. Causa: `ClearCurrentDeliverySelection` azzera la selezione ma non le etichette, e dopo il rebuild fallito le routine dei vettori non girano più nella richiesta. Nessun ordine viene creato.
+
+**Soluzione (`carrello.aspx.vb`, 10 righe).** Tutto in `ShowCurrentShippingSelectionFailure`, chiamata solo dai quattro punti in cui la consegna fallisce in modo definitivo: spedizione, assicurazione addebitata e offerta, costo del pagamento a 0,00; casella dell'assicurazione deselezionata e spenta; pagamento e totali si ricalcolano dopo, dal database. `ClearCurrentDeliverySelection` non è toccata: i percorsi validi restano identici.
+
+**Revisioni.** ChatGPT (xhigh): accolti livello L, prova di misura in cartella, costo del pagamento residuo, assicurazione da riscegliere. Claude (Opus): accolti il punto unico del fallimento e la richiesta successiva nel test (il sito sceglie da solo un altro vettore: senza deselezione ne addebiterebbe l'assicurazione); scartata la condizione sul vettore corrente nel blocco (cosmetica, mutazione non uccidibile). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`, caso V1 (rosso prima): conferma non raggiunta, Spedizione e Assicurazione 0,00, IVA scesa, Totale = imponibile + IVA + pagamento, casella non spuntata e spenta; poi scelta di un altro vettore: assicurazione non addebitata. 17 mutazioni uccise. 21 test collegati senza nuovi fallimenti, precompile, segreti, CI verdi. Dati del LAB ripristinati e verificati.
+
+**Limiti e coda (NON AVVIATI).** **`CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A` (L, difetto preesistente riprodotto durante la prova):** dopo un passaggio dalla conferma, la bozza valida (30 minuti) rimette il vettore di prima a ogni richiesta e il cliente non riesce a cambiare vettore. La deselezione dell'assicurazione vale anche per i fallimenti temporanei. Costo del pagamento residuo non provato con mutazione. **Alla consegna futura:** `carrello.aspx`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CART-INSURANCE-UNCHECK-ORDER-1A — 20/11/2026 — SOURCE (nessun importo di assicurazione per un vettore che non la offre)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (importi del checkout). PR [#609](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/609), stable `9fd36912`.** Task in coda da `CART-SHIPPING-NUMERIC-READ-1A`; avvio confermato dal PO il 20/11/2026 («OK PROCEDI»).
