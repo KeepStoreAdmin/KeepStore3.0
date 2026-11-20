@@ -3548,10 +3548,23 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
         Dim draft As CheckoutDraftState = Nothing
         If identity Is Nothing OrElse Not identity.IsComplete OrElse
            Not CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current, identity, draft) Then Return
-        RestoreGridRadioSelection(gvVettori, "rbSpedizione", draft.DeliveryMethodId)
-        RestoreGridRadioSelection(gvVettoriPromo, "rbSpedizione", draft.DeliveryMethodId)
-        RestoreGridRadioSelection(gvPagamento, "rbPagamento", draft.PaymentMethodId)
+        ' Le scelte della bozza si rimettono solo quando il browser non ha mandato le proprie (pagina aperta o ricaricata,
+        ' ritorno dalla conferma dove le opzioni sono nascoste). Se il gruppo arriva dal browser porta la scelta del cliente,
+        ' oppure il ripristino gia fatto nella risposta precedente: sovrascriverlo impedirebbe di cambiare vettore o pagamento.
+        If Not IsCheckoutOptionGroupPosted("spedizione") Then
+            RestoreGridRadioSelection(gvVettori, "rbSpedizione", draft.DeliveryMethodId)
+            RestoreGridRadioSelection(gvVettoriPromo, "rbSpedizione", draft.DeliveryMethodId)
+        End If
+        If Not IsCheckoutOptionGroupPosted("pagamento") Then
+            RestoreGridRadioSelection(gvPagamento, "rbPagamento", draft.PaymentMethodId)
+        End If
     End Sub
+
+    ' Vero se nella richiesta il browser ha mandato una scelta per quel gruppo di opzioni (nome del gruppo dei radio).
+    Private Function IsCheckoutOptionGroupPosted(ByVal groupName As String) As Boolean
+        If Not Page.IsPostBack OrElse Request Is Nothing Then Return False
+        Return Not String.IsNullOrEmpty(Request.Form(groupName))
+    End Function
 
     Private Sub RestoreGridRadioSelection(ByVal grid As GridView,
                                           ByVal radioId As String,

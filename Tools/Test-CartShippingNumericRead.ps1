@@ -12,6 +12,8 @@ param([switch]$SkipMutants, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20
 # nemmeno con un minimo impostato e con la casella mandata spuntata dal browser; la casella resta disattivata.
 # CART-SUMMARY-AFTER-INVALID-DELIVERY-1A (caso V1): se il vettore scelto non e piu valido, il riepilogo non mostra piu i suoi importi
 # e l'assicurazione va scelta di nuovo.
+# CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A (caso D1): dopo un passaggio dalla conferma il cliente deve poter cambiare vettore e pagamento;
+# se non cambia nulla (ritorno con Modifica, ricaricamento della pagina) restano le scelte sigillate nella bozza.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -102,6 +104,45 @@ function Read-Step2($browser) {
     throw 'PAGINA_NON_VALIDA: passo spedizione e pagamento non raggiunto'
 }
 function CodCost($s) { if ($null -ne $s.cod) { return [string]$s.cod.cost } else { return '(riga assente)' } }
+
+# ---------- scelte di vettore e pagamento (caso D1) ----------
+$optionsJs = "(function(){function L(sel){var o=[];document.querySelectorAll(sel).forEach(function(r){var tr=r.closest('tr');var t=tr?tr.textContent.replace(/\s+/g,' ').toLowerCase():'';o.push({v:r.value,checked:r.checked,disabled:r.disabled,cod:(window.__ksCod&&t.indexOf(window.__ksCod)>=0)});});return o;}var tv=document.querySelector('[id`$=tbVettoriId]'),tp=document.querySelector('[id`$=tbPagamenti]');return JSON.stringify({tbV:tv?tv.value:'',tbP:tp?tp.value:'',carriers:L('[id*=gvVettori] input[type=radio]'),pays:L('[id*=gvPagamento] input[type=radio]')});})()"
+function Read-Options($browser) {
+    $null = Invoke-KsJs $browser ('window.__ksCod=' + (ConvertTo-Json $script:codText) + ';1')
+    return (ConvertFrom-Json ([string](Invoke-KsJs $browser $optionsJs)))
+}
+function Format-Options($o) {
+    $cv = @($o.carriers | Where-Object { $_.checked } | ForEach-Object { [string]$_.v }) -join ','
+    $cp = @($o.pays | Where-Object { $_.checked } | ForEach-Object { [string]$_.v }) -join ','
+    return ([string]$o.tbV + '/' + [string]$o.tbP + ' spunte ' + $cv + '/' + $cp)
+}
+# Clic sul radio con quel valore; attende che la pagina tornata mostri il valore nella casella nascosta (o 8 secondi) e restituisce lo stato.
+function Select-Option($browser, [string]$grid, [string]$value) {
+    Start-Sleep -Milliseconds 2000   # la pagina appena tornata deve finire di caricarsi, altrimenti il clic va perso
+    $done = [string](Invoke-KsJs $browser ("(function(){var r=[].slice.call(document.querySelectorAll('[id*=" + $grid + "] input[type=radio]')).filter(function(x){return x.value==='" + $value + "'&&!x.disabled;});if(!r.length)return '';if(r[0].checked)return 'gia';r[0].click();return '1';})()"))
+    if ($done -eq '') { throw ('PAGINA_NON_VALIDA: opzione ' + $value + ' non trovata in ' + $grid) }
+    $o = $null
+    for ($w = 0; $w -lt 16; $w++) {
+        Start-Sleep -Milliseconds 500
+        try { $o = Read-Options $browser } catch { $o = $null }
+        if ($null -eq $o) { continue }
+        $now = if ($grid -eq 'gvPagamento') { [string]$o.tbP } else { [string]$o.tbV }
+        if ($done -eq 'gia' -or ($now -eq $value -and $w -ge 3)) { break }
+    }
+    if ($null -eq $o) { throw 'PAGINA_NON_VALIDA: pagina non leggibile dopo la scelta di una opzione' }
+    return $o
+}
+function Go-Confirm($browser, [string]$what) {
+    Start-Sleep -Milliseconds 1500
+    Invoke-KsClick $browser '#MainContent_btnVaiConfermaOrdine'; Start-Sleep -Milliseconds 3500
+    if (-not [bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btInviaOrdine")')) { throw ('PAGINA_NON_VALIDA: conferma non raggiunta (' + $what + ')') }
+}
+# Browser nuovo = sessione nuova, senza bozza d'ordine: stato di partenza per i casi successivi.
+function Reset-Browser {
+    if ($script:browser) { Stop-KsBrowser $script:browser; $script:browser = $null }
+    $script:browser = Start-KsBrowser -LoopbackHosts @('www.taikun.it') -Width 1280 -Height 900
+    Enter-Site $script:browser
+}
 
 # Ogni caso restituisce l'elenco dei difetti (vuoto = giusto).
 function Test-Case([string]$id, $browser) {
@@ -239,6 +280,48 @@ function Test-Case([string]$id, $browser) {
             $webNow = Get-Scalar "SELECT Web AS ksval FROM vettori WHERE id=$script:carrier AND AziendeId=$script:company;"
             if ($webNow -ne '1') { throw 'ATTENZIONE: vettore di prova non rimesso sul Web' }
         }
+        'D1' {   # dopo la conferma il cliente deve poter cambiare vettore e pagamento; senza cambi restano le scelte sigillate
+            Reset-Browser; $browser = $script:browser   # sessione nuova: nessuna bozza dei casi precedenti
+            Set-Carrier 1.5 4.5 1.6 0 3.5; $null = Read-Step2 $browser
+            $o0 = Read-Options $browser
+            $v0 = [string]$o0.tbV; $p0 = [string]$o0.tbP
+            $vs = @($o0.carriers | Where-Object { -not $_.disabled } | ForEach-Object { [string]$_.v })
+            $ps = @($o0.pays | Where-Object { -not $_.disabled -and -not $_.cod } | ForEach-Object { [string]$_.v })
+            if ($vs.Count -lt 2 -or $ps.Count -lt 2) { throw ('PAGINA_NON_VALIDA: D1 richiede almeno due vettori e due pagamenti attivi (' + $vs.Count + ', ' + $ps.Count + ')') }
+            $va = $vs[$vs.Count - 1]; $vc = $vs[0]            # A = ultimo vettore, C = primo (piu in alto di A)
+            $pb = $ps[$ps.Count - 1]; $pd = $ps[0]            # B = ultimo pagamento, D = primo
+            try {
+                $o = Select-Option $browser 'gvVettori' $va; $o = Select-Option $browser 'gvPagamento' $pb
+                if ([string]$o.tbV -ne $va -or [string]$o.tbP -ne $pb) { throw ('PAGINA_NON_VALIDA: D1 scelte iniziali non applicate (' + (Format-Options $o) + ')') }
+                Go-Confirm $browser 'D1 prima conferma'
+                Invoke-KsClick $browser '#MainContent_btnModificaCheckout'; Start-Sleep -Milliseconds 3500
+                $o = Read-Options $browser
+                if ((Format-Options $o) -ne ($va + '/' + $pb + ' spunte ' + $va + '/' + $pb)) { $bad.Add('D1 dopo Modifica senza cambi: ' + (Format-Options $o) + ', atteso ' + $va + '/' + $pb) }
+                $null = Read-Step2 $browser
+                $o = Read-Options $browser
+                if ((Format-Options $o) -ne ($va + '/' + $pb + ' spunte ' + $va + '/' + $pb)) { $bad.Add('D1 dopo il ricaricamento con la bozza valida: ' + (Format-Options $o) + ', atteso ' + $va + '/' + $pb) }
+                if ($bad.Count -eq 0) {
+                    $o = Select-Option $browser 'gvVettori' $vc
+                    if ((Format-Options $o) -ne ($vc + '/' + $pb + ' spunte ' + $vc + '/' + $pb)) { $bad.Add('D1 vettore scelto dal cliente dopo la conferma: ' + (Format-Options $o) + ', atteso ' + $vc + '/' + $pb) }
+                }
+                if ($bad.Count -eq 0) {
+                    $o = Select-Option $browser 'gvPagamento' $pd
+                    if ((Format-Options $o) -ne ($vc + '/' + $pd + ' spunte ' + $vc + '/' + $pd)) { $bad.Add('D1 pagamento scelto dal cliente dopo la conferma: ' + (Format-Options $o) + ', atteso ' + $vc + '/' + $pd) }
+                }
+                if ($bad.Count -eq 0) {
+                    Go-Confirm $browser 'D1 seconda conferma'
+                    Invoke-KsClick $browser '#MainContent_btnModificaCheckout'; Start-Sleep -Milliseconds 3500
+                    $o = Read-Options $browser
+                    if ((Format-Options $o) -ne ($vc + '/' + $pd + ' spunte ' + $vc + '/' + $pd)) { $bad.Add('D1 dopo la seconda conferma e Modifica: ' + (Format-Options $o) + ', atteso ' + $vc + '/' + $pd) }
+                    $null = Read-Step2 $browser
+                    $o = Read-Options $browser
+                    if ((Format-Options $o) -ne ($vc + '/' + $pd + ' spunte ' + $vc + '/' + $pd)) { $bad.Add('D1 dopo il ricaricamento con la bozza nuova: ' + (Format-Options $o) + ', atteso ' + $vc + '/' + $pd) }
+                }
+            } finally {
+                # stato di partenza per i casi successivi: nuovo browser = nuova sessione, senza bozza
+                Reset-Browser
+            }
+        }
         'C5' {   # valori di oggi a due decimali: stessi importi di prima
             Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
             $ei = Money ([Math]::Max($script:imp * 1.5D / 100D, 4.5D)); $ec = Money ([Math]::Max($script:baseAmount * 1.6D / 100D, 3.5D))
@@ -294,8 +377,8 @@ try {
     if ($e2e.Count -eq 0) {
         # V1 per primo: dopo un passaggio dalla conferma la bozza valida rimette il vettore di prima a ogni richiesta (difetto noto, in coda
         # come CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A) e la parte finale di V1 non potrebbe scegliere un altro vettore.
-        foreach ($c in @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3')) {
-            $bad = @(Test-Case $c $browser)
+        foreach ($c in @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1')) {
+            $bad = @(Test-Case $c $script:browser)
             Check ($bad.Count -eq 0) ('L10 caso ' + $c + $(if ($bad.Count) { ' -> ' + ($bad -join '; ') } else { '' }))
         }
     }
@@ -320,7 +403,10 @@ try {
             @{ Id = 'M14_FAILED_DELIVERY_KEEPS_INSURANCE_COST'; Case = 'V1'; Expect = 'V1 riepilogo Assicurazione'; Old = 'If lblSpeseAss IsNot Nothing Then lblSpeseAss.Text = FormatCurrencyIt(0D) '' consegna non valida'; New = '' },
             @{ Id = 'M15_FAILED_DELIVERY_KEEPS_OFFER'; Case = 'V1'; Expect = 'V1 importo offerto'; Old = 'If lblAssicurazione IsNot Nothing Then lblAssicurazione.Text = FormatCurrencyIt(0D) '' consegna non valida'; New = '' },
             @{ Id = 'M16_FAILED_DELIVERY_KEEPS_TICK'; Case = 'V1'; Expect = 'V1 casella dell''assicurazione ancora spuntata'; Old = 'If cbAssicurazione IsNot Nothing Then cbAssicurazione.Checked = False '' consegna non valida'; New = '' },
-            @{ Id = 'M17_FAILED_DELIVERY_KEEPS_BOX_ENABLED'; Case = 'V1'; Expect = 'V1 casella dell''assicurazione attiva'; Old = '_insuranceKnown = True '' consegna non valida'; New = '' }
+            @{ Id = 'M17_FAILED_DELIVERY_KEEPS_BOX_ENABLED'; Case = 'V1'; Expect = 'V1 casella dell''assicurazione attiva'; Old = '_insuranceKnown = True '' consegna non valida'; New = '' },
+            @{ Id = 'M18_DRAFT_ALWAYS_RESTORED'; Case = 'D1'; Expect = 'D1 vettore scelto dal cliente'; Old = 'If Not IsCheckoutOptionGroupPosted("spedizione") Then'; New = 'If True Then' },
+            @{ Id = 'M19_DRAFT_NEVER_RESTORED'; Case = 'D1'; Expect = 'D1 dopo il ricaricamento con la bozza valida'; Old = 'If Not IsCheckoutOptionGroupPosted("spedizione") Then'; New = 'If False Then' },
+            @{ Id = 'M20_PAYMENT_ALWAYS_RESTORED'; Case = 'D1'; Expect = 'D1 pagamento scelto dal cliente'; Old = 'If Not IsCheckoutOptionGroupPosted("pagamento") Then'; New = 'If True Then' }
         )
         foreach ($m in $mutants) {
             if (([regex]::Matches($source, [regex]::Escape($m.Old))).Count -ne 1) { $mutantFail.Add($m.Id + ' ancora non unica'); continue }
@@ -328,13 +414,13 @@ try {
             if ($m.ContainsKey('Old2')) { if (([regex]::Matches($source, [regex]::Escape($m.Old2))).Count -ne 1) { $mutantFail.Add($m.Id + ' seconda parte ancora non unica'); continue }; $mutated = $mutated.Replace($m.Old2, $m.New2) }
             Write-SiteVb $mutated
             try {
-                $mb = @(Test-Case $m.Case $browser)
+                $mb = @(Test-Case $m.Case $script:browser)
                 if ($mb.Count -eq 0) { $mutantFail.Add($m.Id + ' sopravvive al caso ' + $m.Case) }
                 elseif ($m.ContainsKey('Expect') -and -not ($mb[0]).StartsWith($m.Expect)) { $mutantFail.Add($m.Id + ' fallisce per un altro motivo: ' + $mb[0]) } else { Write-Host ('  ucciso ' + $m.Id + ' (' + $m.Case + '): ' + $mb[0]) }
             } catch { $mutantFail.Add($m.Id + ' errore: ' + $_.Exception.Message) }
         }
         Sync-Site
-        $after = @(Test-Case 'C1' $browser)
+        $after = @(Test-Case 'C1' $script:browser)
         if ($after.Count -ne 0) { $mutantFail.Add('dopo il ripristino il sito non torna verde: ' + $after[0]) }
     }
 } finally {
@@ -350,5 +436,5 @@ if ($sourceFailed) { Write-Host 'CART_SHIPPING_NUMERIC FAIL (sorgente)' }
 if ($e2e.Count -gt 0) { Write-Host ('CART_SHIPPING_NUMERIC FAIL (sito LAB): ' + $e2e.Count) }
 foreach ($x in $mutantFail) { Write-Host ('  FAIL ' + $x) }
 if ($sourceFailed -or $e2e.Count -gt 0 -or $mutantFail.Count -gt 0) { exit 1 }
-if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (17 mutazioni uccise sul sito LAB)' }
+if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (20 mutazioni uccise sul sito LAB)' }
 exit 0
