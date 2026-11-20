@@ -2281,8 +2281,10 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
             Dim id As Integer = SafeInt(row("id"), 0)
             Dim tc As Integer = SafeInt(row("TCid"), -1)
             If id <= 0 OrElse (tc <> -1 AndAlso tc <= 0) OrElse seen.Contains(id) Then Continue For
-            Dim net As Decimal = Convert.ToDecimal(SafeDbl(row("Prezzo"), 0), CultureInfo.InvariantCulture)
-            Dim gross As Decimal = Convert.ToDecimal(SafeDbl(row("PrezzoIvato"), 0), CultureInfo.InvariantCulture)
+            Dim net As Decimal = 0D
+            Dim gross As Decimal = 0D
+            If Not TryReadDatabaseDecimal(row("Prezzo"), net) Then Continue For
+            If Not TryReadDatabaseDecimal(row("PrezzoIvato"), gross) Then gross = 0D
             Dim selected As Nullable(Of Decimal) = priceContext.SelectPrice(net, gross)
             If Not selected.HasValue Then Continue For
             Dim displayPrice As Decimal = selected.Value
