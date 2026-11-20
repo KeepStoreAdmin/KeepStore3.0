@@ -882,6 +882,16 @@ End Function
 Private Sub ShowCurrentShippingSelectionFailure()
     SetCheckoutStep("checkout")
     If tOrdine IsNot Nothing Then tOrdine.Visible = True
+    ' La consegna non e piu valida: il riepilogo non deve mostrare gli importi del vettore che non c'e piu.
+    ' Le routine dei vettori non girano piu in questa richiesta; pagamento e totali vengono ricalcolati dopo, da questi valori.
+    ' L'assicurazione va scelta di nuovo: alla richiesta successiva il sito puo proporre un altro vettore.
+    If lblSpeseSped IsNot Nothing Then lblSpeseSped.Text = FormatCurrencyIt(0D) ' consegna non valida
+    If lblSpeseAss IsNot Nothing Then lblSpeseAss.Text = FormatCurrencyIt(0D) ' consegna non valida
+    If lblAssicurazione IsNot Nothing Then lblAssicurazione.Text = FormatCurrencyIt(0D) ' consegna non valida
+    If lblPagamento IsNot Nothing Then lblPagamento.Text = FormatCurrencyIt(0D)
+    If cbAssicurazione IsNot Nothing Then cbAssicurazione.Checked = False ' consegna non valida
+    _insuranceKnown = True ' consegna non valida
+    _insuranceAvailable = False
     SetAddressSelectionMessage(CheckoutFailureRecoveryService.BuildUserMessage(
         CheckoutFailureReason.ShippingMethodMissing, String.Empty))
     ApplyCheckoutStepUi()

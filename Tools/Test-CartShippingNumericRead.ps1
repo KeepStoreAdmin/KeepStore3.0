@@ -10,6 +10,8 @@ param([switch]$SkipMutants, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20
 # (A) sorgente, (B) sito LAB con i file di lavoro, (C) mutazioni eseguite sul sito LAB (file rimessi alla fine). Solo ASCII.
 # CART-INSURANCE-UNCHECK-ORDER-1A (casi I1-I3): un vettore che non offre l'assicurazione (percentuale 0) non deve mai produrre un importo,
 # nemmeno con un minimo impostato e con la casella mandata spuntata dal browser; la casella resta disattivata.
+# CART-SUMMARY-AFTER-INVALID-DELIVERY-1A (caso V1): se il vettore scelto non e piu valido, il riepilogo non mostra piu i suoi importi
+# e l'assicurazione va scelta di nuovo.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -191,6 +193,52 @@ function Test-Case([string]$id, $browser) {
                 if ($s4.insChecked -eq $true) { Invoke-KsClick $browser '[id$=cbAssicurazione]'; Start-Sleep -Milliseconds 2000 }
             }
         }
+        'V1' {   # il vettore scelto (con assicurazione spuntata) viene tolto dal Web: riepilogo senza i suoi importi
+            Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
+            if ($s.insDisabled -ne $false) { throw 'PAGINA_NON_VALIDA: V1 richiede un vettore con assicurazione' }
+            if ($s.insChecked -ne $true) { Invoke-KsClick $browser '[id$=cbAssicurazione]'; Start-Sleep -Milliseconds 2000 }
+            $s1 = Read-State $browser
+            if ($s1.insChecked -ne $true -or -not $s1.sum.PSObject.Properties['IVA']) { throw 'PAGINA_NON_VALIDA: V1 assicurazione non spuntata prima della prova' }
+            $ivaBefore = Num ([string]$s1.sum.IVA)
+            $null = Invoke-Sql ("UPDATE vettori SET Web=0 WHERE id=$script:carrier AND AziendeId=$script:company;") -Write
+            try {
+                Invoke-KsClick $browser '#MainContent_btnVaiConfermaOrdine'; Start-Sleep -Milliseconds 3500
+                if ([bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btInviaOrdine")')) { $bad.Add('V1 conferma raggiunta con un vettore non piu valido') }
+                else {
+                    $s2 = Read-State $browser
+                    if (-not $s2.step2) { throw 'PAGINA_NON_VALIDA: V1 passo spedizione e pagamento non mostrato dopo il fallimento' }
+                    foreach ($n in @('Imponibile', 'Spedizione', 'Assicurazione', 'IVA', 'Pagamento', 'Totale')) { if (-not $s2.sum.PSObject.Properties[$n]) { throw ('PAGINA_NON_VALIDA: V1 riepilogo senza ' + $n) } }
+                    if ([string]$s2.sum.Spedizione -ne '0,00') { $bad.Add('V1 riepilogo Spedizione "' + [string]$s2.sum.Spedizione + '" senza un vettore scelto, atteso "0,00"') }
+                    if ([string]$s2.sum.Assicurazione -ne '0,00') { $bad.Add('V1 riepilogo Assicurazione "' + [string]$s2.sum.Assicurazione + '" senza un vettore scelto, atteso "0,00"') }
+                    if ($s2.ins -ne '0,00') { $bad.Add('V1 importo offerto "' + $s2.ins + '" senza un vettore scelto, atteso "0,00"') }
+                    if ($s2.insChecked -ne $false) { $bad.Add('V1 casella dell''assicurazione ancora spuntata dopo il fallimento') }
+                    if ($s2.insDisabled -ne $true) { $bad.Add('V1 casella dell''assicurazione attiva senza un vettore scelto') }
+                    if ($bad.Count -eq 0) {
+                        $sumParts = (Num ([string]$s2.sum.Imponibile)) + (Num ([string]$s2.sum.IVA)) + (Num ([string]$s2.sum.Pagamento))
+                        if ((Num ([string]$s2.sum.IVA)) -ge $ivaBefore) { $bad.Add('V1 IVA "' + [string]$s2.sum.IVA + '" non scesa senza spedizione e assicurazione') }
+                        if ((Num ([string]$s2.sum.Totale)) -ne $sumParts) { $bad.Add('V1 Totale "' + [string]$s2.sum.Totale + '", atteso imponibile + IVA + pagamento = ' + $sumParts.ToString($inv)) }
+                        # richiesta successiva: un altro vettore che offre l'assicurazione non deve addebitarla senza un nuovo gesto
+                        $offered = $false
+                        $prevCarrier = '0'; $trace = ''
+                        for ($k = 0; $k -lt 4 -and -not $offered; $k++) {
+                            Start-Sleep -Milliseconds 2000   # la pagina appena tornata deve finire di caricarsi, altrimenti il clic va perso
+                            $clicked = [string](Invoke-KsJs $browser ("(function(){var r=[].slice.call(document.querySelectorAll('[id*=gvVettori] input[type=radio]')).filter(function(x){return !x.disabled;});if(r.length<=" + $k + ")return '';r[" + $k + "].click();return '1';})()"))
+                            if ($clicked -eq '') { break }
+                            $s3 = $null
+                            for ($w = 0; $w -lt 16; $w++) { Start-Sleep -Milliseconds 500; try { $s3 = Read-State $browser } catch { $s3 = $null }; if ($null -ne $s3 -and $s3.step2 -and ([string]$s3.carrier) -match '^[1-9]\d*$' -and ([string]$s3.carrier) -ne $prevCarrier -and $s3.sum.PSObject.Properties['Spedizione']) { break } }
+                            if ($null -ne $s3) { $prevCarrier = [string]$s3.carrier; $trace += ' [clic ' + $k + ': vettore ' + [string]$s3.carrier + ', casella spenta ' + [string]$s3.insDisabled + ', passo ' + [string]$s3.step2 + ']' } else { $trace += ' [clic ' + $k + ': pagina non letta]' }
+                            if ($null -eq $s3) { throw 'PAGINA_NON_VALIDA: V1 pagina non leggibile dopo la scelta di un altro vettore' }
+                            if ($s3.step2 -and $s3.insDisabled -eq $false) { $offered = $true }
+                        }
+                        if (-not $offered) { throw ('PAGINA_NON_VALIDA: V1 nessun altro vettore con assicurazione per la richiesta successiva' + $trace) }
+                        $sa3 = if ($s3.sum.PSObject.Properties['Assicurazione']) { [string]$s3.sum.Assicurazione } else { '' }
+                        if ($s3.insChecked -ne $false -or $sa3 -ne '0,00') { $bad.Add('V1 dopo la scelta di un altro vettore Assicurazione "' + $sa3 + '" senza un nuovo gesto del cliente') }
+                    }
+                }
+            } finally { $null = Invoke-Sql ("UPDATE vettori SET Web=1 WHERE id=$script:carrier AND AziendeId=$script:company;") -Write }
+            $webNow = Get-Scalar "SELECT Web AS ksval FROM vettori WHERE id=$script:carrier AND AziendeId=$script:company;"
+            if ($webNow -ne '1') { throw 'ATTENZIONE: vettore di prova non rimesso sul Web' }
+        }
         'C5' {   # valori di oggi a due decimali: stessi importi di prima
             Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
             $ei = Money ([Math]::Max($script:imp * 1.5D / 100D, 4.5D)); $ec = Money ([Math]::Max($script:baseAmount * 1.6D / 100D, 3.5D))
@@ -244,7 +292,9 @@ try {
     Check ($script:pIns -gt 0 -and $script:pCod -gt 0) ('L09 percentuali di prova trovate (' + $script:pIns.ToString($inv) + ' e ' + $script:pCod.ToString($inv) + ')')
 
     if ($e2e.Count -eq 0) {
-        foreach ($c in @('C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3')) {
+        # V1 per primo: dopo un passaggio dalla conferma la bozza valida rimette il vettore di prima a ogni richiesta (difetto noto, in coda
+        # come CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A) e la parte finale di V1 non potrebbe scegliere un altro vettore.
+        foreach ($c in @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3')) {
             $bad = @(Test-Case $c $browser)
             Check ($bad.Count -eq 0) ('L10 caso ' + $c + $(if ($bad.Count) { ' -> ' + ($bad -join '; ') } else { '' }))
         }
@@ -265,7 +315,12 @@ try {
             @{ Id = 'M09_UNAVAILABLE_INSURANCE_KEEPS_AMOUNT'; Case = 'I1'; Expect = 'I1 importo offerto'; Old = 'If Not _insuranceAvailable Then insurance = 0'; New = 'If False Then insurance = 0' },
             @{ Id = 'M10_LOCK_IGNORES_AVAILABILITY'; Case = 'I1'; Expect = 'I1 casella'; Old = 'unlocked AndAlso (Not _insuranceKnown OrElse _insuranceAvailable)'; New = 'unlocked' },
             @{ Id = 'M11_CODE_BEFORE_THE_FIX'; Case = 'I2'; Expect = 'I2 alla conferma Assicurazione "4,13"'; Old = 'If Not _insuranceAvailable Then insurance = 0'; New = 'If False Then insurance = 0'; Old2 = 'unlocked AndAlso (Not _insuranceKnown OrElse _insuranceAvailable)'; New2 = 'unlocked' },
-            @{ Id = 'M12_INSURANCE_NEVER_AVAILABLE'; Case = 'I3'; Expect = 'I3 casella'; Old = '_insuranceAvailable = readOk AndAlso charges.InsurancePercent <> 0D'; New = '_insuranceAvailable = False' }
+            @{ Id = 'M12_INSURANCE_NEVER_AVAILABLE'; Case = 'I3'; Expect = 'I3 casella'; Old = '_insuranceAvailable = readOk AndAlso charges.InsurancePercent <> 0D'; New = '_insuranceAvailable = False' },
+            @{ Id = 'M13_FAILED_DELIVERY_KEEPS_SHIPPING'; Case = 'V1'; Expect = 'V1 riepilogo Spedizione'; Old = 'If lblSpeseSped IsNot Nothing Then lblSpeseSped.Text = FormatCurrencyIt(0D) '' consegna non valida'; New = '' },
+            @{ Id = 'M14_FAILED_DELIVERY_KEEPS_INSURANCE_COST'; Case = 'V1'; Expect = 'V1 riepilogo Assicurazione'; Old = 'If lblSpeseAss IsNot Nothing Then lblSpeseAss.Text = FormatCurrencyIt(0D) '' consegna non valida'; New = '' },
+            @{ Id = 'M15_FAILED_DELIVERY_KEEPS_OFFER'; Case = 'V1'; Expect = 'V1 importo offerto'; Old = 'If lblAssicurazione IsNot Nothing Then lblAssicurazione.Text = FormatCurrencyIt(0D) '' consegna non valida'; New = '' },
+            @{ Id = 'M16_FAILED_DELIVERY_KEEPS_TICK'; Case = 'V1'; Expect = 'V1 casella dell''assicurazione ancora spuntata'; Old = 'If cbAssicurazione IsNot Nothing Then cbAssicurazione.Checked = False '' consegna non valida'; New = '' },
+            @{ Id = 'M17_FAILED_DELIVERY_KEEPS_BOX_ENABLED'; Case = 'V1'; Expect = 'V1 casella dell''assicurazione attiva'; Old = '_insuranceKnown = True '' consegna non valida'; New = '' }
         )
         foreach ($m in $mutants) {
             if (([regex]::Matches($source, [regex]::Escape($m.Old))).Count -ne 1) { $mutantFail.Add($m.Id + ' ancora non unica'); continue }
@@ -285,6 +340,7 @@ try {
 } finally {
     if ($browser) { Stop-KsBrowser $browser }
     try { Sync-Site } catch { Write-Host '  ATTENZIONE: file del sito LAB non ripristinati' }
+    if ((Get-Variable -Scope Script -Name carrier -ErrorAction SilentlyContinue) -and $script:carrier -gt 0) { try { $null = Invoke-Sql ("UPDATE vettori SET Web=1 WHERE id=$script:carrier AND AziendeId=$script:company AND Web=0;") -Write } catch { Write-Host '  ATTENZIONE: vettore di prova non rimesso sul Web' } }
     if ($restoreCarrier -ne '') { try { $null = Invoke-Sql $restoreCarrier -Write } catch { Write-Host '  ATTENZIONE: valori del vettore non ripristinati sul LAB' } }
     if ($restorePayment -ne '') { try { $null = Invoke-Sql $restorePayment -Write } catch { Write-Host '  ATTENZIONE: pagamento in contrassegno non ripristinato sul LAB' } }
     Close-LabSite
@@ -294,5 +350,5 @@ if ($sourceFailed) { Write-Host 'CART_SHIPPING_NUMERIC FAIL (sorgente)' }
 if ($e2e.Count -gt 0) { Write-Host ('CART_SHIPPING_NUMERIC FAIL (sito LAB): ' + $e2e.Count) }
 foreach ($x in $mutantFail) { Write-Host ('  FAIL ' + $x) }
 if ($sourceFailed -or $e2e.Count -gt 0 -or $mutantFail.Count -gt 0) { exit 1 }
-if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (12 mutazioni uccise sul sito LAB)' }
+if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (17 mutazioni uccise sul sito LAB)' }
 exit 0
