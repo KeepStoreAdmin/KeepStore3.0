@@ -193,6 +193,59 @@ Private Const CHECKOUT_TOKEN_PURPOSE As String = "KeepStore.OrderCheckout.Idempo
 Private Const CHECKOUT_SUBMIT_CSRF_PURPOSE As String = "KeepStore.OrderCheckout.SubmitCsrf.V1"
 Private Const CHECKOUT_SUBMIT_VALIDATION_GROUP As String = "checkoutSubmit"
 Private Const CHECKOUT_REQUEST_VIEWSTATE_KEY As String = "CheckoutRequestId"
+' Impronta della bozza d'ordine che la pagina di conferma sta mostrando (unica per ogni sigillatura).
+Private Const CHECKOUT_SHOWN_DRAFT_VIEWSTATE_KEY As String = "CheckoutShownDraft"
+Private Const CheckoutConditionsChangedMessage As String = "Le condizioni dell'ordine sono cambiate (consegna, pagamento o importi). Controlla il riepilogo aggiornato e invia di nuovo l'ordine."
+Private _postedShownDraftKeyCaptured As Boolean
+Private _postedShownDraftKey As String = ""
+
+' L'impronta arrivata dal browser con questa richiesta: letta una sola volta, prima che la pagina la riscriva.
+Private Function CapturePostedShownDraftKey() As String
+    If Not _postedShownDraftKeyCaptured Then
+        _postedShownDraftKey = Convert.ToString(ViewState(CHECKOUT_SHOWN_DRAFT_VIEWSTATE_KEY), CultureInfo.InvariantCulture)
+        If _postedShownDraftKey Is Nothing Then _postedShownDraftKey = ""
+        _postedShownDraftKeyCaptured = True
+    End If
+    Return _postedShownDraftKey
+End Function
+
+' Vero se le due bozze descrivono lo stesso ordine: scelte, politica di pagamento, carrello e ogni importo.
+' Date, id della richiesta e impronta completa cambiano a ogni sigillatura e non si confrontano.
+Private Shared Function HasSameCheckoutConditions(ByVal shown As CheckoutDraftState, ByVal current As CheckoutDraftState) As Boolean
+    If shown Is Nothing OrElse current Is Nothing Then Return False
+    Dim same As Func(Of String, String, Boolean) =
+        Function(a As String, b As String) String.Equals(If(a, ""), If(b, ""), StringComparison.Ordinal)
+    Return shown.TipoDocumentiId = current.TipoDocumentiId AndAlso
+           shown.BillingAddressId = current.BillingAddressId AndAlso
+           shown.ShippingAddressId = current.ShippingAddressId AndAlso
+           shown.DeliveryMethodId = current.DeliveryMethodId AndAlso
+           shown.PaymentMethodId = current.PaymentMethodId AndAlso
+           shown.PaymentOnline = current.PaymentOnline AndAlso
+           shown.ConfirmBeforePayment = current.ConfirmBeforePayment AndAlso
+           shown.AllowLaterPayment = current.AllowLaterPayment AndAlso
+           shown.SendEmailBeforePayment = current.SendEmailBeforePayment AndAlso
+           shown.InsuranceSelected = current.InsuranceSelected AndAlso
+           same(shown.Notes, current.Notes) AndAlso
+           same(shown.CouponCode, current.CouponCode) AndAlso
+           shown.CouponTaxableTotal = current.CouponTaxableTotal AndAlso
+           shown.CouponVatId = current.CouponVatId AndAlso
+           shown.CouponVatValue = current.CouponVatValue AndAlso
+           shown.CouponRounding = current.CouponRounding AndAlso
+           shown.ReverseChargeVat = current.ReverseChargeVat AndAlso
+           shown.CarrierVat = current.CarrierVat AndAlso
+           same(shown.CouponFingerprint, current.CouponFingerprint) AndAlso
+           same(shown.CartFingerprint, current.CartFingerprint) AndAlso
+           same(shown.OptionsFingerprint, current.OptionsFingerprint) AndAlso
+           same(shown.CommercialProfileFingerprint, current.CommercialProfileFingerprint) AndAlso
+           shown.Subtotal = current.Subtotal AndAlso
+           shown.Vat = current.Vat AndAlso
+           shown.ShippingCost = current.ShippingCost AndAlso
+           shown.InsuranceCost = current.InsuranceCost AndAlso
+           shown.PaymentCost = current.PaymentCost AndAlso
+           shown.Discount = current.Discount AndAlso
+           shown.DiscountVat = current.DiscountVat AndAlso
+           shown.Total = current.Total
+End Function
 Private Const CART_UPDATE_REQUEST_VIEWSTATE_KEY As String = "CartUpdateRequestId"
 Private Const SessCheckoutStep As String = "CartCheckoutStep"
 Private Const CartEditorLockMessage As String = "Completa o annulla la modifica dell'indirizzo prima di continuare con il checkout."
@@ -2662,8 +2715,12 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
     Private Sub BindCheckoutConfirmSummary()
         Dim authoritativeDraft As CheckoutDraftState = Nothing
         Dim identity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+        ' La pagina ricorda quale bozza sta mostrando: all'invio si verifica che sia ancora quella corrente.
+        CapturePostedShownDraftKey()
+        ViewState.Remove(CHECKOUT_SHOWN_DRAFT_VIEWSTATE_KEY)
         If identity IsNot Nothing AndAlso identity.IsComplete AndAlso
            CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current, identity, authoritativeDraft) Then
+            ViewState(CHECKOUT_SHOWN_DRAFT_VIEWSTATE_KEY) = authoritativeDraft.Fingerprint
             SetCartShippingAddressId(authoritativeDraft.ShippingAddressId)
             SetCartShippingAddressIsManual(authoritativeDraft.ShippingAddressId > 0)
             ApplyCurrentShippingAddress()
@@ -3514,6 +3571,15 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
 
         Try
             If Not ValidateOrderNotesLength() Then Return
+            ' La conferma che il cliente ha davanti: la bozza in sessione, solo se e quella mostrata da questa pagina
+            ' (un'altra scheda o un invio precedente possono averla sostituita). Letta prima della nuova sigillatura.
+            Dim shownDraft As CheckoutDraftState = Nothing
+            Dim shownKey As String = CapturePostedShownDraftKey()
+            Dim shownIdentity As OrderStorefrontIdentity = OrderStorefrontContext.Resolve(HttpContext.Current)
+            Dim shownIsCurrent As Boolean =
+                shownKey <> "" AndAlso shownIdentity IsNot Nothing AndAlso shownIdentity.IsComplete AndAlso
+                CheckoutDraftService.TryReadSelectionForRetry(HttpContext.Current, shownIdentity, shownDraft) AndAlso
+                String.Equals(shownDraft.Fingerprint, shownKey, StringComparison.Ordinal)
             Dim currentDeliveryId As Integer
             If Not TryRebuildAndValidateCurrentDeliverySelection(True, currentDeliveryId) Then
                 ShowCurrentShippingSelectionFailure()
@@ -3525,6 +3591,13 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
             Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
             If Not TryCaptureAuthoritativeCheckoutDraft(4, draft, draftFailure) Then
                 DispatchCheckoutFailure(draftFailure, "ValidateDraft")
+                Return
+            End If
+            ' Un ordine non parte con condizioni diverse da quelle della conferma mostrata: se qualcosa e cambiato
+            ' (o la conferma mostrata non e piu quella corrente) il cliente rivede la conferma aggiornata e invia di nuovo.
+            If Not shownIsCurrent OrElse Not HasSameCheckoutConditions(shownDraft, draft) Then
+                If chkTermsConsent IsNot Nothing Then chkTermsConsent.Checked = False
+                ShowCheckoutSubmitError(CheckoutConditionsChangedMessage, True)
                 Return
             End If
             RedirectToOrdineWithQuery("C=" & HttpUtility.UrlEncode(Cookie.ToUpper()))

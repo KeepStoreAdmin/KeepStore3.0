@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipMutants, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
+param([switch]$SkipMutants, [string]$Cases = '', [string]$MutantFilter = '', [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
 
 # CART-SHIPPING-NUMERIC-READ-1A. Assicurazione e contrassegno del vettore nel carrello.
 # Difetto: i cinque numeri del vettore (percentuale e minimo dell'assicurazione; percentuale, fisso e minimo del contrassegno)
@@ -14,6 +14,8 @@ param([switch]$SkipMutants, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20
 # e l'assicurazione va scelta di nuovo.
 # CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A (caso D1): dopo un passaggio dalla conferma il cliente deve poter cambiare vettore e pagamento;
 # se non cambia nulla (ritorno con Modifica, ricaricamento della pagina) restano le scelte sigillate nella bozza.
+# CHECKOUT-SEND-RESEAL-DIVERGENCE-1A (casi S1-S3): un ordine non parte con condizioni diverse da quelle della conferma che il cliente
+# ha davanti; se qualcosa e cambiato si mostra la conferma aggiornata e si chiede un nuovo invio. Nessun ordine viene creato dalla prova.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -142,6 +144,72 @@ function Reset-Browser {
     if ($script:browser) { Stop-KsBrowser $script:browser; $script:browser = $null }
     $script:browser = Start-KsBrowser -LoopbackHosts @('www.taikun.it') -Width 1280 -Height 900
     Enter-Site $script:browser
+}
+
+# ---------- invio dell'ordine senza creare ordini (casi S1-S3) ----------
+# Nella SOLA copia del sito LAB ordine.aspx viene sostituita da questa pagina di prova, che scrive la bozza sigillata in sessione e non fa altro.
+$orderProbe = @'
+<%@ Page Language="VB" EnableViewState="false" %>
+<script runat="server">
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As EventArgs)
+        Dim d As CheckoutDraftState = TryCast(Session("KeepStore:CheckoutDraft:Current"), CheckoutDraftState)
+        Dim inv As System.Globalization.CultureInfo = System.Globalization.CultureInfo.InvariantCulture
+        Response.ContentType = "text/plain"
+        If d IsNot Nothing Then
+            Response.Write("KSPROBE delivery=" & d.DeliveryMethodId.ToString(inv) & " payment=" & d.PaymentMethodId.ToString(inv) & " total=" & d.Total.ToString("0.00", inv) & " end")
+        Else
+            Response.Write("KSPROBE nodraft end")
+        End If
+        Response.End()
+    End Sub
+</script>
+'@
+$orderPageBytes = [IO.File]::ReadAllBytes((Join-Path $root 'ordine.aspx'))
+function Install-OrderProbe { [IO.File]::WriteAllText((Join-Path $SitePath 'ordine.aspx'), $orderProbe, $utf8) }
+function Restore-OrderPage {
+    $p = Join-Path $SitePath 'ordine.aspx'
+    [IO.File]::WriteAllBytes($p, $orderPageBytes)
+    if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($p)) -ne [Convert]::ToBase64String($orderPageBytes)) { throw 'ATTENZIONE: ordine.aspx della copia LAB non ripristinata' }
+}
+$confirmJs = "(function(){var b=document.body.innerText.replace(/\s+/g,' ');var k=b.lastIndexOf('Riepilogo ordine');var s=k>=0?b.substring(k):b;var m=s.match(/\bTotale (-?[0-9.]+,[0-9]{2})/);var c=document.getElementById('chkTermsConsent');var a=document.getElementById('pnlCheckoutSubmitError');return JSON.stringify({confirm:!!document.querySelector('#MainContent_btInviaOrdine'),totalText:m?m[1]:'',cod:(!!window.__ksCod&&b.toLowerCase().indexOf(window.__ksCod)>=0),terms:c?c.checked:false,alert:(a&&a.getClientRects().length)?a.textContent.replace(/\s+/g,' ').trim():'',path:location.pathname.toLowerCase(),body:b.substring(0,120)});})()"
+function Read-Confirm($browser) {
+    $null = Invoke-KsJs $browser ('window.__ksCod=' + (ConvertTo-Json $script:codText) + ';1')
+    $o = ConvertFrom-Json ([string](Invoke-KsJs $browser $confirmJs))
+    $t = ''; if ([string]$o.totalText -ne '') { $t = (Num ([string]$o.totalText)).ToString('0.00', $inv) }
+    return [pscustomobject]@{ confirm = [bool]$o.confirm; total = $t; cod = [bool]$o.cod; terms = [bool]$o.terms; alert = [string]$o.alert; path = [string]$o.path; body = [string]$o.body }
+}
+# Vettore con contrassegno, contrassegno scelto, conferma aperta: restituisce cio che la conferma mostra.
+function Open-CodConfirm($browser) {
+    Set-Carrier 1.5 4.5 1.6 0 3.5; $null = Read-Step2 $browser
+    $o = Select-Option $browser 'gvPagamento' ([string]$payId)
+    if ([string]$o.tbP -ne [string]$payId) { throw 'PAGINA_NON_VALIDA: contrassegno non selezionabile' }
+    Go-Confirm $browser 'conferma col contrassegno'
+    $c = Read-Confirm $browser
+    if (-not $c.confirm -or $c.total -eq '' -or -not $c.cod) { throw 'PAGINA_NON_VALIDA: la conferma non mostra contrassegno e totale' }
+    return $c
+}
+# Spunta le condizioni e invia. sent = il browser e arrivato alla pagina dell'ordine (qui: la pagina di prova).
+function Send-Order($browser) {
+    Start-Sleep -Milliseconds 1500
+    $null = Invoke-KsJs $browser "(function(){var c=document.getElementById('chkTermsConsent');if(c&&!c.checked){c.click();}return 1;})()"
+    Start-Sleep -Milliseconds 500
+    $null = Invoke-KsJs $browser "(function(){var a=document.getElementById('pnlCheckoutSubmitError');if(a){a.setAttribute('data-ks-old','1');}return 1;})()"
+    Invoke-KsClick $browser '#MainContent_btInviaOrdine' -NoWait
+    for ($w = 0; $w -lt 30; $w++) {
+        Start-Sleep -Milliseconds 500
+        $o = $null; try { $o = ConvertFrom-Json ([string](Invoke-KsJs $browser "(function(){var b=document.body?document.body.innerText.replace(/\s+/g,' '):'';var a=document.getElementById('pnlCheckoutSubmitError');return JSON.stringify({path:location.pathname.toLowerCase(),ready:document.readyState,probe:(b.indexOf('KSPROBE')>=0&&b.indexOf(' end')>=0)?b:'',alert:(a&&!a.hasAttribute('data-ks-old')&&a.getClientRects().length)?a.textContent.replace(/\s+/g,' ').trim():'',confirm:!!document.querySelector('#MainContent_btInviaOrdine')});})()")) } catch { $o = $null }
+        if ($null -eq $o) { continue }
+        if ([string]$o.probe -ne '') {
+            $mp = [regex]::Match([string]$o.probe, 'payment=(\d+) total=(-?[0-9.]+) end')
+            if (-not $mp.Success) { throw ('PAGINA_NON_VALIDA: pagina di prova senza bozza (' + [string]$o.probe + ')') }
+            return [pscustomobject]@{ sent = $true; payment = $mp.Groups[1].Value; total = $mp.Groups[2].Value; alert = '' }
+        }
+        if ([string]$o.path -match 'ordine\.aspx' -and [string]$o.ready -eq 'complete' -and $w -ge 6) { throw 'PAGINA_NON_VALIDA: arrivato a ordine.aspx ma non alla pagina di prova' }
+        if ([string]$o.alert -ne '' -and $o.confirm -and [string]$o.ready -eq 'complete') { return [pscustomobject]@{ sent = $false; payment = ''; total = ''; alert = [string]$o.alert } }
+    }
+    $last = Read-Confirm $browser
+    if ($last.path -notmatch 'carrello\.aspx') { throw ('PAGINA_NON_VALIDA: dopo l''invio pagina inattesa ' + $last.path) }
+    return [pscustomobject]@{ sent = $false; payment = ''; total = ''; alert = $last.alert }
 }
 
 # Ogni caso restituisce l'elenco dei difetti (vuoto = giusto).
@@ -322,6 +390,64 @@ function Test-Case([string]$id, $browser) {
                 Reset-Browser
             }
         }
+        'S1' {   # invio normale: nulla cambia tra conferma e invio -> l'ordine parte con cio che e stato mostrato
+            Reset-Browser; $browser = $script:browser
+            Install-OrderProbe
+            try {
+                $c = Open-CodConfirm $browser
+                $r = Send-Order $browser
+                if (-not $r.sent) { $bad.Add('S1 invio normale fermato: ' + $r.alert) }
+                elseif ($r.payment -ne [string]$payId -or $r.total -ne $c.total) { $bad.Add('S1 ordine inviato con pagamento ' + $r.payment + ' e totale ' + $r.total + ', mostrati ' + [string]$payId + ' e ' + $c.total) }
+            } finally { Restore-OrderPage; Reset-Browser }
+        }
+        'S2' {   # tra conferma e invio il vettore non accetta piu il contrassegno: nuova conferma obbligatoria
+            Reset-Browser; $browser = $script:browser
+            Install-OrderProbe
+            try {
+                $c = Open-CodConfirm $browser
+                Set-Carrier 1.5 4.5 0 0 0
+                $r = Send-Order $browser
+                if ($r.sent) { $bad.Add('S2 ordine inviato senza nuova conferma: pagamento ' + $r.payment + ' e totale ' + $r.total + ', mostrati ' + [string]$payId + ' e ' + $c.total) }
+                else {
+                    $c2 = Read-Confirm $browser
+                    if (-not $c2.confirm) { throw 'PAGINA_NON_VALIDA: S2 dopo il blocco non c''e la conferma' }
+                    if ($r.alert -eq '') { $bad.Add('S2 nessun messaggio dopo il blocco dell''invio') }
+                    if ($c2.total -eq $c.total -or $c2.cod) { $bad.Add('S2 la conferma dopo il blocco mostra ancora totale ' + $c2.total + ' e contrassegno ' + $c2.cod) }
+                    if ($c2.terms) { $bad.Add('S2 casella delle condizioni ancora spuntata dopo il blocco') }
+                    if ($bad.Count -eq 0) {
+                        $r2 = Send-Order $browser
+                        if (-not $r2.sent) { $bad.Add('S2 secondo invio fermato: ' + $r2.alert) }
+                        elseif ($r2.payment -eq [string]$payId -or $r2.total -ne $c2.total) { $bad.Add('S2 secondo invio con pagamento ' + $r2.payment + ' e totale ' + $r2.total + ', mostrato totale ' + $c2.total) }
+                    }
+                }
+            } finally { Restore-OrderPage; Reset-Browser }
+        }
+        'S3' {   # doppio invio dalla stessa conferma dopo un cambiamento: il secondo non deve passare senza che il cliente veda la conferma nuova
+            Reset-Browser; $browser = $script:browser
+            Install-OrderProbe
+            try {
+                $c = Open-CodConfirm $browser
+                Set-Carrier 1.5 4.5 0 0 0
+                Start-Sleep -Milliseconds 1500
+                # primo invio fatto dalla pagina senza sostituirla (la risposta viene scartata): la pagina mostra ancora la conferma vecchia
+                $first = [string](Invoke-KsJs $browser "(function(){var c=document.getElementById('chkTermsConsent');if(c&&!c.checked){c.click();}var f=document.forms[0];var b=document.querySelector('#MainContent_btInviaOrdine');if(!f||!b)return 'noform';var fd=new FormData(f);fd.append(b.name,b.value);var x=new XMLHttpRequest();x.open('POST',f.action,false);x.send(fd);return String(x.status);})()")
+                if ($first -ne '200') { throw ('PAGINA_NON_VALIDA: S3 primo invio non riuscito (' + $first + ')') }
+                $still = Read-Confirm $browser
+                if (-not $still.confirm -or -not $still.cod -or $still.total -ne $c.total) { throw 'PAGINA_NON_VALIDA: S3 la pagina non mostra piu la conferma vecchia' }
+                $r = Send-Order $browser
+                if ($r.sent) { $bad.Add('S3 ordine inviato dalla conferma superata: pagamento ' + $r.payment + ' e totale ' + $r.total + ', la pagina mostrava ' + [string]$payId + ' e ' + $c.total) }
+                else {
+                    $c2 = Read-Confirm $browser
+                    if (-not $c2.confirm) { throw 'PAGINA_NON_VALIDA: S3 dopo il blocco non c''e la conferma' }
+                    if ($c2.cod -or $c2.total -eq $c.total) { $bad.Add('S3 la conferma dopo il blocco mostra ancora il contrassegno o il totale vecchio') }
+                    if ($bad.Count -eq 0) {
+                        $r2 = Send-Order $browser
+                        if (-not $r2.sent) { $bad.Add('S3 invio dopo la nuova conferma fermato: ' + $r2.alert) }
+                        elseif ($r2.payment -eq [string]$payId -or $r2.total -ne $c2.total) { $bad.Add('S3 invio dopo la nuova conferma con pagamento ' + $r2.payment + ' e totale ' + $r2.total + ', mostrato totale ' + $c2.total) }
+                    }
+                }
+            } finally { Restore-OrderPage; Reset-Browser }
+        }
         'C5' {   # valori di oggi a due decimali: stessi importi di prima
             Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
             $ei = Money ([Math]::Max($script:imp * 1.5D / 100D, 4.5D)); $ec = Money ([Math]::Max($script:baseAmount * 1.6D / 100D, 3.5D))
@@ -377,7 +503,9 @@ try {
     if ($e2e.Count -eq 0) {
         # V1 per primo: dopo un passaggio dalla conferma la bozza valida rimette il vettore di prima a ogni richiesta (difetto noto, in coda
         # come CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A) e la parte finale di V1 non potrebbe scegliere un altro vettore.
-        foreach ($c in @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1')) {
+        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3')
+        if ($Cases -ne '') { $caseList = @($Cases.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }); $SkipMutants = ($MutantFilter -eq '') }   # esecuzione parziale (messa a punto, o mutazioni in piu passate con -MutantFilter)
+        foreach ($c in $caseList) {
             $bad = @(Test-Case $c $script:browser)
             Check ($bad.Count -eq 0) ('L10 caso ' + $c + $(if ($bad.Count) { ' -> ' + ($bad -join '; ') } else { '' }))
         }
@@ -406,9 +534,13 @@ try {
             @{ Id = 'M17_FAILED_DELIVERY_KEEPS_BOX_ENABLED'; Case = 'V1'; Expect = 'V1 casella dell''assicurazione attiva'; Old = '_insuranceKnown = True '' consegna non valida'; New = '' },
             @{ Id = 'M18_DRAFT_ALWAYS_RESTORED'; Case = 'D1'; Expect = 'D1 vettore scelto dal cliente'; Old = 'If Not IsCheckoutOptionGroupPosted("spedizione") Then'; New = 'If True Then' },
             @{ Id = 'M19_DRAFT_NEVER_RESTORED'; Case = 'D1'; Expect = 'D1 dopo il ricaricamento con la bozza valida'; Old = 'If Not IsCheckoutOptionGroupPosted("spedizione") Then'; New = 'If False Then' },
-            @{ Id = 'M20_PAYMENT_ALWAYS_RESTORED'; Case = 'D1'; Expect = 'D1 pagamento scelto dal cliente'; Old = 'If Not IsCheckoutOptionGroupPosted("pagamento") Then'; New = 'If True Then' }
+            @{ Id = 'M20_PAYMENT_ALWAYS_RESTORED'; Case = 'D1'; Expect = 'D1 pagamento scelto dal cliente'; Old = 'If Not IsCheckoutOptionGroupPosted("pagamento") Then'; New = 'If True Then' },
+            @{ Id = 'M21_SEND_WITHOUT_RECONFIRM'; Case = 'S2'; Expect = 'S2 ordine inviato senza nuova conferma'; Old = 'If Not shownIsCurrent OrElse Not HasSameCheckoutConditions(shownDraft, draft) Then'; New = 'If False Then' },
+            @{ Id = 'M22_SEND_ALWAYS_BLOCKED'; Case = 'S1'; Expect = 'S1 invio normale fermato'; Old = 'If Not shownIsCurrent OrElse Not HasSameCheckoutConditions(shownDraft, draft) Then'; New = 'If True Then' },
+            @{ Id = 'M23_SHOWN_PAGE_NOT_BOUND'; Case = 'S3'; Expect = 'S3 ordine inviato dalla conferma superata'; Old = 'String.Equals(shownDraft.Fingerprint, shownKey, StringComparison.Ordinal)'; New = 'True' }
         )
         foreach ($m in $mutants) {
+            if ($MutantFilter -ne '' -and $m.Id -notmatch $MutantFilter) { continue }
             if (([regex]::Matches($source, [regex]::Escape($m.Old))).Count -ne 1) { $mutantFail.Add($m.Id + ' ancora non unica'); continue }
             $mutated = $source.Replace($m.Old, $m.New)
             if ($m.ContainsKey('Old2')) { if (([regex]::Matches($source, [regex]::Escape($m.Old2))).Count -ne 1) { $mutantFail.Add($m.Id + ' seconda parte ancora non unica'); continue }; $mutated = $mutated.Replace($m.Old2, $m.New2) }
@@ -425,6 +557,7 @@ try {
     }
 } finally {
     if ($browser) { Stop-KsBrowser $browser }
+    try { Restore-OrderPage } catch { Write-Host '  ATTENZIONE: ordine.aspx della copia LAB non ripristinata' }
     try { Sync-Site } catch { Write-Host '  ATTENZIONE: file del sito LAB non ripristinati' }
     if ((Get-Variable -Scope Script -Name carrier -ErrorAction SilentlyContinue) -and $script:carrier -gt 0) { try { $null = Invoke-Sql ("UPDATE vettori SET Web=1 WHERE id=$script:carrier AND AziendeId=$script:company AND Web=0;") -Write } catch { Write-Host '  ATTENZIONE: vettore di prova non rimesso sul Web' } }
     if ($restoreCarrier -ne '') { try { $null = Invoke-Sql $restoreCarrier -Write } catch { Write-Host '  ATTENZIONE: valori del vettore non ripristinati sul LAB' } }
@@ -436,5 +569,5 @@ if ($sourceFailed) { Write-Host 'CART_SHIPPING_NUMERIC FAIL (sorgente)' }
 if ($e2e.Count -gt 0) { Write-Host ('CART_SHIPPING_NUMERIC FAIL (sito LAB): ' + $e2e.Count) }
 foreach ($x in $mutantFail) { Write-Host ('  FAIL ' + $x) }
 if ($sourceFailed -or $e2e.Count -gt 0 -or $mutantFail.Count -gt 0) { exit 1 }
-if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (20 mutazioni uccise sul sito LAB)' }
+if ($Cases -ne '' -or $MutantFilter -ne '') { Write-Host ('CART_SHIPPING_NUMERIC PARZIALE OK (casi: ' + $(if ($Cases -ne '') { $Cases } else { 'tutti' }) + '; mutazioni: ' + $(if ($SkipMutants) { 'nessuna' } elseif ($MutantFilter -ne '') { $MutantFilter } else { 'tutte' }) + ')') } elseif ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (23 mutazioni uccise sul sito LAB)' }
 exit 0
