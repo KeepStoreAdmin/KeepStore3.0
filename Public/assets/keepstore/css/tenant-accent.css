@@ -58,7 +58,8 @@ body {
 .ks-order-inventory-alert,
 .product-info-price,
 .price-text,
-.box-total-btn > p {
+.box-total-btn > p,
+.ks-checkout-grand-total {
     --primary: var(--ks-price-accent);
     --primary-2: var(--ks-price-accent);
     --primary-hover: #B8001F;
@@ -157,4 +158,149 @@ body .ks-suggest .ks-suggest-chip:focus-visible,
 body .ks-suggest .ks-suggest-all:focus-visible,
 body .ks-suggest .ks-suggest-note a:focus-visible {
     outline-color: var(--ks-accent-hover);
+}
+
+/* ==========================================================================
+   Carrello, area cliente e documenti (STYLE-TENANT-ACCENT-1B).
+   Alcune tinte storiche non sono il rosso d'accento ma un rosso vicino (pulsanti del carrello, visti di recente,
+   stato dell'indirizzo). --ks-accent-custom vale 0 solo quando l'accento e il rosso storico e 1 con ogni altro
+   colore: col rosso storico quelle tinte restano identiche, con un altro accento seguono l'accento.
+   Le tinte usate come testo portano la stessa informazione nel canale alfa (0.5 = rosso storico, 1 = altro accento):
+   solo con un altro accento vengono scurite quanto serve per leggersi sul bianco.
+   ========================================================================== */
+body {
+    --ks-accent-alt: var(--ks-accent);
+    --ks-accent-alt-text: var(--ks-accent-text);
+    --ks-accent-note-text: var(--ks-accent-text);
+    --ks-accent-badge-text: var(--ks-accent-text);
+    --ks-on-accent-hover: #fff;
+}
+@supports (color: rgb(from red calc(r + 9 * (1 - clamp(0, (max(r - 216, 216 - r) + max(g, 0 - g) + max(b - 39, 39 - b) - 2) * 1000, 1))) g b)) and (color: oklch(from red clamp(0, (0.65 - l) * 1000, 1) 0 0)) and (color: oklch(from red min(l, 0.555) c h)) {
+    body {
+        --ks-accent-custom: clamp(0, (max(r - 216, 216 - r) + max(g, 0 - g) + max(b - 39, 39 - b) - 2) * 1000, 1);
+        --ks-accent-alt: rgb(from var(--ks-accent) calc(r + 9 * (1 - var(--ks-accent-custom))) calc(g + 40 * (1 - var(--ks-accent-custom))) calc(b - 2 * (1 - var(--ks-accent-custom))));
+        --ks-accent-alt-text: oklch(from rgb(from var(--ks-accent) calc(r + 9 * (1 - var(--ks-accent-custom))) calc(g + 40 * (1 - var(--ks-accent-custom))) calc(b - 2 * (1 - var(--ks-accent-custom))) / calc(0.5 + 0.5 * var(--ks-accent-custom))) min(l, calc(0.555 + (1 - alpha) * 2)) c h / 1);
+        --ks-accent-note-text: oklch(from rgb(from var(--ks-accent) calc(r - 19 * (1 - var(--ks-accent-custom))) calc(g + 18 * (1 - var(--ks-accent-custom))) calc(b + 9 * (1 - var(--ks-accent-custom))) / calc(0.5 + 0.5 * var(--ks-accent-custom))) min(l, calc(0.555 + (1 - alpha) * 2)) c h / 1);
+        --ks-accent-badge-text: oklch(from rgb(from var(--ks-accent) calc(r - 19 * (1 - var(--ks-accent-custom))) calc(g + 34 * (1 - var(--ks-accent-custom))) calc(b - 5 * (1 - var(--ks-accent-custom))) / calc(0.5 + 0.5 * var(--ks-accent-custom))) min(l, calc(0.555 + (1 - alpha) * 2)) c h / 1);
+        --ks-on-accent-hover: oklch(from var(--ks-accent-hover) clamp(0, (0.6 - l) * 1000, 1) 0 0);
+    }
+}
+
+/* Prezzi che seguivano l'accento per altre vie: totale del riepilogo (alias del carrello) e importo dell'assicurazione. */
+.ks-checkout-grand-total {
+    --ks-checkout-primary: var(--ks-price-accent);
+}
+[id$="lblAssicurazione"] {
+    color: var(--ks-price-accent);
+}
+
+/* Pulsanti del carrello: stessi selettori di cart-ui.css, a riposo e in hover o focus. */
+.ks-cart-page .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger),
+.ks-cart-page.ks-checkout-shell .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger),
+.ks-cart-page.ks-checkout-modern .ks-checkout-actions .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger),
+.ks-cart-page.ks-cart-modern .ks-cart-actions .tf-btn:not(.btn-gray):not(.btn-danger) {
+    color: var(--ks-on-accent);
+    background-color: var(--ks-accent-alt);
+    border-color: var(--ks-accent-alt);
+}
+.ks-cart-page .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):hover,
+.ks-cart-page .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):focus,
+.ks-cart-page.ks-checkout-shell .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):hover,
+.ks-cart-page.ks-checkout-shell .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):focus,
+.ks-cart-page.ks-checkout-modern .ks-checkout-actions .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):hover,
+.ks-cart-page.ks-checkout-modern .ks-checkout-actions .tf-btn:not(.btn-gray):not(.btn-line):not(.btn-danger):focus,
+.ks-cart-page.ks-cart-modern .ks-cart-actions .tf-btn:not(.btn-gray):not(.btn-danger):hover,
+.ks-cart-page.ks-cart-modern .ks-cart-actions .tf-btn:not(.btn-gray):not(.btn-danger):focus {
+    color: var(--ks-on-accent-hover) !important;
+    background-color: var(--ks-accent-hover);
+    border-color: var(--ks-accent-hover);
+}
+.ks-cart-page.ks-cart-modern .ks-checkout-consent input[type="checkbox"] {
+    accent-color: var(--ks-accent-alt);
+}
+
+/* Rossi scritti nella pagina (attributo di colore): servono regole piu forti. */
+.ks-cart-heading-count,
+.ks-doc-card__title a {
+    color: var(--ks-accent-alt-text) !important;
+}
+
+/* Visti di recente e stato dell'indirizzo nel carrello. Il prezzo dei visti di recente non si tocca. */
+.ks-rv-eyebrow,
+.ks-rv-name a:hover,
+.ks-rv-link {
+    color: var(--ks-accent-note-text);
+}
+.ks-rv-link {
+    border-color: var(--ks-accent-note-text);
+}
+.ks-rv-link:hover {
+    background: var(--ks-accent-note-text);
+    color: #fff;
+}
+.ks-rv-card:hover {
+    border-color: color-mix(in srgb, var(--ks-accent-note-text) 22%, transparent);
+}
+.ks-cart-page .ks-delivery-address-section .ks-address-status-badge {
+    border-color: color-mix(in srgb, var(--ks-accent-badge-text) 22%, transparent);
+    color: var(--ks-accent-badge-text);
+}
+
+/* Testo e icone sopra un fondo d'accento. */
+.ks-cart-page .checkout-status .icon,
+.ks-cart-page .ks-pay-guide__icon,
+.ks-account-avatar,
+.ks-account-notice__icon,
+.ks-pay-now__badge,
+.ks-pay-now__icon,
+#ksMiniCartCanvas .ks-mini-cart-primary,
+form input.tf-btn.tf-btn:not(.btn-gray):not(.btn-gray-2):not(.btn-line) {
+    color: var(--ks-on-accent);
+}
+.ks-cart-page .ks-pay-guide__card--wait .ks-pay-guide__icon {
+    color: #fff;
+}
+.tf-btn.btn-fill:not(.btn-gray):not(.btn-gray-2):not(.btn-line):not(.btn-line-white):not(:hover),
+.tf-btn.btn-small:not(.btn-gray):not(.btn-gray-2):not(.btn-line):not(.btn-line-white):not(:hover),
+.tf-btn.btn-small:not(.btn-gray):not(.btn-gray-2):not(.btn-line):not(.btn-line-white):not(:hover) .text-white,
+.ks-pay-now__btn:not(:hover),
+.ks-print-order:not(:hover),
+.ks-actions > .tf-btn:not(.btn-gray):not(.btn-gray-2):not(.btn-line):not(.btn-line-white):not(:hover),
+.ks-actions > .tf-btn:not(.btn-gray):not(.btn-gray-2):not(.btn-line):not(.btn-line-white):not(:hover) .ks-link-back {
+    color: var(--ks-on-accent) !important;
+}
+
+/* Testo e icone color accento su fondo chiaro. */
+.ks-account-nav-link:hover,
+.ks-account-nav-link:focus-visible,
+.ks-account-nav-link.active,
+.ks-account-nav-link[aria-current="page"],
+a.ks-account-tile:hover,
+a.ks-account-tile:focus-visible,
+.ks-account-tile__icon,
+.ks-doc-card__track,
+.ks-link-button,
+.ks-pdp-toc__link:hover,
+.ks-pdp-toc__link[aria-current="true"],
+.ks-cart-page .ks-cart-trust-item i,
+.ks-cart-page .ks-address-smart-note i,
+.ks-cart-page .ks-pay-guide__steps li::before {
+    color: var(--ks-accent-text);
+}
+.ks-account-nav-link.active,
+.ks-account-nav-link[aria-current="page"] {
+    background: color-mix(in srgb, var(--ks-accent) 5.5%, #fff);
+}
+
+/* Caselle e aloni che avevano il rosso scritto a mano. */
+.ks-login__stay input[type="checkbox"] {
+    accent-color: var(--ks-accent);
+}
+.ks-cart-page .checkout-status .checkout-bar.first ~ .step-payment:nth-of-type(1) .icon,
+.ks-cart-page .checkout-status .checkout-bar.next ~ .step-payment:nth-of-type(2) .icon,
+.ks-cart-page .checkout-status .checkout-bar.end ~ .step-payment:nth-of-type(3) .icon {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--ks-accent) 16%, transparent);
+}
+.ks-order-progress__step.is-current .ks-order-progress__dot {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--ks-accent) 18%, transparent);
 }

@@ -8,6 +8,8 @@ param([switch]$SkipMutants, [switch]$Report, [string]$SitePath = 'C:\Temp\KeepSt
 #   Azienda con il rosso storico: le due foto sono identiche.  Altra azienda: prezzi/offerte/errori identici, accenti del perimetro cambiati,
 #   nessun rosso d'accento residuo nel perimetro, testo leggibile sopra e con il colore d'accento, anello di focus visibile.
 # (A) sorgente, (B) sito LAB con i file di lavoro, (C) mutazioni sul sito LAB (file rimessi alla fine). Solo ASCII.
+# STYLE-TENANT-ACCENT-1B: carrello, area cliente e documenti con l'utente di prova. L'azienda 2 non ha un utente di prova: nella sola copia del sito LAB
+#   l'azienda dell'utente di prova riceve per prova l'accento chiaro (stesso foglio, cambia solo il valore), poi il file torna com'era.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -63,13 +65,14 @@ function snapOne(e){var s=getComputedStyle(e);var o={};
  if(parseFloat(s.borderTopWidth)>0)o.borderTopColor=ch(s.borderTopColor);if(parseFloat(s.borderRightWidth)>0)o.borderRightColor=ch(s.borderRightColor);
  if(parseFloat(s.borderBottomWidth)>0)o.borderBottomColor=ch(s.borderBottomColor);if(parseFloat(s.borderLeftWidth)>0)o.borderLeftColor=ch(s.borderLeftColor);
  if(s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>0)o.outlineColor=ch(s.outlineColor);
+ if(e.tagName==='INPUT'&&/checkbox|radio/.test(e.type)&&s.accentColor&&s.accentColor!=='auto')o.accentColor=ch(s.accentColor);
  if(e instanceof SVGElement){if(s.fill&&s.fill!=='none'&&s.fill.indexOf('url(')<0)o.fill=ch(s.fill);if(s.stroke&&s.stroke!=='none'&&s.stroke.indexOf('url(')<0)o.stroke=ch(s.stroke);}
  ['::before','::after'].forEach(function(ps){var q=getComputedStyle(e,ps);if(q.content&&q.content!=='none'&&q.content!=='normal'){o[ps+'color']=ch(q.color);o[ps+'bg']=ch(q.backgroundColor);if(parseFloat(q.borderTopWidth)>0)o[ps+'bt']=ch(q.borderTopColor);if(parseFloat(q.borderLeftWidth)>0)o[ps+'bl']=ch(q.borderLeftColor);}});
  return o;}
 function snap(){return els.map(snapOne);}
 function cls(e){var c=(typeof e.className==='string'?e.className:(e.className&&e.className.baseVal)||'').trim().split(/\s+/).filter(Boolean).slice(0,3).join('.');return e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(c?'.'+c:'');}
 function desc(e){var p=e.parentElement;return cls(e)+(p&&p!==document.body?' < '+cls(p):'');}
-var PR=/price|prezz|promo|sale|sconto|discount|risparm|saving|total|deal|venduti|sold|sales|offert|percent/i, ER=/error|invalid|danger|alert|validat|required|inventory/i;
+var PR=/price|prezz|promo|sale|sconto|discount|risparm|saving|total|deal|venduti|sold|sales|offert|percent|assicur/i, ER=/error|invalid|danger|alert|validat|required|inventory/i;
 var NOTP=/tf-btn|price-apply|rate-percent|nav-title|ks-card-buy-cta|btn-submit/i;function fam(e,re){var own=(typeof e.className==='string'?e.className:(e.className&&e.className.baseVal)||'');if(NOTP.test(own)||e.tagName==='BUTTON'||(e.tagName==='INPUT'&&/submit|button/.test(e.type)))return false;for(var i=0,x=e;x&&x!==document.body&&i<4;i++,x=x.parentElement){var c=(typeof x.className==='string'?x.className:(x.className&&x.className.baseVal)||'')+' '+(x.id||'');if(NOTP.test(c))return false;if(re.test(c))return true;}return false;}
 function vis(e){if(!e.getClientRects().length)return false;var s=getComputedStyle(e);return s.visibility!=='hidden'&&parseFloat(s.opacity)>0.05;}
 function red(c){return c&&c[3]>40&&c[0]>150&&c[1]<75&&c[2]<95&&c[0]-c[1]>110;}
@@ -90,7 +93,7 @@ for(var i=0;i<els.length;i++){var e=els[i],a=A[i],b=B[i];var keys={};Object.keys
  var v0=vis(e);
  Object.keys(keys).forEach(function(k){
   if(!eq(a[k],b[k])){var line=desc(e)+' ['+k+'] '+(a[k]?a[k].join(','):'-')+' -> '+(b[k]?b[k].join(','):'-');changed.push(line);if(fam(e,PR)||fam(e,ER))changedPrice.push(line);}
-  if(v0&&red(b[k])&&!fam(e,PR)&&!fam(e,ER)){if(k==='backgroundColor'||k==='color'&&e.childNodes.length&&Array.prototype.some.call(e.childNodes,function(n){return n.nodeType===3&&n.nodeValue.trim();})||k.indexOf('border')===0||k==='fill'||k==='stroke'||k.indexOf('::')===0)residual.push(desc(e)+' ['+k+'] '+b[k].slice(0,3).join(','));}
+  if(v0&&red(b[k])&&!fam(e,PR)&&!fam(e,ER)){if(k==='backgroundColor'||k==='color'&&e.childNodes.length&&Array.prototype.some.call(e.childNodes,function(n){return n.nodeType===3&&n.nodeValue.trim();})||k.indexOf('border')===0||k==='fill'||k==='stroke'||k==='accentColor'||k.indexOf('::')===0)residual.push(desc(e)+' ['+k+'] '+b[k].slice(0,3).join(','));}
   if(b[k]&&near(b[k],acc,2)&&b[k][3]>200)accentUse++;
  });
  if(v0&&(e.textContent.trim()||e.querySelector('i,svg'))&&b.backgroundColor[3]>200&&(near(b.backgroundColor,acc,3)||near(b.backgroundColor,hov,3))&&b.color[3]>200&&cr(b.color,b.backgroundColor)<3)low.push(desc(e)+' icona o testo '+b.color.slice(0,3).join(',')+' su fondo di accento = '+cr(b.color,b.backgroundColor).toFixed(2));
@@ -143,6 +146,99 @@ function Test-Site($browser) {
     return $bad.ToArray()
 }
 
+# ---------- STYLE-TENANT-ACCENT-1B: pagine dell'utente di prova ----------
+$cssRelPath = 'Public\assets\keepstore\css\tenant-accent.css'
+$userLine = 'body[data-ks-company="1"] { --ks-accent: #D80027; }'
+$userLineLight = 'body[data-ks-company="1"] { --ks-accent: #FF8C00; }'
+$namedJs = "(function(){" + $colorFn + "function c(q,p){var e=document.querySelector(q);return e?ch(getComputedStyle(e)[p]).slice(0,3).join(','):'';}var o={};o.total=c('.ks-checkout-grand-total span:last-child','color');o.insurance=c('[id`$=lblAssicurazione]','color');o.go=c('#MainContent_btCompleta','backgroundColor');o.accent=vv('--ks-accent').slice(0,3).join(',');o.hover=vv('--ks-accent-hover').slice(0,3).join(',');o.x=0;o.y=0;o.goCr='0';var b=document.querySelector('#MainContent_btCompleta');if(b){b.scrollIntoView({block:'center',behavior:'instant'});o.hov=b.matches(':hover');var r=b.getBoundingClientRect();o.x=Math.round(r.left+r.width/2);o.y=Math.round(r.top+r.height/2);var s=getComputedStyle(b);o.goCr=cr(ch(s.color),ch(s.backgroundColor)).toFixed(2);}return JSON.stringify(o);})()"
+function Enter-User($browser) {
+    Open-KsUrl $browser ($base + '/login.aspx') 300
+    if ([bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_tbPassword")')) {
+        Set-KsValue $browser '#MainContent_tbUsername' $testUser
+        Set-KsValue $browser '#MainContent_tbPassword' (Get-Secret)
+        Invoke-KsClick $browser '#MainContent_btnLogin'
+        Start-Sleep -Milliseconds 1500
+    }
+    Open-KsUrl $browser ($base + '/carrello.aspx') 300
+    if (-not [bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btCompleta")')) {
+        Open-KsUrl $browser ($base + '/articoli.aspx') 300; Start-Sleep -Seconds 2
+        Invoke-KsClick $browser 'button.js-ks-cart-link' -NoWait; Start-Sleep -Seconds 6
+        Open-KsUrl $browser ($base + '/carrello.aspx') 300
+    }
+    if (-not [bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btCompleta")')) { throw 'PAGINA_NON_VALIDA: carrello dell''utente di prova senza il pulsante per proseguire' }
+}
+function Scan-Here($browser) {
+    Start-Sleep -Milliseconds 1500
+    $null = Invoke-KsJs $browser 'window.scrollTo(0, document.body.scrollHeight); 1'; Start-Sleep -Milliseconds 600
+    $null = Invoke-KsJs $browser 'window.scrollTo(0, 0); 1'; Start-Sleep -Milliseconds 300
+    return (ConvertFrom-Json ([string](Invoke-KsJs $browser $scanJs)))
+}
+function Add-UserScan($bad, [string]$tag, $s, [bool]$light) {
+    if (-not $s.sheet) { $bad.Add($tag + ': foglio non collegato'); return }
+    if ($light) {
+        if ($s.accent -ne '255,140,0') { $bad.Add($tag + ': accento ' + $s.accent + ', atteso 255,140,0') }
+        if (@($s.residual).Count -ne 0) { $bad.Add($tag + ': rosso d''accento residuo: ' + @($s.residual)[0]) }
+        if (@($s.low).Count -ne 0) { $bad.Add($tag + ': testo poco leggibile: ' + @($s.low)[0]) }
+    } else {
+        if ($s.changedCount -ne 0) { $bad.Add($tag + ': ' + $s.changedCount + ' colori cambiati con il rosso storico, per esempio ' + @($s.changed)[0]) }
+    }
+    if ($Report) { Write-Host ('  ' + $tag + ': elementi ' + $s.elements + ', cambiati ' + $s.changedCount + ', accento ' + $s.accent) }
+    if (-not $light) { Show-List 'cambiati' $s.changed }
+    Show-List 'rosso residuo' $s.residual; Show-List 'poco leggibile' $s.low
+}
+function Get-Ratio($text) { return [double]::Parse([string]$text, [Globalization.CultureInfo]::InvariantCulture) }
+# Una passata sulle pagine dell'utente di prova. Restituisce l'elenco dei difetti (vuoto = giusto).
+function Test-UserPass($browser, [bool]$light) {
+    $bad = New-Object Collections.Generic.List[string]
+    $tagBase = $(if ($light) { 'accento chiaro, ' } else { 'rosso storico, ' })
+    Enter-User $browser
+    $s = Scan-Here $browser; Add-UserScan $bad ($tagBase + 'carrello') $s $light
+    if ($light) {
+        $n = ConvertFrom-Json ([string](Invoke-KsJs $browser $namedJs))
+        if ($n.go -ne $n.accent) { $bad.Add($tagBase + 'carrello: fondo del pulsante per proseguire ' + $n.go + ', atteso l''accento ' + $n.accent) }
+        if ((Get-Ratio $n.goCr) -lt 4.5) { $bad.Add($tagBase + 'carrello: testo del pulsante per proseguire a ' + $n.goCr) }
+        $null = Invoke-KsCdp $browser 'Input.dispatchMouseEvent' @{ type = 'mouseMoved'; x = [int]$n.x; y = [int]$n.y }
+        Start-Sleep -Milliseconds 400
+        $h = ConvertFrom-Json ([string](Invoke-KsJs $browser $namedJs))
+        if ($h.go -ne $h.hover) { $bad.Add($tagBase + 'carrello: in hover il fondo del pulsante e ' + $h.go + ', atteso l''accento scuro ' + $h.hover + ' (hover reale: ' + $h.hov + ')') }
+        if ((Get-Ratio $h.goCr) -lt 4.5) { $bad.Add($tagBase + 'carrello: in hover il testo del pulsante e a ' + $h.goCr) }
+        $null = Invoke-KsCdp $browser 'Input.dispatchMouseEvent' @{ type = 'mouseMoved'; x = 2; y = 2 }
+    }
+    for ($try = 0; $try -lt 3; $try++) {
+        if ([bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btCompleta")')) { Invoke-KsClick $browser '#MainContent_btCompleta' }
+        for ($w = 0; $w -lt 12; $w++) { Start-Sleep -Milliseconds 500; if ([bool](Invoke-KsJs $browser '!!document.querySelector(".ks-checkout-grand-total")')) { break } }
+        if ([bool](Invoke-KsJs $browser '!!document.querySelector(".ks-checkout-grand-total")')) { break }
+        Enter-User $browser
+    }
+    $s = Scan-Here $browser; Add-UserScan $bad ($tagBase + 'spedizione e pagamento') $s $light
+    $n = ConvertFrom-Json ([string](Invoke-KsJs $browser $namedJs))
+    if ($n.total -eq '') { throw 'PAGINA_NON_VALIDA: totale del riepilogo non trovato' }
+    if ($n.total -ne '216,0,39') { $bad.Add($tagBase + 'spedizione e pagamento: Totale ' + $n.total + ', atteso il rosso dei prezzi 216,0,39') }
+    if ($n.insurance -ne '216,0,39') { $bad.Add($tagBase + 'spedizione e pagamento: importo dell''assicurazione ' + $n.insurance + ', atteso 216,0,39') }
+    Open-KsUrl $browser ($base + '/myaccount.aspx') 300
+    $s = Scan-Here $browser; Add-UserScan $bad ($tagBase + 'area cliente') $s $light
+    $docs = [string](Invoke-KsJs $browser "(function(){var a=document.querySelector('a[href*=""documenti.aspx?t=""]');return a?a.getAttribute('href'):'';})()")
+    if ($docs -eq '') { throw 'PAGINA_NON_VALIDA: area cliente senza il collegamento ai documenti' }
+    Open-KsUrl $browser ($base + '/' + $docs.TrimStart('/')) 300
+    $s = Scan-Here $browser; Add-UserScan $bad ($tagBase + 'documenti') $s $light
+    $det = [string](Invoke-KsJs $browser "(function(){var a=document.querySelector('a[href*=""documentidettaglio.aspx?id=""]');return a?a.getAttribute('href'):'';})()")
+    if ($det -ne '') { Open-KsUrl $browser ($base + '/' + $det.TrimStart('/')) 300; $s = Scan-Here $browser; Add-UserScan $bad ($tagBase + 'dettaglio documento') $s $light }
+    foreach ($p in @('/datiutente.aspx', '/my-account-edit.aspx', '/track-your-order.aspx')) { Open-KsUrl $browser ($base + $p) 300; $s = Scan-Here $browser; Add-UserScan $bad ($tagBase + $p) $s $light }
+    return $bad.ToArray()
+}
+# Le due passate (rosso storico, poi accento chiaro di prova) con il testo del foglio dato; alla fine il file del sito torna quello dato.
+function Test-User($browser, [string]$sheetText) {
+    $all = New-Object Collections.Generic.List[string]
+    if (-not $sheetText.Contains($userLine)) { $all.Add('riga dell''azienda dell''utente di prova non trovata nel foglio'); return $all.ToArray() }
+    try {
+        Write-Site $cssRelPath $sheetText
+        foreach ($x in @(Test-UserPass $browser $false)) { $all.Add($x) }
+        Write-Site $cssRelPath ($sheetText.Replace($userLine, $userLineLight))
+        foreach ($x in @(Test-UserPass $browser $true)) { $all.Add($x) }
+    } finally { Write-Site $cssRelPath $sheetText }
+    return $all.ToArray()
+}
+
 $browser = $null
 $mutantFail = New-Object Collections.Generic.List[string]
 $siteFailed = $false
@@ -184,6 +280,10 @@ try {
         }
         Check ($fx -eq 'ok') ('L05 anello di focus da tastiera non rosso e ad almeno 3:1 sul bianco' + $(if ($fx -ne 'ok') { ' -> ' + $fx } else { '' }))
     }
+    if ($e2e.Count -eq 0) {
+        $ub = @(Test-User $browser $css)
+        Check ($ub.Count -eq 0) ('L06 carrello, area cliente e documenti: rosso storico identico, accento chiaro completo e leggibile, prezzi fermi' + $(if ($ub.Count) { ' -> ' + (($ub | Select-Object -First 12) -join ' || ') } else { '' }))
+    }
     $siteFailed = ($e2e.Count -gt 0)
 
     # ---------- (C) mutazioni sul sito LAB ----------
@@ -195,19 +295,25 @@ try {
             @{ Id = 'M03_PRICE_FOLLOWS_ACCENT'; File = $cssRel; Old = '--primary: var(--ks-price-accent);'; New = '--primary: var(--ks-accent);' },
             @{ Id = 'M04_WHITE_TEXT_ON_ACCENT'; File = $cssRel; Old = 'color: var(--ks-on-accent) !important;'; New = 'color: #fff !important;' },
             @{ Id = 'M05_NO_BODY_COMPANY'; File = 'Page.master.vb'; Old = 'PageBody.Attributes("data-ks-company")'; New = 'PageBody.Attributes("data-ks-company-off")' },
-            @{ Id = 'M06_ACCENT_TEXT_NOT_DARKENED'; File = $cssRel; Old = '--ks-accent-text: oklch(from var(--ks-accent) min(l, 0.555) c h);'; New = '--ks-accent-text: var(--ks-accent);' }
+            @{ Id = 'M06_ACCENT_TEXT_NOT_DARKENED'; File = $cssRel; Old = '--ks-accent-text: oklch(from var(--ks-accent) min(l, 0.555) c h);'; New = '--ks-accent-text: var(--ks-accent);' },
+            @{ Id = 'M07_TOTAL_ALIAS_FOLLOWS_ACCENT'; User = $true; File = $cssRel; Old = '--ks-checkout-primary: var(--ks-price-accent);'; New = '--ks-checkout-primary-off: var(--ks-price-accent);' },
+            @{ Id = 'M08_INSURANCE_FOLLOWS_ACCENT'; User = $true; File = $cssRel; Old = '[id$="lblAssicurazione"]'; New = '[id$="lblAssicurazioneOff"]' },
+            @{ Id = 'M09_INLINE_RED_NOT_OVERRIDDEN'; User = $true; File = $cssRel; Old = 'color: var(--ks-accent-alt-text) !important;'; New = 'color: var(--ks-accent-alt-text);' },
+            @{ Id = 'M10_HISTORIC_TINT_LOST'; User = $true; File = $cssRel; Old = '--ks-accent-custom: clamp(0, '; New = '--ks-accent-custom: clamp(1, ' },
+            @{ Id = 'M11_CART_BUTTON_BACKGROUND_RED'; User = $true; File = $cssRel; Old = 'background-color: var(--ks-accent-alt);'; New = 'background-color: #e12825;' },
+            @{ Id = 'M12_FILL_BUTTON_TEXT_WHITE'; User = $true; File = $cssRel; Old = '.tf-btn.btn-fill:not(.btn-gray)'; New = '.tf-btn.btn-fill-off:not(.btn-gray)' }
         )
         foreach ($m in $mutants) {
             $src = Get-Text $repoBytes[$m.File]
             if (([regex]::Matches($src, [regex]::Escape($m.Old))).Count -lt 1) { $mutantFail.Add($m.Id + ' ancora assente'); continue }
             Write-Site $m.File ($src.Replace($m.Old, $m.New))
             try {
-                $mb = @(Test-Site $browser)
+                if ($m.ContainsKey('User')) { $mb = @(Test-User $browser ($src.Replace($m.Old, $m.New))) } else { $mb = @(Test-Site $browser) }
                 if ($mb.Count -eq 0) { $mutantFail.Add($m.Id + ' sopravvive') } else { Write-Host ('  ucciso ' + $m.Id + ': ' + $mb[0]) }
             } catch { $mutantFail.Add($m.Id + ' errore: ' + $_.Exception.Message) }
             Sync-Site
         }
-        $after = @(Test-Site $browser)
+        $after = @(Test-Site $browser) + @(Test-User $browser $css)
         if ($after.Count -ne 0) { $mutantFail.Add('dopo il ripristino il sito non torna verde: ' + $after[0]) }
     }
 } finally {
@@ -220,5 +326,5 @@ if ($sourceFailed) { Write-Host 'TENANT_ACCENT FAIL (sorgente)' }
 if ($e2e.Count -gt 0) { Write-Host ('TENANT_ACCENT FAIL (sito LAB): ' + $e2e.Count) }
 foreach ($x in $mutantFail) { Write-Host ('  FAIL ' + $x) }
 if ($sourceFailed -or $e2e.Count -gt 0 -or $mutantFail.Count -gt 0) { exit 1 }
-if ($SkipMutants) { Write-Host 'TENANT_ACCENT OK (mutazioni saltate)' } else { Write-Host 'TENANT_ACCENT OK (6 mutazioni uccise sul sito LAB)' }
+if ($SkipMutants) { Write-Host 'TENANT_ACCENT OK (mutazioni saltate)' } else { Write-Host 'TENANT_ACCENT OK (12 mutazioni uccise sul sito LAB)' }
 exit 0
