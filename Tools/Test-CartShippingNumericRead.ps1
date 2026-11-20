@@ -8,6 +8,8 @@ param([switch]$SkipMutants, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20
 # Prova COMPORTAMENTALE sul percorso reale (sito LAB, https, 127.0.0.1, porta 18843, browser vero, utente di prova collegato):
 # i valori del vettore scelto vengono cambiati sul LAB per la durata del test e rimessi alla fine.
 # (A) sorgente, (B) sito LAB con i file di lavoro, (C) mutazioni eseguite sul sito LAB (file rimessi alla fine). Solo ASCII.
+# CART-INSURANCE-UNCHECK-ORDER-1A (casi I1-I3): un vettore che non offre l'assicurazione (percentuale 0) non deve mai produrre un importo,
+# nemmeno con un minimo impostato e con la casella mandata spuntata dal browser; la casella resta disattivata.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -135,16 +137,59 @@ function Test-Case([string]$id, $browser) {
                 if ($s2.insChecked -eq $true) { Invoke-KsClick $browser '[id$=cbAssicurazione]'; Start-Sleep -Milliseconds 1500 }
             }
         }
-        'C4' {   # cinque NULL: zero, niente contrassegno, ma il vettore resta valido fino alla conferma (la casella dell'assicurazione
-                 # viene riattivata dal blocco/sblocco della pagina: comportamento preesistente, fuori da questa prova)
+        'C4' {   # cinque NULL: zero, niente contrassegno, casella dell'assicurazione spenta, ma il vettore resta valido fino alla conferma
             Set-Carrier $null $null $null $null $null; $s = Read-Step2 $browser
             if ($s.carrier -ne [string]$script:carrier) { $bad.Add('vettore scelto ' + $s.carrier) }
             if ($s.ins -ne '0,00') { $bad.Add('assicurazione "' + $s.ins + '", attesa "0,00"') }
+            if ($s.insDisabled -ne $true) { $bad.Add('casella dell''assicurazione attiva con valori NULL') }
             if ($null -eq $s.cod -or $s.cod.disabled -ne $true) { $bad.Add('contrassegno ancora selezionabile') }
             if ([bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btnVaiConfermaOrdine")')) {
                 Invoke-KsClick $browser '#MainContent_btnVaiConfermaOrdine'; Start-Sleep -Milliseconds 1500
                 if (-not [bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btInviaOrdine")')) { $bad.Add('con valori NULL non si arriva alla conferma') }
             } else { $bad.Add('pulsante verso la conferma assente') }
+        }
+        'I1' {   # vettore SENZA assicurazione (percentuale 0) ma con un minimo: casella spenta, nessun importo
+            Set-Carrier 0 4.125 1.6 0 3.5; $s = Read-Step2 $browser
+            $sa = if ($s.sum.PSObject.Properties['Assicurazione']) { [string]$s.sum.Assicurazione } else { '' }
+            $script:totalNoInsurance = if ($s.sum.PSObject.Properties['Totale']) { [string]$s.sum.Totale } else { '' }
+            if ($s.insDisabled -ne $true) { $bad.Add('I1 casella dell''assicurazione attiva con un vettore che non la offre') }
+            if ($s.ins -ne '0,00') { $bad.Add('I1 importo offerto "' + $s.ins + '", atteso "0,00"') }
+            if ($sa -ne '0,00') { $bad.Add('I1 riepilogo Assicurazione "' + $sa + '", atteso "0,00"') }
+        }
+        'I2' {   # stesso vettore: casella forzata attiva e spuntata nel browser, poi verso la conferma
+            Set-Carrier 0 4.125 1.6 0 3.5; $s = Read-Step2 $browser
+            $t0 = if ($s.sum.PSObject.Properties['Totale']) { [string]$s.sum.Totale } else { '' }
+            if ($s.insChecked -eq $true) { throw 'PAGINA_NON_VALIDA: casella gia spuntata prima della prova' }
+            $null = Invoke-KsJs $browser "(function(){var c=document.querySelector('[id`$=cbAssicurazione]');if(!c)return 0;c.disabled=false;c.removeAttribute('disabled');var p=c.parentElement;if(p&&p.hasAttribute('disabled')){p.removeAttribute('disabled');}c.onclick=null;c.checked=true;return 1;})()"
+            Invoke-KsClick $browser '#MainContent_btnVaiConfermaOrdine'; Start-Sleep -Milliseconds 3000
+            if (-not [bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btInviaOrdine")')) { throw 'PAGINA_NON_VALIDA: conferma non raggiunta nel caso I2' }
+            $s2 = Read-State $browser
+            $sa = if ($s2.sum.PSObject.Properties['Assicurazione']) { [string]$s2.sum.Assicurazione } else { '' }
+            $t1 = if ($s2.sum.PSObject.Properties['Totale']) { [string]$s2.sum.Totale } else { '' }
+            if ($sa -ne '0,00') { $bad.Add('I2 alla conferma Assicurazione "' + $sa + '" con un vettore che non la offre, atteso "0,00"') }
+            if ($t0 -eq '' -or $t1 -ne $t0) { $bad.Add('I2 alla conferma Totale "' + $t1 + '", atteso "' + $t0 + '"') }
+        }
+        'I3' {   # vettore CON assicurazione: la scelta legittima resta fino alla conferma
+            Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
+            $ei = Money ([Math]::Max($script:imp * 1.5D / 100D, 4.5D))
+            if ($s.insDisabled -ne $false) { $bad.Add('I3 casella dell''assicurazione spenta con un vettore che la offre') }
+            elseif ($s.ins -ne $ei) { $bad.Add('I3 importo offerto "' + $s.ins + '", atteso "' + $ei + '"') }
+            else {
+                if ($s.insChecked -ne $true) { Invoke-KsClick $browser '[id$=cbAssicurazione]'; Start-Sleep -Milliseconds 2000 }
+                $s2 = Read-State $browser
+                if (-not $s2.step2) { throw 'PAGINA_NON_VALIDA: dopo la spunta dell''assicurazione nel caso I3' }
+                $sa = if ($s2.sum.PSObject.Properties['Assicurazione']) { [string]$s2.sum.Assicurazione } else { '' }
+                if ($s2.insChecked -ne $true -or $sa -ne $ei) { $bad.Add('I3 dopo la spunta riepilogo Assicurazione "' + $sa + '", atteso "' + $ei + '"') }
+                Invoke-KsClick $browser '#MainContent_btnVaiConfermaOrdine'; Start-Sleep -Milliseconds 3000
+                if (-not [bool](Invoke-KsJs $browser '!!document.querySelector("#MainContent_btInviaOrdine")')) { $bad.Add('I3 conferma non raggiunta con l''assicurazione scelta') }
+                else {
+                    $s3 = Read-State $browser
+                    $sc = if ($s3.sum.PSObject.Properties['Assicurazione']) { [string]$s3.sum.Assicurazione } else { '' }
+                    if ($sc -ne $ei) { $bad.Add('I3 alla conferma Assicurazione "' + $sc + '", atteso "' + $ei + '"') }
+                }
+                $s4 = Read-Step2 $browser
+                if ($s4.insChecked -eq $true) { Invoke-KsClick $browser '[id$=cbAssicurazione]'; Start-Sleep -Milliseconds 2000 }
+            }
         }
         'C5' {   # valori di oggi a due decimali: stessi importi di prima
             Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
@@ -199,7 +244,7 @@ try {
     Check ($script:pIns -gt 0 -and $script:pCod -gt 0) ('L09 percentuali di prova trovate (' + $script:pIns.ToString($inv) + ' e ' + $script:pCod.ToString($inv) + ')')
 
     if ($e2e.Count -eq 0) {
-        foreach ($c in @('C1', 'C2', 'C2B', 'C4', 'C5', 'C3')) {
+        foreach ($c in @('C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3')) {
             $bad = @(Test-Case $c $browser)
             Check ($bad.Count -eq 0) ('L10 caso ' + $c + $(if ($bad.Count) { ' -> ' + ($bad -join '; ') } else { '' }))
         }
@@ -216,14 +261,21 @@ try {
             @{ Id = 'M05_COD_FIXED_FROM_TEXT'; Case = 'C2B'; Old = '_carrierCodFixed = charges.CodFixed'; New = '_carrierCodFixed = ParseDecimalForDb(Convert.ToString(charges.CodFixed, CultureInfo.CurrentCulture), 0D)' },
             @{ Id = 'M06_PAYMENT_READS_HIDDEN_BOX'; Case = 'C1'; Old = 'Minimo = CDbl(_carrierCodMinimum)'; New = 'Minimo = SafeMoney(Me.tbContrMinimo.Text, 0)' },
             @{ Id = 'M07_NULL_IS_FAILURE'; Case = 'C4'; Old = 'If raw Is DBNull.Value Then Return True'; New = 'If raw Is DBNull.Value Then Return False' },
-            @{ Id = 'M08_COD_SWITCH_ROUNDED'; Case = 'C2B'; Old = 'RitiroSede = (charges.CodPercent = 0D)'; New = 'RitiroSede = (Math.Round(charges.CodPercent, 2, MidpointRounding.AwayFromZero) = 0D)' }
+            @{ Id = 'M08_COD_SWITCH_ROUNDED'; Case = 'C2B'; Old = 'RitiroSede = (charges.CodPercent = 0D)'; New = 'RitiroSede = (Math.Round(charges.CodPercent, 2, MidpointRounding.AwayFromZero) = 0D)' },
+            @{ Id = 'M09_UNAVAILABLE_INSURANCE_KEEPS_AMOUNT'; Case = 'I1'; Expect = 'I1 importo offerto'; Old = 'If Not _insuranceAvailable Then insurance = 0'; New = 'If False Then insurance = 0' },
+            @{ Id = 'M10_LOCK_IGNORES_AVAILABILITY'; Case = 'I1'; Expect = 'I1 casella'; Old = 'unlocked AndAlso (Not _insuranceKnown OrElse _insuranceAvailable)'; New = 'unlocked' },
+            @{ Id = 'M11_CODE_BEFORE_THE_FIX'; Case = 'I2'; Expect = 'I2 alla conferma Assicurazione "4,13"'; Old = 'If Not _insuranceAvailable Then insurance = 0'; New = 'If False Then insurance = 0'; Old2 = 'unlocked AndAlso (Not _insuranceKnown OrElse _insuranceAvailable)'; New2 = 'unlocked' },
+            @{ Id = 'M12_INSURANCE_NEVER_AVAILABLE'; Case = 'I3'; Expect = 'I3 casella'; Old = '_insuranceAvailable = readOk AndAlso charges.InsurancePercent <> 0D'; New = '_insuranceAvailable = False' }
         )
         foreach ($m in $mutants) {
             if (([regex]::Matches($source, [regex]::Escape($m.Old))).Count -ne 1) { $mutantFail.Add($m.Id + ' ancora non unica'); continue }
-            Write-SiteVb ($source.Replace($m.Old, $m.New))
+            $mutated = $source.Replace($m.Old, $m.New)
+            if ($m.ContainsKey('Old2')) { if (([regex]::Matches($source, [regex]::Escape($m.Old2))).Count -ne 1) { $mutantFail.Add($m.Id + ' seconda parte ancora non unica'); continue }; $mutated = $mutated.Replace($m.Old2, $m.New2) }
+            Write-SiteVb $mutated
             try {
                 $mb = @(Test-Case $m.Case $browser)
-                if ($mb.Count -eq 0) { $mutantFail.Add($m.Id + ' sopravvive al caso ' + $m.Case) } else { Write-Host ('  ucciso ' + $m.Id + ' (' + $m.Case + '): ' + $mb[0]) }
+                if ($mb.Count -eq 0) { $mutantFail.Add($m.Id + ' sopravvive al caso ' + $m.Case) }
+                elseif ($m.ContainsKey('Expect') -and -not ($mb[0]).StartsWith($m.Expect)) { $mutantFail.Add($m.Id + ' fallisce per un altro motivo: ' + $mb[0]) } else { Write-Host ('  ucciso ' + $m.Id + ' (' + $m.Case + '): ' + $mb[0]) }
             } catch { $mutantFail.Add($m.Id + ' errore: ' + $_.Exception.Message) }
         }
         Sync-Site
@@ -242,5 +294,5 @@ if ($sourceFailed) { Write-Host 'CART_SHIPPING_NUMERIC FAIL (sorgente)' }
 if ($e2e.Count -gt 0) { Write-Host ('CART_SHIPPING_NUMERIC FAIL (sito LAB): ' + $e2e.Count) }
 foreach ($x in $mutantFail) { Write-Host ('  FAIL ' + $x) }
 if ($sourceFailed -or $e2e.Count -gt 0 -or $mutantFail.Count -gt 0) { exit 1 }
-if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (8 mutazioni uccise sul sito LAB)' }
+if ($SkipMutants) { Write-Host 'CART_SHIPPING_NUMERIC OK (mutazioni saltate)' } else { Write-Host 'CART_SHIPPING_NUMERIC OK (12 mutazioni uccise sul sito LAB)' }
 exit 0

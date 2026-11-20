@@ -1372,6 +1372,9 @@ Private Class CurrentCartShippingSnapshot
 End Class
 
 Private _shippingRebuildAttemptedThisRequest As Boolean
+' Assicurazione del vettore letto in questa richiesta: offerta solo se la lettura e riuscita e la percentuale non e zero.
+Private _insuranceKnown As Boolean
+Private _insuranceAvailable As Boolean
 Private _shippingEligibilityRebuiltThisRequest As Boolean
 Private _shippingSelectionValidatedThisRequest As Boolean
 Private _validatedDeliveryIdThisRequest As Integer
@@ -1445,13 +1448,18 @@ Private Function ApplyCarrierCharges(ByVal readOk As Boolean, ByVal charges As C
     Dim minimum As Double = CDbl(charges.InsuranceMinimum)
     Dim insurance As Double = (CDbl(charges.InsurancePercent) * SafeMoney(lblImponibile.Text, 0)) / 100
     If insurance < minimum Then insurance = minimum
+    ' Un vettore che non offre l'assicurazione non ha un importo, nemmeno con un minimo impostato:
+    ' cosi nessuna casella mandata spuntata dal browser puo creare un addebito.
+    _insuranceKnown = True
+    _insuranceAvailable = readOk AndAlso charges.InsurancePercent <> 0D
+    If Not _insuranceAvailable Then insurance = 0
     lblAssicurazione.Text = FormatCurrencyIt(insurance)
 
     ' Le caselle nascoste non portano piu valori: nessun calcolo le legge e quello che torna dal browser non conta.
     tbContrFisso.Text = ""
     tbContrPerc.Text = ""
     tbContrMinimo.Text = ""
-    Return charges.InsurancePercent <> 0D
+    Return _insuranceAvailable
 End Function
 
 'Enum Lst
@@ -2494,7 +2502,8 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
         SetControlEnabled(btnCartAddressEdit, unlocked)
         SetControlEnabled(gvVettoriPromo, unlocked)
         SetControlEnabled(gvVettori, unlocked)
-        SetControlEnabled(cbAssicurazione, unlocked)
+        ' La casella dell'assicurazione resta spenta se il vettore letto in questa richiesta non la offre.
+        SetControlEnabled(cbAssicurazione, unlocked AndAlso (Not _insuranceKnown OrElse _insuranceAvailable))
         SetControlEnabled(gvPagamento, unlocked)
         SetControlEnabled(btnVaiConfermaOrdine, unlocked)
         SetControlEnabled(btInviaOrdine, unlocked)
