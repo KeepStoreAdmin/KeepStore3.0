@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A — 20/11/2026 — SOURCE (dopo la conferma il cliente può cambiare vettore e pagamento)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (checkout). PR [#613](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/613), stable `e0bc49bf`.** Difetto riprodotto durante `CART-SUMMARY-AFTER-INVALID-DELIVERY-1A`; correzione chiesta dal PO il 20/11/2026 («Sì, procedi»).
+
+**Difetto riprodotto (sito LAB).** Dopo un passaggio dalla conferma, per i 30 minuti di validità della bozza d'ordine (in sessione) ogni clic su un altro vettore o su un altro pagamento tornava sulla scelta di prima. Causa: `RestoreCheckoutOptionSelections` rimetteva i radio sugli id della bozza a ogni `PreRender` delle griglie, anche sopra la scelta appena mandata dal cliente.
+
+**Soluzione (`carrello.aspx.vb`).** Le scelte della bozza si rimettono, per gruppo, solo se il browser non ha mandato le proprie nella richiesta (`Request.Form("spedizione")` / `("pagamento")` assente: pagina aperta o ricaricata, ritorno dalla conferma dove le opzioni sono nascoste). Nessuno stato in più. Senza cambi restano le scelte sigillate.
+
+**Revisioni.** ChatGPT (xhigh): smontata la prima ipotesi (guardare il radio spuntato: una spunta diversa può nascere dal sito, per esempio dal pagamento predefinito). Claude (Opus): accolta la sua alternativa più semplice del marcatore in sessione; accolti il clic su una riga più in alto, il caso con ricaricamento e la verifica che un ordine non può partire con la bozza vecchia (l'invio richiede il passo di conferma e risigilla). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`, caso D1 (rosso prima al cambio di vettore): scelte non predefinite, conferma, «Modifica» e ricaricamento senza cambi = scelte sigillate; cambio di vettore verso una riga più in alto e cambio di pagamento = restano, una sola spunta per gruppo; nuova conferma, «Modifica» e ricaricamento = scelte nuove. 20 mutazioni uccise. 21 test collegati senza nuovi fallimenti, precompile, segreti, CI verdi.
+
+**Limiti e coda (NON AVVIATI).** **`CHECKOUT-SEND-RESEAL-DIVERGENCE-1A` (L, preesistente, priorità):** all'invio dell'ordine `LeggiPagamenti` può cambiare pagamento con il ripiego (per esempio contrassegno non più disponibile) e la nuova sigillatura lo accetta senza tornare alla conferma; insieme, il ripiego che sceglie il contrassegno prima di spegnerlo. Spedizione promo e speciale e due schede del browser non provate. **Alla consegna futura:** `carrello.aspx`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CART-SUMMARY-AFTER-INVALID-DELIVERY-1A — 20/11/2026 — SOURCE (riepilogo senza gli importi del vettore non più valido)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (checkout). PR [#611](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/611), stable `1d04071f`.** Task in coda da `CART-INSURANCE-UNCHECK-ORDER-1A`; avvio confermato dal PO il 20/11/2026 («ok procedi»).
