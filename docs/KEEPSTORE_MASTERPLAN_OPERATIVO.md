@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CART-SHIPPING-NUMERIC-READ-1A — 20/11/2026 — SOURCE (assicurazione e contrassegno del vettore letti come numeri)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#603](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/603), stable `7e79207c`.** Seguito della richiesta del PO del 20/11/2026 sui prezzi «che sballano» nel carrello; il PO: «Si, procedi».
+
+**Fatti e causa.** I cinque numeri del vettore (`vettori`, `double(15,3)`) passavano da testo e dalla regola «un separatore seguito da tre cifre = migliaia» di `ParseDecimalForDb`. Riprodotto sul sito LAB: minimo dell'assicurazione 4,125 mostrato 4.125,00, minimo del contrassegno 3,125 mostrato 3.125,00; importi che entrano nel totale dell'ordine. Percentuali arrotondate a due decimali prima del calcolo. Oggi 0 vettori su 20 hanno tre decimali: difetto latente.
+
+**Correzione.** `carrello.aspx`: i cinque numeri sono chiavi tipizzate delle due griglie (`id` primo). `carrello.aspx.vb`: `ApplyCarrierCharges` e l'unico punto che applica le spese (griglia normale, promo, spedizione gratuita speciale); `LeggiPagamenti` usa numeri della richiesta, non le caselle nascoste tornate dal browser (ora vuote); NULL = zero; valore illeggibile = consegna non convalidata. `ParseDecimalForDb` e `Safe*` non toccati.
+
+**Revisioni.** ChatGPT (xhigh): accolti «errore diverso da NULL», casi di prova non mascherati, `RitiroSede` dal numero; rimandato l'ordine della casella dell'assicurazione. Claude (Opus): accolti l'uscita su `TryRebuild...` al posto di `_cartTotalsUnavailable`, `Values.Contains`, contrassegno spento se i valori non sono noti, caselle non piu scritte; scartato l'azzeramento a inizio `LeggiVettori` (cancellerebbe il percorso speciale). Gate di certezza: PASS.
+
+**Prove.** Nuovo `Tools/Test-CartShippingNumericRead.ps1`, visto rosso prima: sito LAB, browser, 6 casi, 8 mutazioni uccise ciascuna dal proprio caso (il test rientra da solo se il sito si riavvia). Collegati senza fallimenti nuovi; precompile, segreti e CI verdi.
+
+**Limiti e coda (NON AVVIATI).** Percorso speciale provato come sorgente. Percentuali sotto 0,005 ora valgono il loro valore (oggi nessun caso). `CART-INSURANCE-UNCHECK-ORDER-1A` (S): la casella dell'assicurazione viene riattivata dal blocco/sblocco della pagina e le spese si aggiornano prima della deselezione. Contrassegno spento se la percentuale e 0 anche con fisso > 0 (preesistente). `export_amazon.aspx.vb` r. 47-55. **Alla consegna futura:** `carrello.aspx`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CART-RECENT-LAYOUT-1B — 20/11/2026 — SOURCE (schede dei «Visti di recente» del carrello allineate)
 
 **Esito: A (SOURCE, non pubblicato). Livello S. PR [#601](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/601), stable `8f556bf7`.** Seconda parte della richiesta del PO del 20/11/2026 («i prezzi ... sono disallineati con gli altri»).
