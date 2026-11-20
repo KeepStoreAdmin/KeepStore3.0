@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-TENANT-ACCENT-1B — 20/11/2026 — SOURCE (accento della vetrina su carrello, area cliente e documenti)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#607](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/607), stable `bef62787`.** Richiesta del PO del 20/11/2026 («Sì, completa»): l'accento per vetrina (`--ks-accent`) anche su carrello, checkout, area cliente e documenti.
+
+**Fatti misurati.** Con l'accento chiaro: (1) difetto lasciato da 1A, il «Totale» del riepilogo diventava arancione (colorato dall'alias `--ks-checkout-primary`, `cart-ui.css` r. 3312) e così l'importo dell'assicurazione (`carrello.aspx` r. 968, dentro `.text-primary`); (2) rossi scritti a mano diversi dall'accento (`#e12825` pulsanti del carrello, `#c51230` visti di recente, `#c52222` stato dell'indirizzo, `ForeColor` nelle pagine); (3) testo bianco su accento e testo color accento illeggibili (2,33:1) su pulsanti, badge, avatar, passi, voce attiva.
+
+**Soluzione.** Solo `tenant-accent.css` (più il numero di versione del foglio in `Page.master`). Totale e assicurazione riportati al rosso fisso. Una «bandiera» calcolata dall'accento (`--ks-accent-custom`, 0 solo col rosso storico) lascia identiche le tinte storiche su Azienda 1 e le fa seguire l'accento con ogni altro colore; per le tinte di testo la bandiera viaggia nel canale alfa e lo scurimento vale solo con un altro accento. Pulsanti del carrello a riposo e in hover, testo sopra l'accento per elenco di componenti (nessuna regola generale sui pulsanti), voce attiva dell'indice della scheda articolo (sfuggita a 1A).
+
+**Revisioni.** ChatGPT (xhigh): accolti alias del totale, assicurazione, `ForeColor` inline, niente regola generale sui `.tf-btn` (pulsanti bianchi di `ordine.aspx`), stati hover/focus. Claude (Opus): accolti ripiego mai invalido, bandiera solo su canali interi, specificità dei selettori del carrello, mini-carrello; scartata la foto di `box-shadow` (formato diverso, falsi positivi). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-TenantAccent.ps1` (rosso prima): utente di prova sul sito LAB, 8 pagine; rosso storico = zero colori cambiati; accento chiaro dato per prova alla sua azienda = nessun rosso residuo, testo leggibile, Totale e assicurazione 216,0,39, hover del pulsante. 12 mutazioni uccise. Test collegati, precompile, segreti, CI verdi.
+
+**Limiti (dichiarati).** Su Azienda 1 solo in hover/focus i pulsanti del carrello passano da `#b91f1d` a `#B8001F`. Non coperti: stili interni di `ordine.aspx`, pulsanti storici `BackColor="red"` di `registrazione.aspx`, conferma finale, mobile, vera Azienda 2 con utente collegato (nessun utente di prova). **Alla consegna futura:** `Page.master`, `Page.master.vb`, `Public/assets/keepstore/css/tenant-accent.css`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-TENANT-ACCENT-1A — 20/11/2026 — SOURCE (un solo colore di accento per vetrina)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#605](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/605), stable `57e35296`.** Richiesta del PO del 20/11/2026: «Un solo colore di accento per vetrina», variabile `--ks-accent` con un valore per azienda; Azienda 1 mantiene il rosso, Azienda 2 usa `#FF8C00`; prezzi ed errori invariati.
