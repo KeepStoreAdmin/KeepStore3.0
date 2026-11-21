@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-BASELINE-1A — 21/11/2026 — SOURCE (strumento: fotografia riproducibile dello stile del negozio)
+
+**Esito: A (SOURCE, solo strumenti e documenti: nulla da pubblicare). Livello S. PR [#617](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/617), stable `f8d0491c`.** Richiesta del PO del 21/11/2026 («si procedi con la grafica»): primo task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md). Nessun file del prodotto cambia.
+
+**Che cosa fa.** `Tools/Get-KeepStoreStyleBaseline.ps1` legge nel browser gli stili calcolati per ruolo, **produttore** (occasioni, griglia della HOME, elenco, sezioni e prezzo principale della scheda prodotto, barra d'acquisto, consigli del carrello…) e **stato del prezzo** letto dal markup (normale, normale + quantità, sconto immediato, barrato, prezzo quantità, su richiesta). Sola lettura, solo sito LAB (origine controllata), nessun clic che scrive; con l'utente collegato nessun testo e nessuna schermata. `-Compare`: stessa chiave con firme diverse = errore, chiave nuova o scomparsa = avviso. `-Summary` genera il [riepilogo](KEEPSTORE_STYLE_BASELINE_2026_11_21.md).
+
+**Fatti misurati (14 pagine, 390 e 1280 px, 903 varianti).** Nelle griglie della HOME il prezzo con sconto immediato è nero come quello normale; nella scheda prodotto il prezzo principale è rosso anche senza sconto; il carrello usa «Inter» (non caricato) accanto ad Arial; raggi 3, 4, 5, 6, 7, 8, 10, 12, 14, 22 px; l'elenco a 1280 px è alto 23.541 px (5.086 a 390). Due fotografie consecutive: 0 errori, 2 avvisi (rotazione della HOME).
+
+**Revisioni.** ChatGPT (xhigh): accolti l'identità di ogni campione (senza lo stato uno scambio di colore fra prezzi non si vedeva), il clic «Completa» tolto (rivalida i prezzi del carrello: scrive), la privacy, l'origine chiusa. Claude (Opus): accolti i marcatori reali dei quattro produttori di prezzi (il barrato è disegnato con `::before`, non con la decorazione del testo), il confronto per chiave, la tabella di copertura, le schede prodotto scelte per stato; scartati come eccessivi Smoke, censimento completo delle superfici, dieci mutazioni. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-StyleBaselineTool.ps1`: pagina di prova locale con il markup dei produttori reali, attese scritte a mano (13 prezzi, visibilità, bordi, ombre, confronto, unione, copertura, origine), un caso visto rosso (prezzo della scheda prodotto) e corretto, 4 mutazioni uccise. Segreti e CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Non fotografati: stati interattivi, pannelli aperti, seconda azienda, documenti, ricerca, conferma d'ordine; LAB senza immagini; nessun articolo «solo quantità» nella prima pagina dell'elenco. Prossimo: `STYLE-PRICE-STATES-1A` (L). Nulla da pubblicare sul server.
+
 ## CHECKOUT-SEND-RESEAL-DIVERGENCE-1A — 20/11/2026 — SOURCE (l'ordine non parte con condizioni diverse dalla conferma mostrata)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (invio dell'ordine). PR [#615](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/615), stable `21819c73`.** Difetto segnalato dai revisori in `CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A`; correzione chiesta dal PO il 20/11/2026 («Sì, procedi»).
