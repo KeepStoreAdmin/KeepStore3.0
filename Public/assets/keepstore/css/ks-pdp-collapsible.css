@@ -1,0 +1,61 @@
+/* KeepStore - sezioni della scheda prodotto a scomparsa su telefono (PDP-LAYOUT-ORDER-1A).
+   Il pulsante e le classi sono aggiunti da ks-pdp-collapsible.js solo sotto i 768 px; il corpo chiuso ha l'attributo hidden.
+   Il pulsante eredita dal titolo (h2) carattere, corpo, peso e colore: la scala dei titoli resta quella di type-scale.css. */
+@media screen and (max-width: 767.98px) {
+  /* la testata e un elemento <header>: lo script dell'intestazione del sito scrive top su ogni header (innocuo finche e statico) */
+  .ks-pdp-section--collapsible .ks-pdp-section__head {
+    position: relative;
+    top: auto !important;
+  }
+  .ks-pdp-section__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: left;
+    text-transform: inherit;
+    cursor: pointer;
+    scroll-margin-top: calc(var(--ks-pdp-toc-height, 49px) + 16px);
+  }
+  /* tutta la testata (titolo e riga di aiuto) risponde al tocco */
+  .ks-pdp-section--collapsible .ks-pdp-section__toggle::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .ks-pdp-section__arrow {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    margin: 0 8px 4px 0;
+    border: solid currentColor;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .ks-pdp-section__toggle[aria-expanded="true"] .ks-pdp-section__arrow {
+    margin-bottom: -4px;
+    transform: rotate(-135deg);
+  }
+  .ks-pdp-section--closed .ks-pdp-section__head {
+    margin-bottom: 0;
+  }
+}
+
+/* In stampa ogni sezione stampabile e aperta, anche se sul telefono era chiusa. */
+@media print {
+  .ks-pdp-section__body[hidden] {
+    display: block !important;
+  }
+  .ks-pdp-section__arrow {
+    display: none;
+  }
+}

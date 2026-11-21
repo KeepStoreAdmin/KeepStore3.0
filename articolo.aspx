@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/drift-basic.min.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261119-compact-1b" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-pdp-collapsible.css") %>?v=20261121-pdp-collapsible-1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -943,6 +944,7 @@
     <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-buybar.js") %>?v=20261114-pdp-buybar1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-sections.js") %>?v=20261118-pdp-sections1a"></script>
+    <script src="<%= ThemeManager.Asset("js/ks-pdp-collapsible.js") %>?v=20261121-pdp-collapsible-1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-tools.js") %>?v=20261118-pdp-tools1a"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
     <asp:Literal ID="litRecentlyViewedScript" runat="server" EnableViewState="false" />
