@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## HOME-MOBILE-MENU-1A — 21/11/2026 — SOURCE (menu su telefono più compatto e ordinato)
+
+**Esito: A (SOURCE, non pubblicato). Livello M (presentazione e ordine del menu). PR [#623](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/623), stable `36f33e1b`.** Richiesta del PO (19/11: «Non mi piace come lo visualizzo»; 21/11: «Osserva anche il menu del sito www.estayon.com poi fai anche tu una ricerca, per progettare la visualizzazione al meglio possibile»). `www.estayon.com` non esiste: osservato `www.e-stayon.com`.
+
+**Design Gate.** ONSUS originale (pannello con logo e schede); Bytecno e Stay On a 390 px (pannello all'82-86% con pagina scurita dietro, testata «MENU», righe da 40-44 px in grassetto, freccia, servizi con icona, nessun logo); Baymard 2026 (categorie come prime voci, «Vedi tutto» col nome a ogni livello, elenchi oltre 10 voci da dividere) e Nielsen Norman Group (la parola «Menu» aiuta; livelli successivi ammessi per cataloghi profondi). **KeepStore prima:** pannello a tutto schermo, prima voce a 108 px, 18 settori prima di «Offerte» (a 1.149 px) e dell'area personale (1.276 px su 844), «+» che però cambia pannello, rientro di 56 px per un'immagine assente.
+
+**Ora (sotto 1200 px).** Pannello `min(86vw, 360px)`; testata «Menu» + chiusura nel flusso, senza logo, con bordo nel colore del negozio; catalogo per primo con righe compatte in grassetto, senza rientro vuoto e con freccia al posto del «+»; «Tutto in <nome>» in cima a ogni livello; barra dei servizi sempre visibile (Offerte, Account, Wishlist, Confronta, con icona); «Indietro», frecce e icone nel colore di accento scurito per il testo. La logica dei livelli non cambia. File: `SiteHeader.ascx`, foglio nuovo `mobile-menu.css`, `Page.master`.
+
+**Revisioni.** ChatGPT (xhigh): accolti controllo del logo da non togliere dal markup, ordine e fuoco da definire insieme, oracolo con intervalli e tocco reale. Claude (Opus): accolti testata nel flusso (altrimenti senza JavaScript copriva l'intestazione), barra dei servizi fuori dall'area che scorre (niente `sticky`), testata neutra per il contrasto (bianco su arancione 2,3:1 nei browser senza colori relativi), selettori esatti di freccia e rientro; scartati come eccessivi testata piena di colore e utente collegato nell'oracolo. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-MobileMenu.ps1`: sito LAB a 360 / 390 / 430 px con menu aperto davvero (larghezza, pagina scurita toccabile, testata, righe ≥ 44 px non tagliate e toccabili, tre livelli e ritorni, Esc e fuoco, barra dei servizi a ogni livello), 1280 px invariato, rosso prima e verde dopo, **9 mutazioni uccise**; schermate controllate a vista. `Test-HeaderNavActive` e `Test-QaBrowser1B` adeguati; `Test-TenantAccent` reso stabile (memoria del browser disattivata). Precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** `HOME-MOBILE-HEADER-1A`: intestazione della HOME su telefono alta 246 px (Stay On circa 60). `HOME-MOBILE-MENU-1B`: categoria senza tipologie come collegamento diretto, settore corrente evidenziato. Decisione del PO: 18 settori sono più della soglia indicata dalla ricerca. Non provati: immagini dei settori (assenti sul LAB), utente collegato, telefoni reali, senza JavaScript. `Test-HeaderMenuMarkup` resta nei fallimenti noti. **Alla consegna futura:** `Page.master`, `Public/ui/controls/SiteHeader.ascx`, `Public/assets/keepstore/css/mobile-menu.css`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-TYPE-TITLES-1A — 21/11/2026 — SOURCE (un carattere e una scala dei titoli su tutto il sito)
 
 **Esito: A (SOURCE, non pubblicato). Livello M (sola presentazione). PR [#621](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/621), stable `313536bc`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), terzo task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md) (sezione 3.1).
