@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/photoswipe.css") %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/product-ui.css") %>?v=20261119-compact-1b" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-pdp-collapsible.css") %>?v=20261121-pdp-collapsible-1a" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/ks-pdp-offer-box.css") %>?v=20261121-pdp-offer-box-1a" />
 
     <asp:Literal ID="litJsonLdHead" runat="server" EnableViewState="false" />
 </asp:Content>
@@ -175,13 +176,11 @@
                                                 <asp:Literal ID="litPriceHtml2" runat="server" />
                                             </div>
                                             <p class="body-text-3 text-main-2"><asp:Literal ID="litPriceDisplayLabel" runat="server" Mode="Encode" /></p>
+                                            <asp:Literal ID="litOfferLine" runat="server" EnableViewState="false" />
                                             <p>
                                                 <i class="icon-delivery-2"></i>
                                                 <asp:Literal ID="litBuyBoxAvailability" runat="server" />
                                             </p>
-                                            <asp:PlaceHolder ID="phPromotionOffers" runat="server" Visible="false">
-                                                <asp:Literal ID="litPromotionOffers" runat="server" />
-                                            </asp:PlaceHolder>
                                         </div>
 
                                         <asp:Panel ID="pnlVariants" runat="server" Visible="false" CssClass="product-color">
@@ -192,7 +191,10 @@
                                         </asp:Panel>
 
                                         <div class="product-quantity">
-                                            <p class="title body-text-3">Quantita</p>
+                                            <p class="title body-text-3">
+                                                <span>Quantità</span>
+                                                <asp:PlaceHolder ID="phOffersLink" runat="server" Visible="false"><a class="ks-pdp-offers-link" href="#ksPdpOffers"><asp:Literal ID="litOffersLinkText" runat="server" Mode="Encode" /></a></asp:PlaceHolder>
+                                            </p>
                                             <div class="wg-quantity">
                                                 <button class="btn-quantity btn-decrease" type="button" data-ks-qty="minus" aria-label="Riduci quantità">
                                                     <i class="icon-minus"></i>
@@ -217,8 +219,14 @@
                                                 <span>Acquista</span>
                                                 <i class="icon-cart-2" aria-hidden="true"></i>
                                             </button>
-                                            <a class="tf-btn text-white btn-gray" href="/carrello.aspx">Vai al carrello</a>
+                                            <a class="tf-btn btn-line ks-pdp-cart-link" href="/carrello.aspx">Vai al carrello</a>
                                         </div>
+
+                                        <asp:PlaceHolder ID="phPromotionOffers" runat="server" Visible="false">
+                                            <div class="ks-pdp-offers" id="ksPdpOffers" tabindex="-1">
+                                                <asp:Literal ID="litPromotionOffers" runat="server" />
+                                            </div>
+                                        </asp:PlaceHolder>
 
                                         <div class="shipping-to ks-pdp-shipping-info">
                                             <p class="body-md-2 fw-semibold">Spedizione</p>

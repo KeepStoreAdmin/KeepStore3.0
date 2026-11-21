@@ -955,14 +955,14 @@ function Test-RuntimeContract {
             Assert-HealthyResponse $pdp 'ZAP80-A4 PDP'
             $promoPanel = Get-ElementByClass $pdp.Content 'ks-product-promos'
             $promoText = Get-PageText $promoPanel
-            Assert-True ([regex]::Matches($promoPanel, 'class="ks-product-promos__item(?:\s|\")', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 2) 'PDP lists both promotion types'
+            Assert-True ([regex]::Matches($promoPanel, 'class="ks-product-promos__item(?:\s|\")', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP lists only the offers not already summarized next to the price'
             Assert-True ([regex]::Matches($promoText, '\bOfferte attive\b', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP has one promotion heading'
             Assert-True ([regex]::Matches($promoText, '(?<![0-9])5,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 0) 'PDP panel does not repeat the immediate price'
             Assert-True ([regex]::Matches($promoText, '(?<![0-9])6,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 0) 'PDP panel does not repeat the base price'
             Assert-True ([regex]::Matches($promoText, 'Da\s*4,00\s*€', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP renders the best tier price once'
             Assert-True ([regex]::Matches($promoText, 'MULTIPLI\s+5\s+PZ\.', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP renders the tier condition once'
-            Assert-True ([regex]::Matches($promoText, 'QUANTITA\s+1\s+PZ\.', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP renders the immediate condition once'
-            Assert-True ([regex]::Matches($promoText, 'Già applicata al prezzo principale', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 1) 'PDP points to the already displayed immediate price'
+            Assert-True ([regex]::Matches($promoText, 'QUANTITA\s+1\s+PZ\.', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 0) 'PDP panel does not repeat the applied immediate offer'
+            Assert-True ([regex]::Matches($promoText, 'Già applicata al prezzo principale', [Text.RegularExpressions.RegexOptions]::IgnoreCase).Count -eq 0) 'PDP panel no longer carries the already-applied card'
             Assert-True ($promoText.IndexOf('promo attiva', [StringComparison]::OrdinalIgnoreCase) -lt 0) 'PDP does not invent a validity label'
             Assert-True (-not [regex]::IsMatch($promoPanel, '(?:OfferId|OfferDetailId|OwnerUserId|UtentiId|AziendeId|data-offer)', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) 'PDP exposes no technical promotion identifiers'
 

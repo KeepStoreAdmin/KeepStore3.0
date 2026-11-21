@@ -1,0 +1,86 @@
+/* KeepStore - riquadro d'acquisto della scheda prodotto (PDP-OFFER-BOX-1A, linea di stile 3.6 e 3.7).
+   Riga dell'offerta sotto il prezzo (risparmio e scadenza vera), offerte rimaste sotto il pulsante, un solo pulsante pieno.
+   Foglio a parte: le versioni di product-ui.css sono fissate nei test. */
+
+/* Riga dell'offerta: sta dopo la nota IVA, dentro il blocco del prezzo. */
+.ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offer-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 6px 0 0;
+  color: #1f2933;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offer-line__saving {
+  font-weight: 700;
+}
+.ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offer-line__until {
+  color: #666;
+}
+
+/* Etichetta della quantita con il collegamento alle offerte sulla stessa riga. */
+.ks-product-page .ks-pdp-buybox-sticky .product-quantity .title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offers-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: #004ec3;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Offerte rimaste: sotto i pulsanti, senza il filetto e il margine che avevano sotto il prezzo. */
+.ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offers {
+  scroll-margin-top: 150px;
+}
+.ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offers .ks-product-promos {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Un'azione principale per riquadro: "Vai al carrello" e a bordo, con un bordo che si vede. */
+.ks-product-page .ks-pdp-buybox-sticky .product-box-btn .tf-btn.ks-pdp-cart-link {
+  border: 1px solid #6b7280;
+  background: #fff;
+  color: #1f2933;
+}
+.ks-product-page .ks-pdp-buybox-sticky .product-box-btn .tf-btn.ks-pdp-cart-link:hover,
+.ks-product-page .ks-pdp-buybox-sticky .product-box-btn .tf-btn.ks-pdp-cart-link:focus-visible {
+  border-color: #1f2933;
+  background: #f3f4f6;
+  color: #1f2933;
+}
+
+/* Computer: riquadro piu compatto, cosi "Acquista" resta nella prima schermata anche con la scelta della variante. */
+@media (min-width: 1200px) {
+  .ks-product-page .ks-pdp-buybox-sticky {
+    gap: 10px;
+    padding-top: 16px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offers-link {
+    min-height: 44px;
+  }
+}
+
+/* In stampa il riquadro mostra solo il blocco del prezzo (product-ui.css): le offerte spostate restano stampate. */
+@media print {
+  .ks-product-page .tf-product-info-choose-option > .ks-pdp-offers {
+    display: block !important;
+    margin: 6px 0 0;
+  }
+  .ks-product-page .ks-pdp-buybox-sticky .ks-pdp-offers-link {
+    display: none !important;
+  }
+}

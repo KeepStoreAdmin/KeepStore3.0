@@ -1611,8 +1611,38 @@ Partial Class articolo
         litIvaInfo.Text = Server.HtmlEncode(price.IvaLabel)
         BindCommercialProductInfo(row)
 
-        phPromotionOffers.Visible = (promotionModel IsNot Nothing AndAlso promotionModel.HasOffers)
-        litPromotionOffers.Text = If(promotionModel IsNot Nothing, promotionModel.Html, String.Empty)
+        ' Riga dell'offerta sotto il prezzo: risparmio e percentuale sono la differenza fra i due prezzi stampati (regola unica dello sconto
+        ' mostrato); la scadenza e quella dell'offerta applicata al prezzo. Quando la riga c'e, la scheda "gia applicata" non si ripete sotto.
+        Dim offerLineHtml As String = String.Empty
+        If price.IsPromo AndAlso price.OldPrice.HasValue AndAlso price.CurrentPrice.HasValue Then
+            Dim shownDiscount As StorefrontPromotionDisplay = StorefrontPromotionDisplayPolicy.Resolve(price.OldPrice.Value, price.CurrentPrice.Value)
+            If shownDiscount.HasDiscount Then
+                Dim lineBuilder As New StringBuilder()
+                lineBuilder.Append("<p class=""ks-pdp-offer-line""><strong class=""ks-pdp-offer-line__saving"">Risparmi ")
+                lineBuilder.Append(Server.HtmlEncode(FormatMoney(shownDiscount.Savings)))
+                lineBuilder.Append(" (-").Append(shownDiscount.Percent.ToString(CultureInfo.InvariantCulture)).Append("%)</strong>")
+                If promotionModel IsNot Nothing AndAlso promotionModel.HasDefaultQuantityOffer AndAlso promotionModel.BestDefaultQuantityEndsOn.HasValue Then
+                    lineBuilder.Append(" <span class=""ks-pdp-offer-line__until"">Offerta valida fino al ")
+                    lineBuilder.Append(Server.HtmlEncode(promotionModel.BestDefaultQuantityEndsOn.Value.ToString("dd/MM/yyyy", ItCulture)))
+                    lineBuilder.Append("</span>")
+                End If
+                lineBuilder.Append("</p>")
+                offerLineHtml = lineBuilder.ToString()
+            End If
+        End If
+        litOfferLine.Text = offerLineHtml
+
+        Dim buyBoxOffersHtml As String = String.Empty
+        If promotionModel IsNot Nothing AndAlso promotionModel.HasOffers Then
+            buyBoxOffersHtml = ProductPromotionDisplayHelper.RenderBuyBoxOffersHtml(promotionModel,
+                                                                                    _priceDisplayContext.IsVatExcluded,
+                                                                                    offerLineHtml.Length > 0)
+        End If
+        Dim hasBuyBoxOffers As Boolean = Not String.IsNullOrEmpty(buyBoxOffersHtml)
+        phPromotionOffers.Visible = hasBuyBoxOffers
+        litPromotionOffers.Text = If(hasBuyBoxOffers, buyBoxOffersHtml, String.Empty)
+        phOffersLink.Visible = hasBuyBoxOffers
+        litOffersLinkText.Text = If(promotionModel IsNot Nothing AndAlso promotionModel.HasQuantityTierOffer, "Offerte a quantità", "Altre offerte")
         ' Stesso modello del riquadro: le righe "Promozione" di "Informazioni prodotto" sono gia codificate dal modulo che le compone.
         litPromotionInfo.Text = If(promotionModel IsNot Nothing AndAlso promotionModel.HasOffers, If(promotionModel.InfoHtml, String.Empty), String.Empty)
 

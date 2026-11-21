@@ -282,13 +282,41 @@ Public Module ProductPromotionDisplayHelper
 
     Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel,
                                 ByVal useNetPrices As Boolean) As String
+        Return RenderHtml(model, useNetPrices, False)
+    End Function
+
+    ' Riquadro d'acquisto della scheda prodotto: le stesse schede di Html; con omitAppliedOffer la sola scheda dell'offerta gia applicata
+    ' al prezzo principale non viene resa (la pagina la riassume accanto al prezzo). Senza schede rimaste non esce nulla.
+    Public Function RenderBuyBoxOffersHtml(ByVal model As ProductPromotionDisplayModel,
+                                           ByVal useNetPrices As Boolean,
+                                           ByVal omitAppliedOffer As Boolean) As String
+        Return RenderHtml(model, useNetPrices, omitAppliedOffer)
+    End Function
+
+    Private Function RenderHtml(ByVal model As ProductPromotionDisplayModel,
+                                ByVal useNetPrices As Boolean,
+                                ByVal omitAppliedOffer As Boolean) As String
         If model Is Nothing OrElse
            model.ResolutionState <> ProductPromotionDisplayResolutionState.ResolvedWithOffers OrElse
            Not model.HasOffers Then Return String.Empty
 
+        Dim shown As New List(Of KeyValuePair(Of ProductPromotionOffer, Boolean))()
+        Dim primaryImmediateFound As Boolean = False
+        For Each candidate As ProductPromotionOffer In model.Offers
+            Dim isPrimaryImmediate As Boolean = candidate.AppliesToDefaultQuantity AndAlso
+                                                  Not primaryImmediateFound AndAlso
+                                                  DisplayPrice(candidate.PriceNet, candidate.PriceGross, useNetPrices) =
+                                                  DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)
+            If isPrimaryImmediate Then primaryImmediateFound = True
+            If omitAppliedOffer AndAlso isPrimaryImmediate Then Continue For
+            shown.Add(New KeyValuePair(Of ProductPromotionOffer, Boolean)(candidate, isPrimaryImmediate))
+        Next
+        Dim shownCount As Integer = shown.Count
+        If shownCount = 0 Then Return String.Empty
+
         Dim sb As New StringBuilder()
-        Dim offerCountLabel As String = model.Offers.Count.ToString(CultureInfo.InvariantCulture) &
-                                        If(model.Offers.Count = 1, " offerta attiva", " offerte attive")
+        Dim offerCountLabel As String = shownCount.ToString(CultureInfo.InvariantCulture) &
+                                        If(shownCount = 1, " offerta attiva", " offerte attive")
         sb.Append("<div class=""ks-product-promos"" aria-label=""Offerte attive"">")
         sb.Append("<div class=""ks-product-promos__head"">")
         sb.Append("<div class=""ks-product-promos__heading"">")
@@ -296,16 +324,12 @@ Public Module ProductPromotionDisplayHelper
         sb.Append("<span class=""ks-product-promos__lede"">Prezzi e condizioni per quantità</span>")
         sb.Append("</div>")
         sb.Append("<span class=""ks-product-promos__count"" aria-label=""").Append(HtmlEncode(offerCountLabel)).Append(""">")
-        sb.Append(model.Offers.Count.ToString(CultureInfo.InvariantCulture)).Append(If(model.Offers.Count = 1, " offerta", " offerte")).Append("</span>")
+        sb.Append(shownCount.ToString(CultureInfo.InvariantCulture)).Append(If(shownCount = 1, " offerta", " offerte")).Append("</span>")
         sb.Append("</div>")
         sb.Append("<div class=""ks-product-promos__list"" role=""list"">")
-        Dim primaryImmediateRendered As Boolean = False
-        For Each offer As ProductPromotionOffer In model.Offers
-            Dim isPrimaryImmediate As Boolean = offer.AppliesToDefaultQuantity AndAlso
-                                                  Not primaryImmediateRendered AndAlso
-                                                  DisplayPrice(offer.PriceNet, offer.PriceGross, useNetPrices) =
-                                                  DisplayPrice(model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross, useNetPrices)
-            If isPrimaryImmediate Then primaryImmediateRendered = True
+        For Each entry As KeyValuePair(Of ProductPromotionOffer, Boolean) In shown
+            Dim offer As ProductPromotionOffer = entry.Key
+            Dim isPrimaryImmediate As Boolean = entry.Value
 
             sb.Append("<div class=""ks-product-promos__item ")
             sb.Append(If(offer.AppliesToDefaultQuantity, "ks-product-promos__item--immediate", "ks-product-promos__item--tier"))
