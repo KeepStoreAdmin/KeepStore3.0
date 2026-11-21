@@ -65,6 +65,7 @@
                     </ul>
                     <asp:PlaceHolder ID="phFooterPayments" runat="server" Visible="false">
                         <p class="caption text-center text-break ft-payments">Metodi di pagamento: <asp:Literal ID="litFooterPayments" runat="server" EnableViewState="False" /></p>
+                        <asp:Literal ID="litFooterPaymentLogos" runat="server" EnableViewState="False" />
                     </asp:PlaceHolder>
                     <asp:PlaceHolder ID="phFooterLegal" runat="server" Visible="false">
                         <p class="caption text-center text-break ft-legal"><asp:Literal ID="litFooterLegal" runat="server" EnableViewState="False" /></p>

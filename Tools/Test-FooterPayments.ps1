@@ -429,8 +429,8 @@ $r = Test-Glue $vb
 Assert-Source ($r -ceq 'OK') ('FP04_FOOTER_LINKS_PAYMENTS_ONLY_INSIDE_THE_HOST_GATE_' + $r)
 
 function Test-Markup([string]$a) {
-    $one = '<asp:PlaceHolder ID="phFooterPayments" runat="server" Visible="false">\s*<p class="caption text-center text-break ft-payments">Metodi di pagamento: <asp:Literal ID="litFooterPayments" runat="server" EnableViewState="False" /></p>\s*</asp:PlaceHolder>'
-    if ([regex]::Matches($a, 'phFooterPayments').Count -ne 1 -or [regex]::Matches($a, 'litFooterPayments').Count -ne 1 -or [regex]::Matches($a, 'Metodi di pagamento').Count -ne 1) { return 'COUNT' }
+    $one = '<asp:PlaceHolder ID="phFooterPayments" runat="server" Visible="false">\s*<p class="caption text-center text-break ft-payments">Metodi di pagamento: <asp:Literal ID="litFooterPayments" runat="server" EnableViewState="False" /></p>\s*<asp:Literal ID="litFooterPaymentLogos" runat="server" EnableViewState="False" />\s*</asp:PlaceHolder>'
+    if ([regex]::Matches($a, 'phFooterPayments').Count -ne 1 -or [regex]::Matches($a, 'litFooterPayments').Count -ne 1 -or [regex]::Matches($a, 'Metodi di pagamento').Count -ne 1 -or [regex]::Matches($a, 'litFooterPaymentLogos').Count -ne 1) { return 'COUNT' }
     # dentro .ft-bottom, dopo il menu e PRIMA del blocco dei dati societari
     if ($a -cnotmatch ('(?s)<div class="ft-bottom">.*?<ul class="ft-menu-list-2.*?</ul>\s*' + $one + '\s*<asp:PlaceHolder ID="phFooterLegal"')) { return 'POSITION' }
     if ($a -match '(?i)\b(Visa|PayPal|Mastercard|Maestro|Discover|Satispay|IBAN)\b') { return 'BRAND_WORD' }

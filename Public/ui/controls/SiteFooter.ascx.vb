@@ -137,6 +137,10 @@ Partial Class SiteFooter
         If phFooterPayments Is Nothing OrElse litFooterPayments Is Nothing Then Return
         phFooterPayments.Visible = data.PaymentsHtml.Length > 0
         litFooterPayments.Text = data.PaymentsHtml
+        ' Marchi: il piede decide solo SE (dalla stessa selezione del testo); nomi, file e misure stanno nel catalogo dei marchi.
+        If litFooterPaymentLogos IsNot Nothing Then
+            litFooterPaymentLogos.Text = KeepStorePaymentBrands.LogosHtml((data.PaymentBrands And BrandCards) <> 0, (data.PaymentBrands And BrandWallet) <> 0)
+        End If
     End Sub
 
     ' Dati societari: il blocco c'e solo se ha almeno una riga; vuoto = nessun paragrafo nella pagina.
@@ -164,6 +168,7 @@ Partial Class SiteFooter
         Public FacebookUrl As String = String.Empty
         Public LegalHtml As String = String.Empty
         Public PaymentsHtml As String = String.Empty
+        Public PaymentBrands As Integer = 0
     End Class
 
     ' La sessione puo non avere ancora l'azienda (0): vale l'host. Se ce l'ha ed e diversa da quella dell'host, nessun dato.
@@ -188,6 +193,7 @@ Partial Class SiteFooter
             ' i dati societari si mostrano solo se il profilo e della stessa azienda dell'host
             If legal IsNot Nothing AndAlso legal.CompanyId = hostCompanyId Then data.LegalHtml = BuildFooterLegalHtml(legal)
             data.PaymentsHtml = BuildFooterPaymentsHtml(payments, hostCompanyId, payPalLive)
+            data.PaymentBrands = FooterPaymentBrands(payments, hostCompanyId, payPalLive)
         Else
             data.ContactsHtml = BuildFooterContactsHtml(String.Empty, String.Empty, String.Empty)
         End If
@@ -384,6 +390,9 @@ Partial Class SiteFooter
     ' caricatore la elenca soltanto con la sua regola). Ogni altro valore non si nomina mai.
     Private Const PayPalOnLine As Integer = 2
     Private Const CardOnLine As Integer = 3
+    ' Marchi da affiancare al testo dei metodi: quelli delle carte e quello del portafoglio (due valori distinti, sommabili).
+    Private Const BrandCards As Integer = 1
+    Private Const BrandWallet As Integer = 2
 
     ' Esiste, per l'azienda dell'host, almeno un PayPal con la configurazione pronta? Solo allora serve verificare la richiesta.
     Friend Shared Function HasReadyPayPal(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer) As Boolean
@@ -413,6 +422,23 @@ Partial Class SiteFooter
     ' (sei o piu cifre, @, indirizzi web) o piu lunghi del limite, senza duplicati (senza maiuscole), al massimo PaymentMax dopo pulizia e scarti, nell'ordine ricevuto (la policy li
     ' ordina). Vuoto = nessun blocco nel piede. Il testo e del cliente: sempre codificato.
     Friend Shared Function BuildFooterPaymentsHtml(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer, ByVal payPalLive As Boolean) As String
+        Return SelectFooterPayments(methods, hostCompanyId, payPalLive, Nothing)
+    End Function
+
+    ' Marchi da mostrare: decisi sulla STESSA selezione finale del testo (un metodo scartato dal testo non porta mai il suo marchio). Carta nominata = marchi delle carte;
+    ' PayPal nominato = il suo marchio; i metodi senza gateway non hanno marchio.
+    Friend Shared Function FooterPaymentBrands(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer, ByVal payPalLive As Boolean) As Integer
+        Dim kinds As New List(Of Integer)()
+        SelectFooterPayments(methods, hostCompanyId, payPalLive, kinds)
+        Dim flags As Integer = 0
+        If kinds.Contains(CardOnLine) Then flags = flags Or BrandCards
+        If kinds.Contains(PayPalOnLine) Then flags = flags Or BrandWallet
+        Return flags
+    End Function
+
+    ' La selezione, una sola: restituisce il testo e, se richiesto, raccoglie il tipo di gateway di ogni metodo ACCETTATO (stesso ordine dei nomi).
+    Private Shared Function SelectFooterPayments(ByVal methods As IList(Of StorefrontPaymentMethod), ByVal hostCompanyId As Integer, ByVal payPalLive As Boolean,
+                                                 ByVal kinds As List(Of Integer)) As String
         If methods Is Nothing OrElse hostCompanyId <= 0 Then Return String.Empty
         Dim seen As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
         Dim names As New List(Of String)()
@@ -424,6 +450,7 @@ Partial Class SiteFooter
             Dim name As String = CleanPaymentName(method.Name)
             If name.Length = 0 OrElse Not seen.Add(name) Then Continue For
             names.Add(HttpUtility.HtmlEncode(name))
+            If kinds IsNot Nothing Then kinds.Add(method.OnLine)
         Next
         Return String.Join(", ", names.ToArray())
     End Function

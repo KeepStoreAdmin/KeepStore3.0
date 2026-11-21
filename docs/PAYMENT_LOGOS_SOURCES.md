@@ -2,7 +2,9 @@
 
 Cartella dei file: `Public/assets/images/pagamenti/`. Richiesta del PO del 2026-11-19: «fai un check online e trovami i nuovi loghi e li mettiamo nella cartella e li pubblichiamo online»; il 2026-11-19 il PO ha autorizzato lo scaricamento di Mastercard, Maestro e PayPal dai siti ufficiali accettando le loro condizioni d'uso («Si, scarica»).
 
-**Stato:** i file ufficiali sono nella cartella ma **nessuna pagina li mostra ancora**. Farli comparire nel sito e il task `PAYMENT-LOGOS-1A` (Roadmap), con la regola: un logo si mostra solo se quel metodo e davvero attivo per l'azienda dell'host.
+**Stato (2026-11-21, `PAYMENT-LOGOS-1A`):** il piede di pagina mostra i marchi sotto il testo «Metodi di pagamento», solo per i metodi davvero nominati per l'azienda dell'host: carta nominata = Visa e Mastercard; PayPal nominato = PayPal; nessun marchio per i metodi senza gateway. Nomi, file e misure stanno soltanto in `App_Code/KeepStorePaymentBrands.vb`. La scheda prodotto non ha ancora un blocco proprio (`PAYMENT-LOGOS-1B`).
+
+**Decisione del PO del 2026-11-21 sui circuiti:** alla domanda «Posso mostrare Visa e Mastercard per OGNI azienda che ha la carta Banca Sella attiva sul sito?» il PO ha risposto «Sì, per tutte»: ogni azienda con la carta Banca Sella attiva accetta Visa e Mastercard, e quel metodo e sempre una carta. Se un'azienda avra circuiti diversi servira un dato per azienda (oggi non esiste).
 
 ## File ufficiali scaricati il 2026-11-19 (copiati senza alcuna modifica)
 
