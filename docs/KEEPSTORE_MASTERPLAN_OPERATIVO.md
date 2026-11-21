@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-TYPE-TITLES-1A — 21/11/2026 — SOURCE (un carattere e una scala dei titoli su tutto il sito)
+
+**Esito: A (SOURCE, non pubblicato). Livello M (sola presentazione). PR [#621](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/621), stable `313536bc`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), terzo task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md) (sezione 3.1).
+
+**Prima (misurato).** Titoli di pagina da 21 a 40 px e di sezione da 16 a 30 px, pesi 500 / 600 / 700 a seconda della pagina; titolo della scheda delle occasioni 19 px da 576 px; titolo grigio in «spesso acquistati insieme»; carrello e classi di titolo del tema con «Inter» dichiarato ma non caricato (su accesso negato e dati utente usciva un carattere con grazie).
+
+**Ora.** Titolo di pagina 22 px (26 da 992 px), titolo di sezione 20 px (24), peso 700, su elenco, scheda prodotto, accesso, carrello, area cliente e HOME; occasioni 16 px a ogni larghezza con riserva di tre righe adeguata (76 → 64 px); titolo della scheda blu ovunque; un solo carattere. Tutto in un foglio nuovo `type-scale.css` (solo schermo, fra `price-states.css` e `tenant-accent.css`) più le classi di un titolo in `articolo.aspx`.
+
+**Revisioni.** ChatGPT (xhigh): accolti titoli mancanti nella mappa, regole solo a schermo (la stampa della scheda prodotto sarebbe cambiata), oracolo con presenza obbligatoria. Claude (Opus): accolti quattro selettori sbagliati della mia mappa (non avrebbero avuto effetto su elenco, carrello e guida), `!important` necessario contro il peso di Bootstrap, classi `.h1`-`.h6` con grazie, riserva delle occasioni, posizione del foglio; scartati come eccessivi i titoli dei passi del carrello e gli avvisi. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-TypeScale.ps1`: sito LAB a 1280 e 390 px, elementi scelti per identità, stampa invariata, rosso prima e verde dopo, **12 mutazioni uccise**. `Test-GuideNoShift`: altezze di riferimento aggiornate (235 → 230, 225 → 220; prima e dopo il caricamento uguali: nessun salto). Fotografia prima / dopo: 48 differenze, tutte su titoli e caratteri. 17 test collegati senza nuovi fallimenti, precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Eccezioni dichiarate: titolo sopra l'immagine e titolo senza banner della HOME, «Esplora le categorie». Fuori: titoli dei passi consegna e conferma, avvisi, schede dei consigli del carrello, pagine non fotografate, **livelli dei titoli** (carrello e area cliente senza `h1`: `A11Y-HEADING-LEVELS-1A` in coda). Il test della HOME sul LAB è stato instabile (pagina a volte servita senza le sezioni): ora ferma le animazioni, attende le sezioni e rilegge una volta. **Alla consegna futura:** `Page.master`, `articolo.aspx`, `Public/assets/keepstore/css/type-scale.css`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-PRICE-STATES-1A — 21/11/2026 — SOURCE (il colore del prezzo dice lo stato commerciale, uguale su HOME, elenco e scheda prodotto)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (presentazione dei prezzi: nessun importo cambia). PR [#619](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/619), stable `02d2c388`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), secondo task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md) (sezione 3.2).
