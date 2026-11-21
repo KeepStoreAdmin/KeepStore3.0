@@ -108,13 +108,13 @@
                         </div>
                         <ul class="nav-icon justify-content-xl-center d-xl-none">
                             <li class="nav-account">
-                                <a id="lnkAccountMobile" runat="server" href="/login.aspx" class="link nav-icon-item">
+                                <a id="lnkAccountMobile" runat="server" href="/login.aspx" class="link nav-icon-item" aria-label="La tua Dashboard">
                                     <span><i class="icon icon-user"></i></span>
                                     <p class="body-small">Dashboard</p>
                                 </a>
                             </li>
                             <li class="nav-cart">
-                                <a href="carrello.aspx" class="link nav-icon-item" data-bs-toggle="offcanvas" data-bs-target="#ksMiniCartCanvas" aria-controls="ksMiniCartCanvas">
+                                <a href="carrello.aspx" class="link nav-icon-item" aria-label="Apri carrello" data-ks-mobile-cart data-bs-toggle="offcanvas" data-bs-target="#ksMiniCartCanvas" aria-controls="ksMiniCartCanvas">
                                     <span class="relative"><i class="icon icon-cart"></i><span class="count-box style-pst-2" data-ks-cart-count><asp:Label ID="lblCarrelloCountMobile" runat="server" Text="0" /></span></span>
                                     <p class="body-small">Carrello</p>
                                 </a>

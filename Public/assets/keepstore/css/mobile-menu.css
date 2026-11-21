@@ -145,4 +145,69 @@
   #mobileMenu .mb-bottom {
     margin-top: 12px;
   }
+
+  /* intestazione (HOME-MOBILE-HEADER-1A): area personale e carrello con area toccabile di almeno 44 x 44 px */
+  .ks-header-ui .inner-header .nav-icon-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Intestazione su telefono (HOME-MOBILE-HEADER-1A): riga del logo 56 px, ricerca sempre visibile su una riga,
+   tendina dell'ambito mostrata quando serve, riga "Guida agli acquisti" conservata. */
+@media (max-width: 767.98px) {
+  .ks-header-ui .inner-header {
+    padding: 6px 0;
+  }
+  /* piu specifico dello stile che lo script aggiunge a pagina caricata (54 px) */
+  .ks-header-ui .inner-header .logo-site img {
+    max-height: 44px;
+  }
+  /* a 360 px: logo flessibile, comandi larghi quanto serve, senza distanza fra loro */
+  .ks-header-ui .inner-header .row > .col-7 {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+  }
+  .ks-header-ui .inner-header .row > .col-5 {
+    flex: 0 0 auto;
+    width: auto;
+  }
+  .ks-header-ui .inner-header .nav-icon {
+    gap: 0;
+  }
+
+  .ks-header-ui .ks-mobile-search-area {
+    padding-bottom: 4px;
+  }
+  .ks-header-ui .ks-mobile-search-area .ks-search-shell {
+    padding: 4px;
+    gap: 6px;
+  }
+  .ks-header-ui .ks-mobile-search-area .ks-search-shell .ks-search-category-select {
+    font-size: 16px;   /* sotto i 16 px iOS ingrandisce la pagina */
+  }
+  .ks-guide-mobile-entry {
+    border-top: 0;
+  }
+}
+
+/* Tendina dell'ambito: fuori dal flusso (ma raggiungibile con Tab e dai lettori di schermo) finche il riquadro della ricerca
+   non ha il fuoco e l'ambito e "Tutti i settori" (prima voce). Solo dove il browser supporta :has; altrimenti resta visibile. */
+@supports selector(:has(*)) {
+  @media (max-width: 767.98px) {
+    .ks-header-ui .ks-mobile-search-area .ks-search-shell:not(:focus-within) .select-category:not(:has(option:checked:not(:first-child))) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
 }
