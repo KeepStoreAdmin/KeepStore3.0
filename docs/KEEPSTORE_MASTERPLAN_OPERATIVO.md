@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## PDP-OFFER-BOX-1A — 21/11/2026 — SOURCE (scheda prodotto: riquadro d'acquisto con risparmio e scadenza dell'offerta)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (presentazione di prezzi e promozioni; importi e regole invariati). PR [#629](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/629), stable `c420061e`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), linea di stile 3.6 e 3.7.
+
+**Prima (misurato, articolo con due promozioni).** Su computer 1280 × 761 «Acquista» stava a 909 px, sotto la prima schermata (il blocco «Offerte attive», alto 319 px, stava fra prezzo e pulsante); vicino al prezzo né risparmio né scadenza; una scheda ripeteva «già applicata al prezzo principale»; due pulsanti pieni; «Quantita» senza accento.
+
+**Ora.** Sotto il prezzo scontato, dopo la nota IVA: «Risparmi 1,00 (-17%)» (differenza fra i due prezzi stampati, regola unica `StorefrontPromotionDisplayPolicy.Resolve`) e «Offerta valida fino al gg/mm/aaaa» (data dell'offerta applicata, fine compresa). La scheda dell'offerta già applicata non si ripete nel riquadro (resta in Informazioni prodotto); le altre offerte stanno sotto i pulsanti, con il collegamento «Offerte a quantità» accanto alla quantità. «Acquista» è l'unico pulsante pieno, «Vai al carrello» a bordo; su computer «Acquista» resta nella prima schermata anche con la variante. In stampa le offerte restano. File: `ProductPromotionDisplayHelper.vb` (funzione `RenderBuyBoxOffersHtml`, chiamata solo dalla scheda prodotto), `articolo.aspx`, `articolo.aspx.vb`, foglio nuovo `ks-pdp-offer-box.css`.
+
+**Revisioni.** ChatGPT (xhigh): accolti la riga dopo la nota IVA (la barra fissa su telefono legge prezzo + nota adiacenti), nessun riassunto numerico dell'offerta a quantità («multipli di 5» non è «da 5»; il livello più basso non è sempre quello applicato), la regola di stampa. Claude (Opus): accolti la funzione al posto di una proprietà del modello (un test fissa due righe adiacenti; HOME ed elenco non pagano nulla), il contenitore dentro il segnaposto, il bordo visibile del pulsante secondario, la misura con variante (ha imposto un riquadro più compatto su computer). Rimandata, dichiarata: percentuale della riga e di Informazioni prodotto calcolate con regole diverse (può differire di un punto). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-PdpOfferBox.ps1` sul sito LAB a 390 px e 1280 × 761: valori attesi letti dalla pagina, ordine, collegamento, barra fissa con nota IVA, stampa, articolo senza promozione, variante simulata; rosso prima e verde dopo, **10 mutazioni uccise**; schermate controllate a vista. Tredici test collegati verdi (due rieseguiti da soli dopo un fallimento per concorrenza); `Test-StorefrontPromotionParity` adeguato (resta fra i fallimenti noti: non eseguibile qui); precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Listino IVA esclusa, promozione riservata e variante reale senza caso sul LAB; due offerte immediate non provate a runtime; lettori di schermo e telefoni reali non provati. Coda: allineare la percentuale di Informazioni prodotto alla regola unica (`STYLE-PRICE-STATES-1B`). **Alla consegna futura (insieme):** `App_Code/ProductPromotionDisplayHelper.vb`, `articolo.aspx`, `articolo.aspx.vb`, `Public/assets/keepstore/css/ks-pdp-offer-box.css`. CONSEGNA SERVER SOSPESA.
+
 ## PDP-LAYOUT-ORDER-1A — 21/11/2026 — SOURCE (scheda prodotto su telefono: sezioni lunghe a scomparsa)
 
 **Esito: A (SOURCE, non pubblicato). Livello M (sola presentazione). PR [#627](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/627), stable `d913e725`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), punto 3.6 della linea di stile.
