@@ -43,7 +43,7 @@ Il rosso `#D80027` ha tre soli usi: azione principale, prezzo **scontato subito*
 | --- | --- |
 | Prezzo normale | prezzo nero |
 | Sconto immediato (vale per un pezzo) | prezzo rosso, prezzo precedente barrato in grigio, bollino con la percentuale |
-| Promozione condizionata (per esempio «da 5 pezzi») | prezzo **nero** e riquadro «Prezzo quantità» che dice la condizione; mai prezzo rosso |
+| Promozione condizionata (per esempio «da 5 pezzi») | prezzo principale **nero** e riquadro «Prezzo quantità» che dice la condizione; mai prezzo principale rosso (l'importo piccolo dentro il riquadro resta rosso) |
 | Prezzo non disponibile | testo «Prezzo su richiesta», nessun colore di offerta |
 
 Altri ruoli: titolo della scheda **blu collegamento `#004EC3`** su tutto il sito (anche nei correlati della scheda prodotto); testo `#1F2933`; note `#666`; verde e ambra solo per la disponibilità. Tutte le coppie restano sopra il contrasto 4,5:1 già fissato dai test dei colori. Ogni stato ha anche un'indicazione di testo (non solo il colore).

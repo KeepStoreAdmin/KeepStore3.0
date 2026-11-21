@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-PRICE-STATES-1A — 21/11/2026 — SOURCE (il colore del prezzo dice lo stato commerciale, uguale su HOME, elenco e scheda prodotto)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (presentazione dei prezzi: nessun importo cambia). PR [#619](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/619), stable `02d2c388`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), secondo task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md) (sezione 3.2).
+
+**Prima (misurato con la [fotografia](KEEPSTORE_STYLE_BASELINE_2026_11_21.md)).** Griglie della HOME ed elenco: prezzo scontato nero come il normale; scheda prodotto: prezzo rosso in ogni stato; correlati grigio scuro. Inoltre elenco e scheda prodotto mostravano come sconto qualunque riduzione (anche 100 → 99,50), la HOME solo sopra soglia.
+
+**Ora.** Rosso solo quando accanto c'è il prezzo precedente barrato; nero per prezzo normale, promozione a quantità e «Prezzo su richiesta». Lo sconto si **mostra** (barrato, bollino con la percentuale, rosso) con la regola unica `StorefrontPromotionDisplayPolicy` (almeno 1 centesimo e almeno 1%) anche in elenco e scheda prodotto: **il prezzo da pagare resta quello promozionale**. Stato in un punto solo (`App_Code/StorefrontPriceState.vb`), classe `ks-price-state--sale / --normal / --ask` sul prezzo corrente, colore nel foglio nuovo `price-states.css`.
+
+**Revisioni.** ChatGPT (xhigh) e Claude (Opus) hanno concordato contro la mia separazione: senza la regola unica lo stesso articolo sarebbe stato nero in HOME e rosso in elenco. Accolti anche: perimetro su tutti i chiamanti reali, oracolo indipendente dalla classe, `--ask` in ogni ritorno. Cambiato con misura: regole in un foglio nuovo con `!important` (la versione di `theme-overrides.css` è fissata da 14 test). Scartati come eccessivi: quattro larghezze, prova in stampa. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-PriceStates.ps1`: classe pura (10 casi), sito LAB a 1280 e 390 px con stato letto dal DOM (barrato visibile maggiore), percorso sotto soglia con **importi invariati**, rosso prima e verde dopo, **10 mutazioni uccise**. Fotografia prima / dopo: 28 differenze, tutte e sole di colore sui prezzi in perimetro. 20 test collegati (quattro adeguati, nessun nuovo fallimento), precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Fuori perimetro: anteprima rapida (sempre rossa), barra d'acquisto, mini carrello, carrello, suggerimenti; i riepiloghi delle promozioni possono ancora citare uno sconto sotto soglia; formato della percentuale del bollino diverso fra pagine; seconda azienda non provata nel browser. **Alla consegna futura (insieme):** `App_Code/StorefrontPriceState.vb` e `App_Code/UiPriceFormatter.vb` per primi, poi `Default.aspx.vb`, `articoli.aspx.vb`, `articolo.aspx`, `articolo.aspx.vb`, `Page.master`, `Public/ui/controls/ProductCard.ascx(.vb)`, `Public/assets/keepstore/css/price-states.css`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-BASELINE-1A — 21/11/2026 — SOURCE (strumento: fotografia riproducibile dello stile del negozio)
 
 **Esito: A (SOURCE, solo strumenti e documenti: nulla da pubblicare). Livello S. PR [#617](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/617), stable `f8d0491c`.** Richiesta del PO del 21/11/2026 («si procedi con la grafica»): primo task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md). Nessun file del prodotto cambia.
