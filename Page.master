@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/theme-overrides.css") & "?v=20261119-compact-1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/price-states.css") & "?v=20261121-price-states-1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/type-scale.css") & "?v=20261121-type-scale-1a" %>" />
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/mobile-menu.css") & "?v=20261121-mobile-menu-1a" %>" />
     <link rel="stylesheet" href="<%= ThemeManager.Asset("css/tenant-accent.css") & "?v=20261120-accent-1b" %>" />
     <noscript><style>#preload{display:none!important}</style></noscript>
 </head>

@@ -1,0 +1,148 @@
+/* KeepStore - menu su telefono (HOME-MOBILE-MENU-1A).
+   Pannello piu stretto con la pagina visibile dietro, testata "Menu" nel flusso, catalogo per primo con righe compatte,
+   freccia al posto del "+" quando i livelli sono attivi, barra dei servizi sempre visibile in fondo.
+   Solo sotto 1200 px (dove esiste il pannello). Colori: accento del negozio gia scurito per il testo (--ks-accent-text). */
+@media (max-width: 1199.98px) {
+  #mobileMenu {
+    width: min(86vw, 360px);
+    max-width: 360px;
+  }
+
+  /* testata nel flusso: titolo + chiusura; il logo resta nell'intestazione della pagina */
+  #mobileMenu .logo-site {
+    display: none;
+  }
+  #mobileMenu .ks-mobile-menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 0 0 auto;
+    min-height: 56px;
+    padding: 4px 8px 4px 16px;
+    background: #fff;
+    border-bottom: 3px solid var(--ks-accent, var(--primary, #D80027));
+  }
+  #mobileMenu .ks-mobile-menu-head .offcanvas-title {
+    margin: 0;
+    color: #1F2933;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  #mobileMenu .ks-mobile-menu-head .btn-close-mb {
+    position: static;
+    flex: 0 0 44px;
+  }
+  #mobileMenu .mb-canvas-content {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+    padding-top: 0;
+  }
+
+  /* barra dei livelli */
+  #mobileMenu .ks-mobile-catalog-toolbar {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--line, #e5e5e5);
+  }
+  #mobileMenu .ks-mobile-catalog-title {
+    color: #1F2933;
+    font-weight: 700;
+  }
+  #mobileMenu .ks-mobile-catalog-back {
+    color: var(--ks-accent-text, #B8001F);
+    font-weight: 600;
+  }
+  #mobileMenu .ks-mobile-catalog-back:focus-visible,
+  #mobileMenu .ks-mobile-catalog-title:focus-visible {
+    outline-color: var(--focus-ring, #B8001F);
+  }
+
+  /* elenco: righe compatte, senza lo spazio dell'immagine quando l'immagine manca */
+  #mobileMenu .mb-body {
+    padding: 4px 16px 16px;
+    border-bottom: 0;
+  }
+  #mobileMenu .nav-ul-mb {
+    margin-bottom: 0;
+  }
+  #mobileMenu .ks-mobile-nav-media {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+  }
+  #mobileMenu .ks-mobile-nav-media.is-empty {
+    display: none;
+  }
+  #mobileMenu .ks-mobile-primary-nav .mb-menu-link,
+  #mobileMenu .ks-mobile-primary-nav .sub-nav-link {
+    min-height: 48px;
+    color: #1F2933;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  #mobileMenu .ks-mobile-primary-nav .nav-mb-item,
+  #mobileMenu .ks-mobile-primary-nav .sub-nav-menu > li {
+    margin: 0;
+    padding: 0;
+  }
+
+  /* freccia "avanti" al posto del "+" quando il tocco cambia livello */
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-stage .sub-nav-link > .btn-open-sub::before {
+    content: none;
+  }
+  #mobileMenu.ks-mobile-panels-ready .ks-mobile-catalog-stage .sub-nav-link > .btn-open-sub::after {
+    width: 9px;
+    height: 9px;
+    border: solid var(--ks-accent-text, #B8001F);
+    border-width: 2px 2px 0 0;
+    background: none;
+    transform: rotate(45deg);
+    transition: none;
+  }
+
+  /* barra dei servizi: ultimo elemento della colonna, sempre visibile */
+  #mobileMenu .ks-mobile-utility-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+    list-style: none;
+    background: #fff;
+    border-top: 1px solid var(--line, #e5e5e5);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  }
+  #mobileMenu .ks-mobile-utility-nav .nav-mb-item {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  #mobileMenu .ks-mobile-utility-nav .mb-menu-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 56px;
+    padding: 6px 2px;
+    color: #1F2933;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+  }
+  #mobileMenu .ks-mobile-utility-nav .mb-menu-link i {
+    color: var(--ks-accent-text, #B8001F);
+    font-size: 20px;
+    line-height: 1;
+  }
+  #mobileMenu .ks-mobile-utility-nav .mb-menu-link[aria-current="page"] {
+    color: var(--ks-accent-text, #B8001F);
+  }
+  #mobileMenu .mb-bottom {
+    margin-top: 12px;
+  }
+}

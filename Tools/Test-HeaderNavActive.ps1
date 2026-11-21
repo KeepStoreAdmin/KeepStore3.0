@@ -87,7 +87,7 @@ function Test-Markup([string]$text) {
     if (-not $nav.Contains('<li class="nav-item"><a href="Default.aspx#KsLocalAiSearch130" class="item-link body-md-2 ks-guide-entry">Guida agli acquisti</a></li>')) { return $false }
     # menu mobile: stesso segnale per la tecnologia assistiva
     return ($text.Contains('<li class="nav-mb-item"><a href="Default.aspx" class="mb-menu-link"<%= MainNavCurrent("home") %>><span>Home</span></a></li>') -and
-            $text.Contains('<li class="nav-mb-item"><a href="articoli.aspx?inpromo=1" class="mb-menu-link"<%= MainNavCurrent("offers") %>><span>Offerte</span></a></li>') -and
+            $text.Contains('<li class="nav-mb-item"><a href="articoli.aspx?inpromo=1" class="mb-menu-link"<%= MainNavCurrent("offers") %>><i class="icon-fire" aria-hidden="true"></i><span>Offerte</span></a></li>') -and
             $text.Contains('<li class="nav-mb-item"><a href="Contattaci.aspx" class="mb-menu-link"<%= MainNavCurrent("contact") %>><span>Contatti</span></a></li>'))
 }
 function Test-Wrappers([string]$vbText) {

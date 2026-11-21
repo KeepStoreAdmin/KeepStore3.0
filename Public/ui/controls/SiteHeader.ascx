@@ -212,8 +212,10 @@
 </header>
 
 <div class="offcanvas offcanvas-start canvas-mb" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
-    <h5 class="offcanvas-title visually-hidden" id="mobileMenuLabel">Menu</h5>
-    <button type="button" class="icon-close btn-close-mb link" data-bs-dismiss="offcanvas" aria-label="Chiudi menu"></button>
+    <div class="ks-mobile-menu-head">
+        <h5 class="offcanvas-title" id="mobileMenuLabel">Menu</h5>
+        <button type="button" class="icon-close btn-close-mb link" data-bs-dismiss="offcanvas" aria-label="Chiudi menu"></button>
+    </div>
     <div class="logo-site">
         <a href="Default.aspx" aria-label="Home">
             <asp:Image ID="imgLogoDrawer" runat="server" AlternateText="KeepStore" CssClass="d-block" ImageUrl="" />
@@ -232,19 +234,13 @@
                             <span>Catalogo</span>
                             <span class="btn-open-sub" aria-hidden="true"></span>
                         </button>
-                        <div id="ks-mobile-catalog-root" class="collapse show"><ul class="sub-nav-menu ks-mobile-catalog-list"><asp:Repeater ID="rptNavSettoriMobile" runat="server" EnableViewState="false" OnItemDataBound="rptNavSettoriMobile_ItemDataBound"><ItemTemplate><li class="nav-mb-item ks-mobile-sector-item"><button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'><span class="ks-mobile-nav-entry"><span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span><span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span></span><span class="btn-open-sub" aria-hidden="true"></span></button><div id='ks-mobile-sector-<%# Eval("Id") %>' class="collapse"><ul class="sub-nav-menu"><li><a class="sub-nav-link active" href='<%# Eval("DefaultUrl") %>'>Vedi tutto il settore</a></li><asp:Repeater ID="rptNavCategorieMobile" runat="server" EnableViewState="false" OnItemDataBound="rptNavCategorieMobile_ItemDataBound"><ItemTemplate><li class="nav-mb-item ks-mobile-category-item"><button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'><span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span><span class="btn-open-sub" aria-hidden="true"></span></button><div id='ks-mobile-category-<%# Eval("Id") %>' class="collapse"><ul class="sub-nav-menu sub-menu-level-2"><li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'>Vedi tutta la categoria</a></li><asp:Repeater ID="rptNavTipologieMobile" runat="server" EnableViewState="false"><ItemTemplate><li class="nav-mb-item ks-mobile-tipology-item"><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></a></li></ItemTemplate></asp:Repeater></ul></div></li></ItemTemplate></asp:Repeater></ul></div></li></ItemTemplate></asp:Repeater></ul></div>
+                        <div id="ks-mobile-catalog-root" class="collapse show"><ul class="sub-nav-menu ks-mobile-catalog-list"><asp:Repeater ID="rptNavSettoriMobile" runat="server" EnableViewState="false" OnItemDataBound="rptNavSettoriMobile_ItemDataBound"><ItemTemplate><li class="nav-mb-item ks-mobile-sector-item"><button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-sector-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-sector-<%# Eval("Id") %>'><span class="ks-mobile-nav-entry"><span class='<%# MobileSectorMediaClass(Eval("ImgUrl")) %>'><%# RenderMobileSectorImage(Eval("ImgUrl"), Eval("Descrizione")) %></span><span class="ks-mobile-nav-label"><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span></span><span class="btn-open-sub" aria-hidden="true"></span></button><div id='ks-mobile-sector-<%# Eval("Id") %>' class="collapse"><ul class="sub-nav-menu"><li><a class="sub-nav-link active" href='<%# Eval("DefaultUrl") %>'>Tutto in <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></a></li><asp:Repeater ID="rptNavCategorieMobile" runat="server" EnableViewState="false" OnItemDataBound="rptNavCategorieMobile_ItemDataBound"><ItemTemplate><li class="nav-mb-item ks-mobile-category-item"><button type="button" class="sub-nav-link collapsed" data-bs-toggle="collapse" data-bs-target='#ks-mobile-category-<%# Eval("Id") %>' aria-expanded="false" aria-controls='ks-mobile-category-<%# Eval("Id") %>'><span><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></span><span class="btn-open-sub" aria-hidden="true"></span></button><div id='ks-mobile-category-<%# Eval("Id") %>' class="collapse"><ul class="sub-nav-menu sub-menu-level-2"><li><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'>Tutto in <%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></a></li><asp:Repeater ID="rptNavTipologieMobile" runat="server" EnableViewState="false"><ItemTemplate><li class="nav-mb-item ks-mobile-tipology-item"><a class="sub-nav-link body-md-2" href='<%# Eval("DefaultUrl") %>'><%# Server.HtmlEncode(Convert.ToString(Eval("Descrizione"))) %></a></li></ItemTemplate></asp:Repeater></ul></div></li></ItemTemplate></asp:Repeater></ul></div></li></ItemTemplate></asp:Repeater></ul></div>
                     </li>
                     <li class="nav-mb-item"><a href="Default.aspx" class="mb-menu-link"<%= MainNavCurrent("home") %>><span>Home</span></a></li>
-                    <li class="nav-mb-item"><a href="articoli.aspx?inpromo=1" class="mb-menu-link"<%= MainNavCurrent("offers") %>><span>Offerte</span></a></li>
                     <li class="nav-mb-item"><a href="Contattaci.aspx" class="mb-menu-link"<%= MainNavCurrent("contact") %>><span>Contatti</span></a></li>
                 </ul>
             </div>
         <div class="mb-bottom">
-            <ul class="nav-ul-mb ks-mobile-utility-nav">
-                <li class="nav-mb-item"><a id="lnkAccountMobileButton" href="myaccount.aspx" runat="server" class="mb-menu-link"><span>La tua Dashboard</span></a></li>
-                <li class="nav-mb-item"><a href="wishlist.aspx" class="mb-menu-link"><span>Wishlist</span></a></li>
-                <li class="nav-mb-item"><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="mb-menu-link"><span>Confronta prodotti</span></a></li>
-            </ul>
             <div class="bottom-bar-language bar-lang">
                 <div class="tf-curs">
                     <select class="image-select center style-default type-cur" aria-label="Valuta" disabled="disabled">
@@ -259,6 +255,14 @@
             </div>
         </div>
         </div>
+        <!-- ks-mobile-services -->
+        <ul class="nav-ul-mb ks-mobile-utility-nav" aria-label="Servizi">
+            <li class="nav-mb-item"><a href="articoli.aspx?inpromo=1" class="mb-menu-link"<%= MainNavCurrent("offers") %>><i class="icon-fire" aria-hidden="true"></i><span>Offerte</span></a></li>
+            <li class="nav-mb-item"><a id="lnkAccountMobileButton" href="myaccount.aspx" runat="server" class="mb-menu-link"><i class="icon-user" aria-hidden="true"></i><span>Account</span></a></li>
+            <li class="nav-mb-item"><a href="wishlist.aspx" class="mb-menu-link"><i class="icon-hearth" aria-hidden="true"></i><span>Wishlist</span></a></li>
+            <li class="nav-mb-item"><a href="#compare" data-bs-toggle="offcanvas" data-bs-target="#compare" aria-controls="compare" class="mb-menu-link"><i class="icon-compare1" aria-hidden="true"></i><span>Confronta</span></a></li>
+        </ul>
+        <!-- /ks-mobile-services -->
     </div>
 </div>
 <noscript><style>@media(max-width:1199px){#mobileMenu{position:static;visibility:visible;transform:none;width:100%;height:auto}#mobileMenu .mb-canvas-content{height:auto}#mobileMenu .collapse{display:block}#mobileMenu .btn-close-mb{display:none}}</style></noscript>

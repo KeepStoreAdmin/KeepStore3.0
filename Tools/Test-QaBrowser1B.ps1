@@ -66,7 +66,7 @@ function Test-Contract([hashtable]$f, [switch]$Quiet) {
 
     # (4) nome dell'area cliente: "La tua Dashboard" (decisione PO 2026-11-18) in intestazione, menu, pie di pagina e pannello.
     if ($f.header -notmatch '<span id="lblLogin" runat="server">La tua Dashboard</span>') { $fail.Add('D01 etichetta intestazione') }
-    if ($f.header -notmatch 'class="mb-menu-link"><span>La tua Dashboard</span>') { $fail.Add('D02 etichetta menu telefono') }
+    if ($f.header -notmatch 'class="mb-menu-link"><i class="icon-user" aria-hidden="true"></i><span>Account</span>') { $fail.Add('D02 etichetta menu telefono') }
     if ($f.footer -notmatch '<a class="link" href="myaccount\.aspx">La tua Dashboard</a>') { $fail.Add('D03 etichetta pie di pagina') }
     if ($f.dash -notmatch '(?s)ContentPlaceHolderID="TitleContent"[^>]*>\s*La tua Dashboard\s*</asp:Content>') { $fail.Add('D04 titolo del pannello') }
     if (($f.header + $f.footer + $f.dash) -match 'Il mio account|Area personale|area personale') { $fail.Add('D05 vecchio nome rimasto') }
