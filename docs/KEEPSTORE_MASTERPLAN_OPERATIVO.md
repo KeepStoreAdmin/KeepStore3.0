@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## HOME-MOBILE-HEADER-1A — 21/11/2026 — SOURCE (intestazione su telefono più bassa, senza togliere funzioni)
+
+**Esito: A (SOURCE, non pubblicato). Livello M (sola presentazione). PR [#625](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/625), stable `ed9a03b5`.** Richiesta del PO del 21/11/2026 («Sì, procedi») dopo il menu su telefono.
+
+**Prima (misurato a 360 / 390 / 430 px, uguale su HOME, elenco, scheda prodotto, carrello).** Intestazione di **246 px**: riga del logo 74, ricerca su due righe 126 (campo + tendina «Tutti i settori»), riga «Guida agli acquisti» 45. Area personale e carrello: bersagli di 20 × 26 px, senza nome per i lettori di schermo (il carrello si chiamava «0»). Riferimenti: Stay On circa 60 px (ricerca dietro un'icona), Bytecno circa 140 px senza la striscia promozionale.
+
+**Ora (sotto 768 px): circa 158 px a riposo.** Riga del logo 56 px; area personale e carrello 44 × 44 con nome accessibile; a 360 px nessuna sovrapposizione (colonna del logo flessibile); logo limitato a 44 px. Ricerca sempre visibile su una riga; la tendina dell'ambito compare quando il riquadro ha il fuoco o un ambito è scelto (solo dove il browser supporta `:has`, altrimenti resta visibile), nascosta fuori dal flusso ma raggiungibile con Tab, corpo 16 px. Riga della guida conservata. File: `mobile-menu.css`, `SiteHeader.ascx` (due `aria-label`), `Page.master` (versione).
+
+**Revisioni.** ChatGPT (xhigh): accolti la guida lasciata nella sua riga (nel menu il pannello non si sarebbe chiuso sulla HOME), lo stato della tendina letto dalla scelta corrente e non dall'attributo iniziale, i nomi accessibili. Claude (Opus): accolti le colonne da cambiare (a 360 px tre comandi da 44 px non stavano in 128 px), la regola del logo più specifica dello stile aggiunto da script, il blocco `@media` unico richiesto dal test del menu, la tecnica che non toglie la tendina dalla tabulazione; scartate come eccessive le misure ai confini su tutte le pagine. Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-MobileHeader.ps1`: sito LAB a 360 / 390 / 430 px su quattro pagine (altezza, riga del logo, bersagli, nomi, sovrapposizioni, contatore, logo alto simulato, tendina a riposo / col fuoco / con ambito scelto da script / ritorno, elenco con settore scelto), 1280 px invariato, rosso prima e verde dopo, **9 mutazioni uccise**; schermate controllate a vista. `Test-MobileMenu`, `Test-GuideNoShift`, `Test-HomeBodyClass` e altri 10 test collegati verdi; precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Il selettore nativo di iPhone e Android e i lettori di schermo non sono provabili qui: **alla consegna serve una prova del PO su un telefono vero** (toccare il campo, scegliere un settore, cercare). Nelle pagine di elenco con un settore già scelto la tendina resta visibile (circa 204 px). Intestazione fissa durante lo scorrimento e ricerca a tutto schermo: non fatte. **Alla consegna futura:** `Page.master`, `Public/ui/controls/SiteHeader.ascx`, `Public/assets/keepstore/css/mobile-menu.css`. CONSEGNA SERVER SOSPESA.
+
 ## HOME-MOBILE-MENU-1A — 21/11/2026 — SOURCE (menu su telefono più compatto e ordinato)
 
 **Esito: A (SOURCE, non pubblicato). Livello M (presentazione e ordine del menu). PR [#623](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/623), stable `36f33e1b`.** Richiesta del PO (19/11: «Non mi piace come lo visualizzo»; 21/11: «Osserva anche il menu del sito www.estayon.com poi fai anche tu una ricerca, per progettare la visualizzazione al meglio possibile»). `www.estayon.com` non esiste: osservato `www.e-stayon.com`.
