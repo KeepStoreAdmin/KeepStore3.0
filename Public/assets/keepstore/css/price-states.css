@@ -1,0 +1,14 @@
+/* KeepStore - colore del prezzo corrente secondo lo stato commerciale (STYLE-PRICE-STATES-1A).
+   Unica autorita sul colore del prezzo corrente in HOME, elenco e scheda prodotto: per questo le tre regole
+   usano !important e vincono sulle regole di pagina scritte in passato. La classe di stato e scritta dal server
+   (App_Code/StorefrontPriceState.vb): --sale solo quando accanto c'e il prezzo precedente barrato.
+   Il rosso dei prezzi non segue l'accento del negozio (--ks-price-accent, tenant-accent.css).
+   In stampa il prezzo resta monocromatico (product-ui.css). */
+.ks-price-state--normal,
+.ks-price-state--ask {
+  color: var(--ks-price-normal, #000000) !important;
+}
+
+.ks-price-state--sale {
+  color: var(--ks-price-accent, #D80027) !important;
+}

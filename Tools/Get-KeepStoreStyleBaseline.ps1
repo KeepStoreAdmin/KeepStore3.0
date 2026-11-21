@@ -90,7 +90,7 @@ if(e.closest('.ks-product-promos__item--immediate'))return 'promo-immediata-riqu
 if(e.closest(OLD)||struck(e))return 'barrato';
 var cur=e.closest(CUR);if(!cur)return 'importo';
 var up=cur.parentElement||cur;var wrap=up.closest('.price-wrap, .ks-price, .price-text, .ks-home-price-slot')||up;
-var hasOld=false;wrap.querySelectorAll(OLD).forEach(function(o){if(money.test(txt(o)))hasOld=true;});
+var hasOld=false;wrap.querySelectorAll(OLD).forEach(function(o){if(money.test(txt(o))&&vis(o))hasOld=true;});
 if(hasOld)return 'sconto-immediato';
 var scope=cur.closest('.card-product')||(producer(e)==='scheda-prodotto-principale'?document.body:wrap.parentElement);
 return (scope&&scope.querySelector(TIER))?'normale+quantita':'normale';}

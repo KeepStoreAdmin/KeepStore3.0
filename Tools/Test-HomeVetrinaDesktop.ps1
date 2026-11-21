@@ -80,7 +80,7 @@ function Test-NetQuantityEquivalence([string]$v) {
 }
 function Test-PriceMarkup([string]$v) {
     $fn = Get-Method $v 'RenderPriceBlock'
-    return ($fn.Contains('If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 mb-0")') -and $fn -notmatch 'fw-normal' -and $fn -notmatch 'body-md-2 fw-medium')
+    return ($fn.Contains('If(emphasize, "new-price h4 fw-semibold mb-0", "new-price body-md-2 mb-0")') -and $fn -notmatch 'text-primary' -and $fn.Contains('StorefrontPriceState.CssClass(hasPrice, showsDiscount)') -and $fn -notmatch 'fw-normal' -and $fn -notmatch 'body-md-2 fw-medium')
 }
 function Test-PriceCss([string]$c) {
     $b = Get-Block $c
@@ -165,7 +165,7 @@ Assert-Detected (Test-BestSection $m $vb) 'M04_BEST_SELLERS_FIVE_COLUMNS_UNEVEN_
 # La quantita netta dei pool e provata, con mutazioni, da Test-HomePriceDisplay.ps1.
 $m = Mutate-Text $vb '"new-price body-md-2 mb-0"' '"new-price body-md-2 fw-medium mb-0"' 'M07'
 Assert-Detected (Test-PriceMarkup $m) 'M07_UTILITY_WEIGHT_OVERRIDES_THE_STYLESHEET_AGAIN'
-$m = Mutate-Text $vb '"new-price h4 fw-semibold text-primary mb-0"' '"new-price h4 fw-normal text-primary mb-0"' 'M08'
+$m = Mutate-Text $vb '"new-price h4 fw-semibold mb-0"' '"new-price h4 fw-normal mb-0"' 'M08'
 Assert-Detected (Test-PriceMarkup $m) 'M08_DEAL_PRICE_WEIGHT_BACK_TO_NORMAL'
 $m = Mutate-Text $css 'body.ks-page-home #ksHomePage .ks-home-price-value { font-family: inherit; }' '' 'M09'
 Assert-Detected (Test-PriceCss $m) 'M09_PRICE_FONT_FALLS_BACK_TO_A_SERIF_AGAIN'

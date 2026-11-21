@@ -170,7 +170,7 @@
 
                                     <div class="tf-product-info-choose-option ks-pdp-buybox-sticky">
                                         <div class="product-delivery">
-                                            <div class="price-text fw-medium text-primary">
+                                            <div class="price-text fw-medium">
                                                 <asp:Literal ID="litPriceHtml2" runat="server" />
                                             </div>
                                             <p class="body-text-3 text-main-2"><asp:Literal ID="litPriceDisplayLabel" runat="server" Mode="Encode" /></p>

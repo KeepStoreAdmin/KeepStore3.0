@@ -292,7 +292,7 @@ try {
         $mutants = @(
             @{ Id = 'M01_COMPANIES_SWAPPED'; File = $cssRel; Old = 'body[data-ks-company="2"] { --ks-accent: #FF8C00; }'; New = 'body[data-ks-company="1"] { --ks-accent: #FF8C00; }' },
             @{ Id = 'M02_SHEET_NOT_LINKED'; File = 'Page.master'; Old = 'ThemeManager.Asset("css/tenant-accent.css")'; New = 'ThemeManager.Asset("css/tenant-accent-missing.css")' },
-            @{ Id = 'M03_PRICE_FOLLOWS_ACCENT'; File = $cssRel; Old = '--primary: var(--ks-price-accent);'; New = '--primary: var(--ks-accent);' },
+            @{ Id = 'M03_PRICE_FOLLOWS_ACCENT'; File = $cssRel; Old = '--ks-price-accent: #D80027;'; New = '--ks-price-accent: var(--ks-accent);' },
             @{ Id = 'M04_WHITE_TEXT_ON_ACCENT'; File = $cssRel; Old = 'color: var(--ks-on-accent) !important;'; New = 'color: #fff !important;' },
             @{ Id = 'M05_NO_BODY_COMPANY'; File = 'Page.master.vb'; Old = 'PageBody.Attributes("data-ks-company")'; New = 'PageBody.Attributes("data-ks-company-off")' },
             @{ Id = 'M06_ACCENT_TEXT_NOT_DARKENED'; File = $cssRel; Old = '--ks-accent-text: oklch(from var(--ks-accent) min(l, 0.555) c h);'; New = '--ks-accent-text: var(--ks-accent);' },

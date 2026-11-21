@@ -236,7 +236,7 @@ function Test-PayablePriceUntouched([string]$v) {
     $cp = Get-Method $v 'CurrentPrice'
     $price = Get-Method $v 'RenderPriceBlock'
     return ($cp.Contains('If TryGetValidPromoPrice(row, promoPrice) Then') -and $cp.Contains('Return promoPrice') -and $cp.Contains('Return GetBasePrice(row)') -and $cp -notmatch 'RoundMoney' -and
-            $price.Contains('If ShowDiscount(row) Then') -and $price.Contains('FormatMoney(GetBasePrice(row))') -and $price.Contains('StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D'))
+            $price.Contains('Dim showsDiscount As Boolean = ShowDiscount(row)') -and $price.Contains('If showsDiscount Then') -and $price.Contains('FormatMoney(GetBasePrice(row))') -and $price.Contains('StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D') -and $price.Contains('StorefrontPriceState.CssClass(hasPrice, showsDiscount)'))
 }
 function Test-NetStockEverywhere([string]$v) {
     $net = Get-Method $v 'NetStockSql'
@@ -316,7 +316,7 @@ $m = Mutate-Text $vb 'Return promoPrice
 
         Return GetBasePrice(row)' 'M04'
 Assert-Detected (Test-PayablePriceUntouched $m) 'M04_PAYABLE_PRICE_ROUNDED_BY_THE_PRESENTATION'
-$m = Mutate-Text $vb 'If(StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D, FormatMoney(current), "Prezzo su richiesta")' 'If(current > 0D, FormatMoney(current), "Prezzo su richiesta")' 'M05'
+$m = Mutate-Text $vb 'Dim hasPrice As Boolean = StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D' 'Dim hasPrice As Boolean = current > 0D' 'M05'
 Assert-Detected (Test-PayablePriceUntouched $m) 'M05_PRICE_THAT_PRINTS_0_00_IS_SHOWN'
 $m = Mutate-Text $vb '            sql.Append("AND ").Append(NetStockSql()).Append(">=1 ")' '            sql.Append("AND ").Append(StockWhereClause()).Append(">=1 ")' 'M06'
 Assert-Detected (Test-NetStockEverywhere $m) 'M06_GROSS_STOCK_IN_THE_GENERIC_POOL'

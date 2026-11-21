@@ -87,7 +87,7 @@ function Compile-Probe([string]$pageSource) {
     $code = "Imports System`nImports System.Data`nImports System.Collections.Generic`nImports System.Globalization`nImports System.Text`nImports System.Text.RegularExpressions`nImports System.Web`nPublic Class CardProbe`n" + ($bodies -join "`n") + "`n" + $wrapper + "`nEnd Class"
     $cart = Method-Map ([IO.File]::ReadAllText((Join-Path $repoRoot 'App_Code/CartMutationIdempotencyService.vb')))
     $cartCode = "Imports System`nImports System.Globalization`nImports System.Web`nPublic Class CartMutationIdempotencyService`n" + ((@('CreateRequestId', 'BuildNativeActionValue', 'NormalizeTCId') | ForEach-Object { $cart[$_] }) -join "`n") + "`nEnd Class"
-    $shared = @('StorefrontPriceDisplayContext.vb', 'UiPriceFormatter.vb', 'AvailabilityDisplayHelper.vb', 'ThemeManager.vb', 'UiData.vb', 'StorefrontEffectivePriceSqlBuilder.vb', 'StorefrontPromotionDisplayPolicy.vb', 'StorefrontProductImageSlots.vb', 'StorefrontCommercialIsolationPolicy.vb', 'CartStorefrontScopePolicy.vb') |
+    $shared = @('StorefrontPriceDisplayContext.vb', 'UiPriceFormatter.vb', 'AvailabilityDisplayHelper.vb', 'ThemeManager.vb', 'UiData.vb', 'StorefrontEffectivePriceSqlBuilder.vb', 'StorefrontPromotionDisplayPolicy.vb', 'StorefrontPriceState.vb', 'StorefrontProductImageSlots.vb', 'StorefrontCommercialIsolationPolicy.vb', 'CartStorefrontScopePolicy.vb') |
         ForEach-Object { [IO.File]::ReadAllText((Join-Path $repoRoot ('App_Code/' + $_))) }
     $inv = Method-Map ([IO.File]::ReadAllText((Join-Path $repoRoot 'App_Code/OrderInventoryAvailabilityService.vb')))
     $shared += ("Imports System`nPublic Class OrderInventoryAvailabilityService`n" + $inv['CalculateNetAvailableQuantity'][0] + "`nEnd Class")
@@ -146,7 +146,7 @@ function Test-CardBehaviour($probe, [string]$name) {
     $classesOk = $actions.Contains('js-ks-cart-link') -and $actions.Contains('js-ks-wishlist-link') -and $actions.Contains('js-ks-quickview') -and $actions.Contains('js-ks-compare') -and $actions.Contains("form='ksNativeCartForm'")
     $informativeOk = ($incoming -notmatch 'list-product-btn')
     # R06 prezzo: la variante compatta non porta piu la classe di peso del tema
-    $priceOk = $html -match "<span class='new-price body-md-2 mb-0 ks-home-price-value ks-home-price-value--current'>" -and $html -notmatch 'body-md-2 fw-medium'
+    $priceOk = $html -match "<span class='new-price body-md-2 mb-0 ks-home-price-value ks-home-price-value--current ks-price-state--(?:normal|sale|ask)'>" -and $html -notmatch 'body-md-2 fw-medium'
     $script:lastDetail = ('tagOk=' + $tagOk + ' tagBeforeTitle=' + $tagBeforeTitle + ' incomingOk=' + $incomingOk + ' noTagOk=' + $noTagOk + ' imgOk=' + $imgOk + ' inside=' + $inside + ' liCount=' + $liCount + ' classesOk=' + $classesOk + ' informativeOk=' + $informativeOk + ' priceOk=' + $priceOk)
     return ($tagOk -and $tagBeforeTitle -and $incomingOk -and $noTagOk -and $imgOk -and $inside -and ($liCount -eq 4) -and $classesOk -and $informativeOk -and $priceOk)
 }

@@ -14,6 +14,13 @@ Imports System.Web
 Public Module UiPriceFormatter
     Private ReadOnly PriceCulture As CultureInfo = CultureInfo.GetCultureInfo("it-IT")
 
+    ' Testo unico del prezzo non disponibile e suo markup con la classe di stato (StorefrontPriceState).
+    Public Const PriceOnRequestText As String = "Prezzo su richiesta"
+
+    Public Function PriceOnRequestHtml() As String
+        Return "<span class=""ks-price-ask " & StorefrontPriceState.AskClass & """>" & PriceOnRequestText & "</span>"
+    End Function
+
     ' Separate adapter names preserve legacy overload resolution, including
     ' Object/Nothing callers. All prices supplied here are already authoritative.
     Public Function RenderContextPriceHtml(ByVal prezzo As Object,
@@ -22,15 +29,19 @@ Public Module UiPriceFormatter
                                             ByVal prezzoPromoIvato As Object,
                                             ByVal inOfferta As Object,
                                             ByVal context As StorefrontPriceDisplayContext) As String
-        If context Is Nothing Then Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
+        If context Is Nothing Then Return PriceOnRequestHtml()
         Dim baseValue As Nullable(Of Decimal) = context.SelectPrice(ToDec(prezzo), ToDec(prezzoIvato))
         Dim promoValue As Nullable(Of Decimal) = context.SelectPromoPrice(ToDec(prezzoPromo), ToDec(prezzoPromoIvato))
-        If Not baseValue.HasValue Then Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
+        If Not baseValue.HasValue Then Return PriceOnRequestHtml()
         If ContextHasPromo(baseValue, promoValue, inOfferta) Then
-            Return "<span class=""ks-price""><ins class=""ks-price-now"">" & FormatPrice(promoValue.Value) &
-                   "</ins><del class=""ks-price-old"">" & FormatPrice(baseValue.Value) & "</del></span>"
+            ' Il prezzo da pagare resta quello promozionale; barrato e rosso solo se lo sconto supera la regola unica di presentazione.
+            If StorefrontPriceState.ShowsDiscount(baseValue, promoValue) Then
+                Return "<span class=""ks-price""><ins class=""ks-price-now " & StorefrontPriceState.SaleClass & """>" & FormatPrice(promoValue.Value) &
+                       "</ins><del class=""ks-price-old"">" & FormatPrice(baseValue.Value) & "</del></span>"
+            End If
+            Return "<span class=""ks-price""><span class=""ks-price-now " & StorefrontPriceState.NormalClass & """>" & FormatPrice(promoValue.Value) & "</span></span>"
         End If
-        Return "<span class=""ks-price""><span class=""ks-price-now"">" & FormatPrice(baseValue.Value) & "</span></span>"
+        Return "<span class=""ks-price""><span class=""ks-price-now " & StorefrontPriceState.NormalClass & """>" & FormatPrice(baseValue.Value) & "</span></span>"
     End Function
 
     Public Function RenderContextPriceText(ByVal prezzo As Object,
@@ -39,10 +50,10 @@ Public Module UiPriceFormatter
                                             ByVal prezzoPromoIvato As Object,
                                             ByVal inOfferta As Object,
                                             ByVal context As StorefrontPriceDisplayContext) As String
-        If context Is Nothing Then Return "Prezzo su richiesta"
+        If context Is Nothing Then Return PriceOnRequestText
         Dim baseValue As Nullable(Of Decimal) = context.SelectPrice(ToDec(prezzo), ToDec(prezzoIvato))
         Dim promoValue As Nullable(Of Decimal) = context.SelectPromoPrice(ToDec(prezzoPromo), ToDec(prezzoPromoIvato))
-        If Not baseValue.HasValue Then Return "Prezzo su richiesta"
+        If Not baseValue.HasValue Then Return PriceOnRequestText
         If ContextHasPromo(baseValue, promoValue, inOfferta) Then Return FormatPrice(promoValue.Value)
         Return FormatPrice(baseValue.Value)
     End Function

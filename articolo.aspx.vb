@@ -531,7 +531,7 @@ Partial Class articolo
             .Url = BuildProductUrl(_id, tcidVal, includeTcid:=(Request.QueryString("TCid") IsNot Nothing)),
             .PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo),
             .InOfferta = price.IsPromo,
-            .PromotionBadgeHtml = BuildRelatedPromotionBadgeHtml(promotionModel),
+            .PromotionBadgeHtml = If(price.IsPromo, BuildRelatedPromotionBadgeHtml(promotionModel), String.Empty),
             .PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel, _priceDisplayContext.IsVatExcluded),
             .Codice = codiceVal,
             .Ean = eanVal,
@@ -1196,7 +1196,7 @@ Partial Class articolo
                 item.Url = BuildProductUrl(idVal, tcidVal, includeTcid:=(_tcEnabled AndAlso tcidVal <> -1))
                 item.PrezzoHtml = BuildPriceHtml(price.CurrentPrice, price.OldPrice, price.IsPromo)
                 item.InOfferta = price.IsPromo
-                item.PromotionBadgeHtml = BuildRelatedPromotionBadgeHtml(promotionModel)
+                item.PromotionBadgeHtml = If(price.IsPromo, BuildRelatedPromotionBadgeHtml(promotionModel), String.Empty)
                 item.PromotionSummaryHtml = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promotionModel, _priceDisplayContext.IsVatExcluded)
                 item.Codice = codiceVal
                 item.Ean = eanVal
@@ -2485,17 +2485,18 @@ Partial Class articolo
 
     Private Function BuildPriceHtml(prezzo As Nullable(Of Decimal), prezzoOld As Nullable(Of Decimal), inOfferta As Boolean) As String
         If Not prezzo.HasValue OrElse prezzo.Value <= 0D Then
-            Return "<span class=""new-price price-text fw-medium mb-0"">Prezzo su richiesta</span>"
+            Return "<span class=""new-price price-text fw-medium mb-0 " & StorefrontPriceState.AskClass & """>" & UiPriceFormatter.PriceOnRequestText & "</span>"
         End If
 
         Dim priceText As String = FormatMoney(prezzo.Value)
 
-        If inOfferta AndAlso prezzoOld.HasValue AndAlso prezzoOld.Value > 0D AndAlso prezzo.HasValue AndAlso prezzoOld.Value > prezzo.Value Then
+        ' Rosso e prezzo barrato solo con lo sconto mostrato: inOfferta e gia deciso dalla regola unica in BuildAuthorizedPriceContext.
+        If inOfferta AndAlso prezzoOld.HasValue AndAlso prezzoOld.Value > prezzo.Value Then
             Dim oldText As String = FormatMoney(prezzoOld.Value)
-            Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span> <span class=""old-price body-md-2 text-main-2 fw-normal"">" & Server.HtmlEncode(oldText) & "</span>"
+            Return "<span class=""new-price price-text fw-medium mb-0 " & StorefrontPriceState.SaleClass & """>" & Server.HtmlEncode(priceText) & "</span> <span class=""old-price body-md-2 text-main-2 fw-normal"">" & Server.HtmlEncode(oldText) & "</span>"
         End If
 
-        Return "<span class=""new-price price-text fw-medium mb-0"">" & Server.HtmlEncode(priceText) & "</span>"
+        Return "<span class=""new-price price-text fw-medium mb-0 " & StorefrontPriceState.NormalClass & """>" & Server.HtmlEncode(priceText) & "</span>"
     End Function
 
     Private Function BuildPriceText(prezzo As Nullable(Of Decimal)) As String
@@ -2594,9 +2595,12 @@ Partial Class articolo
                 model.BestDefaultQuantityPriceNet, model.BestDefaultQuantityPriceGross)
             Dim oldPrice As Nullable(Of Decimal) = _priceDisplayContext.SelectPrice(baseNet, baseGross)
             If authorizedPrice.HasValue AndAlso oldPrice.HasValue AndAlso authorizedPrice.Value < oldPrice.Value Then
+                ' Il prezzo da pagare e sempre quello autorizzato; lo sconto si MOSTRA (barrato, bollino, rosso) solo con la regola unica.
                 price.CurrentPrice = authorizedPrice
-                price.OldPrice = oldPrice
-                price.IsPromo = True
+                If StorefrontPriceState.ShowsDiscount(oldPrice, authorizedPrice) Then
+                    price.OldPrice = oldPrice
+                    price.IsPromo = True
+                End If
             End If
         End If
 

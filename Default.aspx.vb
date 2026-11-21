@@ -2893,7 +2893,12 @@ Partial Public Class _Default
                                       ByVal emphasize As Boolean,
                                       Optional ByVal reserveDealSlots As Boolean = False) As String
         Dim sb As New StringBuilder()
-        Dim priceClass As String = If(emphasize, "new-price h4 fw-semibold text-primary mb-0", "new-price body-md-2 mb-0") & " ks-home-price-value ks-home-price-value--current"
+        ' Stato del prezzo (rosso solo con lo sconto mostrato): stessa condizione che scrive il prezzo barrato qui sotto.
+        Dim current As Decimal = CurrentPrice(row)
+        Dim hasPrice As Boolean = StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D
+        Dim showsDiscount As Boolean = ShowDiscount(row)
+        Dim priceClass As String = If(emphasize, "new-price h4 fw-semibold mb-0", "new-price body-md-2 mb-0") & " ks-home-price-value ks-home-price-value--current " &
+                                   StorefrontPriceState.CssClass(hasPrice, showsDiscount)
         Dim oldPriceClass As String = If(emphasize, "old-price price-text text-main-2", "old-price body-md-2 text-main-2") & " ks-home-price-value ks-home-price-value--old"
         Dim slotClass As String = If(emphasize, "ks-home-price-slot--emphasized", "ks-home-price-slot--compact")
         Dim stackClass As String = If(emphasize, "ks-home-price-stack--emphasized", "ks-home-price-stack--compact")
@@ -2902,9 +2907,8 @@ Partial Public Class _Default
         sb.Append("<div class='ks-home-price-stack ").Append(stackClass).Append("'>")
         If reserveDealSlots Then sb.Append("<div class='ks-deal-price-amount-slot'>")
         sb.Append("<p class='price-wrap fw-medium ks-home-price-slot ").Append(slotClass).Append("'>")
-        Dim current As Decimal = CurrentPrice(row)
-        sb.Append("<span class='").Append(priceClass).Append("'>").Append(If(StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D, FormatMoney(current), "Prezzo su richiesta")).Append("</span>")
-        If ShowDiscount(row) Then
+        sb.Append("<span class='").Append(priceClass).Append("'>").Append(If(hasPrice, FormatMoney(current), UiPriceFormatter.PriceOnRequestText)).Append("</span>")
+        If showsDiscount Then
             sb.Append("<span class='").Append(oldPriceClass).Append("'>").Append(FormatMoney(GetBasePrice(row))).Append("</span>")
         End If
         sb.Append("</p>")

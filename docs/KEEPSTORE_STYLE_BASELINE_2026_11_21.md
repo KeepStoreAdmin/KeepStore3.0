@@ -2,7 +2,7 @@
 
 Generato da `Tools/Get-KeepStoreStyleBaseline.ps1` (raccoglitore v1), task `STYLE-BASELINE-1A`. **Non modificare a mano**: si rigenera con `-Summary`. Riferimento per i task della [linea di stile](KEEPSTORE_STYLE_DIRECTION_2026_11_19.md): ogni task rifa la fotografia e la confronta con `-Compare`.
 
-**Provenienza.** Repository `98e41d69`; origine https://www.taikun.it:18843 (sito LAB, database LAB); larghezze 390 e 1280 px; HOME letta 3 volte (ruota gli articoli); utente collegato: si (carrello e area cliente, senza testi ne schermate). Stili calcolati dal browser (Edge), animazioni ferme, pagina scorsa per intero.
+**Provenienza.** Repository `301b9802`; origine https://www.taikun.it:18843 (sito LAB, database LAB); larghezze 390 e 1280 px; HOME letta 3 volte (ruota gli articoli); utente collegato: si (carrello e area cliente, senza testi ne schermate). Stili calcolati dal browser (Edge), animazioni ferme, pagina scorsa per intero.
 
 **Non fotografato (limiti).** Stati interattivi (passaggio del mouse, fuoco, errore, disattivato), pannelli e menu aperti, seconda azienda, documenti, ricerca, pagine di servizio, conferma dell'ordine; il LAB non ha le immagini dei prodotti. Lo stato del prezzo e letto dal markup, non dal modello commerciale. Una variante rara della HOME puo non uscire nelle letture fatte.
 
@@ -10,14 +10,14 @@ Generato da `Tools/Get-KeepStoreStyleBaseline.ps1` (raccoglitore v1), task `STYL
 
 | Pagina | Larghezza | Altezza | Varianti | Caratteri | Raggi |
 | --- | --- | --- | --- | --- | --- |
-| home | 390 | 4546 | 71 | Arial 304 | 10px 15, 14px 2, 4px 8, 6px 95, 7px 1, 8px 16, tondo o pillola 157 |
-| elenco | 390 | 5086 | 65 | Arial 164 | 10px 1, 14px 1, 3px 19, 4px 10, 6px 36, 8px 5, tondo o pillola 59 |
+| home | 390 | 4546 | 71 | Arial 313 | 10px 15, 14px 2, 4px 8, 6px 95, 7px 1, 8px 16, tondo o pillola 164 |
+| elenco | 390 | 5086 | 65 | Arial 164 | 10px 1, 14px 1, 3px 21, 4px 10, 6px 36, 8px 5, tondo o pillola 59 |
 | scheda-sconto | 390 | 9506 | 94 | Arial 294 | 10px 5, 14px 1, 4px 16, 50px 5, 6px 62, 8px 13, tondo o pillola 42 |
 | scheda-normale | 390 | 7216 | 84 | Arial 289 | 10px 5, 14px 1, 4px 16, 50px 5, 6px 62, 8px 11, tondo o pillola 52 |
 | accesso | 390 | 1942 | 40 | Arial 29 | 10px 1, 14px 1, tondo o pillola 4 |
 | carrello | 390 | 5401 | 57 | Arial 57, Inter 26 | 10px 9, 12px 2, 14px 9, 5px 3, 6px 9, 8px 5, tondo o pillola 11 |
 | area-cliente | 390 | 2857 | 44 | Arial 52 | 10px 1, 14px 1, 8px 3, tondo o pillola 4 |
-| home | 1280 | 5010 | 72 | Arial 365 | 10px 14, 14px 1, 22px 8, 4px 44, 6px 95, 7px 1, 8px 9, tondo o pillola 83 |
+| home | 1280 | 4976 | 73 | Arial 363 | 10px 14, 14px 1, 22px 8, 4px 44, 6px 96, 8px 9, tondo o pillola 83 |
 | elenco | 1280 | 23541 | 64 | Arial 1412 | 10px 1, 3px 21, 4px 11, 6px 36, 8px 5, tondo o pillola 23 |
 | scheda-sconto | 1280 | 6774 | 92 | Arial 342 | 10px 4, 3px 12, 4px 16, 50px 5, 6px 34, 8px 24, tondo o pillola 26 |
 | scheda-normale | 1280 | 5364 | 82 | Arial 336 | 10px 4, 3px 12, 4px 16, 50px 5, 6px 34, 8px 21, tondo o pillola 36 |
@@ -33,7 +33,7 @@ Generato da `Tools/Get-KeepStoreStyleBaseline.ps1` (raccoglitore v1), task `STYL
 | consigli-carrello | non incontrato | non incontrato | non incontrato | non incontrato | non incontrato | non incontrato | non incontrato | visto |
 | pagina | non incontrato | non incontrato | non incontrato | non incontrato | non incontrato | non incontrato | non incontrato | visto |
 | scheda-elenco | visto | non incontrato | visto | visto | visto | non incontrato | visto | non incontrato |
-| scheda-griglia-home | visto | non incontrato | visto | visto | visto | non incontrato | non incontrato | non incontrato |
+| scheda-griglia-home | visto | visto | visto | visto | visto | non incontrato | non incontrato | non incontrato |
 | scheda-occasioni | non incontrato | non incontrato | visto | visto | visto | non incontrato | non incontrato | non incontrato |
 | scheda-prodotto:prd-recent | visto | non incontrato | visto | visto | visto | non incontrato | non incontrato | non incontrato |
 | scheda-prodotto:prd-related | non incontrato | visto | non incontrato | non incontrato | visto | non incontrato | non incontrato | non incontrato |
@@ -56,33 +56,34 @@ Generato da `Tools/Get-KeepStoreStyleBaseline.ps1` (raccoglitore v1), task `STYL
 | scheda-elenco | barrato | Arial / 14px / 500 / interlinea 22 / #666666 / su #FFFFFF / line-through | elenco 390, elenco 1280 |
 | scheda-elenco | normale | Arial / 22px / 700 / interlinea 26 / #000000 / su #FFFFFF | elenco 390, elenco 1280 |
 | scheda-elenco | prezzo-quantita | Arial / 14px / 800 / interlinea 18.9 / #D80027 / su #FFFFFF | elenco 390, elenco 1280 |
-| scheda-elenco | sconto-immediato | Arial / 22px / 700 / interlinea 26 / #000000 / su #FFFFFF | elenco 390, elenco 1280 |
+| scheda-elenco | sconto-immediato | Arial / 22px / 700 / interlinea 26 / #D80027 / su #FFFFFF | elenco 390, elenco 1280 |
 | scheda-elenco | su-richiesta | Arial / 22px / 700 / interlinea 26 / #000000 / su #FFFFFF | elenco 390, elenco 1280 |
 | scheda-griglia-home | barrato | Arial / 14px / 500 / interlinea 22 / #666666 / su #FFFFFF / line-through | home 390, home 1280 |
 | scheda-griglia-home | normale | Arial / 22px / 700 / interlinea 26 / #000000 / su #FFFFFF | home 390, home 1280 |
+| scheda-griglia-home | normale+quantita | Arial / 22px / 700 / interlinea 26 / #000000 / su #FFFFFF | home 1280 |
 | scheda-griglia-home | prezzo-quantita | Arial / 13px / 800 / interlinea 17.5 / #D80027 / su #FEF6F7 | home 1280 |
-| scheda-griglia-home | sconto-immediato | Arial / 22px / 700 / interlinea 26 / #000000 / su #FFFFFF | home 390, home 1280 |
+| scheda-griglia-home | sconto-immediato | Arial / 22px / 700 / interlinea 26 / #D80027 / su #FFFFFF | home 390, home 1280 |
 | scheda-occasioni | barrato | Arial / 14px / 500 / interlinea 22 / #666666 / su #FFFFFF / line-through | home 390, home 1280 |
 | scheda-occasioni | prezzo-quantita | Arial / 13px / 800 / interlinea 17.5 / #D80027 / su #FEF6F7 | home 390, home 1280 |
 | scheda-occasioni | sconto-immediato | Arial / 28px / 600 / interlinea 32 / #D80027 / su #FFFFFF | home 390, home 1280 |
 | scheda-prodotto:prd-recent | barrato | Arial / 14px / 400 / interlinea 22 / #666666 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
-| scheda-prodotto:prd-recent | normale | Arial / 18px / 500 / interlinea 20 / #333E48 / su #FFFFFF | scheda-normale 390, scheda-normale 1280 |
+| scheda-prodotto:prd-recent | normale | Arial / 18px / 500 / interlinea 20 / #000000 / su #FFFFFF | scheda-normale 390, scheda-normale 1280 |
 | scheda-prodotto:prd-recent | prezzo-quantita | Arial / 14px / 800 / interlinea 18.9 / #D80027 / su #FEF6F7 | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
-| scheda-prodotto:prd-recent | sconto-immediato | Arial / 18px / 500 / interlinea 20 / #333E48 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
-| scheda-prodotto:prd-related | normale+quantita | Arial / 18px / 500 / interlinea 20 / #333E48 / su #FFFFFF | scheda-sconto 390, scheda-sconto 1280 |
+| scheda-prodotto:prd-recent | sconto-immediato | Arial / 18px / 500 / interlinea 20 / #D80027 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
+| scheda-prodotto:prd-related | normale+quantita | Arial / 18px / 500 / interlinea 20 / #000000 / su #FFFFFF | scheda-sconto 390, scheda-sconto 1280 |
 | scheda-prodotto:prd-related | prezzo-quantita | Arial / 14px / 800 / interlinea 18.9 / #D80027 / su #FEF6F7 | scheda-sconto 390, scheda-sconto 1280 |
 | scheda-prodotto:prd-similar | barrato | Arial / 14px / 400 / interlinea 22 / #666666 / su #FFFFFF | scheda-normale 390, scheda-normale 1280 |
-| scheda-prodotto:prd-similar | normale | Arial / 18px / 500 / interlinea 20 / #333E48 / su #FFFFFF | scheda-sconto 390, scheda-sconto 1280 |
-| scheda-prodotto:prd-similar | normale+quantita | Arial / 18px / 500 / interlinea 20 / #333E48 / su #FFFFFF | scheda-sconto 390, scheda-sconto 1280 |
+| scheda-prodotto:prd-similar | normale | Arial / 18px / 500 / interlinea 20 / #000000 / su #FFFFFF | scheda-sconto 390, scheda-sconto 1280 |
+| scheda-prodotto:prd-similar | normale+quantita | Arial / 18px / 500 / interlinea 20 / #000000 / su #FFFFFF | scheda-sconto 390, scheda-sconto 1280 |
 | scheda-prodotto:prd-similar | prezzo-quantita | Arial / 14px / 800 / interlinea 18.9 / #D80027 / su #FEF6F7 | scheda-sconto 390, scheda-sconto 1280 |
-| scheda-prodotto:prd-similar | sconto-immediato | Arial / 18px / 500 / interlinea 20 / #333E48 / su #FFFFFF | scheda-normale 390, scheda-normale 1280 |
+| scheda-prodotto:prd-similar | sconto-immediato | Arial / 18px / 500 / interlinea 20 / #D80027 / su #FFFFFF | scheda-normale 390, scheda-normale 1280 |
 | scheda-prodotto:prd-usually | barrato | Arial / 14px / 400 / interlinea 22 / #666666 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
 | scheda-prodotto:prd-usually | importo | Arial / 14px / 400 / interlinea 20 / #D80027 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
-| scheda-prodotto:prd-usually | normale | Arial / 20px / 500 / interlinea 22 / #333E48 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
-| scheda-prodotto:prd-usually | sconto-immediato | Arial / 20px / 500 / interlinea 22 / #333E48 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
+| scheda-prodotto:prd-usually | normale | Arial / 20px / 500 / interlinea 22 / #000000 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
+| scheda-prodotto:prd-usually | sconto-immediato | Arial / 20px / 500 / interlinea 22 / #D80027 / su #FFFFFF | scheda-sconto 390, scheda-normale 390, scheda-sconto 1280, scheda-normale 1280 |
 | scheda-prodotto-principale | barrato | Arial / 16px / 400 / interlinea 22 / #666666 / su #FFFFFF / line-through | scheda-sconto 390, scheda-sconto 1280 |
-| scheda-prodotto-principale | normale+quantita | Arial / 30px / 500 / interlinea 36 / #D80027 / su #FFFFFF | scheda-normale 390 |
-| scheda-prodotto-principale | normale+quantita | Arial / 32px / 500 / interlinea 38 / #D80027 / su #FFFFFF | scheda-normale 1280 |
+| scheda-prodotto-principale | normale+quantita | Arial / 30px / 500 / interlinea 36 / #000000 / su #FFFFFF | scheda-normale 390 |
+| scheda-prodotto-principale | normale+quantita | Arial / 32px / 500 / interlinea 38 / #000000 / su #FFFFFF | scheda-normale 1280 |
 | scheda-prodotto-principale | prezzo-quantita | Arial / 16px / 700 / interlinea 22.4 / #D80027 / su #FDF1F3 | scheda-sconto 390, scheda-sconto 1280 |
 | scheda-prodotto-principale | sconto-immediato | Arial / 30px / 500 / interlinea 36 / #D80027 / su #FFFFFF | scheda-sconto 390 |
 | scheda-prodotto-principale | sconto-immediato | Arial / 32px / 500 / interlinea 38 / #D80027 / su #FFFFFF | scheda-sconto 1280 |
@@ -93,7 +94,7 @@ Generato da `Tools/Get-KeepStoreStyleBaseline.ps1` (raccoglitore v1), task `STYL
 | --- | --- | --- |
 | bollino | 4 | 4 |
 | campo | 13 | 14 |
-| prezzo | 20 | 20 |
+| prezzo | 24 | 24 |
 | pulsante | 24 | 25 |
 | scheda | 3 | 3 |
 | scheda-categoria | 2 | 2 |

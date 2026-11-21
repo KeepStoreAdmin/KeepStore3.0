@@ -106,6 +106,7 @@ Partial Class Articoli
         Public Property CategoryName As String
         Public Property PriceText As String
         Public Property OldPriceText As String
+        Public Property PriceStateClass As String
         Public Property BadgeText As String
         Public Property PromoSummaryHtml As String
         Public Property IsOnSale As Boolean
@@ -1685,6 +1686,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         card.CategoryName = model.CategoryName
         card.PriceText = model.PriceText
         card.OldPriceText = model.OldPriceText
+        card.PriceStateClass = model.PriceStateClass
         card.BadgeText = model.BadgeText
         card.PromoSummaryHtml = model.PromoSummaryHtml
         card.IsOnSale = model.IsOnSale
@@ -4122,7 +4124,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     End Function
 
     Private Function CatalogPriceTextFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
-        If Not EnsureCatalogPriceDisplayContext() Then Return "Prezzo su richiesta"
+        If Not EnsureCatalogPriceDisplayContext() Then Return UiPriceFormatter.PriceOnRequestText
         Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, restrictToCatalogCampaign)
         Dim promoPriceNet As Decimal = 0D
         Dim promoPriceGross As Decimal = 0D
@@ -4147,7 +4149,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     End Function
 
     Private Function CatalogPriceHtmlFor(ByVal dataItem As Object, ByVal restrictToCatalogCampaign As Boolean) As String
-        If Not EnsureCatalogPriceDisplayContext() Then Return "<span class=""ks-price-ask"">Prezzo su richiesta</span>"
+        If Not EnsureCatalogPriceDisplayContext() Then Return UiPriceFormatter.PriceOnRequestHtml()
         Dim basePriceNet As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "Prezzo"), 0D)
         Dim basePriceGross As Decimal = KeepStoreSecurity.SqlCleanDecimal(UiData.Get(dataItem, "PrezzoIvato"), 0D)
         Dim promoPriceNet As Decimal = 0D
@@ -4185,17 +4187,17 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         Dim badgeText As String = ""
         Dim promoSummaryHtml As String = ProductPromotionDisplayHelper.RenderCatalogSummaryHtml(promoModel, _priceDisplayContext.IsVatExcluded)
 
-        If hasDefaultQuantityPromo Then
-            If basePrice > 0D Then
-                oldPriceText = UiPriceFormatter.FormatStorefrontAmount(basePrice)
-            End If
-
-            Dim promoPrice As Decimal = CatalogDefaultQuantityPromoPrice(promoModel)
+        ' Sconto MOSTRATO (prezzo barrato, bollino con la percentuale, prezzo rosso): regola unica di presentazione, la stessa della HOME.
+        ' Il prezzo da pagare (PriceText) resta quello promozionale anche quando lo sconto e sotto soglia.
+        Dim defaultQuantityPromoPrice As Decimal = If(hasDefaultQuantityPromo, CatalogDefaultQuantityPromoPrice(promoModel), 0D)
+        Dim showsDiscount As Boolean = hasDefaultQuantityPromo AndAlso StorefrontPriceState.ShowsDiscount(basePrice, defaultQuantityPromoPrice)
+        If showsDiscount Then
+            oldPriceText = UiPriceFormatter.FormatStorefrontAmount(basePrice)
             badgeText = If(promoModel.BestDefaultQuantityDiscountPercent > 0,
                            "-" & promoModel.BestDefaultQuantityDiscountPercent.ToString() & "%",
-                           GetDiscountPercent(basePrice, promoPrice))
+                           GetDiscountPercent(basePrice, defaultQuantityPromoPrice))
             If String.IsNullOrWhiteSpace(badgeText) Then badgeText = "Offerta"
-        ElseIf hasPromotion Then
+        ElseIf hasPromotion AndAlso (Not hasDefaultQuantityPromo OrElse promoModel.HasQuantityTierOffer) Then
             badgeText = "Quantità"
         End If
 
@@ -4215,6 +4217,8 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         model.CategoryName = CatalogCategoryLabel(dataItem)
         model.PriceText = CatalogPriceText(dataItem)
         model.OldPriceText = oldPriceText
+        model.PriceStateClass = StorefrontPriceState.CssClass(
+            Not String.Equals(model.PriceText, UiPriceFormatter.PriceOnRequestText, StringComparison.Ordinal), showsDiscount)
         model.BadgeText = badgeText
         model.PromoSummaryHtml = promoSummaryHtml
         model.IsOnSale = hasPromotion

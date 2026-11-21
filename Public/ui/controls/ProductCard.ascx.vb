@@ -12,6 +12,7 @@ Partial Class Public_ui_controls_ProductCard
     Public Property CategoryName As String
     Public Property PriceText As String
     Public Property OldPriceText As String
+    Public Property PriceStateClass As String
     Public Property BadgeText As String
     Public Property PromoSummaryHtml As String
     ' HTML gia codificato della barra delle vendite (StorefrontSoldUnits.RenderCompact); vuoto = nessuna barra.
@@ -139,6 +140,15 @@ Partial Class Public_ui_controls_ProductCard
     Protected ReadOnly Property SafePriceText As String
         Get
             Return EncodeText(If(String.IsNullOrWhiteSpace(PriceText), "Prezzo demo", PriceText))
+        End Get
+    End Property
+
+    ' Classe di stato del prezzo: solo i tre valori ammessi; senza indicazione il prezzo e normale.
+    Protected ReadOnly Property SafePriceStateClass As String
+        Get
+            If String.Equals(PriceStateClass, StorefrontPriceState.SaleClass, StringComparison.Ordinal) Then Return StorefrontPriceState.SaleClass
+            If String.Equals(PriceStateClass, StorefrontPriceState.AskClass, StringComparison.Ordinal) Then Return StorefrontPriceState.AskClass
+            Return StorefrontPriceState.NormalClass
         End Get
     End Property
 
