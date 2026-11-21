@@ -1,5 +1,21 @@
 # KeepStore Masterplan Operativo
 
+## PAYMENT-LOGOS-1A — 21/11/2026 — SOURCE (piede di pagina: marchi dei pagamenti solo per i metodi davvero nominati)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (dichiarazione dei pagamenti accettati, isolamento azienda). PR [#631](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/631), stable `fdd98858`.** Richiesta del PO del 19/11/2026 (loghi ufficiali) e «Sì, procedi» del 21/11/2026.
+
+**Prima.** Il piede elencava i pagamenti solo come testo; i file ufficiali dei marchi erano nella cartella ma nessuna pagina li mostrava.
+
+**Ora.** Sotto «Metodi di pagamento» una riga di marchi: carta nominata per l'azienda dell'host = Visa e Mastercard; PayPal nominato (configurazione pronta e richiesta consentita) = PayPal; nessun marchio per contanti, bonifico e simili. I marchi nascono dalla stessa selezione finale del testo (azienda dell'host, sessione compatibile, regola dei gateway, pulizia, deduplica, limite): un metodo scartato dal testo non porta mai il suo marchio. Nomi, file e misure solo in `App_Code/KeepStorePaymentBrands.vb`; il piede non contiene nomi di marchi. Stessa altezza visibile (24 px), file non modificati, misure dichiarate, elenco con nome accessibile.
+
+**Decisione del PO (21/11/2026, una domanda).** I due revisori hanno rilevato che il database non dice quali circuiti accetta ogni azienda. Domanda: «Posso mostrare Visa e Mastercard per OGNI azienda che ha la carta Banca Sella attiva sul sito?» Risposta: «Sì, per tutte». Registrata in [PAYMENT_LOGOS_SOURCES](PAYMENT_LOGOS_SOURCES.md).
+
+**Revisioni.** ChatGPT (xhigh): accolti la selezione unica per testo e marchi (prima divergevano con nome non mostrabile o nona voce), le misure per file (Mastercard ha un margine trasparente proprio), il blocco sui circuiti non attestati. Claude (Opus): accolti il catalogo fuori dal piede con i divieti dei test invariati, i due soli valori sì/no nella regione pura, le proporzioni negli attributi (le regole globali calcolano l'altezza dalla larghezza), la domanda al PO prima del codice. Gate di certezza: PASS dopo la risposta del PO.
+
+**Prove.** `Tools/Test-PaymentLogos.ps1`: parte compilata (azienda, sessione, quattro combinazioni di PayPal, tipo sconosciuto, carta scartata dal testo in tre modi, catalogo e proporzioni dei file), sorgente, sito LAB con due aziende a 320 / 390 / 1280 px (immagini decodificate, altezza visibile uguale); rosso prima e verde dopo, **11 mutazioni uccise**; schermate controllate a vista. `Test-FooterPayments` e `Test-FooterAccordion` adeguati al nuovo segnaposto; `Test-FooterTruth`, `Test-FocusVisible`, SEO tecnica verdi; precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** PayPal positivo non provabile sul LAB (richiesta locale): coperto dalla parte compilata. La scheda prodotto non ha un blocco proprio e in fondo ha testi segnaposto («Flusso ecommerce KeepStore sicuro»): `PAYMENT-LOGOS-1B`. **Alla consegna futura (insieme, il piede sta nella master):** `App_Code/KeepStorePaymentBrands.vb`, `Public/ui/controls/SiteFooter.ascx`, `SiteFooter.ascx.vb`, più `visa.svg`, `mastercard.svg`, `paypal-logo-2024.png`; resta la verifica Banca Sella già aperta prima di pubblicare il piede con la carta. CONSEGNA SERVER SOSPESA.
+
 ## PDP-OFFER-BOX-1A — 21/11/2026 — SOURCE (scheda prodotto: riquadro d'acquisto con risparmio e scadenza dell'offerta)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (presentazione di prezzi e promozioni; importi e regole invariati). PR [#629](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/629), stable `c420061e`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), linea di stile 3.6 e 3.7.
