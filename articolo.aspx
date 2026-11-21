@@ -890,61 +890,6 @@
         </section>
     </asp:PlaceHolder>
 
-    <section class="tf-sp-2 pt-0 ks-product-iconbox-section">
-        <div class="container">
-            <div class="swiper tf-sw-iconbox" data-preview="5" data-tablet="3.5" data-mobile-sm="2.5" data-mobile="1" data-space-lg="20" data-space-md="20" data-space="15" data-pagination="1" data-pagination-sm="2" data-pagination-md="3" data-pagination-lg="4">
-                <div class="swiper-wrapper">
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box">
-                            <div class="icon-box"><i class="icon icon-delivery"></i></div>
-                            <div class="content">
-                                <p class="body-text fw-semibold">Spedizione</p>
-                                <p class="body-text-3">Consegna e ritiro secondo disponibilita.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box">
-                            <div class="icon-box"><i class="icon icon-check-2"></i></div>
-                            <div class="content">
-                                <p class="body-text fw-semibold">Supporto clienti</p>
-                                <p class="body-text-3">Assistenza prima e dopo l'acquisto.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box">
-                            <div class="icon-box"><i class="icon icon-money-bag"></i></div>
-                            <div class="content">
-                                <p class="body-text fw-semibold">Pagamenti</p>
-                                <p class="body-text-3">Flusso ecommerce KeepStore sicuro.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box">
-                            <div class="icon-box"><i class="icon icon-shield"></i></div>
-                            <div class="content">
-                                <p class="body-text fw-semibold">Affidabilita</p>
-                                <p class="body-text-3">Disponibilita e listini aggiornati.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="swiper-slide">
-                        <div class="tf-icon-box">
-                            <div class="icon-box"><i class="icon icon-accept"></i></div>
-                            <div class="content">
-                                <p class="body-text fw-semibold">Garanzia</p>
-                                <p class="body-text-3">Prodotti gestiti dal flusso negozio.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="sw-pagination-iconbox sw-dot-default justify-content-center"></div>
-            </div>
-        </div>
-    </section>
-
 </asp:Content>
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">

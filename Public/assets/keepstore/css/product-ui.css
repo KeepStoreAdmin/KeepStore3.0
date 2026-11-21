@@ -1840,7 +1840,6 @@ body.ks-pdp-buybar-on #goTop { bottom: calc(var(--ks-pdp-buybar-h, 72px) + 76px)
   .ks-review-form-wrap,
   .ks-product-list-section,
   .ks-brand-strip,
-  .ks-product-iconbox-section,
   #prd-usually,
   #prd-review:not(:has(.ks-review-item)),
   .box-total-btn,
