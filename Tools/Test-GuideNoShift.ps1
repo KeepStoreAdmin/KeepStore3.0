@@ -99,7 +99,8 @@ foreach ($w in $Widths) {
     Assert-Source ((-not $pre.next) -or ($pre.next.display -eq 'none') -or ($pre.next.h -eq 0)) ('PRE_STATE_NO_FALLBACK_BLOCK_IN_FLOW_' + $w)
 }
 # i valori della stable dopo il bind (il layout a regime non cambia)
-$expectPost = @{ 360 = 235; 390 = 235; 430 = 235; 768 = 225; 800 = 162; 1440 = 162 }
+# STYLE-TYPE-TITLES-1A: il titolo della guida segue la scala dei titoli di sezione (20 px sotto 992 px): 235 -> 230 e 225 -> 220
+$expectPost = @{ 360 = 230; 390 = 230; 430 = 230; 768 = 220; 800 = 162; 1440 = 162 }
 foreach ($w in $expectPost.Keys) { if ($results.ContainsKey($w)) { Assert-Source ([math]::Abs($results[$w].post.h - $expectPost[$w]) -le 2) ('BOUND_HEIGHT_UNCHANGED_FROM_STABLE_' + $w) } }
 
 # --- 2: spostamento cumulativo a freddo -----------------------------------------------------------------------------------------------------

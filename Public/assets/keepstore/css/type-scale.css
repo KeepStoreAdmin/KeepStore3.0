@@ -1,0 +1,71 @@
+/* KeepStore - un carattere e una scala dei titoli (STYLE-TYPE-TITLES-1A, linea di stile 3.1).
+   Titolo di pagina 22 px (26 px da 992 px), titolo di sezione 20 px (24 px), peso 700.
+   Titolo della scheda delle occasioni 16 px a ogni larghezza.
+   Le regole usano !important perche devono vincere su .fw-semibold (600 !important) e su regole di pagina con id.
+   Solo schermo: in stampa restano le misure dei fogli di pagina. L'interlinea cambia solo dove era fissa in px.
+   Eccezioni volute: titolo sopra l'immagine della HOME, titolo della HOME senza banner, "Esplora le categorie". */
+:root {
+  --ks-title-page-size: 22px;
+  --ks-title-section-size: 20px;
+  --ks-title-weight: 700;
+  --ks-card-title-large-size: 16px;
+}
+
+@media screen and (min-width: 992px) {
+  :root {
+    --ks-title-page-size: 26px;
+    --ks-title-section-size: 24px;
+  }
+}
+
+@media screen {
+  /* un solo carattere: classi di titolo del tema e carrello */
+  .h1, .h2, .h3, .h4, .h5, .h6,
+  .ks-cart-page {
+    font-family: var(--ks-font-ui, Arial, sans-serif);
+  }
+
+  /* titolo di pagina */
+  .ks-catalog-titlebar h1.ks-catalog-heading,
+  .ks-product-page h1.product-info-name,
+  h1.ks-login__title,
+  .ks-cart-page.ks-cart-modern .heading-section .heading,
+  .ks-account-dashboard .ks-dashboard-hero h3 {
+    font-family: var(--ks-font-ui, Arial, sans-serif);
+    font-size: var(--ks-title-page-size) !important;
+    font-weight: var(--ks-title-weight) !important;
+  }
+
+  /* titolo di sezione */
+  body.ks-page-home .ks-home-main h5:not(#ksHomeDirectCategoriesTitle),
+  h2#ksGuideTitle,
+  #ksRecentlyViewedBlock .flat-title h5,
+  .ks-pdp-section__title,
+  h2.ks-login__title,
+  .ks-cart-page.ks-cart-modern .ks-summary-card .title,
+  #ks-rv-title,
+  #ksAccountSoonTitle {
+    font-size: var(--ks-title-section-size) !important;
+    font-weight: var(--ks-title-weight) !important;
+  }
+
+  /* due titoli avevano una interlinea fissa pensata per il corpo vecchio (60 px e 25 px): proporzionale al corpo nuovo */
+  .ks-account-dashboard .ks-dashboard-hero h3,
+  body.ks-page-home .ks-home-main h5:not(#ksHomeDirectCategoriesTitle) {
+    line-height: 1.25 !important;
+  }
+
+  /* titolo della scheda grande (occasioni): stesso corpo a ogni larghezza */
+  body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
+    font-size: var(--ks-card-title-large-size) !important;
+  }
+}
+
+/* riserva di tre righe del titolo delle occasioni adeguata al corpo di 16 px (prima 76 px per 19 px) */
+@media screen and (min-width: 768px) {
+  body.ks-page-home .ks-home-deals .ks-deal-slot--title,
+  body.ks-page-home .ks-home-deals .ks-deal-slot--title h6,
+  body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
+    min-height: 64px !important;
+  }
+}

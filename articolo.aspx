@@ -328,7 +328,7 @@
                                             </div>
                                             <div class="box-name">
                                                 <p class="caption text-main-2 font-2 ks-card-category ks-pdp-card-category"><%# Server.HtmlEncode(Convert.ToString(Eval("CategoryName"))) %></p>
-                                                <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-main link-secondary fw-semibold ks-card-title ks-pdp-card-title">
+                                                <a href='<%# Eval("Url") %>' class="prd-name body-md-2 text-secondary link fw-semibold ks-card-title ks-pdp-card-title">
                                                     <%# If(Convert.ToBoolean(Eval("IsCurrent")), "Questo articolo: ", String.Empty) & Server.HtmlEncode(Convert.ToString(Eval("Nome"))) %>
                                                 </a>
                                                 <p class="price-text fw-medium"><%# Eval("PrezzoHtml") %></p>
