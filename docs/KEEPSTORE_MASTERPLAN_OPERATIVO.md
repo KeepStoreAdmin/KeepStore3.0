@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## PDP-LAYOUT-ORDER-1A — 21/11/2026 — SOURCE (scheda prodotto su telefono: sezioni lunghe a scomparsa)
+
+**Esito: A (SOURCE, non pubblicato). Livello M (sola presentazione). PR [#627](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/627), stable `d913e725`.** Richiesta del PO del 21/11/2026 («Sì, procedi»), punto 3.6 della linea di stile.
+
+**Prima.** Su telefono Descrizione, Informazioni prodotto e Recensioni erano sempre tutte aperte: per arrivare agli articoli simili e correlati si scorrevano migliaia di pixel di testo.
+
+**Ora (sotto 768 px).** Il titolo di ciascuna delle tre sezioni contiene un pulsante (`type="button"`, `aria-expanded`, `aria-controls`); il corpo chiuso ha `hidden`. La prima sezione è aperta, le altre chiuse: pagina più corta di almeno 1.500 px sull'articolo di prova. Una sezione si apre anche dall'indice della pagina, dalle stelle in alto, dal frammento dell'indirizzo e dopo l'invio di una recensione (l'esito viene portato in vista e riceve il fuoco). Tutta la testata risponde al tocco. Sopra 768 px il documento torna identico a quello del server; senza JavaScript e in stampa tutto resta aperto. File nuovi `ks-pdp-collapsible.js` e `ks-pdp-collapsible.css`, due righe in `articolo.aspx`; nessuna modifica a prezzi, carrello, dati.
+
+**Revisioni.** ChatGPT (xhigh): accolti il pulsante `type="button"` (la scheda sta dentro il modulo della pagina) e un'unica funzione di apertura per indice, stelle, frammento ed esito. Claude (Opus): accolti i file nuovi al posto di modifiche a `product-ui.css` e `ks-pdp-sections.js` (versioni fissate in sei test), l'esito portato in vista, il pulsante rimosso sopra 768 px; scartati come eccessivi `hidden="until-found"`, lo stato salvato fra pagine e le misure a 320 px col testo al 200%. Disaccordo sull'invio rifiutato chiuso leggendo il codice (non scrive nulla). Gate di certezza: PASS.
+
+**Prove.** `Tools/Test-PdpCollapsible.ps1` sul sito LAB: 390 px (stato iniziale, tocco e Invio, riga di aiuto, indice, stelle, frammento, caricamento con frammento, stampa, vero invio a campi vuoti), senza JavaScript, 1280 px, passaggio 390 → 1280 → 390; rosso prima e verde dopo, **12 mutazioni uccise**; schermata controllata a vista. Nove test collegati verdi (sezioni, strumenti, barra d'acquisto, fuoco, scala dei titoli, stati di prezzo, elenco compatto, SEO tecnica); precompile, segreti, CI verdi.
+
+**Limiti e residuo (NON AVVIATO).** Lettori di schermo e telefoni reali non provati; la voce corrente dell'indice può indicare la sezione successiva quando le righe chiuse sono vicine; articolo senza descrizione non trovato sul LAB (coperto dal codice: si apre la prima sezione presente). Prossimo: `PDP-OFFER-BOX-1A` (riquadro prezzo e acquisto). **Alla consegna futura:** `articolo.aspx`, `Public/assets/keepstore/js/ks-pdp-collapsible.js`, `Public/assets/keepstore/css/ks-pdp-collapsible.css`. CONSEGNA SERVER SOSPESA.
+
 ## HOME-MOBILE-HEADER-1A — 21/11/2026 — SOURCE (intestazione su telefono più bassa, senza togliere funzioni)
 
 **Esito: A (SOURCE, non pubblicato). Livello M (sola presentazione). PR [#625](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/625), stable `ed9a03b5`.** Richiesta del PO del 21/11/2026 («Sì, procedi») dopo il menu su telefono.
