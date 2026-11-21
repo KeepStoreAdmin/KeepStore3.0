@@ -248,6 +248,8 @@ try {
     $hosts = @{}; foreach ($l in $rows) { $mm = [regex]::Match([string]$l, '^ksrow\|(\d)\|([a-z0-9\.\-]+)$'); if ($mm.Success) { $hosts[[int]$mm.Groups[1].Value] = $mm.Groups[2].Value } }
     Check ($hosts.ContainsKey(1) -and $hosts.ContainsKey(2)) 'L01 host delle due aziende letti dal database LAB'
     $browser = Start-KsBrowser -LoopbackHosts @($hosts[1], $hosts[2]) -Width 1280 -Height 900
+    # il foglio dell'accento viene riscritto durante la prova: la copia in memoria del browser darebbe letture vecchie
+    try { $null = Invoke-KsCdp $browser 'Network.enable' @{}; $null = Invoke-KsCdp $browser 'Network.setCacheDisabled' @{ cacheDisabled = $true } } catch { }
     $pdp = @{}
     foreach ($c in @(1, 2)) {
         Open-KsUrl $browser ('https://' + $hosts[$c] + ':18843/articoli.aspx') 300; Start-Sleep -Milliseconds 1500
