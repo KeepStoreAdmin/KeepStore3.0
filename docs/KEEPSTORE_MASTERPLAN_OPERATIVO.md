@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## PAYMENT-LOGOS-1B — 22/11/2026 — SOURCE (scheda prodotto: tolta la fascia dei riquadri a testo fisso)
+
+**Esito: A (SOURCE, non pubblicato). Livello S. PR [#633](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/633), stable `64dcd329`.** «Sì, procedi» del PO del 22/11/2026.
+
+**Prima.** In fondo alla scheda cinque riquadri a testo fisso, uguali per ogni azienda e senza dato («Flusso ecommerce KeepStore sicuro», «Prodotti gestiti dal flusso negozio»…), in un carosello che a 390 px ne mostrava uno su cinque; la fascia, fuori dal pannello del prodotto, usciva anche su 404 e 421.
+
+**Ora.** Fascia tolta (`articolo.aspx`) e selettore morto tolto dalla stampa (`product-ui.css`). I pagamenti veri con i marchi restano nel piede, nella stessa schermata (riga dei metodi a 679 px su 844 con la fascia in cima; 621 su 761 su computer): un blocco nuovo in fondo sarebbe stato un doppione.
+
+**Revisioni.** ChatGPT (xhigh): accolti la fascia fuori dal pannello (404/421), il costo di migrare gli oracoli del piede se la selezione si sposta, la regola di stampa. Claude (Opus): accolti la misura del doppione, la scelta di togliere soltanto, la via «un solo calcolo pubblicato dal piede» per un eventuale blocco futuro; scartata per ora l'estrazione in App_Code. Gate: PASS per la rimozione; **domanda aperta al PO**: riga di marchi sotto «Acquista» sì o no.
+
+**Prove.** `Tools/Test-PdpNoPlaceholderClaims.ps1` (sorgente + sito LAB, due aziende, 390 e 1280 px, scheda e pagina 404): rosso prima, verde dopo, 4 mutazioni uccise. Verdi le prove della scheda (sezioni, riquadro d'acquisto, barra, strumenti, stelle) e `Test-PaymentLogos`; segreti, precompile, CI verdi.
+
+**Residuo (NON AVVIATO).** `Test-PaymentLogos` sul LAB presume due marchi con «carta» (debole per carta + PayPal) e a volte scade per tempo; il pulsante «torna su» sfiora i testi del piede a 390 px (da misurare). **Alla consegna futura:** `articolo.aspx`, `Public/assets/keepstore/css/product-ui.css`. CONSEGNA SERVER SOSPESA.
+
 ## PAYMENT-LOGOS-1A — 21/11/2026 — SOURCE (piede di pagina: marchi dei pagamenti solo per i metodi davvero nominati)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (dichiarazione dei pagamenti accettati, isolamento azienda). PR [#631](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/631), stable `fdd98858`.** Richiesta del PO del 19/11/2026 (loghi ufficiali) e «Sì, procedi» del 21/11/2026.
