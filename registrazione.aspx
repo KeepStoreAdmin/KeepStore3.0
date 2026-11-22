@@ -98,8 +98,8 @@
 
 
                         <div class="tf-section-title mb_30">
-                            <h1 class="title ks-page-title">Crea il tuo account</h1>
-                            <p class="text-muted mb-0">Compila i dati richiesti per completare la registrazione.</p>
+                            <h1 class="title ks-page-title"><%= If(pagetype = "Aggiornamento dati utente", "I tuoi dati", "Crea il tuo account") %></h1>
+                            <% If pagetype <> "Aggiornamento dati utente" Then %><p class="text-muted mb-0">Compila i dati richiesti per completare la registrazione.</p><% End If %>
                         </div>
 <h3 class="fw-semibold mb_20 ks-register-subtitle"><% =pagetype %>
     <asp:Label ID="lblSito" runat="server" ></asp:Label></h3>

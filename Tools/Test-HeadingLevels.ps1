@@ -8,6 +8,7 @@ param([switch]$SkipMutants, [string]$MutantFilter = '', [string]$Cases = '', [st
 # forzato sulla sola copia LAB. Wishlist: sul LAB la pagina e in errore (dati del LAB), si controlla il sorgente.
 # A11Y-HEADING-LEVELS-1B: stesso contratto per registrazione, recupero accesso, contatti, FAQ, privacy, condizioni di vendita, chi siamo,
 # confronto, traccia ordine e 404; il testo delle condizioni scritto dall'azienda non puo portare un secondo titolo principale.
+# REGISTRATION-TITLE-SIGNED-IN-1A: la pagina dei dati dice "I tuoi dati" a chi e collegato e "Crea il tuo account" (con la sua frase) a chi si registra.
 # Mutazioni sulla copia LAB, file rimessi alla fine. Sola lettura sul database. Solo ASCII.
 
 Set-StrictMode -Version Latest
@@ -43,6 +44,7 @@ var o={path:location.pathname.split('/').pop(),h1:h1.length,first:hs.length?hs[0
 if(h1.length){var e=h1[0],c=getComputedStyle(e),r=e.getBoundingClientRect();o.t=(e.textContent||'').replace(/\s+/g,' ').trim();o.seen=r.width>1&&r.height>1;o.size=parseFloat(c.fontSize);o.weight=c.fontWeight;o.lh=parseFloat(c.lineHeight);o.color=c.color;o.bg=c.backgroundColor;o.mb=parseFloat(c.marginBottom);o.mt=parseFloat(c.marginTop);o.align=c.textAlign;o.family=c.fontFamily;o.cut=e.scrollWidth>e.clientWidth+1;o.right=Math.round(r.right);o.left=Math.round(r.left);o.vw=window.innerWidth;
  o.native=e.tagName==='H1'&&(!e.hasAttribute('role')||e.getAttribute('role')==='heading')&&(!e.hasAttribute('aria-level')||e.getAttribute('aria-level')==='1');}
 var sub=document.querySelector('h3.ks-register-subtitle, .ks-register-card .tf-section-title + h3');o.sub=sub&&sub.getClientRects().length?parseFloat(getComputedStyle(sub).fontSize):0;
+var lead=[].slice.call(document.querySelectorAll('.ks-register-card .tf-section-title p'));o.leadNodes=lead.length;o.lead=lead.length&&lead[0].getClientRects().length?(lead[0].textContent||'').replace(/\s+/g,' ').trim():'';
 return JSON.stringify(o);})()
 '@
 function Open-Page($browser, [string]$rel) {
@@ -83,7 +85,7 @@ $caseTable = @(
     @{ Id = 'DATI'; User = $true; Rel = 'datiutente.aspx'; Path = 'datiutente.aspx'; Text = '^Gestione dati account$'; Big = 26; Small = 22; SmallBelow = 992; Weight = '700'; Lh = 1.25; Color = $ink; Mb = 8; Align = 'start' },
     @{ Id = 'PASSWORD'; User = $true; Rel = 'password.aspx'; Path = 'password.aspx'; Text = '^Cambia password$'; Big = 26; Small = 22; SmallBelow = 992; Weight = '700'; Lh = 1.25; Color = $ink; Mb = 12; Align = 'start' },
     @{ Id = 'DETTAGLI'; User = $true; Rel = 'my-account-edit.aspx'; Path = 'my-account-edit.aspx'; Text = '^Dettagli account$'; Big = 26; Small = 22; SmallBelow = 992; Weight = '700'; Lh = 1.25; Color = $ink; Mb = 0; Align = 'start' },
-    @{ Id = 'REGISTRAZIONEUTENTE'; User = $true; Rel = 'registrazione.aspx'; Path = 'registrazione.aspx'; Text = '^Crea il tuo account$'; Big = 26; Small = 22; SmallBelow = 992; Weight = '700'; Lh = 1.25; Color = $ink; Mb = 0; Align = 'start' }
+    @{ Id = 'REGISTRAZIONEUTENTE'; User = $true; Rel = 'registrazione.aspx'; Path = 'registrazione.aspx'; Text = '^I tuoi dati$'; Big = 26; Small = 22; SmallBelow = 992; Weight = '700'; Lh = 1.25; Color = $ink; Mb = 0; Align = 'start' }
 )
 function Test-One($c, $o, [int]$w, [string]$tag) {
     $bad = New-Object Collections.Generic.List[string]
@@ -124,6 +126,8 @@ function Invoke-Case($browser, $c, [int]$w) {
     if ($bad.Count -eq 0 -and ([string]$c.Id).StartsWith('REGISTRAZIONE')) {
         if ([double]$o.sub -le 0) { $bad.Add([string]$c.Id + ' sottotitolo NON PROVATO: non trovato') }
         elseif ([Math]::Abs([double]$o.sub - $sec) -gt 0.2) { $bad.Add([string]$c.Id + ' sottotitolo: corpo ' + [string]$o.sub + ' invece di ' + $sec + ' (il titolo e ' + [string]$o.size + ')') }
+        if ([bool]$c.User) { if ([int]$o.leadNodes -ne 0) { $bad.Add([string]$c.Id + ' frase della registrazione mostrata a chi aggiorna i propri dati') } }
+        elseif ([string]$o.lead -ne 'Compila i dati richiesti per completare la registrazione.') { $bad.Add([string]$c.Id + ' frase della registrazione assente o diversa: [' + [string]$o.lead + ']') }
     }
     if ($bad.Count -eq 0 -and [string]$c.Id -eq 'CONDIZIONI') {
         # il LAB non ha titoli nel testo dell'azienda: se ne inserisce uno nel contenitore e si legge la misura
@@ -252,7 +256,11 @@ try {
             @{ Id = 'M19_REGISTRATION_SUBTITLE_WITHOUT_RULE'; File = 'registrazione.aspx'; W = 1280; Case = 'REGISTRAZIONE'; Expect = '1280 REGISTRAZIONE sottotitolo'; Old = '<h3 class="fw-semibold mb_20 ks-register-subtitle">'; New = '<h3 class="fw-semibold mb_20">' },
             @{ Id = 'M20_COMPANY_H1_NOT_LOWERED'; File = 'condizioni-vendita.aspx.vb'; W = 0; Case = 'LEGALE'; Expect = 'LEGALE il testo dell''azienda conserva un titolo'; Old = 'value = Regex.Replace(value, "(?i)<(/?)h1\b", "<$1h2")'; New = '' },
             @{ Id = 'M21_COMPANY_ROLE_NOT_REMOVED'; File = 'condizioni-vendita.aspx.vb'; W = 0; Case = 'LEGALE'; Expect = 'LEGALE il testo dell''azienda conserva ruolo'; Old = 'value = Regex.Replace(value, "(?i)\s+(role|aria-level)\s*='; New = 'value = Regex.Replace(value, "(?i)\s+(role-off|aria-level-off)\s*=' },
-            @{ Id = 'M22_COMPANY_HEADING_WITHOUT_SCALE'; File = $css; W = 1280; Case = 'CONDIZIONI'; Expect = '1280 CONDIZIONI titolo del testo'; Old = "  article.tf-privacy h2,`n  article.tf-privacy h3 {`n    font-size: var(--ks-title-section-size)"; New = "  article.tf-privacy-off h2,`n  article.tf-privacy-off h3 {`n    font-size: var(--ks-title-section-size)" }
+            @{ Id = 'M22_COMPANY_HEADING_WITHOUT_SCALE'; File = $css; W = 1280; Case = 'CONDIZIONI'; Expect = '1280 CONDIZIONI titolo del testo'; Old = "  article.tf-privacy h2,`n  article.tf-privacy h3 {`n    font-size: var(--ks-title-section-size)"; New = "  article.tf-privacy-off h2,`n  article.tf-privacy-off h3 {`n    font-size: var(--ks-title-section-size)" },
+            @{ Id = 'M23_SIGNED_IN_TITLE_STILL_CREATE'; File = 'registrazione.aspx'; W = 390; Case = 'REGISTRAZIONEUTENTE'; Expect = '390 REGISTRAZIONEUTENTE testo'; Old = '<h1 class="title ks-page-title"><%= If(pagetype = "Aggiornamento dati utente", "I tuoi dati", "Crea il tuo account") %></h1>'; New = '<h1 class="title ks-page-title">Crea il tuo account</h1>' },
+            @{ Id = 'M24_VISITOR_TITLE_SAYS_YOUR_DATA'; File = 'registrazione.aspx'; W = 390; Case = 'REGISTRAZIONE'; Expect = '390 REGISTRAZIONE testo'; Old = '<h1 class="title ks-page-title"><%= If(pagetype = "Aggiornamento dati utente", "I tuoi dati", "Crea il tuo account") %></h1>'; New = '<h1 class="title ks-page-title">I tuoi dati</h1>' },
+            @{ Id = 'M25_LEAD_ALWAYS_SHOWN'; File = 'registrazione.aspx'; W = 390; Case = 'REGISTRAZIONEUTENTE'; Expect = '390 REGISTRAZIONEUTENTE frase'; Old = '<% If pagetype <> "Aggiornamento dati utente" Then %><p class="text-muted mb-0">'; New = '<% If True Then %><p class="text-muted mb-0">' },
+            @{ Id = 'M26_LEAD_NEVER_SHOWN'; File = 'registrazione.aspx'; W = 390; Case = 'REGISTRAZIONE'; Expect = '390 REGISTRAZIONE frase'; Old = '<% If pagetype <> "Aggiornamento dati utente" Then %><p class="text-muted mb-0">'; New = '<% If False Then %><p class="text-muted mb-0">' }
         )
         foreach ($mu in $mutants) {
             if ($MutantFilter -ne '' -and $mu.Id -notmatch $MutantFilter) { continue }
@@ -273,5 +281,5 @@ try {
     Sync-Site
     foreach ($f in $files) { if ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $SitePath $f))) -ne [Convert]::ToBase64String($repoBytes[$f])) { Write-Host ('  ATTENZIONE: file del LAB non ripristinato: ' + $f); $exit = 1 } }
 }
-if ($exit -eq 0) { Write-Host ('HEADING_LEVELS PASS' + $(if ($SkipMutants -or $Cases -ne '') { ' (senza mutazioni)' } elseif ($MutantFilter -ne '') { ' (mutazioni filtrate)' } else { ' (22 mutazioni uccise sul sito LAB)' })) } else { Write-Host 'HEADING_LEVELS FAIL' }
+if ($exit -eq 0) { Write-Host ('HEADING_LEVELS PASS' + $(if ($SkipMutants -or $Cases -ne '') { ' (senza mutazioni)' } elseif ($MutantFilter -ne '') { ' (mutazioni filtrate)' } else { ' (26 mutazioni uccise sul sito LAB)' })) } else { Write-Host 'HEADING_LEVELS FAIL' }
 exit $exit
