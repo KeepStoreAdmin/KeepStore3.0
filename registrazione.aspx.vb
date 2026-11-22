@@ -364,8 +364,8 @@ Partial Class registrazione
 		btnElimDest.enabled = false
 		btnModDest.enabled = false
 		Me.MaintainScrollPositionOnPostBack = True
-        'Setto il Timeout per la fase di registrazione, dò all'utente la possibilità di registrarsi con una sessione che dura 1200min
-        Session.Timeout = 10
+        ' SESSION-TIMEOUT-REGISTRATION-1A: questa pagina non cambia la durata della sessione (prima la portava a 10 minuti
+        ' per tutto il sito, anche per chi era collegato): vale la durata configurata.
 
         '--------------------[ I LISTINI AGEVOLATI NON DEVONO COMPARIRE SU WEBAFFARE ]-------------------------------
         'If (Session.Item("AziendaID") <> 2) Then
