@@ -168,7 +168,7 @@
                 <asp:Literal ID="litCartPriceRevalidation" runat="server" />
             </asp:Panel>
 
-            <asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false" CssClass="ks-alert ks-alert-danger mb-3" role="alert" aria-live="assertive" tabindex="-1">
+            <asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false" EnableViewState="false" CssClass="ks-alert ks-alert-danger mb-3" role="alert" aria-live="assertive" tabindex="-1">
                 <strong>Ordine non inviato.</strong>
                 <span class="d-block mt-1"><asp:Literal ID="litCheckoutSubmitError" runat="server" /></span>
                 <asp:ValidationSummary ID="vsCheckoutSubmit" runat="server" ValidationGroup="checkoutSubmit" CssClass="mt-2" HeaderText="Controlla prima di riprovare:" />

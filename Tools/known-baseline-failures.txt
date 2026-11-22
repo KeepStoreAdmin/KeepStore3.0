@@ -6,7 +6,7 @@ Test-HeaderCurrentScope # pin "solo il blocco ricerca della testata cambiato" (v
 Test-HeaderMenuMarkup # estrazione del markup della testata fallisce (verificato su ce0c5b26)
 Test-RegistrationFormContinuity # pin "registrazione.aspx.vb invariato" contro una baseline storica (verificato su ce0c5b26)
 Test-MobileCheckoutContinuity # pin "carrello.aspx.vb invariato" contro una baseline storica (verificato su ce0c5b26)
-Test-CheckoutCriticalNoticesVisibility # pin "solo spostamento, tutto il resto invariato" (verificato su ce0c5b26)
+Test-CheckoutCriticalNoticesVisibility # pin "solo spostamento, tutto il resto invariato" (verificato su ce0c5b26; dal 23/11/2026 anche il blocco di pnlCheckoutSubmitError differisce dalla base per EnableViewState="false", CHECKOUT-ERROR-PANEL-STICKY-1A)
 Test-WishlistHeaderOwnerKey # pin "solo i blocchi della lista desideri cambiati" (verificato su ce0c5b26)
 Test-LoginPostOriginGuard # pin a una baseline storica 743e4d4a (nota dalla memoria di lavoro)
 Test-CheckoutConsentRecovery # pin "code-behind byte content unchanged" contro una baseline storica (verificato sulla stable 0e84c52c)

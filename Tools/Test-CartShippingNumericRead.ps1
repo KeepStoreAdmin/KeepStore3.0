@@ -35,6 +35,7 @@ $it = [Globalization.CultureInfo]::GetCultureInfo('it-IT')
 $svcRel = 'App_Code\CheckoutDraftService.vb'
 $recRel = 'App_Code\CheckoutFailureRecoveryService.vb'
 $files = @('carrello.aspx.vb', 'carrello.aspx', $svcRel, $recRel)
+$markupRel = 'carrello.aspx'
 $repoBytes = @{}; foreach ($f in $files) { $repoBytes[$f] = [IO.File]::ReadAllBytes((Join-Path $root $f)) }
 $fail = New-Object Collections.Generic.List[string]
 
@@ -456,6 +457,7 @@ function Test-Case([string]$id, $browser) {
                     $c2 = Read-Confirm $browser
                     if (-not $c2.confirm) { throw 'PAGINA_NON_VALIDA: S2 dopo il blocco non c''e la conferma' }
                     if ($r.alert -eq '') { $bad.Add('S2 nessun messaggio dopo il blocco dell''invio') }
+                    elseif (([string]$r.alert).ToLower().IndexOf('le condizioni dell''ordine sono cambiate') -lt 0 -or ([string]$r.alert).ToLower().IndexOf('disponibile con questa spedizione') -ge 0) { $bad.Add('S2 messaggio inatteso dopo il blocco: [' + [string]$r.alert + ']') }
                     if ($c2.total -eq $c.total -or $c2.cod) { $bad.Add('S2 la conferma dopo il blocco mostra ancora totale ' + $c2.total + ' e contrassegno ' + $c2.cod) }
                     if ($c2.terms) { $bad.Add('S2 casella delle condizioni ancora spuntata dopo il blocco') }
                     if ($bad.Count -eq 0) {
@@ -659,6 +661,51 @@ function Test-Case([string]$id, $browser) {
             } finally { Reset-Browser }
             }
         }
+        'H1' {
+            # CHECKOUT-ERROR-PANEL-STICKY-1A: dopo un rifiuto alla creazione dell'ordine il cliente vede l'avviso sul passo "spedizione e
+            # pagamento"; quando corregge la scelta e torna alla conferma, l'avviso del tentativo precedente non deve piu comparire.
+            for ($attempt = 1; $attempt -le 2; $attempt++) {
+            try {
+                Reset-Browser
+                Set-Carrier 1.5 4.5 1.6 0 3.5; $null = Read-Step2 $script:browser
+                $o = Read-Options $script:browser
+                $alts = @($o.pays | Where-Object { -not $_.cod -and -not $_.disabled })
+                if ($alts.Count -lt 1) { throw 'PAGINA_NON_VALIDA: nessun pagamento normale disponibile' }
+                $o = Select-Option $script:browser 'gvPagamento' ([string]$payId)
+                if ([string]$o.tbP -ne [string]$payId) { if ($attempt -eq 1) { continue }; throw 'PAGINA_NON_VALIDA: contrassegno non selezionabile' }
+                Go-Confirm $script:browser 'conferma col contrassegno (H1)'
+                Set-Carrier 1.5 4.5 0 0 0
+                $alertJs = "(function(){var a=document.getElementById('pnlCheckoutSubmitError');return JSON.stringify({path:location.pathname.toLowerCase(),send:!!document.querySelector('#MainContent_btInviaOrdine'),review:!!document.querySelector('#MainContent_btnVaiConfermaOrdine'),alert:(a&&a.getClientRects().length)?a.textContent.replace(/\s+/g,' ').trim().toLowerCase():''});})()"
+                Install-OrderProbe
+                try { Open-KsUrl $script:browser ($base + '/ordine.aspx?ksdispatch=1') 300; Start-Sleep -Milliseconds 2500 } finally { Restore-OrderPage }
+                $a0 = ConvertFrom-Json ([string](Invoke-KsJs $script:browser $alertJs))
+                if ([string]$a0.path -notmatch 'carrello\.aspx' -or ([string]$a0.alert).IndexOf('disponibile con questa spedizione') -lt 0) { if ($attempt -eq 1) { continue }; throw 'PAGINA_NON_VALIDA: H1 il rifiuto non ha mostrato il suo avviso' }
+                # il cliente corregge: sceglie un pagamento normale che NON e gia spuntato (invio vero della pagina)
+                $now = Read-Options $script:browser
+                $other = @($now.pays | Where-Object { -not $_.cod -and -not $_.disabled -and -not $_.checked })
+                if ($other.Count -lt 1) { throw 'PAGINA_NON_VALIDA: H1 nessun pagamento normale diverso da quello gia scelto' }
+                $want = [string]$other[0].v
+                if ([string]$now.tbP -eq $want) { throw 'PAGINA_NON_VALIDA: H1 il pagamento da scegliere risulta gia scelto' }
+                $o = Select-Option $script:browser 'gvPagamento' $want
+                if ([string]$o.tbP -ne $want) { throw 'PAGINA_NON_VALIDA: H1 pagamento alternativo non selezionabile' }
+                $a1 = ConvertFrom-Json ([string](Invoke-KsJs $script:browser $alertJs))
+                Go-Confirm $script:browser 'conferma dopo la correzione (H1)'
+                $a2 = ConvertFrom-Json ([string](Invoke-KsJs $script:browser $alertJs))
+                Write-Host ('       H1 visto: dopo la correzione avviso=[' + ([string]$a1.alert).Substring(0, [Math]::Min(50, ([string]$a1.alert).Length)) + '] sulla conferma avviso=[' + ([string]$a2.alert).Substring(0, [Math]::Min(50, ([string]$a2.alert).Length)) + ']')
+                if ([string]$a1.alert -ne '') { $bad.Add('dopo che il cliente ha cambiato pagamento resta l''avviso del tentativo precedente: [' + [string]$a1.alert + ']') }
+                if ([string]$a2.alert -ne '') { $bad.Add('la conferma corretta mostra ancora l''avviso del tentativo precedente: [' + [string]$a2.alert + ']') }
+                if ($bad.Count -eq 0) {
+                    Install-OrderProbe
+                    try {
+                        $r = Send-Order $script:browser
+                        if (-not $r.sent) { $bad.Add('l''invio dalla conferma corretta viene fermato: ' + [string]$r.alert) }
+                        elseif ($r.payment -ne $want) { $bad.Add('l''ordine partirebbe col pagamento ' + [string]$r.payment + ' invece di ' + $want) }
+                    } finally { Restore-OrderPage }
+                }
+                break
+            } finally { Reset-Browser }
+            }
+        }
         'C5' {   # valori di oggi a due decimali: stessi importi di prima
             Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
             $ei = Money ([Math]::Max($script:imp * 1.5D / 100D, 4.5D)); $ec = Money ([Math]::Max($script:baseAmount * 1.6D / 100D, 3.5D))
@@ -715,7 +762,7 @@ try {
     if ($e2e.Count -eq 0) {
         # V1 per primo: dopo un passaggio dalla conferma la bozza valida rimette il vettore di prima a ogni richiesta (difetto noto, in coda
         # come CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A) e la parte finale di V1 non potrebbe scegliere un altro vettore.
-        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3', 'F1', 'F2', 'F2B', 'F3', 'G1', 'G2', 'G2N', 'G2M', 'G3', 'G3P', 'G4', 'G5')
+        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3', 'F1', 'F2', 'F2B', 'F3', 'G1', 'G2', 'G2N', 'G2M', 'G3', 'G3P', 'G4', 'G5', 'H1')
         if ($Cases -ne '') { $caseList = @($Cases.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }); $SkipMutants = ($MutantFilter -eq '') }   # esecuzione parziale (messa a punto, o mutazioni in piu passate con -MutantFilter)
         foreach ($c in $caseList) {
             $bad = @(Test-Case $c $script:browser)
@@ -765,7 +812,10 @@ try {
             @{ Id = 'M36_SERVICE_GENERIC_REASON'; Case = 'G2'; File = $svcRel; Old = 'failureReason = CheckoutFailureReason.CashOnDeliveryNotOffered'; New = 'failureReason = CheckoutFailureReason.PaymentMethodNotAllowed' },
             @{ Id = 'M37_MESSAGE_BRANCH_REMOVED'; Case = 'G5'; Expect = 'dopo il rifiuto manca il messaggio del contrassegno'; File = $recRel; Old = 'Case CheckoutFailureReason.CashOnDeliveryNotOffered'; New = 'Case CType(99, CheckoutFailureReason)' },
             @{ Id = 'M38_RETURN_TO_CONFIRM_STEP'; Case = 'G5'; Expect = 'dopo il rifiuto il cliente non e sul passo spedizione e pagamento'; Old = "                 CheckoutFailureReason.CashOnDeliveryNotOffered,`r`n"; New = '' },
-            @{ Id = 'M39_SEALING_NOTICE_NOT_AN_ERROR'; Case = 'G1'; Expect = 'il messaggio del contrassegno non e mostrato come errore'; Old = 'draftFailure = CheckoutFailureReason.CashOnDeliveryNotOffered)'; New = 'False)' }
+            @{ Id = 'M39_SEALING_NOTICE_NOT_AN_ERROR'; Case = 'G1'; Expect = 'il messaggio del contrassegno non e mostrato come errore'; Old = 'draftFailure = CheckoutFailureReason.CashOnDeliveryNotOffered)'; New = 'False)' },
+            @{ Id = 'M40_NOTICE_KEPT_ACROSS_POSTBACKS'; Case = 'H1'; Expect = 'dopo che il cliente ha cambiato pagamento resta'; File = $markupRel; Old = '<asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false" EnableViewState="false"'; New = '<asp:Panel ID="pnlCheckoutSubmitError" runat="server" ClientIDMode="Static" Visible="false"' },
+            @{ Id = 'M41_NOTICE_NOT_SHOWN_ON_POSTBACK'; Case = 'S2'; Expect = 'S2 nessun messaggio'; Old = 'If pnlCheckoutSubmitError IsNot Nothing Then pnlCheckoutSubmitError.Visible = True'; New = 'If pnlCheckoutSubmitError IsNot Nothing Then pnlCheckoutSubmitError.Visible = Not IsPostBack' },
+            @{ Id = 'M42_NOTICE_TEXT_NOT_WRITTEN'; Case = 'S2'; Expect = 'S2 messaggio inatteso'; Old = 'If litCheckoutSubmitError IsNot Nothing Then litCheckoutSubmitError.Text = HttpUtility.HtmlEncode(safeMessage)'; New = 'If litCheckoutSubmitError IsNot Nothing Then litCheckoutSubmitError.Text = String.Empty' }
         )
         foreach ($m in $mutants) {
             if ($MutantFilter -ne '' -and $m.Id -notmatch $MutantFilter) { continue }
