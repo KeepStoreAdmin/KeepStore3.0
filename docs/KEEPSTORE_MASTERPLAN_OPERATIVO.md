@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## A11Y-HEADING-LEVELS-1A — 22/11/2026 — SOURCE (carrello e area cliente con un titolo principale h1)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#641](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/641), stable `7bfea777`.** «Sì, procedi» del PO del 22/11/2026. Nessun dato commerciale toccato; nel carrello cambia solo la marcatura del titolo.
+
+**Fatti e causa.** Sul LAB carrello, carrello vuoto, Dashboard, «I miei ordini», dati utente, password, dettagli account e wishlist non avevano un `h1` (titoli `h3`/`h4`); con il carrello non consultabile la pagina restava senza titolo.
+
+**Ora.** Un solo `h1` nativo per pagina e per stato, esposto alle tecnologie assistive. Carrello, carrello vuoto e Dashboard conservano l'aspetto; le altre cinque pagine prendono la scala del titolo di pagina della linea di stile (26 / 22 px, peso 700; prima 40 o 30 px su schermo grande, 25 o 24 px su telefono). Colore fissato contro le regole `h1` dei fogli dei clienti, misura propria in stampa, nessuna modifica al code-behind.
+
+**Revisioni.** ChatGPT (xhigh): accolti la smentita della classe `.h3` (su telefono non riproduce l'aspetto), lo stato del carrello senza titolo, l'oracolo con esposizione alle tecnologie assistive. Claude (Opus): accolti i due `h1` con lettura fallita e righe in pagina, il colore dai fogli dei clienti, la stampa, i selettori nei gruppi esistenti; scartato come decisione del PO il passaggio alla scala (e la linea di stile gia decisa, `KEEPSTORE_STYLE_DIRECTION_2026_11_19.md` r.36). Gate: PASS.
+
+**Prove.** `Tools/Test-HeadingLevels.ps1` (LAB, 1280 / 390 / 320 px, stampa emulata, stato non consultabile forzato sulla copia LAB): rossa prima, verde dopo, 12 mutazioni uccise. Verdi `Test-TypeScale`, `Test-AccountOrders1B`, prove di carrello, checkout e area cliente; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Wishlist: sul LAB la pagina e in errore (dati del LAB), controllata nel sorgente e misurata sul sito Smoke. Non provati: testo al 200%, PDF reale, lettori di schermo. `A11Y-HEADING-LEVELS-1B`: registrazione, recupero accesso, contatti, FAQ, privacy, condizioni, chi siamo, confronto, traccia ordine, 404 (nessun `h1`), `promo.aspx` (tre `h1`), HOME (`h1` = nome del primo articolo in evidenza); livelli sotto l'`h1`. **Alla consegna futura (insieme):** `Page.master`, `carrello.aspx`, `myaccount.aspx`, `documenti.aspx`, `datiutente.aspx`, `password.aspx`, `my-account-edit.aspx`, `wishlist.aspx`, `Public/assets/keepstore/css/type-scale.css`. CONSEGNA SERVER SOSPESA.
+
 ## HOME-MOBILE-MENU-1B — 22/11/2026 — SOURCE (menu del telefono: voce senza sottolivelli come collegamento diretto, posizione corrente segnata)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#639](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/639), stable `a0013b4b`.** «Sì, procedi» del PO del 22/11/2026. Nessun dato commerciale toccato.
