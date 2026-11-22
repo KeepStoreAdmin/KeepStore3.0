@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## REGISTRATION-TITLE-SIGNED-IN-1A — 22/11/2026 — SOURCE (la pagina dei dati dice «I tuoi dati» a chi e collegato)
+
+**Esito: A (SOURCE, non pubblicato). Livello S. PR [#645](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/645), stable `c2eeebef`.** Decisione del PO del 22/11/2026: «Sì, cambialo» (titolo «I tuoi dati» per chi e gia collegato).
+
+**Fatti e causa.** `registrazione.aspx` serve sia a registrarsi sia ad aggiornare i dati; titolo e frase erano testo fisso: chi era collegato leggeva «Crea il tuo account» e «Compila i dati richiesti per completare la registrazione.».
+
+**Ora.** Chi e collegato legge «I tuoi dati» e non vede la frase sulla registrazione; chi si registra vede tutto come prima. Il titolo usa lo stesso dato del sottotitolo (`pagetype`); nessuna modifica al code-behind.
+
+**Revisioni.** ChatGPT (xhigh) e Claude (Opus): nessun difetto bloccante; accolti l'oracolo della frase nei due stati, quattro mutazioni, un solo `h1` nel sorgente; scartata la costante condivisa nel code-behind (allarga il manifest). Gate: PASS.
+
+**Prove.** `Tools/Test-HeadingLevels.ps1` (LAB, 1280 / 390 / 320 px): rossa prima, verde dopo, 4 mutazioni nuove uccise (26 in tutto); segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Non provati: invio del modulo, sessione scaduta durante un invio, `Coupon.master` (STANDBY). Per il PO: questa pagina imposta la durata della sessione a 10 minuti per chi la apre (`registrazione.aspx.vb` r.368); il percorso in alto dice «Accedi / Registrazione» anche a chi e collegato; la scheda del browser dice «Registrazione - Aggiornamento dati utente». **Alla consegna futura:** `registrazione.aspx` (insieme ai file di `A11Y-HEADING-LEVELS-1B`). CONSEGNA SERVER SOSPESA.
+
 ## A11Y-HEADING-LEVELS-1B — 22/11/2026 — SOURCE (dieci pagine informative e di accesso con un titolo principale h1)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#643](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/643), stable `07eefbd0`.** «Sì, procedi» del PO del 22/11/2026. Nessun dato commerciale toccato.
