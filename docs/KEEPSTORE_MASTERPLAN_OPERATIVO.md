@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## A11Y-HEADING-LEVELS-1B — 22/11/2026 — SOURCE (dieci pagine informative e di accesso con un titolo principale h1)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#643](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/643), stable `07eefbd0`.** «Sì, procedi» del PO del 22/11/2026. Nessun dato commerciale toccato.
+
+**Fatti e causa.** Sul LAB registrazione, recupero accesso, contatti, FAQ, privacy, condizioni di vendita, chi siamo, confronto, traccia ordine e 404 non avevano un `h1` (titoli `h2` / `h5`; nella 404 un testo da 16 px).
+
+**Ora.** Un solo `h1` nativo per pagina, nella scala del titolo di pagina (26 / 22 px, peso 700; prima sette pagine a 40 / 30 px, due a 22 px, la 404 a 16 px). Registrazione: il sottotitolo scende alla misura di sezione. Condizioni di vendita: i titoli del testo scritto dall'azienda scendono di un livello e prendono la misura di sezione. **Difetto trovato e corretto:** `SanitizeLegalHtml` cancellava le chiusure dei tag ammessi (`</strong>`, `</h2>`).
+
+**Revisioni.** ChatGPT (xhigh): accolti l'`h1` nel testo dell'azienda, il sottotitolo di registrazione piu grande del titolo, l'oracolo (identita della sessione, ruolo e livello, opacita). Claude (Opus): accolti `role` / `aria-level` nel testo dell'azienda, i selettori nei gruppi esistenti, i titoli dell'azienda fuori scala, gli `h1` contati in tutto il documento; scartata la diramazione `Coupon.master` (STANDBY). Gate: PASS.
+
+**Prove.** `Tools/Test-HeadingLevels.ps1` (LAB, 1280 / 390 / 320 px, stampa, funzione delle condizioni compilata in memoria): rossa prima, verde dopo, 22 mutazioni uccise. Verdi `Test-TypeScale` (M05, M12), contatti, piede, SEO tecnica, accesso, palette, focus; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Non provati: testo al 200%, lettori di schermo, regole `h1` dei fogli dei clienti oltre colore e sfondo. Per il PO: titolo «Crea il tuo account» mostrato anche a chi e collegato; un indirizzo inesistente rimanda a `FileNotFound.htm` che non esiste e `404.aspx` risponde 200; percorso «Home / Accedi / Registrazione» impilato in verticale. In coda: HOME (`h1` = primo articolo in evidenza), `promo.aspx` (tre `h1`). **Alla consegna futura (insieme):** `Page.master`, `registrazione.aspx`, `remind.aspx`, `Contattaci.aspx`, `faq.aspx`, `privacy.aspx`, `condizioni-vendita.aspx(.vb)`, `about.aspx`, `compare.aspx`, `track-your-order.aspx`, `404.aspx`, `Public/assets/keepstore/css/type-scale.css`. CONSEGNA SERVER SOSPESA.
+
 ## A11Y-HEADING-LEVELS-1A — 22/11/2026 — SOURCE (carrello e area cliente con un titolo principale h1)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#641](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/641), stable `7bfea777`.** «Sì, procedi» del PO del 22/11/2026. Nessun dato commerciale toccato; nel carrello cambia solo la marcatura del titolo.
