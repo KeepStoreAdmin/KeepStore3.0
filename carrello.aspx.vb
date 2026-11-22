@@ -3849,10 +3849,6 @@ End Sub
 
         rb = TryCast(gvPagamento.Rows(i).FindControl("rbPagamento"), Control)
 
-        If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) Then
-            firstSelectableIndex = i
-        End If
-
         lblContrassegno = TryCast(gvPagamento.Rows(i).FindControl("lblContrassegno"), Label)
 
         If lblContrassegno IsNot Nothing AndAlso Val(lblContrassegno.Text) = 1 Then
@@ -3887,6 +3883,12 @@ End Sub
 
             Minimo = 0
 
+        End If
+
+        ' CHECKOUT-PAYMENT-FALLBACK-ORDER-1A: il candidato della scelta automatica si valuta sullo stato FINALE della riga,
+        ' cioe dopo l'eventuale disattivazione del contrassegno (prima si valutava lo stato d'ingresso).
+        If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) Then
+            firstSelectableIndex = i
         End If
 
         totPagamento = (totBase * (Percentuale / 100)) + Fisso
@@ -3932,6 +3934,15 @@ End Sub
         Else
             Me.lblPagamento.Text = FormatCurrencyIt(0D)
         End If
+
+    ElseIf sel = False AndAlso gvPagamento.Rows.Count > 0 Then
+
+        ' Nessuna delle righe mostrate e disponibile: nessun pagamento scelto. Prima restavano l'id e il costo vecchi e
+        ' l'ordine poteva partire con un pagamento che il vettore non offre. Il controllo prima della conferma
+        ' ("Seleziona un metodo di pagamento") e quello autorevole (id non valido) fermano conferma e invio.
+        Me.tbPagamenti.Text = String.Empty
+        Me.tbShopIdGestPay.Text = String.Empty
+        Me.lblPagamento.Text = FormatCurrencyIt(0D)
 
     End If
 

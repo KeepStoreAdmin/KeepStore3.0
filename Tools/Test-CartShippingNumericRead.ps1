@@ -16,6 +16,9 @@ param([switch]$SkipMutants, [string]$Cases = '', [string]$MutantFilter = '', [st
 # se non cambia nulla (ritorno con Modifica, ricaricamento della pagina) restano le scelte sigillate nella bozza.
 # CHECKOUT-SEND-RESEAL-DIVERGENCE-1A (casi S1-S3): un ordine non parte con condizioni diverse da quelle della conferma che il cliente
 # ha davanti; se qualcosa e cambiato si mostra la conferma aggiornata e si chiede un nuovo invio. Nessun ordine viene creato dalla prova.
+# CHECKOUT-PAYMENT-FALLBACK-ORDER-1A (casi F1-F3): quando il pagamento scelto non e piu disponibile, la scelta automatica cade sul primo
+# pagamento DISPONIBILE, non sul contrassegno appena disattivato, nemmeno se e la prima riga dell'elenco; se non ne resta nessuno
+# non c'e nessun pagamento scelto e l'ordine non puo partire; una scelta valida del cliente resta quella.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -448,6 +451,95 @@ function Test-Case([string]$id, $browser) {
                 }
             } finally { Restore-OrderPage; Reset-Browser }
         }
+        { $_ -in @('F1', 'F2', 'F2B', 'F3') } {
+            # F1: contrassegno PRIMA riga, scelto, poi non piu disponibile col vettore (percentuale 0 = ritiro), altre righe disponibili:
+            #     la conferma mostra il primo pagamento disponibile e l'ordine parte con quello.
+            # F2: contrassegno UNICO pagamento, poi non piu disponibile: non si arriva alla conferma e nessun ordine puo partire.
+            # F2B: come F2, ma il vettore di ritiro ha una spesa fissa di contrassegno maggiore di zero.
+            # F3: contrassegno prima riga e disponibile: senza scelta e senza pagamento predefinito la scelta automatica e la prima riga;
+            #     la scelta del cliente su un'altra riga viene conservata fino all'invio.
+            # L'ordine dei pagamenti (e in F2 l'elenco) viene cambiato sul LAB per la durata del caso e rimesso. Nessun ordine creato.
+            $ordOrig = Get-Scalar "SELECT IFNULL(Ordinamento,'NULL') AS ksval FROM pagamentitipo WHERE id=$payId;"
+            $ordMin = Get-Scalar "SELECT COALESCE(MIN(Ordinamento),0)-1 AS ksval FROM pagamentitipo WHERE AziendeID=$script:company AND Abilitato=1;"
+            if ($ordOrig -notmatch '^(-?\d+|NULL)$' -or $ordMin -notmatch '^-?\d+$') { throw 'PAGINA_NON_VALIDA: ordinamento dei pagamenti non leggibile' }
+            $others = ''
+            if ($id -like 'F2*') {
+                $others = Get-Scalar "SELECT COALESCE(GROUP_CONCAT(id ORDER BY id),'') AS ksval FROM pagamentitipo WHERE AziendeID=$script:company AND Abilitato=1 AND id<>$payId;"
+                if ($others -notmatch '^-?\d+(,-?\d+)*$') { throw 'PAGINA_NON_VALIDA: nessun altro pagamento da disattivare' }
+            }
+            $seen = ''
+            try {
+                $null = Invoke-Sql "UPDATE pagamentitipo SET Ordinamento=$ordMin WHERE id=$payId;" -Write
+                if ($others -ne '') { $null = Invoke-Sql "UPDATE pagamentitipo SET Abilitato=0 WHERE AziendeID=$script:company AND id IN ($others);" -Write }
+                Reset-Browser
+                Set-Carrier 1.5 4.5 1.6 0 3.5; $null = Read-Step2 $script:browser
+                $o = Read-Options $script:browser
+                $pays = @($o.pays)
+                if ($pays.Count -lt 1 -or -not [bool]$pays[0].cod -or [bool]$pays[0].disabled) { throw 'PAGINA_NON_VALIDA: il contrassegno non e la prima riga disponibile dei pagamenti' }
+                $alts = @($pays | Where-Object { -not $_.cod -and -not $_.disabled })
+                if ($id -like 'F2*') { if ($pays.Count -ne 1) { throw ('PAGINA_NON_VALIDA: F2 attende il solo contrassegno, righe ' + $pays.Count) } }
+                elseif ($alts.Count -lt 2) { throw ('PAGINA_NON_VALIDA: servono almeno due pagamenti oltre al contrassegno, trovati ' + $alts.Count) }
+                $want = if ($id -eq 'F3') { [string]$alts[1].v } elseif ($id -eq 'F1') { [string]$alts[0].v } else { '' }
+                $wantText = if ($want -ne '') { Get-Scalar "SELECT LOWER(TRIM(Descrizione)) AS ksval FROM pagamentitipo WHERE id=$want;" } else { '' }
+                if ($id -eq 'F3') {
+                    # scelta automatica iniziale: una sola riga disponibile spuntata, uguale al pagamento scelto; senza predefinito e la prima riga
+                    $first = @($pays | Where-Object { $_.checked -and -not $_.disabled })
+                    if ($first.Count -ne 1 -or [string]$first[0].v -ne [string]$o.tbP) { $bad.Add('scelta automatica iniziale incoerente (' + (Format-Options $o) + ')') }
+                    elseif ((Get-Scalar "SELECT COUNT(*) AS ksval FROM pagamentitipo WHERE AziendeID=$script:company AND Abilitato=1 AND COALESCE(Predefinito,0)=1;") -eq '0' -and [string]$o.tbP -ne [string]$payId) { $bad.Add('senza pagamento predefinito la scelta automatica non e la prima riga disponibile (' + [string]$o.tbP + ')') }
+                    $o = Select-Option $script:browser 'gvPagamento' $want
+                    if ([string]$o.tbP -ne $want) { $bad.Add('la scelta del cliente non viene conservata: pagamento scelto [' + [string]$o.tbP + '] invece di ' + $want) }
+                } else {
+                    $o = Select-Option $script:browser 'gvPagamento' ([string]$payId)
+                    if ([string]$o.tbP -ne [string]$payId) { throw 'PAGINA_NON_VALIDA: contrassegno non selezionabile' }
+                    # il contrassegno smette di essere disponibile DOPO che la pagina e stata mostrata (percentuale 0 = ritiro)
+                    if ($id -eq 'F2B') { Set-Carrier $null $null 0 2 0 } else { Set-Carrier $null $null $null $null $null }
+                }
+                Start-Sleep -Milliseconds 1500
+                Invoke-KsClick $script:browser '#MainContent_btnVaiConfermaOrdine'; Start-Sleep -Milliseconds 3500
+                $cf = Read-Confirm $script:browser
+                if ($cf.path -notmatch 'carrello\.aspx') { throw ('PAGINA_NON_VALIDA: dopo il clic pagina inattesa ' + $cf.path) }
+                $body = [string](Invoke-KsJs $script:browser "document.body.innerText.replace(/\s+/g,' ').toLowerCase()")
+                $seen = 'conferma=' + [string]$cf.confirm + ' contrassegno=' + [string]$cf.cod + ' totale=' + [string]$cf.total
+                if ($id -like 'F2*') {
+                    if ($cf.confirm) {
+                        $bad.Add('si arriva alla conferma senza un pagamento disponibile')
+                        Install-OrderProbe
+                        try { $r = Send-Order $script:browser; $seen += ' invio=' + [string]$r.sent + ' pagamento=' + [string]$r.payment; if ($r.sent) { $bad.Add('l''ordine partirebbe col pagamento ' + [string]$r.payment + ' (contrassegno ' + [string]$payId + ') che il vettore non offre') } } finally { Restore-OrderPage }
+                    } else {
+                        $o2 = Read-Options $script:browser
+                        $seen += ' pagamento scelto=[' + [string]$o2.tbP + ']'
+                        if ([string]$o2.tbP -ne '') { $bad.Add('senza pagamenti disponibili resta scelto il pagamento ' + [string]$o2.tbP) }
+                        if ($body.IndexOf('seleziona un metodo di pagamento') -lt 0) { $bad.Add('manca l''invito a scegliere un metodo di pagamento') }
+                        if (@($o2.pays | Where-Object { $_.checked }).Count -ne 0) { $bad.Add('una riga non disponibile resta spuntata') }
+                    }
+                } else {
+                    if (-not $cf.confirm) { $bad.Add('la conferma non viene raggiunta') }
+                    else {
+                        if ($cf.cod -and $id -eq 'F1') { $bad.Add('la conferma mostra il contrassegno, che non e piu disponibile') }
+                        $shown = [string](Invoke-KsJs $script:browser "(function(){var e=document.querySelector('[id`$=lblConfirmPaymentMethod]');return e?e.textContent.replace(/\s+/g,' ').trim().toLowerCase():'';})()")
+                        $seen += ' pagamento mostrato=[' + $shown + ']'
+                        if ($wantText -eq '' -or $shown.IndexOf($wantText) -lt 0 -or $shown.IndexOf('non disponibile') -ge 0) { $bad.Add('la conferma non mostra il pagamento atteso [' + $wantText + ']: [' + $shown + ']') }
+                        Install-OrderProbe
+                        try {
+                            $r = Send-Order $script:browser
+                            $seen += ' invio=' + [string]$r.sent + ' pagamento=' + [string]$r.payment + ' totale=' + [string]$r.total + ' atteso=' + $want
+                            if (-not $r.sent) { $bad.Add('l''invio dalla conferma mostrata viene fermato: ' + [string]$r.alert) }
+                            else {
+                                if ($r.payment -ne $want) { $bad.Add('l''ordine partirebbe col pagamento ' + [string]$r.payment + ' invece di ' + $want) }
+                                if ($r.total -ne $cf.total) { $bad.Add('l''ordine partirebbe con totale ' + $r.total + ', la conferma mostra ' + $cf.total) }
+                            }
+                        } finally { Restore-OrderPage }
+                    }
+                }
+                Write-Host ('       ' + $id + ' visto: ' + $seen)
+            } finally {
+                $null = Invoke-Sql "UPDATE pagamentitipo SET Ordinamento=$ordOrig WHERE id=$payId;" -Write
+                if ($others -ne '') { $null = Invoke-Sql "UPDATE pagamentitipo SET Abilitato=1 WHERE AziendeID=$script:company AND id IN ($others);" -Write }
+                if ((Get-Scalar "SELECT IFNULL(Ordinamento,'NULL') AS ksval FROM pagamentitipo WHERE id=$payId;") -ne $ordOrig) { Write-Host '  ATTENZIONE: ordinamento del pagamento non ripristinato sul LAB' }
+                if ($others -ne '' -and (Get-Scalar "SELECT COALESCE(GROUP_CONCAT(id ORDER BY id),'') AS ksval FROM pagamentitipo WHERE AziendeID=$script:company AND Abilitato=1 AND id<>$payId;") -ne $others) { Write-Host '  ATTENZIONE: pagamenti non riabilitati sul LAB' }
+                Reset-Browser
+            }
+        }
         'C5' {   # valori di oggi a due decimali: stessi importi di prima
             Set-Carrier 1.5 4.5 1.6 0 3.5; $s = Read-Step2 $browser
             $ei = Money ([Math]::Max($script:imp * 1.5D / 100D, 4.5D)); $ec = Money ([Math]::Max($script:baseAmount * 1.6D / 100D, 3.5D))
@@ -503,7 +595,7 @@ try {
     if ($e2e.Count -eq 0) {
         # V1 per primo: dopo un passaggio dalla conferma la bozza valida rimette il vettore di prima a ogni richiesta (difetto noto, in coda
         # come CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A) e la parte finale di V1 non potrebbe scegliere un altro vettore.
-        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3')
+        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3', 'F1', 'F2', 'F2B', 'F3')
         if ($Cases -ne '') { $caseList = @($Cases.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }); $SkipMutants = ($MutantFilter -eq '') }   # esecuzione parziale (messa a punto, o mutazioni in piu passate con -MutantFilter)
         foreach ($c in $caseList) {
             $bad = @(Test-Case $c $script:browser)
@@ -537,7 +629,12 @@ try {
             @{ Id = 'M20_PAYMENT_ALWAYS_RESTORED'; Case = 'D1'; Expect = 'D1 pagamento scelto dal cliente'; Old = 'If Not IsCheckoutOptionGroupPosted("pagamento") Then'; New = 'If True Then' },
             @{ Id = 'M21_SEND_WITHOUT_RECONFIRM'; Case = 'S2'; Expect = 'S2 ordine inviato senza nuova conferma'; Old = 'If Not shownIsCurrent OrElse Not HasSameCheckoutConditions(shownDraft, draft) Then'; New = 'If False Then' },
             @{ Id = 'M22_SEND_ALWAYS_BLOCKED'; Case = 'S1'; Expect = 'S1 invio normale fermato'; Old = 'If Not shownIsCurrent OrElse Not HasSameCheckoutConditions(shownDraft, draft) Then'; New = 'If True Then' },
-            @{ Id = 'M23_SHOWN_PAGE_NOT_BOUND'; Case = 'S3'; Expect = 'S3 ordine inviato dalla conferma superata'; Old = 'String.Equals(shownDraft.Fingerprint, shownKey, StringComparison.Ordinal)'; New = 'True' }
+            @{ Id = 'M23_SHOWN_PAGE_NOT_BOUND'; Case = 'S3'; Expect = 'S3 ordine inviato dalla conferma superata'; Old = 'String.Equals(shownDraft.Fingerprint, shownKey, StringComparison.Ordinal)'; New = 'True' },
+            @{ Id = 'M24_COD_ALWAYS_CANDIDATE'; Case = 'F1'; Old = 'If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) Then'; New = 'If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso (RbGetEnabled(rb) OrElse (lblContrassegno IsNot Nothing AndAlso Val(lblContrassegno.Text) = 1)) Then' },
+            @{ Id = 'M25_LAST_CANDIDATE_WINS'; Case = 'F1'; Old = 'If firstSelectableIndex = -1 AndAlso rb IsNot Nothing AndAlso RbGetEnabled(rb) Then'; New = 'If rb IsNot Nothing AndAlso RbGetEnabled(rb) Then' },
+            @{ Id = 'M26_STALE_PAYMENT_KEPT'; Case = 'F2'; Old = 'ElseIf sel = False AndAlso gvPagamento.Rows.Count > 0 Then'; New = 'ElseIf False Then' },
+            @{ Id = 'M27_ONLY_COST_CLEARED'; Case = 'F2B'; Old = '        Me.tbPagamenti.Text = String.Empty'; New = '        Me.tbPagamenti.Text = Me.tbPagamenti.Text' },
+            @{ Id = 'M28_VALID_CHOICE_CLEARED'; Case = 'F3'; Old = 'ElseIf sel = False AndAlso gvPagamento.Rows.Count > 0 Then'; New = 'ElseIf gvPagamento.Rows.Count > 0 Then' }
         )
         foreach ($m in $mutants) {
             if ($MutantFilter -ne '' -and $m.Id -notmatch $MutantFilter) { continue }
