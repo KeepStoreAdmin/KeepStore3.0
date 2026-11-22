@@ -29,7 +29,7 @@
                         <div class="myaccount-content account-edit">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                 <div>
-                                    <h4 class="fw-semibold mb-0">Dettagli account</h4>
+                                    <h1 class="fw-semibold mb-0 ks-page-title">Dettagli account</h1>
                                     <div class="body-small text-main-2">Aggiorna profilo, contatti e indirizzo di fatturazione.</div>
                                 </div>
                                 <a href="myaccount.aspx" class="tf-btn btn-line">Annulla</a>

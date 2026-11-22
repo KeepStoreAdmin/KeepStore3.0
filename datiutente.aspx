@@ -35,7 +35,7 @@
                 <div class="myaccount-content account-dashboard">
                     <div class="ks-userdata-hero">
                         <div>
-                            <h3 class="fw-semibold mb-2">Gestione dati account</h3>
+                            <h1 class="fw-semibold mb-2 ks-page-title">Gestione dati account</h1>
                             <p class="body-md-2 text-main-2 mb-0">Per modificare i dati personali, di fatturazione o gli indirizzi usa le sezioni aggiornate dell'area cliente.</p>
                         </div>
                         <a href="myaccount.aspx" class="tf-btn btn-line">Torna al mio account</a>

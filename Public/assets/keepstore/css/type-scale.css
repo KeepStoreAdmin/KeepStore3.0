@@ -30,7 +30,8 @@
   .ks-product-page h1.product-info-name,
   h1.ks-login__title,
   .ks-cart-page.ks-cart-modern .heading-section .heading,
-  .ks-account-dashboard .ks-dashboard-hero h3 {
+  .ks-account-dashboard .ks-dashboard-hero h1,
+  h1.ks-page-title {
     font-family: var(--ks-font-ui, Arial, sans-serif);
     font-size: var(--ks-title-page-size) !important;
     font-weight: var(--ks-title-weight) !important;
@@ -50,7 +51,8 @@
   }
 
   /* due titoli avevano una interlinea fissa pensata per il corpo vecchio (60 px e 25 px): proporzionale al corpo nuovo */
-  .ks-account-dashboard .ks-dashboard-hero h3,
+  .ks-account-dashboard .ks-dashboard-hero h1,
+  h1.ks-page-title,
   body.ks-page-home .ks-home-main h5:not(#ksHomeDirectCategoriesTitle) {
     line-height: 1.25 !important;
   }
@@ -67,5 +69,42 @@
   body.ks-page-home .ks-home-deals .ks-deal-slot--title h6,
   body.ks-page-home .ks-home-deals .ks-deal-card .name-product {
     min-height: 64px !important;
+  }
+}
+
+/* Titoli principali (A11Y-HEADING-LEVELS-1A): carrello e area cliente hanno un h1 nativo.
+   Il colore e fissato qui perche i fogli dei singoli clienti possono colorare ogni h1. */
+.ks-account-dashboard .ks-dashboard-hero h1,
+h1.ks-page-title {
+  color: var(--grey-1, #333E48);
+}
+
+/* carrello vuoto: il titolo e l'h1 della pagina e conserva le misure che aveva */
+.ks-cart-page .ks-cart-empty-card h1 {
+  margin: 0 0 .35rem;
+  color: #111827;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+@media (max-width: 767.98px) {
+  .ks-cart-page .ks-cart-empty-card h1 {
+    font-size: 24px;
+  }
+}
+
+/* carrello non consultabile: non e un carrello vuoto, il titolo della pagina resta visibile */
+.ks-cart-page.ks-cart-is-empty.ks-cart-read-unavailable .heading-section {
+  display: block;
+}
+
+/* fuori dallo schermo un h1 nudo prenderebbe le misure di base del tema */
+@media print {
+  .ks-cart-page.ks-cart-modern .heading-section .heading,
+  .ks-account-dashboard .ks-dashboard-hero h1,
+  h1.ks-page-title {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    line-height: 1.25;
   }
 }

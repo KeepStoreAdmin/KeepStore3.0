@@ -73,7 +73,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($la -notmatch '<details class="ks-doc-more-dates"') { $fail.Add('A4 altre date in un details') }
     if ($la -notmatch 'role="group" aria-label="Filtra i documenti"|aria-label="Filtra i documenti"') { $fail.Add('A4 etichetta del gruppo filtri') }
     # A5 titolo e percorso
-    if ($la -notmatch '<h3 class="fw-semibold mb-0">I miei ordini</h3>' -or $la -notmatch '<span class="text">I miei ordini</span>') { $fail.Add('A5 titolo I miei ordini') }
+    if ($la -notmatch '<h1 class="fw-semibold mb-0 ks-page-title">I miei ordini</h1>' -or $la -notmatch '<span class="text">I miei ordini</span>') { $fail.Add('A5 titolo I miei ordini') }
     # A6 stile: la griglia della scheda segue la larghezza della scheda, non della finestra
     if ($css -notmatch '\.ks-doc-card\s*\{[^}]*container-type:\s*inline-size') { $fail.Add('A6 scheda non e un contenitore') }
     if ($css -notmatch '@container\s*\(min-width:\s*\d+px\)\s*\{\s*\.ks-doc-card__body') { $fail.Add('A6 colonne non da @container') }
@@ -192,7 +192,7 @@ $mutants = @(
     @{ Id = 'M15_DATE_TEXT_INPUT'; File = 'listAspx'; Old = 'ID="dataInizio" TextMode="Date"'; New = 'ID="dataInizio"' },
     @{ Id = 'M16_DATES_NOT_IN_DETAILS'; File = 'listAspx'; Old = '<details class="ks-doc-more-dates"<%= MoreDatesOpenAttribute %>>'; New = '<div class="ks-doc-more-dates"<%= MoreDatesOpenAttribute %>>' },
     @{ Id = 'M17_FILTER_GROUP_LABEL_LOST'; File = 'listAspx'; Old = 'role="group" aria-label="Filtra i documenti"'; New = '' },
-    @{ Id = 'M18_OLD_TITLE'; File = 'listAspx'; Old = '<h3 class="fw-semibold mb-0">I miei ordini</h3>'; New = '<h3 class="fw-semibold mb-0">I miei documenti</h3>' },
+    @{ Id = 'M18_OLD_TITLE'; File = 'listAspx'; Old = '<h1 class="fw-semibold mb-0 ks-page-title">I miei ordini</h1>'; New = '<h1 class="fw-semibold mb-0 ks-page-title">I miei documenti</h1>' },
     @{ Id = 'M19_DASHBOARD_LIST_BACK'; File = 'dashAspx'; Old = '<nav class="ks-account-hub" aria-label="Servizi dell''account">'; New = '<asp:Repeater ID="rptRecentOrders" runat="server"></asp:Repeater><nav class="ks-account-hub" aria-label="Servizi dell''account">' },
     @{ Id = 'M20_DASHBOARD_HELPER_BACK'; File = 'dashVb'; Old = 'Protected Function GetDashboardGreeting('; New = "Protected Function GetPaymentStatusLabel() As String : Return `"`" : End Function`r`n`r`n    Protected Function GetDashboardGreeting(" },
     @{ Id = 'M21_DASHBOARD_BUTTON_LOST'; File = 'dashAspx'; Old = '<a href="documenti.aspx" class="tf-btn btn-fill">I miei ordini</a>'; New = '' },

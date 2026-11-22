@@ -149,7 +149,7 @@ function Invoke-Case([string]$case, $browser, [int]$w) {
             if ([string]$o.__fonts -ne '') { $bad.Add('CARRELLO carattere diverso da quello del sito: ' + [string]$o.__fonts) }
         }
         'AREA' {
-            $o = Read-Groups $browser '/myaccount.aspx' @{ pagina = '.ks-dashboard-hero h3' }
+            $o = Read-Groups $browser '/myaccount.aspx' @{ pagina = '.ks-dashboard-hero h1' }
             foreach ($b in (Test-Group 'AREA' $o 'pagina' 1 1 $page '700')) { $bad.Add($b) }
             if ([string]$o.__fonts -ne '') { $bad.Add('AREA carattere diverso da quello del sito: ' + [string]$o.__fonts) }
         }

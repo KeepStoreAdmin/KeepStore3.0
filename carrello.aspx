@@ -50,7 +50,7 @@
 
     <!-- NOTE: rimosso frammento di markup corrotto rimasto da una migrazione precedente (carattere di controllo). -->
 
-    <section class="s-shoping-cart tf-sp-2 ks-cart-page ks-cart-modern <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %>" data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>">
+    <section class="s-shoping-cart tf-sp-2 ks-cart-page ks-cart-modern <%= If(IsCartEmptyState(), "ks-cart-is-empty", If(IsCheckoutConfirmStep(), "ks-cart-step-confirm", If(IsCheckoutStepVisible(), "ks-cart-step-checkout", "ks-cart-step-cart"))) %><%= If(CartReadUnavailablePanel.Visible, " ks-cart-read-unavailable", "") %>" data-iva-tipo="<%= If(Convert.ToString(Me.Session("IvaTipo")) = "1", "1", "2") %>">
         <div class="container">
 
             <nav class="checkout-status tf-sp-2 pt-0" aria-label="Fasi dell'ordine">
@@ -81,7 +81,7 @@
             </noscript>
 
             <div class="heading-section mb-3">
-                <h3 class="heading"><% If IsCheckoutConfirmStep() Then %>Riepilogo ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e pagamento<% Else %>Il tuo carrello<% End If %></h3>
+                <h1 class="heading"><% If IsCheckoutConfirmStep() Then %>Riepilogo ordine<% ElseIf IsCheckoutStepVisible() Then %>Spedizione e pagamento<% Else %>Il tuo carrello<% End If %></h1>
                 <p class="ks-cart-step-intro"><% If IsCheckoutConfirmStep() Then %>Un ultimo controllo dei dati e degli importi prima di inviare l'ordine.<% ElseIf IsCheckoutStepVisible() Then %>Scegli come ricevere i prodotti e come pagare. Puoi rivedere tutto prima dell'invio.<% Else %>Controlla i prodotti e le quantità, poi continua con la consegna.<% End If %></p>
                 <div class="body-text-3 ks-cart-heading-meta">
                     <asp:Label ID="lblArticoli" runat="server" Text="" Font-Bold="true" ForeColor="#E12825" CssClass="ks-cart-heading-count" data-ks-cart-heading-count="true"></asp:Label>
@@ -485,7 +485,7 @@
                     <i class="icon-shop-cart-1"></i>
                 </div>
                 <div class="ks-cart-message-content">
-                    <h4>Il carrello è vuoto</h4>
+                    <h1>Il carrello è vuoto</h1>
                     <p class="body-text-3">Aggiungi prodotti dal catalogo e torna qui quando vuoi completare l'acquisto.</p>
                     <div class="box-btn ks-cart-message-actions">
                         <a href="articoli.aspx" class="tf-btn ks-cart-empty-primary">Sfoglia il catalogo</a>

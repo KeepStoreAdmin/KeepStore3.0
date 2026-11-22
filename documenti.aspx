@@ -193,7 +193,7 @@
 
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
-                                        <h3 class="fw-semibold mb-0">I miei ordini</h3>
+                                        <h1 class="fw-semibold mb-0 ks-page-title">I miei ordini</h1>
                                         <div class="body-small text-main-2">Ordini, fatture e DDT in un solo posto.</div>
                                     </div>
                                     <asp:HyperLink 

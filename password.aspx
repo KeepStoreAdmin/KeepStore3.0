@@ -67,7 +67,7 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="tf-section-heading mb-4">
-                            <h3 class="heading">Cambia password</h3>
+                            <h1 class="heading ks-page-title">Cambia password</h1>
                             <p class="text mt-2">Aggiorna la tua password in modo sicuro.</p>
                         </div>
 

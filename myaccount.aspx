@@ -39,7 +39,7 @@
                         <div class="myaccount-content account-dashboard">
                             <div class="ks-dashboard-hero">
                                 <div>
-                                    <h3 class="fw-semibold mb-2"><asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua Dashboard" /></h3>
+                                    <h1 class="fw-semibold mb-2"><asp:Literal ID="litGreeting" runat="server" Text="Benvenuto nella tua Dashboard" /></h1>
                                     <p class="body-md-2 text-main-2 mb-0">Da qui puoi controllare ordini, documenti, dati account e indirizzi.</p>
                                 </div>
                                 <a href="documenti.aspx" class="tf-btn btn-fill">I miei ordini</a>

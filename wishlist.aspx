@@ -36,7 +36,7 @@
                         <!-- Wishlist -->
                         <div class="tf-section-heading mb-4 d-flex flex-wrap justify-content-between align-items-center">
                 <div>
-                    <h3 class="heading mb-1">Wishlist</h3>
+                    <h1 class="heading mb-1 ks-page-title">Wishlist</h1>
                     <div class="body-md-2 text-main-2">
                         <asp:Label ID="lblTrovati" runat="server" Text="0" Font-Bold="True"></asp:Label>
                         <span> articoli</span>
