@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-PRICE-STATES-1C — 22/11/2026 — SOURCE (anteprima rapida: sconto mostrato come nella scheda da cui si apre)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#637](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/637), stable `79be1e64`.** «Sì, procedi» del PO del 22/11/2026.
+
+**Prima.** Un articolo in sconto (prezzo rosso e precedente barrato nella scheda) appariva nell'anteprima rapida a prezzo nero, senza prezzo precedente: misurato su HOME, elenco e correlati della scheda prodotto.
+
+**Ora.** L'anteprima ha lo stato della scheda: rosso con il precedente barrato, nero, oppure «Prezzo su richiesta». Il server scrive `data-ks-old-price` solo quando la scheda mostra lo sconto (stesso testo, stessa lettura della promozione); `keepstore-product.js` riscrive lo stato a ogni apertura e non calcola importi; etichetta «Prezzo precedente» per i lettori di schermo. Nessun importo cambia.
+
+**Revisioni.** ChatGPT (xhigh): accolti lo stato «richiesta» (non deducibile dall'assenza del testo), le letture indipendenti della promozione nell'elenco, la prova estesa ai tre produttori, l'etichetta accessibile; scartate le fixture per soglia e IVA (gia in `Test-PriceStates`). Claude (Opus): accolti il percorso in linea dell'elenco, i visti di recente senza anteprima (nessun lavoro li), le due prove storiche da non toccare (in `known-baseline-failures`), la classe assegnata per intero, lo stato «richiesta» provato con un comando iniettato. Gate: PASS.
+
+**Prove.** `Tools/Test-PriceStatesSurfaces.ps1` (sito LAB: HOME, elenco, scheda prodotto, 390 px, sequenza sconto -> normale -> richiesta): rosso prima, verde dopo, 12 mutazioni uccise. Verdi `Test-PriceStates` e `Test-TenantAccent` (senza mutazioni), focus, ricerca, strumento di stile, barra e riquadro d'acquisto; segreti, precompile, CI.
+
+**Limiti e residuo.** Scheda in linea dell'elenco (non attiva) e IVA esclusa non provate nel browser. **Decisione PO 22/11/2026:** i totali (carrello, mini carrello, «Totale selezione») **restano rossi**. Residuo NON AVVIATO: bollino «Promo» dei suggerimenti da flag generico. **Alla consegna futura (insieme, prima `App_Code`):** `App_Code/UiPriceFormatter.vb`, `Page.master`, `Default.aspx(.vb)`, `articoli.aspx(.vb)`, `articolo.aspx(.vb)`, `compare.aspx`, `Public/assets/keepstore/js/keepstore-product.js`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-PRICE-STATES-1B — 22/11/2026 — SOURCE (anteprima rapida e suggerimenti di ricerca: prezzo non più rosso per una classe generica)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#635](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/635), stable `0c13f25b`.** «procedi con STYLE-PRICE-STATES-1B» del PO del 22/11/2026.
