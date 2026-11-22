@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CHECKOUT-PAYMENT-FALLBACK-ORDER-1A — 22/11/2026 — SOURCE (nessun ordine col contrassegno quando il vettore non lo offre)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (checkout e pagamento). PR [#649](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/649), stable `c1f966d0`.** «Sì, procedi» del PO del 22/11/2026.
+
+**Fatti e causa (riprodotti sul LAB, nessun ordine creato).** Con il contrassegno come UNICO pagamento offerto e un vettore che non lo offre (ritiro) si arrivava alla conferma e l'ordine partiva col contrassegno. Con altri pagamenti disponibili e il contrassegno primo dell'elenco, la bozza veniva sigillata col contrassegno, la conferma mostrava «Descrizione non disponibile» e il primo invio veniva fermato. Causa: `LeggiPagamenti` (`carrello.aspx.vb`) sceglieva il candidato prima di disattivare il contrassegno e, senza candidati, lasciava nei campi l'id e il costo vecchi; nessun controllo a valle lega contrassegno e vettore.
+
+**Ora.** Il candidato si valuta sullo stato finale della riga; se nessuna riga mostrata e disponibile non resta scelto nessun pagamento e i controlli esistenti fermano conferma («Seleziona un metodo di pagamento…») e invio.
+
+**Revisioni.** ChatGPT (xhigh): accolti il caso senza candidati (poi riprodotto) e le correzioni all'analisi (i NULL del vettore sono zeri = ritiro; la conferma non mostrava un pagamento alternativo). Claude (Opus): accolti l'azzeramento solo con righe presenti, il controllo dell'etichetta della conferma, il caso con spesa fissa, le mutazioni dedicate. Gate: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`: casi nuovi F1, F2, F2B, F3 (F1 e F2 rossi prima); 18 casi verdi; 28 mutazioni uccise (5 nuove). Dati del LAB rimessi. Verdi carrello, checkout, pagamenti; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Non provato il ritorno sulla conferma dopo un errore di `ordine.aspx` (griglia senza righe: comportamento invariato per costruzione). Segnalati: nessun controllo lato server tra contrassegno e vettore (seconda difesa); scelta automatica del vettore senza controllo dello stato abilitato; negozio Banca Sella letto dalla sessione e non dalla bozza. **Alla consegna futura:** `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## SESSION-TIMEOUT-REGISTRATION-1A — 22/11/2026 — SOURCE (la pagina di registrazione / dati non accorcia piu la sessione a 10 minuti)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (sessione del cliente). PR [#647](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/647), stable `6fe7f2f8`.** «Sì, procedi» del PO del 22/11/2026.
