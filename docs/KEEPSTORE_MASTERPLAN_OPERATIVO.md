@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## STYLE-PRICE-STATES-1B — 22/11/2026 — SOURCE (anteprima rapida e suggerimenti di ricerca: prezzo non più rosso per una classe generica)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#635](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/635), stable `0c13f25b`.** «procedi con STYLE-PRICE-STATES-1B» del PO del 22/11/2026.
+
+**Prima.** Nell'anteprima rapida (`#D80027`) e nei suggerimenti della ricerca in testata (`#B0001F`) il prezzo di ogni articolo era sempre rosso, anche a prezzo normale e senza prezzo barrato accanto (linea di stile 3.2: rosso solo se scontato subito). La prova di 1A escludeva per costruzione modali e testata.
+
+**Ora.** Nero in entrambe: `Page.master` (classe `ks-price-state--normal` al posto di `text-primary`) e `ks-page-flags.js` (colore del prezzo normale; versione dello script `20261122-price-states-1b`). Nessun importo cambia, nessun file VB.
+
+**Revisioni.** ChatGPT (xhigh): accolti la smentita della mia causa (il prezzo dell'anteprima non segue l'accento: misurato con due accenti; è il contenitore `.product-info-price` a tenerlo rosso), il colore atteso esatto, la prova non vuota; scartato «prova causale assente» (cascata ricostruita). Claude (Opus): accolti la sostituzione della classe (accanto a `text-primary` perde), i due test che fissavano il vecchio rosso e la versione dello script, il perimetro «sempre nero». Gate: PASS.
+
+**Prove.** `Tools/Test-PriceStatesSurfaces.ps1` (sito LAB, due aziende, anteprima da scheda normale e in sconto, suggerimenti; colore esatto): rosso prima, verde dopo, 4 mutazioni uccise. `Test-SearchPanel` e `Test-TenantAccent` adeguati e verdi (il secondo senza mutazioni), `Test-PriceStates` (senza mutazioni), focus, strumento di stile verdi; segreti, precompile, CI verdi.
+
+**Residuo (NON AVVIATO).** `STYLE-PRICE-STATES-1C`: portare nell'anteprima prezzo precedente e stato (oggi un articolo in sconto vi appare nero senza barrato); bollino «Promo» dei suggerimenti da flag generico. **Domanda al PO:** totali rossi (subtotale e conferma del carrello, mini carrello, «Totale selezione») neri o come sono. Decisione PO 22/11/2026 su PAYMENT-LOGOS-1B: nessun logo sotto «Acquista» («No, basta il piede»). **Alla consegna futura (insieme):** `Page.master`, `Public/assets/keepstore/js/ks-page-flags.js`. CONSEGNA SERVER SOSPESA.
+
 ## PAYMENT-LOGOS-1B — 22/11/2026 — SOURCE (scheda prodotto: tolta la fascia dei riquadri a testo fisso)
 
 **Esito: A (SOURCE, non pubblicato). Livello S. PR [#633](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/633), stable `64dcd329`.** «Sì, procedi» del PO del 22/11/2026.
