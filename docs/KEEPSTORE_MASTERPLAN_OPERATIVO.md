@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CHECKOUT-ERROR-PANEL-STICKY-1A — 23/11/2026 — SOURCE (l'avviso «Ordine non inviato» non resta dopo la correzione)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#655](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/655), stable `c9b615b9`.** «Sì, procedi» del PO del 23/11/2026.
+
+**Fatti e causa (riprodotti sul LAB).** Dopo un rifiuto alla creazione dell'ordine l'avviso «Ordine non inviato. …» restava visibile quando il cliente cambiava pagamento e compariva anche sulla conferma successiva, ormai corretta, per ogni motivo di rifiuto. Causa: il pannello `pnlCheckoutSubmitError` conservava visibilita e testo nel ViewState e veniva ripulito in un solo punto.
+
+**Ora.** L'avviso vale per la sola richiesta che lo produce: `EnableViewState="false"` sul pannello (`carrello.aspx`). Un nuovo errore lo mostra di nuovo col suo testo. Nessuna modifica al codice.
+
+**Revisioni.** ChatGPT (xhigh): accolti l'attributo sul solo pannello e il difetto del mio caso di prova (poteva non fare un vero nuovo invio). Claude (Opus): prodotto giudicato sicuro; accolti lo scarto di un passo della prova che non avrebbe funzionato, le mutazioni legate a S2, la nota dei fallimenti noti. Gate: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`: caso H1 rosso prima e verde dopo; S2 controlla anche il testo dell'avviso; 27 casi verdi; 3 mutazioni nuove uccise. Verdi le prove correlate; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Schermo del telefono non provato; la pagina si sposta di qualche riga quando l'avviso sparisce. Segnalato: `pnlCartRecovery` ha un difetto simile (attributo `hidden`). **Alla consegna futura:** `carrello.aspx`. CONSEGNA SERVER SOSPESA.
+
 ## CHECKOUT-COD-REFUSAL-MESSAGE-1A — 23/11/2026 — SOURCE (messaggio dedicato: contrassegno non offerto dalla spedizione scelta)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#653](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/653), stable `cdf5096e`.** Decisione del PO del 22/11/2026: «Sì, cambialo» (messaggio dedicato).
