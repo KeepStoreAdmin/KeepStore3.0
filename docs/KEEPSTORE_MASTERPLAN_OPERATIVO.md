@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CHECKOUT-COD-CARRIER-SERVER-CHECK-1A — 22/11/2026 — SOURCE (il server rifiuta il contrassegno se il vettore non lo offre)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (checkout, pagamento, creazione dell'ordine). PR [#651](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/651), stable `85fe0210`.** «Sì, procedi» del PO del 22/11/2026.
+
+**Fatti e causa.** Solo la pagina del carrello legava contrassegno e vettore; i due controlli autorevoli (sigillo della bozza e `CheckoutDraftService.ValidateAuthoritativeSelections` alla creazione dell'ordine) verificavano pagamento e vettore separatamente. Misurato sul LAB: con la difesa della pagina spenta il sigillo accettava; con la percentuale del vettore a 0, NULL o -1 dopo il sigillo il servizio rispondeva «valido».
+
+**Ora.** `CheckoutDraftService.IsCashOnDeliveryCompatible` legge dal database: `Contrassegno = 1` ammesso solo con `vettori.ContrassegnoPercentuale > 0` (NULL e negativi esclusi; pagamento non trovato = non ammesso). Chiamata al sigillo e alla creazione; motivo `PaymentMethodNotAllowed`.
+
+**Revisioni.** ChatGPT (xhigh): accolti «maggiore di zero» (non «diverso»), la riga mancante non ammessa, gli id di consegna negativi, i casi aggiuntivi. Claude (Opus): accolti la verifica della vista dei vettori, il servizio tra i file della prova, la pagina di prova fedele alla chiamata reale, l'enum della harness. Gate: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`: casi G1, G2, G2N, G2M (rossi prima), G3, G3P, G4; 25 casi verdi; 34 mutazioni uccise (6 nuove). Verdi checkout, pagamenti, PayPal; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** La verifica alla creazione vale al momento della lettura (la transazione inizia dopo); non si esegue il vero `ordine.aspx` sul LAB. Per il PO: testo dedicato del messaggio (oggi «…non accetta ordini dal sito…») e stile neutro dell'avviso al passaggio verso la conferma. **Alla consegna futura (insieme, prima `App_Code`):** `App_Code/CheckoutDraftService.vb`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CHECKOUT-PAYMENT-FALLBACK-ORDER-1A — 22/11/2026 — SOURCE (nessun ordine col contrassegno quando il vettore non lo offre)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (checkout e pagamento). PR [#649](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/649), stable `c1f966d0`.** «Sì, procedi» del PO del 22/11/2026.
