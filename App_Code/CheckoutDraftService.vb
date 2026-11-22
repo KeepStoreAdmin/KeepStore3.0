@@ -185,7 +185,47 @@ Public NotInheritable Class CheckoutDraftService
                 Return False
             End If
         End Using
+        If Not IsCashOnDeliveryCompatible(connection, transaction, identity.CompanyId, draft.PaymentMethodId, draft.DeliveryMethodId) Then
+            failureReason = CheckoutFailureReason.PaymentMethodNotAllowed
+            Return False
+        End If
         Return True
+    End Function
+
+    ' CHECKOUT-COD-CARRIER-SERVER-CHECK-1A: seconda difesa lato server, letta dal database e non dallo stato della pagina.
+    ' Un pagamento in contrassegno (pagamentitipo.Contrassegno = 1) e ammesso solo se il vettore scelto lo offre:
+    ' vettori.ContrassegnoPercentuale maggiore di zero (NULL e valori negativi esclusi, nessun arrotondamento): la stessa
+    ' regola con cui il carrello disattiva la riga del contrassegno. Pagamento non trovato per id e azienda = non ammesso.
+    ' Gli id di consegna possono essere negativi (spedizione speciale): nessun filtro sul segno.
+    ' Vale al momento della lettura; un errore del database resta un errore, come per le letture vicine.
+    Public Shared Function IsCashOnDeliveryCompatible(ByVal connection As MySqlConnection,
+                                                      ByVal transaction As MySqlTransaction,
+                                                      ByVal companyId As Integer,
+                                                      ByVal paymentId As Integer,
+                                                      ByVal deliveryId As Integer) As Boolean
+        If connection Is Nothing Then Return False
+        Const sql As String =
+            "SELECT " &
+            "(SELECT COUNT(*) FROM pagamentitipo p WHERE p.id=?paymentId AND p.AziendeID=?aziendaId) AS PaymentRows, " &
+            "(SELECT COUNT(*) FROM pagamentitipo p WHERE p.id=?paymentId AND p.AziendeID=?aziendaId AND p.Contrassegno=1) AS CodRows, " &
+            "(SELECT COUNT(*) FROM vettori v WHERE v.id=?deliveryId AND v.AziendeId=?aziendaId AND v.ContrassegnoPercentuale > 0) AS OfferRows"
+        Dim paymentRows As Integer = 0
+        Dim codRows As Integer = 0
+        Dim offerRows As Integer = 0
+        Using command As New MySqlCommand(sql, connection, transaction)
+            command.Parameters.Add("?paymentId", MySqlDbType.Int32).Value = paymentId
+            command.Parameters.Add("?aziendaId", MySqlDbType.Int32).Value = companyId
+            command.Parameters.Add("?deliveryId", MySqlDbType.Int32).Value = deliveryId
+            Using reader As MySqlDataReader = command.ExecuteReader()
+                If Not reader.Read() Then Return False
+                paymentRows = Convert.ToInt32(reader("PaymentRows"), CultureInfo.InvariantCulture)
+                codRows = Convert.ToInt32(reader("CodRows"), CultureInfo.InvariantCulture)
+                offerRows = Convert.ToInt32(reader("OfferRows"), CultureInfo.InvariantCulture)
+            End Using
+        End Using
+        If paymentRows <> 1 Then Return False
+        If codRows = 0 Then Return True
+        Return offerRows = 1
     End Function
 
     Private Shared Function IsStructurallyValid(ByVal draft As CheckoutDraftState,

@@ -23,6 +23,8 @@ Public Enum CheckoutFailureReason
     Collision = 6
     RetryRequired = 7
     CartInvalid = 8
+    OrderNotesInvalid = 9
+    PaymentMethodNotAllowed = 10
 End Enum
 
 Public NotInheritable Class OrderStorefrontIdentity

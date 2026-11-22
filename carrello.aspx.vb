@@ -570,6 +570,13 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
             HttpContext.Current, normalizedRequestId, "ValidatePayment", "passed", Nothing,
             "not-claimed", "none", "ValidatePayment")
 
+        ' CHECKOUT-COD-CARRIER-SERVER-CHECK-1A: il contrassegno si sigilla solo se il vettore scelto lo offre (lettura dal database,
+        ' indipendente dallo stato dei controlli della pagina).
+        If Not CheckoutDraftService.IsCashOnDeliveryCompatible(connection, Nothing, identity.CompanyId, paymentId, deliveryId) Then
+            failureReason = CheckoutFailureReason.PaymentMethodNotAllowed
+            Return False
+        End If
+
         ' PAYMENT-PAY-FIRST-BY-FLAG-1A: tipo di pagamento e flag della bozza vengono da una lettura autorevole per id e azienda (errore = nessuna bozza,
         ' mai valori presunti). Con flag 0 su un metodo per cui il sito non sa pagare prima, l'ordine non parte: il cliente sceglie un altro metodo.
         Dim paymentPolicy As PaymentPolicySnapshot = Nothing
