@@ -24,7 +24,7 @@
     <section class="flat-spacing">
         <div class="container">
             <div class="tf-page-title">
-                <div class="heading text-center">Ops! Pagina non trovata</div>
+                <h1 class="heading text-center ks-page-title">Ops! Pagina non trovata</h1>
                 <p class="text text-center mt-3">
                     La pagina che stai cercando non esiste oppure è stata spostata.
                 </p>

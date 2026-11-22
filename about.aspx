@@ -20,7 +20,7 @@
             <div class="row align-items-center">
                 <div class="col-lg-6">
                     <div class="tf-section-title mb_30">
-                        <h2 class="title">Il nostro negozio</h2>
+                        <h1 class="title ks-page-title">Il nostro negozio</h1>
                         <p class="text-main-2 mt-2">E-commerce e assistenza: hardware, telefonia, consumabili e accessori con focus su consulenza e post-vendita.</p>
                     </div>
                     <ul class="text-main-2">

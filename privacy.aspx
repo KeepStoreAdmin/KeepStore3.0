@@ -18,7 +18,7 @@
     <section class="flat-spacing">
         <div class="container">
             <div class="tf-section-title mb_30">
-                <h2 class="title">Privacy Policy</h2>
+                <h1 class="title ks-page-title">Privacy Policy</h1>
                 <p class="text-main-2 mt-2">Informativa ai sensi della normativa vigente (GDPR).</p>
             </div>
 

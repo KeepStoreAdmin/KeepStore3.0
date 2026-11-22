@@ -18,7 +18,7 @@
     <section class="flat-spacing" id="ksComparePage">
         <div class="container">
             <div class="tf-section-title mb_30">
-                <h2 class="title">Confronta prodotti</h2>
+                <h1 class="title ks-page-title">Confronta prodotti</h1>
                 <p class="text-main-2 mt-2">Seleziona i prodotti dal catalogo e confrontali in questa pagina.</p>
             </div>
 

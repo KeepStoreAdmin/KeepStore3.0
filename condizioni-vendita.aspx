@@ -20,7 +20,7 @@
     <section class="flat-spacing">
         <div class="container">
             <div class="tf-section-title mb_30">
-                <h2 class="title">Condizioni Generali di Vendita</h2>
+                <h1 class="title ks-page-title">Condizioni Generali di Vendita</h1>
                 <p class="text-main-2 mt-2">
                     <asp:Literal ID="litCompanyName" runat="server" />
                 </p>

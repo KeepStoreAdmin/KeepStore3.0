@@ -152,7 +152,7 @@
                     <div class="col-xl-6 col-lg-7 col-md-9">
                         <div class="ks-auth-card">
 
-                            <h5 class="title fw-semibold mb-2">Recupero accesso</h5>
+                            <h1 class="title fw-semibold mb-2 ks-page-title">Recupero accesso</h1>
 
                             <asp:Panel ID="pnlSentConfirmation" runat="server" Visible="false" CssClass="ks-remind-confirmation">
                                 <div class="ks-remind-confirmation__eyebrow">Richiesta ricevuta</div>

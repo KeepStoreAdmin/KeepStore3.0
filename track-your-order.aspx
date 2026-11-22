@@ -22,7 +22,7 @@
     <section class="flat-spacing">
         <div class="container">
             <div class="tf-section-title mb_30">
-                <h2 class="title">Traccia il tuo ordine</h2>
+                <h1 class="title ks-page-title">Traccia il tuo ordine</h1>
                 <p class="text-main-2 mt-2">Inserisci il numero d’ordine e l’email usata in fase di acquisto.</p>
             </div>
 

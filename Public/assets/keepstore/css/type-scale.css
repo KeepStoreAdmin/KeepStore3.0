@@ -45,7 +45,10 @@
   h2.ks-login__title,
   .ks-cart-page.ks-cart-modern .ks-summary-card .title,
   #ks-rv-title,
-  #ksAccountSoonTitle {
+  #ksAccountSoonTitle,
+  h3.ks-register-subtitle,
+  article.tf-privacy h2,
+  article.tf-privacy h3 {
     font-size: var(--ks-title-section-size) !important;
     font-weight: var(--ks-title-weight) !important;
   }
@@ -53,6 +56,9 @@
   /* due titoli avevano una interlinea fissa pensata per il corpo vecchio (60 px e 25 px): proporzionale al corpo nuovo */
   .ks-account-dashboard .ks-dashboard-hero h1,
   h1.ks-page-title,
+  h3.ks-register-subtitle,
+  article.tf-privacy h2,
+  article.tf-privacy h3,
   body.ks-page-home .ks-home-main h5:not(#ksHomeDirectCategoriesTitle) {
     line-height: 1.25 !important;
   }
@@ -105,6 +111,12 @@ h1.ks-page-title {
   h1.ks-page-title {
     font-size: 22px !important;
     font-weight: 700 !important;
+    line-height: 1.25;
+  }
+  h3.ks-register-subtitle,
+  article.tf-privacy h2,
+  article.tf-privacy h3 {
+    font-size: 18px;
     line-height: 1.25;
   }
 }

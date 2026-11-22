@@ -108,7 +108,11 @@ Partial Class condizioni_vendita
         value = Regex.Replace(value, "(?is)<(script|style|iframe|object|embed|form|input|meta|link)\b[^>]*/?>", "")
         value = Regex.Replace(value, "(?i)\s+on[a-z]+\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", "")
         value = Regex.Replace(value, "(?i)(href|src)\s*=\s*(""|')\s*(javascript:|data:)[^""']*(""|')", "$1=""#""")
-        value = Regex.Replace(value, "(?i)</?(?!p\b|br\b|ul\b|ol\b|li\b|strong\b|b\b|em\b|i\b|u\b|h[1-6]\b|a\b|span\b|div\b)[^>]+>", "")
+        ' Il controllo dei tag ammessi guarda il nome DOPO l'eventuale barra: prima la chiusura di un tag ammesso (</strong>, </h2>) veniva cancellata.
+        value = Regex.Replace(value, "(?i)<(?!/?(?:p|br|ul|ol|li|strong|b|em|i|u|h[1-6]|a|span|div)\b)[^>]+>", "")
+        ' A11Y-HEADING-LEVELS-1B: il titolo principale della pagina e uno solo; quelli scritti nel testo dell'azienda scendono di un livello.
+        value = Regex.Replace(value, "(?i)<(/?)h1\b", "<$1h2")
+        value = Regex.Replace(value, "(?i)\s+(role|aria-level)\s*=\s*(""[^""]*""|'[^']*'|[^\s>]+)", "")
 
         Return value
     End Function

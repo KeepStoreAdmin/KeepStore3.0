@@ -98,10 +98,10 @@
 
 
                         <div class="tf-section-title mb_30">
-                            <h2 class="title">Crea il tuo account</h2>
+                            <h1 class="title ks-page-title">Crea il tuo account</h1>
                             <p class="text-muted mb-0">Compila i dati richiesti per completare la registrazione.</p>
                         </div>
-<h3 class="fw-semibold mb_20"><% =pagetype %>
+<h3 class="fw-semibold mb_20 ks-register-subtitle"><% =pagetype %>
     <asp:Label ID="lblSito" runat="server" ></asp:Label></h3>
       <div class="demoarea ks-legacy-panel" id="principale" runat="server" visible="true">
                        

@@ -38,7 +38,7 @@
                         <div class="col-lg-7">
                             <div class="contact-wrap">
                                 <div class="box-title mb-3">
-                                    <h5 class="fw-semibold mb-10">Contattaci</h5>
+                                    <h1 class="fw-semibold mb-10 ks-page-title">Contattaci</h1>
                                     <p class="body-text-3 mb-0">
                                         Compila il form: ti risponderemo entro 24 ore lavorative.
                                     </p>
