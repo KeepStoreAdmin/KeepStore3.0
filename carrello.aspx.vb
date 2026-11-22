@@ -573,7 +573,7 @@ Private Function TryCaptureAuthoritativeCheckoutDraft(ByVal tipoDocumento As Int
         ' CHECKOUT-COD-CARRIER-SERVER-CHECK-1A: il contrassegno si sigilla solo se il vettore scelto lo offre (lettura dal database,
         ' indipendente dallo stato dei controlli della pagina).
         If Not CheckoutDraftService.IsCashOnDeliveryCompatible(connection, Nothing, identity.CompanyId, paymentId, deliveryId) Then
-            failureReason = CheckoutFailureReason.PaymentMethodNotAllowed
+            failureReason = CheckoutFailureReason.CashOnDeliveryNotOffered
             Return False
         End If
 
@@ -1670,6 +1670,11 @@ Private Const InvalidShippingAddressMessage As String = "L'indirizzo di spedizio
         If lblAddressSelectionMessage IsNot Nothing Then
             lblAddressSelectionMessage.Text = message
             lblAddressSelectionMessage.CssClass = If(isError, "ks-alert ks-alert-danger d-block mt-2", "body-text-3 text-main-2 d-block mt-2")
+            If isError Then
+                lblAddressSelectionMessage.Attributes("role") = "alert"
+            Else
+                lblAddressSelectionMessage.Attributes.Remove("role")
+            End If
         End If
     End Sub
 
@@ -3283,6 +3288,7 @@ Private Function LoadCartRecommendations(ByVal maxItems As Integer, ByRef title 
         Select Case failure.Reason
             Case CheckoutFailureReason.ShippingAddressInvalid,
                  CheckoutFailureReason.ShippingMethodMissing,
+                 CheckoutFailureReason.CashOnDeliveryNotOffered,
                  CheckoutFailureReason.PaymentMethodMissing,
                  CheckoutFailureReason.PaymentMethodNotAllowed
                 SetCheckoutStep("checkout")
@@ -5202,7 +5208,9 @@ Private Sub MoveToCheckoutConfirmStep()
     Dim draftFailure As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
     If Not TryCaptureAuthoritativeCheckoutDraft(4, draft, draftFailure) Then
         SetCheckoutStep("checkout")
-        SetAddressSelectionMessage(CheckoutFailureRecoveryService.BuildUserMessage(draftFailure, String.Empty))
+        ' CHECKOUT-COD-REFUSAL-MESSAGE-1A: il rifiuto del contrassegno e mostrato come errore (gli altri motivi restano come prima).
+        SetAddressSelectionMessage(CheckoutFailureRecoveryService.BuildUserMessage(draftFailure, String.Empty),
+                                   draftFailure = CheckoutFailureReason.CashOnDeliveryNotOffered)
         ApplyCheckoutStepUi()
         Return
     End If

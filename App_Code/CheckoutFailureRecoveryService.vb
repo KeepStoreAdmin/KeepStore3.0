@@ -17,6 +17,7 @@ Public Enum CheckoutFailureReason
     CartInvalid = 8
     OrderNotesInvalid = 9
     PaymentMethodNotAllowed = 10
+    CashOnDeliveryNotOffered = 11
 End Enum
 
 Public NotInheritable Class CheckoutFailureFlash
@@ -123,6 +124,8 @@ Public NotInheritable Class CheckoutFailureRecoveryService
                 Return "Seleziona un metodo di pagamento prima di confermare l'ordine."
             Case CheckoutFailureReason.PaymentMethodNotAllowed
                 Return "Il metodo di pagamento scelto al momento non accetta ordini dal sito. Scegli un altro metodo di pagamento e conferma di nuovo l'ordine."
+            Case CheckoutFailureReason.CashOnDeliveryNotOffered
+                Return "Il contrassegno non è disponibile con questa spedizione. Scegli un'altra spedizione o un altro metodo di pagamento e conferma di nuovo l'ordine."
             Case CheckoutFailureReason.TermsNotAccepted
                 Return "Accetta le Condizioni Generali di Vendita prima di confermare l'ordine."
             Case CheckoutFailureReason.CartChanged

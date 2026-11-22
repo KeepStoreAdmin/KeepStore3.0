@@ -22,6 +22,9 @@ param([switch]$SkipMutants, [string]$Cases = '', [string]$MutantFilter = '', [st
 # CHECKOUT-COD-CARRIER-SERVER-CHECK-1A (casi G1-G4): seconda difesa lato server. Il sigillo della bozza e la validazione usata alla
 # creazione dell'ordine rifiutano il contrassegno se il vettore non lo offre (percentuale non maggiore di zero), leggendo dal database.
 # La pagina di prova al posto di ordine.aspx chiama la stessa validazione del servizio sulla bozza sigillata e stampa l'esito.
+# CHECKOUT-COD-REFUSAL-MESSAGE-1A (casi G1, G2*, G5): il rifiuto ha un motivo e un messaggio suoi ("Il contrassegno non e disponibile
+# con questa spedizione..."), mostrato come errore al passaggio verso la conferma e, dopo un rifiuto alla creazione dell'ordine,
+# sul passo "spedizione e pagamento" (una volta sola).
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -30,7 +33,8 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 $inv = [Globalization.CultureInfo]::InvariantCulture
 $it = [Globalization.CultureInfo]::GetCultureInfo('it-IT')
 $svcRel = 'App_Code\CheckoutDraftService.vb'
-$files = @('carrello.aspx.vb', 'carrello.aspx', $svcRel)
+$recRel = 'App_Code\CheckoutFailureRecoveryService.vb'
+$files = @('carrello.aspx.vb', 'carrello.aspx', $svcRel, $recRel)
 $repoBytes = @{}; foreach ($f in $files) { $repoBytes[$f] = [IO.File]::ReadAllBytes((Join-Path $root $f)) }
 $fail = New-Object Collections.Generic.List[string]
 
@@ -176,6 +180,11 @@ $orderProbe = @'
                         Dim reason As CheckoutFailureReason = CheckoutFailureReason.CartInvalid
                         Dim ok As Boolean = CheckoutDraftService.ValidateAuthoritativeSelections(conn, Nothing, identity, sealed, reason)
                         verdict = "valid=" & ok.ToString() & " reason=" & If(ok, "none", reason.ToString())
+                        ' come ordine.aspx quando la validazione fallisce: ritiro della richiesta, messaggio in sessione, ritorno al carrello
+                        If Not ok AndAlso Request.QueryString("ksdispatch") = "1" AndAlso reason <> CheckoutFailureReason.ShippingAddressInvalid Then
+                            If CheckoutFailureRecoveryService.RetireAndDispatch(HttpContext.Current, sealed.RequestId, reason, "ValidateDraft") Then Return
+                            verdict = "valid=False reason=DispatchFailed"
+                        End If
                     End Using
                 Else
                     verdict = "valid=unknown reason=DraftNotReadable"
@@ -543,7 +552,13 @@ function Test-Case([string]$id, $browser) {
                 $seen = 'conferma=' + [string]$cf.confirm + ' contrassegno=' + [string]$cf.cod + ' totale=' + [string]$cf.total
                 if ($id -eq 'G1') {
                     if ($cf.confirm) { $bad.Add('con la difesa della pagina spenta il sigillo accetta il contrassegno su un vettore che non lo offre') }
-                    elseif ($body.IndexOf('non accetta ordini dal sito') -lt 0) { $bad.Add('il sigillo ferma la conferma ma senza il messaggio atteso') }
+                    else {
+                        $note = ConvertFrom-Json ([string](Invoke-KsJs $script:browser "(function(){var e=document.querySelector('[id`$=lblAddressSelectionMessage]');if(!e||!e.getClientRects().length)return JSON.stringify({t:'',c:'',r:''});return JSON.stringify({t:e.textContent.replace(/\s+/g,' ').trim().toLowerCase(),c:e.className,r:e.getAttribute('role')||''});})()"))
+                        $seen += ' avviso=[' + ([string]$note.t).Substring(0, [Math]::Min(60, ([string]$note.t).Length)) + '] classe=[' + [string]$note.c + '] ruolo=[' + [string]$note.r + ']'
+                        if (([string]$note.t).IndexOf('disponibile con questa spedizione') -lt 0) { $bad.Add('il sigillo ferma la conferma ma senza il messaggio del contrassegno: [' + [string]$note.t + ']') }
+                        elseif (([string]$note.c) -notmatch 'ks-alert-danger' -or [string]$note.r -ne 'alert') { $bad.Add('il messaggio del contrassegno non e mostrato come errore (classe [' + [string]$note.c + '], ruolo [' + [string]$note.r + '])') }
+                        if ($body.IndexOf('non accetta ordini dal sito') -ge 0) { $bad.Add('compare ancora il messaggio generico del pagamento') }
+                    }
                 } elseif ($id -like 'F2*') {
                     if ($cf.confirm) {
                         $bad.Add('si arriva alla conferma senza un pagamento disponibile')
@@ -585,7 +600,7 @@ function Test-Case([string]$id, $browser) {
                 Reset-Browser
             }
         }
-        { $_ -in @('G2', 'G2N', 'G2M', 'G3', 'G3P', 'G4') } {
+        { $_ -in @('G2', 'G2N', 'G2M', 'G3', 'G3P', 'G4', 'G5') } {
             # Bozza sigillata con un vettore che offre il contrassegno; poi (G2*) la percentuale del vettore diventa 0 / NULL / negativa.
             # G3: nessun cambiamento; G3P: percentuale minima positiva; G4: pagamento normale e percentuale 0. Nessun ordine creato.
             # Dopo molte ricompilazioni il sito LAB si riavvia e la sessione (con la bozza) si perde: in quel caso il caso si ripete una volta.
@@ -607,17 +622,38 @@ function Test-Case([string]$id, $browser) {
                 $reached = $true
                 try { Go-Confirm $script:browser ('conferma del caso ' + $id) } catch { if (([string]$_.Exception.Message) -match 'conferma non raggiunta') { $reached = $false } else { throw } }
                 if (-not $reached) { $bad.Add('un ordine valido non arriva alla conferma (pagamento ' + $chosen + ')'); break }
-                if ($id -eq 'G2' -or $id -eq 'G4') { Set-Carrier 1.5 4.5 0 0 0 }
+                if ($id -eq 'G2' -or $id -eq 'G4' -or $id -eq 'G5') { Set-Carrier 1.5 4.5 0 0 0 }
                 elseif ($id -eq 'G2N') { Set-Carrier 1.5 4.5 $null 0 0 }
                 elseif ($id -eq 'G2M') { Set-Carrier 1.5 4.5 -1 0 0 }
                 Install-OrderProbe
+                if ($id -eq 'G5') {
+                    # ritorno al carrello dopo il rifiuto alla creazione dell'ordine: passo, messaggio, uso unico
+                    $g5 = $null
+                    try {
+                        Open-KsUrl $script:browser ($base + '/ordine.aspx?ksdispatch=1') 300; Start-Sleep -Milliseconds 2500
+                        $g5js = "(function(){var a=document.getElementById('pnlCheckoutSubmitError');var b=document.body?document.body.innerText.replace(/\s+/g,' '):'';return JSON.stringify({path:location.pathname.toLowerCase(),q:location.search,send:!!document.querySelector('#MainContent_btInviaOrdine'),review:!!document.querySelector('#MainContent_btnVaiConfermaOrdine'),alert:(a&&a.getClientRects().length)?a.textContent.replace(/\s+/g,' ').trim().toLowerCase():'',probe:b.indexOf('KSPROBE')>=0?b.substring(0,90):''});})()"
+                        $g5 = ConvertFrom-Json ([string](Invoke-KsJs $script:browser $g5js))
+                    } finally { Restore-OrderPage }
+                    if ([string]$g5.probe -match 'nodraft' -and $attempt -eq 1) { continue }
+                    Write-Host ('       G5 visto: pagina=' + [string]$g5.path + [string]$g5.q + ' invia=' + [string]$g5.send + ' rivedi=' + [string]$g5.review + ' avviso=[' + ([string]$g5.alert).Substring(0, [Math]::Min(70, ([string]$g5.alert).Length)) + ']')
+                    if ([string]$g5.probe -ne '') { $bad.Add('dopo il rifiuto non si torna al carrello: ' + [string]$g5.probe) }
+                    elseif ([string]$g5.path -notmatch 'carrello\.aspx') { $bad.Add('dopo il rifiuto pagina inattesa ' + [string]$g5.path) }
+                    else {
+                        if ([bool]$g5.send -or -not [bool]$g5.review) { $bad.Add('dopo il rifiuto il cliente non e sul passo spedizione e pagamento (invia=' + [string]$g5.send + ' rivedi=' + [string]$g5.review + ')') }
+                        if (([string]$g5.alert).IndexOf('disponibile con questa spedizione') -lt 0) { $bad.Add('dopo il rifiuto manca il messaggio del contrassegno: [' + [string]$g5.alert + ']') }
+                        Open-KsUrl $script:browser ($base + '/carrello.aspx?checkoutfailed=1') 300; Start-Sleep -Milliseconds 1500
+                        $again = ConvertFrom-Json ([string](Invoke-KsJs $script:browser $g5js))
+                        if (([string]$again.alert).IndexOf('disponibile con questa spedizione') -ge 0) { $bad.Add('il messaggio del rifiuto ricompare ricaricando la pagina') }
+                    }
+                    break
+                }
                 $v = $null
                 try { $v = Read-ServiceVerdict $script:browser } catch { if ($attempt -eq 2 -or ([string]$_.Exception.Message) -notmatch 'nodraft') { throw } } finally { Restore-OrderPage }
                 if ($null -eq $v) { continue }
                 Write-Host ('       ' + $id + ' visto: valid=' + $v.valid + ' reason=' + $v.reason + ' pagamento=' + $v.payment)
                 if ($v.payment -ne $chosen) { throw 'PAGINA_NON_VALIDA: la bozza non contiene il pagamento scelto' }
                 if ($id -in @('G2', 'G2N', 'G2M')) {
-                    if ($v.valid -ne 'False' -or $v.reason -ne 'PaymentMethodNotAllowed') { $bad.Add('la validazione del servizio accetta il contrassegno con un vettore che non lo offre (valid=' + $v.valid + ' reason=' + $v.reason + ')') }
+                    if ($v.valid -ne 'False' -or $v.reason -ne 'CashOnDeliveryNotOffered') { $bad.Add('la validazione del servizio accetta il contrassegno con un vettore che non lo offre (valid=' + $v.valid + ' reason=' + $v.reason + ')') }
                 } elseif ($v.valid -ne 'True') { $bad.Add('la validazione del servizio rifiuta un ordine valido (valid=' + $v.valid + ' reason=' + $v.reason + ')') }
                 break
             } finally { Reset-Browser }
@@ -679,7 +715,7 @@ try {
     if ($e2e.Count -eq 0) {
         # V1 per primo: dopo un passaggio dalla conferma la bozza valida rimette il vettore di prima a ogni richiesta (difetto noto, in coda
         # come CART-DRAFT-RESTORE-OVERRIDES-CARRIER-1A) e la parte finale di V1 non potrebbe scegliere un altro vettore.
-        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3', 'F1', 'F2', 'F2B', 'F3', 'G1', 'G2', 'G2N', 'G2M', 'G3', 'G3P', 'G4')
+        $caseList = @('V1', 'C1', 'C2', 'C2B', 'C4', 'C5', 'C3', 'I1', 'I2', 'I3', 'D1', 'S1', 'S2', 'S3', 'F1', 'F2', 'F2B', 'F3', 'G1', 'G2', 'G2N', 'G2M', 'G3', 'G3P', 'G4', 'G5')
         if ($Cases -ne '') { $caseList = @($Cases.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }); $SkipMutants = ($MutantFilter -eq '') }   # esecuzione parziale (messa a punto, o mutazioni in piu passate con -MutantFilter)
         foreach ($c in $caseList) {
             $bad = @(Test-Case $c $script:browser)
@@ -724,16 +760,23 @@ try {
             @{ Id = 'M31_SEALING_CHECK_REMOVED'; Case = 'G1'; Old = 'If Not CheckoutDraftService.IsCashOnDeliveryCompatible(connection, Nothing, identity.CompanyId, paymentId, deliveryId) Then'; New = 'If False Then' },
             @{ Id = 'M32_NULL_PERCENT_ACCEPTED'; Case = 'G2N'; File = $svcRel; Old = 'v.ContrassegnoPercentuale > 0'; New = 'COALESCE(v.ContrassegnoPercentuale, 1) > 0' },
             @{ Id = 'M33_NEGATIVE_PERCENT_ACCEPTED'; Case = 'G2M'; File = $svcRel; Old = 'v.ContrassegnoPercentuale > 0'; New = 'v.ContrassegnoPercentuale <> 0' },
-            @{ Id = 'M34_ORDINARY_PAYMENT_REJECTED'; Case = 'G4'; File = $svcRel; Old = 'If codRows = 0 Then Return True'; New = 'If codRows = 0 Then Return False' }
+            @{ Id = 'M34_ORDINARY_PAYMENT_REJECTED'; Case = 'G4'; File = $svcRel; Old = 'If codRows = 0 Then Return True'; New = 'If codRows = 0 Then Return False' },
+            @{ Id = 'M35_SEALING_GENERIC_REASON'; Case = 'G1'; Expect = 'il sigillo ferma la conferma ma senza il messaggio del contrassegno'; Old = "identity.CompanyId, paymentId, deliveryId) Then`r`n            failureReason = CheckoutFailureReason.CashOnDeliveryNotOffered"; New = "identity.CompanyId, paymentId, deliveryId) Then`r`n            failureReason = CheckoutFailureReason.PaymentMethodNotAllowed" },
+            @{ Id = 'M36_SERVICE_GENERIC_REASON'; Case = 'G2'; File = $svcRel; Old = 'failureReason = CheckoutFailureReason.CashOnDeliveryNotOffered'; New = 'failureReason = CheckoutFailureReason.PaymentMethodNotAllowed' },
+            @{ Id = 'M37_MESSAGE_BRANCH_REMOVED'; Case = 'G5'; Expect = 'dopo il rifiuto manca il messaggio del contrassegno'; File = $recRel; Old = 'Case CheckoutFailureReason.CashOnDeliveryNotOffered'; New = 'Case CType(99, CheckoutFailureReason)' },
+            @{ Id = 'M38_RETURN_TO_CONFIRM_STEP'; Case = 'G5'; Expect = 'dopo il rifiuto il cliente non e sul passo spedizione e pagamento'; Old = "                 CheckoutFailureReason.CashOnDeliveryNotOffered,`r`n"; New = '' },
+            @{ Id = 'M39_SEALING_NOTICE_NOT_AN_ERROR'; Case = 'G1'; Expect = 'il messaggio del contrassegno non e mostrato come errore'; Old = 'draftFailure = CheckoutFailureReason.CashOnDeliveryNotOffered)'; New = 'False)' }
         )
         foreach ($m in $mutants) {
             if ($MutantFilter -ne '' -and $m.Id -notmatch $MutantFilter) { continue }
             $isSvc = $m.ContainsKey('File')
-            $srcText = if ($isSvc) { $svcSource } else { $source }
+            $srcText = if ($isSvc) { Get-Text $repoBytes[$m.File] } else { $source }
             if (([regex]::Matches($srcText, [regex]::Escape($m.Old))).Count -ne 1) { $mutantFail.Add($m.Id + ' ancora non unica'); continue }
             $mutated = $srcText.Replace($m.Old, $m.New)
             if ($m.ContainsKey('Old2')) { if (([regex]::Matches($source, [regex]::Escape($m.Old2))).Count -ne 1) { $mutantFail.Add($m.Id + ' seconda parte ancora non unica'); continue }; $mutated = $mutated.Replace($m.Old2, $m.New2) }
             if ($isSvc) { Write-SiteFile $m.File $mutated } else { Write-SiteVb $mutated }
+            # un file di App_Code riavvia il sito: lo si lascia ripartire prima del caso, altrimenti i primi clic vanno persi
+            if ($isSvc) { try { Open-KsUrl $script:browser ($base + '/Default.aspx') 300 } catch { }; Start-Sleep -Seconds 10 }
             try {
                 $mb = @(Test-Case $m.Case $script:browser)
                 if ($mb.Count -eq 0) { $mutantFail.Add($m.Id + ' sopravvive al caso ' + $m.Case) }

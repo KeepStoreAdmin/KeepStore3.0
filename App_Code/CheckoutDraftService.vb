@@ -186,7 +186,7 @@ Public NotInheritable Class CheckoutDraftService
             End If
         End Using
         If Not IsCashOnDeliveryCompatible(connection, transaction, identity.CompanyId, draft.PaymentMethodId, draft.DeliveryMethodId) Then
-            failureReason = CheckoutFailureReason.PaymentMethodNotAllowed
+            failureReason = CheckoutFailureReason.CashOnDeliveryNotOffered
             Return False
         End If
         Return True

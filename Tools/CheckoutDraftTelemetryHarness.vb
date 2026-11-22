@@ -25,6 +25,7 @@ Public Enum CheckoutFailureReason
     CartInvalid = 8
     OrderNotesInvalid = 9
     PaymentMethodNotAllowed = 10
+    CashOnDeliveryNotOffered = 11
 End Enum
 
 Public NotInheritable Class OrderStorefrontIdentity
