@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## CHECKOUT-COD-REFUSAL-MESSAGE-1A — 23/11/2026 — SOURCE (messaggio dedicato: contrassegno non offerto dalla spedizione scelta)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#653](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/653), stable `cdf5096e`.** Decisione del PO del 22/11/2026: «Sì, cambialo» (messaggio dedicato).
+
+**Fatti e causa.** Il rifiuto introdotto da `CHECKOUT-COD-CARRIER-SERVER-CHECK-1A` usava il motivo generico `PaymentMethodNotAllowed` («…non accetta ordini dal sito…»), impreciso (basta cambiare spedizione) e in stile neutro al passaggio verso la conferma.
+
+**Ora.** Motivo `CashOnDeliveryNotOffered = 11` e testo: «Il contrassegno non è disponibile con questa spedizione. Scegli un'altra spedizione o un altro metodo di pagamento e conferma di nuovo l'ordine.». Al passaggio verso la conferma e un errore (`role="alert"`); dopo un rifiuto alla creazione dell'ordine il cliente torna al passo «spedizione e pagamento» con il messaggio, una sola volta. Il messaggio generico resta per il suo caso.
+
+**Revisioni.** ChatGPT (xhigh): accolti il motivo separato, l'ordine dell'inserimento nel gruppo del carrello, la prova del ritorno dopo il rifiuto. Claude (Opus): scartati con prova due punti del mio piano (distinzione «pagamento non trovato», non raggiungibile; pannello di errore al sigillo, che sarebbe rimasto sulla conferma successiva); accolti il motore delle mutazioni per piu file e il caso G5. Gate: PASS.
+
+**Prove.** `Tools/Test-CartShippingNumericRead.ps1`: G1, G2, G2N, G2M (rossi prima), G5 nuovo; 26 casi verdi; 39 mutazioni uccise (5 nuove). `Test-OrderBeforePaymentPolicy` e `Test-CheckoutFailureRecovery` verdi senza modifiche; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Nessun ordine reale. Segnalato: il pannello di errore del ritorno resta visibile anche dopo che il cliente ha corretto (gia cosi per tutti i motivi); il testo dice «contrassegno» per ogni azienda. **Alla consegna futura (insieme, prima `App_Code`):** `App_Code/CheckoutFailureRecoveryService.vb`, `App_Code/CheckoutDraftService.vb`, `carrello.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CHECKOUT-COD-CARRIER-SERVER-CHECK-1A — 22/11/2026 — SOURCE (il server rifiuta il contrassegno se il vettore non lo offre)
 
 **Esito: A (SOURCE, non pubblicato). Livello L (checkout, pagamento, creazione dell'ordine). PR [#651](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/651), stable `85fe0210`.** «Sì, procedi» del PO del 22/11/2026.
