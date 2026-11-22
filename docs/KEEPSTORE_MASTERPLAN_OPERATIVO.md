@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## SESSION-TIMEOUT-REGISTRATION-1A — 22/11/2026 — SOURCE (la pagina di registrazione / dati non accorcia piu la sessione a 10 minuti)
+
+**Esito: A (SOURCE, non pubblicato). Livello L (sessione del cliente). PR [#647](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/647), stable `6fe7f2f8`.** «Sì, procedi» del PO del 22/11/2026.
+
+**Fatti e causa.** Misurato sul LAB con una pagina di prova temporanea: dopo `registrazione.aspx` la durata della sessione passava da 30 a 10 minuti e restava a 10 su tutto il sito (Dashboard, ordini), per anonimi e collegati, finche non si apriva il carrello. Causa: `registrazione.aspx.vb` r.368 `Session.Timeout = 10` a ogni caricamento, con un commento che dichiarava l'intenzione opposta.
+
+**Ora.** La pagina non cambia la durata che riceve: riga tolta, commento corretto, nessun altro file del prodotto.
+
+**Revisioni.** ChatGPT (xhigh): accolti il contratto «preserva la durata», l'oracolo con durata iniziale diversa (45), l'invio reale, i mutanti «fisso a 30» e «solo negli invii», il marcatore di sessione. Claude (Opus): accolti l'invio nudo del modulo (per chi e collegato il controllo «AZIENDA» non esiste), il controllo dei rinvii, la pagina di prova senza master e solo locale; nessun codice dipende dai 10 minuti. Gate: PASS.
+
+**Prove.** `Tools/Test-SessionTimeoutPages.ps1` (LAB, pagina di prova creata e rimossa nella sola copia LAB): rossa prima, verde dopo, 4 mutazioni uccise, da anonimo e da collegato. Verdi accesso, credenziali, «Resta collegato»; segreti, precompile, CI.
+
+**Limiti e residuo (NON AVVIATO).** Sessioni gia a 10 minuti alla pubblicazione: tornano normali al primo passaggio dal carrello o alla sessione successiva. Non provati: salvataggio riuscito con rinvio, attesa reale della scadenza, `Coupon.master` (STANDBY); la durata sul server pubblico dipende dalla sua configurazione. Segnalato: `carrello.aspx.vb` r.3049 forza 30 a ogni caricamento. **Alla consegna futura:** `registrazione.aspx.vb` insieme a `registrazione.aspx`. CONSEGNA SERVER SOSPESA.
+
 ## REGISTRATION-TITLE-SIGNED-IN-1A — 22/11/2026 — SOURCE (la pagina dei dati dice «I tuoi dati» a chi e collegato)
 
 **Esito: A (SOURCE, non pubblicato). Livello S. PR [#645](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/645), stable `c2eeebef`.** Decisione del PO del 22/11/2026: «Sì, cambialo» (titolo «I tuoi dati» per chi e gia collegato).
