@@ -119,7 +119,7 @@
       '.ks-suggest-sub b{font-weight:900;color:#111827;}',
       '.ks-suggest-tag{padding:1px 8px;border-radius:999px;background:#fff3cd;color:#7a5b00;font-weight:800;}',
       '.ks-suggest-side{display:grid;justify-items:end;align-content:center;gap:4px;}',
-      '.ks-suggest-price{font-size:15px;font-weight:900;color:#b0001f;white-space:nowrap;}',
+      '.ks-suggest-price{font-size:15px;font-weight:900;color:var(--ks-price-normal,#000);white-space:nowrap;}',
       '.ks-suggest-badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef1f4;color:#475569;font-size:11px;font-weight:800;line-height:1.4;white-space:nowrap;}',
       '.ks-suggest-badge.is-promo{background:#fde8ec;color:#b0001f;}',
       '.ks-suggest-badge.is-ok{background:#e4f5ea;color:#116533;}',

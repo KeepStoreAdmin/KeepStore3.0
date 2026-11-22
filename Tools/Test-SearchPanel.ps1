@@ -96,7 +96,7 @@ function Test-Navigation([string]$js) {
 }
 function Test-PanelCss([string]$js) {
     return ($js -match '\.ks-suggest-all\{[^}]*min-height:44px[^}]*background:#d80027;color:#fff' -and
-            $js -match '\.ks-suggest-price\{[^}]*color:#b0001f' -and
+            $js -match '\.ks-suggest-price\{[^}]*color:var\(--ks-price-normal,#000\)' -and
             $js -match '\.ks-suggest-chip\{[^}]*min-height:32px' -and
             $js -match '\.ks-suggest-chip:focus-visible,\.ks-suggest-all:focus-visible[^}]*outline:3px solid #d80027' -and
             $js -match '@media \(prefers-reduced-motion:no-preference\)\{\.ks-suggest-skel-thumb' -and
@@ -114,7 +114,7 @@ function Test-MobileCss([string]$css) {
             $css -match '(?s)\.ks-header-ui \.ks-mobile-search-area \.ks-search-shell \.ks-search-category-select \{[^}]*min-height: 40px;[^}]*border-radius: 999px;')
 }
 function Test-Busters([string]$master) {
-    return ($master -match 'js/ks-page-flags\.js"\) %>\?v=20261114-(?:search-panel1a|deadcode-c1a)' -and $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-(?:home-cards|palette-aa|focus-fc)1a|20261119-compact-1a)"')
+    return ($master -match 'js/ks-page-flags\.js"\) %>\?v=(?:20261114-(?:search-panel1a|deadcode-c1a)|20261122-price-states-1b)' -and $master -match 'theme-overrides\.css"\) & "\?v=(?:20261114-(?:search-panel1a|home-vetrina[12]a|deadcode-c1a)|20261115-(?:home-cards|palette-aa|focus-fc)1a|20261119-compact-1a)"')
 }
 function Test-ServerLabel([string]$vb) {
     $recent = [regex]::Match($vb, '(?s)Private Function BuildRecentResult\(.*?End Function').Value
@@ -185,7 +185,7 @@ $m = $m.Replace('<fieldset>' + "`n" + '                    <asp:TextBox ID="tbCe
 Assert-Detected (Test-MobileMarkup $m) 'M16_DEPARTMENT_BEFORE_THE_FIELD_IN_DOM_ORDER'
 $m = Mutate-Text $themeCss "  grid-row: 2;`n  min-width: 0;" "  min-width: 0;" 'M17'
 Assert-Detected (Test-MobileCss $m) 'M17_DEPARTMENT_SELECT_NOT_ON_A_SECOND_ROW'
-$m = Mutate-Text $master 'js/ks-page-flags.js") %>?v=20261114-deadcode-c1a' 'js/ks-page-flags.js") %>?v=20261021-suggest-commercial1a' 'M18'
+$m = Mutate-Text $master 'js/ks-page-flags.js") %>?v=20261122-price-states-1b' 'js/ks-page-flags.js") %>?v=20261021-suggest-commercial1a' 'M18'
 Assert-Detected (Test-Busters $m) 'M18_SCRIPT_CACHE_BUSTER_NOT_UPDATED'
 $m = Mutate-Text $vb 'output("displayLabel") = _commercial.PriceContext.DisplayLabel' 'output("displayLabel") = String.Empty' 'M19'
 Assert-Detected (Test-ServerLabel $m) 'M19_RECENT_RESULT_WITHOUT_LABEL'
