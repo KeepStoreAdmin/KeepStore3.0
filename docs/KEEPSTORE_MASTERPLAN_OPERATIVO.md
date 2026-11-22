@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## HOME-MOBILE-MENU-1B — 22/11/2026 — SOURCE (menu del telefono: voce senza sottolivelli come collegamento diretto, posizione corrente segnata)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#639](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/639), stable `a0013b4b`.** «Sì, procedi» del PO del 22/11/2026. Nessun dato commerciale toccato.
+
+**Fatti e causa.** Sul LAB a 390 px: 27 categorie su 134 e 1 settore su 18 aprivano un livello con la sola riga «Tutto in <nome>»; sulle pagine del catalogo il menu del telefono aveva 0 segni della posizione (il menu grande 2-4). Causa: `SiteHeader.ascx` scriveva sempre pulsante e pannello, anche senza figli, e nessun attributo di percorso.
+
+**Ora.** La voce senza sottolivelli e un collegamento diretto, senza freccia. Il ramo della pagina corrente ha una barra a sinistra (genitori) e barra + colore (pagina): stessi attributi e stesso scopo del menu grande, un solo `aria-current`. Lo script dei livelli non cambia.
+
+**Revisioni.** ChatGPT (xhigh): accolti il code-behind nei file della prova, l'oracolo di conservazione delle voci (insieme uguale al menu grande), la specificita del selettore, il bordo al posto dell'ombra. Claude (Opus): accolti gli attributi prima di `href`, la barra in `--ks-accent-text`, nessun rientro del testo, le regole nel blocco unico del telefono, i pulsanti solo «ancestor»; scartato il testo nascosto sui genitori (sporcherebbe titolo e «Indietro»). Gate: PASS.
+
+**Prove.** `Tools/Test-MobileMenu.ps1` (sito LAB, tocco vero su categoria e settore diretti, cinque pagine): rossa prima, verde dopo, 21 mutazioni uccise. Verdi le prove di testata, palette, focus, ricerca; segreti, precompile, CI. `Test-HomeDeadCodeC` falliva gia sulla stable: aggiunta ai fallimenti noti.
+
+**Limiti e residuo (NON AVVIATO).** Non provati: senza JavaScript, ripiego dei livelli, postback, lettori di schermo e telefoni reali. Aprire il menu gia nel settore corrente: non fatto. **Alla consegna futura (insieme):** `Page.master`, `Public/ui/controls/SiteHeader.ascx`, `Public/ui/controls/SiteHeader.ascx.vb`, `Public/assets/keepstore/css/mobile-menu.css`. CONSEGNA SERVER SOSPESA.
+
 ## STYLE-PRICE-STATES-1C — 22/11/2026 — SOURCE (anteprima rapida: sconto mostrato come nella scheda da cui si apre)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#637](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/637), stable `79be1e64`.** «Sì, procedi» del PO del 22/11/2026.
