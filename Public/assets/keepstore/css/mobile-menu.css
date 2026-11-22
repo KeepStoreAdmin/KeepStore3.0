@@ -103,6 +103,19 @@
     transition: none;
   }
 
+  /* posizione corrente (HOME-MOBILE-MENU-1B): barra nel margine sinistro, il testo non rientra; resta anche con i colori forzati */
+  #mobileMenu .ks-mobile-primary-nav .sub-nav-link[data-ks-current-path] {
+    margin-left: -11px;
+    padding-left: 8px;
+    border-left: 3px solid var(--ks-accent-text, #B8001F);
+  }
+  #mobileMenu .ks-mobile-primary-nav button.sub-nav-link[data-ks-current-path] {
+    width: calc(100% + 11px);
+  }
+  #mobileMenu .ks-mobile-primary-nav .sub-nav-link[data-ks-current-path="current"] {
+    color: var(--ks-accent-text, #B8001F);
+  }
+
   /* barra dei servizi: ultimo elemento della colonna, sempre visibile */
   #mobileMenu .ks-mobile-utility-nav {
     display: grid;

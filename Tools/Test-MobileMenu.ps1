@@ -1,17 +1,19 @@
 [CmdletBinding()]
-param([switch]$SkipMutants, [string]$MutantFilter = '', [string]$ShotDir = '', [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
+param([switch]$SkipMutants, [switch]$CatalogOnly, [string]$MutantFilter = '', [string]$ShotDir = '', [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
 
 # HOME-MOBILE-MENU-1A. Menu su telefono (#mobileMenu): pannello stretto con la pagina visibile dietro, testata "Menu" nel flusso,
 # catalogo per primo con righe compatte e freccia, barra dei servizi (Offerte, Account, Wishlist, Confronta) sempre visibile,
 # "Tutto in <nome>" in cima a ogni livello. La logica dei livelli (ks-page-flags.js) non cambia.
 # Prova sul sito LAB (https, 127.0.0.1, porta 18843) a 360 / 390 / 430 px con il menu aperto davvero; a 1280 px le regole non valgono.
+# HOME-MOBILE-MENU-1B: una voce senza sottolivelli e un collegamento diretto (niente livello con la sola riga "Tutto in"), nessuna voce persa
+# rispetto al menu grande della stessa pagina, e il menu segna il ramo della pagina corrente (un solo aria-current).
 # Mutazioni sulla copia LAB, file rimessi alla fine. Sola lettura sul database. Solo ASCII.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
-$files = @('Page.master', 'Public\ui\controls\SiteHeader.ascx', 'Public\assets\keepstore\css\mobile-menu.css')
+$files = @('Page.master', 'Public\ui\controls\SiteHeader.ascx', 'Public\ui\controls\SiteHeader.ascx.vb', 'Public\assets\keepstore\css\mobile-menu.css')
 foreach ($f in $files) { if (-not (Test-Path -LiteralPath (Join-Path $root $f))) { Write-Host ('MOBILE_MENU FAIL: file mancante ' + $f); exit 1 } }
 $repoBytes = @{}; foreach ($f in $files) { $repoBytes[$f] = [IO.File]::ReadAllBytes((Join-Path $root $f)) }
 function Get-Text([byte[]]$bytes) { $o = 0; if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { $o = 3 }; return $utf8.GetString($bytes, $o, $bytes.Length - $o) }
@@ -44,10 +46,18 @@ o.bar=links;o.active=document.activeElement?((document.activeElement.className&&
 return JSON.stringify(o);})()
 '@
 function Read-Menu($browser) { return (ConvertFrom-Json ([string](Invoke-KsJs $browser $stateJs))) }
+function Open-Page($browser, [string]$rel) {
+    # dopo una ricompilazione il sito LAB puo rispondere una pagina di errore del browser: si riprova
+    for ($a = 1; $a -le 3; $a++) {
+        try { Open-KsUrl $browser ($base + '/' + $rel) 300 } catch { if ($a -eq 3) { throw } }
+        try { if ([string](Invoke-KsJs $browser 'location.origin') -eq $base -and [bool](Invoke-KsJs $browser "!!document.getElementById('mobileMenu')")) { return } } catch { }
+        Start-Sleep -Seconds 4
+    }
+    throw 'ORIGINE_INATTESA'
+}
 function Open-Home($browser) {
     try { $null = Invoke-KsCdp $browser 'Network.enable' @{}; $null = Invoke-KsCdp $browser 'Network.setCacheDisabled' @{ cacheDisabled = $true } } catch { }
-    Open-KsUrl $browser ($base + '/Default.aspx') 300
-    if ([string](Invoke-KsJs $browser 'location.origin') -ne $base) { throw 'ORIGINE_INATTESA' }
+    Open-Page $browser 'Default.aspx'
     $null = Invoke-KsJs $browser "(function(){var st=document.createElement('style');st.textContent='*,*::before,*::after{animation:none!important;transition:none!important}';document.head.appendChild(st);return 1;})()"
     Start-Sleep -Milliseconds 1200
 }
@@ -95,6 +105,130 @@ function Test-Rows([string]$tag, $s) {
         if (-not [bool]$r.hit) { $bad.Add($tag + ' riga [' + [string]$r.t + '] non risponde al tocco'); break }
         if ([int]$r.labelLeft -gt 20) { $bad.Add($tag + ' riga [' + [string]$r.t + ']: rientro vuoto di ' + [string]$r.labelLeft + ' px'); break }
         if ([bool]$r.isButton -and ([bool]$r.plus -or -not [bool]$r.arrow)) { $bad.Add($tag + ' riga [' + [string]$r.t + ']: segno ' + $(if ($r.plus) { 'piu' } else { 'assente' }) + ' invece della freccia'); break }
+    }
+    return $bad
+}
+
+$treeJs = @'
+(function(){
+var m=document.getElementById('mobileMenu');
+function P(b){return document.getElementById((b.getAttribute('data-bs-target')||'').replace('#',''));}
+function T(e){return e?(e.textContent||'').replace(/\s+/g,' ').trim():'';}
+function H(a){return a?(a.getAttribute('href')||''):'';}
+function N(x){return x?T(x.querySelector('.ks-mobile-nav-label')||x.querySelector('span')||x):'';}
+var o={single:[],broken:[],phone:[],phoneDirect:[],desk:[],deskDirect:[],marks:[],deskCurrent:[],branch:null,directCat:null,directSector:null,bound:String(m.__ksPanelsBound)};
+[].forEach.call(m.querySelectorAll('.ks-mobile-sector-item'),function(s){
+ var sb=s.querySelector(':scope > button'),sa=s.querySelector(':scope > a'),sn=N(sb||sa);
+ if(!sb){if(!sa){o.broken.push('S:'+sn);return;}o.phone.push('S|'+H(sa));o.phoneDirect.push('S|'+H(sa));if(!o.directSector)o.directSector={name:sn,href:H(sa)};return;}
+ var sp=P(sb);if(!sp){o.broken.push('S:'+sn);return;}
+ var sAll=sp.querySelector(':scope > ul > li > a');o.phone.push('S|'+H(sAll));
+ if(sp.querySelectorAll(':scope > ul > li').length<2)o.single.push('S:'+sn);
+ [].forEach.call(sp.querySelectorAll('.ks-mobile-category-item'),function(c){
+  var cb=c.querySelector(':scope > button'),ca=c.querySelector(':scope > a'),cn=N(cb||ca);
+  if(!cb){if(!ca){o.broken.push('C:'+cn);return;}o.phone.push('C|'+H(ca));o.phoneDirect.push('C|'+H(ca));if(!o.directCat)o.directCat={sector:sn,sectorHref:H(sAll),name:cn,href:H(ca)};return;}
+  var cp=P(cb);if(!cp){o.broken.push('C:'+cn);return;}
+  var cAll=cp.querySelector(':scope > ul > li > a');o.phone.push('C|'+H(cAll));
+  if(cp.querySelectorAll(':scope > ul > li').length<2)o.single.push('C:'+cn);
+  var tips=cp.querySelectorAll('.ks-mobile-tipology-item > a');
+  [].forEach.call(tips,function(t){o.phone.push('T|'+H(t));});
+  if(tips.length&&!o.branch)o.branch={sector:sn,sectorHref:H(sAll),cat:cn,catHref:H(cAll),tip:T(tips[0]),tipHref:H(tips[0])};
+ });});
+[].forEach.call(document.querySelectorAll('.ks-header-catalog-sector'),function(s){
+ var sl=H(s.querySelector('.ks-header-catalog-sector-link'));o.desk.push('S|'+sl);
+ var blocks=s.querySelectorAll('.ks-header-catalog-category-block');if(!blocks.length)o.deskDirect.push('S|'+sl);
+ [].forEach.call(blocks,function(b){var c=H(b.querySelector('.ks-header-catalog-category-link'));o.desk.push('C|'+c);
+  var tl=b.querySelectorAll('.ks-header-catalog-tipology-link');if(!tl.length)o.deskDirect.push('C|'+c);
+  [].forEach.call(tl,function(t){o.desk.push('T|'+H(t));});});});
+[].forEach.call(m.querySelectorAll('.ks-mobile-catalog-root [data-ks-current-path], .ks-mobile-catalog-root [aria-current]'),function(e){
+ o.marks.push((e.getAttribute('data-ks-current-path')||'-')+'|'+(e.getAttribute('aria-current')||'-')+'|'+e.tagName+'|'+(e.tagName==='A'?H(e):N(e)));});
+[].forEach.call(document.querySelectorAll(".ks-header-catalog-sector [data-ks-current-path='current']"),function(e){o.deskCurrent.push(H(e));});
+var plain=m.querySelector('.ks-mobile-catalog-root .sub-nav-link:not([data-ks-current-path])');
+function S(e){if(!e)return null;var c=getComputedStyle(e);var l=e.querySelector('.ks-mobile-nav-label')||e.querySelector('span')||e;return {bw:c.borderLeftWidth,bs:c.borderLeftStyle,bc:c.borderLeftColor,color:c.color,labelLeft:Math.round(l.getBoundingClientRect().left-m.getBoundingClientRect().left),left:Math.round(e.getBoundingClientRect().left-m.getBoundingClientRect().left),shown:e.getClientRects().length>0};}
+o.stylePlain=S(plain);o.styleAncestor=S(m.querySelector(".ks-mobile-catalog-root [data-ks-current-path='ancestor']"));o.styleCurrent=S(m.querySelector(".ks-mobile-catalog-root [data-ks-current-path='current']"));
+return JSON.stringify(o);})()
+'@
+function Read-Tree($browser) { return (ConvertFrom-Json ([string](Invoke-KsJs $browser $treeJs))) }
+function Get-Set($list) { return (@($list | ForEach-Object { [string]$_ } | Sort-Object -Unique) -join "`n") }
+function Wait-Location($browser, [string]$rel) {
+    for ($i = 0; $i -lt 60; $i++) { Start-Sleep -Milliseconds 500; try { if ([string](Invoke-KsJs $browser 'location.pathname.split("/").pop()+location.search') -eq $rel -and [string](Invoke-KsJs $browser 'document.readyState') -ne 'loading') { return $true } } catch { } }
+    return $false
+}
+# Tocco vero (mouse) sul collegamento diretto con quell'indirizzo, nel livello visibile del menu.
+function Tap-Direct($browser, [string]$href, [string]$tag, $bad) {
+    $q = ConvertTo-Json $href -Compress
+    $info = ConvertFrom-Json ([string](Invoke-KsJs $browser ("(function(){var m=document.getElementById('mobileMenu');var a=[].slice.call(m.querySelectorAll('.ks-mobile-catalog-root li > a.sub-nav-link')).filter(function(x){return x.getAttribute('href')===" + $q + "&&x.getClientRects().length;})[0];if(!a)return JSON.stringify({found:false});a.scrollIntoView({block:'center'});var r=a.getBoundingClientRect();var p=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return JSON.stringify({found:true,x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2),h:Math.round(r.height),hit:!!p&&(p===a||a.contains(p)),arrow:!!a.querySelector('.btn-open-sub'),cut:a.scrollWidth>a.clientWidth+1,isAll:/^Tutto in /.test((a.textContent||'').trim())});})()")))
+    if (-not [bool]$info.found) { $bad.Add($tag + ': collegamento diretto non visibile nel livello (' + $href + ')'); return }
+    if ([bool]$info.isAll) { $bad.Add($tag + ': la voce e ancora "Tutto in" dentro un livello'); return }
+    if ([int]$info.h -lt 44) { $bad.Add($tag + ': riga alta ' + [string]$info.h + ' px') }
+    if ([bool]$info.arrow) { $bad.Add($tag + ': freccia su una voce che non apre un livello') }
+    if ([bool]$info.cut) { $bad.Add($tag + ': riga tagliata') }
+    if (-not [bool]$info.hit) { $bad.Add($tag + ': non risponde al tocco'); return }
+    foreach ($t in @('mousePressed', 'mouseReleased')) { $null = Invoke-KsCdp $browser 'Input.dispatchMouseEvent' @{ type = $t; x = [int]$info.x; y = [int]$info.y; button = 'left'; clickCount = 1 } }
+    if (-not (Wait-Location $browser $href)) { $bad.Add($tag + ': il tocco non porta a ' + $href) }
+}
+function Enter-Sector($browser, [string]$name) {
+    $q = ConvertTo-Json $name -Compress
+    $null = Invoke-KsJs $browser ("(function(){var m=document.getElementById('mobileMenu');var b=[].slice.call(m.querySelectorAll('.ks-mobile-sector-item > button')).filter(function(x){return (x.querySelector('.ks-mobile-nav-label').textContent||'').replace(/\s+/g,' ').trim()===" + $q + ";})[0];if(b)b.click();return 1;})()")
+    for ($i = 0; $i -lt 24; $i++) { Start-Sleep -Milliseconds 250; if ([string](Invoke-KsJs $browser "document.querySelector('#mobileMenu .ks-mobile-catalog-title').textContent.trim()") -eq $name) { break } }
+    Start-Sleep -Milliseconds 400
+}
+function Test-Marks([string]$tag, $t, [string[]]$expected, $bad) {
+    $got = Get-Set $t.marks; $want = Get-Set $expected
+    if ($got -ne $want) { $bad.Add($tag + ' segni della posizione: [' + ($got -replace "`n", ' ; ') + '] invece di [' + ($want -replace "`n", ' ; ') + ']'); return }
+    $cur = @($expected | Where-Object { $_ -like 'current|*' })
+    if ($cur.Count -eq 1) { $h = ([string]$cur[0]).Split('|')[3]; if (@($t.deskCurrent) -notcontains $h) { $bad.Add($tag + ' segni della posizione: il menu grande non segna la stessa pagina (' + $h + ')') } }
+}
+function Invoke-Catalog($browser) {
+    $bad = New-Object Collections.Generic.List[string]
+    Open-Home $browser
+    $t = Read-Tree $browser
+    if ([string]$t.bound -ne 'true') { $bad.Add('catalogo: la logica dei livelli non si attiva (' + [string]$t.bound + ')') }
+    if (@($t.broken).Count -gt 0) { $bad.Add('catalogo: voci senza pulsante ne collegamento: ' + ((@($t.broken) | Select-Object -First 3) -join ', ')) }
+    if (@($t.single).Count -gt 0) { $bad.Add('catalogo: ' + @($t.single).Count + ' livelli con la sola riga "Tutto in" (' + ((@($t.single) | Select-Object -First 3) -join ', ') + ')') }
+    if (@($t.desk).Count -lt 20) { $bad.Add('catalogo NON PROVATO: menu grande con ' + @($t.desk).Count + ' voci'); return $bad }
+    if ((Get-Set $t.phone) -ne (Get-Set $t.desk)) {
+        $miss = @(@($t.desk) | Where-Object { @($t.phone) -notcontains $_ }); $extra = @(@($t.phone) | Where-Object { @($t.desk) -notcontains $_ })
+        $bad.Add('catalogo: voci diverse dal menu grande (mancano ' + $miss.Count + ', in piu ' + $extra.Count + '; es. ' + ((@($miss + $extra) | Select-Object -First 2) -join ' , ') + ')')
+    }
+    if ((Get-Set $t.phoneDirect) -ne (Get-Set $t.deskDirect)) { $bad.Add('catalogo: collegamenti diretti ' + @($t.phoneDirect).Count + ' invece di ' + @($t.deskDirect).Count + ' voci senza sottolivelli') }
+    if (@($t.marks).Count -gt 0) { $bad.Add('catalogo: segni della posizione sulla HOME (' + @($t.marks).Count + ')') }
+    if ($null -eq $t.branch) { $bad.Add('posizione NON PROVATO: nessuna categoria con tipologie'); return $bad }
+    $dc = $t.directCat; $ds = $t.directSector; $br = $t.branch
+    if ($null -eq $dc) { $bad.Add('categoria diretta NON PROVATO: nessuna categoria senza tipologie come collegamento') }
+    else {
+        Open-Menu $browser; Enter-Sector $browser ([string]$dc.sector)
+        if ($ShotDir -ne '') { Save-KsScreenshot $browser (Join-Path $ShotDir 'menu-390-diretta.png') }
+        Tap-Direct $browser ([string]$dc.href) 'categoria diretta' $bad
+        Start-Sleep -Milliseconds 1200
+        Test-Marks 'categoria diretta' (Read-Tree $browser) @(('ancestor|-|BUTTON|' + [string]$dc.sector), ('current|location|A|' + [string]$dc.href)) $bad
+    }
+    if ($null -eq $ds) { $bad.Add('settore diretto NON PROVATO: nessun settore senza categorie come collegamento') }
+    else {
+        Open-Home $browser; Open-Menu $browser
+        Tap-Direct $browser ([string]$ds.href) 'settore diretto' $bad
+        Start-Sleep -Milliseconds 1200
+        Test-Marks 'settore diretto' (Read-Tree $browser) @(('current|location|A|' + [string]$ds.href)) $bad
+    }
+    $aS = 'ancestor|-|BUTTON|' + [string]$br.sector; $aC = 'ancestor|-|BUTTON|' + [string]$br.cat
+    Open-Page $browser ([string]$br.sectorHref); Start-Sleep -Milliseconds 1200
+    Test-Marks 'pagina del settore' (Read-Tree $browser) @($aS, ('current|location|A|' + [string]$br.sectorHref)) $bad
+    Open-Page $browser ([string]$br.catHref); Start-Sleep -Milliseconds 1200
+    Test-Marks 'pagina della categoria' (Read-Tree $browser) @($aS, $aC, ('current|location|A|' + [string]$br.catHref)) $bad
+    Open-Page $browser ([string]$br.tipHref); Start-Sleep -Milliseconds 1200
+    $null = Invoke-KsJs $browser "(function(){var st=document.createElement('style');st.textContent='*,*::before,*::after{animation:none!important;transition:none!important}';document.head.appendChild(st);return 1;})()"
+    Open-Menu $browser
+    $tt = Read-Tree $browser
+    Test-Marks 'pagina della tipologia' $tt @($aS, $aC, ('current|location|A|' + [string]$br.tipHref)) $bad
+    if ($ShotDir -ne '') { Save-KsScreenshot $browser (Join-Path $ShotDir 'menu-390-posizione.png') }
+    $sa = $tt.styleAncestor; $sc = $tt.styleCurrent; $sp = $tt.stylePlain
+    if ($null -eq $sa -or $null -eq $sc -or $null -eq $sp) { $bad.Add('segno NON PROVATO: riga segnata o riga normale assente') }
+    else {
+        if ([string]$sa.bw -ne '3px' -or [string]$sa.bs -ne 'solid' -or [string]$sc.bw -ne '3px') { $bad.Add('segno: barra a sinistra ' + [string]$sa.bw + ' ' + [string]$sa.bs + ' (ramo) e ' + [string]$sc.bw + ' (pagina) invece di 3px solid') }
+        if ([string]$sa.bc -eq [string]$sp.color -or [string]$sa.bc -match 'rgba\(0, 0, 0, 0\)') { $bad.Add('segno: barra del colore del testo normale o trasparente (' + [string]$sa.bc + ')') }
+        if ([string]$sc.color -eq [string]$sp.color) { $bad.Add('segno: la pagina corrente ha il colore del testo normale (' + [string]$sc.color + ')') }
+        if (-not [bool]$sa.shown -or [int]$sa.left -lt 0) { $bad.Add('segno: barra del ramo fuori dal pannello (' + [string]$sa.left + ' px)') }
+        if ([int]$sa.labelLeft -ne [int]$sp.labelLeft) { $bad.Add('segno: testo della riga segnata a ' + [string]$sa.labelLeft + ' px invece di ' + [string]$sp.labelLeft) }
+        if ([string]$sp.bw -ne '0px') { $bad.Add('segno: barra anche sulle righe normali (' + [string]$sp.bw + ')') }
     }
     return $bad
 }
@@ -162,6 +296,14 @@ function Invoke-Desktop($browser) {
     Open-Home $browser
     $r = ConvertFrom-Json ([string](Invoke-KsJs $browser "(function(){var m=document.getElementById('mobileMenu');var h=m.querySelector('.ks-mobile-menu-head');var b=m.querySelector('.ks-mobile-utility-nav');return JSON.stringify({w:getComputedStyle(m).width,head:h?getComputedStyle(h).minHeight:'',bar:b?getComputedStyle(b).display:''});})()"))
     if ([string]$r.head -eq '56px' -or [string]$r.bar -eq 'grid') { $bad.Add('1280 le regole del menu su telefono valgono anche su schermo grande (testata ' + [string]$r.head + ', barra ' + [string]$r.bar + ')') }
+    $t = Read-Tree $browser
+    if ($null -eq $t.branch) { $bad.Add('1280 segno NON PROVATO: nessuna categoria con tipologie') }
+    else {
+        Open-Page $browser ([string]$t.branch.tipHref); Start-Sleep -Milliseconds 800
+        $t2 = Read-Tree $browser
+        if ($null -eq $t2.styleAncestor) { $bad.Add('1280 segno NON PROVATO: nessuna riga segnata') }
+        elseif ([string]$t2.styleAncestor.bw -ne '0px') { $bad.Add('1280 le regole del segno della posizione valgono anche su schermo grande (' + [string]$t2.styleAncestor.bw + ')') }
+    }
     return $bad
 }
 function Start-Phone([int]$w) { return (Start-KsBrowser -LoopbackHosts @('www.taikun.it', 'www.webaffare.it') -Width $w -Height 844 -Mobile) }
@@ -172,19 +314,23 @@ if ($ShotDir -ne '') { New-Item -ItemType Directory -Force -Path $ShotDir | Out-
 $browser = $null
 try {
     Sync-Site
-    foreach ($w in @(360, 390, 430)) {
+    foreach ($w in $(if ($CatalogOnly) { @() } else { @(360, 390, 430) })) {
         $browser = Start-Phone $w
         $bad = @(Invoke-Width $browser $w)
         if ($bad.Count -eq 0) { Write-Host ('  ok   ' + $w + ' px') } else { $exit = 1; foreach ($b in ($bad | Select-Object -First 10)) { Write-Host ('  FAIL ' + $b) } }
         Stop-KsBrowser $browser; $browser = $null
     }
+    $browser = Start-Phone 390
+    $bad = @(Invoke-Catalog $browser)
+    if ($bad.Count -eq 0) { Write-Host '  ok   catalogo e posizione (390 px)' } else { $exit = 1; foreach ($b in ($bad | Select-Object -First 12)) { Write-Host ('  FAIL ' + $b) } }
+    Stop-KsBrowser $browser; $browser = $null
     $browser = Start-KsBrowser -LoopbackHosts @('www.taikun.it', 'www.webaffare.it') -Width 1280 -Height 900
     $bad = @(Invoke-Desktop $browser)
     if ($bad.Count -eq 0) { Write-Host '  ok   1280 px' } else { $exit = 1; foreach ($b in $bad) { Write-Host ('  FAIL ' + $b) } }
     Stop-KsBrowser $browser; $browser = $null
 
     if (-not $SkipMutants -and $exit -eq 0) {
-        $css = 'Public\assets\keepstore\css\mobile-menu.css'; $ascx = 'Public\ui\controls\SiteHeader.ascx'
+        $css = 'Public\assets\keepstore\css\mobile-menu.css'; $ascx = 'Public\ui\controls\SiteHeader.ascx'; $vb = 'Public\ui\controls\SiteHeader.ascx.vb'
         $mutants = @(
             @{ Id = 'M01_SHEET_NOT_LINKED'; File = 'Page.master'; W = 390; Expect = '390 pannello largo'; Old = 'css/mobile-menu.css'; New = 'css/mobile-menu-off.css' },
             @{ Id = 'M02_DRAWER_FULL_WIDTH'; File = $css; W = 390; Expect = '390 pannello largo'; Old = '    width: min(86vw, 360px);'; New = '    width: 100vw;' },
@@ -194,7 +340,19 @@ try {
             @{ Id = 'M06_ARROW_RULE_REMOVED'; File = $css; W = 390; Expect = '390 settori riga'; Old = '.sub-nav-link > .btn-open-sub::before {'; New = '.sub-nav-link > .btn-open-sub-off::before {' },
             @{ Id = 'M07_NO_BREAKPOINT'; File = $css; W = 1280; Expect = '1280 le regole'; Old = '@media (max-width: 1199.98px) {'; New = '@media (min-width: 1px) {' },
             @{ Id = 'M08_VIEW_ALL_WITHOUT_NAME'; File = $ascx; W = 390; Expect = '390 livello: prima voce'; Old = "'>Tutto in <%# Server.HtmlEncode(Convert.ToString(Eval(""Descrizione""))) %></a></li><asp:Repeater ID=""rptNavCategorieMobile"""; New = "'>Vedi tutto il settore</a></li><asp:Repeater ID=""rptNavCategorieMobile""" },
-            @{ Id = 'M09_EMPTY_IMAGE_SLOT_KEPT'; File = $css; W = 390; Expect = '390 settori riga'; Old = '  #mobileMenu .ks-mobile-nav-media.is-empty {'; New = '  #mobileMenu .ks-mobile-nav-media.is-empty-off {' }
+            @{ Id = 'M09_EMPTY_IMAGE_SLOT_KEPT'; File = $css; W = 390; Expect = '390 settori riga'; Old = '  #mobileMenu .ks-mobile-nav-media.is-empty {'; New = '  #mobileMenu .ks-mobile-nav-media.is-empty-off {' },
+            @{ Id = 'M10_EMPTY_BRANCH_AS_BUTTON'; File = $vb; W = 0; Expect = 'catalogo: '; Old = 'If category IsNot Nothing Then Return category.Children IsNot Nothing AndAlso category.Children.Count > 0'; New = 'If category IsNot Nothing Then Return True' },
+            @{ Id = 'M11_DIRECT_CATEGORY_URL_WRONG'; File = $ascx; W = 0; Expect = 'catalogo: voci diverse'; Old = "href='<%# Eval(""DefaultUrl"") %>'><span><%# Server.HtmlEncode"; New = "href='articoli.aspx'><span><%# Server.HtmlEncode" },
+            @{ Id = 'M12_DIRECT_SECTOR_URL_WRONG'; File = $ascx; W = 0; Expect = 'catalogo: voci diverse'; Old = "href='<%# Eval(""DefaultUrl"") %>'><span class=""ks-mobile-nav-entry"">"; New = "href='articoli.aspx'><span class=""ks-mobile-nav-entry"">" },
+            @{ Id = 'M13_DIRECT_CATEGORY_OMITTED'; File = $ascx; W = 0; Expect = 'catalogo: voci senza pulsante'; Old = "Visible='<%# Not MobileHasChildren(Container.DataItem) %>'><a class=""sub-nav-link ks-mobile-direct-link""<%# MobilePathAttributes(Container.DataItem, ""leaf"") %> href='<%# Eval(""DefaultUrl"") %>'><span><%#"; New = "Visible=""false""><a class=""sub-nav-link ks-mobile-direct-link""<%# MobilePathAttributes(Container.DataItem, ""leaf"") %> href='<%# Eval(""DefaultUrl"") %>'><span><%#" },
+            @{ Id = 'M14_ANCESTOR_NOT_WRITTEN'; File = $vb; W = 0; Expect = 'categoria diretta segni'; Old = 'If String.Equals(role, "branch", StringComparison.Ordinal) Then Return "ancestor"'; New = 'If String.Equals(role, "branch", StringComparison.Ordinal) Then Return String.Empty' },
+            @{ Id = 'M15_CURRENT_ON_BUTTON'; File = $vb; W = 0; Expect = 'categoria diretta segni'; Old = 'If String.Equals(role, "branch", StringComparison.Ordinal) Then Return "ancestor"'; New = 'If String.Equals(role, "branch", StringComparison.Ordinal) Then Return "current"' },
+            @{ Id = 'M16_VIEW_ALL_CURRENT_BELOW'; File = $vb; W = 0; Expect = 'categoria diretta segni'; Old = 'atEnd = Not scope.HasCategory'; New = 'atEnd = True' },
+            @{ Id = 'M17_TIPOLOGY_NOT_MARKED'; File = $vb; W = 0; Expect = 'pagina della tipologia segni'; Old = 'onPath = scope.HasCategory AndAlso scope.HasTipology AndAlso node.Id = scope.TipologyId AndAlso node.ParentId = scope.CategoryId'; New = 'onPath = False' },
+            @{ Id = 'M18_SIGN_RULE_REMOVED'; File = $css; W = 0; Expect = 'segno: barra'; Old = "  #mobileMenu .ks-mobile-primary-nav .sub-nav-link[data-ks-current-path] {`n    margin-left: -11px;"; New = "  #mobileMenu .ks-mobile-primary-nav .sub-nav-link-off[data-ks-current-path] {`n    margin-left: -11px;" },
+            @{ Id = 'M19_SIGN_LOSES_THE_CASCADE'; File = $css; W = 0; Expect = 'segno: la pagina corrente'; Old = '  #mobileMenu .ks-mobile-primary-nav .sub-nav-link[data-ks-current-path="current"] {'; New = '  #mobileMenu [data-ks-current-path="current"] {' },
+            @{ Id = 'M20_SIGN_INDENTS_THE_TEXT'; File = $css; W = 0; Expect = 'segno: testo'; Old = '    margin-left: -11px;'; New = '    margin-left: 0;' },
+            @{ Id = 'M21_SIGN_OUTSIDE_PHONE_BLOCK'; File = $css; W = 1280; Expect = '1280 le regole del segno'; Old = '  /* posizione corrente (HOME-MOBILE-MENU-1B)'; New = "}`n#mobileMenu .ks-mobile-primary-nav .sub-nav-link[data-ks-current-path] { border-left: 3px solid #B8001F; }`n@media (max-width: 1199.98px) {`n  /* posizione corrente (HOME-MOBILE-MENU-1B)" }
         )
         foreach ($mu in $mutants) {
             if ($MutantFilter -ne '' -and $mu.Id -notmatch $MutantFilter) { continue }
@@ -207,7 +365,8 @@ try {
             } else { $mut = $src.Replace($mu.Old, $mu.New) }
             Write-SiteText $mu.File $mut
             try {
-                if ($mu.W -eq 1280) { $browser = Start-KsBrowser -LoopbackHosts @('www.taikun.it', 'www.webaffare.it') -Width 1280 -Height 900; $mb = @(Invoke-Desktop $browser) }
+                if ($mu.W -eq 0) { $browser = Start-Phone 390; $mb = @(Invoke-Catalog $browser) }
+                elseif ($mu.W -eq 1280) { $browser = Start-KsBrowser -LoopbackHosts @('www.taikun.it', 'www.webaffare.it') -Width 1280 -Height 900; $mb = @(Invoke-Desktop $browser) }
                 else { $browser = Start-Phone $mu.W; $mb = @(Invoke-Width $browser $mu.W) }
                 if (@($mb | Where-Object { ([string]$_).StartsWith($mu.Expect) }).Count -gt 0) { Write-Host ('  ok   mutazione uccisa ' + $mu.Id) } else { Write-Host ('  FAIL mutazione sopravvissuta ' + $mu.Id + ' :: ' + (($mb | Select-Object -First 2) -join ' ; ')); $exit = 1 }
             } catch { Write-Host ('  FAIL ' + $mu.Id + ': ' + $_.Exception.Message); $exit = 1 }
@@ -219,5 +378,5 @@ try {
     Sync-Site
     foreach ($f in $files) { if ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $SitePath $f))) -ne [Convert]::ToBase64String($repoBytes[$f])) { Write-Host ('  ATTENZIONE: file del LAB non ripristinato: ' + $f); $exit = 1 } }
 }
-if ($exit -eq 0) { Write-Host ('MOBILE_MENU PASS' + $(if ($SkipMutants) { ' (senza mutazioni)' } elseif ($MutantFilter -ne '') { ' (mutazioni filtrate)' } else { ' (9 mutazioni uccise sul sito LAB)' })) } else { Write-Host 'MOBILE_MENU FAIL' }
+if ($exit -eq 0) { Write-Host ('MOBILE_MENU PASS' + $(if ($SkipMutants) { ' (senza mutazioni)' } elseif ($MutantFilter -ne '') { ' (mutazioni filtrate)' } else { ' (21 mutazioni uccise sul sito LAB)' })) } else { Write-Host 'MOBILE_MENU FAIL' }
 exit $exit

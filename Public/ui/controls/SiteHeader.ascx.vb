@@ -278,6 +278,48 @@ Partial Class SiteHeader
     Protected Function MainNavCurrent(ByVal key As String) As String
         Return NavCurrentAttr(MainNavKey(), key)
     End Function
+    ' HOME-MOBILE-MENU-1B: nel menu del telefono una voce senza sottolivelli e un collegamento diretto (come «Vedi la categoria» del menu grande),
+    ' e il ramo della pagina corrente e segnato con gli stessi attributi del menu grande, dallo stesso scopo (_headerCurrentScope).
+    Protected Function MobileHasChildren(ByVal item As Object) As Boolean
+        Dim sector As CatalogMenuSector = TryCast(item, CatalogMenuSector)
+        If sector IsNot Nothing Then Return sector.Categories IsNot Nothing AndAlso sector.Categories.Count > 0
+        Dim category As CatalogMenuCategory = TryCast(item, CatalogMenuCategory)
+        If category IsNot Nothing Then Return category.Children IsNot Nothing AndAlso category.Children.Count > 0
+        Return False
+    End Function
+
+    ' Ruoli: "branch" = pulsante che apre il livello (solo «ancestor»); "all" = «Tutto in <nome>» (pagina corrente se lo scopo si ferma li);
+    ' "leaf" = collegamento diretto o tipologia. Restituisce "", "ancestor" oppure "current": al piu un «current» per menu.
+    Friend Shared Function ResolveMobilePathState(ByVal scope As CatalogTaxonomyContext, ByVal item As Object, ByVal role As String) As String
+        If scope Is Nothing OrElse Not scope.HasSector OrElse item Is Nothing Then Return String.Empty
+        Dim onPath As Boolean = False
+        Dim atEnd As Boolean = False
+        Dim sector As CatalogMenuSector = TryCast(item, CatalogMenuSector)
+        Dim category As CatalogMenuCategory = TryCast(item, CatalogMenuCategory)
+        Dim node As CatalogMenuNode = TryCast(item, CatalogMenuNode)
+        If sector IsNot Nothing Then
+            onPath = sector.Id = scope.SectorId
+            atEnd = Not scope.HasCategory
+        ElseIf category IsNot Nothing Then
+            onPath = scope.HasCategory AndAlso category.Id = scope.CategoryId AndAlso category.SettoriId = scope.SectorId
+            atEnd = Not scope.HasTipology
+        ElseIf node IsNot Nothing Then
+            onPath = scope.HasCategory AndAlso scope.HasTipology AndAlso node.Id = scope.TipologyId AndAlso node.ParentId = scope.CategoryId
+            atEnd = True
+        End If
+        If Not onPath Then Return String.Empty
+        If String.Equals(role, "branch", StringComparison.Ordinal) Then Return "ancestor"
+        Return If(atEnd, "current", String.Empty)
+    End Function
+
+    Protected Function MobilePathAttributes(ByVal item As Object, ByVal role As String) As String
+        Dim state As String = ResolveMobilePathState(_headerCurrentScope, item, role)
+        If state.Length = 0 Then Return String.Empty
+        Dim sb As New StringBuilder()
+        AppendDesktopCatalogPathAttributes(sb, True, String.Equals(state, "current", StringComparison.Ordinal))
+        Return sb.ToString()
+    End Function
+
     Protected Function MobileSectorMediaClass(ByVal imgUrl As Object) As String
         Dim value As String = Convert.ToString(imgUrl)
         If String.IsNullOrWhiteSpace(value) Then
