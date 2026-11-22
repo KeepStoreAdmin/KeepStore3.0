@@ -795,7 +795,7 @@
 </asp:Content>
 
 <asp:Content ID="cntScripts" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261028-quickview-focus-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261122-price-states-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20261022-home-vetrina-1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-shopping-guide.js") & "?v=20261107-assistant-ux1e" %>"></script>
     <script src="<%= ThemeManager.Asset("js/home-default.js") & "?v=20261120-hover-full1a" %>"></script>

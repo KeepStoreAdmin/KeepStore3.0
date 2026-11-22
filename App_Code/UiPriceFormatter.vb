@@ -58,6 +58,22 @@ Public Module UiPriceFormatter
         Return FormatPrice(baseValue.Value)
     End Function
 
+    ' Testo del prezzo precedente da mostrare barrato accanto a RenderContextPriceText: stessa condizione di RenderContextPriceHtml
+    ' (promozione valida E sconto che supera la regola unica di presentazione). Vuoto quando lo sconto non si mostra.
+    Public Function RenderContextOldPriceText(ByVal prezzo As Object,
+                                               ByVal prezzoIvato As Object,
+                                               ByVal prezzoPromo As Object,
+                                               ByVal prezzoPromoIvato As Object,
+                                               ByVal inOfferta As Object,
+                                               ByVal context As StorefrontPriceDisplayContext) As String
+        If context Is Nothing Then Return String.Empty
+        Dim baseValue As Nullable(Of Decimal) = context.SelectPrice(ToDec(prezzo), ToDec(prezzoIvato))
+        Dim promoValue As Nullable(Of Decimal) = context.SelectPromoPrice(ToDec(prezzoPromo), ToDec(prezzoPromoIvato))
+        If Not baseValue.HasValue Then Return String.Empty
+        If ContextHasPromo(baseValue, promoValue, inOfferta) AndAlso StorefrontPriceState.ShowsDiscount(baseValue, promoValue) Then Return FormatPrice(baseValue.Value)
+        Return String.Empty
+    End Function
+
     Private Function ContextHasPromo(ByVal baseValue As Nullable(Of Decimal),
                                      ByVal promoValue As Nullable(Of Decimal),
                                      ByVal inOfferta As Object) As Boolean

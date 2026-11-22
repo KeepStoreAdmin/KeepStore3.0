@@ -894,7 +894,7 @@
 
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/product-ui.js") %>" defer></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261122-price-states-1c"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-buybar.js") %>?v=20261114-pdp-buybar1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-sections.js") %>?v=20261118-pdp-sections1a"></script>
     <script src="<%= ThemeManager.Asset("js/ks-pdp-collapsible.js") %>?v=20261121-pdp-collapsible-1a"></script>

@@ -4243,7 +4243,8 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         model.ShowAddToCart = True
         model.ShowMultiSelect = False
         model.QuantityText = "1"
-        model.ActionDataAttributes = CatalogActionDataAttributes(dataItem)
+        ' Anteprima rapida: gli stessi testi (prezzo e prezzo precedente) appena assegnati alla scheda, senza una seconda lettura.
+        model.ActionDataAttributes = BuildCatalogActionDataAttributes(dataItem, model.PriceText, oldPriceText)
         Return model
     End Function
 
@@ -4339,14 +4340,33 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
     End Function
 
     Protected Function CatalogActionDataAttributes(ByVal dataItem As Object) As String
-        Return BuildCatalogActionDataAttributes(dataItem, CatalogPriceTextFor(dataItem, True))
+        ' Scheda in linea: prezzo e prezzo precedente dalla STESSA lettura della promozione (stessa regola di CatalogPriceHtmlFor).
+        Dim priceText As String = UiPriceFormatter.PriceOnRequestText
+        Dim oldPriceText As String = String.Empty
+        If EnsureCatalogPriceDisplayContext() Then
+            Dim promoModel As ProductPromotionDisplayModel = CatalogPromotionModel(dataItem, True)
+            Dim promoPriceNet As Decimal = 0D
+            Dim promoPriceGross As Decimal = 0D
+            Dim inPromotion As Integer = 0
+            If promoModel IsNot Nothing AndAlso promoModel.HasDefaultQuantityOffer Then
+                promoPriceNet = promoModel.BestDefaultQuantityPriceNet
+                promoPriceGross = promoModel.BestDefaultQuantityPriceGross
+                inPromotion = 1
+            End If
+            priceText = UiPriceFormatter.RenderContextPriceText(UiData.Get(dataItem, "Prezzo"), UiData.Get(dataItem, "PrezzoIvato"),
+                                                                promoPriceNet, promoPriceGross, inPromotion, _priceDisplayContext)
+            oldPriceText = UiPriceFormatter.RenderContextOldPriceText(UiData.Get(dataItem, "Prezzo"), UiData.Get(dataItem, "PrezzoIvato"),
+                                                                      promoPriceNet, promoPriceGross, inPromotion, _priceDisplayContext)
+        End If
+        Return BuildCatalogActionDataAttributes(dataItem, priceText, oldPriceText)
     End Function
 
     Protected Function RecentCatalogActionDataAttributes(ByVal dataItem As Object) As String
-        Return BuildCatalogActionDataAttributes(dataItem, CatalogPriceTextFor(dataItem, False))
+        ' I visti di recente non aprono l'anteprima rapida: nessun prezzo precedente.
+        Return BuildCatalogActionDataAttributes(dataItem, CatalogPriceTextFor(dataItem, False), String.Empty)
     End Function
 
-    Private Function BuildCatalogActionDataAttributes(ByVal dataItem As Object, ByVal priceText As String) As String
+    Private Function BuildCatalogActionDataAttributes(ByVal dataItem As Object, ByVal priceText As String, ByVal oldPriceText As String) As String
         Dim title As String = UiData.Str(dataItem, "Descrizione1")
         Dim descr As String = UiData.Str(dataItem, "Descrizione2")
         If String.IsNullOrWhiteSpace(descr) Then descr = UiData.Str(dataItem, "DescrizioneLunga")
@@ -4361,6 +4381,7 @@ If hasPmax Then sdsArticoli.SelectParameters.Add(New Parameter("Pmax", TypeCode.
         attrs.Append(" data-ks-url=""").Append(HA(CatalogProductUrl(dataItem))).Append("""")
         attrs.Append(" data-ks-img=""").Append(HA(StorefrontProductImageSlots.CoverUrl(dataItem))).Append("""")
         attrs.Append(" data-ks-price=""").Append(HA(priceText)).Append("""")
+        If Not String.IsNullOrEmpty(oldPriceText) Then attrs.Append(" data-ks-old-price=""").Append(HA(oldPriceText)).Append("""")
         attrs.Append(" data-ks-available=""").Append(HA(CatalogAvailabilityText(dataItem))).Append("""")
         attrs.Append(" data-ks-cart-url=""").Append(HA(CatalogCartAddUrl(dataItem))).Append("""")
         Dim cartQty As Decimal = GetCatalogCartQuantity(UiData.Int(dataItem, "id"), CatalogTcId(dataItem, True))

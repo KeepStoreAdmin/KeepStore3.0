@@ -2798,7 +2798,10 @@ Partial Public Class _Default
         Dim url As String = ProductUrl(row("id"))
         Dim img As String = StorefrontProductImageSlots.CoverUrl(row)
         Dim current As Decimal = CurrentPrice(row)
-        Dim priceText As String = If(current > 0D, FormatMoney(current), "Prezzo su richiesta")
+        Dim hasPrice As Boolean = StorefrontPromotionDisplayPolicy.RoundMoney(current) > 0D
+        Dim priceText As String = If(hasPrice, FormatMoney(current), UiPriceFormatter.PriceOnRequestText)
+        ' Prezzo precedente per l'anteprima rapida: solo con lo sconto mostrato, stessa condizione e stesso testo della scheda (RenderPriceBlock).
+        Dim oldPriceText As String = If(hasPrice AndAlso ShowDiscount(row), FormatMoney(GetBasePrice(row)), String.Empty)
         Dim availableText As String = AvailabilityDisplayHelper.BuildText(row, HttpContext.Current)
         Dim description As String = QuickViewDescription(row)
 
@@ -2812,6 +2815,7 @@ Partial Public Class _Default
         sb.Append(" data-ks-url='").Append(EncodeAttr(url)).Append("'")
         sb.Append(" data-ks-img='").Append(EncodeAttr(img)).Append("'")
         sb.Append(" data-ks-price='").Append(EncodeAttr(priceText)).Append("'")
+        If oldPriceText.Length > 0 Then sb.Append(" data-ks-old-price='").Append(EncodeAttr(oldPriceText)).Append("'")
         sb.Append(" data-ks-available='").Append(EncodeAttr(availableText)).Append("'")
         sb.Append(" data-ks-cart-url='").Append(EncodeAttr(CartAddUrl(row))).Append("'")
         sb.Append(" data-ks-description='").Append(EncodeAttr(description)).Append("'")

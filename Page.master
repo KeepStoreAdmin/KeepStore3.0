@@ -451,6 +451,7 @@
                                 <div class="infor-center">
                                     <div class="product-info-price">
                                         <h4 class="ks-price-state--normal" id="ksQuickViewPrice">0,00</h4>
+                                        <span class="old-price text-main-2" id="ksQuickViewOldPriceWrap" hidden><span class="visually-hidden">Prezzo precedente: </span><span id="ksQuickViewOldPrice"></span></span>
                                     </div>
                                     <div class="product-progress-sale mt-3">
                                         <div class="progress-sold progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">

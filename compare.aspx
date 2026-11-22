@@ -51,5 +51,5 @@
 </asp:Content>
 
 <asp:Content ID="ScriptsContent" ContentPlaceHolderID="ScriptsContent" runat="server">
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261122-price-states-1c"></script>
 </asp:Content>

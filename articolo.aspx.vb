@@ -111,6 +111,7 @@ Partial Class articolo
         Public Property AvailabilityHtml As String
         Public Property IsAvailable As Boolean
         Public Property PriceValue As Nullable(Of Decimal)
+        Public Property OldPriceValue As Nullable(Of Decimal)
         Public Property IsCurrent As Boolean
         Public Property BusinessKey As String
         Public Property AddToCartUrl As String
@@ -546,6 +547,7 @@ Partial Class articolo
             .AvailabilityHtml = availability.Html,
             .IsAvailable = availability.IsAvailable,
             .PriceValue = price.CurrentPrice,
+            .OldPriceValue = price.OldPrice,
             .IsCurrent = True
         }
         FinalizeRelatedItem(item)
@@ -1208,6 +1210,7 @@ Partial Class articolo
                 item.TagliaName = SafeReaderString(rdr, "TCTaglia")
                 item.ColoreName = FirstNonEmpty(SafeReaderString(rdr, "TCColore"), ExtractColorKey(nameVal & " " & codiceVal))
                 item.PriceValue = price.CurrentPrice
+                item.OldPriceValue = price.OldPrice
                 item.IsCurrent = False
                 Dim availability As AvailabilityDisplayModel = AvailabilityDisplayHelper.BuildFromValues(
                     SafeDec(rdr("Giacenza"), 0D),
@@ -1284,6 +1287,8 @@ Partial Class articolo
         sb.Append("data-ks-url='").Append(EncodeAttr(item.Url)).Append("' ")
         sb.Append("data-ks-img='").Append(EncodeAttr(item.Img)).Append("' ")
         sb.Append("data-ks-price='").Append(EncodeAttr(priceText)).Append("' ")
+        ' Prezzo precedente solo con lo sconto mostrato: OldPrice e gia deciso dalla regola unica in BuildAuthorizedPriceContext.
+        If item.OldPriceValue.HasValue AndAlso item.OldPriceValue.Value > 0D Then sb.Append("data-ks-old-price='").Append(EncodeAttr(FormatMoney(item.OldPriceValue.Value))).Append("' ")
         sb.Append("data-ks-available='").Append(EncodeAttr(item.AvailabilityText)).Append("' ")
         sb.Append("data-ks-cart-url='").Append(EncodeAttr(item.AddToCartUrl)).Append("' ")
         sb.Append("data-ks-description='").Append(EncodeAttr(ThemeManager.CompactText(descriptionText, 140))).Append("'")

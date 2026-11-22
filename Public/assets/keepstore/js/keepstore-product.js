@@ -277,6 +277,7 @@
       url: link.getAttribute('data-ks-url') || link.getAttribute('href') || '',
       image: link.getAttribute('data-ks-img') || '',
       price: link.getAttribute('data-ks-price') || '',
+      oldPrice: link.getAttribute('data-ks-old-price') || '',
       available: link.getAttribute('data-ks-available') || '',
       cartUrl: link.getAttribute('data-ks-cart-url') || '',
       description: link.getAttribute('data-ks-description') || ''
@@ -762,6 +763,25 @@
     img.setAttribute('alt', item.title || 'Prodotto');
   }
 
+  // Stato del prezzo nell'anteprima: lo stesso della scheda da cui si apre. Il browser non calcola importi: il prezzo precedente
+  // arriva dal server (data-ks-old-price) solo quando la scheda mostra lo sconto. Lo stato e riscritto per intero a ogni apertura.
+  var PRICE_ON_REQUEST = 'Prezzo su richiesta';
+
+  function setQuickViewPrice(item) {
+    var price = document.getElementById('ksQuickViewPrice');
+    if (!price) return;
+    var wrap = document.getElementById('ksQuickViewOldPriceWrap');
+    var old = document.getElementById('ksQuickViewOldPrice');
+    var text = item.price || PRICE_ON_REQUEST;
+    var state = 'normal';
+    if (text === PRICE_ON_REQUEST) state = 'ask';
+    else if (item.oldPrice && wrap && old) state = 'sale';
+    price.textContent = text;
+    price.className = 'ks-price-state--' + state;
+    if (old) old.textContent = state === 'sale' ? item.oldPrice : '';
+    if (wrap) wrap.hidden = state !== 'sale';
+  }
+
   function initQuickViewActions() {
     document.addEventListener('click', function (ev) {
       var link = ev.target && ev.target.closest ? ev.target.closest('.js-ks-quickview') : null;
@@ -781,7 +801,7 @@
       }
       setText('ksQuickViewSold', item.brand ? 'Marca: ' + item.brand : 'Scheda prodotto');
       setText('ksQuickViewAvailable', item.available || '');
-      setText('ksQuickViewPrice', item.price || 'Prezzo su richiesta');
+      setQuickViewPrice(item);
       setText('ksQuickViewDescription', item.description || item.category || '');
       setQuickViewImage(item);
       setHref('ksQuickViewImageLink', item.url);

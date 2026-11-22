@@ -627,6 +627,6 @@
 <asp:Content ID="ScriptsContent1" ContentPlaceHolderID="ScriptsContent" runat="server">
     <script src="<%= ThemeManager.Asset("js/catalog-ui.js") %>?v=20261114-catalog-nav1a"></script>
     <script src="<%= ThemeManager.Asset("js/catalog-product-flow.js") %>?v=20260831-mediasort1"></script>
-    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261106-catalog-pdp-shopping-continuity-1a"></script>
+    <script src="<%= ThemeManager.Asset("js/keepstore-product.js") %>?v=20261122-price-states-1c"></script>
     <script src="<%= ThemeManager.Asset("js/keepstore-recently-viewed.js") %>?v=20260916-promo-parity-rev1"></script>
 </asp:Content>
