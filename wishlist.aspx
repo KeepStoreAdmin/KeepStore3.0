@@ -3,6 +3,7 @@
     Wishlist
 </asp:Content>
 <asp:Content ID="HeadContent" ContentPlaceHolderID="HeadContent" runat="server">
+    <link rel="stylesheet" href="<%= ThemeManager.Asset("css/catalog-filters-ui.css") %>?v=20261114-filter-buttons1a" />
 </asp:Content>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" Runat="Server">
 <div class="ks-myaccount">
@@ -117,7 +118,6 @@
 
                                 <asp:Label ID="lblID" runat="server" Text='<%# Eval("id") %>' Visible="false"></asp:Label>
                                 <asp:TextBox ID="tbid" runat="server" Text='<%# Eval("id") %>' Visible="false" EnableViewState="false"></asp:TextBox>
-                                <asp:TextBox ID="tbInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false" EnableViewState="false"></asp:TextBox>
                             </ItemTemplate>
                         </asp:TemplateField>
 
@@ -126,40 +126,7 @@
                             <ItemStyle CssClass="wishlist-item_price" />
                             <ItemTemplate>
 
-                                <p class="price-wrap fw-medium flex-nowrap">
-                                    <asp:Label ID="lblPrezzoPromo" runat="server" CssClass="new-price price-text fw-medium mb-0" Text='<%# Eval("PrezzoPromo", "{0:N2}") %>'></asp:Label>
-                                    <asp:Label ID="lblPrezzoPromoIvato" runat="server" CssClass="new-price price-text fw-medium mb-0" Text='<%# Eval("PrezzoPromoIvato", "{0:N2}") %>' Visible="false"></asp:Label>
-
-                                    <asp:Label ID="lblPrezzo" runat="server" CssClass="old-price body-md-2 text-main-2 fw-normal" Text='<%# Eval("Prezzo", "{0:N2}") %>'></asp:Label>
-                                    <asp:Label ID="lblPrezzoIvato" runat="server" CssClass="old-price body-md-2 text-main-2 fw-normal" Text='<%# Eval("PrezzoIvato", "{0:N2}") %>' Visible="false"></asp:Label>
-                                </p>
-
-                                <div class="ks-hidden">
-                                    <asp:Image ID="img_prezzo9" runat="server" />
-                                    <asp:Image ID="img_prezzo8" runat="server" />
-                                    <asp:Image ID="img_prezzo7" runat="server" />
-                                    <asp:Image ID="img_prezzo6" runat="server" />
-                                    <asp:Image ID="img_prezzo5" runat="server" />
-                                    <asp:Image ID="img_prezzo4" runat="server" />
-                                    <asp:Image ID="img_prezzo3" runat="server" />
-                                    <asp:Image ID="img_prezzo2" runat="server" />
-                                    <asp:Image ID="img_prezzo1" runat="server" />
-                                </div>
-
-                                <asp:SqlDataSource ID="sdsPromo" runat="server" ConnectionString="<%$ ConnectionStrings:EntropicConnectionString %>"
-                                    ProviderName="<%$ ConnectionStrings:EntropicConnectionString.ProviderName %>"
-                                    SelectCommand="SELECT '' AS OfferteDescrizione, 0 AS InOfferta, 0 AS OfferteQntMinima, 0 AS OfferteMultipli WHERE 1=0" EnableViewState="False" />
-
-                                <asp:Repeater ID="rPromo" runat="server" DataSourceID="sdsPromo" EnableViewState="false" OnItemDataBound="rPromo_ItemDataBound">
-                                    <ItemTemplate>
-                                        <asp:Label ID="lblOfferta" runat="server" Text='<%# Eval("OfferteDescrizione") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblInOfferta" runat="server" Text='<%# Eval("InOfferta") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblQtaMin" runat="server" Text='<%# Eval("OfferteQntMinima") %>' Visible="false"></asp:Label>
-                                        <asp:Label ID="lblMultipli" runat="server" Text='<%# Eval("OfferteMultipli") %>' Visible="false"></asp:Label>
-                                    </ItemTemplate>
-                                </asp:Repeater>
-
-                                <asp:Panel ID="Panel_in_offerta" runat="server" Visible="False"></asp:Panel>
+                                <div class="price-wrap fw-medium"><%# WishlistPriceHtml(Container.DataItem) %></div>
 
                             </ItemTemplate>
                         </asp:TemplateField>

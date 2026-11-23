@@ -15,6 +15,9 @@ $rel = 'wishlist.aspx.vb'
 $sitePage = Join-Path $SitePath $rel
 if (-not (Test-Path -LiteralPath $sitePage)) { Write-Host ('WISHLIST_GROUPBY FAIL: pagina non trovata nel sito LAB: ' + $sitePage); exit 1 }
 $repoBytes = [IO.File]::ReadAllBytes((Join-Path $root $rel)); $origBytes = [IO.File]::ReadAllBytes($sitePage)
+# la pagina usa anche wishlist.aspx e App_Code\KeepStoreWishlistPriceDisplay.vb (WISHLIST-PRICE-DISPLAY-1A): vanno sul sito LAB insieme e poi si rimettono
+$extra = @('wishlist.aspx', 'App_Code\KeepStoreWishlistPriceDisplay.vb'); $extraOrig = @{}
+foreach ($x in $extra) { $sp = Join-Path $SitePath $x; $extraOrig[$x] = if (Test-Path -LiteralPath $sp) { [IO.File]::ReadAllBytes($sp) } else { $null }; $rp = Join-Path $root $x; if (Test-Path -LiteralPath $rp) { [IO.File]::WriteAllBytes($sp, [IO.File]::ReadAllBytes($rp)) } }
 function Get-Text([byte[]]$bytes) { $o = 0; if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) { $o = 3 }; return $utf8.GetString($bytes, $o, $bytes.Length - $o) }
 function Same-Bytes($a, $b) { return ([Convert]::ToBase64String($a) -eq [Convert]::ToBase64String($b)) }
 
@@ -116,6 +119,7 @@ try {
 } finally {
     try { if ($before -gt 0 -and $uid -gt 0) { $null = Invoke-Sql ("DELETE FROM wishlist WHERE id_wishlist > $before AND id_utente IN ($uid, $other);") -Write } } catch { Write-Host '  ATTENZIONE: pulizia della wishlist non riuscita'; $exit = 1 }
     try { if ($saved -ne '') { $null = Invoke-Sql ("INSERT INTO wishlist (id_wishlist, id_utente, id_articolo) VALUES " + $saved + ";") -Write } } catch { Write-Host '  ATTENZIONE: ripristino delle righe del cliente di prova non riuscito'; $exit = 1 }
+    foreach ($x in $extra) { $sp = Join-Path $SitePath $x; try { if ($null -ne $extraOrig[$x]) { [IO.File]::WriteAllBytes($sp, $extraOrig[$x]) } elseif (Test-Path -LiteralPath $sp) { Remove-Item -LiteralPath $sp -Force } } catch { Write-Host '  ATTENZIONE: ripristino file extra non riuscito' } }
     try { Set-SiteBytes $origBytes } catch { Write-Host ('  ATTENZIONE: ripristino del sito non riuscito: ' + $_.Exception.Message); $exit = 1 }
     Close-LabSite
 }
