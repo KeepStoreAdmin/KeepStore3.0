@@ -213,7 +213,8 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
         "datiutente.aspx", "documenti.aspx", "documentidettaglio.aspx", "login.aspx", "logout.aspx",
         "myaccount.aspx", "ordine.aspx", "ordine_coupon.aspx", "pagamento.aspx", "password.aspx",
         "pay_your_orders.aspx", "paypalcheckout.aspx", "paypalpay.aspx", "paypalrecheck.aspx", "paypalreturn.aspx", "paypalwebhook.aspx",
-        "promozioni.aspx", "registrazione.aspx", "remind.aspx", "reset-password.aspx", "test.aspx",
+        "promozioni.aspx", "registrazione.aspx", "registrazioneok.aspx", "remind.aspx", "reset-password.aspx", "resetpassword.aspx", "test.aspx",
+        "track-your-order.aspx", "setup_listino_personalizzato.aspx", "bancasella.aspx", "responseclient.aspx",
         "wishlist.aspx"
     }
 

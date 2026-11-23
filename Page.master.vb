@@ -704,6 +704,7 @@ Private Sub ApplyGlobalSeoPolicy()
             qs("rimuovi") IsNot Nothing AndAlso Convert.ToString(qs("rimuovi")).Trim() <> String.Empty)
         Dim applyNoIndex As Boolean = hasMutationParameter OrElse
             StorefrontCanonicalHostPolicy.IsNoIndexPath(pathLower) OrElse
+            StorefrontCanonicalHostPolicy.IsNoIndexPath(Request.FilePath) OrElse
             Response.StatusCode >= 400
 
         Dim sb As New StringBuilder()

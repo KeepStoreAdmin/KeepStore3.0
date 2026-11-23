@@ -70,7 +70,14 @@ Module StorefrontSeoPolicyHarness
         AssertTrue("account noindex", StorefrontCanonicalHostPolicy.IsNoIndexPath("/my-account-orders.aspx?page=2"))
         AssertTrue("checkout noindex", StorefrontCanonicalHostPolicy.IsNoIndexPath("/ordine.aspx?ReturnUrl=x"))
         AssertTrue("legacy promotions noindex", StorefrontCanonicalHostPolicy.IsNoIndexPath("/promozioni.aspx"))
+        For Each privateName As String In New String() {"track-your-order.aspx", "resetpassword.aspx", "registrazioneok.aspx", "Setup_Listino_Personalizzato.aspx", "bancasella.aspx", "responseClient.aspx"}
+            AssertTrue("private page noindex " & privateName, StorefrontCanonicalHostPolicy.IsNoIndexPath("/" & privateName))
+            AssertTrue("private page noindex with query " & privateName, StorefrontCanonicalHostPolicy.IsNoIndexPath("/" & privateName.ToUpperInvariant() & "?a=/x.aspx"))
+        Next
+        AssertTrue("private page under folder", StorefrontCanonicalHostPolicy.IsNoIndexPath("/BancaSella/responseClient.aspx"))
         AssertFalse("home indexable", StorefrontCanonicalHostPolicy.IsNoIndexPath("/Default.aspx"))
+        AssertFalse("privacy indexable", StorefrontCanonicalHostPolicy.IsNoIndexPath("/privacy.aspx"))
+        AssertFalse("query with private name stays indexable", StorefrontCanonicalHostPolicy.IsNoIndexPath("/articoli.aspx?r=/track-your-order.aspx"))
         AssertFalse("catalog indexable", StorefrontCanonicalHostPolicy.IsNoIndexPath("/articoli.aspx"))
         AssertFalse("product indexable", StorefrontCanonicalHostPolicy.IsNoIndexPath("/articolo.aspx"))
 

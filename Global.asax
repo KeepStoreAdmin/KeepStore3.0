@@ -125,7 +125,8 @@ Sub Application_PreSendRequestHeaders(ByVal sender As Object, ByVal e As EventAr
 
         If Request IsNot Nothing Then
             Dim shouldNoIndex As Boolean = (Response.StatusCode >= 400) OrElse
-                StorefrontCanonicalHostPolicy.IsNoIndexPath(Request.Url.AbsolutePath)
+                StorefrontCanonicalHostPolicy.IsNoIndexPath(Request.Url.AbsolutePath) OrElse
+                StorefrontCanonicalHostPolicy.IsNoIndexPath(Request.FilePath)
             If shouldNoIndex Then Response.Headers("X-Robots-Tag") = "noindex, nofollow"
         End If
 
