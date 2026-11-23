@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## LEGACY-PROMO-PAGES-RETIRE-1A — 24/11/2026 — SOURCE (pagine promo legacy ridotte a ponti)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#665](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/665), stable `c8d38732`.** «Pulizia pagine legacy» scelta dal PO fra le opzioni proposte da CODE.
+
+**Fatto (misurato sul LAB).** `promo.aspx` rispondeva 200 (404 KB) con tre `h1` e quattro query `SELECT * FROM offerte` senza filtro azienda (offerte di tutti i tenant); `promo_in_scadenza.aspx` era in errore (302 InternalError). Nessun link nel sito.
+
+**Ora.** Le due pagine sono ponti come `promozioni.aspx`: sola direttiva, `Page_PreInit` risponde 301 (GET/HEAD) o 303 verso `articoli.aspx?inpromo=1` senza DB, sessione ne cookie (anche con un `__VIEWSTATE` fittizio). `promo_in_scadenza` con qualsiasi query va a `&pid=invalid` (ct mai inoltrato, quindi niente `ct=30000`). Nessuna modifica a `LegacyPromotionRoutePolicy` ne a `PostLoginReturnUrlPolicy`: il ritorno post-login resta ammesso e la pagina rimanda.
+
+**Revisioni.** ChatGPT (xhigh): accolti ct=30000 (risolto non inoltrando ct), oracolo senza redirect seguiti, quattro SqlDataSource; livello L ridotto a M. Claude (Opus): accolti perimetro minimo, PreInit con EnableViewState=False, motivo di sicurezza multitenant (nessun AziendeId), cookie come discriminante. Gate: PASS.
+
+**Prove.** `Tools/Test-LegacyPromoPagesRetired.ps1`: rosso prima; 13 casi (GET/HEAD/POST, query, ct) senza redirect e senza cookie, markup solo direttiva, 3 mutanti uccisi (master tenuta, query ignorata, POST 302). `Test-HeadingLevels` verde; RouteRetirement e Parity restano nel baseline noto. CI verde.
+
+**Limiti e residuo (NON AVVIATO).** Persa la selezione «in scadenza» (7 giorni) e il filtro per categoria della vecchia pagina, gia non funzionanti: decisione di prodotto dichiarata. `listini.aspx` (esportazione PDF/Excel, in errore da anonimo, famiglia 1055) fuori perimetro: serve una decisione del PO. Da verificare: copie sotto `.claude/worktrees` raggiungibili dal sito? **Alla consegna futura:** `promo.aspx`, `promo.aspx.vb`, `promo_in_scadenza.aspx`, `promo_in_scadenza.aspx.vb`.
+
 ## WISHLIST-PRICE-DISPLAY-1A — 23/11/2026 — SOURCE (la pagina Preferiti mostra il prezzo)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#664](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/664), stable `6c6f4458`.** «procedi con altri task» del PO del 23/11/2026; nato dal ramo promo segnalato nel task Preferiti precedente.
