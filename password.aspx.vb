@@ -69,7 +69,10 @@ Partial Class password
                 tbPasswordConferma.Text = ""
             End Using
 
-        Catch
+        Catch ex As Exception
+            ' Mai il messaggio dell'eccezione: con i parametri sostituiti dal driver potrebbe contenere la password. Solo tipo e codice MySQL.
+            Dim mysqlCode As String = If(TypeOf ex Is MySqlException, " MySQL " & DirectCast(ex, MySqlException).Number.ToString(), "")
+            KeepStoreLog.Error("password-change", "Errore cambio password: " & ex.GetType().Name & mysqlCode, Nothing, HttpContext.Current)
             ShowPasswordMessage("Non e stato possibile aggiornare la password. Riprova piu tardi.", False)
         End Try
     End Sub
@@ -175,17 +178,35 @@ Partial Class password
                               "AND CHAR_LENGTH(@newpwd) BETWEEN @minLen AND @maxLen " &
                               "AND BINARY @newpwd <> BINARY @currentpwd"
 
-        Using cmd As New MySqlCommand(sql, conn)
-            cmd.CommandType = CommandType.Text
-            cmd.Parameters.AddWithValue("@newpwd", newPwd)
-            cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
-            cmd.Parameters.AddWithValue("@id", loginIdValue)
-            cmd.Parameters.AddWithValue("@currentpwd", currentPassword)
-            cmd.Parameters.AddWithValue("@confirmpwd", confirmPwd)
-            cmd.Parameters.AddWithValue("@minLen", MinPasswordLength)
-            cmd.Parameters.AddWithValue("@maxLen", MaxPasswordLength)
+        ' AUTH-PASSWORD-CHANGE-REVOKES-CODES-1A: i codici di recupero gia inviati smettono di valere nella stessa transazione del cambio.
+        ' Ordine: prima l'accesso, poi i codici (come emissione e cambio e-mail). Nessun Commit e raggiungibile dopo un errore: l'eccezione
+        ' risale, la transazione si annulla alla chiusura e la password resta quella di prima.
+        Using tx As MySqlTransaction = conn.BeginTransaction()
+            Dim changed As Boolean
+            Using cmd As New MySqlCommand(sql, conn, tx)
+                cmd.CommandType = CommandType.Text
+                cmd.Parameters.AddWithValue("@newpwd", newPwd)
+                cmd.Parameters.AddWithValue("@dataPassword", DateTime.Today)
+                cmd.Parameters.AddWithValue("@id", loginIdValue)
+                cmd.Parameters.AddWithValue("@currentpwd", currentPassword)
+                cmd.Parameters.AddWithValue("@confirmpwd", confirmPwd)
+                cmd.Parameters.AddWithValue("@minLen", MinPasswordLength)
+                cmd.Parameters.AddWithValue("@maxLen", MaxPasswordLength)
+                changed = (cmd.ExecuteNonQuery() = 1)
+            End Using
 
-            Return cmd.ExecuteNonQuery() > 0
+            If Not changed Then
+                tx.Rollback()
+                Return False
+            End If
+
+            Using cmdCodes As New MySqlCommand("UPDATE login_password_reset_tokens SET RevokedAt = CURRENT_TIMESTAMP WHERE LoginId = @LoginId AND UsedAt IS NULL AND RevokedAt IS NULL", conn, tx)
+                cmdCodes.Parameters.Add("@LoginId", MySqlDbType.Int32).Value = loginIdValue
+                cmdCodes.ExecuteNonQuery()
+            End Using
+
+            tx.Commit()
+            Return True
         End Using
     End Function
 End Class
