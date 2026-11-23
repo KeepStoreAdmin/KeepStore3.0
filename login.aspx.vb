@@ -19,6 +19,17 @@ Partial Class Login
     Protected Sub Page_Init(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Init
         ' Master Init has already resolved the storefront. Reject POST before Page_Load can consume return context.
         If String.Equals(Request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase) Then EnsureLoginPostOrigin()
+        ' AUTH-LOGIN-SESSION-RENEW-1A: dopo l'accesso con password il sito cambia sessione e rinvia qui (GET login.aspx?k=1). Il biglietto monouso
+        ' si consuma DOPO l'Init della master (che ha gia stabilito il negozio della sessione nuova: una identita scritta prima verrebbe revocata):
+        ' si scrive solo l'identita; Page_Load completa e rinvia alla destinazione, dove la rivalidazione della master idrata il resto.
+        Try
+            If KeepStoreSignInSessionRenew.IsRenewRequest(Context) Then
+                Dim ticket As SignInTicket = Nothing
+                If KeepStoreSignInSessionRenew.TryConsume(Context, ticket) Then KeepStoreSignInSessionRenew.ApplyIdentity(Context, ticket)
+            End If
+        Catch ex As Exception
+            KeepStoreLog.Error("login-session-renew", "Sign-in ticket consumption failed closed. Error type: " & ex.GetType().Name & ".", Nothing, HttpContext.Current)
+        End Try
     End Sub
 
     Protected Overrides Sub Render(ByVal writer As System.Web.UI.HtmlTextWriter)
@@ -81,6 +92,15 @@ Partial Class Login
         chkStaySignedIn.InputAttributes("aria-describedby") = "ksStaySignedInHint"
         If Not IsPostBack Then
 
+            ' Rinvio dopo l'accesso con password: identita ricostruita nella sessione nuova, valori dell'accesso, poi la destinazione richiesta.
+            Dim renewedTicket As SignInTicket = KeepStoreSignInSessionRenew.ConsumedTicket(Context)
+            If renewedTicket IsNot Nothing AndAlso CurrentLoginIdSafe() > 0 Then
+                KeepStoreSignInSessionRenew.ApplyExtras(Context, renewedTicket)
+                Response.Redirect(ResolveUrl(renewedTicket.Target), False)
+                Context.ApplicationInstance.CompleteRequest()
+                Return
+            End If
+
             ' Se è già loggato, non ha senso stare sulla pagina di login
             If CurrentLoginIdSafe() > 0 Then
                 Response.Redirect(ResolveAndConsumePostLoginTarget(), False)
@@ -137,6 +157,10 @@ Partial Class Login
         ' Se il login è andato a buon fine, Session("LoginId") è valorizzata
         If ok AndAlso CurrentLoginIdSafe() > 0 Then
 
+          ' AUTH-LOGIN-SESSION-RENEW-1A: se il rinnovo della sessione e attivo e non si completa, la sessione vecchia non resta collegata.
+          Dim renewalFinished As Boolean = False
+          Try
+
             ' Registra l'accesso riuscito prima delle operazioni accessorie.
             LoginAccessAuditRecorder.TryRecordSuccessfulLogin(HttpContext.Current, CurrentLoginIdSafe())
 
@@ -164,8 +188,27 @@ Partial Class Login
             ' Decido dove reindirizzare senza tornare su pagine tecniche.
             Dim targetUrl As String = ResolveAndConsumePostLoginTarget()
 
-            Response.Redirect(targetUrl, False)
-            Context.ApplicationInstance.CompleteRequest()
+            ' Identificativo di sessione nuovo (contro la fissazione): il biglietto porta l'identita verificata alla sessione nuova.
+            Dim renewal As SignInRenewOutcome = KeepStoreSignInSessionRenew.TryRenewAfterSignIn(
+                HttpContext.Current, CurrentLoginIdSafe(),
+                StorefrontCommercialIsolationPolicy.PositiveInteger(Session("UtentiId")), targetUrl)
+            If renewal = SignInRenewOutcome.Renewed Then
+                renewalFinished = True
+                Response.Redirect(KeepStoreSignInSessionRenew.RenewRedirectUrl(ResolveUrl("~/login.aspx")), False)
+                Context.ApplicationInstance.CompleteRequest()
+                Return
+            End If
+            If renewal = SignInRenewOutcome.NotSupported Then
+                renewalFinished = True
+                Response.Redirect(targetUrl, False)
+                Context.ApplicationInstance.CompleteRequest()
+                Return
+            End If
+            ' Failed: si esce dal blocco senza completare; il Finally toglie l'identita e abbandona la sessione.
+          Finally
+            If Not renewalFinished AndAlso KeepStoreSignInSessionRenew.IsSupported(HttpContext.Current) Then FailSignInRenewalClosed()
+          End Try
+            lblLogin.Text = GenericLoginFailureMessage
             Return
         End If
 
@@ -173,6 +216,18 @@ Partial Class Login
         If String.IsNullOrWhiteSpace(lblLogin.Text) Then
             lblLogin.Text = GenericLoginFailureMessage
         End If
+    End Sub
+
+    ' Fallimento chiuso del rinnovo: nessuna identita resta nella sessione vecchia e la sessione viene abbandonata.
+    Private Sub FailSignInRenewalClosed()
+        Try
+            ClearInvalidLoginSession()
+        Catch
+        End Try
+        Try
+            Session.Abandon()
+        Catch
+        End Try
     End Sub
 
     '================================================================

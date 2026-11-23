@@ -74,7 +74,11 @@ function Invoke-Login([string]$jar, [bool]$stay, [string]$word = '') {
     $set[(Get-FieldName $page.Body 'tbPassword')] = if ($word -ne '') { $word } else { Get-Secret }
     if ($stay) { $set['ctl00$MainContent$chkStaySignedIn'] = 'on' }
     $f = New-FormFile $page.Body $set
-    try { return (Invoke-Http '/login.aspx' $jar $f '/login.aspx') } finally { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+    try { $r = Invoke-Http '/login.aspx' $jar $f '/login.aspx' } finally { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue }
+    # AUTH-LOGIN-SESSION-RENEW-1A: dopo l'accesso il sito cambia sessione e rinvia a login.aspx?k=1; il rinvio si segue qui, cosi il jar resta
+    # collegato e la risposta restituita e quella con la destinazione (302 verso la pagina richiesta), come prima del cambio.
+    if ($r.Status -eq 302 -and $r.Location -match '(?i)login\.aspx\?k=1$') { return (Invoke-Http '/login.aspx?k=1' $jar) }
+    return $r
 }
 function Get-JarValue([string]$jar, [string]$name) {
     if (-not (Test-Path -LiteralPath $jar)) { return '' }

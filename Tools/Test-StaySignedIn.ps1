@@ -29,7 +29,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($m -eq '') { $fail.Add('B0 modulo assente') }
     else {
         # B1 chiamanti: solo quelli previsti dalla fase 2 (AUTH-STAY-SIGNED-IN-2B, Tools/Test-StaySignedInPages.ps1)
-        $expectedCallers = @('KeepStoreStaySignedInWeb.vb', 'Page.master.vb', 'login.aspx.vb', 'logout.aspx.vb', 'password.aspx.vb', 'registrazione.aspx.vb', 'my-account-edit.aspx.vb', 'datiutente.aspx.vb', 'privacy.aspx')
+        $expectedCallers = @('KeepStoreStaySignedInWeb.vb', 'Page.master.vb', 'login.aspx.vb', 'logout.aspx.vb', 'password.aspx.vb', 'registrazione.aspx.vb', 'my-account-edit.aspx.vb', 'datiutente.aspx.vb', 'privacy.aspx', 'KeepStoreSignInSessionRenew.vb')
         $callers = @(Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
             Where-Object { @('.vb', '.aspx', '.ascx', '.master', '.asax') -contains $_.Extension.ToLowerInvariant() } |
             Where-Object { $_.FullName -notmatch '\\(\.claude|\.ai-review|\.git|Tools|obj|Bin|Public|App_Data|Database Taikun)\\' -and $_.Name -ne 'KeepStoreStaySignedIn.vb' } |
