@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-PASSWORD-CHANGE-REVOKES-CODES-1A — 23/11/2026 — SOURCE (il cambio password revoca i codici di reset)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#663](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/663), stable `2e31f5fe`.** Seguito di PR 573/576/579 (codici di reset revocati al cambio e-mail).
+
+**Fatto.** `password.aspx` cambiava la password senza toccare i codici di reset gia emessi: chi aveva un codice ancora valido poteva reimpostare la password dopo il cambio. Il servizio token revoca soltanto a emissione, uso e cambio e-mail.
+
+**Ora.** `UpdatePassword` esegue in una sola transazione l'UPDATE della password (con le guardie sulla password letta) e la revoca (`RevokedAt`) dei codici non usati e non revocati dello stesso `LoginId`; commit solo a entrambe riuscite, altrimenti rollback e messaggio generico. Errore registrato solo con tipo e numero MySQL. Confine: l'accesso (`LoginId`), non gli accessi fratelli.
+
+**Revisioni.** ChatGPT (xhigh): accolti ripristino completo di token e login nel test (tabelle di backup mai sovrascritte), prova di concorrenza con lock tenuto da sessione SQL, casi senza codici e piu codici; scartato il rilievo sul lock order dopo verifica del servizio (r.160-161). Claude (Opus): accolta la correzione del piano (revoca nella stessa transazione, ordine login poi token). Gate: PASS.
+
+**Prove.** `Tools/Test-PasswordChangeRevokesResetCodes.ps1` sul sito LAB: rosso prima; casi password errata, successo, revoca avvelenata (rollback), zero righe con lock concorrente; 7 mutanti uccisi. CI verde su push e pull_request dopo lo sblocco della fatturazione GitHub (repository ora pubblico).
+
+**Limiti e residuo (NON AVVIATO).** Il motore transazionale delle due tabelle sui database reali non e verificato (InnoDB nel DDL). Un codice emesso dopo il cambio resta valido per scelta. **Alla consegna futura:** `password.aspx.vb`.
+
 ## WISHLIST-MYSQL8-GROUPBY-1A — 23/11/2026 — SOURCE (la pagina Preferiti si apre con ONLY_FULL_GROUP_BY)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#661](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/661), stable `55b4cfb4`.** «Procedi con il prossimo task» del PO del 23/11/2026.
