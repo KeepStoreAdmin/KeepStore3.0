@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-LOGIN-SESSION-RENEW-1A — 23/11/2026 — SOURCE (sessione nuova dopo l'accesso con password)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#657](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/657), stable `7ed616e6`.** Richiesta del PO del 23/11/2026: «un nuovo task della roadmap».
+
+**Fatto (misurato sul LAB).** L'accesso con password scriveva l'identita nella sessione gia esistente: l'identificativo restava quello di prima (rischio di fissazione di sessione).
+
+**Ora.** Biglietto monouso in memoria (solo identita e un elenco chiuso di valori tipizzati), sessione abbandonata, cookie di sessione scaduto, rinvio a `login.aspx?k=1`, dove il biglietto si consuma una volta (GET, nessun cookie di sessione, sessione nuova con impronta diversa, 60 s, al massimo 3 pendenti per account). Fallimento chiuso; connessione non sicura = comportamento di prima. Nuovo `App_Code/KeepStoreSignInSessionRenew.vb`, `login.aspx.vb`.
+
+**Revisioni.** ChatGPT (xhigh): accolto di non copiare tutta la sessione (token CSRF anonimo); scartato il «carrello irraggiungibile» (il messaggio d'unione viaggia nel biglietto). Claude (Opus): accolti consumo in `login.aspx`, impronta del vecchio identificativo, fallimento chiuso, nessun tetto globale con rifiuto; scartato il marcatore «ripristinato». Consumo spostato da `PreInit` a `Page_Init` perche la master revoca l'identita scritta prima del tenant. Gate: PASS.
+
+**Prove.** `Tools/Test-LoginSessionRenew.ps1`: 17 controlli + 2 di fallimento chiuso, 10 mutanti uccisi, rossa sul vecchio login. Verdi StaySignedIn (56 mutanti), CredentialsOldPassword, EmailChangePassword, StaySignedInPages; LoginPostOriginGuard (si blocca) e LabAvailabilityVisitorRule sono fallimenti noti.
+
+**Limiti.** Sessione in memoria (riciclo = nuovo accesso); schede col vecchio ViewState falliscono al primo invio; `Login` legacy della master non coperto; unione del carrello provata solo indirettamente. **Alla consegna futura:** prima `App_Code/KeepStoreSignInSessionRenew.vb`, poi `login.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## CHECKOUT-ERROR-PANEL-STICKY-1A — 23/11/2026 — SOURCE (l'avviso «Ordine non inviato» non resta dopo la correzione)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#655](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/655), stable `c9b615b9`.** «Sì, procedi» del PO del 23/11/2026.
