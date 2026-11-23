@@ -1,22 +1,25 @@
-﻿
+﻿Imports System
+Imports System.Web
+
+' Ponte di compatibilita (LEGACY-PROMO-PAGES-RETIRE-1A): la vecchia pagina non mostra piu nulla e rimanda alla vetrina delle offerte del catalogo.
+' Il rinvio avviene in PreInit, prima di vista di stato, master e controlli: nessun accesso a database o sessione, nessun cookie.
 Partial Class _promo
-    Inherits System.Web.UI.Page
+    Inherits Page
 
-    Dim IvaTipo As Integer
+    Protected Sub Page_PreInit(ByVal sender As Object, ByVal e As EventArgs) Handles Me.PreInit
+        Me.EnableViewState = False
+        Dim destination As String = LegacyPromotionRoutePolicy.BuildModernPath(Nothing, Request.ApplicationPath)
 
-    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
-        Me.tbData.Text = System.DateTime.Today
-        Me.Session("InOfferta") = 1
+        Dim method As String = Convert.ToString(Request.HttpMethod)
+        Dim permanentNavigation As Boolean =
+            String.Equals(method, "GET", StringComparison.OrdinalIgnoreCase) OrElse
+            String.Equals(method, "HEAD", StringComparison.OrdinalIgnoreCase)
+
+        Response.Clear()
+        Response.StatusCode = If(permanentNavigation, 301, 303)
+        Response.RedirectLocation = destination
+        Response.TrySkipIisCustomErrors = True
+        Response.SuppressContent = True
+        Context.ApplicationInstance.CompleteRequest()
     End Sub
-
-    Protected Sub Page_PreRender(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.PreRender
-        Me.Title = Me.Title & " - " & Me.Session("AziendaDescrizione")
-        IvaTipo = Me.Session("IvaTipo")
-        If IvaTipo = 1 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Esclusa"
-        ElseIf IvaTipo = 2 Then
-            Me.lblPrezzi.Text = "*Prezzi Iva Inclusa"
-        End If
-    End Sub
-
 End Class
