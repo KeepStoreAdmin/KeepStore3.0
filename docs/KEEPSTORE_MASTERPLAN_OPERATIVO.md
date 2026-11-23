@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## AUTH-PRIVATE-PAGES-NO-STORE-1A — 23/11/2026 — SOURCE (le pagine private non restano nella cache del browser)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#659](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/659), stable `99565646`.** «OK PROCEDI con il prossimo task» del PO del 23/11/2026.
+
+**Fatti (misurati sul LAB).** `track-your-order`, `resetpassword`, `registrazioneok`, `Setup_Listino_Personalizzato`, `bancasella` rispondevano 200 con la sola `Cache-Control: private` e senza `noindex` (nell'elenco c'era `reset-password`, nome inesistente). Ogni pagina dell'elenco si aggirava con un PathInfo (`/registrazione.aspx/x`, `%2Fx`): il nome del file si leggeva dall'ultimo segmento.
+
+**Ora.** Elenco `NonIndexablePages` completato (6 nomi, anche `BancaSella/responseClient`); `Page.master.vb` e `Global.asax` considerano anche `Request.FilePath`, il file eseguito. Nessun cambio a robots.txt (un Disallow impedirebbe di leggere il noindex).
+
+**Revisioni.** ChatGPT (xhigh): accolti perimetro piu largo, POST di tracciamento come oracolo, difetto `.Count` della prova; smentita la mia premessa sulla sitemap. Claude (Opus): accolti `Request.FilePath` al posto di una regola sulla stringa (che avrebbe allentato `/privacy.aspx/login.aspx`), `responseClient`, mutanti uccisi solo per la pagina attesa; scartato il mio P2. Gate: PASS.
+
+**Prove.** `Tools/Test-PrivatePagesNoStore.ps1`: 23 pagine, POST di tracciamento con un ordine reale del LAB, 8 mutanti uccisi, rossa sul codice precedente. SEO tecnica (56 asserzioni), isolamento test, dominio tenant, StaySignedInPages PASS.
+
+**Limiti (NON AVVIATI).** `no-store` non toglie il codice di reimpostazione e i dati di `bancasella` da indirizzo e log; Indietro dopo logout non misurato; `registrazioneok?state=coupon` (Coupon.master); `listini.aspx`, `vers_stampabile.aspx` fuori dalla master. **Alla consegna futura:** prima `App_Code/StorefrontCanonicalHostPolicy.vb`, poi `Page.master.vb`, `Global.asax`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-LOGIN-SESSION-RENEW-1A — 23/11/2026 — SOURCE (sessione nuova dopo l'accesso con password)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#657](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/657), stable `7ed616e6`.** Richiesta del PO del 23/11/2026: «un nuovo task della roadmap».
