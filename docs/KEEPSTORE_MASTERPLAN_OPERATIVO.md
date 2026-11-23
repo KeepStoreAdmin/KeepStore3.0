@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## WISHLIST-PRICE-DISPLAY-1A — 23/11/2026 — SOURCE (la pagina Preferiti mostra il prezzo)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#664](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/664), stable `6c6f4458`.** «procedi con altri task» del PO del 23/11/2026; nato dal ramo promo segnalato nel task Preferiti precedente.
+
+**Fatto (misurato sul LAB).** Il blocco prezzo di ogni card dei Preferiti era vuoto: label `Visible=False` e cifre-immagine dentro `.ks-hidden` (display:none), da sempre. Il ramo promo confrontava l'id articolo con 1 (e il repeater non aveva le label cercate).
+
+**Ora.** `App_Code/KeepStoreWishlistPriceDisplay.vb` (`WishlistPriceDisplay.PriceHtml`) mostra il prezzo che il carrello applica a un pezzo aggiunto dai Preferiti: stessa routine `ResolveStandardPrice` in sola lettura, variante -1, quantita 1 (IVA utente anche a zero, reverse charge, promo di articolo), formatter comune; un solo prezzo, niente barrato; fallisce chiuso con «Prezzo su richiesta». Rimossi markup e codice morto.
+
+**Revisioni.** ChatGPT (xhigh): accolti causa, fiscalita (override 0) e variante come bloccanti di H, CSS non caricato, errore tecnico da non confondere con assenza promo. Claude (Opus): accolta la soluzione piu piccola (riuso in sola lettura del carrello) al posto di H; scartato `lblPrezzi` da DisplayLabel (resta Session). H scartata. Gate: PASS.
+
+**Prove.** `Tools/Test-WishlistPriceDisplay.ps1`: rosso prima; senza promo, in promo (nessun barrato), prezzo zero = su richiesta; 3 mutanti uccisi (TCid, promo al formatter, chiamata tolta); 1 equivalente dichiarato (IsValid, il formatter rifiuta gia lo zero). Verdi `Test-WishlistGroupBy` (adattato) e i correlati; CI verde su push e pull_request.
+
+**Limiti e residuo (NON AVVIATO).** IVA override 0 e reverse charge non riproducibili sul LAB (provati per costruzione); lordo/netto scambiato non distinguibile con l'utente di prova (pin statico). Promo a scaglioni mostra il prezzo a 1 pezzo. Resta: `wishlist.TCid` ignorato dal carrello (task separato). **Alla consegna futura:** `App_Code/KeepStoreWishlistPriceDisplay.vb` prima, poi `wishlist.aspx` e `wishlist.aspx.vb`.
+
 ## AUTH-PASSWORD-CHANGE-REVOKES-CODES-1A — 23/11/2026 — SOURCE (il cambio password revoca i codici di reset)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#663](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/663), stable `2e31f5fe`.** Seguito di PR 573/576/579 (codici di reset revocati al cambio e-mail).
