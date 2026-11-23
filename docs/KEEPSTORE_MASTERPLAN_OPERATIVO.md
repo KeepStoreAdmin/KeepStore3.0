@@ -1,5 +1,19 @@
 # KeepStore Masterplan Operativo
 
+## WISHLIST-MYSQL8-GROUPBY-1A — 23/11/2026 — SOURCE (la pagina Preferiti si apre con ONLY_FULL_GROUP_BY)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#661](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/661), stable `55b4cfb4`.** «Procedi con il prossimo task» del PO del 23/11/2026.
+
+**Fatto (misurato sul LAB, MySQL 8).** `GET /wishlist.aspx` da collegato finiva in InternalError: errore 1055 per `GROUP BY id` su ~76 colonne non aggregate (`wishlist.aspx.vb`). Il tile «Preferiti» dell'area account punta a quella pagina.
+
+**Ora.** Una riga completa per articolo con `ROW_NUMBER() OVER (PARTITION BY vsuperarticoli.id ORDER BY <criterio del catalogo>, wishlist.id_wishlist)`; utente e listino filtrano nella sottoquery prima del rank; `ORDER BY id` esterno (con MySQL 5 il GROUP BY ordinava per id). Nessun MIN/MAX/ANY_VALUE.
+
+**Revisioni.** ChatGPT (xhigh): accolti ordine esterno, oracolo con fanout, livello L; la sua premessa «redirect al login» era errata (rinvia ad accessonegato). Claude (Opus): accolti `vsuperarticoli.NListino`, fixture diretta con pulizia dei soli id creati, riga di un secondo utente, mutante ORDER BY dichiarato non uccidibile. Gate: PASS.
+
+**Prove.** `Tools/Test-WishlistGroupBy.ps1`: rossa prima; 5 controlli, 4 mutanti uccisi. Incidente di prova: la prima esecuzione ha cancellato per errore l'unica riga di wishlist del cliente di prova nel LAB (id 1, articolo non recuperabile); corretto il `finally` (la pulizia parte solo dopo la lettura di `$before`). Dato LAB sintetico, nessun effetto sul prodotto.
+
+**Limiti e residuo (NON AVVIATO).** Scelta fra righe diverse di `vsuperarticoli` non provata sul listino 7 (nessun fanout); ramo con `TCid` in wishlist solo statico. Segnalati: `listini.aspx` (stessa famiglia 1055, r.583/931), `wishlist_add` (3 parametri a `NewElement_Wishlist` che ne ha 2, Catch vuoto), ramo promo (confronto con 1, label mancanti). **Alla consegna futura:** `wishlist.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-PRIVATE-PAGES-NO-STORE-1A — 23/11/2026 — SOURCE (le pagine private non restano nella cache del browser)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#659](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/659), stable `99565646`.** «OK PROCEDI con il prossimo task» del PO del 23/11/2026.
