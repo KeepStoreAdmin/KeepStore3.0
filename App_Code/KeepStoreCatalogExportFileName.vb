@@ -5,7 +5,7 @@ Imports System
 Imports System.Globalization
 Imports System.Text
 
-' Nome del file scaricato dal listino (CATALOG-DOWNLOAD-FILENAME-1A): Listino_<azienda>_<aaaa-mm-gg>.<pdf|xls>.
+' Nome del file scaricato dal listino (CATALOG-DOWNLOAD-FILENAME-1A): Listino_<azienda>_<gg-mm-aaaa>.<pdf|xls>.
 ' Il nome azienda e testo del database dentro un'intestazione HTTP: qui diventa ASCII sicuro per costruzione (solo A-Z a-z 0-9 e trattino, il resto e un
 ' solo trattino basso), senza mai lanciare eccezioni (un nome strano non deve bloccare il download). Nessuna dipendenza da altre classi: si prova da sola.
 Public NotInheritable Class CatalogExportFileName
@@ -15,9 +15,9 @@ Public NotInheritable Class CatalogExportFileName
     Private Const MaxCompanyLength As Integer = 40
     Private Const FallbackCompany As String = "KeepStore"
 
-    ' La data e quella dello snapshot (non una seconda lettura dell'orologio), con cultura invariante: nessun anno diverso (thai) e ordine alfabetico = ordine di data.
+    ' La data e quella dello snapshot (non una seconda lettura dell'orologio), nel formato italiano gg-mm-aaaa scelto dal PO, con cultura invariante (nessun anno thai).
     Public Shared Function Build(ByVal companyName As String, ByVal generatedOn As Date, ByVal asExcel As Boolean) As String
-        Dim stamp As String = generatedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        Dim stamp As String = generatedOn.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture)
         Dim extension As String = If(asExcel, ".xls", ".pdf")
         Dim part As String = FallbackCompany
         Try

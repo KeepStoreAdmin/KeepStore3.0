@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$Red, [switch]$Stress, [string]$KeepXls = '', [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
+param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$Red, [switch]$Stress, [switch]$NoExcel, [string]$KeepXls = '', [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
 
 # CATALOG-DOWNLOAD-1B (XLS). Prova HTTP sul sito LAB (https, 127.0.0.1, porta 18843, utente di prova) del download Excel del listino: il file e un vero .xls
 # (HSSF) rileggibile, ha i fogli Indice + un foglio per settore + Elenco, ogni articolo compare UNA volta nell'ordine atteso (calcolato da SQL), il prezzo
@@ -84,12 +84,15 @@ function Read-Anchors($rec, $acc) {
 function Get-XlsInfo([string]$file) {
     $fs = [IO.File]::OpenRead($file)
     try { $wb = New-Object NPOI.HSSF.UserModel.HSSFWorkbook -ArgumentList $fs } finally { $fs.Close() }
-    $info = @{ Sheets = @(); Names = @(); Items = New-Object Collections.Generic.List[object]; ElencoItems = New-Object Collections.Generic.List[object]; DocLinks = 0; Styles = [int]$wb.NumCellStyles; Pictures = 0; Anchors = @{}; Texts = (New-Object Text.StringBuilder); DocTargets = (New-Object 'Collections.Generic.List[string]') }
+    $info = @{ Sheets = @(); Names = @(); Items = New-Object Collections.Generic.List[object]; ElencoItems = New-Object Collections.Generic.List[object]; DocLinks = 0; Styles = [int]$wb.NumCellStyles; Pictures = 0; Anchors = @{}; Texts = (New-Object Text.StringBuilder); DocTargets = (New-Object 'Collections.Generic.List[string]'); Stats = @{}; PriceFmt = (New-Object 'Collections.Generic.HashSet[int]'); CodeFmt = (New-Object 'Collections.Generic.HashSet[int]'); EanFmt = (New-Object 'Collections.Generic.HashSet[int]'); FilterNames = (New-Object 'Collections.Generic.List[string]') }
     $info.Pictures = @($wb.GetAllPictures()).Count
+    # nomi della cartella di lavoro: il filtro automatico e il nome nascosto _FilterDatabase con il foglio e l'intervallo
+    for ($i = 0; $i -lt $wb.NumberOfNames; $i++) { $nm = $wb.GetNameAt($i); if ([string]$nm.NameName -match 'FilterDatabase') { $info.FilterNames.Add(([string]$nm.SheetIndex) + '|' + ([string]$nm.RefersToFormula)) } }
     for ($s = 0; $s -lt $wb.NumberOfSheets; $s++) {
         $sh = $wb.GetSheetAt($s); $name = $wb.GetSheetName($s)
         $info.Names += $name
         $isElenco = ($name -eq 'Elenco')
+        $info.Stats[$name] = @{ Rows = ($sh.LastRowNum + 1); Links = 0 }
         for ($r = $sh.FirstRowNum; $r -le $sh.LastRowNum; $r++) {
             $row = $sh.GetRow($r); if ($null -eq $row) { continue }
             for ($c = 0; $c -lt 14; $c++) {
@@ -98,6 +101,7 @@ function Get-XlsInfo([string]$file) {
                 if ($ct -eq 'STRING') { [void]$info.Texts.Append($cell.StringCellValue + ' | ') }
                 $hl = $null; try { $hl = $cell.Hyperlink } catch { $hl = $null }
                 if ($null -eq $hl) { continue }
+                $info.Stats[$name].Links++
                 $addr = [string]$hl.Address
                 # in lettura NPOI 1.2.3 non distingue il tipo (Unknown): il collegamento interno ha etichetta "place" e indirizzo 'foglio'!A1
                 if ([string]$hl.Label -eq 'place' -or $addr -match "^'.*'![A-Z]+[0-9]+$") { if ($name -eq 'Indice') { $info.DocLinks++; [void]$info.DocTargets.Add(($addr -replace "^'(.*)'!.*$", '$1').Replace("''", "'")) }; continue }
@@ -106,6 +110,11 @@ function Get-XlsInfo([string]$file) {
                 # riga articolo: id dal collegamento, EAN e prezzi letti dalla riga con intestazioni fisse
                 $item = @{ Id = [int]$m.Groups[1].Value; Sheet = $name; Row = $r; Cells = @{} }
                 for ($k = 0; $k -lt 14; $k++) { $x = $row.GetCell($k); if ($null -ne $x) { $t = [string]$x.CellType; $item.Cells[$k] = if ($t -eq 'NUMERIC') { [string]$x.NumericCellValue } elseif ($t -eq 'STRING') { $x.StringCellValue } else { '' } } }
+                # indici numerici dei formati (non le stringhe: NPOI 1.2.3 e sfasato di uno nelle due direzioni): prezzo, codice, EAN
+                $pc = if ($isElenco) { 8 } else { 5 }; $cc = if ($isElenco) { 4 } else { 1 }; $ec = if ($isElenco) { 5 } else { 2 }
+                $px = $row.GetCell($pc); if ($null -ne $px -and [string]$px.CellType -eq 'NUMERIC') { [void]$info.PriceFmt.Add([int]$px.CellStyle.DataFormat) }
+                $cx = $row.GetCell($cc); if ($null -ne $cx) { [void]$info.CodeFmt.Add([int]$cx.CellStyle.DataFormat) }
+                $ex = $row.GetCell($ec); if ($null -ne $ex -and [string]$ex.CellType -eq 'STRING' -and $ex.StringCellValue -ne '') { [void]$info.EanFmt.Add([int]$ex.CellStyle.DataFormat) }
                 if ($isElenco) { $info.ElencoItems.Add($item) } else { $info.Items.Add($item) }
             }
         }
@@ -122,6 +131,91 @@ function Get-XlsInfo([string]$file) {
     return $info
 }
 function Is-ValidSheetName([string]$n) { return ($n.Length -ge 1 -and $n.Length -le 31 -and $n -notmatch "[\[\]:*?/\\]" -and -not $n.StartsWith("'") -and -not $n.EndsWith("'")) }
+
+# ---- Excel vero via COM (se installato): istanza PROPRIA, chiusa per PID, nessuna macro, sola lettura ---------------------------------------------------------------
+Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class KsXlWin { [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid); }' -ErrorAction SilentlyContinue
+$script:ComRan = $false
+function Start-OwnedExcel {
+    if ($NoExcel -or $null -eq [type]::GetTypeFromProgID('Excel.Application')) { return $null }
+    $xl = New-Object -ComObject Excel.Application
+    $xl.Visible = $false; $xl.DisplayAlerts = $false; $xl.AskToUpdateLinks = $false; $xl.AutomationSecurity = 3
+    $p = [uint32]0; [void][KsXlWin]::GetWindowThreadProcessId([IntPtr][int]$xl.Hwnd, [ref]$p)
+    return @{ Xl = $xl; Pid = [int]$p }
+}
+function Stop-OwnedExcel($o) {
+    if ($null -eq $o) { return }
+    try { $o.Xl.Quit() } catch { }
+    try { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($o.Xl) } catch { }
+    [GC]::Collect(); [GC]::WaitForPendingFinalizers()
+    for ($i = 0; $i -lt 20; $i++) { if ($null -eq (Get-Process -Id $o.Pid -ErrorAction SilentlyContinue)) { return }; Start-Sleep -Milliseconds 500 }
+    if ($o.Pid -gt 0) { Stop-Process -Id $o.Pid -Force -ErrorAction SilentlyContinue }
+}
+function Test-XlsInExcel([string]$file, $info, [int]$nArticles, $iPlain, $iPromo, [double]$expPlain, [double]$expPromo, [double]$expOld) {
+    $o = Start-OwnedExcel
+    if ($null -eq $o) { Write-Host '  COM NON ESEGUITO: Excel assente o -NoExcel (il controllo con Excel vero non e stato fatto)'; return }
+    $script:ComRan = $true
+    $xl = $o.Xl; $wb = $null
+    try {
+        try { $wb = $xl.Workbooks.Open($file, 0, $true) } catch { Check $false ('Excel: apertura senza errore (' + $_.Exception.Message + ')'); return }
+        Check ($wb.Worksheets.Count -eq $info.Names.Count) ('Excel: aperto, ' + $wb.Worksheets.Count + ' fogli (attesi ' + $info.Names.Count + ')')
+        $nfi = New-Object Globalization.NumberFormatInfo; $nfi.NumberDecimalSeparator = [string]$xl.International(3); $nfi.NumberGroupSeparator = [string]$xl.International(4)
+        # contenuto per foglio contro NPOI: una riparazione silenziosa cambierebbe righe, forme o collegamenti
+        $badSheets = 0
+        foreach ($name in $info.Names) {
+            $ws = $wb.Worksheets.Item($name); $ur = $ws.UsedRange; $rowsXl = $ur.Row + $ur.Rows.Count - 1; $st = $info.Stats[$name]
+            $anch = if ($info.Anchors.ContainsKey($name)) { $info.Anchors[$name].Count } else { 0 }
+            if ($rowsXl -ne $st.Rows -or $ws.Hyperlinks.Count -ne $st.Links -or $ws.Shapes.Count -ne $anch) { $badSheets++; Write-Host ('    foglio ' + $name + ': righe ' + $rowsXl + '/' + $st.Rows + ' link ' + $ws.Hyperlinks.Count + '/' + $st.Links + ' forme ' + $ws.Shapes.Count + '/' + $anch) }
+        }
+        Check ($badSheets -eq 0) ('Excel: righe, collegamenti e foto di ogni foglio uguali al file (fogli diversi ' + $badSheets + ')')
+        # testo visibile dei prezzi con i separatori dell'istanza: il difetto del formato sfasato dava "$37" invece di "37,00"
+        $sp = $wb.Worksheets.Item($iPlain.Sheet); $rp = $iPlain.Row + 1
+        $t1 = ([string]$sp.Cells.Item($rp, 6).Text).Trim(); $w1 = ([decimal]$expPlain).ToString('#,##0.00', $nfi)
+        Check ($t1 -ceq $w1) ('Excel: prezzo normale mostrato "' + $t1 + '" (atteso "' + $w1 + '")')
+        $sq = $wb.Worksheets.Item($iPromo.Sheet); $rq = $iPromo.Row + 1
+        $t2 = ([string]$sq.Cells.Item($rq, 6).Text).Trim(); $w2 = ([decimal]$expPromo).ToString('#,##0.00', $nfi)
+        $t3 = ([string]$sq.Cells.Item($rq, 7).Text).Trim(); $w3 = ([decimal]$expOld).ToString('#,##0.00', $nfi)
+        Check ($t2 -ceq $w2 -and $t3 -ceq $w3) ('Excel: prezzo in offerta "' + $t2 + '" (atteso "' + $w2 + '") e prezzo di listino "' + $t3 + '" (atteso "' + $w3 + '")')
+        $eanItem = @($info.Items | Where-Object { $_.Cells.ContainsKey(2) -and $_.Cells[2] -ne '' })[0]
+        $se = $wb.Worksheets.Item($eanItem.Sheet)
+        Check (([string]$se.Cells.Item($eanItem.Row + 1, 2).NumberFormat) -ceq '@' -and ([string]$se.Cells.Item($eanItem.Row + 1, 3).NumberFormat) -ceq '@' -and ([string]$se.Cells.Item($eanItem.Row + 1, 3).Text) -ceq $eanItem.Cells[2]) 'Excel: codice ed EAN in formato testo, EAN identico al file'
+        # filtri automatici: solo Elenco, intervallo dal NOME _FilterDatabase (AutoFilter.Range non vede un intervallo corto), nessun criterio attivo
+        $withFilter = @(); foreach ($ws in $wb.Worksheets) { if ($ws.AutoFilterMode) { $withFilter += $ws.Name } }
+        Check (($withFilter -join ',') -ceq 'Elenco') ('Excel: filtro automatico solo sul foglio Elenco (trovato: ' + ($withFilter -join ',') + ')')
+        $nRef = 0; $ref = ''; foreach ($n in $wb.Names) { if ([string]$n.Name -like '*_FilterDatabase') { $nRef++; $ref = [string]$n.RefersTo } }
+        $expRef = '=Elenco!$A$1:$L$' + ($nArticles + 1)
+        Check ($nRef -eq 1 -and ($ref -replace "'", '') -ceq $expRef) ('Excel: intervallo del filtro ' + $expRef + ' dal nome nascosto (trovato ' + $ref + ')')
+        $el = $wb.Worksheets.Item('Elenco'); $cnt = [int]$el.AutoFilter.Filters.Count; $active = 0
+        for ($i = 1; $i -le $cnt; $i++) { if ($el.AutoFilter.Filters.Item($i).On) { $active++ } }
+        $colE = $el.Range('E2:E' + ($nArticles + 1))
+        $visible = [int]$xl.WorksheetFunction.Subtotal(103, $colE)
+        Check ($cnt -eq 12 -and $active -eq 0 -and $visible -eq $nArticles) ('Excel: 12 colonne filtrabili, nessun criterio attivo, tutte le righe visibili in apertura (' + $visible + ' su ' + $nArticles + ')')
+        # filtro applicato sul settore dell'ULTIMA riga: le righe visibili sono esattamente quelle di quel settore (identita, non solo conteggio)
+        $sector = [string]$info.ElencoItems[$info.ElencoItems.Count - 1].Cells[0]
+        if ($sector -match '[*?~]') { Write-Host '  nota: filtro per settore non provato (nome con caratteri jolly)' } else {
+            $want = New-Object 'Collections.Generic.HashSet[int]'; foreach ($it in $info.ElencoItems) { if ([string]$it.Cells[0] -ceq $sector) { [void]$want.Add($it.Row + 1) } }
+            [void]$el.Range('A1:L' + ($nArticles + 1)).AutoFilter(1, $sector)
+            $got = New-Object 'Collections.Generic.HashSet[int]'
+            try { foreach ($ar in $colE.SpecialCells(12).Areas) { for ($k = 0; $k -lt $ar.Rows.Count; $k++) { [void]$got.Add([int]$ar.Row + $k) } } } catch { }
+            $same = ($got.Count -eq $want.Count); if ($same) { foreach ($x in $want) { if (-not $got.Contains($x)) { $same = $false; break } } }
+            Check ($same -and $want.Contains($nArticles + 1)) ('Excel: filtro Settore = "' + $sector + '": ' + $got.Count + ' righe visibili, attese ' + $want.Count + ', ultima riga inclusa')
+        }
+        $wb.Close($false); $wb = $null
+        # controllo negativo: un file troncato NON deve aprirsi (se si aprisse, l'oracolo non vedrebbe i guasti)
+        $bytes = [IO.File]::ReadAllBytes($file); $cut = Join-Path $tmp 'troncato.xls'
+        [IO.File]::WriteAllBytes($cut, $bytes[0..([int]($bytes.Length * 0.6))])
+        $threw = $false; try { $wc = $xl.Workbooks.Open($cut, 0, $true); $wc.Close($false) } catch { $threw = $true }
+        Check $threw 'Excel: controllo negativo, un file troncato non si apre'
+    } finally {
+        try { if ($null -ne $wb) { $wb.Close($false) } } catch { }
+        Stop-OwnedExcel $o
+    }
+}
+function Get-FilterVerdict($inf, [int]$n) {
+    # sempre eseguibile (NPOI): un solo nome _FilterDatabase, foglio Elenco (ultimo) e intervallo A1:L(n+1)
+    if ($inf.FilterNames.Count -ne 1) { return $false }
+    $parts = ([string]$inf.FilterNames[0]).Split('|')
+    return (([int]$parts[0]) -eq ($inf.Names.Count - 1) -and ($parts[1] -replace "'", '') -ceq ('Elenco!$A$1:$L$' + ($n + 1)))
+}
 
 $exit = 0
 $uid = 0; $lst = 0; $copied = New-Object Collections.Generic.List[string]
@@ -242,6 +336,10 @@ try {
             }
             Check ($info.Texts.ToString().Contains('Disponibile') -and $info.Texts.ToString().Contains('Non disponibile')) 'colonna disponibilita: testi Disponibile e Non disponibile presenti'
             Check ($info.Styles -lt 3500) ('stili sotto il limite di 4000 (' + $info.Styles + ')')
+            # sempre eseguibili (NPOI): indici numerici dei formati (4 = #,##0.00, 49 = testo) e nome del filtro automatico
+            Check ($info.PriceFmt.Count -eq 1 -and $info.PriceFmt.Contains(4) -and $info.CodeFmt.Count -eq 1 -and $info.CodeFmt.Contains(49) -and $info.EanFmt.Count -eq 1 -and $info.EanFmt.Contains(49)) ('formati: prezzo 4, codice ed EAN 49 (trovati prezzo [' + ($info.PriceFmt -join ',') + '] codice [' + ($info.CodeFmt -join ',') + '] EAN [' + ($info.EanFmt -join ',') + '])')
+            Check (Get-FilterVerdict $info $ids.Count) ('filtro automatico: un solo nome _FilterDatabase sull''ultimo foglio, Elenco A1:L' + ($ids.Count + 1) + ' (trovato: ' + ($info.FilterNames -join ';') + ')')
+            Test-XlsInExcel $xlsFile $info $ids.Count $iPlain $iPromo $expPlain $expPromo $expOld
             Check ($ok.Length -lt 25MB) ('peso del file sotto 25 MB (' + [math]::Round($ok.Length / 1MB, 1) + ' MB)')
             Check ($info.Texts.ToString() -match 'Fanno fede') 'nota: fanno fede i prezzi del sito'
         }
@@ -257,6 +355,9 @@ try {
             'M03_NO_PROMO'       = @{ File = 'App_Code\KeepStoreCatalogExportSnapshot.vb'; From = 'If model.HasDefaultQuantityOffer Then'; To = 'If False Then'; Kill = 'promo' }
             'M04_PHOTO_ROW'      = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = 'Dim anchorRow As Integer = r ''PHOTO_ROW'; To = 'Dim anchorRow As Integer = r + 1 ''PHOTO_ROW'; Kill = 'photo' }
             'M05_NO_SHEETNAME_CLEAN' = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = 'candidate = SanitizeSheetName(raw) ''SHEET_SANITIZE'; To = 'candidate = raw ''SHEET_SANITIZE'; Kill = 'names' }
+            'M06_MONEY_FORMAT'  = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = 'Money = 4S'; To = 'Money = 5S'; Kill = 'fmt' }
+            'M07_FILTER_SHORT'  = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = '(snapshot.Rows.Count + 1).ToString(CultureInfo.InvariantCulture)) ''FILTER_RANGE'; To = 'snapshot.Rows.Count.ToString(CultureInfo.InvariantCulture)) ''FILTER_RANGE'; Kill = 'filter' }
+            'M08_FILTER_SHEET'  = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = '"''Elenco''!$A$1:$L$"'; To = '"''Indice''!$A$1:$L$"'; Kill = 'filter' }
         }
         $killed = 0; $total = 0
         foreach ($id in $mutants.Keys) {
@@ -276,6 +377,8 @@ try {
                     elseif ($mu.Kill -eq 'order') { $dead = (($sid -join ',') -ne ($ids -join ',')); $why = 'ordine diverso' }
                     elseif ($mu.Kill -eq 'promo') { $ip = @($inf.Items | Where-Object { $_.Id -eq $idPromo })[0]; $vv = if ($null -ne $ip -and $ip.Cells.ContainsKey(5)) { [double]::Parse($ip.Cells[5], [Globalization.CultureInfo]::InvariantCulture) } else { -1 }; $dead = ([math]::Abs($vv - $expPromo) -ge 0.005); $why = 'prezzo promo diverso' }
                     elseif ($mu.Kill -eq 'photo') { $b3 = 0; foreach ($phId in $photoIds) { $it = @($inf.Items | Where-Object { $_.Id -eq $phId })[0]; if ($null -eq $it -or -not ($inf.Anchors.ContainsKey($it.Sheet) -and $inf.Anchors[$it.Sheet].Contains([int]$it.Row))) { $b3++ } }; $dead = ($b3 -gt 0); $why = 'foto fuori riga' }
+                    elseif ($mu.Kill -eq 'fmt') { $dead = -not ($inf.PriceFmt.Count -eq 1 -and $inf.PriceFmt.Contains(4)); $why = 'formato prezzo diverso da 4' }
+                    elseif ($mu.Kill -eq 'filter') { $dead = -not (Get-FilterVerdict $inf $ids.Count); $why = 'filtro sul foglio o sull''intervallo sbagliato' }
                     elseif ($mu.Kill -eq 'names') { $dn = @($inf.Names | Group-Object { $_.ToLowerInvariant() } | Where-Object { $_.Count -gt 1 }).Count; $dead = ($dn -gt 0 -or $inf.Names.Count -ne ($sectorCount + 2)); $why = 'nomi fogli doppi' }
                 }
                 if ($dead) { $killed++; Write-Host ('  ok   mutante ' + $id + ' ucciso (' + $why + ')') } else { Write-Host ('  FAIL mutante ' + $id + ' sopravvissuto'); $exit = 1 }
@@ -302,5 +405,5 @@ try {
     Close-LabSite
 }
 if ($e2e.Count -gt 0) { $exit = 1 }
-if ($exit -eq 0) { Write-Host 'CATALOG_XLS PASS' } else { Write-Host 'CATALOG_XLS FAIL' }
+if ($exit -eq 0) { if ($script:ComRan) { Write-Host 'CATALOG_XLS PASS (Excel vero eseguito)' } else { Write-Host 'CATALOG_XLS PASS (COM NON ESEGUITO: Excel non verificato)' } } else { Write-Host 'CATALOG_XLS FAIL' }
 exit $exit

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$Red, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
 
-# CATALOG-DOWNLOAD-FILENAME-1A. Il file scaricato (PDF o Excel) si chiama Listino_<azienda>_<data>.<pdf|xls>.
+# CATALOG-DOWNLOAD-FILENAME-1A. Il file scaricato (PDF o Excel) si chiama Listino_<azienda>_<gg-mm-aaaa>.<pdf|xls>.
 # Parte 1 (unitaria): l'helper App_Code\KeepStoreCatalogExportFileName.vb si compila da solo e si prova su casi estremi (vuoto, simboli, CON, percorsi, CR/LF,
 #   virgolette, 200 caratteri, surrogato isolato, cirillico, cifre arabe, lettere a tutta larghezza, cultura thai); mutanti sull'helper compilato in memoria.
 # Parte 2 (HTTP sul LAB, https 127.0.0.1:18843, utente di prova): per PDF ed Excel la risposta ha UN SOLO Content-Disposition uguale all'atteso, calcolato qui
@@ -52,23 +52,23 @@ function New-Probe([string]$helperSource) {
 $d0 = New-Object DateTime 2026, 11, 24
 $emoji = [char]::ConvertFromUtf32(0x1F600)
 $cases = @(
-    @{ N = 'Taikun s.r.l.'; X = $false; E = 'Listino_Taikun_srl_2026-11-24.pdf' },
-    @{ N = ('Caf' + [char]0xE8 + '  Rossi & Figli'); X = $true; E = 'Listino_Cafe_Rossi_Figli_2026-11-24.xls' },
-    @{ N = ''; X = $false; E = 'Listino_KeepStore_2026-11-24.pdf' },
-    @{ N = $null; X = $true; E = 'Listino_KeepStore_2026-11-24.xls' },
-    @{ N = '!!!///'; X = $false; E = 'Listino_KeepStore_2026-11-24.pdf' },
-    @{ N = 'CON'; X = $false; E = 'Listino_CON_2026-11-24.pdf' },
-    @{ N = '../../etc/passwd'; X = $false; E = 'Listino_etc_passwd_2026-11-24.pdf' },
-    @{ N = ('A' + [char]13 + [char]10 + 'B"C;D'); X = $false; E = 'Listino_A_B_C_D_2026-11-24.pdf' },
-    @{ N = ('A' * 200); X = $false; E = ('Listino_' + ('A' * 40) + '_2026-11-24.pdf') },
-    @{ N = (('A' * 118) + $emoji.Substring(0, 1)); X = $false; E = ('Listino_' + ('A' * 40) + '_2026-11-24.pdf') },
-    @{ N = (('B' * 39) + ' CCCC'); X = $false; E = ('Listino_' + ('B' * 39) + '_2026-11-24.pdf') },
-    @{ N = ([string][char]0x41C + [char]0x43E + [char]0x441 + [char]0x43A + [char]0x432 + [char]0x430); X = $false; E = 'Listino_KeepStore_2026-11-24.pdf' },
-    @{ N = ('Gro' + [char]0xDF + 'handel'); X = $false; E = 'Listino_Gro_handel_2026-11-24.pdf' },
-    @{ N = ([string][char]0x663 + [char]0x663 + [char]0x663 + 'abc'); X = $false; E = 'Listino_abc_2026-11-24.pdf' },
-    @{ N = ([string][char]0xFF21 + [char]0xFF22 + [char]0xFF23); X = $false; E = 'Listino_ABC_2026-11-24.pdf' },
-    @{ N = ([string][char]0xFB01 + 'ne'); X = $false; E = 'Listino_fine_2026-11-24.pdf' },
-    @{ N = '-Rossi-'; X = $false; E = 'Listino_Rossi_2026-11-24.pdf' }
+    @{ N = 'Taikun s.r.l.'; X = $false; E = 'Listino_Taikun_srl_24-11-2026.pdf' },
+    @{ N = ('Caf' + [char]0xE8 + '  Rossi & Figli'); X = $true; E = 'Listino_Cafe_Rossi_Figli_24-11-2026.xls' },
+    @{ N = ''; X = $false; E = 'Listino_KeepStore_24-11-2026.pdf' },
+    @{ N = $null; X = $true; E = 'Listino_KeepStore_24-11-2026.xls' },
+    @{ N = '!!!///'; X = $false; E = 'Listino_KeepStore_24-11-2026.pdf' },
+    @{ N = 'CON'; X = $false; E = 'Listino_CON_24-11-2026.pdf' },
+    @{ N = '../../etc/passwd'; X = $false; E = 'Listino_etc_passwd_24-11-2026.pdf' },
+    @{ N = ('A' + [char]13 + [char]10 + 'B"C;D'); X = $false; E = 'Listino_A_B_C_D_24-11-2026.pdf' },
+    @{ N = ('A' * 200); X = $false; E = ('Listino_' + ('A' * 40) + '_24-11-2026.pdf') },
+    @{ N = (('A' * 118) + $emoji.Substring(0, 1)); X = $false; E = ('Listino_' + ('A' * 40) + '_24-11-2026.pdf') },
+    @{ N = (('B' * 39) + ' CCCC'); X = $false; E = ('Listino_' + ('B' * 39) + '_24-11-2026.pdf') },
+    @{ N = ([string][char]0x41C + [char]0x43E + [char]0x441 + [char]0x43A + [char]0x432 + [char]0x430); X = $false; E = 'Listino_KeepStore_24-11-2026.pdf' },
+    @{ N = ('Gro' + [char]0xDF + 'handel'); X = $false; E = 'Listino_Gro_handel_24-11-2026.pdf' },
+    @{ N = ([string][char]0x663 + [char]0x663 + [char]0x663 + 'abc'); X = $false; E = 'Listino_abc_24-11-2026.pdf' },
+    @{ N = ([string][char]0xFF21 + [char]0xFF22 + [char]0xFF23); X = $false; E = 'Listino_ABC_24-11-2026.pdf' },
+    @{ N = ([string][char]0xFB01 + 'ne'); X = $false; E = 'Listino_fine_24-11-2026.pdf' },
+    @{ N = '-Rossi-'; X = $false; E = 'Listino_Rossi_24-11-2026.pdf' }
 )
 function Test-Cases($probe, [string]$tag) {
     $bad = New-Object Collections.Generic.List[string]
@@ -82,7 +82,7 @@ function Test-Cases($probe, [string]$tag) {
     try {
         [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo('th-TH')
         $got = [string]$probe.B('Taikun', $d0, $false)
-        if ($got -cne 'Listino_Taikun_2026-11-24.pdf') { $bad.Add('cultura thai: [' + $got + ']') }
+        if ($got -cne 'Listino_Taikun_24-11-2026.pdf') { $bad.Add('cultura thai: [' + $got + ']') }
     } finally { [Threading.Thread]::CurrentThread.CurrentCulture = $old }
     return $bad.ToArray()
 }
@@ -155,7 +155,7 @@ try {
             $len = $rnd.Next(0, 60); $sb = New-Object Text.StringBuilder
             for ($k = 0; $k -lt $len; $k++) { [void]$sb.Append([char]$rnd.Next(0, 0xFFFF)) }
             $r = ''; try { $r = [string]$probe.B($sb.ToString(), $d0, $false) } catch { $r = 'EXC' }
-            if ($r -notmatch '^Listino_[A-Za-z0-9_-]{1,40}_2026-11-24\.pdf$') { $rejected++ }
+            if ($r -notmatch '^Listino_[A-Za-z0-9_-]{1,40}_24-11-2026\.pdf$') { $rejected++ }
         }
         Check ($rejected -eq 0) ('unitaria: 2000 stringhe casuali danno sempre un nome sicuro (anomalie ' + $rejected + ')')
         if (-not $SkipMutants -and -not $Red) {
@@ -185,7 +185,7 @@ try {
     # ---------------- Parte 2: HTTP sul sito LAB -------------------------------------------------------------------------------------------------------
     $companyName = (Get-Scalar "SELECT Nome AS ksval FROM aziende WHERE URL1 = 'www.taikun.it' LIMIT 1;")
     Check ($companyName -ne '') ('fixture: nome azienda dell''host letto da SQL (' + $companyName + ')')
-    $today = (Get-Date).ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    $today = (Get-Date).ToString('dd-MM-yyyy', [Globalization.CultureInfo]::InvariantCulture)
     $expPdf = 'Listino_' + (Expected-Part $companyName) + '_' + $today + '.pdf'
     $expXls = 'Listino_' + (Expected-Part $companyName) + '_' + $today + '.xls'
 
@@ -198,7 +198,9 @@ try {
         $okOne = ($r.Disp.Count -eq 1)
         $line = if ($r.Disp.Count -ge 1) { ([string]$r.Disp[0]).Trim() } else { '' }
         $want = 'Content-Disposition: attachment; filename="' + $expected + '"'
-        Check ($okOne -and ($line -ceq $want)) ($tag + ': un solo Content-Disposition uguale a ' + $expected + ' (visto: ' + $line + ', righe ' + $r.Disp.Count + ')')
+        $todayAfter = (Get-Date).ToString('dd-MM-yyyy', [Globalization.CultureInfo]::InvariantCulture)
+        $wantAfter = 'Content-Disposition: attachment; filename="' + ($expected -replace '_[0-9]{2}-[0-9]{2}-[0-9]{4}[.]', ('_' + $todayAfter + '.')) + '"'
+        Check ($okOne -and ($line -ceq $want -or $line -ceq $wantAfter)) ($tag + ': un solo Content-Disposition uguale a ' + $expected + ' (visto: ' + $line + ', righe ' + $r.Disp.Count + ')')
         return $r
     }
     $null = Check-Download 'btnPdf' 'Scarica il PDF' $expPdf 'PDF'

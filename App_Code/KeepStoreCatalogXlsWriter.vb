@@ -51,9 +51,9 @@ Public NotInheritable Class CatalogXlsWriter
         Public ReadOnly Text As Short
         Public Sub New()
             Wb = New Hs.HSSFWorkbook()
-            Dim fmt As Ss.DataFormat = Wb.CreateDataFormat()
-            Money = fmt.GetFormat("#,##0.00")
-            Text = fmt.GetFormat("@")
+            ' NPOI 1.2.3: HSSFDataFormat.GetFormat e sfasato di uno ("#,##0.00" -> 5, "@" -> 50: Excel mostra "$37" e un formato data). Si usano gli indici standard BIFF.
+            Money = 4S
+            Text = 49S
         End Sub
     End Class
 
@@ -98,6 +98,9 @@ Public NotInheritable Class CatalogXlsWriter
             Next
         Next
         WriteList(c, listSheet, snapshot.Rows, priceNote)
+        ' Filtri automatici SOLO sul foglio Elenco (tabella piatta: intestazione alla riga 1, 12 colonne); si crea dopo tutti i fogli. Nei fogli settore le righe di
+        ' titolo categoria/tipologia/gruppo dentro l'intervallo romperebbero il filtro. L'intervallo si verifica dal nome nascosto _FilterDatabase.
+        c.Wb.CreateAutoFilter("'Elenco'!$A$1:$L$" & (snapshot.Rows.Count + 1).ToString(CultureInfo.InvariantCulture)) 'FILTER_RANGE
         indexSheet.IsSelected = True
 
         ' Write produce il contenitore OLE2 (.xls vero); GetBytes restituirebbe il solo flusso interno, non apribile.
