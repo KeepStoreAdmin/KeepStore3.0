@@ -40,3 +40,5 @@ Test-AccountOrderContinuity # richiede -EvidenceDirectory (nuova cartella in TEM
 Test-PersistentCartLoginMerge # richiede il parametro obbligatorio -ScratchConfigPath (configurazione fuori dal repository): senza, PowerShell si ferma prima di ogni controllo; i file che legge (login.aspx.vb, logout.aspx.vb, Page.master.vb) non sono cambiati in KS-QA-BROWSER-1A
 Test-HomePerfCaches # CACHE_HELPER_USED_ONLY_BY_THE_TWO_REVIEWED_CALLERS: App_Code/KeepStoreContactChannels.vb usa la cache dalla PR 551 (3e59d2ff), gia sulla stable 632e2bb6
 Test-HomeDeadCodeC # D05_CACHE_BUSTERS_OF_THE_CLEANED_ASSETS_UPDATED: versioni dei fogli cambiate da task successivi (verificato su 6d683503, worktree pulito)
+Test-AccountProfileTenantScope # fallisce gia sulla stable (verificato il 2026-11-24 su dc80fac8, worktree pulito, con -EvidenceDirectory e node di Codex): SYNTHETIC-SQL-ERROR, il carattere BOM iniziale non e JSON valido nel dialogo con node
+Test-LoginSessionRenew # M02_NO_COOKIE_EXPIRY punto della mutazione non unico, poi il test non termina: fallisce gia sulla stable (verificato il 2026-11-24 su dc80fac8, worktree pulito)

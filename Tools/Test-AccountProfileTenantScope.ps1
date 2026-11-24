@@ -400,10 +400,34 @@ $compiler=New-Object Microsoft.VisualBasic.VBCodeProvider
 $runnerInstance=$null
 try{
     $options=New-Object CodeDom.Compiler.CompilerParameters
-    $options.GenerateInMemory=$true;$options.CompilerOptions='/optionInfer+ /optionExplicit+ /optionStrict- /imports:Microsoft.VisualBasic'
+    $options.GenerateInMemory=$true;$options.CompilerOptions='/optionInfer+ /optionExplicit+ /optionStrict- /imports:Microsoft.VisualBasic /imports:System.Web'
     $options.TempFiles=New-Object CodeDom.Compiler.TempFileCollection($EvidenceDirectory,$false)
     foreach($r in @('System.dll','System.Core.dll','System.Data.dll','System.Web.dll','System.Web.Extensions.dll','System.Configuration.dll',$mysql)){[void]$options.ReferencedAssemblies.Add($r)}
-    $sources=@($support,$scopeClass.Replace('__SCOPE_METHOD__',$scopeMethod),(Materialize $candidate 'ProfileCandidate'),(Materialize $baseline 'ProfileBaseline'),$runner,(Source 'App_Code/StorefrontCanonicalHostPolicy.vb'),(Source 'App_Code/StorefrontCommercialIsolationPolicy.vb'))
+    # AUTH-ATTEMPT-LIMIT-1A: the page now calls the attempt limit; this test checks the company scope of the profile, so the limit is replaced by an inert stand-in (the real one is proven by Test-AuthAttemptLimit and Test-AuthAttemptLimitPages).
+    $limitStub=@'
+Public Enum AttemptLimitDecision
+    Allowed
+    Blocked
+    Inactive
+End Enum
+Public Class KeepStoreAuthAttemptLimit
+    Public Const ScopeCurrentPassword As Integer = 2
+End Class
+Public Class KeepStoreAuthAttemptLimitWeb
+    Public Const BlockedMessage As String = "blocked"
+    Public Shared Function LoginKey(ByVal loginId As Integer) As String
+        Return loginId.ToString()
+    End Function
+    Public Shared Function Reserve(ByVal context As HttpContext, ByVal companyId As Integer, ByVal scope As Integer, ByVal key As String) As AttemptLimitDecision
+        Return AttemptLimitDecision.Inactive
+    End Function
+    Public Shared Sub Succeed(ByVal context As HttpContext, ByVal companyId As Integer, ByVal scope As Integer, ByVal key As String)
+    End Sub
+    Public Shared Sub Fail(ByVal context As HttpContext, ByVal companyId As Integer, ByVal scope As Integer, ByVal key As String)
+    End Sub
+End Class
+'@
+    $sources=@($support,$scopeClass.Replace('__SCOPE_METHOD__',$scopeMethod),(Materialize $candidate 'ProfileCandidate'),(Materialize $baseline 'ProfileBaseline'),$runner,(Source 'App_Code/StorefrontCanonicalHostPolicy.vb'),(Source 'App_Code/StorefrontCommercialIsolationPolicy.vb'),$limitStub)
     $compiled=$compiler.CompileAssemblyFromSource($options,[string[]]$sources)
     if($compiled.Errors.HasErrors){throw (($compiled.Errors|Where-Object{!$_.IsWarning}|ForEach-Object{'line '+$_.Line+': '+$_.ErrorText}) -join '; ')}
     $runnerInstance=[Activator]::CreateInstance($compiled.CompiledAssembly.GetType('Runner'))
