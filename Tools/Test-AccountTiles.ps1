@@ -123,6 +123,7 @@ function New-TilesProbe([string]$modText, [string]$progText) {
 $fixedTail = @(
     'profile|Dati account|my-account-edit.aspx|1|-1|user',
     'addresses|Indirizzi|my-account-address.aspx|1|-1|pin',
+    'catalog|Scarica listino e offerte|listino-catalogo.aspx|1|-1|download',
     'wishlist|Preferiti|wishlist.aspx|1|-1|heart',
     'password|Password|password.aspx|1|-1|lock',
     'help|Assistenza|Contattaci.aspx|1|-1|chat',
@@ -184,18 +185,18 @@ function Test-ModuleMatrix([string]$modText, [string]$progText) {
     try {
         $probe = New-TilesProbe $modText $progText
         foreach ($c in $buildCases) { $got = $probe.B([string]$c[0]); if ($got -cne $c[1]) { Show-Failure ('build [' + $c[0] + '] got [' + ($got -replace "`n", ' // ') + ']'); $ok = $false } }
-        if ($probe.BNothing() -ne 12) { Show-Failure 'build nothing'; $ok = $false }
+        if ($probe.BNothing() -ne 13) { Show-Failure 'build nothing'; $ok = $false }
         foreach ($c in $noticeCases) { $got = $probe.N([string]$c[0], [int]$c[1]); if ($got -cne $c[2]) { Show-Failure ('notice [' + $c[0] + '] got [' + $got + ']'); $ok = $false } }
         if ($probe.NNothing() -cne '') { Show-Failure 'notice nothing'; $ok = $false }
         foreach ($c in $countCases) { $got = $probe.H([bool]$c[0], [int]$c[1]); if ($got -cne $c[2]) { Show-Failure ('count ' + $c[0] + ' ' + $c[1] + ' got [' + $got + ']'); $ok = $false } }
         # HTML dei riquadri
         $active = $probe.R('2~Preventivo~0~3^4~Ordine~1~1', $true)
         $soon = $probe.R('2~Preventivo~0~3^4~Ordine~1~1', $false)
-        if ([regex]::Matches($active, '<li>').Count -ne 8 -or [regex]::Matches($active, '<li><a class="ks-account-tile" href="').Count -ne 8 -or $active -notmatch '^<ul class="ks-account-tiles">' -or $active.Contains('is-soon') -or $active.Contains('In arrivo')) { Show-Failure 'active html shape'; $ok = $false }
+        if ([regex]::Matches($active, '<li>').Count -ne 9 -or [regex]::Matches($active, '<li><a class="ks-account-tile" href="').Count -ne 9 -or $active -notmatch '^<ul class="ks-account-tiles">' -or $active.Contains('is-soon') -or $active.Contains('In arrivo')) { Show-Failure 'active html shape'; $ok = $false }
         if ($active -notmatch 'href="documenti\.aspx\?t=2">.*?<span class="ks-account-tile__label">Preventivo</span><span class="ks-account-tile__hint">3 documenti</span></a>' -or $active -notmatch 'href="documenti\.aspx\?t=4">.*?<span class="ks-account-tile__label">I miei ordini</span><span class="ks-account-tile__hint">1 ordine</span></a>') { Show-Failure 'active html counts'; $ok = $false }
         if ($active -notmatch '<span class="ks-account-tile__label">Esci</span></a></li></ul>$') { Show-Failure 'active html no hint for fixed tiles'; $ok = $false }
         if ([regex]::Matches($soon, '<li>').Count -ne 5 -or [regex]::Matches($soon, '<li><span class="ks-account-tile is-soon">').Count -ne 5 -or $soon -notmatch '^<ul class="ks-account-tiles is-soon-group">' -or $soon -match '<a\b|href|tabindex|role=' -or [regex]::Matches($soon, '<span class="ks-account-tile__hint">In arrivo</span>').Count -ne 5) { Show-Failure 'soon html shape'; $ok = $false }
-        if ([regex]::Matches(($active + $soon), '<svg class="ks-account-tile__icon"[^>]*aria-hidden="true"').Count -ne 13) { Show-Failure 'icons hidden'; $ok = $false }
+        if ([regex]::Matches(($active + $soon), '<svg class="ks-account-tile__icon"[^>]*aria-hidden="true"').Count -ne 14) { Show-Failure 'icons hidden'; $ok = $false }
         $hostile = $probe.RRaw('<img src=x onerror=1>"', 'documenti.aspx?t=1&x="><script>', $true, $true)
         if ($hostile -notmatch 'href="documenti\.aspx\?t=1&amp;x=&quot;&gt;&lt;script&gt;"' -or $hostile -notmatch '<span class="ks-account-tile__label">&lt;img src=x onerror=1&gt;&quot;</span>' -or $hostile.Contains('<img') -or $hostile.Contains('<script')) { Show-Failure ('hostile html [' + $hostile + ']'); $ok = $false }
         $noUrl = $probe.RRaw('Senza indirizzo', '', $true, $true)
