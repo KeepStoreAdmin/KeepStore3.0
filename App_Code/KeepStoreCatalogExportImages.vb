@@ -24,6 +24,8 @@ Public NotInheritable Class CatalogExportImages
     Private Const MaxSourceBytes As Long = 8L * 1024L * 1024L
     Private Const ThumbSide As Integer = 180
     Private Const ReadyThumbMaxBytes As Long = 48L * 1024L
+    Private Const SheetSide As Integer = 80
+    Private Const SheetQuality As Long = 70L
 
     ' Restituisce i byte JPEG/PNG pronti da incorporare, oppure Nothing.
     Public Shared Function LoadThumbnail(ByVal rawName As String) As Byte()
@@ -73,6 +75,72 @@ Public NotInheritable Class CatalogExportImages
             Return jpeg
         Catch
             Return Nothing
+        End Try
+    End Function
+
+    ' Foto per il foglio Excel (CATALOG-DOWNLOAD-1B): sempre ricodificata JPEG piccola (80 px, qualita 70), con cache su disco separata da quella del PDF.
+    ' Sorgente: la miniatura "_nome" se esiste (piccola da leggere), altrimenti l'originale. Nothing se manca, e illeggibile o il tempo e esaurito (allowResize = False).
+    Public Shared Function LoadSheetPhoto(ByVal rawName As String, ByVal allowResize As Boolean) As CatalogExportPhoto
+        Try
+            Dim name As String = SafeFileName(rawName)
+            If String.IsNullOrEmpty(name) Then Return Nothing
+            Dim baseDir As String = BaseDirectory()
+            If String.IsNullOrEmpty(baseDir) Then Return Nothing
+
+            Dim source As String = Contained(baseDir, name)
+            Dim thumbName As String = If(name.StartsWith("_", StringComparison.Ordinal), name, "_" & name)
+            Dim thumbPath As String = Contained(baseDir, thumbName)
+            If thumbPath IsNot Nothing AndAlso File.Exists(thumbPath) Then
+                Dim thumbInfo As New FileInfo(thumbPath)
+                If thumbInfo.Length > 0L AndAlso thumbInfo.Length <= 1024L * 1024L Then source = thumbPath
+            End If
+            If source Is Nothing OrElse Not File.Exists(source) Then Return Nothing
+            Dim info As New FileInfo(source)
+            If info.Length <= 0L OrElse info.Length > MaxSourceBytes Then Return Nothing
+
+            Dim key As String = info.Name.ToLowerInvariant()
+            Dim cachePath As String = CacheFile(info, SheetSide, "|xls")
+            If cachePath IsNot Nothing AndAlso File.Exists(cachePath) Then
+                Dim cached As Byte() = File.ReadAllBytes(cachePath)
+                Dim cw As Integer = 0
+                Dim ch As Integer = 0
+                If ReadSize(cached, cw, ch) Then Return New CatalogExportPhoto(key, cached, cw, ch)
+            End If
+
+            If Not allowResize Then Return Nothing
+            Dim w As Integer = 0
+            Dim h As Integer = 0
+            Dim jpeg As Byte() = ShrinkSized(source, SheetSide, SheetQuality, w, h)
+            If jpeg Is Nothing Then Return Nothing
+            If cachePath IsNot Nothing Then
+                Try
+                    Dim temp As String = cachePath & "." & Guid.NewGuid().ToString("N") & ".tmp"
+                    File.WriteAllBytes(temp, jpeg)
+                    If File.Exists(cachePath) Then
+                        File.Delete(temp)
+                    Else
+                        File.Move(temp, cachePath)
+                    End If
+                Catch
+                End Try
+            End If
+            Return New CatalogExportPhoto(key, jpeg, w, h)
+        Catch
+            Return Nothing
+        End Try
+    End Function
+
+    Private Shared Function ReadSize(ByVal bytes As Byte(), ByRef width As Integer, ByRef height As Integer) As Boolean
+        Try
+            Using ms As New MemoryStream(bytes)
+                Using img As Image = Image.FromStream(ms, False, False)
+                    width = img.Width
+                    height = img.Height
+                End Using
+            End Using
+            Return width > 0 AndAlso height > 0 AndAlso width <= 600 AndAlso height <= 600
+        Catch
+            Return False
         End Try
     End Function
 
@@ -149,12 +217,16 @@ Public NotInheritable Class CatalogExportImages
     End Function
 
     Private Shared Function CacheFile(ByVal info As FileInfo) As String
+        Return CacheFile(info, ThumbSide, "")
+    End Function
+
+    Private Shared Function CacheFile(ByVal info As FileInfo, ByVal side As Integer, ByVal tag As String) As String
         Try
             Dim dir As String = HostingEnvironment.MapPath("~/App_Data/CatalogExportThumbs")
             If String.IsNullOrWhiteSpace(dir) Then Return Nothing
             Directory.CreateDirectory(dir)
             Dim key As String = info.Name.ToLowerInvariant() & "|" & info.Length.ToString(CultureInfo.InvariantCulture) & "|" &
-                info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture) & "|" & ThumbSide.ToString(CultureInfo.InvariantCulture)
+                info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture) & "|" & side.ToString(CultureInfo.InvariantCulture) & tag
             Using sha As SHA1 = SHA1.Create()
                 Dim hash As Byte() = sha.ComputeHash(Encoding.UTF8.GetBytes(key))
                 Return Path.Combine(dir, BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant() & ".jpg")
@@ -166,6 +238,12 @@ Public NotInheritable Class CatalogExportImages
 
     ' Riduzione con GDI+: stesso rapporto, fondo bianco (PNG trasparenti), JPEG qualita 72.
     Private Shared Function Shrink(ByVal path As String, ByVal side As Integer, ByVal quality As Long) As Byte()
+        Dim w As Integer = 0
+        Dim h As Integer = 0
+        Return ShrinkSized(path, side, quality, w, h)
+    End Function
+
+    Private Shared Function ShrinkSized(ByVal path As String, ByVal side As Integer, ByVal quality As Long, ByRef outWidth As Integer, ByRef outHeight As Integer) As Byte()
         Try
             Dim bytes As Byte() = File.ReadAllBytes(path)
             Using source As New MemoryStream(bytes)
@@ -191,6 +269,8 @@ Public NotInheritable Class CatalogExportImages
                             parameters.Param(0) = New EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality)
                             Using output As New MemoryStream()
                                 target.Save(output, codec, parameters)
+                                outWidth = w
+                                outHeight = h
                                 Return output.ToArray()
                             End Using
                         End Using
@@ -201,4 +281,19 @@ Public NotInheritable Class CatalogExportImages
             Return Nothing
         End Try
     End Function
+End Class
+
+' Foto pronta per il foglio Excel: byte JPEG, dimensioni in pixel e chiave stabile (nome file) per incorporarla una sola volta nella cartella di lavoro.
+Public NotInheritable Class CatalogExportPhoto
+    Public ReadOnly Key As String
+    Public ReadOnly Bytes As Byte()
+    Public ReadOnly Width As Integer
+    Public ReadOnly Height As Integer
+
+    Public Sub New(ByVal key As String, ByVal bytes As Byte(), ByVal width As Integer, ByVal height As Integer)
+        Me.Key = key
+        Me.Bytes = bytes
+        Me.Width = width
+        Me.Height = height
+    End Sub
 End Class

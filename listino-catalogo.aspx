@@ -1,4 +1,4 @@
-<%@ Page Title="" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="listino-catalogo.aspx.vb" Inherits="listino_catalogo" %>
+﻿<%@ Page Title="" Language="VB" MasterPageFile="~/Page.master" AutoEventWireup="false" CodeFile="listino-catalogo.aspx.vb" Inherits="listino_catalogo" %>
 
 <asp:Content ID="TitleContent" ContentPlaceHolderID="TitleContent" runat="server">
     Scarica listino e offerte
@@ -13,7 +13,6 @@
         .ks-dl-list { margin: 0 0 16px; padding-left: 20px; color: #4b5563; }
         .ks-dl-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
         .ks-dl-actions .tf-btn { min-height: 48px; }
-        .ks-dl-soon { opacity: .55; cursor: not-allowed; }
         .ks-dl-note { font-size: 13px; color: #6b7280; margin-top: 14px; }
         .ks-dl-msg { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; background: #fff4f4; border: 1px solid #f1b9bf; color: #7a1f2a; }
         .ks-dl-busy { position: fixed; inset: 0; z-index: 2000; display: none; align-items: center; justify-content: center; background: rgba(17, 24, 39, .55); padding: 16px; }
@@ -47,21 +46,22 @@
                     <h1>Scarica listino e offerte</h1>
                     <p>Il catalogo completo del negozio, da sfogliare sul tuo computer o telefono anche senza connessione.</p>
                     <ul class="ks-dl-list">
-                        <li>Una foto, codice, EAN e descrizione per ogni articolo, ordinati per settore, tipologia e gruppo.</li>
+                        <li>Una foto, codice, EAN e descrizione per ogni articolo, ordinati per settore, categoria, tipologia e gruppo.</li>
                         <li>Prezzi del tuo profilo (<asp:Literal ID="litPriceLabel" runat="server" Text="IVA come da profilo"></asp:Literal>), con le offerte in evidenza.</li>
                         <li>Indice e segnalibri per andare subito dove ti serve; il codice apre la scheda dell'articolo sul sito.</li>
+                        <li>Excel: un foglio per ogni settore, più un elenco completo che puoi ordinare. Il PDF è più comodo da sfogliare su telefono, l'Excel sul computer.</li>
                     </ul>
 
                     <asp:HiddenField ID="hfToken" runat="server" />
                     <div class="ks-dl-actions">
                         <asp:Button ID="btnPdf" runat="server" Text="Scarica il PDF" CssClass="tf-btn btn-fill" OnClientClick="return ksCatalogStart(this);" />
-                        <span class="tf-btn btn-line ks-dl-soon" aria-disabled="true">Excel (XLS) in arrivo</span>
+                        <asp:Button ID="btnXls" runat="server" Text="Scarica Excel" CssClass="tf-btn btn-line" OnClientClick="return ksCatalogStart(this);" />
                     </div>
                     <asp:Panel ID="pnlMessage" runat="server" Visible="false" CssClass="ks-dl-msg" role="alert">
                         <asp:Literal ID="litMessage" runat="server"></asp:Literal>
                     </asp:Panel>
                     <div id="ksDlClientMsg" class="ks-dl-msg" role="alert" hidden></div>
-                    <p class="ks-dl-note">La preparazione puo richiedere fino a un minuto: i prezzi e le offerte sono quelli di oggi per il tuo account. Il file non viene conservato sul sito.</p>
+                    <p class="ks-dl-note">La preparazione può richiedere fino a un minuto: i prezzi e le offerte sono quelli di oggi per il tuo account. Il file non viene conservato sul sito.</p>
                 </div>
             </div>
         </section>
@@ -71,7 +71,7 @@
         <div class="ks-dl-busy-box">
             <div class="ks-dl-spin" aria-hidden="true"></div>
             <strong>Sto generando il listino...</strong>
-            <p>Puo richiedere fino a un minuto. Non chiudere questa pagina: il download parte da solo.</p>
+            <p>Può richiedere fino a un minuto. Non chiudere questa pagina: il download parte da solo.</p>
         </div>
     </div>
     <iframe name="ksDlFrame" id="ksDlFrame" title="Download listino" style="display:none" tabindex="-1" aria-hidden="true"></iframe>
@@ -104,8 +104,8 @@
                 timer = setInterval(function () {
                     var v = cookie('ks_dl_done');
                     if (v.indexOf(token + '|') === 0) {
-                        finish(v === token + '|ok' ? '' : 'Non e stato possibile generare il listino. Riprova tra qualche minuto.');
-                    } else if (Date.now() - started > 240000) {
+                        finish(v === token + '|ok' ? '' : 'Non è stato possibile generare il listino. Riprova tra qualche minuto.');
+                    } else if (Date.now() - started > 630000) {
                         finish('La preparazione sta richiedendo troppo tempo. Riprova tra qualche minuto.');
                     }
                 }, 700);

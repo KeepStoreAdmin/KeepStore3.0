@@ -1,10 +1,10 @@
-Imports System
+﻿Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
 Imports System.Threading
 Imports System.Web
 
-' Scarica listino e offerte (CATALOG-DOWNLOAD-1A). Pagina privata dell'utente collegato: un POST protetto da token genera il PDF al momento e lo
+' Scarica listino e offerte (CATALOG-DOWNLOAD-1A PDF, CATALOG-DOWNLOAD-1B Excel). Pagina privata dell'utente collegato: un POST protetto da token genera il file al momento e lo
 ' invia come allegato (mai salvato sul sito). Confini: prima di qualsiasi query si verifica che il POST non sia stato respinto dal controllo CSRF, che
 ' l'utente sia collegato e che il contesto prezzi sia coerente (lo fa lo snapshot); un solo file alla volta per utente e al massimo due insieme nel sito.
 Partial Class listino_catalogo
@@ -31,6 +31,15 @@ Partial Class listino_catalogo
     End Sub
 
     Protected Sub btnPdf_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnPdf.Click
+        RunExport(False)
+    End Sub
+
+    Protected Sub btnXls_Click(ByVal sender As Object, ByVal e As EventArgs) Handles btnXls.Click
+        RunExport(True)
+    End Sub
+
+    ' Stesse guardie per PDF ed Excel: CSRF, accesso, un file alla volta per utente, al massimo due insieme nel sito.
+    Private Sub RunExport(ByVal asExcel As Boolean)
         ' Il rifiuto CSRF reindirizza ma non ferma il ciclo di vita: nessuna generazione dopo un POST respinto.
         If Response.IsRequestBeingRedirected Then Return
         Dim token As String = SafeToken(hfToken.Value)
@@ -41,7 +50,7 @@ Partial Class listino_catalogo
         End If
 
         If Not TryEnter(loginId) Then
-            Fail(token, "Stai gia generando un listino: attendi che finisca.", 429)
+            Fail(token, "Stai già generando un listino: attendi che finisca.", 429)
             Return
         End If
         Dim bytes As Byte() = Nothing
@@ -50,7 +59,7 @@ Partial Class listino_catalogo
         Try
             If Not Gate.Wait(TimeSpan.FromSeconds(20)) Then
                 status = 503
-                message = "Il servizio e occupato con altri listini: riprova tra un minuto."
+                message = "Il servizio è occupato con altri listini: riprova tra un minuto."
             Else
                 Try
                     Server.ScriptTimeout = 600
@@ -60,15 +69,15 @@ Partial Class listino_catalogo
                         message = "Per scaricare il listino devi essere collegato."
                     ElseIf snapshot.Status <> CatalogExportStatus.Ready Then
                         status = 500
-                        message = "Non e stato possibile preparare il listino. Riprova piu tardi."
+                        message = "Non è stato possibile preparare il listino. Riprova più tardi."
                     Else
-                        bytes = CatalogPdfWriter.Build(snapshot)
+                        bytes = If(asExcel, CatalogXlsWriter.Build(snapshot), CatalogPdfWriter.Build(snapshot))
                     End If
                 Catch ex As Exception
                     status = 500
-                    message = "Non e stato possibile preparare il listino. Riprova piu tardi."
+                    message = "Non è stato possibile preparare il listino. Riprova più tardi."
                     Try
-                        KeepStoreLog.Error("catalog-export", "Generazione PDF non riuscita: " & ex.GetType().Name, Nothing, Context)
+                        KeepStoreLog.Error("catalog-export", If(asExcel, "Generazione Excel non riuscita: ", "Generazione PDF non riuscita: ") & ex.GetType().Name, Nothing, Context)
                     Catch
                     End Try
                 Finally
@@ -83,16 +92,16 @@ Partial Class listino_catalogo
             Fail(token, message, status)
             Return
         End If
-        SendPdf(token, bytes)
+        SendFile(token, bytes, asExcel)
     End Sub
 
-    Private Sub SendPdf(ByVal token As String, ByVal bytes As Byte())
+    Private Sub SendFile(ByVal token As String, ByVal bytes As Byte(), ByVal asExcel As Boolean)
         Response.Clear()
         Response.Cache.SetCacheability(HttpCacheability.NoCache)
         Response.Cache.SetNoStore()
         Response.AppendHeader("X-Robots-Tag", "noindex, nofollow, noarchive")
-        Response.ContentType = "application/pdf"
-        Response.AppendHeader("Content-Disposition", "attachment; filename=""listino-offerte-" & Date.Today.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & ".pdf""")
+        Response.ContentType = If(asExcel, "application/vnd.ms-excel", "application/pdf")
+        Response.AppendHeader("Content-Disposition", "attachment; filename=""listino-offerte-" & Date.Today.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & If(asExcel, ".xls", ".pdf") & """")
         Response.AppendHeader("Content-Length", bytes.Length.ToString(CultureInfo.InvariantCulture))
         SetDoneCookie(token, "ok")
         Response.BinaryWrite(bytes)

@@ -1,4 +1,4 @@
-Option Strict On
+﻿Option Strict On
 Option Explicit On
 
 Imports System
@@ -25,12 +25,22 @@ Public NotInheritable Class CatalogPdfWriter
     ' la generazione successiva trova le foto gia ridotte.
     Private Const ResizeBudgetSeconds As Integer = 150
 
-    Private Shared ReadOnly SectorPalette As Integer()() = New Integer()() {
+    Friend Shared ReadOnly SectorPalette As Integer()() = New Integer()() {
         New Integer() {31, 78, 121}, New Integer() {0, 121, 107}, New Integer() {46, 125, 50}, New Integer() {191, 87, 0},
         New Integer() {173, 20, 87}, New Integer() {94, 53, 177}, New Integer() {0, 105, 148}, New Integer() {123, 31, 162},
         New Integer() {198, 40, 40}, New Integer() {69, 90, 100}, New Integer() {130, 119, 23}, New Integer() {0, 131, 143},
         New Integer() {109, 76, 65}, New Integer() {40, 53, 147}, New Integer() {85, 139, 47}, New Integer() {216, 67, 21}
     }
+
+    Friend Shared ReadOnly Property SectorColorCount As Integer
+        Get
+            Return SectorPalette.Length
+        End Get
+    End Property
+
+    Friend Shared Function SectorColor(ByVal index As Integer) As Integer()
+        Return SectorPalette(index Mod SectorPalette.Length)
+    End Function
 
     Private NotInheritable Class Styles
         Public ReadOnly Base As BaseFont
@@ -290,15 +300,15 @@ Public NotInheritable Class CatalogPdfWriter
         Dim site As String = If(info IsNot Nothing AndAlso Not String.IsNullOrEmpty(info.Website), Pdf(info.Website), "il sito web")
         Dim note As New PdfPTable(1) With {.WidthPercentage = 86.0F, .SpacingBefore = 16.0F, .HorizontalAlignment = Element.ALIGN_CENTER}
         Dim noteText As New Phrase()
-        noteText.Add(New Chunk("Fanno fede sempre i prezzi e le disponibilita aggiornati sul sito. ", styles.F(9.5F, True, styles.Ink)))
-        noteText.Add(New Chunk("Questo listino puo subire variazioni di prezzo o di disponibilita: controlla sempre il sito web (" & site & ").", styles.F(9.0F, False, styles.Ink)))
+        noteText.Add(New Chunk("Fanno fede sempre i prezzi e le disponibilità aggiornati sul sito. ", styles.F(9.5F, True, styles.Ink)))
+        noteText.Add(New Chunk("Questo listino può subire variazioni di prezzo o di disponibilità: controlla sempre il sito web (" & site & ").", styles.F(9.0F, False, styles.Ink)))
         note.AddCell(New PdfPCell(noteText) With {.BackgroundColor = New BaseColor(255, 247, 214), .BorderColor = New BaseColor(240, 176, 0), .BorderWidth = 1.0F, .Padding = 9.0F})
         doc.Add(note)
 
         ' Legenda.
         Dim legend As New PdfPTable(1) With {.WidthPercentage = 86.0F, .SpacingBefore = 12.0F, .HorizontalAlignment = Element.ALIGN_CENTER}
         Dim legendText As New Phrase()
-        legendText.Add(New Chunk("Disponibilita:   ", styles.F(8.5F, True, styles.Ink)))
+        legendText.Add(New Chunk("Disponibilità:   ", styles.F(8.5F, True, styles.Ink)))
         legendText.Add(styles.Dot(0, 11.0F))
         legendText.Add(New Chunk(" Disponibile     ", styles.F(8.5F, False, styles.Ink)))
         legendText.Add(styles.Dot(1, 11.0F))
@@ -306,7 +316,7 @@ Public NotInheritable Class CatalogPdfWriter
         legendText.Add(styles.Dot(2, 11.0F))
         legendText.Add(New Chunk(" Non disponibile", styles.F(8.5F, False, styles.Ink)))
         legendText.Add(New Chunk(vbLf & "Offerte:   ", styles.F(8.5F, True, styles.Ink)))
-        legendText.Add(New Chunk("prezzo in rosso, prezzo di listino barrato e data di validita; le offerte a quantita indicano il minimo.", styles.F(8.5F, False, styles.Ink)))
+        legendText.Add(New Chunk("prezzo in rosso, prezzo di listino barrato e data di validità; le offerte a quantità indicano il minimo.", styles.F(8.5F, False, styles.Ink)))
         Dim legendCell As New PdfPCell(legendText) With {.BackgroundColor = styles.Band, .BorderColor = styles.Line, .Padding = 9.0F}
         legendCell.SetLeading(14.0F, 0.0F)
         legend.AddCell(legendCell)
@@ -494,7 +504,7 @@ Public NotInheritable Class CatalogPdfWriter
         Return New PdfPCell() With {.FixedHeight = RowHeight, .BorderColor = styles.Line, .Padding = 2.0F}
     End Function
 
-    Private Shared Function IsRealEan(ByVal value As String) As Boolean
+    Friend Shared Function IsRealEan(ByVal value As String) As Boolean
         If String.IsNullOrEmpty(value) OrElse value.Length < 8 OrElse value.Length > 14 Then Return False
         For Each ch As Char In value
             If ch < "0"c OrElse ch > "9"c Then Return False
