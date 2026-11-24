@@ -171,6 +171,7 @@ if ($LASTEXITCODE -ne 0) { throw 'RESET_CONTRACT_BASE_UNAVAILABLE' }
 # Trasformazioni DICHIARATE della base (ognuna deve trovare esattamente una occorrenza); tutto il resto del servizio resta identico.
 # 1 = cutover delle e-mail (storica); 2-4 = AUTH-RESET-ISSUE-LOCK-1C: impronte facoltative come oggetti, emissione tramite
 # PasswordResetTokenIssuance.TryIssue (blocco dell'accesso e confronto dell'e-mail), rimozione del vecchio inserimento.
+# 5 = AUTH-ATTEMPT-LIMIT-1A: dopo il commit del cambio password con codice, si toglie il blocco dei tentativi di accesso.
 $resetTransforms = @(
     @{ Old = 'companyInfo.AziendaId <= 0 OrElse aziendaEmail = "" Then'; New = 'companyInfo.AziendaId <= 0 Then' },
     @{ Old = (@'
@@ -213,7 +214,16 @@ $resetTransforms = @(
             cmd.ExecuteNonQuery()
         End Using
     End Sub
-'@ + "`n`n"); New = '' }
+'@ + "`n`n"); New = '' },
+    @{ Old = (@'
+                    tx.Commit()
+                    userMessage = "Password aggiornata correttamente. Ora puoi accedere con la nuova password."
+'@ + "`n"); New = (@'
+                    tx.Commit()
+                    ' AUTH-ATTEMPT-LIMIT-1A: il titolare ha ricevuto il codice per e-mail: il blocco dell'accesso si toglie (fuori dalla transazione, mai un errore verso la pagina).
+                    KeepStoreAuthAttemptLimitWeb.ClearLogin(HttpContext.Current, loginId)
+                    userMessage = "Password aggiornata correttamente. Ora puoi accedere con la nuova password."
+'@ + "`n") }
 )
 $expectedReset = $baselineReset
 $resetTransformsExact = $true

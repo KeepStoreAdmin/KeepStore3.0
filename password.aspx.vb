@@ -50,6 +50,24 @@ Partial Class password
                 Dim currentPassword As String = GetCurrentPassword(conn, loginIdValue)
                 Dim validationMessage As String = ""
 
+                ' AUTH-ATTEMPT-LIMIT-1A: il confronto con la password attuale e un tentativo prenotato (stesso conteggio del cambio e-mail).
+                Dim limitCompany As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(Session("AuthenticatedAziendaID"))
+                If limitCompany > 0 AndAlso Not String.IsNullOrWhiteSpace(oldPwd) AndAlso Not String.IsNullOrWhiteSpace(newPwd) AndAlso
+                   Not String.IsNullOrWhiteSpace(newPwd2) AndAlso currentPassword.Length > 0 Then
+                    Dim limitDecision As AttemptLimitDecision = KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))
+                    If limitDecision = AttemptLimitDecision.Blocked Then
+                        ShowPasswordMessage(KeepStoreAuthAttemptLimitWeb.BlockedMessage, False)
+                        Exit Sub
+                    End If
+                    If limitDecision = AttemptLimitDecision.Allowed Then
+                        If String.Equals(currentPassword, oldPwd, StringComparison.Ordinal) Then
+                            KeepStoreAuthAttemptLimitWeb.Succeed(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))
+                        Else
+                            KeepStoreAuthAttemptLimitWeb.Fail(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))
+                        End If
+                    End If
+                End If
+
                 If Not ValidatePasswordChange(oldPwd, newPwd, newPwd2, currentPassword, validationMessage) Then
                     ShowPasswordMessage(validationMessage, False)
                     Exit Sub

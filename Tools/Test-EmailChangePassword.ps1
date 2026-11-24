@@ -46,7 +46,7 @@ function Test-Source([hashtable]$f, [switch]$Quiet) {
     if ($save -notmatch 'If emailChanged Then cmd\.Parameters\.Add\("@CurrentPassword", MySqlDbType\.VarChar\)\.Value = currentPassword') { $fail.Add('S04 parametro della password') }
     if ($c -match 'AddWithValue') { $fail.Add('S04 parametri senza tipo esplicito') }
     # S05 zero righe con e-mail cambiata = password errata: messaggio, nessun commit
-    if ($save -notmatch 'Dim affectedUsers As Integer = cmd\.ExecuteNonQuery\(\)\s+If emailChanged AndAlso affectedUsers = 0 Then\s+ShowMessage\(WrongCurrentPasswordMessage, False\)\s+Return\s+End If\s+If affectedUsers <> 1 Then Throw New InvalidOperationException\("Profile update was not authorized\."\)') { $fail.Add('S05 zero righe = password errata, senza commit') }
+    if ($save -notmatch 'Dim affectedUsers As Integer = cmd\.ExecuteNonQuery\(\)\s+(?:If emailChanged AndAlso limitReserved Then\s+If affectedUsers = 0 Then\s+KeepStoreAuthAttemptLimitWeb\.Fail\([^\n]*\)\s+Else\s+KeepStoreAuthAttemptLimitWeb\.Succeed\([^\n]*\)\s+End If\s+End If\s+)?If emailChanged AndAlso affectedUsers = 0 Then\s+ShowMessage\(WrongCurrentPasswordMessage, False\)\s+Return\s+End If\s+If affectedUsers <> 1 Then Throw New InvalidOperationException\("Profile update was not authorized\."\)') { $fail.Add('S05 zero righe = password errata, senza commit') }
     $iCommit = $save.IndexOf('tr.Commit()'); $iSession = $save.IndexOf('If emailChanged Then Session("LoginEmail") = updated.Email')
     if ($iCommit -lt 0 -or $iSession -lt 0 -or $iSession -lt $iCommit) { $fail.Add('S05 sessione aggiornata solo dopo il commit') }
     if ($c -notmatch ('Private Const WrongCurrentPasswordMessage As String = "' + [regex]::Escape($wrongMessage))) { $fail.Add('S05 messaggio') }

@@ -160,6 +160,8 @@ Public Module PasswordResetTokenService
                     RevokeActiveTokens(conn, tx, loginId)
 
                     tx.Commit()
+                    ' AUTH-ATTEMPT-LIMIT-1A: il titolare ha ricevuto il codice per e-mail: il blocco dell'accesso si toglie (fuori dalla transazione, mai un errore verso la pagina).
+                    KeepStoreAuthAttemptLimitWeb.ClearLogin(HttpContext.Current, loginId)
                     userMessage = "Password aggiornata correttamente. Ora puoi accedere con la nuova password."
                     Return True
                 End Using

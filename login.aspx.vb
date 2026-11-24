@@ -4,6 +4,7 @@ Imports System.Data
 Partial Class Login
     Inherits System.Web.UI.Page
 
+    Private Const LimitRequestItemKey As String = "KeepStore:AuthAttemptLimit:LoginRequest"
     Private Const GenericLoginFailureMessage As String = "Accesso non riuscito. Verifica le credenziali o contatta il supporto."
     Private Const SessionExpiredMessage As String = "La sessione e' scaduta per inattivita. Accedi di nuovo per continuare dal carrello."
 
@@ -240,108 +241,149 @@ Partial Class Login
 
         Dim connString As String = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
 
-        Using conn As New MySqlConnection(connString)
-            conn.Open()
+        ' AUTH-ATTEMPT-LIMIT-1A: esito del tentativo prenotato, registrato in ogni uscita (successo azzera, ogni altra uscita e un errore).
+        Dim limitReserved As Boolean = False
+        Dim limitPasswordOk As Boolean = False
+        Dim limitScope As Integer = 0
+        Dim limitKeyText As String = String.Empty
+        Dim limitCompany As Integer = 0
+        Try
+            Using conn As New MySqlConnection(connString)
+                conn.Open()
 
-            Using cmd As New MySqlCommand()
-                cmd.Connection = conn
-                cmd.CommandType = CommandType.Text
+                Using cmd As New MySqlCommand()
+                    cmd.Connection = conn
+                    cmd.CommandType = CommandType.Text
 
-                ' Il login e' sempre vincolato allo storefront risolto server-side.
-                Dim aziendaId As Integer = 0
-                Integer.TryParse(Convert.ToString(Session("AziendaID")), aziendaId)
-                If aziendaId <= 0 Then
-                    ClearInvalidLoginSession()
-                    lblLogin.Text = GenericLoginFailureMessage
-                    Return False
-                End If
-                cmd.CommandText = "SELECT * FROM vlogin WHERE AziendeID=?aziendaId AND UPPER(Username) = ?username LIMIT 0, 1"
-                cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
-                cmd.Parameters.AddWithValue("?username", user.ToUpper())
-
-                Using dr As MySqlDataReader = cmd.ExecuteReader()
-
-                    If Not dr.Read() Then
-                        lblLogin.Text = GenericLoginFailureMessage
-                        Return False
-                    End If
-
-                    ' Controlli di abilitazione
-                    If dr.Item("Abilitato") <> 1 Then
-                        lblLogin.Text = GenericLoginFailureMessage
-                        Return False
-                    End If
-
-                    If dr.Item("UtentiAbilitato") <> 1 Then
-                        lblLogin.Text = GenericLoginFailureMessage
-                        Return False
-                    End If
-
-                    Dim accountCompanyId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("AziendeID"))
-                    Dim persistedPriceListId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("listino"))
-                    Dim authenticatedPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAuthenticatedPriceList(
-                        aziendaId,
-                        accountCompanyId,
-                        persistedPriceListId)
-                    If authenticatedPriceListId <= 0 Then
+                    ' Il login e' sempre vincolato allo storefront risolto server-side.
+                    Dim aziendaId As Integer = 0
+                    Integer.TryParse(Convert.ToString(Session("AziendaID")), aziendaId)
+                    If aziendaId <= 0 Then
                         ClearInvalidLoginSession()
                         lblLogin.Text = GenericLoginFailureMessage
                         Return False
                     End If
+                    cmd.CommandText = "SELECT * FROM vlogin WHERE AziendeID=?aziendaId AND UPPER(Username) = ?username LIMIT 0, 1"
+                    cmd.Parameters.AddWithValue("?aziendaId", aziendaId)
+                    cmd.Parameters.AddWithValue("?username", user.ToUpper())
 
-                    ' Controllo password (case-insensitive, come in origine)
-                    Dim dbPass As String = dr.Item("Password").ToString()
-                    If dbPass.ToLower() <> pass.ToLower() Then
-                        lblLogin.Text = GenericLoginFailureMessage
-                        Return False
-                    End If
+                    Using dr As MySqlDataReader = cmd.ExecuteReader()
 
-                    '=======================
-                    ' LOGIN OK → set Session
-                    '=======================
-                    Try
-                        Session("AbilitaListino") = CInt(dr.Item("AbilitaListino"))
-                    Catch
-                        Session("AbilitaListino") = 0
-                    End Try
+                        ' AUTH-ATTEMPT-LIMIT-1A: il tentativo si prenota PRIMA di ogni confronto di password. Chiave: il LoginId trovato, oppure il nome digitato se l'accesso non esiste.
+                        Dim rowFound As Boolean = dr.Read()
+                        limitScope = If(rowFound, KeepStoreAuthAttemptLimit.ScopeLogin, KeepStoreAuthAttemptLimit.ScopeUnknownUser)
+                        limitKeyText = If(rowFound, KeepStoreAuthAttemptLimitWeb.LoginKey(Convert.ToInt32(dr.Item("id"))), KeepStoreAuthAttemptLimit.NormalizeUnknownName(user))
+                        limitCompany = aziendaId
+                        ' Il pulsante e collegato due volte (OnClick nella pagina e Handles nel codice): il gestore gira due volte per clic. Il tentativo si conta UNA volta
+                        ' per richiesta; la seconda chiamata confronta la stessa password gia contata e, se la prima era bloccata, resta bloccata.
+                        Dim limitMarker As Object = HttpContext.Current.Items(LimitRequestItemKey)
+                        Dim limitDecision As AttemptLimitDecision
+                        If limitMarker Is Nothing Then
+                            limitDecision = KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, limitCompany, limitScope, limitKeyText)
+                            HttpContext.Current.Items(LimitRequestItemKey) = If(limitDecision = AttemptLimitDecision.Blocked, "blocked", "counted")
+                        ElseIf String.Equals(Convert.ToString(limitMarker), "blocked", StringComparison.Ordinal) Then
+                            limitDecision = AttemptLimitDecision.Blocked
+                        Else
+                            limitDecision = AttemptLimitDecision.Inactive
+                        End If
+                        If limitDecision = AttemptLimitDecision.Blocked Then
+                            lblLogin.Text = KeepStoreAuthAttemptLimitWeb.BlockedMessage
+                            Return False
+                        End If
+                        limitReserved = (limitDecision = AttemptLimitDecision.Allowed)
 
-                    Session("LoginId") = dr.Item("id")
-                    Session("LoginID") = dr.Item("id")
-                    Session("LoginEmail") = dr.Item("email")
-                    Session("LoginNomeCognome") = dr.Item("cognomenome")
+                        If Not rowFound Then
+                            lblLogin.Text = GenericLoginFailureMessage
+                            Return False
+                        End If
 
-                    If Not IsDBNull(dr.Item("ultimoaccesso")) Then
-                        Session("LoginUltimoAccesso") = dr.Item("ultimoaccesso")
-                    End If
+                        ' Controlli di abilitazione
+                        If dr.Item("Abilitato") <> 1 Then
+                            lblLogin.Text = GenericLoginFailureMessage
+                            Return False
+                        End If
 
-                    Session("UtentiId") = dr.Item("utentiid")
-                    Session("UtentiID") = dr.Item("utentiid")
-                    Session("UtentiTipoId") = dr.Item("utentitipoid")
-                    Session("AuthenticatedAziendaID") = accountCompanyId
+                        If dr.Item("UtentiAbilitato") <> 1 Then
+                            lblLogin.Text = GenericLoginFailureMessage
+                            Return False
+                        End If
 
-                    'Indica se l'utente può o meno creare l'html per le promo mailing
-                    Session("genera_html_mail") = dr.Item("genera_html_mail")
+                        Dim accountCompanyId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("AziendeID"))
+                        Dim persistedPriceListId As Integer = StorefrontCommercialIsolationPolicy.PositiveInteger(dr.Item("listino"))
+                        Dim authenticatedPriceListId As Integer = StorefrontCommercialIsolationPolicy.ResolveAuthenticatedPriceList(
+                            aziendaId,
+                            accountCompanyId,
+                            persistedPriceListId)
+                        If authenticatedPriceListId <= 0 Then
+                            ClearInvalidLoginSession()
+                            lblLogin.Text = GenericLoginFailureMessage
+                            Return False
+                        End If
 
-                    Session("Listino") = authenticatedPriceListId
-                    Session("listino") = authenticatedPriceListId
-                    Dim masterPage As PageMaster = TryCast(Me.Master, PageMaster)
-                    If masterPage Is Nothing Then Throw New InvalidOperationException("Storefront login master is unavailable.")
-                    masterPage.ApplyAuthenticatedPriceDisplayState(dr.Item("IvaTipo"), dr.Item("IdEsenzioneIva"),
-                        dr.Item("ValoreEsenzioneIva"), dr.Item("DescrizioneEsenzioneIva"), dr.Item("AbilitatoIvaReverseCharge"))
-                    Session("DataPassword") = dr.Item("DataPassword")
-                    Try
-                        Session("CanOrder") = dr.Item("CanOrder")
-                    Catch
-                        Session("CanOrder") = 1
-                    End Try
-                    Try
-                        Session("ScadenzaPassword") = dr.Item("ScadenzaPassword")
-                    Catch
-                    End Try
+                        ' Controllo password (case-insensitive, come in origine)
+                        Dim dbPass As String = dr.Item("Password").ToString()
+                        If dbPass.ToLower() <> pass.ToLower() Then
+                            lblLogin.Text = GenericLoginFailureMessage
+                            Return False
+                        End If
+                        limitPasswordOk = True
 
+                        '=======================
+                        ' LOGIN OK → set Session
+                        '=======================
+                        Try
+                            Session("AbilitaListino") = CInt(dr.Item("AbilitaListino"))
+                        Catch
+                            Session("AbilitaListino") = 0
+                        End Try
+
+                        Session("LoginId") = dr.Item("id")
+                        Session("LoginID") = dr.Item("id")
+                        Session("LoginEmail") = dr.Item("email")
+                        Session("LoginNomeCognome") = dr.Item("cognomenome")
+
+                        If Not IsDBNull(dr.Item("ultimoaccesso")) Then
+                            Session("LoginUltimoAccesso") = dr.Item("ultimoaccesso")
+                        End If
+
+                        Session("UtentiId") = dr.Item("utentiid")
+                        Session("UtentiID") = dr.Item("utentiid")
+                        Session("UtentiTipoId") = dr.Item("utentitipoid")
+                        Session("AuthenticatedAziendaID") = accountCompanyId
+
+                        'Indica se l'utente può o meno creare l'html per le promo mailing
+                        Session("genera_html_mail") = dr.Item("genera_html_mail")
+
+                        Session("Listino") = authenticatedPriceListId
+                        Session("listino") = authenticatedPriceListId
+                        Dim masterPage As PageMaster = TryCast(Me.Master, PageMaster)
+                        If masterPage Is Nothing Then Throw New InvalidOperationException("Storefront login master is unavailable.")
+                        masterPage.ApplyAuthenticatedPriceDisplayState(dr.Item("IvaTipo"), dr.Item("IdEsenzioneIva"),
+                            dr.Item("ValoreEsenzioneIva"), dr.Item("DescrizioneEsenzioneIva"), dr.Item("AbilitatoIvaReverseCharge"))
+                        Session("DataPassword") = dr.Item("DataPassword")
+                        Try
+                            Session("CanOrder") = dr.Item("CanOrder")
+                        Catch
+                            Session("CanOrder") = 1
+                        End Try
+                        Try
+                            Session("ScadenzaPassword") = dr.Item("ScadenzaPassword")
+                        Catch
+                        End Try
+
+                    End Using
                 End Using
             End Using
-        End Using
+
+        Finally
+            If limitReserved Then
+                If limitPasswordOk Then
+                    KeepStoreAuthAttemptLimitWeb.Succeed(HttpContext.Current, limitCompany, limitScope, limitKeyText)
+                Else
+                    KeepStoreAuthAttemptLimitWeb.Fail(HttpContext.Current, limitCompany, limitScope, limitKeyText)
+                End If
+            End If
+        End Try
 
         ' Salvo il cookie per lo USERNAME (ma NON la password)
         Try

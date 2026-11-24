@@ -97,6 +97,18 @@ Partial Class my_account_edit
                         Return
                     End If
 
+                    ' AUTH-ATTEMPT-LIMIT-1A: la verifica della password attuale e un tentativo prenotato su una connessione PROPRIA: se questa
+                    ' transazione si annulla (ogni Return la annulla) l'errore resta registrato.
+                    Dim limitReserved As Boolean = False
+                    If emailChanged Then
+                        Dim limitDecision As AttemptLimitDecision = KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, scope.CompanyId, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginId))
+                        If limitDecision = AttemptLimitDecision.Blocked Then
+                            ShowMessage(KeepStoreAuthAttemptLimitWeb.BlockedMessage, False)
+                            Return
+                        End If
+                        limitReserved = (limitDecision = AttemptLimitDecision.Allowed)
+                    End If
+
                     RequireProfileScope(scope)
                     Dim sqlUtente As String =
                         "UPDATE utenti u " &
@@ -127,6 +139,13 @@ Partial Class my_account_edit
                         AddProfileScopeParameters(cmd, scope)
                         If emailChanged Then cmd.Parameters.Add("@CurrentPassword", MySqlDbType.VarChar).Value = currentPassword
                         Dim affectedUsers As Integer = cmd.ExecuteNonQuery()
+                        If emailChanged AndAlso limitReserved Then
+                            If affectedUsers = 0 Then
+                                KeepStoreAuthAttemptLimitWeb.Fail(HttpContext.Current, scope.CompanyId, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginId))
+                            Else
+                                KeepStoreAuthAttemptLimitWeb.Succeed(HttpContext.Current, scope.CompanyId, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginId))
+                            End If
+                        End If
                         If emailChanged AndAlso affectedUsers = 0 Then
                             ShowMessage(WrongCurrentPasswordMessage, False)
                             Return
