@@ -46,6 +46,7 @@ Public NotInheritable Class CatalogPdfWriter
         Public ReadOnly Base As BaseFont
         Public ReadOnly Bold As BaseFont
         Public ReadOnly Dots As BaseFont
+        Public ReadOnly Italic As BaseFont
         Public ReadOnly Ink As New BaseColor(33, 37, 41)
         Public ReadOnly Muted As New BaseColor(110, 117, 124)
         Public ReadOnly Accent As New BaseColor(31, 41, 55)
@@ -60,6 +61,7 @@ Public NotInheritable Class CatalogPdfWriter
             Base = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED)
             Bold = BaseFont.CreateFont(BaseFont.HELVETICA_BOLD, BaseFont.CP1252, BaseFont.NOT_EMBEDDED)
             Dots = BaseFont.CreateFont(BaseFont.ZAPFDINGBATS, BaseFont.CP1252, BaseFont.NOT_EMBEDDED)
+            Italic = BaseFont.CreateFont(BaseFont.HELVETICA_OBLIQUE, BaseFont.CP1252, BaseFont.NOT_EMBEDDED)
         End Sub
         Public Function F(ByVal size As Single, ByVal bold As Boolean, ByVal color As BaseColor) As Font
             Return New Font(If(bold, Me.Bold, Me.Base), size, Font.NORMAL, color)
@@ -278,7 +280,11 @@ Public NotInheritable Class CatalogPdfWriter
         End If
         If Not logoDone Then doc.Add(New Paragraph(" ") With {.SpacingBefore = 30.0F})
         doc.Add(New Paragraph(company.ToUpper(ItCulture), styles.F(24.0F, True, styles.Accent)) With {.Alignment = Element.ALIGN_CENTER, .SpacingBefore = 10.0F})
-        doc.Add(New Paragraph("Listino e offerte", styles.F(17.0F, False, styles.Ink)) With {.Alignment = Element.ALIGN_CENTER, .SpacingBefore = 2.0F})
+        ' Descrizione dell'azienda (aziende.Descrizione), solo in questa prima pagina; se vuota nessun paragrafo e nessuno spazio.
+        If info IsNot Nothing AndAlso Not String.IsNullOrEmpty(info.Description) Then
+            doc.Add(New Paragraph(Pdf(info.Description), New Font(styles.Italic, 10.5F, Font.NORMAL, styles.Muted)) With {.Alignment = Element.ALIGN_CENTER, .SpacingBefore = 4.0F, .IndentationLeft = 50.0F, .IndentationRight = 50.0F})
+        End If
+        doc.Add(New Paragraph("Listino e offerte", styles.F(17.0F, False, styles.Ink)) With {.Alignment = Element.ALIGN_CENTER, .SpacingBefore = 6.0F})
         doc.Add(New Paragraph(dateText & "  -  " & priceNote & "  -  " & snapshot.Rows.Count.ToString("N0", ItCulture) & " articoli in " &
                               sectorCount.ToString(CultureInfo.InvariantCulture) & " settori", styles.F(9.5F, False, styles.Muted)) With {.Alignment = Element.ALIGN_CENTER, .SpacingBefore = 6.0F})
 

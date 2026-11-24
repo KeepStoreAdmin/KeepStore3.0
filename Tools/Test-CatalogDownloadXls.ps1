@@ -17,7 +17,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
 if ($SitePath -notmatch '^C:\\Temp\\KeepStoreRegOrderLab-[0-9]+\\site$') { Write-Host 'CATALOG_XLS FAIL: il sito di prova deve essere quello del LAB'; exit 1 }
 $files = @('listino-catalogo.aspx', 'listino-catalogo.aspx.vb', 'App_Code\KeepStoreCatalogExportSnapshot.vb', 'App_Code\KeepStoreCatalogExportImages.vb',
-    'App_Code\KeepStoreCatalogPdfWriter.vb', 'App_Code\KeepStoreCatalogXlsWriter.vb', 'App_Code\KeepStoreCatalogExportFileName.vb','App_Code\StorefrontCanonicalHostPolicy.vb', 'App_Code\KeepStoreAccountTiles.vb')
+    'App_Code\KeepStoreCatalogPdfWriter.vb', 'App_Code\KeepStoreCatalogXlsWriter.vb', 'App_Code\KeepStoreCatalogExportFileName.vb', 'App_Code\KeepStoreCatalogExportText.vb', 'App_Code\StorefrontCanonicalHostPolicy.vb', 'App_Code\KeepStoreAccountTiles.vb')
 $repoBytes = @{}; $origBytes = @{}
 foreach ($f in $files) {
     $rp = Join-Path $root $f; $sp = Join-Path $SitePath $f
@@ -84,7 +84,7 @@ function Read-Anchors($rec, $acc) {
 function Get-XlsInfo([string]$file) {
     $fs = [IO.File]::OpenRead($file)
     try { $wb = New-Object NPOI.HSSF.UserModel.HSSFWorkbook -ArgumentList $fs } finally { $fs.Close() }
-    $info = @{ Sheets = @(); Names = @(); Items = New-Object Collections.Generic.List[object]; ElencoItems = New-Object Collections.Generic.List[object]; DocLinks = 0; Styles = [int]$wb.NumCellStyles; Pictures = 0; Anchors = @{}; Texts = (New-Object Text.StringBuilder); DocTargets = (New-Object 'Collections.Generic.List[string]'); Stats = @{}; PriceFmt = (New-Object 'Collections.Generic.HashSet[int]'); CodeFmt = (New-Object 'Collections.Generic.HashSet[int]'); EanFmt = (New-Object 'Collections.Generic.HashSet[int]'); FilterNames = (New-Object 'Collections.Generic.List[string]') }
+    $info = @{ Sheets = @(); Names = @(); Items = New-Object Collections.Generic.List[object]; ElencoItems = New-Object Collections.Generic.List[object]; DocLinks = 0; Styles = [int]$wb.NumCellStyles; Pictures = 0; Anchors = @{}; Texts = (New-Object Text.StringBuilder); DocTargets = (New-Object 'Collections.Generic.List[string]'); Stats = @{}; PriceFmt = (New-Object 'Collections.Generic.HashSet[int]'); CodeFmt = (New-Object 'Collections.Generic.HashSet[int]'); EanFmt = (New-Object 'Collections.Generic.HashSet[int]'); FilterNames = (New-Object 'Collections.Generic.List[string]'); RichChecks = (New-Object 'Collections.Generic.List[object]') }
     $info.Pictures = @($wb.GetAllPictures()).Count
     # nomi della cartella di lavoro: il filtro automatico e il nome nascosto _FilterDatabase con il foglio e l'intervallo
     for ($i = 0; $i -lt $wb.NumberOfNames; $i++) { $nm = $wb.GetNameAt($i); if ([string]$nm.NameName -match 'FilterDatabase') { $info.FilterNames.Add(([string]$nm.SheetIndex) + '|' + ([string]$nm.RefersToFormula)) } }
@@ -115,6 +115,14 @@ function Get-XlsInfo([string]$file) {
                 $px = $row.GetCell($pc); if ($null -ne $px -and [string]$px.CellType -eq 'NUMERIC') { [void]$info.PriceFmt.Add([int]$px.CellStyle.DataFormat) }
                 $cx = $row.GetCell($cc); if ($null -ne $cx) { [void]$info.CodeFmt.Add([int]$cx.CellStyle.DataFormat) }
                 $ex = $row.GetCell($ec); if ($null -ne $ex -and [string]$ex.CellType -eq 'STRING' -and $ex.StringCellValue -ne '') { [void]$info.EanFmt.Add([int]$ex.CellStyle.DataFormat) }
+                # testo ricco (solo fogli settore): titolo in grassetto e dettaglio non in grassetto come font dei due tratti della cella
+                if (-not $isElenco -and $item.Cells.ContainsKey(3) -and $item.Cells[3].Contains([string][char]10)) {
+                    $rt = $row.GetCell(3).RichStringCellValue; $nr = [int]$rt.NumFormattingRuns; $b0 = $false; $b1 = $true
+                    $lf = $item.Cells[3].IndexOf([char]10)
+                    # GetFontAtIndex vuole la POSIZIONE di un carattere (non il numero del tratto): primo carattere del titolo e primo del dettaglio
+                    if ($nr -ge 2 -and $lf -gt 0) { $b0 = ([int]$wb.GetFontAt([int16]$rt.GetFontAtIndex(0)).Boldweight -ge 700); $b1 = ([int]$wb.GetFontAt([int16]$rt.GetFontAtIndex($lf + 1)).Boldweight -ge 700) }
+                    $info.RichChecks.Add(@{ Runs = $nr; TitleBold = $b0; DetailBold = $b1 })
+                }
                 if ($isElenco) { $info.ElencoItems.Add($item) } else { $info.Items.Add($item) }
             }
         }
@@ -199,6 +207,27 @@ function Test-XlsInExcel([string]$file, $info, [int]$nArticles, $iPlain, $iPromo
             $same = ($got.Count -eq $want.Count); if ($same) { foreach ($x in $want) { if (-not $got.Contains($x)) { $same = $false; break } } }
             Check ($same -and $want.Contains($nArticles + 1)) ('Excel: filtro Settore = "' + $sector + '": ' + $got.Count + ' righe visibili, attese ' + $want.Count + ', ultima riga inclusa')
         }
+        # titolo in grassetto e dettaglio no, letti da Excel (Characters parte da 1; LF conta come un carattere); Elenco: descrizione in grassetto
+        $rich = @($info.Items | Where-Object { $_.Cells.ContainsKey(3) -and $_.Cells[3].Contains([string][char]10) })[0]
+        if ($null -ne $rich) {
+            $rs = $wb.Worksheets.Item($rich.Sheet); $rc = $rs.Cells.Item($rich.Row + 1, 4); $rtxt = [string]$rc.Value2; $ti = $rtxt.IndexOf([char]10)
+            $boldFirst = [bool]$rc.Characters(1, 1).Font.Bold; $boldLast = [bool]$rc.Characters($ti, 1).Font.Bold; $boldDetail = [bool]$rc.Characters($ti + 2, 1).Font.Bold
+            Check ($ti -gt 0 -and $boldFirst -and $boldLast -and -not $boldDetail) 'Excel: titolo dell''articolo in grassetto (primo e ultimo carattere) e dettaglio normale'
+        } else { Check $false 'Excel: nessun articolo con dettaglio per provare il grassetto' }
+        $elItem = $info.ElencoItems[0]; $elc = $wb.Worksheets.Item('Elenco').Cells.Item($elItem.Row + 1, 7)
+        Check ([bool]$elc.Font.Bold) 'Excel: nell''Elenco la descrizione (il titolo) e in grassetto'
+        # nessuna riga di articolo tagliata: dopo AutoFit (solo in memoria, file in sola lettura) l'altezza non supera quella scritta
+        $tight = 0; $probed = 0
+        foreach ($name in $info.Names) {
+            if ($name -eq 'Indice' -or $name -eq 'Elenco') { continue }
+            $ws = $wb.Worksheets.Item($name); $n = 0
+            foreach ($it in @($info.Items | Where-Object { $_.Sheet -eq $name })) {
+                $n++; if (($n % 5) -ne 1) { continue }
+                $row = $ws.Rows.Item($it.Row + 1); $h0 = [double]$row.RowHeight; [void]$row.AutoFit(); $h1 = [double]$row.RowHeight; $probed++
+                if ($h1 -gt ($h0 + 0.5)) { $tight++; if ($tight -le 3) { Write-Host ('    riga ' + ($it.Row + 1) + ' di ' + $name + ': scritta ' + $h0 + ' pt, serve ' + $h1 + ' pt') } }
+            }
+        }
+        Check ($tight -eq 0 -and $probed -gt 20) ('Excel: nessun testo tagliato nelle righe articolo (provate ' + $probed + ', troppo basse ' + $tight + ')')
         $wb.Close($false); $wb = $null
         # controllo negativo: un file troncato NON deve aprirsi (se si aprisse, l'oracolo non vedrebbe i guasti)
         $bytes = [IO.File]::ReadAllBytes($file); $cut = Join-Path $tmp 'troncato.xls'
@@ -235,6 +264,8 @@ try {
     $promoGross = Get-Scalar "SELECT PrezzoPromoIvato AS ksval FROM vsuperarticoli WHERE NListino = $lst AND id = $idPromo AND InOfferta = 1 LIMIT 1;"
     $promoBaseNet = Get-Scalar "SELECT Prezzo AS ksval FROM vsuperarticoli WHERE NListino = $lst AND id = $idPromo AND InOfferta = 1 LIMIT 1;"
     $promoBaseGross = Get-Scalar "SELECT PrezzoIvato AS ksval FROM vsuperarticoli WHERE NListino = $lst AND id = $idPromo AND InOfferta = 1 LIMIT 1;"
+    # descrizione dell'azienda dell'host (aziende.Descrizione): attesa da SQL, spazi compressi come fa la pulizia del sito
+    $expDesc = ((Get-Scalar "SELECT Descrizione AS ksval FROM aziende WHERE URL1 = 'www.taikun.it' LIMIT 1;") -replace '\s+', ' ').Trim()
     $promoEnd = Get-Scalar "SELECT DATE_FORMAT(OfferteDataFine, '%d/%m/%Y') AS ksval FROM vsuperarticoli WHERE NListino = $lst AND id = $idPromo AND InOfferta = 1 LIMIT 1;"
 
     # foto vere: i file presenti nella copia locale del progetto si copiano nel sito LAB (e si tolgono alla fine). Atteso: articoli con quel nome in Img1..Img4
@@ -339,6 +370,14 @@ try {
             # sempre eseguibili (NPOI): indici numerici dei formati (4 = #,##0.00, 49 = testo) e nome del filtro automatico
             Check ($info.PriceFmt.Count -eq 1 -and $info.PriceFmt.Contains(4) -and $info.CodeFmt.Count -eq 1 -and $info.CodeFmt.Contains(49) -and $info.EanFmt.Count -eq 1 -and $info.EanFmt.Contains(49)) ('formati: prezzo 4, codice ed EAN 49 (trovati prezzo [' + ($info.PriceFmt -join ',') + '] codice [' + ($info.CodeFmt -join ',') + '] EAN [' + ($info.EanFmt -join ',') + '])')
             Check (Get-FilterVerdict $info $ids.Count) ('filtro automatico: un solo nome _FilterDatabase sull''ultimo foglio, Elenco A1:L' + ($ids.Count + 1) + ' (trovato: ' + ($info.FilterNames -join ';') + ')')
+            # richieste del PO (24/11): intestazione solo "Prezzo" (il regime IVA resta nel foglio Indice), titolo in grassetto, descrizione azienda in prima pagina UNA volta
+            $allText = $info.Texts.ToString()
+            Check ($allText -notmatch 'Prezzo - ' -and $allText -match '(^|\| )Prezzo \| ') 'intestazione "Prezzo" (senza la nota IVA) nei fogli settore e nell''Elenco'
+            Check ($allText -match 'Iva\s+(inclusa|esclusa)') 'il regime IVA resta scritto nel foglio Indice'
+            $descCount = ([regex]::Matches($allText, [regex]::Escape($expDesc))).Count
+            Check ($expDesc.Length -gt 20 -and $descCount -eq 1) ('descrizione azienda nella prima pagina (Indice) una sola volta (' + $descCount + ' occorrenze di ' + $expDesc.Length + ' caratteri)')
+            $richBad = @($info.RichChecks | Where-Object { $_.Runs -lt 2 -or -not $_.TitleBold -or $_.DetailBold }).Count
+            Check ($info.RichChecks.Count -gt 10 -and $richBad -eq 0) ('titolo in grassetto e dettaglio normale in tutte le celle con dettaglio (' + $info.RichChecks.Count + ' celle, difformi ' + $richBad + ')')
             Test-XlsInExcel $xlsFile $info $ids.Count $iPlain $iPromo $expPlain $expPromo $expOld
             Check ($ok.Length -lt 25MB) ('peso del file sotto 25 MB (' + [math]::Round($ok.Length / 1MB, 1) + ' MB)')
             Check ($info.Texts.ToString() -match 'Fanno fede') 'nota: fanno fede i prezzi del sito'
@@ -358,6 +397,9 @@ try {
             'M06_MONEY_FORMAT'  = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = 'Money = 4S'; To = 'Money = 5S'; Kill = 'fmt' }
             'M07_FILTER_SHORT'  = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = '(snapshot.Rows.Count + 1).ToString(CultureInfo.InvariantCulture)) ''FILTER_RANGE'; To = 'snapshot.Rows.Count.ToString(CultureInfo.InvariantCulture)) ''FILTER_RANGE'; Kill = 'filter' }
             'M08_FILTER_SHEET'  = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = '"''Elenco''!$A$1:$L$"'; To = '"''Indice''!$A$1:$L$"'; Kill = 'filter' }
+            'M09_TITLE_NOT_BOLD' = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = 'GetFont(c, ColorInk, 9S, True) ''TITLE_BOLD'; To = 'GetFont(c, ColorInk, 9S, False) ''TITLE_BOLD'; Kill = 'bold' }
+            'M10_NO_DESCRIPTION' = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = 'If Not String.IsNullOrEmpty(descText) Then ''DESC_ROW'; To = 'If False Then ''DESC_ROW'; Kill = 'desc' }
+            'M11_OLD_PRICE_HEAD' = @{ File = 'App_Code\KeepStoreCatalogXlsWriter.vb'; From = '"Prezzo", "Prezzo di listino"'; To = '"Prezzo - IVA esclusa", "Prezzo di listino"'; Kill = 'head' }
         }
         $killed = 0; $total = 0
         foreach ($id in $mutants.Keys) {
@@ -378,6 +420,9 @@ try {
                     elseif ($mu.Kill -eq 'promo') { $ip = @($inf.Items | Where-Object { $_.Id -eq $idPromo })[0]; $vv = if ($null -ne $ip -and $ip.Cells.ContainsKey(5)) { [double]::Parse($ip.Cells[5], [Globalization.CultureInfo]::InvariantCulture) } else { -1 }; $dead = ([math]::Abs($vv - $expPromo) -ge 0.005); $why = 'prezzo promo diverso' }
                     elseif ($mu.Kill -eq 'photo') { $b3 = 0; foreach ($phId in $photoIds) { $it = @($inf.Items | Where-Object { $_.Id -eq $phId })[0]; if ($null -eq $it -or -not ($inf.Anchors.ContainsKey($it.Sheet) -and $inf.Anchors[$it.Sheet].Contains([int]$it.Row))) { $b3++ } }; $dead = ($b3 -gt 0); $why = 'foto fuori riga' }
                     elseif ($mu.Kill -eq 'fmt') { $dead = -not ($inf.PriceFmt.Count -eq 1 -and $inf.PriceFmt.Contains(4)); $why = 'formato prezzo diverso da 4' }
+                    elseif ($mu.Kill -eq 'bold') { $dead = (@($inf.RichChecks | Where-Object { $_.Runs -lt 2 -or -not $_.TitleBold -or $_.DetailBold }).Count -gt 0); $why = 'titolo non in grassetto' }
+                    elseif ($mu.Kill -eq 'desc') { $dead = (([regex]::Matches($inf.Texts.ToString(), [regex]::Escape($expDesc))).Count -ne 1); $why = 'descrizione azienda assente' }
+                    elseif ($mu.Kill -eq 'head') { $dead = ($inf.Texts.ToString() -match 'Prezzo - '); $why = 'intestazione con la nota IVA' }
                     elseif ($mu.Kill -eq 'filter') { $dead = -not (Get-FilterVerdict $inf $ids.Count); $why = 'filtro sul foglio o sull''intervallo sbagliato' }
                     elseif ($mu.Kill -eq 'names') { $dn = @($inf.Names | Group-Object { $_.ToLowerInvariant() } | Where-Object { $_.Count -gt 1 }).Count; $dead = ($dn -gt 0 -or $inf.Names.Count -ne ($sectorCount + 2)); $why = 'nomi fogli doppi' }
                 }

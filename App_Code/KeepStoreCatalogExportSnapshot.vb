@@ -123,9 +123,10 @@ Public NotInheritable Class CatalogExportCompany
     Public ReadOnly Email As String
     Public ReadOnly Website As String
     Public ReadOnly LogoFile As String
+    Public ReadOnly Description As String
 
     Public Sub New(ByVal name As String, ByVal legalName As String, ByVal vatNumber As String, ByVal registeredOffice As String,
-                   ByVal operationalOffice As String, ByVal phone As String, ByVal email As String, ByVal website As String, ByVal logoFile As String)
+                   ByVal operationalOffice As String, ByVal phone As String, ByVal email As String, ByVal website As String, ByVal logoFile As String, Optional ByVal description As String = "")
         Me.Name = name
         Me.LegalName = legalName
         Me.VatNumber = vatNumber
@@ -135,6 +136,7 @@ Public NotInheritable Class CatalogExportCompany
         Me.Email = email
         Me.Website = website
         Me.LogoFile = logoFile
+        Me.Description = If(description, "")
     End Sub
 End Class
 
@@ -260,7 +262,8 @@ Public NotInheritable Class CatalogExportSnapshotProvider
                 If String.Equals(operational, registered, StringComparison.OrdinalIgnoreCase) Then operational = ""
             End If
             Return New CatalogExportCompany(Clean(tenant.CompanyName, 120), legalName, vat, registered, operational,
-                                            Clean(tenant.SupportPhone, 40), Clean(tenant.SupportEmail, 120), Clean(tenant.CanonicalBaseUrl, 160), Clean(tenant.LogoFileName, 150))
+                                            Clean(tenant.SupportPhone, 40), Clean(tenant.SupportEmail, 120), Clean(tenant.CanonicalBaseUrl, 160), Clean(tenant.LogoFileName, 150),
+                                            CatalogExportText.Description(tenant.CompanyDescription))
         Catch
             Return Nothing
         End Try

@@ -14,7 +14,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
 if ($SitePath -notmatch '^C:\\Temp\\KeepStoreRegOrderLab-[0-9]+\\site$') { Write-Host 'CATALOG_PDF FAIL: il sito di prova deve essere quello del LAB'; exit 1 }
 $files = @('listino-catalogo.aspx', 'listino-catalogo.aspx.vb', 'App_Code\KeepStoreCatalogExportSnapshot.vb', 'App_Code\KeepStoreCatalogExportImages.vb',
-    'App_Code\KeepStoreCatalogPdfWriter.vb', 'App_Code\KeepStoreCatalogXlsWriter.vb', 'App_Code\KeepStoreCatalogExportFileName.vb','App_Code\StorefrontCanonicalHostPolicy.vb', 'App_Code\KeepStoreAccountTiles.vb')
+    'App_Code\KeepStoreCatalogPdfWriter.vb', 'App_Code\KeepStoreCatalogXlsWriter.vb', 'App_Code\KeepStoreCatalogExportFileName.vb', 'App_Code\KeepStoreCatalogExportText.vb', 'App_Code\StorefrontCanonicalHostPolicy.vb', 'App_Code\KeepStoreAccountTiles.vb')
 $repoBytes = @{}; $origBytes = @{}
 foreach ($f in $files) {
     $rp = Join-Path $root $f; $sp = Join-Path $SitePath $f
@@ -77,11 +77,12 @@ function Post-Pdf([string]$jarFile, $form, [string]$outFile, [switch]$DropViewSt
 function Get-PdfInfo([string]$file) {
     $bytes = [IO.File]::ReadAllBytes($file)
     $r = New-Object iTextSharp.text.pdf.PdfReader -ArgumentList (, $bytes)
-    $info = @{ Pages = $r.NumberOfPages; Index = ''; Text = ''; Images = 0; Dots = (New-Object 'Collections.Generic.HashSet[string]'); Links = 0; LinkIds = (New-Object 'Collections.Generic.HashSet[int]'); FirstLink = ''; Bookmarks = $null }
+    $info = @{ Pages = $r.NumberOfPages; Index = ''; Cover = ''; Text = ''; Images = 0; Dots = (New-Object 'Collections.Generic.HashSet[string]'); Links = 0; LinkIds = (New-Object 'Collections.Generic.HashSet[int]'); FirstLink = ''; Bookmarks = $null }
     $sb = New-Object Text.StringBuilder
     for ($p = 1; $p -le $r.NumberOfPages; $p++) { [void]$sb.Append([iTextSharp.text.pdf.parser.PdfTextExtractor]::GetTextFromPage($r, $p)); [void]$sb.Append("`n") }
     $info.Text = $sb.ToString()
     $info.Index = [iTextSharp.text.pdf.parser.PdfTextExtractor]::GetTextFromPage($r, 2)
+    $info.Cover = [iTextSharp.text.pdf.parser.PdfTextExtractor]::GetTextFromPage($r, 1)
     for ($i = 1; $i -lt $r.XrefSize; $i++) {
         $o = $r.GetPdfObject($i)
         if ($null -ne $o -and $o.IsStream()) { $st = $o; $sub = $st.Get([iTextSharp.text.pdf.PdfName]::SUBTYPE); if ($null -ne $sub -and $sub.ToString() -eq '/Image') { $info.Images++ } }
@@ -234,6 +235,11 @@ try {
             $segPromo = if ($iPromo -ge 0) { $s1 = [math]::Max(0, $iPromo - 260); $textNs.Substring($s1, [math]::Min(560, $textNs.Length - $s1)) } else { '' }
             Check ($segPromo.Contains($expPromo)) ('articolo in offerta: prezzo promo ' + $expPromo + ' (visto: ' + $segPromo.Substring(0, [math]::Min(110, $segPromo.Length)) + ')')
             Check ($segPromo.Contains($expOld)) ('articolo in offerta: prezzo di listino ' + $expOld + ' visibile')
+            # descrizione dell'azienda (aziende.Descrizione dell'host) nella prima pagina, una sola volta in tutto il documento
+            $expDescNs = ((Get-Scalar "SELECT Descrizione AS ksval FROM aziende WHERE URL1 = 'www.taikun.it' LIMIT 1;") -replace '\s', '')
+            $descCount = ([regex]::Matches($textNs, [regex]::Escape($expDescNs))).Count
+            $cover = ($info.Cover -replace '\s', '')
+            Check ($expDescNs.Length -gt 20 -and $descCount -eq 1 -and $cover.Contains($expDescNs)) ('descrizione azienda: una sola volta e nella prima pagina (occorrenze ' + $descCount + ')')
             Check ($segPromo.Contains($promoEnd)) ('articolo in offerta: validita fino al ' + $promoEnd)
             Check ($expectedPhotos -gt 0) ('fixture foto: articoli con foto vera nel listino (' + $expectedPhotos + ')')
             Check ($info.Images -ge ($expectedPhotos + $(if ($logoCopied) { 1 } else { 0 }))) ('foto e logo incorporati nel PDF (immagini ' + $info.Images + ', attese almeno ' + ($expectedPhotos + $(if ($logoCopied) { 1 } else { 0 })) + ')')

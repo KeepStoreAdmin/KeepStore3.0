@@ -94,10 +94,10 @@ Public NotInheritable Class CatalogXlsWriter
         WriteIndex(c, indexSheet, snapshot, sectors, priceNote)
         For Each sector As SectorBlock In sectors
             For i As Integer = 0 To sector.Sheets.Count - 1
-                WriteSectorSheet(c, sector, sector.Sheets(i), sector.Chunks(i), priceNote)
+                WriteSectorSheet(c, sector, sector.Sheets(i), sector.Chunks(i))
             Next
         Next
-        WriteList(c, listSheet, snapshot.Rows, priceNote)
+        WriteList(c, listSheet, snapshot.Rows)
         ' Filtri automatici SOLO sul foglio Elenco (tabella piatta: intestazione alla riga 1, 12 colonne); si crea dopo tutti i fogli. Nei fogli settore le righe di
         ' titolo categoria/tipologia/gruppo dentro l'intervallo romperebbero il filtro. L'intervallo si verifica dal nome nascosto _FilterDatabase.
         c.Wb.CreateAutoFilter("'Elenco'!$A$1:$L$" & (snapshot.Rows.Count + 1).ToString(CultureInfo.InvariantCulture)) 'FILTER_RANGE
@@ -192,8 +192,8 @@ Public NotInheritable Class CatalogXlsWriter
         palette.SetColorAtIndex(ColorKo, CByte(214), CByte(40), CByte(40))
     End Sub
 
-    Private Shared Function GetFont(ByVal c As Ctx, ByVal color As Short, ByVal size As Short, ByVal bold As Boolean, Optional ByVal underline As Boolean = False, Optional ByVal strike As Boolean = False) As Ss.Font
-        Dim key As String = color.ToString(CultureInfo.InvariantCulture) & "|" & size.ToString(CultureInfo.InvariantCulture) & "|" & bold.ToString() & "|" & underline.ToString() & "|" & strike.ToString()
+    Private Shared Function GetFont(ByVal c As Ctx, ByVal color As Short, ByVal size As Short, ByVal bold As Boolean, Optional ByVal underline As Boolean = False, Optional ByVal strike As Boolean = False, Optional ByVal italic As Boolean = False) As Ss.Font
+        Dim key As String = color.ToString(CultureInfo.InvariantCulture) & "|" & size.ToString(CultureInfo.InvariantCulture) & "|" & bold.ToString() & "|" & underline.ToString() & "|" & strike.ToString() & "|" & italic.ToString()
         Dim font As Ss.Font = Nothing
         If c.Fonts.TryGetValue(key, font) Then Return font
         font = c.Wb.CreateFont()
@@ -203,6 +203,7 @@ Public NotInheritable Class CatalogXlsWriter
         font.Boldweight = CShort(If(bold, 700, 400))
         If underline Then font.Underline = CByte(1)
         font.IsStrikeout = strike
+        font.IsItalic = italic
         c.Fonts(key) = font
         Return font
     End Function
@@ -210,7 +211,7 @@ Public NotInheritable Class CatalogXlsWriter
     Private Shared Function GetStyle(ByVal c As Ctx, ByVal font As Ss.Font, ByVal fill As Short, ByVal horizontal As Ss.HorizontalAlignment, ByVal vertical As Ss.VerticalAlignment,
                                      ByVal wrap As Boolean, ByVal format As Short, ByVal border As Boolean) As Ss.CellStyle
         Dim key As String = font.Color.ToString(CultureInfo.InvariantCulture) & "|" & font.FontHeightInPoints.ToString(CultureInfo.InvariantCulture) & "|" &
-            font.Boldweight.ToString(CultureInfo.InvariantCulture) & "|" & font.Underline.ToString(CultureInfo.InvariantCulture) & "|" & font.IsStrikeout.ToString() & "|" &
+            font.Boldweight.ToString(CultureInfo.InvariantCulture) & "|" & font.Underline.ToString(CultureInfo.InvariantCulture) & "|" & font.IsStrikeout.ToString() & "|" & font.IsItalic.ToString() & "|" &
             fill.ToString(CultureInfo.InvariantCulture) & "|" & horizontal.ToString() & "|" & vertical.ToString() & "|" & wrap.ToString() & "|" & format.ToString(CultureInfo.InvariantCulture) & "|" & border.ToString()
         Dim style As Ss.CellStyle = Nothing
         If c.Styles.TryGetValue(key, style) Then Return style
@@ -357,6 +358,19 @@ Public NotInheritable Class CatalogXlsWriter
         nameRow.HeightInPoints = 30.0F
         PutText(nameRow, 0, company, nameStyle)
         r += 1
+        ' Descrizione dell'azienda (aziende.Descrizione), solo nella prima pagina: celle unite A-D (non si adattano da sole: altezza calcolata); se vuota nessuna riga.
+        Dim descText As String = If(info IsNot Nothing, info.Description, "")
+        If Not String.IsNullOrEmpty(descText) Then 'DESC_ROW
+            Dim descStyle As Ss.CellStyle = GetStyle(c, GetFont(c, ColorMuted, 11S, False, False, False, True), -1S, Ss.HorizontalAlignment.LEFT, Ss.VerticalAlignment.TOP, True, 0S, False)
+            Dim descRow As Ss.Row = sheet.CreateRow(r)
+            descRow.HeightInPoints = CSng(LineCount(descText, 100) * 15.0R + 6.0R)
+            PutText(descRow, 0, descText, descStyle)
+            For k As Integer = 1 To 3
+                PutBlank(descRow, k, descStyle)
+            Next
+            sheet.AddMergedRegion(New NPOI.SS.Util.CellRangeAddress(r, r, 0, 3))
+            r += 1
+        End If
         Dim subStyle As Ss.CellStyle = GetStyle(c, GetFont(c, ColorMuted, 11S, False), -1S, Ss.HorizontalAlignment.LEFT, Ss.VerticalAlignment.CENTER, False, 0S, False)
         PutText(sheet.CreateRow(r), 0, "Listino e offerte del " & dateText & " - " & priceNote & " - " & snapshot.Rows.Count.ToString("N0", ItCulture) & " articoli in " &
                 sectors.Count.ToString(CultureInfo.InvariantCulture) & " settori", subStyle)
@@ -441,7 +455,7 @@ Public NotInheritable Class CatalogXlsWriter
 
     ' ---- Foglio di un settore ------------------------------------------------------------------------------------------------------------------
 
-    Private Shared Sub WriteSectorSheet(ByVal c As Ctx, ByVal sector As SectorBlock, ByVal sheet As Ss.Sheet, ByVal rows As List(Of CatalogExportRow), ByVal priceNote As String)
+    Private Shared Sub WriteSectorSheet(ByVal c As Ctx, ByVal sector As SectorBlock, ByVal sheet As Ss.Sheet, ByVal rows As List(Of CatalogExportRow))
         Dim hsSheet As Hs.HSSFSheet = CType(sheet, Hs.HSSFSheet)
         hsSheet.TabColorIndex = sector.ColorIndex
         sheet.DisplayGridlines = False
@@ -482,7 +496,7 @@ Public NotInheritable Class CatalogXlsWriter
 
         Dim headRow As Ss.Row = sheet.CreateRow(r)
         headRow.HeightInPoints = 26.0F
-        Dim heads As String() = {"Foto", "Codice", "EAN", "Descrizione", "Disponibilit" & ChrW(&HE0), "Prezzo - " & priceNote, "Prezzo di listino", "Offerta", "Note quantit" & ChrW(&HE0)}
+        Dim heads As String() = {"Foto", "Codice", "EAN", "Descrizione", "Disponibilit" & ChrW(&HE0), "Prezzo", "Prezzo di listino", "Offerta", "Note quantit" & ChrW(&HE0)}
         For k As Integer = 0 To heads.Length - 1
             PutText(headRow, k, heads(k), headStyle)
         Next
@@ -551,10 +565,10 @@ Public NotInheritable Class CatalogXlsWriter
 
     Private Shared Sub WriteArticleRow(ByVal c As Ctx, ByVal sheet As Ss.Sheet, ByVal patriarch As Ss.Drawing, ByVal r As Integer, ByVal row As CatalogExportRow)
         Dim photo As CatalogExportPhoto = FindPhoto(c, row)
-        Dim desc As String = row.Description
-        If Not String.IsNullOrEmpty(row.Detail) Then desc &= ChrW(10) & row.Detail
-        Dim lines As Integer = LineCount(desc, 62)
-        Dim height As Single = CSng(Math.Min(180.0R, Math.Max(If(photo IsNot Nothing, PhotoRowPoints, 28.0F), lines * 11.5R + 6.0R)))
+        ' Titolo in grassetto e dettaglio piccolo e grigio nella stessa cella (come nel PDF). Altezza: il grassetto e piu largo (50 caratteri per riga contro 60 del dettaglio).
+        Dim titleLines As Integer = LineCount(row.Description, 50)
+        Dim detailLines As Integer = If(String.IsNullOrEmpty(row.Detail), 0, LineCount(row.Detail, 60))
+        Dim height As Single = CSng(Math.Min(300.0R, Math.Max(If(photo IsNot Nothing, PhotoRowPoints, 28.0F), titleLines * 12.5R + detailLines * 11.0R + 8.0R)))
         Dim rowObj As Ss.Row = sheet.CreateRow(r)
         rowObj.HeightInPoints = height
 
@@ -565,7 +579,16 @@ Public NotInheritable Class CatalogXlsWriter
         Dim code As Ss.Cell = PutText(rowObj, 1, row.Code, codeStyle)
         If Not String.IsNullOrEmpty(row.ProductUrl) Then PutUrlLink(code, row.ProductUrl)
         PutText(rowObj, 2, If(CatalogPdfWriter.IsRealEan(row.Ean), row.Ean, ""), Body(c, False, False, c.Text))
-        PutText(rowObj, 3, desc, Body(c, False, True))
+        Dim titleFont As Ss.Font = GetFont(c, ColorInk, 9S, True) 'TITLE_BOLD
+        Dim detailFont As Ss.Font = GetFont(c, ColorMuted, 8S, False)
+        Dim descText As String = row.Description
+        If Not String.IsNullOrEmpty(row.Detail) Then descText &= ChrW(10) & row.Detail
+        Dim rich As New Hs.HSSFRichTextString(descText)
+        rich.ApplyFont(0, row.Description.Length, titleFont)
+        If Not String.IsNullOrEmpty(row.Detail) Then rich.ApplyFont(row.Description.Length + 1, descText.Length, detailFont)
+        Dim descCell As Ss.Cell = rowObj.CreateCell(3)
+        descCell.SetCellValue(rich)
+        descCell.CellStyle = Body(c, False, True)
         WriteCommercialCells(c, rowObj, 4, row)
     End Sub
 
@@ -610,7 +633,7 @@ Public NotInheritable Class CatalogXlsWriter
 
     ' ---- Foglio Elenco (piatto, ordinabile, senza foto) ----------------------------------------------------------------------------
 
-    Private Shared Sub WriteList(ByVal c As Ctx, ByVal sheet As Ss.Sheet, ByVal rows As List(Of CatalogExportRow), ByVal priceNote As String)
+    Private Shared Sub WriteList(ByVal c As Ctx, ByVal sheet As Ss.Sheet, ByVal rows As List(Of CatalogExportRow))
         Dim hsSheet As Hs.HSSFSheet = CType(sheet, Hs.HSSFSheet)
         hsSheet.TabColorIndex = ColorMuted
         Dim maxCode As Integer = 8
@@ -622,7 +645,7 @@ Public NotInheritable Class CatalogXlsWriter
             sheet.SetColumnWidth(k, WidthUnits(widths(k)))
         Next
         Dim headStyle As Ss.CellStyle = GetStyle(c, GetFont(c, ColorWhite, 9S, True), ColorInk, Ss.HorizontalAlignment.LEFT, Ss.VerticalAlignment.CENTER, True, 0S, False)
-        Dim heads As String() = {"Settore", "Categoria", "Tipologia", "Gruppo", "Codice", "EAN", "Descrizione", "Disponibilit" & ChrW(&HE0), "Prezzo - " & priceNote, "Prezzo di listino", "Offerta", "Note quantit" & ChrW(&HE0)}
+        Dim heads As String() = {"Settore", "Categoria", "Tipologia", "Gruppo", "Codice", "EAN", "Descrizione", "Disponibilit" & ChrW(&HE0), "Prezzo", "Prezzo di listino", "Offerta", "Note quantit" & ChrW(&HE0)}
         Dim headRow As Ss.Row = sheet.CreateRow(0)
         headRow.HeightInPoints = 26.0F
         For k As Integer = 0 To heads.Length - 1
@@ -641,7 +664,7 @@ Public NotInheritable Class CatalogXlsWriter
             Dim code As Ss.Cell = PutText(rowObj, 4, row.Code, codeStyle)
             If Not String.IsNullOrEmpty(row.ProductUrl) Then PutUrlLink(code, row.ProductUrl)
             PutText(rowObj, 5, If(CatalogPdfWriter.IsRealEan(row.Ean), row.Ean, ""), Body(c, False, False, c.Text))
-            PutText(rowObj, 6, row.Description, Body(c, False, False))
+            PutText(rowObj, 6, row.Description, Body(c, True, False))
             WriteCommercialCells(c, rowObj, 7, row)
             r += 1
         Next
