@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## DB-MYSQL-8-4-UPGRADE-1A — 24/11/2026 — NON AVVIATO (documentato)
+
+**Esito: nessun codice ne database toccati; task documentale. Livello L quando si apre.** Richiesta del PO (con Enzo): passare a MySQL 8.4 LTS (ultima patch 8.4.13) con .NET Framework 4.8; «il sito funziona lo stesso o servono modifiche?». Piano completo, fatti e rischi: [KEEPSTORE_MYSQL_8_4_UPGRADE_PLAN](KEEPSTORE_MYSQL_8_4_UPGRADE_PLAN.md).
+
+**Fatti.** Produzione = **MySQL 8.0.42** con `sql_mode` SENZA `ONLY_FULL_GROUP_BY` (il LAB 8.0.46 lo ha: il LAB e piu severo); TLS 1.2/1.3. Sito: `MySql.Data` 8.0.33 (precedente alla 8.4, non certificato); gestionale: 9.7.0, .NET 4.8. Codice e migrazioni senza funzioni rimosse in 8.4; nessun nome riservato nuovo (MANUAL, PARALLEL, QUALIFY, TABLESAMPLE) nel LAB (639 routine, 22 trigger, 159 viste, 284 tabelle, tutte InnoDB).
+
+**Rischi principali.** Account con `mysql_native_password` (spento di default in 8.4, da controllare: SELECT account ancora da eseguire); file di configurazione con opzioni eliminate; `sql_mode` da conservare identico a produzione; connettore da provare o aggiornare (approvazione PO per la cartella `Bin`); replica/backup con comandi vecchi; ritorno indietro solo da backup.
+
+**Pacchetto del PO.** `mysql-8.4.13.1-winx64-debug-test` (2,2 GB) e il solo pacchetto debug+test: ha `mysqld-debug.exe` ma NON `share` ne i client (`mysql.exe`, `mysqldump.exe`): per avviare un'istanza serve lo ZIP standard `mysql-8.4.13.1-winx64.zip`; il debug non si usa per misure di tempo ne in produzione.
+
+**Mandato.** Il PO autorizza fin d'ora l'installazione di 8.4 come seconda istanza LAB (porta diversa da 13317, solo 127.0.0.1) quando il task si apre; produzione, `Bin`, file di configurazione del server restano fuori. Fasi: 1 controlli di Enzo (parziale), 2 istanza 8.4 sul PC, 3 prove, 4 piano di passaggio con Enzo.
+
 ## CATALOG-DOWNLOAD-1D — 24/11/2026 — SOURCE (Excel rifinito, descrizione azienda in prima pagina)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#673](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/673), stable `c4e7c743`.** Feedback del PO dopo aver scaricato PDF ed Excel dal server: titolo dell'articolo in grassetto, intestazione «Prezzo», filtri invariati, descrizione dell'azienda in prima pagina.
