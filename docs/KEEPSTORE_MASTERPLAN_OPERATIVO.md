@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CATALOG-DOWNLOAD-1C — 24/11/2026 — SOURCE (Excel: prezzi corretti, filtri; data del nome)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#671](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/671), stable `8baaef41`.** Richiesta del PO: «Data: preferisco 24-11-2026», «Procedi con i soli filtri del listino», `listini.aspx` in standby.
+
+**Difetto trovato.** Su questo PC c'e Excel 16 (avevo scritto il contrario per un errore di percorso): aperto il file, i prezzi comparivano come `$37` e codici/EAN con un formato data. Causa: `HSSFDataFormat.GetFormat` di NPOI 1.2.3 e sfasato di uno (`#,##0.00` -> 5, `@` -> 50). Ora indici standard 4 e 49. I test precedenti rileggevano il valore con NPOI, non il testo di Excel: errore di metodo mio, dichiarato.
+
+**Ora.** Filtri automatici sulle 12 colonne del solo foglio Elenco (intervallo `A1:L<n+1>`, creato dopo tutti i fogli); i fogli settore non hanno filtri (le righe di titolo categoria/tipologia/gruppo li romperebbero). Nome file `Listino_<azienda>_<gg-mm-aaaa>`. `Tools/Test-CatalogDownloadXls.ps1` ora apre il file con Excel via COM (istanza propria, chiusa per PID, sola lettura, senza macro): testo dei prezzi con i separatori dell'istanza, formati, intervallo dal nome `_FilterDatabase`, filtro sul settore dell'ultima riga con righe visibili per identita, righe/collegamenti/foto per foglio uguali al file, controllo negativo (file troncato non si apre); senza Excel stampa `COM NON ESEGUITO`. 8 mutanti uccisi; prova di stress (3.934 foto, 1.790 in un foglio) aperta da Excel senza differenze.
+
+**Revisioni.** ChatGPT (xhigh) e Claude (Opus, con prove in Excel): accolti oracolo per identita, intervallo dal nome nascosto (`AutoFilter.Range` non vede un intervallo corto), nessun uso di `FilterMode` (e `True` gia in apertura), igiene COM, livello L, midnight nei test del nome; rimandati limite di 65.535 righe dell'Elenco e file binari danneggiati.
+
+**Limiti (NON AVVIATO).** Le frecce del filtro sono viste da Excel come `AutoFilterMode` vero, non fotografate; apertura interattiva senza avvisi non certificabile (con avvisi spenti una riparazione silenziosa sfugge al solo controllo di apertura: coperta dal confronto di contenuto). Restano C miniature offline, E cache per utente; `listini.aspx` (ex task F) e in STANDBY, non ritirata.
+
 ## CATALOG-DOWNLOAD-FILENAME-1A — 24/11/2026 — SOURCE (nome del file del listino)
 
 **Esito: A (SOURCE, non pubblicato). Livello S. PR [#669](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/669), stable `46d11455`.** Richiesta del PO: il file scaricato si chiama «Listino_(nome azienda)_(data corrente)».
