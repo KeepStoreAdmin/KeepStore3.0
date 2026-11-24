@@ -160,12 +160,13 @@ Public Module PayPalCheckoutRepository
     Public Function StartNextAttempt(ByVal doc As PayPalPaymentDocumentInfo,
                                      ByVal cfg As PayPalCheckoutConfig,
                                      ByVal previous As PayPalCheckoutTransactionInfo,
-                                     ByVal reconciled As PayPalOrderSnapshot) As PayPalCheckoutTransactionInfo
+                                     ByVal reconciled As PayPalOrderSnapshot,
+                                     Optional ByVal allowExpired As Boolean = False) As PayPalCheckoutTransactionInfo
         If doc Is Nothing OrElse cfg Is Nothing OrElse previous Is Nothing OrElse Not previous.IsCurrent OrElse
            reconciled Is Nothing OrElse Not (doc.RemoteManaged OrElse String.Equals(doc.OrigineOrdine, "INTERNO", StringComparison.OrdinalIgnoreCase)) OrElse
            String.IsNullOrEmpty(previous.PayPalOrderId) OrElse
            Not String.Equals(previous.PayPalOrderId, reconciled.OrderId, StringComparison.Ordinal) OrElse
-           Not PayPalAttemptPolicy.MaySupersede(If(doc.RemoteManaged, "INTERNO", doc.OrigineOrdine), previous.Stato, reconciled.Status, reconciled.CaptureStatus) Then Return New PayPalCheckoutTransactionInfo()
+           Not PayPalAttemptPolicy.MaySupersede(If(doc.RemoteManaged, "INTERNO", doc.OrigineOrdine), previous.Stato, reconciled.Status, reconciled.CaptureStatus, allowExpired) Then Return New PayPalCheckoutTransactionInfo()
         Try
             Using conn As New MySqlConnection(ConnectionString)
                 conn.Open()
@@ -174,13 +175,16 @@ Public Module PayPalCheckoutRepository
                     Dim currentId As Long = 0
                     Dim currentState As String = String.Empty
                     Dim currentOrder As String = String.Empty
-                    Using cmd As New MySqlCommand("SELECT Id,Stato,PayPalOrderId FROM paypal_checkout_transazioni WHERE DocumentiId=@doc AND CurrentSlot=1 FOR UPDATE", conn, trns)
+                    Dim inactiveMinutes As Integer = 0
+                    ' L'eta si legge qui, sotto lock, con l'orologio del database (UpdatedAt di una riga CREATED = momento della creazione dell'ordine remoto).
+                    Using cmd As New MySqlCommand("SELECT Id,Stato,PayPalOrderId,TIMESTAMPDIFF(MINUTE,UpdatedAt,CURRENT_TIMESTAMP) AS InattivoMinuti FROM paypal_checkout_transazioni WHERE DocumentiId=@doc AND CurrentSlot=1 FOR UPDATE", conn, trns)
                         cmd.Parameters.Add("@doc", MySqlDbType.Int32).Value = doc.DocumentId
                         Using reader As MySqlDataReader = cmd.ExecuteReader()
                             If reader.Read() Then
                                 currentId = Convert.ToInt64(reader("Id"), CultureInfo.InvariantCulture)
                                 currentState = Convert.ToString(reader("Stato"))
                                 currentOrder = Convert.ToString(reader("PayPalOrderId"))
+                                If Not IsDBNull(reader("InattivoMinuti")) Then inactiveMinutes = Convert.ToInt32(reader("InattivoMinuti"), CultureInfo.InvariantCulture)
                             End If
                         End Using
                     End Using
@@ -188,6 +192,12 @@ Public Module PayPalCheckoutRepository
                        Not String.Equals(currentOrder, previous.PayPalOrderId, StringComparison.Ordinal) Then
                         trns.Commit()
                         Return LoadTransactionForDocument(doc.DocumentId)
+                    End If
+                    ' Seconda valutazione, sotto lock: la scadenza conta solo se il database conferma l'inattivita.
+                    If Not PayPalAttemptPolicy.MaySupersede(If(doc.RemoteManaged, "INTERNO", doc.OrigineOrdine), currentState, reconciled.Status, reconciled.CaptureStatus,
+                                                            allowExpired AndAlso inactiveMinutes >= PayPalAttemptPolicy.ExpiryMinutes) Then
+                        trns.Rollback()
+                        Return New PayPalCheckoutTransactionInfo()
                     End If
                     Dim attemptNo As Integer = previous.TentativoNo + 1
                     Using cmd As New MySqlCommand("UPDATE paypal_checkout_transazioni SET CurrentSlot=NULL,Stato='SUPERSEDED',UpdatedAt=CURRENT_TIMESTAMP WHERE Id=@id AND CurrentSlot=1 AND Stato=@stato", conn, trns)

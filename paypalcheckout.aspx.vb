@@ -91,7 +91,16 @@ Partial Class paypalcheckout
             ElseIf PayPalCheckoutSafetyPolicy.IsTrustedApprovalUrl(details.Snapshot.ApprovalUrl) Then
                 ' La risposta HTTP del redirect potrebbe perdersi: per pochi minuti
                 ' e consentito soltanto recuperare questo stesso order/attempt.
-                RedirectTerminal(details.Snapshot.ApprovalUrl) : Return
+                ' PAYPAL-EXPIRED-ORDER-RETRY-1A: se invece l'ordine e abbandonato da oltre 180 minuti (e mai approvato) il repository, sotto lock e con l'orologio del
+                ' database, lo sostituisce con un nuovo tentativo; se rifiuta (non scaduto o cambiato) il cliente va allo stesso link come prima.
+                Dim rotated As PayPalCheckoutTransactionInfo = Nothing
+                If Not viaLaunch Then rotated = PayPalCheckoutRepository.StartNextAttempt(doc, cfg, tx, details.Snapshot, True)
+                If rotated IsNot Nothing AndAlso rotated.Exists AndAlso rotated.IsCurrent AndAlso rotated.Id <> tx.Id Then
+                    tx = rotated
+                    If Not String.IsNullOrWhiteSpace(tx.PayPalOrderId) Then Fail(documentId, "Tentativo PayPal concorrente in corso") : Return
+                Else
+                    RedirectTerminal(details.Snapshot.ApprovalUrl) : Return
+                End If
             Else
                 Fail(documentId, "Ordine PayPal non riutilizzabile") : Return
             End If
