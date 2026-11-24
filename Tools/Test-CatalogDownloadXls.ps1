@@ -17,7 +17,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
 if ($SitePath -notmatch '^C:\\Temp\\KeepStoreRegOrderLab-[0-9]+\\site$') { Write-Host 'CATALOG_XLS FAIL: il sito di prova deve essere quello del LAB'; exit 1 }
 $files = @('listino-catalogo.aspx', 'listino-catalogo.aspx.vb', 'App_Code\KeepStoreCatalogExportSnapshot.vb', 'App_Code\KeepStoreCatalogExportImages.vb',
-    'App_Code\KeepStoreCatalogPdfWriter.vb', 'App_Code\KeepStoreCatalogXlsWriter.vb', 'App_Code\StorefrontCanonicalHostPolicy.vb', 'App_Code\KeepStoreAccountTiles.vb')
+    'App_Code\KeepStoreCatalogPdfWriter.vb', 'App_Code\KeepStoreCatalogXlsWriter.vb', 'App_Code\KeepStoreCatalogExportFileName.vb','App_Code\StorefrontCanonicalHostPolicy.vb', 'App_Code\KeepStoreAccountTiles.vb')
 $repoBytes = @{}; $origBytes = @{}
 foreach ($f in $files) {
     $rp = Join-Path $root $f; $sp = Join-Path $SitePath $f

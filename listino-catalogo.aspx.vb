@@ -56,6 +56,7 @@ Partial Class listino_catalogo
         Dim bytes As Byte() = Nothing
         Dim status As Integer = 200
         Dim message As String = ""
+        Dim fileName As String = ""
         Try
             If Not Gate.Wait(TimeSpan.FromSeconds(20)) Then
                 status = 503
@@ -71,9 +72,12 @@ Partial Class listino_catalogo
                         status = 500
                         message = "Non è stato possibile preparare il listino. Riprova più tardi."
                     Else
+                        ' Il nome si calcola PRIMA dei writer: se qualcosa fallisce dopo, non parte un file senza nome.
+                        fileName = CatalogExportFileName.Build(If(snapshot.Company IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(snapshot.Company.Name), snapshot.Company.Name, snapshot.CompanyName), snapshot.GeneratedOn, asExcel) 'FILE_NAME
                         bytes = If(asExcel, CatalogXlsWriter.Build(snapshot), CatalogPdfWriter.Build(snapshot))
                     End If
                 Catch ex As Exception
+                    bytes = Nothing
                     status = 500
                     message = "Non è stato possibile preparare il listino. Riprova più tardi."
                     Try
@@ -92,16 +96,16 @@ Partial Class listino_catalogo
             Fail(token, message, status)
             Return
         End If
-        SendFile(token, bytes, asExcel)
+        SendFile(token, bytes, fileName, asExcel)
     End Sub
 
-    Private Sub SendFile(ByVal token As String, ByVal bytes As Byte(), ByVal asExcel As Boolean)
+    Private Sub SendFile(ByVal token As String, ByVal bytes As Byte(), ByVal fileName As String, ByVal asExcel As Boolean)
         Response.Clear()
         Response.Cache.SetCacheability(HttpCacheability.NoCache)
         Response.Cache.SetNoStore()
         Response.AppendHeader("X-Robots-Tag", "noindex, nofollow, noarchive")
         Response.ContentType = If(asExcel, "application/vnd.ms-excel", "application/pdf")
-        Response.AppendHeader("Content-Disposition", "attachment; filename=""listino-offerte-" & Date.Today.ToString("yyyyMMdd", CultureInfo.InvariantCulture) & If(asExcel, ".xls", ".pdf") & """")
+        Response.AppendHeader("Content-Disposition", "attachment; filename=""" & fileName & """")
         Response.AppendHeader("Content-Length", bytes.Length.ToString(CultureInfo.InvariantCulture))
         SetDoneCookie(token, "ok")
         Response.BinaryWrite(bytes)
