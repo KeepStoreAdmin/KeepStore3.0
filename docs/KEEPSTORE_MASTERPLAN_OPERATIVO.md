@@ -1,5 +1,21 @@
 # KeepStore Masterplan Operativo
 
+## PAYPAL-EXPIRED-ORDER-RETRY-1A — 24/11/2026 — SOURCE (ordine PayPal abbandonato sostituibile)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#679](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/679), stable `35c0dde3`.** Richiesta del PO («ora procedi con PayPal scaduto»).
+
+**Difetto.** Un tentativo locale `CREATED` mai approvato restava per sempre quello corrente: `PayPalAttemptPolicy.MaySupersede` ammetteva la sostituzione solo con stati terminali e `paypalcheckout.aspx.vb` rimandava sempre allo stesso link, anche dopo la scadenza; il cliente non poteva piu pagare (gli ordini del gestionale compresi).
+
+**Ora.** `MaySupersede(..., expired)` e la costante `ExpiryMinutes = 180` (la durata minima documentata da PayPal per un ordine `CREATED`): un `CREATED` con remoto `CREATED`/`PAYER_ACTION_REQUIRED`, nessuna capture, origine `INTERNO`/RemoteManaged e inattivo da almeno 180 minuti si sostituisce. L'eta si legge in `StartNextAttempt` sotto lock con l'orologio del database (`TIMESTAMPDIFF(MINUTE, UpdatedAt, CURRENT_TIMESTAMP)`; per una riga `CREATED` `UpdatedAt` e il momento della creazione dell'ordine remoto) e la politica si rivaluta sotto lock; la pagina tenta la rotazione solo se non e un lancio dal carrello e, se il repository rifiuta, rimanda al vecchio link come prima.
+
+**Sicurezza del denaro (verificata sul codice).** Il sito cattura un ordine solo con `TryBeginCapture` (richiede `CurrentSlot=1` e documento non pagato, sotto `FOR UPDATE`); ritorno e webhook escono prima se il tentativo non e corrente; l'ordine e `CAPTURE` con `PAY_NOW` senza cattura automatica: sostituire un `CREATED` non approvato non causa un secondo incasso, qualunque sia la finestra. Se l'account PayPal ha scadenze piu lunghe, il caso peggiore e un'approvazione del vecchio link che non viene incassata (nessun addebito).
+
+**Revisioni.** ChatGPT (xhigh): STOP B circoscritto (nessuna finestra dimostrabile dai file, eta misurata sull'evento sbagliato, capture in conflitto senza traccia); accolti misura sull'orologio del database e rivalutazione sotto lock, scartato «non scegliere una costante» (il denaro non dipende dalla finestra). Claude (Opus): SICURO per il ramo con GET riuscito; `UpdatedAt` e la misura giusta (`CreatedAt` sarebbe sbagliata se la prima creazione fallisce), gli unici UPDATE portano FUORI da `CREATED`; ridimensionato a CONSIGLIATO il rischio di capture storica in conflitto.
+
+**Prove.** `Tools/Test-PayPalExpiredAttempt.ps1`: tabella della politica compilata da sola (19 casi, 5 mutanti), confine 179 min 59 s / 180 / 181 sul database del LAB e colonna `UpdatedAt` con aggiornamento automatico, pin sul testo (eta sotto lock, politica rivalutata, nessuna rotazione per i lanci dal carrello, 3 mutanti); `Test-PayPalOrderOriginAndAttempts` (30 casi), `Test-PayPalCheckoutFlow` (27) e `Test-OrderRemotePayment` (53 + 4 mutanti sul LAB) verdi; precompile e segreti verdi.
+
+**Limiti e residuo (NON AVVIATO).** Nessun test end-to-end con interleaving su database ne PayPal vero; ramo dell'errore 404 dopo la scadenza (se PayPal risponde 404 il cliente resta bloccato come oggi): servono le righe `Riconciliazione PayPal non disponibile` (con `http=` e `code=`) del registro `paypal-checkout.log` del server; carta Banca Sella bloccata da un PayPal abbandonato (`RpPayPalOther`), con il rischio PayPal -> Sella -> PayPal; capture storica in conflitto senza registrazione persistente (preesistente); messaggio dedicato per il ritorno su un link sostituito. **Alla consegna futura:** `App_Code/PayPalAttemptPolicy.vb`, `App_Code/PayPalCheckoutRepository.vb`, poi `paypalcheckout.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-ATTEMPT-LIMIT-1A e AUTH-EMAIL-UNIQUE-1A — 24/11/2026 — STUDIO (NON AVVIATI)
 
 **Richiesta del PO:** studiare la migliore soluzione per (1) limite ai tentativi sulla password attuale e (2) unicita dell'e-mail per azienda, sfruttando cio che c'e; se serve un vincolo al database, spiegare se e solo «una modifica di tipo», le conseguenze e i rischi.
