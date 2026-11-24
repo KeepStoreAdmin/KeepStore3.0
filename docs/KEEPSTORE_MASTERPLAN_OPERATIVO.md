@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CATALOG-DOWNLOAD-1A (task A, PDF) — 24/11/2026 — SOURCE (scarica listino e offerte dalla dashboard)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#666](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/666), stable `91835836`.** Richiesta del PO del 23-24/11/2026: catalogo scaricabile e sfogliabile per i clienti collegati, PDF e XLS a scelta.
+
+**Ora.** Riquadro «Scarica listino e offerte» nella dashboard e pagina privata `listino-catalogo.aspx`: POST protetto, spinner con avviso, PDF generato al momento (mai salvato). Prezzi, IVA (override anche a zero, reverse charge) e offerte (anche riservate) dal batch condiviso del sito, una riga per articolo con la regola del catalogo; un file alla volta per utente e al massimo due insieme. PDF: prima pagina con logo, dati aziendali, nota («fanno fede i prezzi del sito») e legenda; indice a riquadri colorati per settore con il reticolo di categorie e tipologie e i numeri di pagina; segnalibri settore > categoria > tipologia > gruppo; righe con foto, codice, EAN, descrizione, disponibilita (pallino verde, giallo, rosso come la scheda del sito) e prezzo; offerte con riferimento, validita e prezzo di listino barrato; codice = collegamento alla scheda. Codice ed EAN su una riga, colonne dal valore piu lungo.
+
+**Revisioni.** ChatGPT (xhigh): accolti niente cache fra utenti, batch e non colonne promo della vista, guardia CSRF che precede la generazione, foto da file locali; scartata la cache di H4. Claude (Opus): accolti disegno in task piccoli, NPOI 1.2.3 senza filtri (non promessi), wrapper e limiti di carico. Il PO ha corretto la gerarchia (mancava la categoria) e chiesto la prima pagina, la disponibilita, la nota, le foto e colori: fatti. Gate: PASS.
+
+**Prove.** `Tools/Test-CatalogDownloadPdf.ps1` sul LAB: 4.304 articoli, ordine, nessun duplicato, prezzi e offerta, foto vere e logo, link, pallini dei tre colori, indice con numeri reali, 4 mutanti uccisi; PDF di 326 pagine in circa 3 s e 1 MB. Tessere e layout dashboard aggiornati (12 riquadri). Nota: la prova si scrisse dopo il codice (dichiarato).
+
+**Limiti e residuo (NON AVVIATO).** Foto reali del server e miniature `_` non misurabili sul LAB (6 file locali): la prima generazione puo essere lenta, dopo 150 s non si ridimensionano nuove foto. IVA override 0/reverse charge provati per costruzione. Il messaggio del PO sul colore era troncato: da chiarire. Task B: XLS (fogli per settore, link, foto; filtri solo previo accordo), poi C-F (miniature fuori linea, cache, ritiro di `listini.aspx`). **Alla consegna futura:** `KeepStoreCatalogExportSnapshot.vb`, `KeepStoreCatalogExportImages.vb`, `KeepStoreCatalogPdfWriter.vb`, `KeepStoreAccountTiles.vb`, `StorefrontCanonicalHostPolicy.vb` (App_Code prima), poi `listino-catalogo.aspx` e `.aspx.vb`.
+
 ## LEGACY-PROMO-PAGES-RETIRE-1A — 24/11/2026 — SOURCE (pagine promo legacy ridotte a ponti)
 
 **Esito: A (SOURCE, non pubblicato). Livello M. PR [#665](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/665), stable `c8d38732`.** «Pulizia pagine legacy» scelta dal PO fra le opzioni proposte da CODE.
