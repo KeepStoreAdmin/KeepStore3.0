@@ -1,5 +1,15 @@
 # KeepStore Masterplan Operativo
 
+## CATALOG-DOWNLOAD-FILENAME-1A — 24/11/2026 — SOURCE (nome del file del listino)
+
+**Esito: A (SOURCE, non pubblicato). Livello S. PR [#669](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/669), stable `46d11455`.** Richiesta del PO: il file scaricato si chiama «Listino_(nome azienda)_(data corrente)».
+
+**Ora.** `Listino_<azienda>_<aaaa-mm-gg>.pdf|xls`, esempio `Listino_Taikun_srl_2026-11-24.pdf`. Helper nuovo `App_Code/KeepStoreCatalogExportFileName.vb` senza dipendenze: ASCII sicuro per costruzione (solo A-Z a-z 0-9 e trattino, il resto diventa un solo `_`; punti, virgole e apostrofi tolti), surrogati isolati neutralizzati, FormKD, taglio a 40 caratteri, ripiego `KeepStore`, mai eccezioni. Data = quella dello snapshot (`InvariantCulture`, nessun anno thai), nome calcolato prima dei writer e byte azzerati se la generazione fallisce. Formato data `aaaa-mm-gg` (si ordina nelle cartelle) invece di `gg-mm-aaaa` proposto al PO: una riga da cambiare.
+
+**Revisioni.** ChatGPT (xhigh) e Claude (Opus) concordi: accolti filtro ASCII con intervalli espliciti (`IsLetterOrDigit` lascia passare cifre arabe e lettere a tutta larghezza), data dallo snapshot, helper totale, oracolo con intestazioni catturate; scartati `filename*` e traslitterazioni (ß diventa `_`).
+
+**Prove.** `Tools/Test-CatalogDownloadFileName.ps1`: 18 casi estremi, 2000 stringhe casuali, 5 mutanti unitari e 3 HTTP sul LAB (un solo `Content-Disposition` uguale all'atteso calcolato da SQL) uccisi; test PDF ed Excel e precompile verdi. Limite: nessun browser reale provato (solo l'intestazione).
+
 ## CATALOG-DOWNLOAD-1B (task B, Excel) — 24/11/2026 — SOURCE (listino in XLS)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#667](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/667), stable `357bfcec`.** Richiesta del PO del 23-24/11/2026: listino anche in Excel, sfogliabile in locale.
