@@ -8,7 +8,7 @@
 
 **Rischi principali.** Account con `mysql_native_password` (spento di default in 8.4: i 4 account indicati non entrano piu senza intervento: ALTER USER con nuova password per ognuno e/o ponte temporaneo `mysql_native_password=ON`); file di configurazione con opzioni eliminate; `sql_mode` da conservare identico a produzione; connettore da provare o aggiornare (approvazione PO per la cartella `Bin`); replica/backup con comandi vecchi; ritorno indietro solo da backup.
 
-**Pacchetto del PO.** `mysql-8.4.13.1-winx64-debug-test` (2,2 GB) e il solo pacchetto debug+test: ha `mysqld-debug.exe` ma NON `share` ne i client (`mysql.exe`, `mysqldump.exe`): per avviare un'istanza serve lo ZIP standard `mysql-8.4.13.1-winx64.zip`; il debug non si usa per misure di tempo ne in produzione.
+**Pacchetto del PO.** `C:\KeepStoreWeb\mysql-8.4.13.1-winx64.msi` (130 MB, firma Oracle valida, «MySQL Server 8.4» 8.4.1301) sostituisce il pacchetto debug+test (non avviabile da solo). Non si lancia l'installatore normale (servizio, registro, firewall): estrazione amministrativa `msiexec /a ... TARGETDIR=<cartella>` in fase 2, con verifica di `mysqld.exe`, `share` e client.
 
 **Mandato.** Il PO autorizza fin d'ora l'installazione di 8.4 come seconda istanza LAB (porta diversa da 13317, solo 127.0.0.1) quando il task si apre; produzione, `Bin`, file di configurazione del server restano fuori. Fasi: 1 controlli di Enzo (parziale), 2 istanza 8.4 sul PC, 3 prove, 4 piano di passaggio con Enzo.
 
