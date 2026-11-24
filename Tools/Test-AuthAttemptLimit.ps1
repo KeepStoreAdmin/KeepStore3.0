@@ -17,7 +17,7 @@ $files = @{
     svc    = Read-Repo 'App_Code/KeepStoreAuthAttemptLimit.vb'
     web    = Read-Repo 'App_Code/KeepStoreAuthAttemptLimitWeb.vb'
     login  = Read-Repo 'login.aspx.vb'
-    pwd    = Read-Repo 'password.aspx.vb'
+    pwdpg  = Read-Repo 'password.aspx.vb'
     acc    = Read-Repo 'my-account-edit.aspx.vb'
     reset  = Read-Repo 'App_Code/PasswordResetTokenService.vb'
     master = Read-Repo 'Page.master'
@@ -37,7 +37,7 @@ $pwdReaders = @(Get-ChildItem -LiteralPath $root -Recurse -File -Filter *.vb -Er
 
 function Test-Source([hashtable]$f, [switch]$Quiet) {
     $fail = New-Object Collections.Generic.List[string]
-    $s = $f.svc; $w = $f.web; $l = $f.login; $p = $f.pwd; $a = $f.acc; $r = $f.reset; $d = $f.doc
+    $s = $f.svc; $w = $f.web; $l = $f.login; $p = $f.pwdpg; $a = $f.acc; $r = $f.reset; $d = $f.doc
     if ($s -eq '' -or $w -eq '') { $fail.Add('B0 servizio o strato web assente') }
     else {
         # B1 servizio autonomo e silenzioso; tempo del database
@@ -190,10 +190,10 @@ $sourceMutants = @(
     @{ Id = 'P07_LOGIN_FOUND_KEY_FROM_TYPED_NAME'; File = 'login'; Old = 'KeepStoreAuthAttemptLimitWeb.LoginKey(Convert.ToInt32(dr.Item("id")))'; New = 'KeepStoreAuthAttemptLimit.NormalizeUnknownName(user)' },
     @{ Id = 'P08_LOGIN_FIXED_COMPANY'; File = 'login'; Old = 'limitCompany = aziendaId'; New = 'limitCompany = 1' },
     @{ Id = 'P09_LOGIN_NO_FAIL_IN_FINALLY'; File = 'login'; Old = "                Else`n                    KeepStoreAuthAttemptLimitWeb.Fail(HttpContext.Current, limitCompany, limitScope, limitKeyText)`n"; New = "                Else`n" },
-    @{ Id = 'P10_PWD_NO_RESERVE'; File = 'pwd'; Old = 'KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))'; New = 'AttemptLimitDecision.Allowed' },
-    @{ Id = 'P11_PWD_VALIDATE_BEFORE_RESERVE'; File = 'pwd'; Old = "                Dim limitCompany As Integer = StorefrontCommercialIsolationPolicy"; New = "                Dim validateFirst As Boolean = ValidatePasswordChange(oldPwd, newPwd, newPwd2, currentPassword, validationMessage)`n                Dim limitCompany As Integer = StorefrontCommercialIsolationPolicy" },
-    @{ Id = 'P12_PWD_BLOCKED_CONTINUES'; File = 'pwd'; Old = "ShowPasswordMessage(KeepStoreAuthAttemptLimitWeb.BlockedMessage, False)`n                        Exit Sub"; New = 'ShowPasswordMessage(KeepStoreAuthAttemptLimitWeb.BlockedMessage, False)' },
-    @{ Id = 'P13_PWD_NO_SUCCESS'; File = 'pwd'; Old = "                            KeepStoreAuthAttemptLimitWeb.Succeed(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))`n"; New = '' },
+    @{ Id = 'P10_PWD_NO_RESERVE'; File = 'pwdpg'; Old = 'KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))'; New = 'AttemptLimitDecision.Allowed' },
+    @{ Id = 'P11_PWD_VALIDATE_BEFORE_RESERVE'; File = 'pwdpg'; Old = "                Dim limitCompany As Integer = StorefrontCommercialIsolationPolicy"; New = "                Dim validateFirst As Boolean = ValidatePasswordChange(oldPwd, newPwd, newPwd2, currentPassword, validationMessage)`n                Dim limitCompany As Integer = StorefrontCommercialIsolationPolicy" },
+    @{ Id = 'P12_PWD_BLOCKED_CONTINUES'; File = 'pwdpg'; Old = "ShowPasswordMessage(KeepStoreAuthAttemptLimitWeb.BlockedMessage, False)`n                        Exit Sub"; New = 'ShowPasswordMessage(KeepStoreAuthAttemptLimitWeb.BlockedMessage, False)' },
+    @{ Id = 'P13_PWD_NO_SUCCESS'; File = 'pwdpg'; Old = "                            KeepStoreAuthAttemptLimitWeb.Succeed(HttpContext.Current, limitCompany, KeepStoreAuthAttemptLimit.ScopeCurrentPassword, KeepStoreAuthAttemptLimitWeb.LoginKey(loginIdValue))`n"; New = '' },
     @{ Id = 'P14_ACC_NO_FAIL'; File = 'acc'; Old = 'KeepStoreAuthAttemptLimitWeb.Fail(HttpContext.Current, scope.CompanyId,'; New = 'KeepStoreAuthAttemptLimitWeb.Release(HttpContext.Current, scope.CompanyId,' },
     @{ Id = 'P15_ACC_FIXED_COMPANY'; File = 'acc'; Old = 'KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, scope.CompanyId,'; New = 'KeepStoreAuthAttemptLimitWeb.Reserve(HttpContext.Current, 1,' },
     @{ Id = 'P16_ACC_ALWAYS_RESERVES'; File = 'acc'; Old = "                    If emailChanged Then`n                        Dim limitDecision"; New = "                    If True Then`n                        Dim limitDecision" },
