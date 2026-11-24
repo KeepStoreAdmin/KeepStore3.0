@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CATALOG-DOWNLOAD-1B (task B, Excel) — 24/11/2026 — SOURCE (listino in XLS)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#667](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/667), stable `357bfcec`.** Richiesta del PO del 23-24/11/2026: listino anche in Excel, sfogliabile in locale.
+
+**Ora.** Secondo pulsante «Scarica Excel» nella pagina del download: stesso snapshot, stessi prezzi/IVA/offerte e stesse guardie del PDF (CSRF prima della generazione, un file alla volta per utente, al massimo due insieme; client e server allineati a 600 s). File .xls (HSSF): foglio Indice (logo, dati azienda, nota «fanno fede i prezzi del sito», legenda, collegamenti ai settori), un foglio per settore (foto 80 px, codice con link alla scheda, EAN come testo, disponibilita con pallino colorato, prezzo numerico, prezzo di listino barrato, offerta con nome e validita, note a quantita; righe categoria/tipologia/gruppo senza celle unite e raggruppate per categoria) e foglio Elenco piatto e ordinabile. Nomi fogli ripuliti e unici (il settore «Cavi e Adattatori A/V» aveva una barra), stili per ruolo. Corretti anche i testi della pagina (mancava la categoria) e del PDF (accenti).
+
+**Revisioni.** ChatGPT (xhigh): accolti foto riducibili solo per l'XLS, nomi fogli, stati commerciali, oracolo con tripla articolo-prezzo-foto; SMENTITA la mia ipotesi «NPOI senza filtri» (CreateAutoFilter esiste). Claude (Opus): accolti elenco piatto ordinabile, niente celle unite nei dati, GroupRow; il filtro e RIMANDATO (frecce non verificabili senza Excel). Scoperti in test: `GetBytes()` non produce un .xls apribile (serve `Write`), NPOI 1.2.3 non rilegge le forme (le ancore si leggono dai record Escher).
+
+**Prove.** `Tools/Test-CatalogDownloadXls.ps1` sul LAB: 4.304 articoli, ordine e insiemi da SQL, prezzi e offerta, foto sulla riga del proprio articolo, nomi fogli, 130 stili; 5 mutanti uccisi; con `-Stress` una foto per articolo: 3.934 foto, foglio piu grande 1.790 foto, 11 MB, 31 s la prima volta. PDF ancora 4/4 mutanti, tessere, precompile e secrets guard verdi.
+
+**Limiti (NON AVVIATO).** Nessun Excel/LibreOffice sul PC: apertura senza avvisi NON provata (solo rilettura NPOI); filtri automatici rimandati; foto reali del server non misurate (prova con miniature finte); memoria del processo non misurata. Riferimento offerta (`OfferLabel`) ancora assente nel PDF. Task successivi: C-F (miniature offline, filtri, cache per utente, ritiro di `listini.aspx` su decisione del PO).
+
 ## CATALOG-DOWNLOAD-1A (task A, PDF) — 24/11/2026 — SOURCE (scarica listino e offerte dalla dashboard)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#666](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/666), stable `91835836`.** Richiesta del PO del 23-24/11/2026: catalogo scaricabile e sfogliabile per i clienti collegati, PDF e XLS a scelta.
