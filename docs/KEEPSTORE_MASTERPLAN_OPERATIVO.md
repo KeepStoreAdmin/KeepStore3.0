@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## CATALOG-DOWNLOAD-1D — 24/11/2026 — SOURCE (Excel rifinito, descrizione azienda in prima pagina)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#673](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/673), stable `c4e7c743`.** Feedback del PO dopo aver scaricato PDF ed Excel dal server: titolo dell'articolo in grassetto, intestazione «Prezzo», filtri invariati, descrizione dell'azienda in prima pagina.
+
+**Ora.** Excel: titolo in grassetto e dettaglio piccolo grigio nella stessa cella (testo ricco), nell'Elenco la descrizione e in grassetto; intestazione solo «Prezzo» (il regime IVA resta nel foglio Indice, il piede del PDF non cambia); altezza delle righe ricalcolata (il test con Excel ha trovato 107 righe su 866 con testo tagliato PRIMA della correzione, 0 dopo). Descrizione (`aziende.Descrizione` dell'host) nuova nel frontespizio PDF (corsivo sotto il nome) e nel foglio Indice (celle unite con altezza calcolata); pulita da `App_Code/KeepStoreCatalogExportText.vb` (HTML decodificato, tag e controlli tolti, spazi compressi, vuota se e solo un indirizzo web, 255 caratteri, mai eccezioni); vuota = nessuna riga.
+
+**Revisioni.** ChatGPT (xhigh, prima chiamata in timeout a 20 minuti = NON ESEGUITA, rifatta) e Claude (Opus, con prove in Excel): SCARTATA la mia idea di trasformare codice ed EAN in numeri (`01` e `1` diventerebbero uguali: perdita di identita); accolti rich text, altezze con titolo piu largo, helper condiviso per la pulizia. RIMANDATI i triangolini verdi: Opus ha provato in Excel 16 che si sopprimono con record FEAT iniettati piu BOF modificato, ma non su altre versioni o programmi e non era richiesto (da proporre al PO).
+
+**Prove.** `Tools/Test-CatalogDownloadXls.ps1` (11 mutanti uccisi, Excel vero: grassetto per carattere, nessun testo tagliato dopo AutoFit su un campione di 866 righe), `Test-CatalogDownloadPdf.ps1` (descrizione una volta, nella prima pagina), `Test-CatalogExportText.ps1` (14 casi, 2000 stringhe casuali, 5 mutanti). Lezione di metodo: due test lanciati in parallelo sul LAB si sono rotti a vicenda (restore del sito); un solo test alla volta.
+
+**Limiti.** Triangolini verdi su codici/EAN ancora presenti (disattivabili in Excel); descrizione dal cache dei tenant (circa 10 minuti di ritardo); `Clean(codice, 40)` accorcia i codici molto lunghi (difetto preesistente).
+
 ## CATALOG-DOWNLOAD-1C — 24/11/2026 — SOURCE (Excel: prezzi corretti, filtri; data del nome)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#671](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/671), stable `8baaef41`.** Richiesta del PO: «Data: preferisco 24-11-2026», «Procedi con i soli filtri del listino», `listini.aspx` in standby.
