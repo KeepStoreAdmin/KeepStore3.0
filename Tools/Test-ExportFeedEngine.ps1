@@ -93,8 +93,7 @@ if (-not $SkipMutants -and $u.Compiled) {
 $svcSrc = Read-Repo 'App_Code\KeepStoreFeedService.vb'
 $pageSrc = Read-Repo 'feed.aspx.vb'
 $pageMarkup = Read-Repo 'feed.aspx'
-$guardCfg = Read-Repo 'Public\assets\images\export\web.config'
-function Test-Source([string]$svc, [string]$eng, [string]$page, [string]$markup, [string]$guard) {
+function Test-Source([string]$svc, [string]$eng, [string]$page, [string]$markup) {
     $f = New-Object Collections.Generic.List[string]
     # blocco: nome con il database, connessione dedicata senza pool, rilascio in Finally
     if ($svc -notmatch "GET_LOCK\(CONCAT\('ksfeed\.', MD5\(CONCAT\(DATABASE\(\), ':', @id\)\)\), 0\)") { $f.Add('S1 GET_LOCK senza il database nel nome o con attesa') }
@@ -134,16 +133,16 @@ function Test-Source([string]$svc, [string]$eng, [string]$page, [string]$markup,
     # pagina e cartella
     if ($markup -notmatch 'EnableSessionState="false"') { $f.Add('P1 sessione spenta') }
     if ($page -notmatch 'Public Overrides Sub ProcessRequest' -or $page -match 'MyBase\.ProcessRequest') { $f.Add('P2 ProcessRequest senza ciclo della pagina') }
-    if ($guard -notmatch 'fileExtensions allowUnlisted="false"' -or $guard -match '<add ') { $f.Add('P3 cartella: nessuna estensione ammessa') }
+    if ($svc -notmatch 'fileExtensions allowUnlisted=""false"" />' -or $svc -match '<add ') { $f.Add('P3 cartella: nessuna estensione ammessa') }
     if ($svc -notmatch 'allowUnlisted=""false""') { $f.Add('P4 il servizio non ricrea la guardia della cartella') }
     return $f.ToArray()
 }
 Write-Host '(B) sorgente'
-$sf = @(Test-Source $svcSrc $engineSrc $pageSrc $pageMarkup $guardCfg)
+$sf = @(Test-Source $svcSrc $engineSrc $pageSrc $pageMarkup)
 Check ($sf.Count -eq 0) ('B1 controlli sul sorgente (' + ($sf -join '; ') + ')')
 $policySrc = Read-Repo 'App_Code\StorefrontCanonicalHostPolicy.vb'
 Check ($policySrc -match '"listino-catalogo\.aspx", "feed\.aspx"') 'B2 feed.aspx e tra le pagine non indicizzabili'
-Check ((Read-Repo '.gitignore') -match '(?m)^/Public/assets/images/export/\*\r?$' -and (Read-Repo '.gitignore') -match '(?m)^!/Public/assets/images/export/web\.config') 'B3 i feed generati non si versionano, il web.config della cartella si'
+Check ((Read-Repo '.gitignore') -match '(?m)^/Public/assets/images/export/\s*$' -and -not (Test-Path -LiteralPath (Join-Path $root 'Public\assets\images\export\web.config'))) 'B3 la cartella dei feed (e il web.config di guardia scritto dal motore) non si versionano'
 $svcMutants = @(
     @('lock-senza-database', "MD5(CONCAT(DATABASE(), ':', @id))", "MD5(CONCAT('x', ':', @id))"),
     @('lock-con-attesa', "':', @id))), 0)", "':', @id))), 5)"),
@@ -173,7 +172,7 @@ if (-not $SkipMutants) {
         if ($MutantFilter -ne '' -and $m[0] -notlike ('*' + $MutantFilter + '*')) { continue }
         $total++
         if (-not $svcSrc.Contains($m[1])) { Write-Host ('  FAIL mutante sorgente ' + $m[0] + ': testo da mutare non trovato'); $e2e.Add('mutante sorgente ' + $m[0] + ' non applicabile'); continue }
-        $mut = @(Test-Source $svcSrc.Replace($m[1], $m[2]) $engineSrc $pageSrc $pageMarkup $guardCfg)
+        $mut = @(Test-Source $svcSrc.Replace($m[1], $m[2]) $engineSrc $pageSrc $pageMarkup)
         if ($mut.Count -gt 0) { $killed++; Write-Host ('  ok   mutante sorgente ' + $m[0] + ' ucciso (' + $mut[0] + ')') }
         else { Write-Host ('  FAIL mutante sorgente ' + $m[0] + ' sopravvissuto'); $e2e.Add('mutante sorgente ' + $m[0] + ' sopravvissuto') }
     }
