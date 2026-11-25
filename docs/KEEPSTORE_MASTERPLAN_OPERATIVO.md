@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## KS-H04-FEED-DESIGN-1A — 25/11/2026 — AUDIT E PROGETTO (docs)
+
+**Esito: A (solo documenti, nessun codice o database toccato).** Audit di `export.aspx`, `export_csv.aspx`, `export_amazon.aspx`, delle maschere del gestionale (`KeepStoreRepo`, sola lettura) e delle tabelle `export*` sul LAB (specchio di taikun, sola lettura); decisioni del PO 2026-11-25 recepite; progetto e programma dei task nel [documento dedicato](KEEPSTORE_FEED_COMPARATORI_AUDIT_2026_11_25.md); disegno delle tre maschere per Enzo in `docs/images/feed-comparatori/` (JPEG).
+
+**Fatti.** Ogni feed contiene un solo prodotto (`Response.End` nel ciclo, dal 2026-01-01); i feed csv (28 su 56) vanno in errore (dizionario sensibile alle maiuscole, causa molto probabile); `Abilitato` e ignorato; password deboli nel link; ogni richiesta rilegge il catalogo con una o due connessioni per riga; `export_amazon.aspx` senza accesso con `UPDATE` concatenato.
+
+**Decisioni del PO.** Cartella `Public/assets/images/export`; formati CSV, TXT, TSV e XML; tutto `https`; nessun comparatore preimpostato (ogni feed e un dato, duplicabile); Amazon fuori da questo programma (progetto separato, `export_amazon.aspx` si chiude); Google Merchant da studiare; Pixel di Meta e feed manager come task dedicati.
+
+**Progetto.** File pronto riusato (nome casuale), una sola rigenerazione alla volta con blocco nel database, interrogazione unica del catalogo, `304`, limite ai tentativi, codice di accesso creato dal database, colonne libere in tabella `export_colonne`; vecchi link validi finche la casella lo consente. Task: 0 `EXPORT-AMAZON-CLOSE-1A`, 1 `EXPORT-FEED-REPAIR-1A`, 2 `EXPORT-FEED-DB-1A`, 3 `EXPORT-FEED-ENGINE-1A`, 4 gestionale (Enzo), 5 `FEED-EXAMPLES-1A`, 6 `GOOGLE-MERCHANT-CENTER-FEED-1A`, 7 `META-PIXEL-1A`, 8 `FEED-RULES-1A`.
+
+**Limiti (NON AVVIATI).** Nessun task avviato; codice produttore, validita del file e feed ancora in uso sono decisioni aperte (sezione 7 del documento); la causa dei csv in errore va isolata nel task 1; Trovaprezzi e 7Pixel non pubblicano una specifica tecnica ufficiale (da chiedere all'account manager). CONSEGNA SERVER SOSPESA.
+
 ## EXPORT-SQL-PARAMS-1A — 25/11/2026 — SOURCE (iniezione SQL in export.aspx)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#684](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/684).** La pagina pubblica `export.aspx` costruiva tutte le sue query concatenando valori della richiesta (`id`, `pwd`) e dati di `export_filtri`: ora ogni valore passa da un parametro (`MySqlCommand.Parameters`), il testo SQL non contiene piu valori. Stesso risultato per i link gia consegnati (maiuscole, accenti, spazi finali, filtri, spedizione gratis come prima). Nessun dato commerciale toccato.
