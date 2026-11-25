@@ -215,7 +215,7 @@ Public NotInheritable Class StorefrontCanonicalHostPolicy
         "pay_your_orders.aspx", "paypalcheckout.aspx", "paypalpay.aspx", "paypalrecheck.aspx", "paypalreturn.aspx", "paypalwebhook.aspx",
         "promozioni.aspx", "registrazione.aspx", "registrazioneok.aspx", "remind.aspx", "reset-password.aspx", "resetpassword.aspx", "test.aspx",
         "track-your-order.aspx", "setup_listino_personalizzato.aspx", "bancasella.aspx", "responseclient.aspx",
-        "wishlist.aspx", "listino-catalogo.aspx"
+        "wishlist.aspx", "listino-catalogo.aspx", "feed.aspx"
     }
 
     Private Sub New()

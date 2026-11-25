@@ -1,2 +1,6 @@
 # Private installation configuration; the example remains versioned.
 /[Ww]eb.[Cc]onfig
+
+# Feed pronti generati dal sito (EXPORT-FEED-ENGINE-1A): mai versionati, resta solo il web.config della cartella.
+/Public/assets/images/export/*
+!/Public/assets/images/export/web.config

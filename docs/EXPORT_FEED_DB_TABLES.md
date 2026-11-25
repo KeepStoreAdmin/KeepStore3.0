@@ -7,7 +7,7 @@
 ## 1. Che cosa fa
 - Aggiunge a `export` quindici colonne di opzione (tutte con valore predefinito) e il **codice del link** `TokenAccesso`, creato **dal database** (48 caratteri esadecimali maiuscoli, `HEX(RANDOM_BYTES(24))`), con indice unico e controllo di formato. I feed che ci sono gia ricevono un codice distinto.
 - Crea `export_colonne` (le colonne del file, una riga per colonna) e `export_stato` (cosa ha fatto il sito: ultima generazione, ultima richiesta, righe, errore). Entrambe si cancellano da sole quando si cancella il feed (chiave esterna con cancellazione a catena).
-- **Non tocca** `exportcampi`, `export_filtri`, le routine del gestionale, ne alcun dato esistente. La riga `CategoriaPercorso` di `exportcampi` la aggiunge il task del motore, quando il motore la sa scrivere nel file.
+- **Non tocca** `exportcampi`, `export_filtri`, le routine del gestionale, ne alcun dato esistente. La riga `CategoriaPercorso` di `exportcampi` la aggiunge il task del gestionale (task 4): il motore (task 3) la scrive gia nel file, ma la riga serve solo al selettore dei campi del gestionale.
 
 ## 2. Come si esegue (SQLyog, un database alla volta, solo dopo il si del PO per quel database)
 I quattro script stanno in [EXPORT_FEED_DB_SCRIPTS](EXPORT_FEED_DB_SCRIPTS.md), un blocco ciascuno (non sono file `.sql` del repository: il repository e pubblico). Tutti gli script iniziano senza `USE`: si sceglie il database nello strumento. Attivare **Halt Execution of Queries on Error** e, dopo qualunque STOP o errore, chiudere la connessione prima di rilanciare (la sessione conserva le variabili).
