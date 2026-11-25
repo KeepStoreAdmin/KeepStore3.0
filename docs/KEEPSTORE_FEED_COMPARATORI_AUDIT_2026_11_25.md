@@ -1,6 +1,6 @@
 # KS-H04 — Feed per comparatori e canali: audit, progetto e programma dei task (2026-11-25)
 
-Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25); il task 1 `EXPORT-FEED-REPAIR-1A` e CHIUSO in SOURCE (PR 690, vedi sezioni 3 e 5), i task 0 e 2-8 NON sono avviati qui.** Sorgenti lette: `export.aspx.vb`, `export_csv.aspx.vb`, `export_amazon.aspx.vb` (dopo la PR 684), le maschere del gestionale `frmSettaggiExport`, `frmSettaggiExportGest`, `frmExportArticoli` (`KeepStoreRepo`, sola lettura), le tabelle `export`, `export_filtri`, `exportcampi`, `export_amazon`, `aziende` sul LAB (specchio di taikun, sola lettura) e le fonti pubbliche dei comparatori elencate in fondo. Nessun nome di cliente o valore di password in questo file: il repository e pubblico.
+Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25); il task 1 `EXPORT-FEED-REPAIR-1A` e CHIUSO in SOURCE (PR 691, vedi sezioni 3 e 5), i task 0 e 2-8 NON sono avviati qui.** Sorgenti lette: `export.aspx.vb`, `export_csv.aspx.vb`, `export_amazon.aspx.vb` (dopo la PR 684), le maschere del gestionale `frmSettaggiExport`, `frmSettaggiExportGest`, `frmExportArticoli` (`KeepStoreRepo`, sola lettura), le tabelle `export`, `export_filtri`, `exportcampi`, `export_amazon`, `aziende` sul LAB (specchio di taikun, sola lettura) e le fonti pubbliche dei comparatori elencate in fondo. Nessun nome di cliente o valore di password in questo file: il repository e pubblico.
 
 ## 1. Decisioni del PO (2026-11-25)
 
@@ -24,7 +24,7 @@ Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25); il task 1 `EXPORT-
 
 ## 3. Difetti verificati (con prova sul LAB)
 
-**Stato 2026-11-25 sera:** i difetti 1-3 e il prezzo sono CORRETTI in SOURCE dal task `EXPORT-FEED-REPAIR-1A` (PR 690, non pubblicato); il file dei vecchi indirizzi, ora completo (4.304 righe su 4.304 articoli), e l'**oracolo di confronto** per il motore nuovo. Restano aperti i punti 4, 6 e 7.
+**Stato 2026-11-25 sera:** i difetti 1-3 e il prezzo sono CORRETTI in SOURCE dal task `EXPORT-FEED-REPAIR-1A` (PR 691, non pubblicato); il file dei vecchi indirizzi, ora completo (4.304 righe su 4.304 articoli), e l'**oracolo di confronto** per il motore nuovo. Restano aperti i punti 4, 6 e 7.
 
 1. **Ogni feed contiene un solo prodotto:** `export.aspx.vb` chiama `Response.End()` dentro il ciclo, dopo la prima riga (dal primo caricamento, 2026-01-01). Provato con tre feed: intestazione + 1 riga.
 2. **I feed csv vanno in errore (302 verso la pagina di errore):** causa ISOLATA con una traccia vera sul LAB, sono **due difetti in sequenza**: (a) il dizionario che legge la riga di `export` distingue le maiuscole (`KeyNotFoundException`: il codice chiede `Valore`, `descrizione`, `nlistino`, MySQL restituisce `valore`, `Descrizione`, `NListino`); (b) dopo (a), `InvalidOperationException: Connection must be valid and open`: la pagina era stata copiata da `export.aspx` senza la connessione (il comando non ne aveva una). 28 feed su 56.
@@ -93,7 +93,7 @@ Tutti passano dal flusso canonico (verifica, pacchetto, ChatGPT xhigh, revisore 
 | # | Task | Liv. | Risultato | Dipende da |
 |---|---|---|---|---|
 | 0 | `EXPORT-AMAZON-CLOSE-1A` | S | `export_amazon.aspx` risponde «non disponibile» (410) senza leggere o scrivere nel database: chiusa l'iniezione e l'accesso aperto. Nota per il progetto Amazon del PO su che cosa e stato fatto | niente |
-| 1 | `EXPORT-FEED-REPAIR-1A` | L | **FATTO in SOURCE (PR 690, non pubblicato).** Sui vecchi link: via `Response.End` dal ciclo, csv corretto, `Abilitato`, `#DescrizioneLungaHtml#`, `https`, prezzo offerta per 1 pezzo, una riga per articolo, una sola connessione ausiliaria; il feed e completo e fa da oracolo | niente |
+| 1 | `EXPORT-FEED-REPAIR-1A` | L | **FATTO in SOURCE (PR 691, non pubblicato).** Sui vecchi link: via `Response.End` dal ciclo, csv corretto, `Abilitato`, `#DescrizioneLungaHtml#`, `https`, prezzo offerta per 1 pezzo, una riga per articolo, una sola connessione ausiliaria; il feed e completo e fa da oracolo | niente |
 | 2 | `EXPORT-FEED-DB-1A` | M | Migrazione unica (colonne di `export`, tabella `export_colonne`, due campi in `exportcampi`, creazione del codice nel database), con ritorno indietro e verifica; applicata dal PO su taikun, poi il programma di Enzo | 1 |
 | 3 | `EXPORT-FEED-ENGINE-1A` | L | Motore, `feed.aspx`, file pronto in `Public/assets/images/export`, blocco unico, `304`, anteprima di 20 righe; prove su LAB con il carico di 100 richieste e le mutazioni | 2 |
 | 4 | Gestionale (Enzo) | — | Le tre maschere del disegno, tolti i riferimenti ad Amazon; vedi sezione 6 | 2, 3 |

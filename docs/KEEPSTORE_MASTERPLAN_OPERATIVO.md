@@ -2,7 +2,7 @@
 
 ## EXPORT-FEED-REPAIR-1A — 25/11/2026 — SOURCE (vecchi indirizzi dei feed completi e corretti)
 
-**Esito: A (SOURCE, non pubblicato). Livello L. PR [#690](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/690).** `export.aspx` e `export_csv.aspx` tornano a produrre il file intero (prima intestazione + un prodotto; i csv in errore), con una riga per articolo, prezzo offerta per 1 pezzo se in promozione oggi (altrimenti listino, mai scaglioni), `https`, `Abilitato` rispettato e `#DescrizioneLungaHtml#` riconosciuto. Area CRITICAL toccata: prezzi pubblici nei feed. Nessun database toccato.
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#691](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/691).** `export.aspx` e `export_csv.aspx` tornano a produrre il file intero (prima intestazione + un prodotto; i csv in errore), con una riga per articolo, prezzo offerta per 1 pezzo se in promozione oggi (altrimenti listino, mai scaglioni), `https`, `Abilitato` rispettato e `#DescrizioneLungaHtml#` riconosciuto. Area CRITICAL toccata: prezzi pubblici nei feed. Nessun database toccato.
 
 **Fatti e causa.** Causa dei csv ISOLATA con traccia vera: due difetti in sequenza (dizionario sensibile alle maiuscole; comando senza connessione). Prezzo: la vista ha una riga per offerta, il filtro vecchio dava 16 articoli ripetuti, ne perdeva 3 e usava promozioni a scaglioni o a multipli. Trovati anche: prima riga di filtro che ignorava `ArticoliId` (esportava tutto il catalogo), `#id#` assente nei csv, peso oltre l'ultima fascia, `Val` che tagliava la spedizione. Prestazioni (4.304 articoli, senza pool come il server online): 92,9 s e 8.642 connessioni per richiesta, ora 4,4 s e 2.
 
