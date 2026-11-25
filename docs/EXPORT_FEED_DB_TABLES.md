@@ -10,7 +10,7 @@
 - **Non tocca** `exportcampi`, `export_filtri`, le routine del gestionale, ne alcun dato esistente. La riga `CategoriaPercorso` di `exportcampi` la aggiunge il task del motore, quando il motore la sa scrivere nel file.
 
 ## 2. Come si esegue (SQLyog, un database alla volta, solo dopo il si del PO per quel database)
-Tutti gli script iniziano senza `USE`: si sceglie il database nello strumento. Attivare **Halt Execution of Queries on Error** e, dopo qualunque STOP o errore, chiudere la connessione prima di rilanciare (la sessione conserva le variabili).
+I quattro script stanno in [EXPORT_FEED_DB_SCRIPTS](EXPORT_FEED_DB_SCRIPTS.md), un blocco ciascuno (non sono file `.sql` del repository: il repository e pubblico). Tutti gli script iniziano senza `USE`: si sceglie il database nello strumento. Attivare **Halt Execution of Queries on Error** e, dopo qualunque STOP o errore, chiudere la connessione prima di rilanciare (la sessione conserva le variabili).
 1. `20261125_EXPORT_FEED_DB_1A_preflight.sql` (sola lettura): deve dare `EXPORT_FEED_DB_PREFLIGHT_OK`. Mostra database, server, versione e numero di feed: controllare che sia il database voluto. Si ferma se la versione e inferiore a MySQL 8.0.19, se e MariaDB, se il registro binario e attivo in formato `STATEMENT` (i codici sarebbero diversi sulla replica) o se `export` non e come atteso.
 2. `20261125_EXPORT_FEED_DB_1A_forward.sql`: otto passi (`-- STEP 1` ... `-- STEP 8`); alla fine `EXPORT_FEED_DB_FORWARD_OK`. **Si puo rilanciare dopo qualunque interruzione**: ogni passo guarda lo stato reale del database e salta quello che c'e gia.
 3. `20261125_EXPORT_FEED_DB_1A_verify.sql` (sola lettura): tutte le righe `OK` e, in fondo, `EXPORT_FEED_DB_VERIFY_OK`; altrimenti errore deliberato.

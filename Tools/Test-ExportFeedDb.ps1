@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param([switch]$SkipMutants, [string]$MutantFilter = '')
 
-# EXPORT-FEED-DB-1A. Prova della migrazione unica dei dati dei feed (Database Taikun/Migrations/20261125_EXPORT_FEED_DB_1A_*.sql) sul LAB locale:
+# EXPORT-FEED-DB-1A. Prova della migrazione unica dei dati dei feed (i quattro script in docs/EXPORT_FEED_DB_SCRIPTS.md) sul LAB locale:
 #  - preflight, forward, verify, rollback eseguiti dagli script REALI (nessuna copia di prova), sul database LAB (identita verificata da Invoke-KeepStoreLabSql);
 #  - le routine del gestionale (Newexport, Modexport, Delexport) continuano a funzionare con la firma attuale e non toccano le colonne nuove;
 #  - il codice del link (TokenAccesso) lo crea il database: 48 caratteri esadecimali maiuscoli, distinti, unico, regolare anche per le righe esistenti e per quelle inserite
@@ -17,11 +17,19 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
-$migDir = Join-Path $root 'Database Taikun\Migrations'
+$scriptsDoc = Join-Path $root 'docs\EXPORT_FEED_DB_SCRIPTS.md'
 $prefix = '20261125_EXPORT_FEED_DB_1A_'
 $labSql = Join-Path $root 'Tools\Invoke-KeepStoreLabSql.ps1'
 $tmp = Join-Path $env:TEMP ('ks-exportfeeddb-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+# Gli script stanno in blocchi di docs/EXPORT_FEED_DB_SCRIPTS.md (il repository pubblico non ammette file .sql nuovi): si estraggono in una cartella temporanea con i nomi di file attesi.
+$migDir = Join-Path $tmp 'mig'
+New-Item -ItemType Directory -Force -Path $migDir | Out-Null
+$docText = [IO.File]::ReadAllText($scriptsDoc, $utf8)
+foreach ($k in @('preflight', 'forward', 'verify', 'rollback')) {
+    $m = [regex]::Match($docText, '(?s)## ' + [regex]::Escape($prefix + $k) + '\.sql\r?\n\r?\n```sql\r?\n(.*?)\r?\n```')
+    if ($m.Success) { [IO.File]::WriteAllText((Join-Path $migDir ($prefix + $k + '.sql')), ($m.Groups[1].Value -replace '\r\n', "`n"), $utf8) }
+}
 $confirm = 'SET @KeepStoreConfirmDropFeedData=1;' + "`n"
 
 function Invoke-Sql([string]$sql, [switch]$Write) {
