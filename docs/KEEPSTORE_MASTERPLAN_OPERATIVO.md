@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## EXPORT-FEED-DB-1A — 25/11/2026 — SOURCE (dati dei feed: colonne di opzione, codice del link, export_colonne, export_stato)
+
+**Esito: A (SOURCE, script NON applicati a nessun database reale). Livello L (schema). PR PRNUM.** Migrazione unica `20261125_EXPORT_FEED_DB_1A` (preflight, forward, verify, rollback) e pagina per PO ed Enzo [EXPORT_FEED_DB_TABLES](EXPORT_FEED_DB_TABLES.md): quindici colonne di opzione e `TokenAccesso` (codice del link creato dal database) in `export`, tabelle `export_colonne` e `export_stato`. Nessuna routine, trigger, `DEFINER`; `Newexport`/`Modexport`/`Delexport`, `exportcampi` e `export_filtri` non cambiano; nessun file del sito cambia.
+
+**Fatti e causa.** (1) Un solo `ALTER` con predefinito `HEX(RANDOM_BYTES(24))` fallisce (ERROR 1674) anche con `log_bin=0`; funziona in cinque passi (colonna NULL, predefinito, riempimento, non nullo + unico + CHECK). (2) Il predefinito va impostato PRIMA del riempimento: una riga creata nel frattempo riceve il codice (misura su tabella di prova). (3) `Modexport` ha 18 parametri IN + 1 OUT, `Newexport` 17 + 1; usano colonne nominate. (4) `Condizione` esiste gia in `exportcampi`; `CategoriaPercorso` passa al task del motore. (5) Il gestionale legge `Select * from Export`: vedra le colonne nuove nella griglia fino al suo task.
+
+**Revisioni.** ChatGPT (xhigh): eseguita — accolto: finestra fra riempimento e vincolo, rollback distruttivo, riprese dopo interruzione, oracolo con codice errato, `export_stato` con LEFT JOIN, parametri di `Modexport`; scartato: nessuno (privilegi per colonna: vero, ma non provato dal programma di Enzo, `export_stato` resta per un motivo diverso). Claude (Opus): eseguita — accolto: arresto con binlog STATEMENT, forward ripetibile da `information_schema`, COLLATE esplicita, rollback con conferma, test 7 senza `AUTO_INCREMENT`; rimandato: indice su `export_filtri(ExportId)`, orfani, race di `Newexport` (task motore e gestionale). Gate di certezza: PASS con i limiti sotto.
+
+**Prove.** `Tools/Test-ExportFeedDb.ps1` sul LAB: script reali, ripresa e rollback dopo ogni interruzione (8 passi), routine del gestionale con la firma reale, cascata, codice errato/duplicato rifiutato, binlog STATEMENT, 20 mutanti uccisi (alcuni dal verify stesso: doppia difesa); scrive solo righe sintetiche e riporta lo schema allo stato iniziale. Guardia dei segreti e `git diff --check` verdi.
+
+**Limiti e residuo (NON AVVIATO).** Provato su 8.0.46 senza registro binario, non su 8.0.42, non con replica, non con SQLyog. Domanda aperta a Enzo: il programma di allineamento esegue lo script o confronta gli schemi (nel secondo caso ERROR 1674 o codici uguali, fermati dall'indice unico). Task 3 motore, 4 gestionale, 5-8 NON AVVIATI. **Alla consegna futura:** nessun file del sito; il PO applica gli script solo su `taikun`, dopo il suo si. CONSEGNA SERVER SOSPESA.
+
 ## EXPORT-FEED-REPAIR-1A — 25/11/2026 — SOURCE (vecchi indirizzi dei feed completi e corretti)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#691](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/691).** `export.aspx` e `export_csv.aspx` tornano a produrre il file intero (prima intestazione + un prodotto; i csv in errore), con una riga per articolo, prezzo offerta per 1 pezzo se in promozione oggi (altrimenti listino, mai scaglioni), `https`, `Abilitato` rispettato e `#DescrizioneLungaHtml#` riconosciuto. Area CRITICAL toccata: prezzi pubblici nei feed. Nessun database toccato.

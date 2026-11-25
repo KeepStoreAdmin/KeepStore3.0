@@ -1,6 +1,6 @@
 # KS-H04 — Feed per comparatori e canali: audit, progetto e programma dei task (2026-11-25)
 
-Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25); il task 1 `EXPORT-FEED-REPAIR-1A` e CHIUSO in SOURCE (PR 691, vedi sezioni 3 e 5), i task 0 e 2-8 NON sono avviati qui.** Sorgenti lette: `export.aspx.vb`, `export_csv.aspx.vb`, `export_amazon.aspx.vb` (dopo la PR 684), le maschere del gestionale `frmSettaggiExport`, `frmSettaggiExportGest`, `frmExportArticoli` (`KeepStoreRepo`, sola lettura), le tabelle `export`, `export_filtri`, `exportcampi`, `export_amazon`, `aziende` sul LAB (specchio di taikun, sola lettura) e le fonti pubbliche dei comparatori elencate in fondo. Nessun nome di cliente o valore di password in questo file: il repository e pubblico.
+Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25); i task 0 (`EXPORT-AMAZON-CLOSE-1A`, PR 687) e 1 (`EXPORT-FEED-REPAIR-1A`, PR 691 e 692) sono CHIUSI in SOURCE; il task 2 `EXPORT-FEED-DB-1A` e pronto in SOURCE (script provati sul LAB, NON applicati a nessun database reale: vedi [EXPORT_FEED_DB_TABLES](EXPORT_FEED_DB_TABLES.md)); i task 3-8 NON sono avviati.** Sorgenti lette: `export.aspx.vb`, `export_csv.aspx.vb`, `export_amazon.aspx.vb` (dopo la PR 684), le maschere del gestionale `frmSettaggiExport`, `frmSettaggiExportGest`, `frmExportArticoli` (`KeepStoreRepo`, sola lettura), le tabelle `export`, `export_filtri`, `exportcampi`, `export_amazon`, `aziende` sul LAB (specchio di taikun, sola lettura) e le fonti pubbliche dei comparatori elencate in fondo. Nessun nome di cliente o valore di password in questo file: il repository e pubblico.
 
 ## 1. Decisioni del PO (2026-11-25)
 
@@ -78,23 +78,24 @@ In XML ogni colonna e un elemento con il titolo come nome (per Google RSS 2.0 il
 | `MinutiCache` | `int` | `60` | no | validita del file pronto |
 | `ParolaDisponibile`, `ParolaInArrivo`, `ParolaNonDisponibile` | `varchar(40)` | `Disponibile`, `In Arrivo`, `Non Disponibile` | no | parole scritte nel campo disponibilita |
 | `SenzaImmagine`, `SenzaEan`, `PrezzoZero` | `int` | `0`, `0`, `1` | no | 1 = scarta il prodotto |
-| `UltimaGenerazioneUtc`, `UltimaRichiestaUtc` | `datetime` | nessuno | si | scritte dal sito |
-| `UltimeRighe`, `UltimeScartate` | `int` | nessuno | si | scritte dal sito |
-| `UltimoErrore` | `varchar(200)` | nessuno | si | scritta dal sito, senza dati sensibili |
+| `UltimaGenerazioneUtc`, `UltimaRichiestaUtc` | `datetime` | nessuno | si | scritte dal sito: **nella tabella `export_stato`**, non in `export` (vedi sotto) |
+| `UltimeRighe`, `UltimeScartate` | `int` | nessuno | si | scritte dal sito: in `export_stato` |
+| `UltimoErrore` | `varchar(200)` | nessuno | si | scritta dal sito, senza dati sensibili: in `export_stato` |
 
+**Tabella nuova `export_stato`** (decisione del task 2, motivi verificabili: il salvataggio del gestionale non compete con le scritture del sito, la configurazione resta in sola lettura per il sito): `ExportId` (`int`, chiave primaria e chiave esterna verso `export(ID)` con cancellazione a catena) e le cinque colonne di stato sopra, tutte vuote ammesse; la riga nasce alla prima scrittura del sito (il gestionale la legge con `LEFT JOIN`). Dettaglio e script in [EXPORT_FEED_DB_TABLES](EXPORT_FEED_DB_TABLES.md); il codice del link si crea in cinque passi perche un solo `ALTER` con `RANDOM_BYTES` fallisce (ERROR 1674).
 **Tabella nuova `export_colonne`:** `Id` (`int`, automatico, chiave), `ExportId` (`int`, non nullo, indice), `Posizione` (`int`, non nullo, unico con `ExportId`), `TitoloColonna` (`varchar(60)`), `Campo` (`varchar(40)`, vuoto = valore fisso), `Prefisso`, `Suffisso` (`varchar(40)`), `ValoreFisso` (`varchar(100)`), `MassimoCaratteri` (`int`, NULL), `SeVuoto` (`varchar(100)`).
-**`exportcampi`:** si aggiungono `Condizione` e `CategoriaPercorso` (Settore > Categoria > Tipologia > Gruppo). Il tempo di consegna si ottiene con `GiorniSpedizione` piu un suffisso (es. ` giorni lavorativi`). **Codice produttore:** il magazzino ha un solo codice (`Codice`); finche non esiste un campo dedicato si usa quello (decisione aperta, sezione 7).
+**`exportcampi`:** `Condizione` esiste gia; `CategoriaPercorso` (Settore > Categoria > Tipologia > Gruppo) si aggiunge **nel task 3**, quando il motore la sa scrivere (il vecchio generatore scriverebbe il segnaposto letterale). Il tempo di consegna si ottiene con `GiorniSpedizione` piu un suffisso (es. ` giorni lavorativi`). **Codice produttore:** il magazzino ha un solo codice (`Codice`); si usa quello (decisione del PO 2026-11-25, sezione 1 punto 10).
 **Nessuna colonna rimossa:** `Google`, `Amazon`, `NoVettoreSuGratis` restano nel database (non si cancellano dati), spariscono dalle maschere. `Password` resta nel database (non si cancellano dati) ma il motore nuovo non la usa.
 
-## 5. Programma dei task (nessuno avviato; ordine consigliato)
+## 5. Programma dei task (0 e 1 chiusi, 2 pronto in SOURCE, 3-8 non avviati; ordine consigliato)
 
 Tutti passano dal flusso canonico (verifica, pacchetto, ChatGPT xhigh, revisore Opus, decisione, codice). Un task = un risultato per il cliente.
 
 | # | Task | Liv. | Risultato | Dipende da |
 |---|---|---|---|---|
-| 0 | `EXPORT-AMAZON-CLOSE-1A` | S | `export_amazon.aspx` risponde «non disponibile» (410) senza leggere o scrivere nel database: chiusa l'iniezione e l'accesso aperto. Nota per il progetto Amazon del PO su che cosa e stato fatto | niente |
+| 0 | `EXPORT-AMAZON-CLOSE-1A` | S | **FATTO in SOURCE (PR 687).** `export_amazon.aspx` risponde «non disponibile» (410) senza leggere o scrivere nel database: chiusa l'iniezione e l'accesso aperto. Nota per il progetto Amazon del PO su che cosa e stato fatto | niente |
 | 1 | `EXPORT-FEED-REPAIR-1A` | L | **FATTO in SOURCE (PR 691, non pubblicato).** Sui vecchi link: via `Response.End` dal ciclo, csv corretto, `Abilitato`, `#DescrizioneLungaHtml#`, `https`, prezzo offerta per 1 pezzo, una riga per articolo, una sola connessione ausiliaria; il feed e completo e fa da oracolo | niente |
-| 2 | `EXPORT-FEED-DB-1A` | M | Migrazione unica (colonne di `export`, tabella `export_colonne`, due campi in `exportcampi`, creazione del codice nel database), con ritorno indietro e verifica; applicata dal PO su taikun, poi il programma di Enzo | 1 |
+| 2 | `EXPORT-FEED-DB-1A` | L | **PRONTO in SOURCE (script provati sul LAB, non applicati).** Migrazione unica (colonne di `export`, tabella `export_colonne`, due campi in `exportcampi`, creazione del codice nel database), con ritorno indietro e verifica; applicata dal PO su taikun, poi il programma di Enzo | 1 |
 | 3 | `EXPORT-FEED-ENGINE-1A` | L | Motore, `feed.aspx`, file pronto in `Public/assets/images/export`, blocco unico, `304`, anteprima di 20 righe; prove su LAB con il carico di 100 richieste e le mutazioni | 2 |
 | 4 | Gestionale (Enzo) | — | Le tre maschere del disegno, tolti i riferimenti ad Amazon; vedi sezione 6 | 2, 3 |
 | 5 | `FEED-EXAMPLES-1A` | S | Tre feed di esempio **come dati** (Google Merchant, Trovaprezzi/7Pixel, idealo) con le colonne richieste dalle loro specifiche; il PO li duplica o li cancella | 3 |
