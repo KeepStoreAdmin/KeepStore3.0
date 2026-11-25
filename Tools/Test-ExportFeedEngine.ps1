@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$OnlyUnit, [switch]$SkipSite, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
+param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$OnlyUnit, [switch]$SkipSite, [switch]$Cleanup, [string]$SitePath = 'C:\Temp\KeepStoreRegOrderLab-20261025\site')
 
 # EXPORT-FEED-ENGINE-1A. Prova del motore dei feed (App_Code\KeepStoreFeedEngine.vb, KeepStoreFeedService.vb, feed.aspx):
 #  (A) prova unitaria del motore puro (formati, escape, nomi XML, spedizione a token esatti, arrotondamenti, scarti) + mutazioni del motore;
@@ -8,6 +8,8 @@ param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$OnlyUnit, [swit
 #      prezzo del sito per utente anonimo (14 casi di promozione sintetici + oracolo SQL su tutto il catalogo), formati, 304/HEAD/ETag, revoca, nuovo codice, URL statico negato,
 #      azienda del feed, errori di configurazione senza pubblicare, cooldown, un solo lavoratore sotto richieste sovrapposte, nessuna interrogazione con file pronto, prestazioni.
 # Scrive solo righe sintetiche (ID 9301-9330, offerte 9990101-9990140), tre campi di UN articolo (ripristinati) e i file in Public\assets\images\export del SITO LAB; la migrazione si annulla alla fine con il rollback.
+# Durata circa 12 minuti con le mutazioni: con Tools\Run-KeepStoreRelatedTests.ps1 serve -TimeoutSec 1800 (il tempo predefinito di 480 s interrompe la prova e lascia sul LAB la migrazione e le righe
+# sintetiche). Se la prova e stata interrotta: rilanciare con -Cleanup (riporta LAB e sito allo stato iniziale; non fa nient'altro).
 # Un solo uso del sito LAB alla volta: mutex Global\KeepStoreLabSite18843. Mai password in output. Solo ASCII (Windows PowerShell 5.1).
 
 Set-StrictMode -Version Latest
@@ -307,6 +309,32 @@ $folder = Join-Path $SitePath 'Public\assets\images\export'
 function Clear-FeedFiles { if (Test-Path -LiteralPath $folder) { Get-ChildItem -LiteralPath $folder -File | Remove-Item -Force } }
 function Clear-FeedFolder { if (Test-Path -LiteralPath $folder) { Remove-Item -LiteralPath $folder -Recurse -Force } }
 
+if ($Cleanup) {
+    # Recupero dopo una prova interrotta: righe sintetiche, offerte, articoli, migrazione e file del sito.
+    $uuid = Get-Scalar 'SELECT @@server_uuid AS ksval;'
+    if ($uuid -ne '1167ebae-d0c0-11f1-b348-9c7bef540c10') { throw 'NOT_THE_LAB' }
+    $np = Get-Scalar 'SELECT ArticoliId AS ksval FROM offertedettaglio WHERE id=9990114;'
+    $q = New-Object Text.StringBuilder
+    if ($np -match '^[0-9]+$') { [void]$q.AppendLine('UPDATE articoli SET NoPromo=0 WHERE id=' + $np + ' AND NoPromo=1;') }
+    if ((Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='ks_feedengine_trick';") -eq '1') {
+        [void]$q.AppendLine('UPDATE articoli a JOIN ks_feedengine_trick t ON t.id=a.id SET a.Descrizione1=t.Descrizione1, a.Descrizione2=t.Descrizione2, a.Ean=t.Ean, a.DescrizioneHTML=t.DescrizioneHTML, a.SpedizioneGratis_Listini=t.SpedizioneGratis_Listini, a.SpedizioneGratis_Data_Inizio=t.SpedizioneGratis_Data_Inizio, a.SpedizioneGratis_Data_Fine=t.SpedizioneGratis_Data_Fine;')
+        [void]$q.AppendLine('DROP TABLE IF EXISTS ks_feedengine_trick;')
+    }
+    [void]$q.AppendLine('DELETE FROM voffertearticoli WHERE OfferteID BETWEEN 9990101 AND 9990140;')
+    [void]$q.AppendLine('DELETE FROM offertedettaglio WHERE id BETWEEN 9990101 AND 9990140;')
+    [void]$q.AppendLine('DELETE FROM offerte WHERE id BETWEEN 9990101 AND 9990140;')
+    $null = Invoke-Sql $q.ToString() -Write
+    if ((Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export' AND COLUMN_NAME='TokenAccesso';") -eq '1') {
+        $null = Invoke-Sql 'DELETE FROM export_filtri WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM export_colonne WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM export_stato WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM `export` WHERE ID BETWEEN 9301 AND 9330 AND Descrizione LIKE ''KSFEEDENGINE%'';' -Write
+        $rb = (Invoke-Sql ('SET @KeepStoreConfirmDropFeedData=1;' + "`n" + [IO.File]::ReadAllText((Join-Path $migDir ($prefixMig + 'rollback.sql')), $utf8)) -Write) -join "`n"
+        Write-Host ('  rollback della migrazione: ' + $(if ($rb -match 'EXPORT_FEED_DB_ROLLBACK_OK') { 'ok' } else { 'NON RIUSCITO' }))
+    }
+    foreach ($rel in 'feed.aspx', 'feed.aspx.vb', 'App_Code\KeepStoreFeedEngine.vb', 'App_Code\KeepStoreFeedService.vb') { $p = Join-Path $SitePath $rel; if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force } }
+    if (Test-Path -LiteralPath $folder) { Remove-Item -LiteralPath $folder -Recurse -Force }
+    Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host 'EXPORT_FEED_ENGINE CLEANUP DONE'; exit 0
+}
+
 $siteMutex = New-Object System.Threading.Mutex($false, 'Global\KeepStoreLabSite18843'); $siteHeld = $false
 $migApplied = $false; $fixtures = $false; $trickBackup = $false; $trickId = 0; $noPromoArt = $null; $folderPreexisted = Test-Path -LiteralPath $folder
 try {
@@ -320,7 +348,7 @@ try {
 
     # --- migrazione reale: preflight, forward, verify ---
     $hasToken = Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export' AND COLUMN_NAME='TokenAccesso';"
-    if ($hasToken -ne '0') { throw 'MIGRATION_ALREADY_APPLIED_ON_LAB' }
+    if ($hasToken -ne '0') { throw 'MIGRATION_ALREADY_APPLIED_ON_LAB (prova precedente interrotta: rilanciare con -Cleanup)' }
     $pf = (Invoke-Sql ([IO.File]::ReadAllText((Join-Path $migDir ($prefixMig + 'preflight.sql')), $utf8))) -join "`n"
     Check ($pf -match 'EXPORT_FEED_DB_PREFLIGHT_OK') 'C0 preflight della migrazione'
     $fw = (Invoke-Sql ([IO.File]::ReadAllText((Join-Path $migDir ($prefixMig + 'forward.sql')), $utf8)) -Write) -join "`n"
