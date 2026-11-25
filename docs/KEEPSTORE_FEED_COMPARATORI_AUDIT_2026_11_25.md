@@ -1,6 +1,6 @@
 # KS-H04 — Feed per comparatori e canali: audit, progetto e programma dei task (2026-11-25)
 
-Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25), NESSUN TASK ANCORA AVVIATO, nessuna modifica al codice o al database in questa voce.** Sorgenti lette: `export.aspx.vb`, `export_csv.aspx.vb`, `export_amazon.aspx.vb` (dopo la PR 684), le maschere del gestionale `frmSettaggiExport`, `frmSettaggiExportGest`, `frmExportArticoli` (`KeepStoreRepo`, sola lettura), le tabelle `export`, `export_filtri`, `exportcampi`, `export_amazon`, `aziende` sul LAB (specchio di taikun, sola lettura) e le fonti pubbliche dei comparatori elencate in fondo. Nessun nome di cliente o valore di password in questo file: il repository e pubblico.
+Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25); il task 1 `EXPORT-FEED-REPAIR-1A` e CHIUSO in SOURCE (PR @@PR@@, vedi sezioni 3 e 5), i task 0 e 2-8 NON sono avviati qui.** Sorgenti lette: `export.aspx.vb`, `export_csv.aspx.vb`, `export_amazon.aspx.vb` (dopo la PR 684), le maschere del gestionale `frmSettaggiExport`, `frmSettaggiExportGest`, `frmExportArticoli` (`KeepStoreRepo`, sola lettura), le tabelle `export`, `export_filtri`, `exportcampi`, `export_amazon`, `aziende` sul LAB (specchio di taikun, sola lettura) e le fonti pubbliche dei comparatori elencate in fondo. Nessun nome di cliente o valore di password in questo file: il repository e pubblico.
 
 ## 1. Decisioni del PO (2026-11-25)
 
@@ -13,6 +13,7 @@ Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25), NESSUN TASK ANCORA
 7. **Amazon:** il PO ha aperto un progetto separato (con ChatGPT e Claude Code). In questo programma Amazon **si toglie**: `export_amazon.aspx` si chiude e dalle maschere del gestionale sparisce tutto cio che riguarda Amazon. Il PO riportera le informazioni del progetto Amazon e si uniranno in questo manuale.
 8. **Maschere del gestionale:** disegno consegnato come immagini JPEG (cartella `docs/images/feed-comparatori/`), nello stile griglia Janus, semplice, da dare a Enzo.
 9. **Studiare un task dedicato per il Pixel di Meta** (campo gia presente in `aziende`) e, piu avanti, una **funzione tipo «feed manager/connettore»** (regole sui feed, canali).
+10. **Risposte del PO sulle decisioni aperte (2026-11-25):** (a) **codice produttore = `Codice`** (decisione chiusa: nessun campo nuovo al magazzino); (b) **file valido 1 ora** (`MinutiCache` = 60, chiusa); (c) **nessun feed e in uso e si possono cancellare:** la compatibilita dei vecchi link con `id` e password **non serve piu** nel motore nuovo (tolti dal progetto `LinkVecchioAttivo` e il ponte; i vecchi indirizzi `export.aspx` e `export_csv.aspx` si cancellano quando il motore nuovo e pronto); (d) **regola del prezzo:** la colonna prezzo e il **prezzo OFFERTA per 1 pezzo se l'articolo e in promozione in quel momento, altrimenti il prezzo di listino, mai prezzi a scaglioni di quantita**, con la valuta come suffisso della colonna (es. ` EUR`).
 
 ## 2. Come funziona oggi (fatti)
 
@@ -23,12 +24,16 @@ Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25), NESSUN TASK ANCORA
 
 ## 3. Difetti verificati (con prova sul LAB)
 
+**Stato 2026-11-25 sera:** i difetti 1-3 e il prezzo sono CORRETTI in SOURCE dal task `EXPORT-FEED-REPAIR-1A` (PR @@PR@@, non pubblicato); il file dei vecchi indirizzi, ora completo (4.304 righe su 4.304 articoli), e l'**oracolo di confronto** per il motore nuovo. Restano aperti i punti 4, 6 e 7.
+
 1. **Ogni feed contiene un solo prodotto:** `export.aspx.vb` chiama `Response.End()` dentro il ciclo, dopo la prima riga (dal primo caricamento, 2026-01-01). Provato con tre feed: intestazione + 1 riga.
-2. **I feed csv vanno in errore (302 verso la pagina di errore):** `export_csv.aspx.vb` legge le colonne con un dizionario che distingue le maiuscole; causa molto probabile letta nel codice, errore riprodotto, non ancora isolato con una traccia. 28 feed su 56.
-3. `#DescrizioneLungaHtml#` non e riconosciuto (il testo letterale finisce nel file); `Abilitato`, `Tipo` e i flag Google e Amazon sono ignorati dalla pagina.
+2. **I feed csv vanno in errore (302 verso la pagina di errore):** causa ISOLATA con una traccia vera sul LAB, sono **due difetti in sequenza**: (a) il dizionario che legge la riga di `export` distingue le maiuscole (`KeyNotFoundException`: il codice chiede `Valore`, `descrizione`, `nlistino`, MySQL restituisce `valore`, `Descrizione`, `NListino`); (b) dopo (a), `InvalidOperationException: Connection must be valid and open`: la pagina era stata copiata da `export.aspx` senza la connessione (il comando non ne aveva una). 28 feed su 56.
+3. `#DescrizioneLungaHtml#` non e riconosciuto (il testo letterale finisce nel file; 17 feed su 56 lo usano; il gestionale non lo conosce, ma e la descrizione lunga con i tag HTML = colonna `DescrizioneHTML`: ora e trattato come `#DescrizioneHtml#`); `Abilitato`, `Tipo` e i flag Google e Amazon sono ignorati dalla pagina (`Abilitato` ora vale, in modo prudente: spento o vuoto = «Feed non disponibile»).
 4. Password corte e in chiaro (40 su 56 sotto 8 caratteri, 5 identiche), nel link e nel database; `id` progressivo; nessun limite ai tentativi. La PR 684 ha chiuso l'iniezione SQL di `export.aspx`.
 5. **Prestazioni:** ogni richiesta rilegge la vista `vsuperarticoli` e apre una o due connessioni in piu **per ogni riga** (secondo prezzo, spedizione gratis); alcune non si chiudono. Con 4.300 articoli e piu comparatori e un costo evitabile.
-6. Qualita del file: link e immagini `http://`; entita HTML (`&agrave;`) anche nei csv; nessuna quotatura csv; `CampoVuoto2/3` scrivono il valore del primo; resti di debug.
+6. Qualita del file: link e immagini `http://` (**corretto: `https://`**); entita HTML (`&agrave;`) anche nei csv; nessuna quotatura csv; `CampoVuoto2/3` scrivono il valore del primo; resti di debug.
+
+**Trovati e corretti nello stesso task (provati sul LAB):** (i) la **prima** riga di filtro di `export_filtri` ignorava `ArticoliId`: un feed con selezioni di singoli articoli esportava tutto il catalogo (3 feed del LAB con la prima riga «solo articolo»); (ii) la vista `vsuperarticoli` ha **una riga per offerta**: il filtro vecchio produceva 16 articoli ripetuti, ne perdeva 3 (solo scaglioni o solo multipli) e usava la promozione senza guardare la quantita minima; (iii) `#id#` non era sostituito nei csv (3 feed lo usano); (iv) peso oltre l'ultima fascia del vettore interrompeva il feed; (v) csv con IVA inclusa e spedizione: `Val("6,56")` tagliava il costo a 6. **Prestazioni misurate (LAB, senza pool come il server online, 4.304 articoli, formato con `#Prezzo2#` e `#CostoSpedizioneProdo#`):** prima 92,9 s e 8.642 connessioni fisiche per una richiesta; dopo 4,4 s e 2 connessioni (3 nel csv). **Aperti, fuori da quel task:** `%1;%` riconosce anche `11;` nella spedizione gratis (stessa regola della scheda articolo, il carrello usa i token esatti); `Tutto_in_minuscolo=1` nel csv; a-capo isolati nelle descrizioni; entita HTML e quotatura; nessuna foto prodotto sul LAB (la costruzione `https` delle immagini e provata solo sul sorgente).
 7. `export_amazon.aspx`: senza autenticazione, `UPDATE` con testo concatenato (iniezione con scrittura), mostra la configurazione; il gestionale non lo richiama.
 
 ## 4. Progetto: un motore a feed liberi, veloce e protetto
@@ -48,10 +53,12 @@ Stato: **PROGETTO APPROVATO NEI PRINCIPI DAL PO (2026-11-25), NESSUN TASK ANCORA
 Il file si puo comunicare anche come indirizzo diretto del file; il percorso della pagina `feed.aspx` aggiunge controllo di `Abilitato`, registro degli accessi e limite ai tentativi.
 
 ### 4.3 Accesso
-Codice lungo casuale (`TokenAccesso`, creato dal **database** con `RANDOM_BYTES`, quindi nessun codice scritto dal web o dal gestionale), link `https://<dominio>/feed.aspx?c=<codice>`; pulsante **Nuovo codice** (il precedente smette di funzionare). I vecchi link con `id` e password (`export.aspx`, `export_csv.aspx`) **restano validi finche la casella «Link vecchio attivo» e accesa**: passano dallo stesso motore e dallo stesso file, con il limite ai tentativi. `Abilitato` vale davvero.
+Codice lungo casuale (`TokenAccesso`, creato dal **database** con `RANDOM_BYTES`, quindi nessun codice scritto dal web o dal gestionale), link `https://<dominio>/feed.aspx?c=<codice>`; pulsante **Nuovo codice** (il precedente smette di funzionare). I vecchi link con `id` e password (`export.aspx`, `export_csv.aspx`) **non sono piu un requisito** (decisione del PO 2026-11-25: nessun feed e in uso): niente casella «Link vecchio attivo» e niente ponte; si cancellano quando il motore nuovo e pronto. `Abilitato` vale davvero (gia nei vecchi indirizzi dal task 1).
 
 ### 4.4 Colonne libere
 Ogni colonna ha: **titolo** (il nome che il destinatario si aspetta, es. `title`, `price`, `sku`), **campo** del magazzino oppure **valore fisso**, **prefisso e suffisso** (es. ` EUR` dopo il prezzo, `IT::Standard:` davanti alla spedizione), **massimo di caratteri**, **valore se vuoto**. Opzioni del file: separatore, testo tra virgolette, codifica, separatore decimale, riga di intestazione, per XML nome della radice e dell'elemento, togli i tag HTML, parole della disponibilita (Disponibile / In arrivo / Non disponibile, es. `in_stock`, `preorder`, `out_of_stock`), cosa fare con prodotti senza immagine, senza EAN o a prezzo zero. I feed esistenti (`FormatString` con `#Campo#|#Campo#`) **non si convertono**: il motore li legge come elenco di colonne con titolo uguale al campo.
+**Regola del prezzo (decisione del PO 2026-11-25):** la colonna prezzo e il prezzo offerta per 1 pezzo se l'articolo e in promozione in quel momento (promozione valida oggi con quantita minima tra 0 e 1, o senza quantita minima e multipli 1: la stessa regola della scheda articolo), altrimenti il prezzo di listino; mai prezzi a scaglioni; IVA inclusa o esclusa come da impostazione; la valuta e il **suffisso** della colonna (es. ` EUR`). Il vecchio file corretto dal task 1 applica gia questa regola ed e l'oracolo del motore.
+
 In XML ogni colonna e un elemento con il titolo come nome (per Google RSS 2.0 il titolo puo contenere il prefisso `g:` e la radice puo dichiarare lo spazio dei nomi); il motore verifica che i nomi siano XML validi e fa l'escape dei testi.
 
 ### 4.5 Dati nuovi (proposta per Enzo, tutti con nomi ASCII semplici)
@@ -60,7 +67,6 @@ In XML ogni colonna e un elemento con il titolo come nome (per Google RSS 2.0 il
 | Nome | Tipo | Predefinito | NULL | Significato |
 |---|---|---|---|---|
 | `TokenAccesso` | `varchar(64)`, indice unico | creato dal database | si | codice del link nuovo |
-| `LinkVecchioAttivo` | `int` | `1` | no | 1 = accetta ancora id e password |
 | `Separatore` | `varchar(5)` | `\|` | no | separatore dei campi (txt/csv/tsv) |
 | `DelimitatoreTesto` | `varchar(1)` | vuoto | no | virgolette attorno ai testi (vuoto = mai) |
 | `Codifica` | `varchar(10)` | `utf-8` | no | codifica del file |
@@ -78,7 +84,7 @@ In XML ogni colonna e un elemento con il titolo come nome (per Google RSS 2.0 il
 
 **Tabella nuova `export_colonne`:** `Id` (`int`, automatico, chiave), `ExportId` (`int`, non nullo, indice), `Posizione` (`int`, non nullo, unico con `ExportId`), `TitoloColonna` (`varchar(60)`), `Campo` (`varchar(40)`, vuoto = valore fisso), `Prefisso`, `Suffisso` (`varchar(40)`), `ValoreFisso` (`varchar(100)`), `MassimoCaratteri` (`int`, NULL), `SeVuoto` (`varchar(100)`).
 **`exportcampi`:** si aggiungono `Condizione` e `CategoriaPercorso` (Settore > Categoria > Tipologia > Gruppo). Il tempo di consegna si ottiene con `GiorniSpedizione` piu un suffisso (es. ` giorni lavorativi`). **Codice produttore:** il magazzino ha un solo codice (`Codice`); finche non esiste un campo dedicato si usa quello (decisione aperta, sezione 7).
-**Nessuna colonna rimossa:** `Google`, `Amazon`, `NoVettoreSuGratis` restano nel database (non si cancellano dati), spariscono dalle maschere. `Password` resta per il link vecchio.
+**Nessuna colonna rimossa:** `Google`, `Amazon`, `NoVettoreSuGratis` restano nel database (non si cancellano dati), spariscono dalle maschere. `Password` resta nel database (non si cancellano dati) ma il motore nuovo non la usa.
 
 ## 5. Programma dei task (nessuno avviato; ordine consigliato)
 
@@ -87,9 +93,9 @@ Tutti passano dal flusso canonico (verifica, pacchetto, ChatGPT xhigh, revisore 
 | # | Task | Liv. | Risultato | Dipende da |
 |---|---|---|---|---|
 | 0 | `EXPORT-AMAZON-CLOSE-1A` | S | `export_amazon.aspx` risponde «non disponibile» (410) senza leggere o scrivere nel database: chiusa l'iniezione e l'accesso aperto. Nota per il progetto Amazon del PO su che cosa e stato fatto | niente |
-| 1 | `EXPORT-FEED-REPAIR-1A` | L | Sui vecchi link: via `Response.End` dal ciclo, csv corretto, `Abilitato`, `#DescrizioneLungaHtml#`, `https`; il feed torna completo subito, in attesa del motore nuovo | niente |
+| 1 | `EXPORT-FEED-REPAIR-1A` | L | **FATTO in SOURCE (PR @@PR@@, non pubblicato).** Sui vecchi link: via `Response.End` dal ciclo, csv corretto, `Abilitato`, `#DescrizioneLungaHtml#`, `https`, prezzo offerta per 1 pezzo, una riga per articolo, una sola connessione ausiliaria; il feed e completo e fa da oracolo | niente |
 | 2 | `EXPORT-FEED-DB-1A` | M | Migrazione unica (colonne di `export`, tabella `export_colonne`, due campi in `exportcampi`, creazione del codice nel database), con ritorno indietro e verifica; applicata dal PO su taikun, poi il programma di Enzo | 1 |
-| 3 | `EXPORT-FEED-ENGINE-1A` | L | Motore, `feed.aspx`, ponte per i vecchi link, file pronto in `Public/assets/images/export`, blocco unico, `304`, anteprima di 20 righe; prove su LAB con il carico di 100 richieste e le mutazioni | 2 |
+| 3 | `EXPORT-FEED-ENGINE-1A` | L | Motore, `feed.aspx`, file pronto in `Public/assets/images/export`, blocco unico, `304`, anteprima di 20 righe; prove su LAB con il carico di 100 richieste e le mutazioni | 2 |
 | 4 | Gestionale (Enzo) | — | Le tre maschere del disegno, tolti i riferimenti ad Amazon; vedi sezione 6 | 2, 3 |
 | 5 | `FEED-EXAMPLES-1A` | S | Tre feed di esempio **come dati** (Google Merchant, Trovaprezzi/7Pixel, idealo) con le colonne richieste dalle loro specifiche; il PO li duplica o li cancella | 3 |
 | 6 | `GOOGLE-MERCHANT-CENTER-FEED-1A` | M | Verifica del feed Google contro le loro regole (https, `in_stock`, prezzo con `EUR`, `gtin`, spedizione, prezzi uguali alla scheda), uso di `google_merchant_id` in `aziende`; guida al collegamento in Merchant Center | 5 |
@@ -101,16 +107,14 @@ Tutti passano dal flusso canonico (verifica, pacchetto, ChatGPT xhigh, revisore 
 Immagini JPEG: [1 — elenco](images/feed-comparatori/1-elenco-export.jpg), [2 — scheda generale](images/feed-comparatori/2-scheda-generale.jpg), [3 — colonne del file](images/feed-comparatori/3-colonne-del-file.jpg). Il riquadro **arancione** e nuovo, il riquadro **rosso tratteggiato** e tolto.
 
 1. **Elenco `Settaggio Export Web`:** colonne `Formato`, `Ultimo accesso`, `Righe`, `Ultimo errore` (le ultime tre solo lettura); tolte dall'elenco Password, Id Vettore, NListino2, Tutto in minuscolo, Google, Amazon, No Vettore; nuovo pulsante **Duplica** (copia il feed con colonne e filtri, nuovo codice, abilitato = no). Il filtro rapido della griglia permette di trovare i feed non letti da tempo.
-2. **Scheda `Generale`:** `Tipo Export` diventa `Formato file` (CSV, TXT, TSV, XML); tolti i loghi Google e Amazon e la casella «Disabilita Vettore se la spedizione e gratis»; nuovo gruppo **Opzioni del file** (tutti i campi della tabella 4.5); nuovo gruppo **Link e controllo** con il link `https`, **Copia link**, **Anteprima prime 20 righe**, **Nuovo codice**, i campi di sola lettura e la casella **Link vecchio attivo**. Salvataggio con le stesse routine `NewExport`/`ModExport` aggiornate.
+2. **Scheda `Generale`:** `Tipo Export` diventa `Formato file` (CSV, TXT, TSV, XML); tolti i loghi Google e Amazon e la casella «Disabilita Vettore se la spedizione e gratis»; nuovo gruppo **Opzioni del file** (tutti i campi della tabella 4.5); nuovo gruppo **Link e controllo** con il link `https`, **Copia link**, **Anteprima prime 20 righe**, **Nuovo codice** e i campi di sola lettura (nessuna casella «Link vecchio attivo»: non serve piu, vedi sezione 1, punto 10; il disegno `2-scheda-generale.jpg` la mostra ancora e va rifatto). Salvataggio con le stesse routine `NewExport`/`ModExport` aggiornate.
 3. **Scheda `Colonne del file` (nuova):** a sinistra la griglia **Campi disponibili** (quella di oggi, con il pulsante «...»), a destra la griglia **Colonne del file** modificabile (`N.`, `Titolo colonna`, `Campo`, `Prefisso`, `Suffisso`, `Valore fisso`, `Max car.`, `Se vuoto scrivi`) con **Su**, **Giu**, **Elimina colonna**, **Aggiungi valore fisso** e una **riga di esempio** in sola lettura. Sostituisce la casella `Testo formattato`; i feed vecchi si mostrano gia divisi in righe.
 4. **Scheda `Merciologia Selezionata`:** invariata.
 5. **Amazon:** togliere dalle maschere ogni riferimento (casella, logo, colonna dell'elenco, ramo del codice che gestisce `chAmazon`), senza cancellare dati. Il progetto Amazon e a parte.
 6. **Strumento:** la griglia Janus non ha piu assistenza ma le modifiche sono ordinarie (griglie e caselle); la scelta di un componente nuovo e di Enzo e non cambia il sito.
 
 ## 7. Decisioni ancora aperte (una risposta ciascuna, nessuna blocca i task 0-3)
-1. **Codice produttore:** per Trovaprezzi e idealo serve il codice del produttore. Esiste solo `Codice`. Si usa quello (proposta) oppure Enzo aggiunge un campo al magazzino?
-2. **File valido 60 minuti:** vanno bene come predefinito (prezzi e giacenze cambiano durante il giorno)?
-3. **Feed in uso:** quali dei 53 abilitati sono ancora letti? Il motore nuovo lo registra; fino ad allora nessuno si spegne.
+**Tutte e tre CHIUSE dal PO il 2026-11-25** (sezione 1, punto 10): (1) codice produttore = `Codice`; (2) file valido 1 ora; (3) nessun feed e in uso, si possono cancellare (il motore nuovo registra comunque gli accessi). Nessuna decisione resta aperta per i task 2-3.
 
 ## 8. Pixel di Meta (task dedicato `META-PIXEL-1A`, da studiare)
 Stato letto nel codice e nei dati: `aziende.facebook_pixel_id` (`varchar(17)`) esiste e ha un valore in 2 aziende su 2 sul LAB; il sito invia solo **`AddToCart`** (`aggiungi.aspx`) e **`Purchase`** (`ordine.aspx`). Mancano `PageView` su tutte le pagine, `ViewContent` sulla scheda articolo, `Search`, `InitiateCheckout`, `AddPaymentInfo` (eventi standard usati dagli altri negozi, fonte Ecwid sotto). Da studiare nel task: consenso ai cookie prima di caricare il pixel, parametri degli eventi (valuta, valore, identificativi articolo uguali a quelli del feed), Conversions API dal server con identificativo evento per evitare doppi conteggi, e il **catalogo prodotti per Meta** (stesso motore dei feed, due righe di configurazione). Livello L per la privacy; `aziende` ha anche `google_merchant_id`, gia previsto per il task 6.

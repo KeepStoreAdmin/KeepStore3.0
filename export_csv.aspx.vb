@@ -14,51 +14,91 @@ Partial Class export
 
     Function calcola_spese_spedizione(ByVal peso As String) As String
         Dim dr() As DataRow = dt.Select(peso.Replace(",", ".") & " <= PesoMax")
+        'Peso oltre l'ultima fascia del vettore: nessuna tariffa inventata, il campo resta vuoto (il feed non si interrompe).
+        If dr.Length = 0 Then Return ""
 
         Return dr(0).Item("CostoFisso")
     End Function
 
-    Function secondo_prezzo(ByVal idArticolo As Integer, ByVal nListino As Integer, ByVal iva_tipo As Integer, ByVal separatore_decimale As String) As String
-        Dim params As New Dictionary(Of String, String)
-        params.add("@nListino", nListino)
-        params.add("@idArticolo", idArticolo)
-        'Usare la riga sottostante quando verrà inserito il campo idriga nella tabella seriali
-        Dim dr = ExecuteQueryGetDataReader("ArticoliId,NListino,Prezzo,PrezzoIvato", "articoli_listini", "WHERE (NListino=@nListino) AND (ArticoliId=@idArticolo)", params)
+    'UNA connessione ausiliaria per richiesta (EXPORT-FEED-REPAIR-1A): aperta al primo uso, fuori dal lettore principale (MySQL non ammette due comandi su una
+    'connessione con un lettore aperto) e chiusa in Finally. Prima ogni riga apriva una connessione nuova.
+    Private connAux As MySqlConnection = Nothing
+    Private cmdSecondoPrezzo As MySqlCommand = Nothing
+    Private cmdSpedizioneGratis As MySqlCommand = Nothing
 
-        If dr.Count > 0 Then
-            Dim row = dr(0)
-            Dim prezzo As Double
-
-            If iva_tipo = 1 Then
-                If IsDBNull(row("Prezzo")) = False Then
-                    prezzo = row("Prezzo")
-                    Return FormatNumber(prezzo, 2).Replace(".", "").Replace(",", separatore_decimale)
-                End If
-            Else
-                If IsDBNull(row("PrezzoIvato")) = False Then
-                    prezzo = row("PrezzoIvato")
-                    Return FormatNumber(prezzo, 2).Replace(".", "").Replace(",", separatore_decimale)
-                End If
-            End If
-            Return ""
-        Else
-            Return ""
+    Private Function AuxConnection() As MySqlConnection
+        If connAux Is Nothing Then
+            connAux = New MySqlConnection(ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString)
+            connAux.Open()
         End If
+        Return connAux
+    End Function
+
+    Function secondo_prezzo(ByVal idArticolo As Integer, ByVal nListino As Integer, ByVal iva_tipo As Integer, ByVal separatore_decimale As String) As String
+        If cmdSecondoPrezzo Is Nothing Then
+            cmdSecondoPrezzo = New MySqlCommand("SELECT Prezzo, PrezzoIvato FROM articoli_listini WHERE (NListino=@nListino) AND (ArticoliId=@idArticolo)", AuxConnection())
+            cmdSecondoPrezzo.Parameters.Add("@nListino", MySqlDbType.Int32)
+            cmdSecondoPrezzo.Parameters.Add("@idArticolo", MySqlDbType.Int32)
+        End If
+        cmdSecondoPrezzo.Parameters("@nListino").Value = nListino
+        cmdSecondoPrezzo.Parameters("@idArticolo").Value = idArticolo
+
+        Using dr As MySqlDataReader = cmdSecondoPrezzo.ExecuteReader()
+            If Not dr.Read() Then Return ""
+            Dim colonna As String = If(iva_tipo = 1, "Prezzo", "PrezzoIvato")
+            If IsDBNull(dr.Item(colonna)) Then Return ""
+            Return FormatNumber(CDbl(dr.Item(colonna)), 2).Replace(".", "").Replace(",", separatore_decimale)
+        End Using
     End Function
 
     Function verifica_spedizione_gratis(ByVal idArticolo As Integer, ByVal nListino As Integer) As Integer
-        Dim params As New Dictionary(Of String, String)
-        params.add("@nListino", nListino)
-        params.add("@idArticolo", idArticolo)
-        'Usare la riga sottostante quando verrà inserito il campo idriga nella tabella seriali
-        Dim dr = ExecuteQueryGetDataReader("SpedizioneGratis_Listini,SpedizioneGratis_Data_Inizio,SpedizioneGratis_Data_Fine,id", "articoli", "WHERE (SpedizioneGratis_Listini LIKE CONCAT('%', @nListino, ';%')) AND (id = @idArticolo) AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())", params)
-
-        'Lettura Parametri
-        If dr.Count > 0 Then
-            Return 1
-        Else
-            Return 0
+        If cmdSpedizioneGratis Is Nothing Then
+            cmdSpedizioneGratis = New MySqlCommand("SELECT id FROM articoli WHERE (SpedizioneGratis_Listini LIKE CONCAT('%', @nListino, ';%')) AND (id = @idArticolo) AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())", AuxConnection())
+            cmdSpedizioneGratis.Parameters.Add("@nListino", MySqlDbType.Int32)
+            cmdSpedizioneGratis.Parameters.Add("@idArticolo", MySqlDbType.Int32)
         End If
+        cmdSpedizioneGratis.Parameters("@nListino").Value = nListino
+        cmdSpedizioneGratis.Parameters("@idArticolo").Value = idArticolo
+
+        Using dr As MySqlDataReader = cmdSpedizioneGratis.ExecuteReader()
+            If dr.Read() Then Return 1
+            Return 0
+        End Using
+    End Function
+
+    'Promozione valida OGGI per 1 pezzo, con la stessa regola della scheda articolo (articolo.aspx.vb, BuildProductSql): quantita minima tra 0 (esclusa) e 1,
+    'oppure nessuna quantita minima e multipli = 1. Scaglioni (minimo > 1) e multipli maggiori di 1 non sono prezzi per 1 pezzo.
+    Private Const SqlPromoPerUnPezzo As String = "(InOfferta=1 and ((coalesce(OfferteQntMinima,0)>0 and OfferteQntMinima<=1) or (coalesce(OfferteQntMinima,0)<=0 and coalesce(OfferteMultipli,0)=1)))"
+
+    'Una sola riga per articolo: la vista ha una riga per offerta; le righe dello stesso articolo sono adiacenti (id nell'ordine) e la prima e quella con la promozione
+    'valida per 1 pezzo (a parita il prezzo piu basso), se esiste.
+    Private Const SqlOrdineArticolo As String = " order by settoriid, categorieid, tipologieid, marcheid, codice, id, " & SqlPromoPerUnPezzo & " desc, (case when " & SqlPromoPerUnPezzo & " then PrezzoPromoIvato end), coalesce(OfferteDettagliId,0)"
+
+    'Condizioni di una riga di export_filtri (come in export.aspx.vb): le colonne sono intere, ogni valore passa da un parametro numerato.
+    Private Function FiltroCondizioni(ByVal riga As MySqlDataReader, ByVal comando As MySqlCommand, ByVal indice As Integer) As String
+        Dim suffisso As String = indice.ToString()
+        Dim colonne() As String = {"MarcheId", "SettoriId", "CategorieId", "TipologieId", "GruppiId", "SottogruppiId"}
+        Dim sigle() As String = {"fm", "fs", "fc", "ft", "fg", "fsg"}
+        Dim campi() As String = {"marcheid", "settoriid", "categorieid", "tipologieid", "gruppiid", "sottogruppiid"}
+        Dim soglie() As Integer = {0, -1, -1, -1, -1, -1}
+        Dim parti As New List(Of String)
+        For i As Integer = 0 To colonne.Length - 1
+            If riga.Item(colonne(i)) > soglie(i) Then
+                parti.Add("(" & campi(i) & "=@" & sigle(i) & suffisso & ")")
+                comando.Parameters.AddWithValue("@" & sigle(i) & suffisso, riga.Item(colonne(i)))
+            Else
+                parti.Add("(1=1)")
+            End If
+        Next
+        Return String.Join(" and ", parti.ToArray())
+    End Function
+
+    Private Function FiltroArticolo(ByVal riga As MySqlDataReader, ByVal comando As MySqlCommand, ByVal indice As Integer) As String
+        If riga.Item("ArticoliId") > -1 Then
+            comando.Parameters.AddWithValue("@fa" & indice.ToString(), riga.Item("ArticoliId"))
+            Return "id=@fa" & indice.ToString()
+        End If
+        Return "1=1"
     End Function
 
     Function converti_in_minuscolo(ByVal testo As String) As String
@@ -71,7 +111,7 @@ Partial Class export
         If String.Equals(resolved, ThemeManager.PlaceholderProductImageUrl(), StringComparison.OrdinalIgnoreCase) Then Return String.Empty
         If resolved.StartsWith("http://", StringComparison.OrdinalIgnoreCase) OrElse resolved.StartsWith("https://", StringComparison.OrdinalIgnoreCase) Then Return resolved
         If resolved.StartsWith("data:", StringComparison.OrdinalIgnoreCase) Then Return String.Empty
-        Return "http://" & dominio.Trim().TrimEnd("/"c) & "/" & resolved.TrimStart("/"c)
+        Return "https://" & dominio.Trim().TrimEnd("/"c) & "/" & resolved.TrimStart("/"c)
     End Function
 
     Private Function QuotedExportProductImageUrl(ByVal value As Object, ByVal dominio As String, ByVal thumbnail As Boolean) As String
@@ -150,9 +190,11 @@ Partial Class export
         Dim conn As New MySqlConnection
         Dim cmd As New MySqlCommand
         Dim dr As MySqlDataReader = Nothing
+        Dim ultimoArtId As Int64 = -1
 
         Dim calcola_spedizione_reale As Integer = 0
 
+        Try
         Dim params As New Dictionary(Of String, String)
         params.add("@id", ID)
         params.add("@password", Password)
@@ -162,7 +204,11 @@ Partial Class export
         'Lettura Parametri
         If drExport.Count = 0 Then
             Response.Write("ID o Password errati.")
-            Response.End()
+            Return
+        ElseIf IsDBNull(drExport(0)("Abilitato")) OrElse Convert.ToInt32(drExport(0)("Abilitato")) <> 1 Then
+            'Feed spento (o senza valore): breve testo, nessun dato; lo stato si dice solo a chi conosce id e password.
+            Response.Write("Feed non disponibile")
+            Return
         Else
             'Applicazione Iva Vettore prelevata dalla tabella Vettori, ogni vettori ha la propria iva da applicare
             Dim row = drExport(0)
@@ -195,8 +241,15 @@ Partial Class export
             GiorniSpedizione = row("giornispedizione")
         End If
 
+        'Connessione principale (prima mai aperta: cmd non aveva una connessione valida).
+        conn.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
+        conn.Open()
+        cmd.Connection = conn
+        cmd.CommandType = CommandType.Text
+
         If calcola_spedizione_reale = 1 Then
-            cmd.CommandText = "SELECT PesoMax, CostoFisso FROM (vettoricosti) WHERE (VettoriId = " & idVettore & ")ORDER BY PesoMax"
+            cmd.CommandText = "SELECT PesoMax, CostoFisso FROM (vettoricosti) WHERE (VettoriId = @vet)ORDER BY PesoMax"
+            cmd.Parameters.AddWithValue("@vet", idVettore)
 
             dtAdapter.SelectCommand = cmd
             dtAdapter.Fill(ds)
@@ -210,8 +263,11 @@ Partial Class export
 
             Path = Path & Nome & ".csv"
 
+            cmd.Parameters.Clear()
+            cmd.Parameters.AddWithValue("@lst", Listino)
             If Giacenza >= 0 Then
-                strGiacenza = " and Giacenza >= " & Giacenza
+                strGiacenza = " and Giacenza >= @gia"
+                cmd.Parameters.AddWithValue("@gia", Giacenza)
             End If
 
             'cmd.CommandText = "select * from varticolilistini where export=1 and nlistino=" & Listino & strGiacenza & " order by settoriid, categorieid, tipologieid, marcheid, codice"
@@ -219,33 +275,31 @@ Partial Class export
             '-----------------------------------------------------------------------------------------------------
             '-----------------------------------------------------------------------------------------------------
             'Filtro Esportazione
-            Dim conn2 As New MySqlConnection
             Dim cmd2 As New MySqlCommand
             Dim dr2 As MySqlDataReader
 
-            conn2.ConnectionString = ConfigurationManager.ConnectionStrings("EntropicConnectionString").ConnectionString
-            conn2.Open()
-
             cmd2.Connection = conn
             cmd2.CommandType = CommandType.Text
-            cmd2.CommandText = "select * from export_filtri where ExportId=" & ID
+            cmd2.CommandText = "select * from export_filtri where ExportId=@exid"
+            cmd2.Parameters.AddWithValue("@exid", ID)
 
             dr2 = cmd2.ExecuteReader()
             dr2.Read()
 
-            'Lettura Parametri
+            'Lettura Parametri: ogni riga di filtro vale per intero (classificazioni E articolo), anche la prima.
             If dr2.HasRows Then
-                cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=" & Listino & strGiacenza & " and (isnull(offerteid) or offerteqntminima = 1 or offertemultipli=1) and ( (" & IIf(dr2.Item("MarcheId") > 0, "(marcheid=" & dr2.Item("MarcheId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SettoriId") > -1, "(settoriid=" & dr2.Item("SettoriId") & ")", "(1=1)") & " and " & IIf(dr2.Item("CategorieId") > -1, "(categorieid=" & dr2.Item("CategorieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("TipologieId") > -1, "(tipologieid=" & dr2.Item("TipologieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("GruppiId") > -1, "(gruppiid=" & dr2.Item("GruppiId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SottogruppiId") > -1, "(sottogruppiid=" & dr2.Item("SottogruppiId") & ")", "(1=1)") & " ) "
+                Dim idxFiltro As Integer = 0
+                cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=@lst" & strGiacenza & " and ( ((" & FiltroCondizioni(dr2, cmd, idxFiltro) & " ) AND (" & FiltroArticolo(dr2, cmd, idxFiltro) & "))"
                 While dr2.Read()
-                    cmd.CommandText = cmd.CommandText & " or ((" & IIf(dr2.Item("MarcheId") > 0, "(marcheid=" & dr2.Item("MarcheId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SettoriId") > -1, "(settoriid=" & dr2.Item("SettoriId") & ")", "(1=1)") & " and " & IIf(dr2.Item("CategorieId") > -1, "(categorieid=" & dr2.Item("CategorieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("TipologieId") > -1, "(tipologieid=" & dr2.Item("TipologieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("GruppiId") > -1, "(gruppiid=" & dr2.Item("GruppiId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SottogruppiId") > -1, "(sottogruppiid=" & dr2.Item("SottogruppiId") & ")", "(1=1)") & " ) AND (" & IIf(dr2.Item("ArticoliId") > -1, "id=" & dr2.Item("ArticoliId"), "1=1") & "))"
+                    idxFiltro += 1
+                    cmd.CommandText = cmd.CommandText & " or ((" & FiltroCondizioni(dr2, cmd, idxFiltro) & " ) AND (" & FiltroArticolo(dr2, cmd, idxFiltro) & "))"
                 End While
-                cmd.CommandText = cmd.CommandText & ") order by settoriid, categorieid, tipologieid, marcheid, codice"
+                cmd.CommandText = cmd.CommandText & ")" & SqlOrdineArticolo
             Else
-                cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=" & Listino & strGiacenza & " and (isnull(offerteid) or offerteqntminima = 1 or offertemultipli=1) order by settoriid, categorieid, tipologieid, marcheid, codice"
+                cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=@lst" & strGiacenza & SqlOrdineArticolo
             End If
-            conn2.Close()
-            cmd2.Dispose()
             dr2.Close()
+            cmd2.Dispose()
             '-----------------------------------------------------------------------------------------------------
             '-----------------------------------------------------------------------------------------------------
 
@@ -258,6 +312,9 @@ Partial Class export
                 strLine = FormatString.Replace("|", ";")
 
                 ArtID = dr.Item("id")
+                'Righe dello stesso articolo (una per offerta): vale la prima, gia scelta dall'ordine.
+                If ArtID = ultimoArtId Then Continue While
+                ultimoArtId = ArtID
                 IdCategoria = dr.Item("CategorieId")
                 IdGruppo = dr.Item("GruppiId")
                 IdSettore = dr.Item("SettoriId")
@@ -269,13 +326,14 @@ Partial Class export
                 Descrizione2 = String.Empty
                 If Not dr.Item("descrizione2") Is DBNull.Value Then Descrizione2 = Left(dr.Item("descrizione2"), 255).Trim.Replace(vbCrLf, "").Replace("|", "/")
                 DescrizioneLunga = dr.Item("Descrizionelunga").Trim.Replace("|", "/")
+                DescrizioneHTML = ""
                 If IsDBNull(dr.Item("DescrizioneHTML")) = False Then
                     DescrizioneHTML = dr.Item("DescrizioneHTML").Trim.Replace("|", "/")
                 End If
                 'Codice = ArtID
                 'comparatore = dr.Item("comparatore")
                 Codice = Left(dr.Item("codice"), 255).Trim.Replace(vbCrLf, "").Replace("|", "/")
-                Link = "http://" & Dominio & "/articolo.aspx?id=" & ArtID & "&comparatore=" & comparatore
+                Link = "https://" & Dominio & "/articolo.aspx?id=" & ArtID & "&comparatore=" & comparatore
                 Ean = dr.Item("Ean")
                 Categoria = IIf(dr.Item("CategorieDescrizione") Is System.DBNull.Value, "", dr.Item("CategorieDescrizione"))
                 tipologia = IIf(dr("TipologieDescrizione") Is System.DBNull.Value, "", dr("TipologieDescrizione"))
@@ -326,8 +384,17 @@ Partial Class export
                     Disponibilita = "Non Disponibile"
                 End If
 
+                'Promozione valida oggi per 1 pezzo (mai prezzi a scaglioni di quantita): altrimenti prezzo di listino.
+                Dim promoPerUnPezzo As Boolean = False
+                If Not IsDBNull(dr.Item("InOfferta")) AndAlso Convert.ToInt32(dr.Item("InOfferta")) = 1 Then
+                    Dim qMin As Double = If(IsDBNull(dr.Item("OfferteQntMinima")), 0, Convert.ToDouble(dr.Item("OfferteQntMinima")))
+                    Dim multipli As Integer = If(IsDBNull(dr.Item("OfferteMultipli")), 0, Convert.ToInt32(dr.Item("OfferteMultipli")))
+                    promoPerUnPezzo = (qMin > 0 AndAlso qMin <= 1) OrElse (qMin <= 0 AndAlso multipli = 1)
+                End If
+                Prezzo = "0"
+
                 If IvaTipo = 1 Then
-                    If dr.Item("InOfferta") = 1 Then
+                    If promoPerUnPezzo Then
                         Prezzo = dr.Item("PrezzoPromo")
                     Else
                         If dr.Item("Prezzo").ToString <> "" Then
@@ -337,7 +404,7 @@ Partial Class export
                         End If
                     End If
                 ElseIf IvaTipo = 2 Then
-                    If dr.Item("InOfferta") = 1 Then
+                    If promoPerUnPezzo Then
                         Prezzo = dr.Item("PrezzoPromoIvato")
                     Else
                         If dr.Item("PrezzoIvato").ToString <> "" Then
@@ -350,16 +417,21 @@ Partial Class export
 
                 Prezzo = FormatNumber(Prezzo, 2).Replace(".", "").Replace(",", separatore_decimale)
                 'Secondo Prezzo, quello di riferimento
-                Prezzo2 = secondo_prezzo(ArtID, Listino2, IvaTipo, separatore_decimale)
+                Prezzo2 = ""
+                If strLine.Contains("#Prezzo2#") Then Prezzo2 = secondo_prezzo(ArtID, Listino2, IvaTipo, separatore_decimale)
 
                 If strLine.Contains("#CostoSpedizioneProdo#") Then
                     If verifica_spedizione_gratis(ArtID, Listino) = 1 Then
                         strLine = strLine.Replace("#CostoSpedizioneProdo#", """0""")
                     Else
-                        If IvaTipo = 1 Then
-                            strLine = strLine.Replace("#CostoSpedizioneProdo#", """" & calcola_spese_spedizione(peso).Replace("""", """""") & """")
+                        Dim costoFascia As String = calcola_spese_spedizione(peso)
+                        If costoFascia = "" Then
+                            strLine = strLine.Replace("#CostoSpedizioneProdo#", """""")
+                        ElseIf IvaTipo = 1 Then
+                            strLine = strLine.Replace("#CostoSpedizioneProdo#", """" & costoFascia.Replace("""", """""") & """")
                         Else
-                            strLine = strLine.Replace("#CostoSpedizioneProdo#", """" & (Val(calcola_spese_spedizione(peso)) * ((iva_Vettore / 100) + 1)).ToString.Replace("""", """""") & """")
+                            'CDbl (cultura del sito): Val() si fermava alla virgola decimale e tagliava il costo (12,50 diventava 12).
+                            strLine = strLine.Replace("#CostoSpedizioneProdo#", """" & (CDbl(costoFascia) * ((iva_Vettore / 100) + 1)).ToString.Replace("""", """""") & """")
                         End If
                     End If
                 End If
@@ -374,6 +446,11 @@ Partial Class export
 
                 If strLine.Contains("#IdSettore#") Then
                     strLine = strLine.Replace("#IdSettore#", IdSettore)
+                End If
+
+                'Id dell'articolo (come in export.aspx): nel csv il segnaposto restava letterale.
+                If strLine.Contains("#id#") Then
+                    strLine = strLine.Replace("#id#", ArtID)
                 End If
 
                 If strLine.Contains("#IdSottogruppo#") Then
@@ -433,6 +510,11 @@ Partial Class export
                     If DescrizioneHTML.Contains("P700") Then
                         Dim a = 1
                     End If
+                End If
+
+                'Nome scritto a mano in 17 feed reali: la descrizione lunga con i tag HTML (stessa colonna DescrizioneHTML di #DescrizioneHtml#).
+                If strLine.Contains("#DescrizioneLungaHtml#") Then
+                    strLine = strLine.Replace("#DescrizioneLungaHtml#", """" & TrasformaTestoXHtml(DescrizioneHTML) & """")
                 End If
 
                 If strLine.Contains("#Prezzo#") Then
@@ -561,17 +643,19 @@ Partial Class export
             dr.Close()
         End If
 
-        If dr IsNot Nothing Then
-            dr.Dispose()
-        End If
-
-        cmd.Dispose()
-
-        conn.Close()
-        conn.Dispose()
-
-        'Response.Redirect(Path)
-        'Response.Write("<script language=vbscript>window.open """ & Path & """</script>")
+        Finally
+            'Connessioni sempre chiuse, anche con errore: principale e ausiliaria (le richieste non lasciano connessioni aperte).
+            If dr IsNot Nothing Then dr.Dispose()
+            If cmdSecondoPrezzo IsNot Nothing Then cmdSecondoPrezzo.Dispose()
+            If cmdSpedizioneGratis IsNot Nothing Then cmdSpedizioneGratis.Dispose()
+            If connAux IsNot Nothing Then
+                connAux.Close()
+                connAux.Dispose()
+            End If
+            cmd.Dispose()
+            conn.Close()
+            conn.Dispose()
+        End Try
     End Sub
 
     Public Function TrasformaTestoXHtml(ByVal str As String) As String
@@ -646,7 +730,8 @@ Partial Class export
                 dr = cmd.ExecuteReader()
 
                 While dr.Read()
-                    Dim row As New Dictionary(Of String, Object)()
+                    ' Nomi delle colonne senza distinzione di maiuscole: il codice legge "Valore", "descrizione", "nlistino" mentre MySQL restituisce "valore", "Descrizione", "NListino".
+                Dim row As New Dictionary(Of String, Object)(StringComparer.OrdinalIgnoreCase)
 
                     ' Per ogni colonna nella riga, aggiungi la colonna al dizionario
                     For i As Integer = 0 To dr.FieldCount - 1
