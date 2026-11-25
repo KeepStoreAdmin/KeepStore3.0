@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## EXPORT-FEED-REPAIR-1A — 25/11/2026 — SOURCE (vecchi indirizzi dei feed completi e corretti)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR [#@@PR@@](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/@@PR@@).** `export.aspx` e `export_csv.aspx` tornano a produrre il file intero (prima intestazione + un prodotto; i csv in errore), con una riga per articolo, prezzo offerta per 1 pezzo se in promozione oggi (altrimenti listino, mai scaglioni), `https`, `Abilitato` rispettato e `#DescrizioneLungaHtml#` riconosciuto. Area CRITICAL toccata: prezzi pubblici nei feed. Nessun database toccato.
+
+**Fatti e causa.** Causa dei csv ISOLATA con traccia vera: due difetti in sequenza (dizionario sensibile alle maiuscole; comando senza connessione). Prezzo: la vista ha una riga per offerta, il filtro vecchio dava 16 articoli ripetuti, ne perdeva 3 e usava promozioni a scaglioni o a multipli. Trovati anche: prima riga di filtro che ignorava `ArticoliId` (esportava tutto il catalogo), `#id#` assente nei csv, peso oltre l'ultima fascia, `Val` che tagliava la spedizione. Prestazioni (4.304 articoli, senza pool come il server online): 92,9 s e 8.642 connessioni per richiesta, ora 4,4 s e 2.
+
+**Revisioni.** ChatGPT (xhigh, 2o tentativo: il 1o in timeout senza risposta): eseguita — accolti filtro puntuale, `#id#`, `Abilitato` NULL, peso e `Val`, test su insieme di id; scartati DBNull nel ciclo (misurati 0 NULL su 34.625 righe) e `%1;%` (regola della scheda articolo). Claude (Opus, Plan): eseguita — accolti gli stessi punti piu il test vecchio da aggiornare e il parser csv; smentita la motivazione su `customErrors`. Gate di certezza: PASS con limiti. Esecutore Sonnet 5.5 (la regola chiede Opus per un L sui prezzi: dichiarato).
+
+**Prove.** `Tools/Test-ExportFeedRepair.ps1` sul sito LAB (rosso sul codice di base, verde dopo, 29 mutanti uccisi, piu 11 del test dei parametri) e `Tools/Test-ExportSqlParams.ps1` aggiornato; articoli con promozione valida, scaduta, a scaglioni, a multipli, senza promozione e con tre offerte sintetiche; insieme di id uguale all'oracolo SQL.
+
+**Limiti e residuo (NON AVVIATO).** Aperti: `%1;%` nella spedizione gratis, `Tutto_in_minuscolo` nel csv, a-capo isolati, entita HTML, quotatura csv, password deboli; nessuna foto sul LAB (https delle immagini provato solo sul sorgente). Risposte del PO 2026-11-25 recepite nel documento dei feed: `LinkVecchioAttivo` e il ponte tolti dal progetto, il disegno `2-scheda-generale.jpg` va rifatto. **Alla consegna futura:** `export.aspx.vb`, `export_csv.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## KS-H04-FEED-DESIGN-1A — 25/11/2026 — AUDIT E PROGETTO (docs)
 
 **Esito: A (solo documenti, nessun codice o database toccato).** Audit di `export.aspx`, `export_csv.aspx`, `export_amazon.aspx`, delle maschere del gestionale (`KeepStoreRepo`, sola lettura) e delle tabelle `export*` sul LAB (specchio di taikun, sola lettura); decisioni del PO 2026-11-25 recepite; progetto e programma dei task nel [documento dedicato](KEEPSTORE_FEED_COMPARATORI_AUDIT_2026_11_25.md); disegno delle tre maschere per Enzo in `docs/images/feed-comparatori/` (JPEG).
