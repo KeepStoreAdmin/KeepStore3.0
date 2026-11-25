@@ -8,7 +8,7 @@ param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$Baseline, [swit
 #  - #DescrizioneLungaHtml# e riconosciuto; link e immagini sono https;
 #  - prezzo = offerta per 1 pezzo se valida oggi (regola del sito), altrimenti listino; mai scaglioni ne multipli;
 #  - le connessioni al database NON crescono con il numero di righe (una connessione ausiliaria fuori dal ciclo).
-# Prova HTTP sul sito LAB (https, 127.0.0.1 forzato, porta 18843, database LAB, identita verificata prima di scrivere). Righe sintetiche 9201-9218, quattro offerte sintetiche (OfferteID 9990001) in `export`,
+# Prova HTTP sul sito LAB (https, 127.0.0.1 forzato, porta 18843, database LAB, identita verificata prima di scrivere). Righe sintetiche 9201-9224, quattro offerte sintetiche (OfferteID 9990001) in `export`,
 # eliminate alla fine. Le copie di export.aspx.vb e export_csv.aspx.vb sul sito LAB sono sostituite con quelle del repository e poi i byte originali sono rimessi.
 # -Baseline: installa il codice della base (git ref fisso) invece di quello del repository: serve a vedere il test ROSSO sul codice vecchio.
 # -BaselineNoEnd (con -Baseline) e -OnlyPerf: misura del costo "prima" = codice di base con i soli Response.End del ciclo tolti (il feed diventa completo e si vede il costo per riga).
@@ -171,7 +171,7 @@ try {
     # --- Identita del LAB e righe libere ---
     $uuid = Get-Scalar 'SELECT @@server_uuid AS ksval;'
     if ($uuid -ne '1167ebae-d0c0-11f1-b348-9c7bef540c10') { throw 'NOT_THE_LAB' }
-    $busy = Get-Scalar 'SELECT COUNT(*) AS ksval FROM `export` WHERE ID BETWEEN 9201 AND 9218;'
+    $busy = Get-Scalar 'SELECT COUNT(*) AS ksval FROM `export` WHERE ID BETWEEN 9201 AND 9224;'
     if ($busy -ne '0') { throw 'FIXTURE_IDS_NOT_FREE' }
 
     # Articoli per i filtri puntuali: i primi due esportabili (query di sola lettura).
@@ -179,6 +179,19 @@ try {
     if ($expIdsPre.Count -ne 2) { throw 'NO_FILTER_ARTICLES' }
     $heavyId = Get-Scalar 'SELECT id AS ksval FROM vsuperarticoli WHERE export=1 AND nlistino=10 AND Peso>50 ORDER BY id LIMIT 1;'
     if ($heavyId -eq '') { throw 'NO_HEAVY_ARTICLE' }
+    # Dati per i filtri di selezione: una marca con articoli disponibili e non, una coppia settore+categoria, un articolo di un'altra marca.
+    $brandX = Get-Scalar 'SELECT MarcheId AS ksval FROM vsuperarticoli WHERE export=1 AND nlistino=10 AND MarcheId>0 GROUP BY MarcheId HAVING COUNT(DISTINCT id) BETWEEN 3 AND 150 AND COUNT(DISTINCT CASE WHEN Giacenza>=1 THEN id END)>=1 AND COUNT(DISTINCT CASE WHEN Giacenza>=1 THEN NULL ELSE id END)>=1 ORDER BY MarcheId LIMIT 1;'
+    $sc = @(Get-Rows 'SELECT SettoriId AS ks, CategorieId AS kc FROM vsuperarticoli WHERE export=1 AND nlistino=10 AND SettoriId>-1 AND CategorieId>-1 GROUP BY SettoriId, CategorieId HAVING COUNT(DISTINCT id) BETWEEN 3 AND 150 ORDER BY SettoriId, CategorieId LIMIT 1;')
+    if ($brandX -eq '' -or $sc.Count -ne 1) { throw 'NO_FILTER_DATA' }
+    $setX = $sc[0]['ks']; $catX = $sc[0]['kc']
+    $artOther = Get-Scalar ('SELECT MIN(id) AS ksval FROM vsuperarticoli WHERE export=1 AND nlistino=10 AND MarcheId<>' + $brandX + ';')
+    function Get-IdList([string]$where) { return ((@(Get-Rows ('SELECT DISTINCT id AS ksid FROM vsuperarticoli WHERE export=1 AND nlistino=10 AND ' + $where + ' ORDER BY id;') | ForEach-Object { $_['ksid'] }) | Sort-Object { [int]$_ }) -join ',') }
+    $listMarca = Get-IdList ('MarcheId=' + $brandX)
+    $listSetCat = Get-IdList ('SettoriId=' + $setX + ' AND CategorieId=' + $catX)
+    $listUnion = Get-IdList ('(MarcheId=' + $brandX + ' OR id=' + $artOther + ')')
+    $listMarcaGiac = Get-IdList ('MarcheId=' + $brandX + ' AND Giacenza>=1')
+    $listAllGiac = Get-IdList 'Giacenza>=1'
+    $listSingle = [string]$artOther
     # --- Righe sintetiche (password scelte qui) ---
     $pw = 'KsFeedRep-1'
     $fmtPrice = '#Link#|#Prezzo#|#UrlImgBig#'
@@ -186,8 +199,8 @@ try {
     $fmtDesc = '#Link#|#DescrizioneLungaHtml#|#DescrizioneHtml#'
     $fmtPerf = '#Link#|#Prezzo#|#Prezzo2#|#CostoSpedizioneProdo#'
     $ins = New-Object Text.StringBuilder
-    function Add-Row([int]$id, [string]$tipo, [string]$fmt, [int]$ivaTipo, [int]$abil, [int]$vet, [int]$lst2) {
-        [void]$ins.AppendLine('INSERT INTO `export` (ID, Descrizione, `Password`, FormatString, NListino, IvaTipo, Giacenza, SpeseSpedizione, GiorniSpedizione, Azienda, Tipo, IdVettore, NListino2, Tutto_in_minuscolo, Google, Amazon, NoVettoreSuGratis, Abilitato) VALUES (' + $id + ', ''KSFEEDREPAIR' + $id + ''', ' + (Sql-Text $pw) + ', ' + (Sql-Text $fmt) + ', 10, ' + $ivaTipo + ', -1, 0, 1, ''www.taikun.it'', ''' + $tipo + ''', ' + $vet + ', ' + $lst2 + ', 0, 0, 0, 0, ' + $abil + ');')
+    function Add-Row([int]$id, [string]$tipo, [string]$fmt, [int]$ivaTipo, [int]$abil, [int]$vet, [int]$lst2, [string]$giac = '-1') {
+        [void]$ins.AppendLine('INSERT INTO `export` (ID, Descrizione, `Password`, FormatString, NListino, IvaTipo, Giacenza, SpeseSpedizione, GiorniSpedizione, Azienda, Tipo, IdVettore, NListino2, Tutto_in_minuscolo, Google, Amazon, NoVettoreSuGratis, Abilitato) VALUES (' + $id + ', ''KSFEEDREPAIR' + $id + ''', ' + (Sql-Text $pw) + ', ' + (Sql-Text $fmt) + ', 10, ' + $ivaTipo + ', ' + $giac + ', 0, 1, ''www.taikun.it'', ''' + $tipo + ''', ' + $vet + ', ' + $lst2 + ', 0, 0, 0, 0, ' + $abil + ');')
     }
     Add-Row 9201 'txt' $fmtPrice 2 1 0 0
     Add-Row 9202 'txt' $fmtPrice 1 1 0 0
@@ -207,6 +220,22 @@ try {
     Add-Row 9216 'csv' '#Link#|#CostoSpedizioneProdo#' 1 1 17 0
     Add-Row 9217 'csv' '#Link#|#CostoSpedizioneProdo#' 2 1 5 0
     Add-Row 9218 'txt' '#Link#|#CostoSpedizioneProdo#' 2 1 5 0
+    Add-Row 9219 'txt' '#Link#|#Prezzo#' 2 1 0 0
+    Add-Row 9220 'txt' '#Link#|#Prezzo#' 2 1 0 0
+    Add-Row 9221 'csv' '#Link#|#Prezzo#' 2 1 0 0
+    Add-Row 9222 'txt' '#Link#|#Prezzo#' 2 1 0 0
+    Add-Row 9223 'csv' '#Link#|#Prezzo#' 2 1 0 0 '1'
+    Add-Row 9224 'txt' '#Link#|#Prezzo#' 2 1 0 0 '1'
+    function Add-Filter([int]$eid, [string]$marca, [string]$sett, [string]$cat, [string]$art) {
+        [void]$ins.AppendLine('INSERT INTO export_filtri (ExportId, MarcheId, SettoriId, CategorieId, TipologieId, GruppiId, SottogruppiId, ArticoliId) VALUES (' + $eid + ', ' + $marca + ', ' + $sett + ', ' + $cat + ', -1, -1, -1, ' + $art + ');')
+    }
+    # 9219: una sola riga "articolo"; 9220: una riga marca; 9221: riga settore+categoria; 9222: riga articolo PRIMA + riga marca; 9223: riga marca con giacenza minima 1; 9224: nessun filtro con giacenza minima 1.
+    Add-Filter 9219 '-1' '-1' '-1' $artOther
+    Add-Filter 9220 $brandX '-1' '-1' '-1'
+    Add-Filter 9221 '-1' $setX $catX '-1'
+    Add-Filter 9222 '-1' '-1' '-1' $artOther
+    Add-Filter 9222 $brandX '-1' '-1' '-1'
+    Add-Filter 9223 $brandX '-1' '-1' '-1'
     # Filtri dei feed 9212 (txt) e 9213 (csv): DUE righe "solo articolo" (tutte le classificazioni a -1); la PRIMA non deve essere ignorata.
     $artA = $expIdsPre[0]; $artB = $expIdsPre[1]
     foreach ($fid in @(9212, 9213)) {
@@ -214,8 +243,8 @@ try {
     }
     $null = Invoke-Sql $ins.ToString() -Write
     $created = $true
-    $made = Get-Scalar 'SELECT COUNT(*) AS ksval FROM `export` WHERE ID BETWEEN 9201 AND 9218;'
-    Check ($made -eq '18') 'fixture create sul LAB (18 righe in export)'
+    $made = Get-Scalar 'SELECT COUNT(*) AS ksval FROM `export` WHERE ID BETWEEN 9201 AND 9224;'
+    Check ($made -eq '24') 'fixture create sul LAB (24 righe in export)'
     # Offerte sintetiche su un articolo senza offerte: valida per 1 pezzo (10%), scaduta ieri (50%), scaglione da 3 (30%), valida per 1 pezzo (20%, la piu bassa). Prezzo atteso = listino - 20%.
     $offBusy = Get-Scalar 'SELECT COUNT(*) AS ksval FROM voffertearticoli WHERE OfferteID=9990001;'
     if ($offBusy -ne '0') { throw 'SYNTH_OFFER_ID_NOT_FREE' }
@@ -251,6 +280,16 @@ try {
         if ([string]$sample[$k] -eq '') { continue }
         $rr = @(Get-Rows ('SELECT id, Prezzo, PrezzoIvato, InOfferta, OfferteQntMinima, OfferteMultipli, PrezzoPromo, PrezzoPromoIvato FROM vsuperarticoli WHERE export=1 AND nlistino=10 AND id=' + $sample[$k] + ';'))
         $expPrice[$k] = @{ 1 = (Expected-Price $rr 1); 2 = (Expected-Price $rr 2) }
+    }
+    # Parita del listino: il prezzo di listino che la vista espone (Prezzo e PrezzoIvato per il listino del feed) e quello di articoli_listini, per tutti i listini dei feed.
+    $parity = Get-Scalar 'SELECT COUNT(*) AS ksval FROM vsuperarticoli v LEFT JOIN articoli_listini l ON l.ArticoliId=v.id AND l.NListino=v.nlistino WHERE v.export=1 AND v.nlistino IN (1,5,6,7,8,9,10,11) AND (l.ArticoliId IS NULL OR NOT (v.Prezzo <=> l.Prezzo) OR NOT (v.PrezzoIvato <=> l.PrezzoIvato));'
+    Check ($parity -eq '0') ('oracolo: Prezzo e PrezzoIvato della vista = articoli_listini per i listini dei feed (differenze: ' + $parity + ')')
+    # Senza promozione valida per 1 pezzo il prezzo atteso e proprio quello di articoli_listini (stesso listino, IVA inclusa ed esclusa).
+    # 'scaglioni' non e qui: quell'articolo ha anche una promozione valida per 1 pezzo, che deve prevalere sul listino (e sui prezzi a scaglioni).
+    foreach ($k in @('scaduta', 'multipli', 'nessuna')) {
+        if ([string]$sample[$k] -eq '') { continue }
+        $ll = @(Get-Rows ('SELECT Prezzo, PrezzoIvato FROM articoli_listini WHERE NListino=10 AND ArticoliId=' + $sample[$k] + ';'))
+        Check ($ll.Count -eq 1 -and (Round2 $ll[0]['Prezzo']) -ceq $expPrice[$k][1] -and (Round2 $ll[0]['PrezzoIvato']) -ceq $expPrice[$k][2]) ('oracolo: articolo ' + $sample[$k] + ' (' + $k + ') senza promo per 1 pezzo = listino di articoli_listini')
     }
     Check ($sample['valida1'] -ne '' -and $sample['scaglioni'] -ne '' -and $sample['multipli'] -ne '' -and $sample['nessuna'] -ne '') 'oracolo: campioni valida1, scaglioni, multipli e nessuna presenti sul LAB'
 
@@ -331,6 +370,22 @@ try {
             $want = @($artA, $artB | Sort-Object)
             Check ($fr.Status -eq 200 -and $fids.Count -eq 2 -and $fids[0] -eq $want[0] -and $fids[1] -eq $want[1]) ('F7 ' + $pair[0] + ': due righe filtro solo-articolo = esattamente quei due articoli (visti ' + $fids.Count + ')')
         }
+        # F11: filtri di selezione (righe in OR fra loro; dentro una riga le colonne sono in AND; una riga con ArticoliId seleziona quel solo articolo), da soli e con la giacenza minima.
+        $fcases = @(
+            @('export.aspx', '9219', $false, $listSingle, 'una riga articolo (prima e unica) = solo quell articolo'),
+            @('export.aspx', '9220', $false, $listMarca, 'riga marca = tutti gli articoli della marca'),
+            @('export_csv.aspx', '9221', $true, $listSetCat, 'riga settore+categoria (AND)'),
+            @('export.aspx', '9222', $false, $listUnion, 'righe miste (articolo prima + marca) in OR'),
+            @('export_csv.aspx', '9223', $true, $listMarcaGiac, 'riga marca con giacenza minima 1 (solo disponibili)'),
+            @('export.aspx', '9224', $false, $listAllGiac, 'nessun filtro con giacenza minima 1 (solo disponibili)')
+        )
+        foreach ($fc in $fcases) {
+            $fr = Invoke-Feed $fc[0] $fc[1] $pw
+            $frs = Get-FeedRows $fr.Body $fc[2]
+            $got = ((@($frs | ForEach-Object { $_.Id }) | Sort-Object { [int]$_ }) -join ',')
+            Check ($fr.Status -eq 200 -and $fc[3] -ne '' -and $got -ceq $fc[3]) ('F11 ' + $fc[0] + ': ' + $fc[4] + ' (attesi ' + @($fc[3] -split ',').Count + ', visti ' + @($got -split ',' | Where-Object { $_ -ne '' }).Count + ')')
+        }
+
         # F8: #id# nel csv e sostituito con l'id dell'articolo.
         $ir = Invoke-Feed 'export_csv.aspx' '9214' $pw
         $irows = Get-FeedRows $ir.Body $true
@@ -441,6 +496,10 @@ try {
             'M26_CSV_WEIGHT_GUARD'         = @{ Page = $pC; Edits = @(, @('If dr.Length = 0 Then Return ""', 'If False Then Return ""')) }
             'M27_CSV_VAL_TRUNCATES_COST'   = @{ Page = $pC; Edits = @(, @('(CDbl(costoFascia) * ((iva_Vettore / 100) + 1))', '(Val(costoFascia) * ((iva_Vettore / 100) + 1))')) }
             'M28_TXT_CONNECTION_PER_ROW'   = @{ Page = $pT; Perf = $true; Edits = @(@('If connAux Is Nothing Then', 'If True Then'), @('If cmdSecondoPrezzo Is Nothing Then', 'If True Then')) }
+            'M31_TXT_FILTER_ROWS_AND'      = @{ Page = $pT; Edits = @(, @('" or ((" & FiltroCondizioni', '" and ((" & FiltroCondizioni')) }
+            'M32_CSV_FILTER_ROWS_AND'      = @{ Page = $pC; Edits = @(, @('" or ((" & FiltroCondizioni', '" and ((" & FiltroCondizioni')) }
+            'M33_TXT_NO_MIN_STOCK'         = @{ Page = $pT; Edits = @(, @('strGiacenza = " and Giacenza >= @gia"', 'strGiacenza = ""')) }
+            'M34_CSV_NO_MIN_STOCK'         = @{ Page = $pC; Edits = @(, @('strGiacenza = " and Giacenza >= @gia"', 'strGiacenza = ""')) }
             'M29_CSV_CONNECTION_PER_ROW'   = @{ Page = $pC; Perf = $true; Edits = @(@('If connAux Is Nothing Then', 'If True Then'), @('If cmdSecondoPrezzo Is Nothing Then', 'If True Then')) }
         }
         $killed = 0; $total = 0
@@ -474,7 +533,7 @@ try {
         try { $null = Invoke-Sql 'DELETE FROM voffertearticoli WHERE OfferteID=9990001 AND OfferteDescrizione=''KSFEEDREPAIR'';' -Write } catch { Write-Host ('  ATTENZIONE: pulizia delle offerte sintetiche non riuscita: ' + $_.Exception.Message); $exit = 1 }
     }
     if ($created) {
-        try { $null = Invoke-Sql 'DELETE FROM export_filtri WHERE ExportId BETWEEN 9201 AND 9218; DELETE FROM `export` WHERE ID BETWEEN 9201 AND 9218 AND Descrizione LIKE ''KSFEEDREPAIR%'';' -Write } catch { Write-Host ('  ATTENZIONE: pulizia delle righe sintetiche non riuscita: ' + $_.Exception.Message); $exit = 1 }
+        try { $null = Invoke-Sql 'DELETE FROM export_filtri WHERE ExportId BETWEEN 9201 AND 9224; DELETE FROM `export` WHERE ID BETWEEN 9201 AND 9224 AND Descrizione LIKE ''KSFEEDREPAIR%'';' -Write } catch { Write-Host ('  ATTENZIONE: pulizia delle righe sintetiche non riuscita: ' + $_.Exception.Message); $exit = 1 }
     }
     if ($siteHeld) { try { $siteMutex.ReleaseMutex() } catch { } }
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
