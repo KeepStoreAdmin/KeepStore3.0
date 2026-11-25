@@ -4,6 +4,8 @@
 
 **Aggiornamento 2026-11-25 — feed per comparatori: audit e programma dei task (`KS-H04`, solo documenti).** Ogni feed oggi contiene un solo prodotto e i csv vanno in errore; progetto a feed liberi (nessun comparatore preimpostato), file pronto riusato, XML, `https`, Amazon fuori; task 0-8 NON AVVIATI nel [documento](KEEPSTORE_FEED_COMPARATORI_AUDIT_2026_11_25.md) con il disegno delle maschere per Enzo.
 
+**Aggiornamento 2026-11-25 — `export_amazon.aspx` chiusa (`EXPORT-AMAZON-CLOSE-1A`, SOURCE, non pubblicato).** La pagina pubblica senza autenticazione che scriveva nella tabella `export_amazon` risponde sempre 410, senza database; Amazon e un progetto separato del PO. File da consegnare: `export_amazon.aspx.vb`. Dettagli: voce del Masterplan.
+
 **Aggiornamento 2026-11-25 — `export.aspx` con query parametrizzate (`EXPORT-SQL-PARAMS-1A`, SOURCE, non pubblicato).** Iniezione SQL chiusa su tutta la pagina pubblica (accesso con `id` e `pwd`, spedizione, filtri); stesso risultato per i link gia consegnati. Residui NON AVVIATI: `export_amazon.aspx` senza autenticazione, connessioni non chiuse dopo `Response.End`. File da consegnare: `export.aspx.vb`. Dettagli: voce del Masterplan.
 
 **Aggiornamento 2026-11-24 sera — limite ai tentativi sulla password (`AUTH-ATTEMPT-LIMIT-1A`, SOURCE, non pubblicato).** Tabella nuova `login_attempt_limits` da creare dal PO su taikun (script nel [manuale](AUTH_ATTEMPT_LIMIT_TABLE.md)); finche manca il sito resta com'e. Dettagli, limiti e consegna: voce del Masterplan.

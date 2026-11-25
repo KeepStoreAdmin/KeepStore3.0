@@ -12,6 +12,18 @@
 
 **Limiti (NON AVVIATI).** Nessun task avviato; codice produttore, validita del file e feed ancora in uso sono decisioni aperte (sezione 7 del documento); la causa dei csv in errore va isolata nel task 1; Trovaprezzi e 7Pixel non pubblicano una specifica tecnica ufficiale (da chiedere all'account manager). CONSEGNA SERVER SOSPESA.
 
+## EXPORT-AMAZON-CLOSE-1A — 25/11/2026 — SOURCE (pagina export_amazon chiusa)
+
+**Esito: A (SOURCE, non pubblicato). Livello M. PR [#687](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/687).** `export_amazon.aspx` (pubblica, senza autenticazione) mostrava la configurazione della tabella `export_amazon` e scriveva con un `UPDATE` a testo concatenato: ora risponde sempre 410 «Servizio non disponibile» con `Cache-Control: no-store`, senza database, senza leggere la richiesta, senza eco. Amazon esce dal programma dei feed (progetto separato del PO).
+
+**Fatti e causa.** Sul LAB `fase=1` dava la configurazione e `fase=3` cambiava la riga (riga 129, testo concatenato); senza `fase` produceva un file con parametri dell'indirizzo. `import_amazon.asp.vb` non e `CodeFile` di nessuna pagina: residuo non compilato, lasciato com'e. Il 410 e un `ProcessRequest` sovrascritto senza `MyBase`: con `PreInit` la validazione della richiesta (`<script>`, `<x`, ViewState) partiva prima.
+
+**Revisioni.** ChatGPT xhigh: eseguita (STOP B; il 1o tentativo e scaduto a 20 min) — accolto: pipeline comune non toccata e contratto ridotto alla pagina, test con mutex e identita prima delle fotografie, niente riavvii, elenco chiuso del sorgente, corpo byte per byte; scartato: livello L. Claude Opus: eseguita — accolti ProcessRequest e i 4 bloccanti del test; RENAME declassato a consigliato. Gate di certezza: PASS con i limiti. Esecutore Sonnet 5.5 (Opus non selezionabile).
+
+**Prove.** `Tools/Test-ExportAmazonClosed.ps1` sul LAB: rosso sul codice vecchio (166 controlli), verde sul nuovo con 14 casi (fase=1, fase=3 con apice e `or 1=1`, nessuna fase, POST, HEAD, byte non validi), serie ripetuta con la tabella rinominata, riga invariata, 11 mutanti uccisi (9 anche dal comportamento HTTP, 2 solo dal sorgente: lettura silenziata e `AppSettings`).
+
+**Limiti e residuo (NON AVVIATO).** Le richieste del LAB sono locali: la pipeline comune (resolver azienda che a cache fredda apre MySQL, HTTPS, host canonico, 421) non e provata ne toccata; variante opzionale: controllo del percorso in `Global.asax`, task L. Nessuna prova su IIS reale; verbi diversi da GET, HEAD e POST decisi da IIS. `import_amazon.asp.vb` da cancellare con un si del PO. **Alla consegna futura:** `export_amazon.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## EXPORT-SQL-PARAMS-1A — 25/11/2026 — SOURCE (iniezione SQL in export.aspx)
 
 **Esito: A (SOURCE, non pubblicato). Livello L. PR [#684](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/684).** La pagina pubblica `export.aspx` costruiva tutte le sue query concatenando valori della richiesta (`id`, `pwd`) e dati di `export_filtri`: ora ogni valore passa da un parametro (`MySqlCommand.Parameters`), il testo SQL non contiene piu valori. Stesso risultato per i link gia consegnati (maiuscole, accenti, spazi finali, filtri, spedizione gratis come prima). Nessun dato commerciale toccato.
