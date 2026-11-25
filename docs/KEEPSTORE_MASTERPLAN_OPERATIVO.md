@@ -10,7 +10,7 @@
 
 **Prove.** `Tools/Test-ExportFeedRepair.ps1` sul sito LAB (rosso sul codice di base, verde dopo, 29 mutanti uccisi, piu 11 del test dei parametri) e `Tools/Test-ExportSqlParams.ps1` aggiornato; articoli con promozione valida, scaduta, a scaglioni, a multipli, senza promozione e con tre offerte sintetiche; insieme di id uguale all'oracolo SQL.
 
-**Limiti e residuo (NON AVVIATO).** Aperti: `%1;%` nella spedizione gratis, `Tutto_in_minuscolo` nel csv, a-capo isolati, entita HTML, quotatura csv, password deboli; nessuna foto sul LAB (https delle immagini provato solo sul sorgente). Risposte del PO 2026-11-25 recepite nel documento dei feed: `LinkVecchioAttivo` e il ponte tolti dal progetto, il disegno `2-scheda-generale.jpg` va rifatto. **Alla consegna futura:** `export.aspx.vb`, `export_csv.aspx.vb`. CONSEGNA SERVER SOSPESA.
+**Limiti e residuo (NON AVVIATO).** Aperti: `%1;%` nella spedizione gratis, `Tutto_in_minuscolo` nel csv, a-capo isolati, entita HTML, quotatura csv, password deboli; nessuna foto sul LAB (https delle immagini provato solo sul sorgente). Risposte del PO 2026-11-25 recepite nel documento dei feed: `LinkVecchioAttivo` e il ponte tolti dal progetto (il disegno `2-scheda-generale.jpg` e gia rifatto dal PO). **Alla consegna futura:** `export.aspx.vb`, `export_csv.aspx.vb`. CONSEGNA SERVER SOSPESA.
 
 ## KS-H04-FEED-DESIGN-1A — 25/11/2026 — AUDIT E PROGETTO (docs)
 
