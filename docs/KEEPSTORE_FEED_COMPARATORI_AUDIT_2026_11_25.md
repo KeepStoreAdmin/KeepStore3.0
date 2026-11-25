@@ -80,6 +80,6 @@ Le colonne `Google`, `Amazon`, `NoVettoreSuGratis` e `Tipo` restano: i flag Goog
 
 1. **Amazon:** il programma che sincronizza Amazon (voce di menu «Amazon» del gestionale) e ancora in uso? Se no, `export_amazon.aspx` si chiude subito.
 2. **Quali dei 53 feed abilitati sono ancora letti?** Il sito non ha mai registrato gli accessi: dal task 3 lo fara; nel frattempo si possono disabilitare solo quelli noti come chiusi.
-3. **Transizione:** i vecchi indirizzi con `id` e `pwd` restano validi finche non si avvisano i destinatari (proposta). 
+3. **Transizione:** i vecchi indirizzi con `id` e `pwd` restano validi finche non si avvisano i destinatari (proposta).
 
 CONSEGNA SERVER SOSPESA.
