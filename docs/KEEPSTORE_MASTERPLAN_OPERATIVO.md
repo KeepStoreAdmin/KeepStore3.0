@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## EXPORT-SQL-PARAMS-1A — 25/11/2026 — SOURCE (iniezione SQL in export.aspx)
+
+**Esito: A (SOURCE, non pubblicato). Livello L. PR #PRNUM.** La pagina pubblica `export.aspx` costruiva tutte le sue query concatenando valori della richiesta (`id`, `pwd`) e dati di `export_filtri`: ora ogni valore passa da un parametro (`MySqlCommand.Parameters`), il testo SQL non contiene piu valori. Stesso risultato per i link gia consegnati (maiuscole, accenti, spazi finali, filtri, spedizione gratis come prima). Nessun dato commerciale toccato.
+
+**Fatti e causa.** Sul LAB (specchio di taikun, mai il database online) `pwd=zzz' or '1'='1` dava accesso (intestazione + riga) e `pwd=zzz'` un 302 a InternalError. Concatenazioni in 6 punti (accesso 185, 36, 93, vettore 230, giacenza/listino 245-262, OR dinamico 269-275); colonne dei filtri tutte `int`. `export.Password` e `varchar utf8mb4_0900_ai_ci`: il confronto parametrizzato ha la stessa collation di prima (misurato). Pagina non in STANDBY (KS-H04).
+
+**Revisioni.** ChatGPT xhigh: eseguita (STOP B) — accolto: fixture con listino 10 e giacenza estrema, predicato `id` falsificabile, `Parameters.Clear()` prima del riuso, sonde `%` e `_`, tutta la pagina e non solo l'accesso; scartato: nulla di sostanziale. Claude Opus: eseguita (NON SICURO su 6 punti) — accolti tutti; `export_amazon.aspx.vb` (UPDATE non autenticato) rimandato a task dedicato. Gate di certezza: PASS con limiti.
+
+**Prove.** `Tools/Test-ExportSqlParams.ps1` sul sito LAB (casi P1-P7, 11 mutanti, uccisi 11/11): sul codice vecchio rosso solo dove atteso (P1, P2), verde sul nuovo; precompile, guardia segreti, carrello 23/23, test correlati (solo questo test cita la pagina; Test-RuntimeTenantDomain PASS).
+
+**Limiti e residuo (NON AVVIATO).** Password con `\` o `'` su altri database non misurate; `export_amazon.aspx` senza autenticazione con UPDATE concatenato (`EXPORT-AMAZON-ACCESS-1A`); connessioni non chiuse dopo `Response.End` (`EXPORT-CONN-LEAK-1A`); pwd assente o vuota accede alle righe con password vuota (preservato, decisione PO aperta); password `export` in chiaro, nessun limite ai tentativi. **Alla consegna futura:** `export.aspx.vb`. CONSEGNA SERVER SOSPESA.
+
 ## AUTH-ATTEMPT-LIMIT-1A — 24/11/2026 — SOURCE (limite ai tentativi sulla password)
 
 **Esito: A (SOURCE, non pubblicato; tabella NON creata su nessun database reale). Livello L. PR [#683](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/683).** Richiesta del PO («avvia ora il limite ai tentativi sulla password con la tabella nuova»). Dopo 5 password sbagliate in 15 minuti l'accesso si blocca 15 minuti (poi 30 e 60 se si ricade entro 24 ore), anche con la password giusta; stesso conteggio per cambio password e cambio e-mail; il recupero password completato dal titolare toglie il blocco. Mai blocco permanente. Nessuna colonna di `login`/`utenti`, nessuna routine: tabella nuova `login_attempt_limits` ([manuale e script](AUTH_ATTEMPT_LIMIT_TABLE.md)), si toglie con `DROP TABLE`; senza tabella il sito resta com'e.

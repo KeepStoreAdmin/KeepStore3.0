@@ -33,7 +33,9 @@ Partial Class export
 
         cmd.Connection = conn
         cmd.CommandType = CommandType.Text
-        cmd.CommandText = "SELECT ArticoliId,NListino,Prezzo, PrezzoIvato FROM articoli_listini WHERE (NListino=" & nListino & ") AND (ArticoliId=" & idArticolo & ")"
+        cmd.CommandText = "SELECT ArticoliId,NListino,Prezzo, PrezzoIvato FROM articoli_listini WHERE (NListino=@lst) AND (ArticoliId=@art)"
+        cmd.Parameters.AddWithValue("@lst", nListino)
+        cmd.Parameters.AddWithValue("@art", idArticolo)
 
         dr = cmd.ExecuteReader()
         dr.Read()
@@ -90,7 +92,9 @@ Partial Class export
 
         cmd.Connection = conn
         cmd.CommandType = CommandType.Text
-        cmd.CommandText = "SELECT SpedizioneGratis_Listini, SpedizioneGratis_Data_Inizio, SpedizioneGratis_Data_Fine, id FROM articoli WHERE (SpedizioneGratis_Listini LIKE CONCAT('%', " & nListino & ", ';%')) AND (id = " & idArticolo & ") AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())"
+        cmd.CommandText = "SELECT SpedizioneGratis_Listini, SpedizioneGratis_Data_Inizio, SpedizioneGratis_Data_Fine, id FROM articoli WHERE (SpedizioneGratis_Listini LIKE CONCAT('%', @lst, ';%')) AND (id = @art) AND (SpedizioneGratis_Data_Inizio <= CURDATE()) AND (SpedizioneGratis_Data_Fine >= CURDATE())"
+        cmd.Parameters.AddWithValue("@lst", nListino)
+        cmd.Parameters.AddWithValue("@art", idArticolo)
 
         dr = cmd.ExecuteReader()
         dr.Read()
@@ -107,6 +111,33 @@ Partial Class export
         End If
     End Function
 
+
+    'Condizioni di una riga di export_filtri: le colonne sono intere, ogni valore passa da un parametro numerato (@fm0, @fs0, ...); il testo SQL non contiene valori.
+    Private Function FiltroCondizioni(ByVal riga As MySqlDataReader, ByVal comando As MySqlCommand, ByVal indice As Integer) As String
+        Dim suffisso As String = indice.ToString()
+        Dim colonne() As String = {"MarcheId", "SettoriId", "CategorieId", "TipologieId", "GruppiId", "SottogruppiId"}
+        Dim sigle() As String = {"fm", "fs", "fc", "ft", "fg", "fsg"}
+        Dim campi() As String = {"marcheid", "settoriid", "categorieid", "tipologieid", "gruppiid", "sottogruppiid"}
+        Dim soglie() As Integer = {0, -1, -1, -1, -1, -1}
+        Dim parti As New List(Of String)
+        For i As Integer = 0 To colonne.Length - 1
+            If riga.Item(colonne(i)) > soglie(i) Then
+                parti.Add("(" & campi(i) & "=@" & sigle(i) & suffisso & ")")
+                comando.Parameters.AddWithValue("@" & sigle(i) & suffisso, riga.Item(colonne(i)))
+            Else
+                parti.Add("(1=1)")
+            End If
+        Next
+        Return String.Join(" and ", parti.ToArray())
+    End Function
+
+    Private Function FiltroArticolo(ByVal riga As MySqlDataReader, ByVal comando As MySqlCommand, ByVal indice As Integer) As String
+        If riga.Item("ArticoliId") > -1 Then
+            comando.Parameters.AddWithValue("@fa" & indice.ToString(), riga.Item("ArticoliId"))
+            Return "id=@fa" & indice.ToString()
+        End If
+        Return "1=1"
+    End Function
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
 
@@ -182,7 +213,9 @@ Partial Class export
 
         cmd.Connection = conn
         cmd.CommandType = CommandType.Text
-        cmd.CommandText = "select export.*, vettori.iva, iva.valore from export left join vettori on export.idVettore=vettori.id left join iva on vettori.iva=iva.id where (export.id='" & ID & "' and export.password='" & Password & "') limit 0, 1"
+        cmd.CommandText = "select export.*, vettori.iva, iva.valore from export left join vettori on export.idVettore=vettori.id left join iva on vettori.iva=iva.id where (export.id=@id and export.`password`=@pwd) limit 0, 1"
+        cmd.Parameters.AddWithValue("@id", ID)
+        cmd.Parameters.AddWithValue("@pwd", If(Password, ""))
 
         dr = cmd.ExecuteReader()
         dr.Read()
@@ -226,8 +259,11 @@ Partial Class export
 
             dr.Close()
 
+            cmd.Parameters.Clear()
+
             If calcola_spedizione_reale = 1 Then
-                cmd.CommandText = "SELECT PesoMax, CostoFisso FROM (vettoricosti) WHERE (VettoriId = " & idVettore & ")ORDER BY PesoMax"
+                cmd.CommandText = "SELECT PesoMax, CostoFisso FROM (vettoricosti) WHERE (VettoriId = @vet)ORDER BY PesoMax"
+                cmd.Parameters.AddWithValue("@vet", idVettore)
 
                 dtAdapter.SelectCommand = cmd
                 dtAdapter.Fill(ds)
@@ -241,8 +277,12 @@ Partial Class export
 
                 Path = Path & Nome & ".txt"
 
+                cmd.Parameters.Clear()
+                cmd.Parameters.AddWithValue("@lst", Listino)
+
                 If Giacenza >= 0 Then
-                    strGiacenza = " and Giacenza >= " & Giacenza
+                    strGiacenza = " and Giacenza >= @gia"
+                    cmd.Parameters.AddWithValue("@gia", Giacenza)
                 End If
 
                 'cmd.CommandText = "select * from varticolilistini where export=1 and nlistino=" & Listino & strGiacenza & " order by settoriid, categorieid, tipologieid, marcheid, codice"
@@ -259,20 +299,23 @@ Partial Class export
 
                 cmd2.Connection = conn
                 cmd2.CommandType = CommandType.Text
-                cmd2.CommandText = "select * from export_filtri where ExportId=" & ID
+                cmd2.CommandText = "select * from export_filtri where ExportId=@exid"
+                cmd2.Parameters.AddWithValue("@exid", ID)
 
                 dr2 = cmd2.ExecuteReader()
                 dr2.Read()
 
                 'Lettura Parametri
                 If dr2.HasRows Then
-                    cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=" & Listino & strGiacenza & " and (isnull(offerteid) or offerteqntminima = 1 or offertemultipli=1) and ( (" & IIf(dr2.Item("MarcheId") > 0, "(marcheid=" & dr2.Item("MarcheId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SettoriId") > -1, "(settoriid=" & dr2.Item("SettoriId") & ")", "(1=1)") & " and " & IIf(dr2.Item("CategorieId") > -1, "(categorieid=" & dr2.Item("CategorieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("TipologieId") > -1, "(tipologieid=" & dr2.Item("TipologieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("GruppiId") > -1, "(gruppiid=" & dr2.Item("GruppiId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SottogruppiId") > -1, "(sottogruppiid=" & dr2.Item("SottogruppiId") & ")", "(1=1)") & " ) "
+                    Dim idxFiltro As Integer = 0
+                    cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=@lst" & strGiacenza & " and (isnull(offerteid) or offerteqntminima = 1 or offertemultipli=1) and ( (" & FiltroCondizioni(dr2, cmd, idxFiltro) & " ) "
                     While dr2.Read()
-                        cmd.CommandText = cmd.CommandText & " or ((" & IIf(dr2.Item("MarcheId") > 0, "(marcheid=" & dr2.Item("MarcheId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SettoriId") > -1, "(settoriid=" & dr2.Item("SettoriId") & ")", "(1=1)") & " and " & IIf(dr2.Item("CategorieId") > -1, "(categorieid=" & dr2.Item("CategorieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("TipologieId") > -1, "(tipologieid=" & dr2.Item("TipologieId") & ")", "(1=1)") & " and " & IIf(dr2.Item("GruppiId") > -1, "(gruppiid=" & dr2.Item("GruppiId") & ")", "(1=1)") & " and " & IIf(dr2.Item("SottogruppiId") > -1, "(sottogruppiid=" & dr2.Item("SottogruppiId") & ")", "(1=1)") & " ) AND (" & IIf(dr2.Item("ArticoliId") > -1, "id=" & dr2.Item("ArticoliId"), "1=1") & "))"
+                        idxFiltro += 1
+                        cmd.CommandText = cmd.CommandText & " or ((" & FiltroCondizioni(dr2, cmd, idxFiltro) & " ) AND (" & FiltroArticolo(dr2, cmd, idxFiltro) & "))"
                     End While
                     cmd.CommandText = cmd.CommandText & ") order by settoriid, categorieid, tipologieid, marcheid, codice"
                 Else
-                    cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=" & Listino & strGiacenza & " and (isnull(offerteid) or offerteqntminima = 1 or offertemultipli=1) order by settoriid, categorieid, tipologieid, marcheid, codice"
+                    cmd.CommandText = "select * from vsuperarticoli where export=1 and nlistino=@lst" & strGiacenza & " and (isnull(offerteid) or offerteqntminima = 1 or offertemultipli=1) order by settoriid, categorieid, tipologieid, marcheid, codice"
                 End If
                 conn2.Close()
                 cmd2.Dispose()
