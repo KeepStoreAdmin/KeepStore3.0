@@ -8,6 +8,8 @@ param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$SkipHarness)
 #  - il forward si rilancia (idempotente: nessuna riga doppia nel registro) e riprende dopo OGNI interruzione (script fermato prima di ciascun passo -- STEP n); il rollback riporta lo stato iniziale;
 #  - rifiuto del rollback senza conferma, arresto con binlog STATEMENT (condizione sostituita: il LAB ha log_bin=0), verify che si ferma se i dati o il registro sono corrotti;
 #  - il programma Tools\ExportFeedGestionaleHarness.vb (connettore .NET, registro REALE, stessa logica di AggiungiDati/ExecStoreTrnNoCommit del gestionale) salva, modifica, duplica;
+#  - lo script dati (database la cui struttura e stata portata da un confronto di schemi: tabelle e routine presenti, dati assenti): completa i dati senza ricreare le routine ne toccare opzioni e righe estranee, si ferma
+#    SENZA scrivere se la struttura manca o una routine ha i parametri in un altro ordine; verify non lascia passare colonne, indici, tipi o parametri nell'ordine sbagliato;
 #  - mutazioni degli script (una modifica per volta): la prova deve fallire.
 # Scrive solo righe sintetiche (KSGESTHARNESS%) e gli oggetti della migrazione, riportati allo stato iniziale dal rollback. Solo ASCII (Windows PowerShell 5.1).
 # Durata circa 8 minuti: con Tools\Run-KeepStoreRelatedTests.ps1 serve -TimeoutSec 1800.
@@ -24,7 +26,7 @@ New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $migDir = Join-Path $tmp 'mig'
 New-Item -ItemType Directory -Force -Path $migDir | Out-Null
 $docText = [IO.File]::ReadAllText($scriptsDoc, $utf8)
-foreach ($k in @('preflight', 'forward', 'verify', 'rollback')) {
+foreach ($k in @('preflight', 'forward', 'dati', 'verify', 'rollback')) {
     $m = [regex]::Match($docText, '(?s)## ' + [regex]::Escape($prefix + $k) + '\.sql\r?\n\r?\n```sql\r?\n(.*?)```')
     if ($m.Success) { [IO.File]::WriteAllText((Join-Path $migDir ($prefix + $k + '.sql')), ($m.Groups[1].Value -replace '\r\n', "`n"), $utf8) }
 }
@@ -71,7 +73,53 @@ function Get-ForwardUpTo([string]$text, [int]$upTo) {
 }
 function Count-Steps([string]$text) { return [regex]::Matches($text, '(?m)^-- STEP (\d+)').Count }
 function Run-Rollback([string]$rollbackText) { return Invoke-Sql ($confirm + $rollbackText) -Write }
-function Remove-TestRows { $null = Invoke-Sql "DELETE FROM export_filtri WHERE ExportId IN (SELECT ID FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%'); DELETE FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%'; DELETE FROM exportcampi WHERE NomeCampo = 'CategoriaPercorsoX'; DELETE FROM export_filtri WHERE ExportId = 0;" -Write }
+function Remove-TestRows { $null = Invoke-Sql "DELETE FROM export_filtri WHERE ExportId IN (SELECT ID FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%'); DELETE FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%'; DELETE FROM exportcampi WHERE NomeCampo = 'CategoriaPercorsoX'; DELETE FROM export_filtri WHERE ExportId = 0; DELETE FROM sysparametristored WHERE NomeStore = 'KsAltraRoutine';" -Write }
+
+
+# --- script dati: simulazione di un database la cui struttura e stata portata dal programma di confronto (tabelle e routine presenti, dati assenti) ---
+$script:skipId = 0
+function Get-DatiFp {
+    return Get-Scalar ("SELECT CONCAT_WS('#', " +
+        "(SELECT SHA2(IFNULL(GROUP_CONCAT(CONCAT_WS(':', ROUTINE_NAME, SHA2(ROUTINE_DEFINITION, 256), DEFINER, SECURITY_TYPE, CREATED, LAST_ALTERED) ORDER BY ROUTINE_NAME SEPARATOR '|'), ''), 256) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_NAME IN (" + $names + "))," +
+        "(SELECT COUNT(*) FROM export_opzioni WHERE ExportId <> " + $script:skipId + "), (SELECT IFNULL(SUM(CRC32(CONCAT_WS(':', Id, ExportId, TokenAccesso, Separatore, MinutiCache))), 0) FROM export_opzioni WHERE ExportId <> " + $script:skipId + ")," +
+        "(SELECT COUNT(*) FROM sysparametristored WHERE NomeStore = 'KsAltraRoutine')) AS ksval;")
+}
+function Get-RegFp {
+    return Get-Scalar ("SELECT CONCAT_WS('#', COUNT(*), IFNULL(SUM(CRC32(CONCAT_WS(':', id, NomeStore, NomeParametro, Direzione))), 0)) AS ksval FROM sysparametristored WHERE NomeStore IN (" + $names + ");")
+}
+function Set-AlignedState([string]$forwardText) {
+    $null = Invoke-Sql $forwardText -Write
+    $script:skipId = [int](Get-Scalar 'SELECT MAX(ExportId) AS ksval FROM export_opzioni;')
+    $null = Invoke-Sql ("UPDATE export_opzioni SET Separatore = ';', MinutiCache = 120 WHERE ExportId = (SELECT m FROM (SELECT MIN(ExportId) AS m FROM export_opzioni) z); " +
+        "DELETE FROM sysparametristored WHERE NomeStore = 'KsAltraRoutine'; INSERT INTO sysparametristored (NomeStore, NomeParametro, Tipo, Lunghezza, Direzione) VALUES ('KsAltraRoutine', 'parX', 'int', -1, 'IN'); " +
+        "DELETE FROM sysparametristored WHERE NomeStore IN (" + $names + "); DELETE FROM exportcampi WHERE NomeCampo = 'CategoriaPercorso'; DELETE FROM export_opzioni WHERE ExportId = " + $script:skipId + ";") -Write
+}
+# Scenario A: il testo di dati deve completare i dati senza toccare routine, opzioni esistenti e righe estranee del registro; e ripetibile; verify OK.
+function Test-DatiA([string]$text, [string]$forwardText, [string]$verifyText) {
+    $f = New-Object Collections.Generic.List[string]
+    Set-AlignedState $forwardText
+    $fp0 = Get-DatiFp
+    $r = Invoke-Sql $text -Write
+    if ($r -notmatch 'EXPORT_FEED_DB_DATI_OK') { $f.Add('senza DATI_OK'); return $f.ToArray() }
+    if ((Get-DatiFp) -ne $fp0) { $f.Add('routine, opzioni o righe estranee del registro cambiate') }
+    if ((Invoke-Sql $verifyText) -notmatch 'EXPORT_FEED_DB_VERIFY_OK') { $f.Add('verify dopo dati non OK') }
+    if ((Get-Scalar ('SELECT COUNT(*) AS ksval FROM export_opzioni WHERE ExportId = ' + $script:skipId + ';')) -ne '1') { $f.Add('riga di opzioni del feed senza opzioni non creata') }
+    $snap1 = Get-Snapshot
+    $r2 = Invoke-Sql $text -Write
+    if ($r2 -notmatch 'EXPORT_FEED_DB_DATI_OK' -or (Get-Snapshot) -ne $snap1 -or (Get-DatiFp) -ne $fp0) { $f.Add('secondo lancio: non ripetibile o stato cambiato') }
+    return $f.ToArray()
+}
+# Scenario B: una routine con i parametri in un altro ordine (come un confronto potrebbe produrre): lo script deve fermarsi SENZA scrivere (registro identico).
+function Test-DatiB([string]$text, [string]$forwardText) {
+    $f = New-Object Collections.Generic.List[string]
+    $null = Invoke-Sql $forwardText -Write
+    $null = Invoke-Sql 'DROP PROCEDURE IF EXISTS `Modexport_codice`; CREATE PROCEDURE `Modexport_codice`(OUT parRetVal int, IN parId int) SET parRetVal = parId;' -Write
+    $reg0 = Get-RegFp; $snap0 = Get-Snapshot
+    $r = Invoke-Sql $text -Write
+    if ($r -match 'EXPORT_FEED_DB_DATI_OK' -or $r -notmatch 'ERROR 1109') { $f.Add('non si e fermato con una routine dai parametri scambiati') }
+    if ((Get-RegFp) -ne $reg0 -or (Get-Snapshot) -ne $snap0) { $f.Add('ha scritto prima di fermarsi (registro o dati cambiati)') }
+    return $f.ToArray()
+}
 
 # --- programma .NET che simula il gestionale ---
 function Run-Harness {
@@ -130,8 +178,8 @@ try {
     $uuid = Get-Scalar 'SELECT @@server_uuid AS ksval;'
     if ($uuid -ne '1167ebae-d0c0-11f1-b348-9c7bef540c10') { throw 'NOT_THE_LAB' }
     Remove-TestRows
-    $forward = Read-Mig 'forward'; $rollback = Read-Mig 'rollback'; $verify = Read-Mig 'verify'; $preflight = Read-Mig 'preflight'
-    if ($forward -eq '' -or $rollback -eq '' -or $verify -eq '' -or $preflight -eq '') { throw 'SCRIPTS_NOT_FOUND_IN_DOC' }
+    $forward = Read-Mig 'forward'; $rollback = Read-Mig 'rollback'; $verify = Read-Mig 'verify'; $preflight = Read-Mig 'preflight'; $dati = Read-Mig 'dati'
+    if ($forward -eq '' -or $rollback -eq '' -or $verify -eq '' -or $preflight -eq '' -or $dati -eq '') { throw 'SCRIPTS_NOT_FOUND_IN_DOC' }
     $initial = Get-Snapshot
     if ($initial -notmatch '#0#0$') { throw 'LAB_NOT_IN_INITIAL_STATE (eseguire il rollback prima di provare)' }
     $nSteps = Count-Steps $forward
@@ -215,6 +263,48 @@ try {
         Check ($r -match 'ERROR 1109' -and ((Get-Snapshot) -eq $initial)) ('binlog STATEMENT simulato: ' + $kind + ' si ferma e non crea nulla')
     }
 
+    # --- script dati: struttura gia portata dal confronto, dati da completare ---
+    $s0 = Get-Snapshot
+    $d0 = Invoke-Sql $dati -Write
+    Check ($d0 -match 'ERROR 1109' -and $d0 -notmatch 'EXPORT_FEED_DB_DATI_OK' -and (Get-Snapshot) -eq $s0) 'dati su un database senza la struttura: si ferma e non scrive nulla'
+    $null = Invoke-Sql (Get-ForwardUpTo $forward 1) -Write
+    $sP = Get-Snapshot
+    $dP = Invoke-Sql $dati -Write
+    Check ($dP -match 'ERROR 1109' -and $dP -notmatch 'EXPORT_FEED_DB_DATI_OK' -and (Get-Snapshot) -eq $sP) 'dati con la struttura parziale (solo export_opzioni): si ferma e non scrive nulla'
+    $null = Run-Rollback $rollback
+    Check ((Get-Snapshot) -eq $initial) 'rollback dopo la prova a struttura parziale: stato iniziale'
+    $fa = @(Test-DatiA $dati $forward $verify)
+    Check ($fa.Count -eq 0) ('dati su un database con la struttura e senza i dati: DATI_OK, routine e righe estranee intatte, verify OK, ripetibile' + $(if ($fa.Count -gt 0) { ' (' + ($fa -join '; ') + ')' } else { '' }))
+    $null = Run-Rollback $rollback; Remove-TestRows
+    $fb = @(Test-DatiB $dati $forward)
+    Check ($fb.Count -eq 0) ('dati con una routine dai parametri scambiati: si ferma prima di scrivere' + $(if ($fb.Count -gt 0) { ' (' + ($fb -join '; ') + ')' } else { '' }))
+    $vB = Invoke-Sql $verify
+    Check ($vB -match "firma_attesa_dei_parametri_delle_routine`tKO" -and $vB -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify: la routine con i parametri scambiati e un KO (firma attesa)'
+    $null = Run-Rollback $rollback; Remove-TestRows
+    Check ((Get-Snapshot) -eq $initial) 'rollback dopo le prove di dati: stato iniziale'
+
+    # --- verify: guasti che prima passavano ---
+    $null = Invoke-Sql $forward -Write
+    $null = Invoke-Sql 'ALTER TABLE export_colonne MODIFY COLUMN Posizione int NOT NULL AFTER SeVuoto;' -Write
+    $vc = Invoke-Sql $verify
+    Check ($vc -match "export_colonne_colonne_tipi_e_ordine`tKO" -and $vc -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify: colonne di export_colonne in un altro ordine = KO'
+    $null = Invoke-Sql 'ALTER TABLE export_colonne MODIFY COLUMN Posizione int NOT NULL AFTER ExportId;' -Write
+    $null = Invoke-Sql 'ALTER TABLE export_colonne ADD INDEX ix_ks_tmp (ExportId), DROP INDEX uk_export_colonne_posizione, ADD UNIQUE KEY uk_export_colonne_posizione (Posizione, ExportId);' -Write
+    $vi = Invoke-Sql $verify
+    Check ($vi -match "indici_per_colonna`tKO" -and $vi -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify: indice con lo stesso nome su colonne sbagliate = KO'
+    $null = Invoke-Sql 'ALTER TABLE export_colonne DROP INDEX uk_export_colonne_posizione, ADD UNIQUE KEY uk_export_colonne_posizione (ExportId, Posizione), DROP INDEX ix_ks_tmp;' -Write
+    $null = Invoke-Sql 'ALTER TABLE export_stato MODIFY COLUMN UltimeRighe bigint NULL DEFAULT NULL;' -Write
+    $vs = Invoke-Sql $verify
+    Check ($vs -match "export_stato_colonne_tipi_e_ordine`tKO" -and $vs -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify: tipo di una colonna di export_stato diverso = KO'
+    $null = Invoke-Sql 'ALTER TABLE export_stato MODIFY COLUMN UltimeRighe int NULL DEFAULT NULL;' -Write
+    $null = Invoke-Sql "UPDATE sysparametristored SET id = id + 200000 WHERE NomeStore = 'Newexport_colonne' AND NomeParametro IN ('parPosizione', 'parCampo') ORDER BY id DESC;" -Write
+    $vr = Invoke-Sql $verify
+    Check ($vr -match "firma_attesa_nel_registro`tKO" -and $vr -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify: registro con due parametri scambiati = KO (firma attesa)'
+    $null = Invoke-Sql $forward -Write
+    Check ((Invoke-Sql $verify) -match 'EXPORT_FEED_DB_VERIFY_OK') 'verify torna OK dopo aver ripristinato'
+    Check ((Invoke-Sql $verify) -match 'Proprietario') 'verify stampa proprietario e SQL SECURITY delle routine (informazione)'
+    $null = Run-Rollback $rollback
+
     # --- ripresa: interruzione dopo ogni passo, poi forward completo, verify, rollback ---
     for ($n = 0; $n -le $nSteps; $n++) {
         $part = Get-ForwardUpTo $forward $n
@@ -265,6 +355,32 @@ try {
             Remove-TestRows
         }
         Write-Host ('  mutanti uccisi ' + $killed + '/' + $total)
+
+        # mutazioni dello script dati: ogni modifica deve far fallire lo scenario A o B
+        $datiMutants = @(
+            @('dati-riempimento-tolto', 'WHERE NOT EXISTS (SELECT 1 FROM export_opzioni o WHERE o.ExportId = e.ID) ORDER BY e.ID', 'WHERE 1 = 0 ORDER BY e.ID'),
+            @('dati-registro-in-altro-ordine', 'ORDER BY SPECIFIC_NAME, ORDINAL_POSITION', 'ORDER BY SPECIFIC_NAME, ORDINAL_POSITION DESC'),
+            @('dati-cancella-righe-estranee-del-registro', 'DELETE FROM sysparametristored WHERE NomeStore IN (', 'DELETE FROM sysparametristored WHERE NomeStore = ''''KsAltraRoutine'''' OR NomeStore IN ('),
+            @('dati-registro-non-scritto', 'PARAMETERS WHERE SPECIFIC_SCHEMA = DATABASE() AND SPECIFIC_NAME IN (''''Newexport_opzioni', 'PARAMETERS WHERE 1 = 0 AND SPECIFIC_NAME IN (''''Newexport_opzioni'),
+            @('dati-guardia-struttura-spenta', 'SET @ks_go = IF(@ks_go = 1 AND (SELECT COUNT(*) FROM information_schema.TABLES', 'SET @ks_go = IF(1 = 1 OR (SELECT COUNT(*) FROM information_schema.TABLES'),
+            @('dati-ricrea-le-routine', 'START TRANSACTION;', 'DROP PROCEDURE IF EXISTS `Dupexport`; CREATE PROCEDURE `Dupexport`(IN parId int, OUT parRetVal int) SET parRetVal = parId; START TRANSACTION;'),
+            @('dati-campo-non-inserito', 'INSERT INTO exportcampi (NomeCampo) SELECT ''''CategoriaPercorso''''', 'INSERT INTO exportcampi (NomeCampo) SELECT ''''CategoriaPercorsoX''''')
+        )
+        $dKilled = 0; $dTotal = 0
+        foreach ($mu in $datiMutants) {
+            if ($MutantFilter -ne '' -and $mu[0] -notlike ('*' + $MutantFilter + '*')) { continue }
+            $dTotal++
+            if (-not $dati.Contains($mu[1])) { Write-Host ('  FAIL mutante ' + $mu[0] + ': testo da mutare non trovato'); $e2e.Add('mutante ' + $mu[0] + ' non applicabile'); continue }
+            $mutated = $dati.Replace($mu[1], $mu[2])
+            $null = Run-Rollback $rollback; Remove-TestRows
+            $fa = @(Test-DatiA $mutated $forward $verify)
+            $null = Run-Rollback $rollback; Remove-TestRows
+            $fb = @(Test-DatiB $mutated $forward)
+            $null = Run-Rollback $rollback; Remove-TestRows
+            if (($fa.Count + $fb.Count) -gt 0) { $dKilled++; Write-Host ('  ok   mutante ' + $mu[0] + ' ucciso (' + (@($fa) + @($fb))[0] + ')') }
+            else { Write-Host ('  FAIL mutante ' + $mu[0] + ' sopravvissuto'); $e2e.Add('mutante ' + $mu[0] + ' sopravvissuto') }
+        }
+        Write-Host ('  mutanti di dati uccisi ' + $dKilled + '/' + $dTotal)
     }
 
     # --- stato finale ---
