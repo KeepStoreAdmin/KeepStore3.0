@@ -79,7 +79,26 @@ $engineMutants = @(
     @('impronta-con-nothing-diverso', 'Dim v As String = NZ(p)', 'Dim v As String = If(p Is Nothing, "NULL", p)'),
     @('vecchio-file-senza-impronta-resta', '[0-9A-F]{48}(-[0-9a-f]{12})?\.(txt|csv|tsv|xml)$', '[0-9A-F]{48}-[0-9a-f]{12}\.(txt|csv|tsv|xml)$'),
     @('anteprima-riga-incompleta', 'If lines.Count > 0 AndAlso (cutByBytes OrElse lines(lines.Count - 1).Length = 0) Then lines.RemoveAt(lines.Count - 1)', 'If lines.Count > 0 AndAlso lines(lines.Count - 1).Length = 0 Then lines.RemoveAt(lines.Count - 1)'),
-    @('anteprima-senza-tetto-righe', 'If lines.Count > maxLines Then lines.RemoveRange(maxLines, lines.Count - maxLines)', '')
+    @('anteprima-senza-tetto-righe', 'If lines.Count > maxLines Then lines.RemoveRange(maxLines, lines.Count - maxLines)', ''),
+    @('gtin-senza-cifra-di-controllo', 'If check <> AscW(s(n - 1)) - AscW("0"c) Then Return ""', ''),
+    @('gtin-prefissi-tolti', 'If p2 = "02" OrElse p2 = "04" OrElse p2 = "98" OrElse p2 = "99" OrElse ean13(0) = "2"c Then Return ""', ''),
+    @('gtin-tutto-zero', 'If s.Trim("0"c).Length = 0 Then Return ""', ''),
+    @('gtin-upc-senza-zero', 'If n = 12 Then ean13 = "0" & s', ''),
+    @('gtin-lunghezza-qualunque', 'If n <> 8 AndAlso n <> 12 AndAlso n <> 13 AndAlso n <> 14 Then Return ""', ''),
+    @('gtin-caratteri-non-cifre', 'If ch < "0"c OrElse ch > "9"c Then Return ""', ''),
+    @('condizione-inglese-invertita', 'If(row.Refurbished = 1, "refurbished", "new")', 'If(row.Refurbished = 1, "new", "refurbished")'),
+    @('testo-decodifica-dopo', 'Dim text As String = WebUtility.HtmlDecode(raw)', 'Dim text As String = raw'),
+    @('testo-script-resta', 'text = ScriptStyleRegex.Replace(text, " ")', ''),
+    @('testo-commenti-restano', 'text = CommentRegex.Replace(text, " ")', ''),
+    @('testo-tag-grezzi', '"</?[A-Za-z][^<>]*>"', '"<[^>]*>"'),
+    @('titolo-sempre-normalizzato', 'If Char.IsLower(ch) Then Return t', ''),
+    @('titolo-cifre-normalizzate', 'If Not hasDigit AndAlso w.Length > 0 Then', 'If w.Length > 0 Then'),
+    @('token-nuovi-non-noti', "`"UrlImg4Big`",`n        `"CondizioneInglese`", `"EanValido`", `"DescrizioneSoloTesto`", `"TitoloNormalizzato`"`n    }", "`"UrlImg4Big`"`n    }"),
+    @('etichetta-non-minuscola', 'Case "eanvalido" : Return ValidGtin(row.Ean)', 'Case "EanValido" : Return ValidGtin(row.Ean)'),
+    @('titolo-dipende-dal-flag', 'Case "titolonormalizzato" : Return NormalizeTitle(row.Title1)', 'Case "titolonormalizzato" : Return If(opts.LowerCaseTitle, CapitalizeLower(row.Title1), NormalizeTitle(row.Title1))'),
+    @('ean-esistente-cambiato', 'Case "ean" : Return CleanText(row.Ean, False)', 'Case "ean" : Return ValidGtin(row.Ean)'),
+    @('descrizione-lunga-esistente-cambiata', 'Case "descrizionelunga" : Return CleanText(row.LongText, False)', 'Case "descrizionelunga" : Return PlainText(row.LongText)'),
+    @('condizione-esistente-cambiata', 'Case "condizione" : Return If(row.Refurbished = 1, "RICONDIZIONATO", "NUOVO")', 'Case "condizione" : Return If(row.Refurbished = 1, "refurbished", "new")')
 )
 if (-not $SkipMutants -and $u.Compiled) {
     $killed = 0; $total = 0

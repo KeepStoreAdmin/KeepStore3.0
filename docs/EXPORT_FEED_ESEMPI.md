@@ -1,6 +1,6 @@
 # EXPORT_FEED_ESEMPI - tre feed di esempio come dati (FEED-EXAMPLES-1A)
 
-Stato: **SOURCE, script provati solo sul database LAB, non applicati a nessun database reale** (26/11/2026). Nessun file da pubblicare sul server. CONSEGNA SERVER SOSPESA.
+Stato: **SOURCE, script provati solo sul database LAB, non applicati a nessun database reale** (26/11/2026; esempio Google reso conforme dal task `GOOGLE-MERCHANT-CENTER-FEED-1A`). Per collegare l'esempio Google a Merchant Center vedi [GOOGLE_MERCHANT_CENTER_COLLEGAMENTO](GOOGLE_MERCHANT_CENTER_COLLEGAMENTO.md). Il motore va pubblicato sul server (`App_Code/KeepStoreFeedEngine.vb`) prima di usare i campi nuovi: senza, il feed Google risponde con un errore di configurazione (campo sconosciuto). CONSEGNA SERVER SOSPESA.
 
 ## 1. Che cosa fa
 Crea, **per ogni azienda idonea**, tre feed di esempio **disabilitati** con le colonne richieste dalle specifiche di Google Merchant Center, Trovaprezzi / 7Pixel e idealo. Sono dati normali del gestionale (tabelle `export`, `export_opzioni`, `export_colonne`): il PO li **duplica** (pulsante Duplica) per fare il suo feed, oppure li **cancella**. Il motore non conosce nessun comparatore. Nessun feed esistente viene toccato.
@@ -10,9 +10,9 @@ Aziende idonee: `aziende.id` presente una volta, `URL1` non vuoto e presente **u
 Valori comuni degli esempi: abilitato **no**; listino = `ListinoDefault` dell'azienda; prezzi **IVA inclusa** (`IvaTipo` = 2: 1 = senza IVA, 2 = con IVA); solo articoli disponibili (giacenza minima 1); articoli senza immagine scartati; prezzo zero scartato; file valido 60 minuti; vettore = vettore web abilitato predefinito dell'azienda (0 se manca); spese fisse 0 e giorni di spedizione 0 (**da completare**).
 
 ## 2. Chi li esegue e in che ordine
-1. **Il PO**, un database alla volta: blocco `20261126_EXPORT_FEED_ESEMPI_esempi.sql` (atteso `EXPORT_FEED_ESEMPI_OK`), poi `20261126_EXPORT_FEED_ESEMPI_verify.sql` (atteso `EXPORT_FEED_ESEMPI_VERIFY_OK`).
+1. **Il PO**, un database alla volta: blocco `20261126_EXPORT_FEED_ESEMPI_campi.sql` (atteso `EXPORT_FEED_CAMPI_OK`: registra quattro campi nel gestionale), poi `20261126_EXPORT_FEED_ESEMPI_esempi.sql` (atteso `EXPORT_FEED_ESEMPI_OK`), poi `20261126_EXPORT_FEED_ESEMPI_verify.sql` (atteso `EXPORT_FEED_ESEMPI_VERIFY_OK`). Per tornare indietro: `20261126_EXPORT_FEED_ESEMPI_rollback.sql` e `20261126_EXPORT_FEED_ESEMPI_campi_rollback.sql`, ognuno preceduto dalla sua conferma.
 2. In SQLyog attivare **Halt Execution of Queries on Error**; dopo un errore chiudere la connessione prima di rilanciare (la sessione conserva le tabelle temporanee).
-3. Privilegi dell'account che esegue: `SELECT` su `aziende`, `vettori`, `vettoricosti`, `export_stato`, `export_filtri`, `sysparametristored`; `SELECT`, `INSERT` su `export`, `export_opzioni`, `export_colonne` (e `DELETE` su `export` solo per il rollback); `CREATE TEMPORARY TABLES`.
+3. Privilegi dell'account che esegue: `SELECT` su `aziende`, `vettori`, `vettoricosti`, `export_stato`, `export_filtri`, `sysparametristored`; `SELECT`, `INSERT` su `export`, `export_opzioni`, `export_colonne`, `exportcampi` (e `DELETE` su `export` e `exportcampi` solo per i rollback); `CREATE TEMPORARY TABLES`.
 4. Prerequisito: la struttura dei feed (tabelle `export_opzioni`, `export_colonne`, `export_stato`) gia presente; senza, lo script si ferma prima di scrivere.
 5. Gli altri database: il programma di Enzo porta lo schema; i dati (esempi compresi) sono righe, quindi lo stesso script si lancia anche li, dopo il si del PO. Gli esempi sono dati opzionali: nessun database ne ha bisogno per funzionare.
 
@@ -21,24 +21,53 @@ Valori comuni degli esempi: abilitato **no**; listino = `ListinoDefault` dell'az
 - [ ] **Giorni di spedizione**: oggi 0 (idealo scrive «0 giorni lavorativi»): mettere il valore reale.
 - [ ] **idealo**: rinominare la colonna `deliveryCosts_dhl` con il vettore reale scelto fra quelli ammessi (`deutsche_post`, `dhl`, `dhl_go_green`, `download`, `dpd`, `fedex`, `german_express_logistics`, `gls`, `gls_think_green`, `hermes`, `pick_point`, `spedition`, `tnt`, `trans_o_flex`, `ups`).
 - [ ] **Trovaprezzi / 7Pixel**: le intestazioni sono **da confermare** con l'account manager (la specifica non e pubblica).
-- [ ] **Google**: **non abilitare** finche non e chiuso `GOOGLE-MERCHANT-CENTER-FEED-1A` (vedi limiti).
+- [ ] **Google**: motore aggiornato sul server, blocco `campi` lanciato, **titoli** letti nell'anteprima (quelli tutto maiuscolo diventano «Parola Parola»; sigle come `USB` diventano `Usb`: e il prezzo della regola senza elenchi), poi la guida di collegamento. Non compilare `aziende.google_merchant_id` per il feed: serve al sondaggio Google Customer Reviews dopo l'ordine (vedi la guida).
 - [ ] Controllare l'**anteprima** (le prime 20 righe) prima di comunicare il link.
 
 ## 4. Colonne (fonte di ogni scelta)
 | Esempio | File | Colonne in ordine |
 |---|---|---|
-| Google Merchant | TSV (tabulazione), UTF-8, prima riga di intestazione | `id`, `title` (150), `description` (5000), `link`, `image_link`, `availability` (`in_stock` / `out_of_stock`), `price` (`12.34 EUR`), `brand` (70), `gtin`, `product_type` (750), `shipping` (`IT::Standard:5.90 EUR`) |
-| Trovaprezzi / 7Pixel | TXT con `|`, UTF-8, intestazione | Nome, Marca, Descrizione, Prezzo, Codice interno, Link, Disponibilita, Categoria, Immagine, Codice produttore, EAN, Spese di spedizione, Peso |
-| idealo | CSV con `,` e virgolette `"`, UTF-8, intestazione | `sku`, `brand`, `title`, `categoryPath`, `url`, `eans`, `hans`, `description`, `price`, `deliveryCosts_dhl`, `delivery`, `imageUrl` |
+| Google Merchant | TSV (tabulazione), UTF-8, prima riga di intestazione | `id`, `title` (150, campo `TitoloNormalizzato`), `description` (5000, `#TitoloNormalizzato#. #DescrizioneSoloTesto#`), `link`, `image_link`, `availability` (`in_stock` / `out_of_stock`), `price` (`12.34 EUR`), `condition` (`new` / `refurbished`), `brand` (70), `gtin` (campo `EanValido`, vuoto se non valido), `mpn` (70, campo `Codice`), `product_type` (750), `shipping` (`IT::Standard:5.90 EUR`) |
+| Trovaprezzi / 7Pixel | TXT con `|`, UTF-8, intestazione | Nome, Marca, Descrizione (testo semplice), Prezzo, Codice interno, Link, Disponibilita, Categoria, Immagine, Codice produttore, EAN (solo se valido), Spese di spedizione, Peso |
+| idealo | CSV con `,` e virgolette `"`, UTF-8, intestazione | `sku`, `brand`, `title`, `categoryPath`, `url`, `eans` (solo se valido), `hans`, `description` (testo semplice), `price`, `deliveryCosts_dhl`, `delivery`, `imageUrl` |
 
-Fonti (lette il 26/11/2026): Google, support.google.com/merchants/answer/7052112 (attributi), /14989239 (file con tabulazione: prima riga di intestazione, stesso numero di tabulazioni in ogni riga); idealo, idealo.github.io/csv-importer/en/csv/ (attributi, separatore `,`, UTF-8, `.` come decimale, valori multipli con `;`); Trovaprezzi / 7Pixel: nessuna specifica pubblica (fonte di seconda mano nell'audit dei feed). La descrizione e il modello `#Descrizione1#. #DescrizioneLunga#` (mai vuota). Il prezzo e l'offerta per 1 pezzo valida oggi, altrimenti il listino (stessa regola della scheda articolo, decisione del PO 2026-11-25). Le spese sono per articolo (fascia di peso del vettore, oppure 0 se il listino ha la spedizione gratis).
+Fonti (lette il 26/11/2026): Google, support.google.com/merchants/answer/7052112 (attributi), /14989239 (file con tabulazione: prima riga di intestazione, stesso numero di tabulazioni in ogni riga); idealo, idealo.github.io/csv-importer/en/csv/ (attributi, separatore `,`, UTF-8, `.` come decimale, valori multipli con `;`); Trovaprezzi / 7Pixel: nessuna specifica pubblica (fonte di seconda mano nell'audit dei feed). La descrizione e un modello titolo + testo semplice (mai vuota: se manca il testo lungo resta il titolo). **Campi nuovi del motore** (sono dati generici, nessun comparatore nel codice): `CondizioneInglese` (`refurbished` se l'articolo e ricondizionato, altrimenti `new`), `EanValido` (l'EAN solo se ha 8, 12, 13 o 14 cifre senza spazi ne trattini, cifra di controllo GS1 corretta, non tutto zero, e un prefisso ammesso: non `02`, `04`, `2`, `98`, `99`), `DescrizioneSoloTesto` (testo lungo senza commenti, script, stile e tag, entita decodificate una volta) e `TitoloNormalizzato` (se il titolo non ha nessuna lettera minuscola, ogni parola senza cifre diventa maiuscola iniziale; altrimenti resta com'e). I campi esistenti (`Condizione`, `Ean`, `DescrizioneLunga`, `Descrizione1`) non cambiano: i feed gia in uso restano identici. Il prezzo e l'offerta per 1 pezzo valida oggi, altrimenti il listino (stessa regola della scheda articolo, decisione del PO 2026-11-25). Le spese sono per articolo (fascia di peso del vettore, oppure 0 se il listino ha la spedizione gratis).
 
 ## 5. Limiti dichiarati (non cambiano che cosa fa lo script)
-1. **Google, `condition`**: il motore scrive `NUOVO`/`RICONDIZIONATO` (non i valori inglesi `new`/`refurbished`): 40 articoli sono ricondizionati e senza l'attributo sarebbero presentati come nuovi. Per questo l'esempio Google non si abilita; la soluzione e nel task `GOOGLE-MERCHANT-CENTER-FEED-1A`.
-2. **HTML nelle descrizioni**: 41 articoli su 4.625 hanno tag HTML nel testo lungo (il motore li toglie solo dal campo `DescrizioneHtml`). **Virgolette nei titoli**: 549 titoli contengono `"` (pollici): nel file a tabulazioni di Google restano cosi come sono; da misurare nel task Google.
-3. **Specifiche non verificabili**: intestazioni e decimale di Trovaprezzi / 7Pixel; uso delle virgolette in idealo (non dichiarato: si usa lo standard CSV); se `Codice` e il codice del produttore (decisione del PO 2026-11-25: si usa `Codice`).
-4. Provato su MySQL 8.0.46 del LAB (registro binario spento), non sul gestionale vero (solo le routine `Dupexport` e le tabelle sul LAB).
-5. Gli esempi non sono pubblici finche disabilitati; la risposta del sito per un feed disabilitato e 404.
+1. **Google e il tutto maiuscolo**: 500 titoli su 1.569 (32%) sono tutto maiuscolo, requisito minimo di Google da evitare. `TitoloNormalizzato` li corregge con una regola solo strutturale (nessun elenco di sigle): `USB`, `HDMI`, `SSD` diventano `Usb`, `Hdmi`, `Ssd`; i codici modello con cifre restano. Controllare l'anteprima al primo caricamento.
+2. **Google e gli identificativi**: circa 70 articoli su 1.569 (63 per lunghezza o caratteri, 7 per cifra di controllo, 4 per prefisso) non hanno un GTIN valido: il `gtin` resta vuoto e Google chiede allora brand e `mpn`. L'esempio scrive `mpn` = `Codice` (decisione del PO 2026-11-25: `Codice` e il codice produttore): **non provato** che ogni `Codice` sia un vero codice del produttore. `identifier_exists` non viene scritto. 14 valori di EAN compaiono su articoli diversi: Google puo segnalarli.
+3. **Google, virgolette e testo**: 549 titoli contengono `"` (pollici) dentro il valore, nessuno all'inizio; le specifiche non dicono che sia un errore, da controllare nella diagnostica al primo caricamento. Le descrizioni lunghe con HTML (7 su 1.569) e le entita (78) sono ripulite da `DescrizioneSoloTesto`; il testo letterale `<2kg` resta.
+4. **Specifiche non verificabili**: intestazioni e decimale di Trovaprezzi / 7Pixel; uso delle virgolette in idealo (non dichiarato: si usa lo standard CSV); regole di Google applicate solo come pubblicate, senza prova dentro Merchant Center.
+5. Provato su MySQL 8.0.46 del LAB (registro binario spento), non sul gestionale vero (solo le routine `Dupexport` e le tabelle sul LAB).
+6. Gli esempi non sono pubblici finche disabilitati; la risposta del sito per un feed disabilitato e 404 (la configurazione resta in cache fino a 60 secondi).
+
+## 20261126_EXPORT_FEED_ESEMPI_campi.sql
+
+```sql
+-- EXPORT-FEED-ESEMPI (campi): registra in exportcampi i quattro campi nuovi del motore (CondizioneInglese, EanValido, DescrizioneSoloTesto, TitoloNormalizzato).
+-- Nessuna istruzione USE: l'operatore sceglie il database di destinazione nello strumento. Un solo testo, identico per ogni database KeepStore: non nomina database, clienti, domini
+-- o account; nessun DEFINER. Lo esegue il Product Owner, un database alla volta, PRIMA di usare gli esempi dal gestionale. Il motore del sito capisce i campi anche senza questa riga: serve soltanto perche il gestionale li proponga.
+-- SQLyog: attivare 'Halt Execution of Queries on Error' e, dopo qualunque STOP o errore, chiudere la connessione prima di rilanciare qualcosa (la sessione conserva variabili e tabelle temporanee).
+-- Serve MySQL 8.0.19 o successivo (non MariaDB). Gli esempi si creano DISABILITATI e non si abilitano da soli.
+-- Aggiunge solo le righe assenti (una transazione), non tocca altro. Esito atteso: EXPORT_FEED_CAMPI_OK. Ripetibile.
+
+SET @ks_ver = SUBSTRING_INDEX(VERSION(), '-', 1);
+SET @ks_go = IF(VERSION() NOT LIKE '%MariaDB%' AND CAST(SUBSTRING_INDEX(@ks_ver, '.', 1) AS UNSIGNED) * 10000 + CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(@ks_ver, '.', 2), '.', -1) AS UNSIGNED) * 100 + CAST(SUBSTRING_INDEX(@ks_ver, '.', -1) AS UNSIGNED) >= 80019, 1, 0);
+SET @ks_go = IF(@ks_go = 1 AND (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exportcampi') = 1 AND (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'exportcampi' AND COLUMN_NAME = 'NomeCampo' AND COLUMN_TYPE = 'varchar(20)' AND COLUMN_KEY = 'PRI') = 1, 1, 0);
+SET @ks_s = IF(@ks_go = 1, 'SELECT ''EXPORT_FEED_CAMPI_START'' AS Esito', 'SELECT * FROM information_schema.KEEPSTORE_STOP_EXPORT_FEED_CAMPI_STRUTTURA');
+PREPARE ks_st FROM @ks_s;
+EXECUTE ks_st;
+DEALLOCATE PREPARE ks_st;
+
+START TRANSACTION;
+INSERT INTO exportcampi (NomeCampo) SELECT v.n FROM (SELECT 'CondizioneInglese' AS n UNION ALL SELECT 'EanValido' AS n UNION ALL SELECT 'DescrizioneSoloTesto' AS n UNION ALL SELECT 'TitoloNormalizzato' AS n) v WHERE @ks_go = 1 AND NOT EXISTS (SELECT 1 FROM exportcampi e WHERE e.NomeCampo = v.n);
+SET @ks_s = IF((SELECT COUNT(*) FROM exportcampi WHERE NomeCampo IN ('CondizioneInglese', 'EanValido', 'DescrizioneSoloTesto', 'TitoloNormalizzato')) = 4, 'SELECT ''EXPORT_FEED_CAMPI_CONTROLLO_OK'' AS Esito', 'SELECT * FROM information_schema.KEEPSTORE_STOP_EXPORT_FEED_CAMPI_CONTROLLO');
+PREPARE ks_st FROM @ks_s;
+EXECUTE ks_st;
+DEALLOCATE PREPARE ks_st;
+COMMIT;
+SELECT 'EXPORT_FEED_CAMPI_OK' AS Esito, (SELECT COUNT(*) FROM exportcampi) AS CampiInTutto;
+```
 
 ## 20261126_EXPORT_FEED_ESEMPI_esempi.sql
 
@@ -69,19 +98,21 @@ INSERT INTO ks_ex_tipo VALUES
 CREATE TEMPORARY TABLE ks_ex_col (Chiave CHAR(1) NOT NULL, Posizione INT NOT NULL, TitoloColonna VARCHAR(60) NOT NULL, Campo VARCHAR(40) NOT NULL, Prefisso VARCHAR(40) NOT NULL, Suffisso VARCHAR(40) NOT NULL, ValoreFisso VARCHAR(100) NOT NULL, MassimoCaratteri INT NULL, SeVuoto VARCHAR(100) NOT NULL, PRIMARY KEY (Chiave, Posizione)) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 INSERT INTO ks_ex_col VALUES
 ('G', 1, 'id', 'Id', '', '', '', NULL, ''),
-('G', 2, 'title', 'Descrizione1', '', '', '', 150, ''),
-('G', 3, 'description', '', '', '', '#Descrizione1#. #DescrizioneLunga#', 5000, ''),
+('G', 2, 'title', 'TitoloNormalizzato', '', '', '', 150, ''),
+('G', 3, 'description', '', '', '', '#TitoloNormalizzato#. #DescrizioneSoloTesto#', 5000, ''),
 ('G', 4, 'link', 'Link', '', '', '', NULL, ''),
 ('G', 5, 'image_link', 'UrlImgBig', '', '', '', NULL, ''),
 ('G', 6, 'availability', 'Disponibilita', '', '', '', NULL, ''),
 ('G', 7, 'price', 'Prezzo', '', ' EUR', '', NULL, ''),
-('G', 8, 'brand', 'Marca', '', '', '', 70, ''),
-('G', 9, 'gtin', 'Ean', '', '', '', NULL, ''),
-('G', 10, 'product_type', 'CategoriaPercorso', '', '', '', 750, ''),
-('G', 11, 'shipping', 'CostoSpedizioneProdo', 'IT::Standard:', ' EUR', '', NULL, ''),
+('G', 8, 'condition', 'CondizioneInglese', '', '', '', NULL, ''),
+('G', 9, 'brand', 'Marca', '', '', '', 70, ''),
+('G', 10, 'gtin', 'EanValido', '', '', '', NULL, ''),
+('G', 11, 'mpn', 'Codice', '', '', '', 70, ''),
+('G', 12, 'product_type', 'CategoriaPercorso', '', '', '', 750, ''),
+('G', 13, 'shipping', 'CostoSpedizioneProdo', 'IT::Standard:', ' EUR', '', NULL, ''),
 ('T', 1, 'Nome', 'Descrizione1', '', '', '', NULL, ''),
 ('T', 2, 'Marca', 'Marca', '', '', '', NULL, ''),
-('T', 3, 'Descrizione', '', '', '', '#Descrizione1#. #DescrizioneLunga#', NULL, ''),
+('T', 3, 'Descrizione', '', '', '', '#Descrizione1#. #DescrizioneSoloTesto#', NULL, ''),
 ('T', 4, 'Prezzo', 'Prezzo', '', '', '', NULL, ''),
 ('T', 5, 'Codice interno', 'Id', '', '', '', NULL, ''),
 ('T', 6, 'Link', 'Link', '', '', '', NULL, ''),
@@ -89,7 +120,7 @@ INSERT INTO ks_ex_col VALUES
 ('T', 8, 'Categoria', 'CategoriaPercorso', '', '', '', NULL, ''),
 ('T', 9, 'Immagine', 'UrlImgBig', '', '', '', NULL, ''),
 ('T', 10, 'Codice produttore', 'Codice', '', '', '', NULL, ''),
-('T', 11, 'EAN', 'Ean', '', '', '', NULL, ''),
+('T', 11, 'EAN', 'EanValido', '', '', '', NULL, ''),
 ('T', 12, 'Spese di spedizione', 'CostoSpedizioneProdo', '', '', '', NULL, ''),
 ('T', 13, 'Peso', 'Peso', '', '', '', NULL, ''),
 ('I', 1, 'sku', 'Id', '', '', '', NULL, ''),
@@ -97,9 +128,9 @@ INSERT INTO ks_ex_col VALUES
 ('I', 3, 'title', 'Descrizione1', '', '', '', NULL, ''),
 ('I', 4, 'categoryPath', 'CategoriaPercorso', '', '', '', NULL, ''),
 ('I', 5, 'url', 'Link', '', '', '', NULL, ''),
-('I', 6, 'eans', 'Ean', '', '', '', NULL, ''),
+('I', 6, 'eans', 'EanValido', '', '', '', NULL, ''),
 ('I', 7, 'hans', 'Codice', '', '', '', NULL, ''),
-('I', 8, 'description', '', '', '', '#Descrizione1#. #DescrizioneLunga#', NULL, ''),
+('I', 8, 'description', '', '', '', '#Descrizione1#. #DescrizioneSoloTesto#', NULL, ''),
 ('I', 9, 'price', 'Prezzo', '', '', '', NULL, ''),
 ('I', 10, 'deliveryCosts_dhl', 'CostoSpedizioneProdo', '', '', '', NULL, ''),
 ('I', 11, 'delivery', 'GiorniSpedizione', '', ' giorni lavorativi', '', NULL, ''),
@@ -167,19 +198,21 @@ INSERT INTO ks_ex_tipo VALUES
 CREATE TEMPORARY TABLE ks_ex_col (Chiave CHAR(1) NOT NULL, Posizione INT NOT NULL, TitoloColonna VARCHAR(60) NOT NULL, Campo VARCHAR(40) NOT NULL, Prefisso VARCHAR(40) NOT NULL, Suffisso VARCHAR(40) NOT NULL, ValoreFisso VARCHAR(100) NOT NULL, MassimoCaratteri INT NULL, SeVuoto VARCHAR(100) NOT NULL, PRIMARY KEY (Chiave, Posizione)) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 INSERT INTO ks_ex_col VALUES
 ('G', 1, 'id', 'Id', '', '', '', NULL, ''),
-('G', 2, 'title', 'Descrizione1', '', '', '', 150, ''),
-('G', 3, 'description', '', '', '', '#Descrizione1#. #DescrizioneLunga#', 5000, ''),
+('G', 2, 'title', 'TitoloNormalizzato', '', '', '', 150, ''),
+('G', 3, 'description', '', '', '', '#TitoloNormalizzato#. #DescrizioneSoloTesto#', 5000, ''),
 ('G', 4, 'link', 'Link', '', '', '', NULL, ''),
 ('G', 5, 'image_link', 'UrlImgBig', '', '', '', NULL, ''),
 ('G', 6, 'availability', 'Disponibilita', '', '', '', NULL, ''),
 ('G', 7, 'price', 'Prezzo', '', ' EUR', '', NULL, ''),
-('G', 8, 'brand', 'Marca', '', '', '', 70, ''),
-('G', 9, 'gtin', 'Ean', '', '', '', NULL, ''),
-('G', 10, 'product_type', 'CategoriaPercorso', '', '', '', 750, ''),
-('G', 11, 'shipping', 'CostoSpedizioneProdo', 'IT::Standard:', ' EUR', '', NULL, ''),
+('G', 8, 'condition', 'CondizioneInglese', '', '', '', NULL, ''),
+('G', 9, 'brand', 'Marca', '', '', '', 70, ''),
+('G', 10, 'gtin', 'EanValido', '', '', '', NULL, ''),
+('G', 11, 'mpn', 'Codice', '', '', '', 70, ''),
+('G', 12, 'product_type', 'CategoriaPercorso', '', '', '', 750, ''),
+('G', 13, 'shipping', 'CostoSpedizioneProdo', 'IT::Standard:', ' EUR', '', NULL, ''),
 ('T', 1, 'Nome', 'Descrizione1', '', '', '', NULL, ''),
 ('T', 2, 'Marca', 'Marca', '', '', '', NULL, ''),
-('T', 3, 'Descrizione', '', '', '', '#Descrizione1#. #DescrizioneLunga#', NULL, ''),
+('T', 3, 'Descrizione', '', '', '', '#Descrizione1#. #DescrizioneSoloTesto#', NULL, ''),
 ('T', 4, 'Prezzo', 'Prezzo', '', '', '', NULL, ''),
 ('T', 5, 'Codice interno', 'Id', '', '', '', NULL, ''),
 ('T', 6, 'Link', 'Link', '', '', '', NULL, ''),
@@ -187,7 +220,7 @@ INSERT INTO ks_ex_col VALUES
 ('T', 8, 'Categoria', 'CategoriaPercorso', '', '', '', NULL, ''),
 ('T', 9, 'Immagine', 'UrlImgBig', '', '', '', NULL, ''),
 ('T', 10, 'Codice produttore', 'Codice', '', '', '', NULL, ''),
-('T', 11, 'EAN', 'Ean', '', '', '', NULL, ''),
+('T', 11, 'EAN', 'EanValido', '', '', '', NULL, ''),
 ('T', 12, 'Spese di spedizione', 'CostoSpedizioneProdo', '', '', '', NULL, ''),
 ('T', 13, 'Peso', 'Peso', '', '', '', NULL, ''),
 ('I', 1, 'sku', 'Id', '', '', '', NULL, ''),
@@ -195,9 +228,9 @@ INSERT INTO ks_ex_col VALUES
 ('I', 3, 'title', 'Descrizione1', '', '', '', NULL, ''),
 ('I', 4, 'categoryPath', 'CategoriaPercorso', '', '', '', NULL, ''),
 ('I', 5, 'url', 'Link', '', '', '', NULL, ''),
-('I', 6, 'eans', 'Ean', '', '', '', NULL, ''),
+('I', 6, 'eans', 'EanValido', '', '', '', NULL, ''),
 ('I', 7, 'hans', 'Codice', '', '', '', NULL, ''),
-('I', 8, 'description', '', '', '', '#Descrizione1#. #DescrizioneLunga#', NULL, ''),
+('I', 8, 'description', '', '', '', '#Descrizione1#. #DescrizioneSoloTesto#', NULL, ''),
 ('I', 9, 'price', 'Prezzo', '', '', '', NULL, ''),
 ('I', 10, 'deliveryCosts_dhl', 'CostoSpedizioneProdo', '', '', '', NULL, ''),
 ('I', 11, 'delivery', 'GiorniSpedizione', '', ' giorni lavorativi', '', NULL, ''),
@@ -218,7 +251,7 @@ SET @ks_n_mancano = (SELECT COUNT(*) FROM ks_ex_atteso WHERE Presente = 0);
 SET @ks_n_modificati = (SELECT COUNT(*) FROM ks_ex_trovato WHERE Identico = 0);
 SET @ks_n_vettore = (SELECT COUNT(*) FROM ks_ex_trovato t JOIN `export` e ON e.ID = t.ExportId WHERE t.Abilitato = 1 AND (COALESCE(e.IdVettore, 0) = 0 OR NOT EXISTS (SELECT 1 FROM vettoricosti vc WHERE vc.VettoriId = e.IdVettore)));
 SET @ks_n_giorni = (SELECT COUNT(*) FROM ks_ex_trovato t JOIN `export` e ON e.ID = t.ExportId WHERE t.Abilitato = 1 AND t.Chiave = 'I' AND COALESCE(e.GiorniSpedizione, 0) = 0);
-SET @ks_n_google = (SELECT COUNT(*) FROM ks_ex_trovato t WHERE t.Abilitato = 1 AND t.Chiave = 'G');
+SET @ks_n_campi = (SELECT COUNT(*) FROM exportcampi WHERE NomeCampo IN ('CondizioneInglese', 'EanValido', 'DescrizioneSoloTesto', 'TitoloNormalizzato'));
 SET @ks_n_incompleti = (SELECT COUNT(*) FROM ks_ex_trovato t WHERE (SELECT COUNT(*) FROM export_opzioni o WHERE o.ExportId = t.ExportId) <> 1 OR (SELECT COUNT(*) FROM export_colonne k WHERE k.ExportId = t.ExportId) = 0);
 SET @ks_n_registro = (SELECT COUNT(*) FROM sysparametristored WHERE NomeStore IN ('Newexport_opzioni', 'Newexport_colonne', 'Dupexport', 'Modexport_codice'));
 SELECT 'Controllo' AS Controllo, 'Esito' AS Esito
@@ -227,7 +260,7 @@ UNION ALL SELECT 'esempi_presenti', IF(@ks_n_mancano = 0, 'OK', CONCAT('ATTENZIO
 UNION ALL SELECT 'esempi_non_modificati', IF(@ks_n_modificati = 0, 'OK', CONCAT('INFO ', @ks_n_modificati, ' esempi modificati dal PO (normale dopo il completamento)'))
 UNION ALL SELECT 'abilitati_senza_vettore_con_fasce', IF(@ks_n_vettore = 0, 'OK', 'ATTENZIONE esempio abilitato senza vettore o senza fasce di costo: la colonna spedizione resta vuota')
 UNION ALL SELECT 'abilitati_con_giorni_zero', IF(@ks_n_giorni = 0, 'OK', 'ATTENZIONE idealo abilitato con 0 giorni lavorativi')
-UNION ALL SELECT 'google_abilitato', IF(@ks_n_google = 0, 'OK', 'ATTENZIONE esempio Google abilitato: manca l attributo condition per i ricondizionati (task GOOGLE-MERCHANT-CENTER-FEED-1A)')
+UNION ALL SELECT 'campi_registrati_nel_gestionale', IF(@ks_n_campi = 4, 'OK', 'ATTENZIONE i quattro campi nuovi non sono in exportcampi: lanciare il blocco campi prima di usare gli esempi dal gestionale')
 UNION ALL SELECT 'registro_gestionale_feed', IF(@ks_n_registro = 32, 'OK', 'ATTENZIONE registro dei parametri incompleto (script dati dei feed)')
 UNION ALL SELECT 'esempi_senza_opzioni_o_colonne', IF(@ks_n_incompleti = 0, 'OK', 'KO esempio senza opzioni o senza colonne');
 SELECT IF(@ks_n_incompleti = 0, 'EXPORT_FEED_ESEMPI_VERIFY_OK', 'EXPORT_FEED_ESEMPI_VERIFY_KO') AS Verdetto;
@@ -268,19 +301,21 @@ INSERT INTO ks_ex_tipo VALUES
 CREATE TEMPORARY TABLE ks_ex_col (Chiave CHAR(1) NOT NULL, Posizione INT NOT NULL, TitoloColonna VARCHAR(60) NOT NULL, Campo VARCHAR(40) NOT NULL, Prefisso VARCHAR(40) NOT NULL, Suffisso VARCHAR(40) NOT NULL, ValoreFisso VARCHAR(100) NOT NULL, MassimoCaratteri INT NULL, SeVuoto VARCHAR(100) NOT NULL, PRIMARY KEY (Chiave, Posizione)) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 INSERT INTO ks_ex_col VALUES
 ('G', 1, 'id', 'Id', '', '', '', NULL, ''),
-('G', 2, 'title', 'Descrizione1', '', '', '', 150, ''),
-('G', 3, 'description', '', '', '', '#Descrizione1#. #DescrizioneLunga#', 5000, ''),
+('G', 2, 'title', 'TitoloNormalizzato', '', '', '', 150, ''),
+('G', 3, 'description', '', '', '', '#TitoloNormalizzato#. #DescrizioneSoloTesto#', 5000, ''),
 ('G', 4, 'link', 'Link', '', '', '', NULL, ''),
 ('G', 5, 'image_link', 'UrlImgBig', '', '', '', NULL, ''),
 ('G', 6, 'availability', 'Disponibilita', '', '', '', NULL, ''),
 ('G', 7, 'price', 'Prezzo', '', ' EUR', '', NULL, ''),
-('G', 8, 'brand', 'Marca', '', '', '', 70, ''),
-('G', 9, 'gtin', 'Ean', '', '', '', NULL, ''),
-('G', 10, 'product_type', 'CategoriaPercorso', '', '', '', 750, ''),
-('G', 11, 'shipping', 'CostoSpedizioneProdo', 'IT::Standard:', ' EUR', '', NULL, ''),
+('G', 8, 'condition', 'CondizioneInglese', '', '', '', NULL, ''),
+('G', 9, 'brand', 'Marca', '', '', '', 70, ''),
+('G', 10, 'gtin', 'EanValido', '', '', '', NULL, ''),
+('G', 11, 'mpn', 'Codice', '', '', '', 70, ''),
+('G', 12, 'product_type', 'CategoriaPercorso', '', '', '', 750, ''),
+('G', 13, 'shipping', 'CostoSpedizioneProdo', 'IT::Standard:', ' EUR', '', NULL, ''),
 ('T', 1, 'Nome', 'Descrizione1', '', '', '', NULL, ''),
 ('T', 2, 'Marca', 'Marca', '', '', '', NULL, ''),
-('T', 3, 'Descrizione', '', '', '', '#Descrizione1#. #DescrizioneLunga#', NULL, ''),
+('T', 3, 'Descrizione', '', '', '', '#Descrizione1#. #DescrizioneSoloTesto#', NULL, ''),
 ('T', 4, 'Prezzo', 'Prezzo', '', '', '', NULL, ''),
 ('T', 5, 'Codice interno', 'Id', '', '', '', NULL, ''),
 ('T', 6, 'Link', 'Link', '', '', '', NULL, ''),
@@ -288,7 +323,7 @@ INSERT INTO ks_ex_col VALUES
 ('T', 8, 'Categoria', 'CategoriaPercorso', '', '', '', NULL, ''),
 ('T', 9, 'Immagine', 'UrlImgBig', '', '', '', NULL, ''),
 ('T', 10, 'Codice produttore', 'Codice', '', '', '', NULL, ''),
-('T', 11, 'EAN', 'Ean', '', '', '', NULL, ''),
+('T', 11, 'EAN', 'EanValido', '', '', '', NULL, ''),
 ('T', 12, 'Spese di spedizione', 'CostoSpedizioneProdo', '', '', '', NULL, ''),
 ('T', 13, 'Peso', 'Peso', '', '', '', NULL, ''),
 ('I', 1, 'sku', 'Id', '', '', '', NULL, ''),
@@ -296,9 +331,9 @@ INSERT INTO ks_ex_col VALUES
 ('I', 3, 'title', 'Descrizione1', '', '', '', NULL, ''),
 ('I', 4, 'categoryPath', 'CategoriaPercorso', '', '', '', NULL, ''),
 ('I', 5, 'url', 'Link', '', '', '', NULL, ''),
-('I', 6, 'eans', 'Ean', '', '', '', NULL, ''),
+('I', 6, 'eans', 'EanValido', '', '', '', NULL, ''),
 ('I', 7, 'hans', 'Codice', '', '', '', NULL, ''),
-('I', 8, 'description', '', '', '', '#Descrizione1#. #DescrizioneLunga#', NULL, ''),
+('I', 8, 'description', '', '', '', '#Descrizione1#. #DescrizioneSoloTesto#', NULL, ''),
 ('I', 9, 'price', 'Prezzo', '', '', '', NULL, ''),
 ('I', 10, 'deliveryCosts_dhl', 'CostoSpedizioneProdo', '', '', '', NULL, ''),
 ('I', 11, 'delivery', 'GiorniSpedizione', '', ' giorni lavorativi', '', NULL, ''),
@@ -320,6 +355,27 @@ COMMIT;
 SET @ks_rimasti = (SELECT COUNT(*) FROM ks_ex_trovato t JOIN `export` e ON e.ID = t.ExportId);
 SELECT 'EXPORT_FEED_ESEMPI_ROLLBACK_OK' AS Esito, @ks_trovati AS Trovati, @ks_trovati - @ks_rimasti AS Cancellati, @ks_rimasti AS Rimasti;
 SELECT t.ExportId, t.Descrizione, IF(t.Identico = 0, 'modificato', IF(t.Abilitato = 1, 'abilitato', IF(t.ConStato = 1, 'letto dal sito', IF(t.ConFiltri = 1, 'con filtri', 'cancellato')))) AS Motivo FROM ks_ex_trovato t ORDER BY t.ExportId;
+```
+
+## 20261126_EXPORT_FEED_ESEMPI_campi_rollback.sql
+
+```sql
+-- EXPORT-FEED-ESEMPI (campi_rollback): toglie da exportcampi i quattro campi nuovi.
+-- Nessuna istruzione USE: l'operatore sceglie il database di destinazione nello strumento. Un solo testo, identico per ogni database KeepStore: non nomina database, clienti, domini
+-- o account; nessun DEFINER. Lo esegue il Product Owner dopo il si esplicito. Va preceduto, nella stessa scheda, da: SET @KeepStoreConfirmDeleteFields = 1;
+-- SQLyog: attivare 'Halt Execution of Queries on Error' e, dopo qualunque STOP o errore, chiudere la connessione prima di rilanciare qualcosa (la sessione conserva variabili e tabelle temporanee).
+-- Serve MySQL 8.0.19 o successivo (non MariaDB). Gli esempi si creano DISABILITATI e non si abilitano da soli.
+-- Cancella soltanto le quattro righe CondizioneInglese, EanValido, DescrizioneSoloTesto, TitoloNormalizzato. Il motore continua a capirle nei feed che le usano; il gestionale non le propone piu.
+
+SET @ks_ok = IF(@KeepStoreConfirmDeleteFields = 1, 1, 0);
+SET @ks_s = IF(@ks_ok = 1, 'SELECT ''EXPORT_FEED_CAMPI_ROLLBACK_START'' AS Esito', 'SELECT * FROM information_schema.KEEPSTORE_STOP_EXPORT_FEED_CAMPI_ROLLBACK_CONFERMA_MANCANTE');
+PREPARE ks_st FROM @ks_s;
+EXECUTE ks_st;
+DEALLOCATE PREPARE ks_st;
+START TRANSACTION;
+DELETE FROM exportcampi WHERE @ks_ok = 1 AND NomeCampo IN ('CondizioneInglese', 'EanValido', 'DescrizioneSoloTesto', 'TitoloNormalizzato');
+COMMIT;
+SELECT 'EXPORT_FEED_CAMPI_ROLLBACK_OK' AS Esito, (SELECT COUNT(*) FROM exportcampi) AS CampiInTutto;
 ```
 
 CONSEGNA SERVER SOSPESA.

@@ -97,6 +97,9 @@ Public NotInheritable Class KeepStoreFeedEngine
     End Function
     Private Shared ReadOnly TokenRegex As New Regex("#([A-Za-z0-9_<>]+)#", RegexOptions.Compiled)
     Private Shared ReadOnly TagRegex As New Regex("<[^>]*>", RegexOptions.Compiled)
+    Private Shared ReadOnly CommentRegex As New Regex("<!--.*?-->", RegexOptions.Compiled Or RegexOptions.Singleline)
+    Private Shared ReadOnly ScriptStyleRegex As New Regex("<(script|style)\b[^>]*>.*?</\1\s*>", RegexOptions.Compiled Or RegexOptions.Singleline Or RegexOptions.IgnoreCase)
+    Private Shared ReadOnly RealTagRegex As New Regex("</?[A-Za-z][^<>]*>", RegexOptions.Compiled)
     Private Shared ReadOnly SpaceRegex As New Regex("\s+", RegexOptions.Compiled)
     Private Shared ReadOnly XmlNameRegex As New Regex("^[A-Za-z_][A-Za-z0-9_.\-]*$", RegexOptions.Compiled)
     Private Shared ReadOnly TokenCodeRegex As New Regex("^[0-9A-F]{48}$", RegexOptions.Compiled)
@@ -117,7 +120,8 @@ Public NotInheritable Class KeepStoreFeedEngine
         "Descrizione_Garanzia", "Disponibilita", "Ean", "Giacenza", "GiorniSpedizione", "Gruppo", "GruppiDesrizione", "id", "IdCategoria",
         "IdGruppo", "IdSettore", "IdSottogruppo", "IdTipologia", "Link", "Marca", "Mesi_Garanzia", "PercenualeSconto", "PercentualeSconto",
         "Peso", "Prezzo", "Prezzo2", "Settore", "SpeseSpedizione", "Tipologia", "UrlImg", "UrlImgBig", "UrlImg2", "UrlImg2Big",
-        "UrlImg3", "UrlImg3Big", "UrlImg4", "UrlImg4Big"
+        "UrlImg3", "UrlImg3Big", "UrlImg4", "UrlImg4Big",
+        "CondizioneInglese", "EanValido", "DescrizioneSoloTesto", "TitoloNormalizzato"
     }
 
     ' ---------- codice del link e nomi dei file ----------
@@ -287,6 +291,72 @@ Public NotInheritable Class KeepStoreFeedEngine
         Return SpaceRegex.Replace(sb.ToString(), " ").Trim()
     End Function
 
+    ' Testo semplice di un testo con HTML (GOOGLE-MERCHANT-CENTER-FEED-1A). Ordine: si decodificano le entita (una sola volta), si tolgono commenti, script e stile CON il loro
+    ' contenuto, poi i soli tag veri (< seguito da una lettera o da /): "5 < 10 > 3" e "<2kg" non sono tag. Una riga, spazi compressi.
+    Public Shared Function PlainText(ByVal raw As String) As String
+        If String.IsNullOrEmpty(raw) Then Return ""
+        Dim text As String = WebUtility.HtmlDecode(raw)
+        text = CommentRegex.Replace(text, " ")
+        text = ScriptStyleRegex.Replace(text, " ")
+        text = RealTagRegex.Replace(text, " ")
+        Return CleanText(text, False)
+    End Function
+
+    ' GTIN valido secondo le regole GS1 richieste da Google: 8, 12, 13 o 14 cifre senza spazi ne trattini, cifra di controllo corretta, non tutto zero,
+    ' non limitato (prefissi 02, 04, 2) ne coupon (98, 99), valutati sul codice a 13 cifre (12 cifre = 0 + codice, 14 cifre = senza la prima). Vuoto se non valido.
+    Public Shared Function ValidGtin(ByVal raw As String) As String
+        If raw Is Nothing Then Return ""
+        Dim s As String = raw.Trim()
+        Dim n As Integer = s.Length
+        If n <> 8 AndAlso n <> 12 AndAlso n <> 13 AndAlso n <> 14 Then Return ""
+        For Each ch As Char In s
+            If ch < "0"c OrElse ch > "9"c Then Return ""
+        Next
+        If s.Trim("0"c).Length = 0 Then Return ""
+        Dim sum As Integer = 0
+        For i As Integer = 0 To n - 2
+            Dim d As Integer = AscW(s(i)) - AscW("0"c)
+            Dim fromRight As Integer = n - 1 - i
+            sum += d * If(fromRight Mod 2 = 1, 3, 1)
+        Next
+        Dim check As Integer = (10 - (sum Mod 10)) Mod 10
+        If check <> AscW(s(n - 1)) - AscW("0"c) Then Return ""
+        If n > 8 Then
+            Dim ean13 As String = s
+            If n = 12 Then ean13 = "0" & s
+            If n = 14 Then ean13 = s.Substring(1)
+            Dim p2 As String = ean13.Substring(0, 2)
+            If p2 = "02" OrElse p2 = "04" OrElse p2 = "98" OrElse p2 = "99" OrElse ean13(0) = "2"c Then Return ""
+        End If
+        Return s
+    End Function
+
+    ' Titolo per i destinatari che non ammettono il tutto maiuscolo: se il titolo NON ha nessuna lettera minuscola, ogni parola senza cifre diventa maiuscola iniziale e
+    ' resto minuscolo (le parole con cifre, per esempio i codici modello, restano); un titolo con almeno una minuscola resta com'e (solo ripulito). Regola solo strutturale.
+    Public Shared Function NormalizeTitle(ByVal raw As String) As String
+        Dim t As String = CleanText(raw, False)
+        If t.Length = 0 Then Return ""
+        For Each ch As Char In t
+            If Char.IsLower(ch) Then Return t
+        Next
+        Dim words As String() = t.Split(" "c)
+        For i As Integer = 0 To words.Length - 1
+            Dim w As String = words(i)
+            Dim hasDigit As Boolean = False
+            For Each ch As Char In w
+                If Char.IsDigit(ch) Then
+                    hasDigit = True
+                    Exit For
+                End If
+            Next
+            If Not hasDigit AndAlso w.Length > 0 Then
+                Dim lower As String = w.ToLowerInvariant()
+                words(i) = lower.Substring(0, 1).ToUpperInvariant() & lower.Substring(1)
+            End If
+        Next
+        Return String.Join(" ", words)
+    End Function
+
     ' Caratteri ammessi da XML 1.0 (le coppie surrogate valide passano).
     Public Shared Function StripInvalidXmlChars(ByVal text As String) As String
         If String.IsNullOrEmpty(text) Then Return ""
@@ -390,6 +460,10 @@ Public NotInheritable Class KeepStoreFeedEngine
                 Return String.Join(" > ", parts.ToArray())
             Case "codice" : Return CleanText(row.Code, False)
             Case "condizione" : Return If(row.Refurbished = 1, "RICONDIZIONATO", "NUOVO")
+            Case "condizioneinglese" : Return If(row.Refurbished = 1, "refurbished", "new")
+            Case "eanvalido" : Return ValidGtin(row.Ean)
+            Case "descrizionesolotesto" : Return PlainText(row.LongText)
+            Case "titolonormalizzato" : Return NormalizeTitle(row.Title1)
             Case "costospedizioneprodo" : Return row.ShippingCost
             Case "descrizione1"
                 Dim t As String = CleanText(row.Title1, False)

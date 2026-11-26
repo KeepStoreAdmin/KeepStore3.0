@@ -62,6 +62,38 @@ function Parse-Csv([string]$line, [string]$sep) {
 }
 
 $script:cur = New-Object Collections.Generic.List[string]
+
+# --- oracolo INDIPENDENTE dal motore (scritto qui, non ne usa il codice) ---
+function Gs1-Valid([string]$raw) {
+    $s = $raw.Trim()
+    if ($s -notmatch '^(\d{8}|\d{12}|\d{13}|\d{14})$') { return '' }
+    if ($s -match '^0+$') { return '' }
+    $d = @($s.ToCharArray() | ForEach-Object { [int][string]$_ })
+    $n = $d.Count; $sum = 0
+    for ($k = 0; $k -lt $n - 1; $k++) { $w = 1; if ((($n - 1 - $k) % 2) -eq 1) { $w = 3 }; $sum += $d[$k] * $w }
+    if (((10 - ($sum % 10)) % 10) -ne $d[$n - 1]) { return '' }
+    if ($n -gt 8) {
+        $e13 = $s; if ($n -eq 12) { $e13 = '0' + $s }; if ($n -eq 14) { $e13 = $s.Substring(1) }
+        if ($e13 -match '^(02|04|98|99|2)') { return '' }
+    }
+    return $s
+}
+function Title-Norm([string]$t) {
+    $t = Clean $t
+    if ($t -eq '' -or $t -cmatch '\p{Ll}') { return $t }
+    $words = $t.Split(' ')
+    for ($i = 0; $i -lt $words.Count; $i++) {
+        $w = $words[$i]
+        if ($w.Length -gt 0 -and $w -notmatch '\d') { $words[$i] = $w.Substring(0, 1).ToUpperInvariant() + $w.Substring(1).ToLowerInvariant() }
+    }
+    return ($words -join ' ')
+}
+function Get-RowsRange([string]$template, [int]$maxId) {
+    $all = New-Object Collections.Generic.List[object]
+    for ($lo = 0; $lo -le $maxId; $lo += 1000) { $hi = $lo + 999; foreach ($r in @(Get-Rows ($template.Replace('{RANGE}', ('BETWEEN ' + $lo + ' AND ' + $hi))))) { $all.Add($r) } }
+    return $all.ToArray()
+}
+
 try { $siteHeld = $siteMutex.WaitOne(1800000) } catch [System.Threading.AbandonedMutexException] { $siteHeld = $true }
 if (-not $siteHeld) { throw 'LAB_SITE_BUSY' }
 $siteTouched = $false
@@ -72,6 +104,8 @@ try {
     $c1 = @($companies | Where-Object { $_.Dominio -eq 'www.taikun.it' })
     if ($c1.Count -ne 1) { throw 'AZIENDA_DEL_SITO_LAB_NON_IDONEA' }
     $c1 = $c1[0]
+    $o = Invoke-Sql $blocks['campi'] -Write
+    Check (($o -join "`n") -match 'EXPORT_FEED_CAMPI_OK') 'D0 i quattro campi sono registrati per la prova HTTP'
     $o = Invoke-Sql $blocks['esempi'] -Write
     Check (($o -join "`n") -match 'EXPORT_FEED_ESEMPI_OK') 'D0 gli esempi sono stati creati per la prova HTTP'
     $carrier = Get-Scalar 'SELECT VettoriId AS ksval FROM vettoricosti GROUP BY VettoriId ORDER BY COUNT(*) DESC LIMIT 1;'
@@ -89,9 +123,9 @@ try {
     Reset-App
 
     # oracolo: articoli del listino con le stesse regole del feed (esportabile, abilitato, giacenza >= 1, prima immagine, prezzo > 0)
-    $ora = @(Get-Rows ('SELECT v.id AS id, IFNULL(v.Descrizione1, '''') AS t, IFNULL(v.MarcheDescrizione, '''') AS b, IFNULL(v.Ean, '''') AS e, IFNULL(v.Codice, '''') AS c, v.PrezzoIvato AS p, IFNULL(v.Img1, '''') AS i, (SELECT COUNT(*) FROM voffertearticoli va WHERE va.id = v.id) AS o FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id WHERE v.NListino = ' + $c1.Listino + ' AND COALESCE(v.Export, 0) = 1 AND COALESCE(a.Abilitato, 0) = 1 AND v.Giacenza >= 1 AND TRIM(COALESCE(v.Img1, '''')) <> '''' AND COALESCE(v.PrezzoIvato, 0) > 0;'))
-    # Le immagini dei prodotti stanno sul server vero, non sul sito LAB: per l'oracolo si creano file segnaposto (1 byte) per i primi 800 articoli con un nome di file semplice;
-    # il motore scarta gli articoli la cui immagine non esiste (come sul server), quindi l'insieme atteso e quello degli articoli con file segnaposto o con indirizzo https/http.
+    $ora = @(Get-Rows ('SELECT v.id AS id, IFNULL(v.Descrizione1, '''') AS t, IFNULL(v.MarcheDescrizione, '''') AS b, IFNULL(v.Ean, '''') AS e, IFNULL(v.Codice, '''') AS c, v.PrezzoIvato AS p, IFNULL(v.Img1, '''') AS i, COALESCE(v.Ricondizionato, 0) AS rc FROM vsuperarticoli v INNER JOIN articoli a ON a.id = v.id WHERE v.NListino = ' + $c1.Listino + ' AND COALESCE(v.Export, 0) = 1 AND COALESCE(a.Abilitato, 0) = 1 AND v.Giacenza >= 1 AND TRIM(COALESCE(v.Img1, '''')) <> '''' AND COALESCE(v.PrezzoIvato, 0) > 0;'))
+    # Le immagini dei prodotti stanno sul server vero, non sul sito LAB: si creano file segnaposto (1 byte) per i primi 800 articoli con un nome di file semplice;
+    # il motore scarta gli articoli la cui immagine non esiste (come sul server), quindi l'insieme atteso e quello degli articoli con file segnaposto o con indirizzo http/https.
     $imgDir = Join-Path $SitePath 'Public\assets\images\articoli'
     if (-not (Test-Path -LiteralPath $imgDir)) { New-Item -ItemType Directory -Path $imgDir | Out-Null; $imgDirCreated = $true } else { $imgDirCreated = $false }
     $created = New-Object Collections.Generic.List[string]; $nMade = 0
@@ -108,11 +142,47 @@ try {
     }
     Check ($oraMap.Count -gt 300) ('D1 oracolo: articoli attesi nel feed (' + $oraMap.Count + ' con immagine su ' + $ora.Count + ' del listino)')
 
+    # oracolo dei prezzi del sito per un cliente anonimo (listino dell'azienda, IVA inclusa, offerta per 1 pezzo valida oggi): stessa logica di Test-ExportFeedEngine.ps1, per questa azienda e questo listino
+    $L = [int]$c1.Listino; $C = [int]$c1.Id
+    $maxArt = [int](Get-Scalar 'SELECT MAX(id) AS ksval FROM articoli;')
+    $baseRows = @(Get-RowsRange ('SELECT al.ArticoliId AS id, al.Prezzo AS net, al.PrezzoIvato AS gross, IFNULL(al.TCid,-1) AS tc FROM articoli_listini al WHERE al.NListino=' + $L + ' AND al.ArticoliId {RANGE} AND (SELECT COUNT(*) FROM articoli_listini x WHERE x.ArticoliId=al.ArticoliId AND x.NListino=' + $L + ')=1;') $maxArt)
+    $baseMap = @{}; foreach ($b in $baseRows) { $baseMap[$b['id']] = @{ net = (Dec $b['net']); gross = (Dec $b['gross']); tc = [int]$b['tc'] } }
+    $offRows = @(Get-RowsRange ('SELECT va.id AS aid, o.Prezzo AS oprice, o.Sconto AS osc, IFNULL(od.TCId,-1) AS otc FROM voffertearticoli va JOIN offerte o ON o.id=va.OfferteID JOIN offertedettaglio od ON od.id=va.OfferteDettagliId AND od.OfferteId=o.id JOIN articoli a ON a.id=va.id ' +
+        'WHERE o.AziendeId=' + $C + ' AND o.Abilitato=1 AND a.Abilitato=1 AND COALESCE(a.NoPromo,0)=0 AND o.DataInizio<=CURDATE() AND o.DataFine>=CURDATE() AND COALESCE(o.UtentiId,0)<=0 ' +
+        'AND NOT (COALESCE(o.QntMinima,0)>0 AND COALESCE(o.Multipli,0)>0) AND ((COALESCE(o.QntMinima,0)>0 AND o.QntMinima<=1) OR (COALESCE(o.QntMinima,0)<=0 AND o.Multipli=1)) ' +
+        'AND (COALESCE(o.DaListino,0)<=0 OR o.DaListino<=' + $L + ') AND (COALESCE(o.AListino,0)<=0 OR o.AListino>=' + $L + ') AND va.id {RANGE};') $maxArt)
+    $offMap = @{}; foreach ($of in $offRows) { if (-not $offMap.ContainsKey($of['aid'])) { $offMap[$of['aid']] = New-Object Collections.Generic.List[object] }; $offMap[$of['aid']].Add($of) }
+    function Expected-Price([string]$artId) {
+        if (-not $baseMap.ContainsKey($artId)) { return $null }
+        $net = $baseMap[$artId].net; $gross = $baseMap[$artId].gross
+        $bestNet = $null; $bestExact = $null; $tc = $baseMap[$artId].tc
+        if ($offMap.ContainsKey($artId) -and $net -gt 0 -and $gross -gt 0) {
+            foreach ($of in $offMap[$artId]) {
+                $otc = [int]$of['otc']
+                if ($otc -gt 0 -and $otc -ne $tc) { continue }
+                $p = Dec $of['oprice']; $sc = Dec $of['osc']
+                $pn = [decimal]0
+                if ($p -gt 0) { $pn = $p } elseif ($sc -gt 0 -and $sc -lt 100) { $pn = $net * (1 - $sc / 100) }
+                if ($pn -le 0 -or $pn -ge $net) { continue }
+                $pg = $pn * ($gross / $net)
+                if ($pg -le 0 -or $pg -ge $gross) { continue }
+                if ($otc -gt 0) { if ($null -eq $bestExact -or $pn -lt $bestExact) { $bestExact = $pn } }
+                elseif ($null -eq $bestNet -or $pn -lt $bestNet) { $bestNet = $pn }
+            }
+        }
+        if ($null -ne $bestExact) { $bestNet = $bestExact }
+        if ($null -ne $bestNet) { return (Money ($bestNet * ($gross / $net))) }
+        return (Money $gross)
+    }
+    $withOffer = @($oraMap.Keys | Where-Object { $offMap.ContainsKey($_) }).Count
+    Check ($withOffer -gt 0) ('D1 oracolo prezzi: articoli del feed con un offerta valida oggi (' + $withOffer + ')')
+
     $defs = @(
-        @{ Name = 'ESEMPIO Google Merchant'; Sep = "`t"; Csv = $false; IdCol = 0; Price = 6; Dec = '.' },
-        @{ Name = 'ESEMPIO Trovaprezzi 7Pixel'; Sep = '|'; Csv = $false; IdCol = 4; Price = 3; Dec = '.' },
-        @{ Name = 'ESEMPIO idealo'; Sep = ','; Csv = $true; IdCol = 0; Price = 8; Dec = '.' }
+        @{ Name = 'ESEMPIO Google Merchant'; Sep = "`t"; Csv = $false; IdCol = 0 },
+        @{ Name = 'ESEMPIO Trovaprezzi 7Pixel'; Sep = '|'; Csv = $false; IdCol = 4 },
+        @{ Name = 'ESEMPIO idealo'; Sep = ','; Csv = $true; IdCol = 0 }
     )
+    $badBrands = @('n/a', 'generic', 'no brand', 'does not exist')
     foreach ($d in $defs) {
         $nm = $d.Name + ' (azienda ' + $c1.Id + ')'
         $e = $exp[$d.Name]
@@ -126,65 +196,95 @@ try {
         $titles = @($e.Cols | ForEach-Object { (Col-Line $_)[0] })
         $head = if ($d.Csv) { @(Parse-Csv $lines[0] $d.Sep) } else { @($lines[0].Split($d.Sep)) }
         Check (($head -join '~') -eq ($titles -join '~')) ('D3 ' + $d.Name + ': intestazione esatta e in ordine (' + ($head -join ',') + ')')
-        $bad = 0; $ids = @{}; $valErr = New-Object Collections.Generic.List[string]; $descEmpty = 0; $shipOk = 0; $shipN = 0
+        $bad = 0; $ids = @{}; $valErr = New-Object Collections.Generic.List[string]; $ruleErr = New-Object Collections.Generic.List[string]
+        $descBad = 0; $shipOk = 0; $shipN = 0; $gtinFile = 0; $gtinExp = 0; $skipTitle = 0; $quoteStart = 0; $priceChecked = 0
         for ($i = 1; $i -lt $lines.Count; $i++) {
             $f = if ($d.Csv) { @(Parse-Csv $lines[$i] $d.Sep) } else { @($lines[$i].Split($d.Sep)) }
             if ($f.Count -ne $titles.Count) { $bad++; continue }
             $id = $f[$d.IdCol]
             if ($ids.ContainsKey($id)) { $valErr.Add('id doppio ' + $id) }
             $ids[$id] = $true
+            if (-not $d.Csv) { foreach ($v in $f) { if ($v.StartsWith('"')) { $quoteStart++ } } }
             if (-not $oraMap.ContainsKey($id)) { continue }
             $a = $oraMap[$id]
-            $t = Clean (Unesc $a['t']); $br = Clean (Unesc $a['b']); $ean = Clean (Unesc $a['e']); $cod = Clean (Unesc $a['c'])
-            if ($d.Name -like '*Trovaprezzi*') { $t = $t.Replace('|', ' '); $br = $br.Replace('|', ' ') }
-            $price = Money (Dec $a['p'])
+            $tRaw = Clean (Unesc $a['t']); $br = Clean (Unesc $a['b']); $ean = (Unesc $a['e']).Trim(); $cod = Clean (Unesc $a['c'])
+            # il titolo si confronta sempre, tranne quando e tutto maiuscolo E ha caratteri non ASCII: li la normalizzazione dipende da lettere che la console altera
+            $nonAscii = (($tRaw -match '[^\x20-\x7E]|\?') -and ($tRaw -cnotmatch '[a-z]'))
+            if ($nonAscii) { $skipTitle++ }
+            $gx = Gs1-Valid $ean
+            if ($gx -ne '') { $gtinExp++ }
+            $expP = Expected-Price $id
             $link = 'https://www.taikun.it/articolo.aspx?id=' + $id
             $col = @{}; for ($k = 0; $k -lt $titles.Count; $k++) { $col[$titles[$k]] = $f[$k] }
+            $priceKey = ''; $descVal = ''
             switch ($d.Name) {
                 'ESEMPIO Google Merchant' {
-                    if (-not (Same-Text $col['title'] $t 150)) { $valErr.Add('title ' + $id) }
-                    if (-not (Same-Text $col['brand'] $br 0)) { $valErr.Add('brand ' + $id) }
-                    if ($col['gtin'] -ne $ean) { $valErr.Add('gtin ' + $id) }
+                    $tn = Title-Norm $tRaw
+                    if (-not $nonAscii) { if (-not (Same-Text $col['title'] $tn 150)) { $valErr.Add('title ' + $id) } }
+                    if (-not (Same-Text $col['brand'] $br 70)) { $valErr.Add('brand ' + $id) }
+                    if ($col['gtin'] -ne $gx) { $valErr.Add('gtin ' + $id) }
+                    if ($col['gtin'] -ne '') { $gtinFile++ }
+                    if (-not (Same-Text $col['mpn'] $cod 70)) { $valErr.Add('mpn ' + $id) }
                     if ($col['link'] -ne $link) { $valErr.Add('link ' + $id) }
+                    $expCond = 'new'; if ($a['rc'] -eq '1') { $expCond = 'refurbished' }
+                    if ($col['condition'] -ne $expCond) { $valErr.Add('condition ' + $id) }
                     if ($col['availability'] -ne 'in_stock') { $valErr.Add('availability ' + $id) }
-                    if ($a['o'] -eq '0' -and $col['price'] -ne ($price + ' EUR')) { $valErr.Add('price ' + $id + ' ' + $col['price'] + ' <> ' + $price) }
-                    if ($col['price'] -notmatch '^\d+\.\d\d EUR$') { $valErr.Add('formato price ' + $id) }
-                    if ($col['image_link'] -notmatch '^https://') { $valErr.Add('image_link ' + $id) }
-                    if ($col['description'].Trim() -eq '') { $descEmpty++ }
+                    if ($null -ne $expP) { $priceChecked++; if ($col['price'] -ne ($expP + ' EUR')) { $valErr.Add('price ' + $id + ' ' + $col['price'] + ' <> ' + $expP) } }
+                    # regole Google riga per riga
+                    if ($id.Length -gt 50) { $ruleErr.Add('id oltre 50 ' + $id) }
+                    if ($col['title'].Trim() -eq '' -or $col['title'].Length -gt 150) { $ruleErr.Add('title vuoto o oltre 150 ' + $id) }
+                    if ($col['description'].Length -gt 5000 -or $col['description'].Trim() -eq '') { $ruleErr.Add('description vuota o oltre 5000 ' + $id) }
+                    if ($col['link'] -notmatch '^https://' -or $col['image_link'] -notmatch '^https://') { $ruleErr.Add('link non https ' + $id) }
+                    if ($col['price'] -notmatch '^\d+\.\d\d EUR$' -or (Dec ($col['price'] -replace ' EUR$', '')) -le 0) { $ruleErr.Add('price formato o zero ' + $id) }
+                    if (@('in_stock', 'out_of_stock', 'preorder', 'backorder') -notcontains $col['availability']) { $ruleErr.Add('availability ' + $id) }
+                    if (@('new', 'refurbished', 'used') -notcontains $col['condition']) { $ruleErr.Add('condition ' + $id) }
+                    if ($col['brand'].Trim() -eq '' -or $col['brand'].Length -gt 70 -or $badBrands -contains $col['brand'].ToLowerInvariant()) { $ruleErr.Add('brand ' + $id) }
+                    if ($col['gtin'] -ne '' -and (Gs1-Valid $col['gtin']) -eq '') { $ruleErr.Add('gtin non valido ' + $id) }
+                    if ($col['mpn'].Length -gt 70 -or $col['product_type'].Length -gt 750) { $ruleErr.Add('mpn o product_type troppo lunghi ' + $id) }
                     if ($col['shipping'] -ne '') { $shipN++; if ($col['shipping'] -match '^IT::Standard:\d+\.\d\d EUR$') { $shipOk++ } }
+                    $descVal = $col['description']
                 }
                 'ESEMPIO Trovaprezzi 7Pixel' {
-                    if (-not (Same-Text $col['Nome'] $t 0)) { $valErr.Add('Nome ' + $id) }
-                    if (-not (Same-Text $col['Marca'] $br 0)) { $valErr.Add('Marca ' + $id) }
-                    if ($col['EAN'] -ne $ean) { $valErr.Add('EAN ' + $id) }
-                    if ($col['Codice produttore'] -ne $cod) { $valErr.Add('Codice produttore ' + $id) }
+                    $tx = $tRaw.Replace('|', ' ')
+                    if (-not $nonAscii) { if (-not (Same-Text $col['Nome'] $tx 0)) { $valErr.Add('Nome ' + $id) } }
+                    if (-not (Same-Text $col['Marca'] $br.Replace('|', ' ') 0)) { $valErr.Add('Marca ' + $id) }
+                    if ($col['EAN'] -ne $gx) { $valErr.Add('EAN ' + $id) }
+                    if ($col['EAN'] -ne '') { $gtinFile++ }
+                    if (-not (Same-Text $col['Codice produttore'] $cod 0)) { $valErr.Add('Codice produttore ' + $id) }
                     if ($col['Link'] -ne $link) { $valErr.Add('Link ' + $id) }
                     if ($col['Disponibilita'] -ne 'Disponibile') { $valErr.Add('Disponibilita ' + $id) }
-                    if ($a['o'] -eq '0' -and $col['Prezzo'] -ne $price) { $valErr.Add('Prezzo ' + $id + ' ' + $col['Prezzo'] + ' <> ' + $price) }
-                    if ($col['Descrizione'].Trim() -eq '') { $descEmpty++ }
+                    if ($null -ne $expP) { $priceChecked++; if ($col['Prezzo'] -ne $expP) { $valErr.Add('Prezzo ' + $id + ' ' + $col['Prezzo'] + ' <> ' + $expP) } }
                     if ($col['Spese di spedizione'] -ne '') { $shipN++; if ($col['Spese di spedizione'] -match '^\d+\.\d\d$') { $shipOk++ } }
+                    $descVal = $col['Descrizione']
                 }
                 'ESEMPIO idealo' {
-                    if (-not (Same-Text $col['title'] $t 0)) { $valErr.Add('title ' + $id) }
+                    if (-not $nonAscii) { if (-not (Same-Text $col['title'] $tRaw 0)) { $valErr.Add('title ' + $id) } }
                     if (-not (Same-Text $col['brand'] $br 0)) { $valErr.Add('brand ' + $id) }
-                    if ($col['eans'] -ne $ean) { $valErr.Add('eans ' + $id) }
-                    if ($col['hans'] -ne $cod) { $valErr.Add('hans ' + $id) }
+                    if ($col['eans'] -ne $gx) { $valErr.Add('eans ' + $id) }
+                    if ($col['eans'] -ne '') { $gtinFile++ }
+                    if (-not (Same-Text $col['hans'] $cod 0)) { $valErr.Add('hans ' + $id) }
                     if ($col['url'] -ne $link) { $valErr.Add('url ' + $id) }
                     if ($col['sku'] -ne $id) { $valErr.Add('sku ' + $id) }
-                    if ($a['o'] -eq '0' -and $col['price'] -ne $price) { $valErr.Add('price ' + $id + ' ' + $col['price'] + ' <> ' + $price) }
+                    if ($null -ne $expP) { $priceChecked++; if ($col['price'] -ne $expP) { $valErr.Add('price ' + $id + ' ' + $col['price'] + ' <> ' + $expP) } }
                     if ($col['delivery'] -ne '3 giorni lavorativi') { $valErr.Add('delivery ' + $id) }
-                    if ($col['description'].Trim() -eq '') { $descEmpty++ }
                     if ($col['deliveryCosts_dhl'] -ne '') { $shipN++; if ($col['deliveryCosts_dhl'] -match '^\d+\.\d\d$') { $shipOk++ } }
+                    $descVal = $col['description']
                 }
             }
+            if ($descVal.Trim() -eq '' -or $descVal -match '</?[A-Za-z]' -or $descVal -match '&(amp|lt|gt|nbsp|quot|euro);') { $descBad++ }
         }
         Check ($bad -eq 0) ('D4 ' + $d.Name + ': stesso numero di campi in ogni riga (righe con campi diversi: ' + $bad + ')')
         $missing = @($oraMap.Keys | Where-Object { -not $ids.ContainsKey($_) }).Count
         $extra = @($ids.Keys | Where-Object { -not $oraMap.ContainsKey($_) }).Count
-        Check ($missing -eq 0 -and $extra -eq 0 -and $ids.Count -eq $oraMap.Count) ('D5 ' + $d.Name + ': insieme esatto degli id (file ' + $ids.Count + ', attesi ' + $oraMap.Count + ', mancanti ' + $missing + ' ' + ((@($oraMap.Keys | Where-Object { -not $ids.ContainsKey($_) }) | Select-Object -First 5) -join ',') + ', in piu ' + $extra + ')')
+        Check ($missing -eq 0 -and $extra -eq 0 -and $ids.Count -eq $oraMap.Count) ('D5 ' + $d.Name + ': insieme esatto degli id (file ' + $ids.Count + ', attesi ' + $oraMap.Count + ', mancanti ' + $missing + ', in piu ' + $extra + ')')
         Check ($valErr.Count -eq 0) ('D6 ' + $d.Name + ': valori per id e colonna uguali all oracolo (errori ' + $valErr.Count + ' ' + (($valErr | Select-Object -First 3) -join ' ; ') + ')')
-        Check ($descEmpty -eq 0) ('D6 ' + $d.Name + ': descrizione mai vuota (vuote ' + $descEmpty + ')')
+        Check ($priceChecked -eq $oraMap.Count) ('D6 ' + $d.Name + ': prezzo controllato per ogni articolo, offerte comprese (' + $priceChecked + ' su ' + $oraMap.Count + ')')
+        Check ($descBad -eq 0) ('D6 ' + $d.Name + ': descrizione mai vuota e senza tag ne entita (difetti ' + $descBad + ')')
         Check ($shipN -gt 0 -and $shipOk -eq $shipN) ('D6 ' + $d.Name + ': spese di spedizione scritte con il formato giusto (scritte ' + $shipN + ', formato giusto ' + $shipOk + ')')
+        Check ($gtinExp -gt 100 -and $gtinFile -eq $gtinExp) ('D6 ' + $d.Name + ': GTIN scritti = GTIN validi attesi (' + $gtinFile + ' su ' + $gtinExp + ' calcolati a parte)')
+        Check ($quoteStart -eq 0) ('D6 ' + $d.Name + ': nessun valore inizia con virgolette (' + $quoteStart + ')')
+        Check ($skipTitle -lt ($oraMap.Count / 20)) ('D6 ' + $d.Name + ': titoli tutto maiuscolo con caratteri non ASCII esclusi dal confronto del titolo: pochi (' + $skipTitle + ')')
+        if ($d.Name -eq 'ESEMPIO Google Merchant') { Check ($ruleErr.Count -eq 0) ('D8 regole Google riga per riga (violazioni ' + $ruleErr.Count + ' ' + (($ruleErr | Select-Object -First 3) -join ' ; ') + ')') }
     }
 
     # esempio disabilitato: 404

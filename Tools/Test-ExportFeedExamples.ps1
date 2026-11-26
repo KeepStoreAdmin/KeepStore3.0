@@ -58,16 +58,17 @@ function Get-Scalar([string]$sql) {
 # ---------------------------------------------------------------------------------------------------------------------
 # definizione INDIPENDENTE attesa (non letta dal generatore): tipo, opzioni e colonne (titolo|campo|prefisso|suffisso|valore fisso|massimo)
 # ---------------------------------------------------------------------------------------------------------------------
-$model = '#Descrizione1#. #DescrizioneLunga#'
+$model = '#Descrizione1#. #DescrizioneSoloTesto#'
+$modelG = '#TitoloNormalizzato#. #DescrizioneSoloTesto#'
 $exp = @{
     'ESEMPIO Google Merchant' = @{ Tipo = 'tsv'; Opt = 'sep=|;delim=;enc=utf-8;dec=.;head=1;html=1;cache=60;w1=in_stock;w2=out_of_stock;w3=out_of_stock;img=1;ean=0;zero=1'; Cols = @(
-        'id|Id|||', 'title|Descrizione1||||150', ('description||||' + $model + '|5000'), 'link|Link|||', 'image_link|UrlImgBig|||', 'availability|Disponibilita|||', ('price|Prezzo||' + ' EUR' + '||'),
-        'brand|Marca||||70', 'gtin|Ean|||', 'product_type|CategoriaPercorso||||750', 'shipping|CostoSpedizioneProdo|IT::Standard:| EUR||') }
+        'id|Id|||', 'title|TitoloNormalizzato||||150', ('description||||' + $modelG + '|5000'), 'link|Link|||', 'image_link|UrlImgBig|||', 'availability|Disponibilita|||', ('price|Prezzo||' + ' EUR' + '||'),
+        'condition|CondizioneInglese|||', 'brand|Marca||||70', 'gtin|EanValido|||', 'mpn|Codice||||70', 'product_type|CategoriaPercorso||||750', 'shipping|CostoSpedizioneProdo|IT::Standard:| EUR||') }
     'ESEMPIO Trovaprezzi 7Pixel' = @{ Tipo = 'txt'; Opt = 'sep=|;delim=;enc=utf-8;dec=.;head=1;html=1;cache=60;w1=Disponibile;w2=In arrivo;w3=Non disponibile;img=1;ean=0;zero=1'; Cols = @(
         'Nome|Descrizione1|||', 'Marca|Marca|||', ('Descrizione||||' + $model + '|'), 'Prezzo|Prezzo|||', 'Codice interno|Id|||', 'Link|Link|||', 'Disponibilita|Disponibilita|||', 'Categoria|CategoriaPercorso|||',
-        'Immagine|UrlImgBig|||', 'Codice produttore|Codice|||', 'EAN|Ean|||', 'Spese di spedizione|CostoSpedizioneProdo|||', 'Peso|Peso|||') }
+        'Immagine|UrlImgBig|||', 'Codice produttore|Codice|||', 'EAN|EanValido|||', 'Spese di spedizione|CostoSpedizioneProdo|||', 'Peso|Peso|||') }
     'ESEMPIO idealo' = @{ Tipo = 'csv'; Opt = 'sep=,;delim=";enc=utf-8;dec=.;head=1;html=1;cache=60;w1=Disponibile;w2=In arrivo;w3=Non disponibile;img=1;ean=0;zero=1'; Cols = @(
-        'sku|Id|||', 'brand|Marca|||', 'title|Descrizione1|||', 'categoryPath|CategoriaPercorso|||', 'url|Link|||', 'eans|Ean|||', 'hans|Codice|||', ('description||||' + $model + '|'), 'price|Prezzo|||',
+        'sku|Id|||', 'brand|Marca|||', 'title|Descrizione1|||', 'categoryPath|CategoriaPercorso|||', 'url|Link|||', 'eans|EanValido|||', 'hans|Codice|||', ('description||||' + $model + '|'), 'price|Prezzo|||',
         'deliveryCosts_dhl|CostoSpedizioneProdo|||', ('delivery|GiorniSpedizione||' + ' giorni lavorativi' + '||'), 'imageUrl|UrlImgBig|||') }
 }
 # Le righe delle colonne sono: titolo|campo|prefisso|suffisso|valorefisso|max  (i campi vuoti restano vuoti)
@@ -80,12 +81,12 @@ Write-Host '(A) testo dei blocchi'
 $docText = ''
 if (Test-Path -LiteralPath $DocPath) { $docText = [IO.File]::ReadAllText($DocPath, $utf8) }
 $blocks = @{}
-foreach ($k in @('esempi', 'verify', 'rollback')) {
+foreach ($k in @('campi', 'esempi', 'verify', 'rollback', 'campi_rollback')) {
     $mm = [regex]::Match($docText, '(?s)## ' + [regex]::Escape($prefix + $k) + '\.sql\r?\n\r?\n```sql\r?\n(.*?)\r?\n```')
     if ($mm.Success) { $blocks[$k] = ($mm.Groups[1].Value -replace '\r\n', "`n") }
     Check $mm.Success ('A1 blocco ' + $k + ' presente nel documento')
 }
-if ($blocks.Count -ne 3) { Write-Host ('EXPORT_FEED_EXAMPLES FAIL: ' + (($script:cur.ToArray()) -join '; ')); Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue; exit 1 }
+if ($blocks.Count -ne 5) { Write-Host ('EXPORT_FEED_EXAMPLES FAIL: ' + (($script:cur.ToArray()) -join '; ')); Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue; exit 1 }
 foreach ($k in $blocks.Keys) {
     $b = $blocks[$k]
     Check ($b -notmatch '(?i)DEFINER\s*=') ('A2 ' + $k + ': nessun DEFINER')
@@ -95,6 +96,7 @@ foreach ($k in $blocks.Keys) {
     Check ($b -notmatch '(?i)(^|[^A-Za-z_])(password|pwd)\s*=') ('A6 ' + $k + ': nessuna password nel testo')
 }
 Check ($blocks['rollback'] -match 'KeepStoreConfirmDeleteExamples') 'A7 il rollback richiede la conferma esplicita'
+Check ($blocks['campi_rollback'] -match 'KeepStoreConfirmDeleteFields') 'A7 il rollback dei campi richiede la conferma esplicita'
 foreach ($x in $script:cur) { $fails.Add($x) }
 $script:cur = New-Object Collections.Generic.List[string]
 
@@ -110,7 +112,13 @@ DROP TRIGGER IF EXISTS ks_ex_test_trg_abil;
 DROP TRIGGER IF EXISTS ks_ex_test_trg_err;
 DELETE FROM export_filtri WHERE ExportId IN (SELECT ID FROM `export` WHERE Descrizione LIKE 'ESEMPIO %(azienda %)');
 DELETE FROM `export` WHERE Descrizione LIKE 'ESEMPIO %(azienda %)';
+DELETE FROM exportcampi WHERE NomeCampo IN ('CondizioneInglese', 'EanValido', 'DescrizioneSoloTesto', 'TitoloNormalizzato');
 '@
+$campiBackupSql = 'DROP TABLE IF EXISTS ks_exportcampi_backup; CREATE TABLE ks_exportcampi_backup AS SELECT * FROM exportcampi;'
+$campiRestoreSql = 'INSERT INTO exportcampi SELECT b.* FROM ks_exportcampi_backup b WHERE NOT EXISTS (SELECT 1 FROM exportcampi e WHERE e.NomeCampo = b.NomeCampo);'
+function Restore-Campi {
+    if ((Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ks_exportcampi_backup';") -eq '1') { $null = Invoke-Sql $campiRestoreSql -Write }
+}
 function Clean-Examples { $o = Invoke-Sql $cleanExamplesSql -Write; if (Sql-Failed $o) { throw ('CLEAN_FAILED ' + ($o -join ' ')) } }
 function Clean-Lab { Clean-Examples; $o = Invoke-Sql 'DELETE FROM aziende WHERE id BETWEEN 9101 AND 9107;' -Write; if (Sql-Failed $o) { throw ('CLEAN_FAILED ' + ($o -join ' ')) } }
 $fixtureSql = @'
@@ -246,6 +254,27 @@ function Run-Battery([hashtable]$b, [bool]$full) {
     Check (@(Example-Rows).Count -eq $nExpected) 'B4 rollback senza conferma: niente cancellato'
 
     if ($full) {
+        # K campi: registrazione in exportcampi (nessuna riga del gestionale deve cambiare)
+        $names = "'CondizioneInglese', 'EanValido', 'DescrizioneSoloTesto', 'TitoloNormalizzato'"
+        $crcF = Get-Scalar "SELECT BIT_XOR(CRC32(NomeCampo)) AS ksval FROM exportcampi;"
+        $n0 = Get-Scalar 'SELECT COUNT(*) AS ksval FROM exportcampi;'
+        $o = Invoke-Sql $b['campi'] -Write
+        Check (($o -join "`n") -match 'EXPORT_FEED_CAMPI_OK') 'K1 campi: esito OK'
+        Check ((Get-Scalar ('SELECT COUNT(*) AS ksval FROM exportcampi WHERE NomeCampo IN (' + $names + ');')) -eq '4' -and (Get-Scalar 'SELECT COUNT(*) AS ksval FROM exportcampi;') -eq ([string]([int]$n0 + 4))) 'K1 campi: quattro righe aggiunte, nessun altra'
+        $o = Invoke-Sql $b['campi'] -Write
+        Check (($o -join "`n") -match 'EXPORT_FEED_CAMPI_OK' -and -not (Sql-Failed $o) -and (Get-Scalar 'SELECT COUNT(*) AS ksval FROM exportcampi;') -eq ([string]([int]$n0 + 4))) 'K2 campi: secondo lancio senza differenze'
+        $o = Invoke-Sql $b['campi_rollback'] -Write
+        Check (Sql-Failed $o) 'K3 rollback dei campi senza conferma: arresto'
+        Check ((Get-Scalar ('SELECT COUNT(*) AS ksval FROM exportcampi WHERE NomeCampo IN (' + $names + ');')) -eq '4') 'K3 rollback dei campi senza conferma: niente cancellato'
+        $o = Invoke-Sql ('SET @KeepStoreConfirmDeleteFields = 1;' + "`n" + $b['campi_rollback']) -Write
+        Check (($o -join "`n") -match 'EXPORT_FEED_CAMPI_ROLLBACK_OK' -and (Get-Scalar 'SELECT COUNT(*) AS ksval FROM exportcampi;') -eq $n0 -and (Get-Scalar "SELECT BIT_XOR(CRC32(NomeCampo)) AS ksval FROM exportcampi;") -eq $crcF) 'K3 rollback dei campi con conferma: restano esattamente le righe di prima'
+        $null = Invoke-Sql 'ALTER TABLE exportcampi ADD COLUMN ks_x INT NULL;' -Write
+        try {
+            $o = Invoke-Sql $b['campi'] -Write
+            Check ((Sql-Failed $o) -and (($o -join ' ') -match 'KEEPSTORE_STOP_EXPORT_FEED_CAMPI_STRUTTURA')) 'K4 campi: tabella con struttura diversa, lo script si ferma con il messaggio della struttura (non con il controllo finale)'
+            Check ((Get-Scalar ('SELECT COUNT(*) AS ksval FROM exportcampi WHERE NomeCampo IN (' + $names + ');')) -eq '0') 'K4 campi: struttura diversa, niente scritto'
+        } finally { $null = Invoke-Sql 'ALTER TABLE exportcampi DROP COLUMN ks_x;' -Write }
+
         # B5 atomicita: errore a meta (trigger che fa fallire la terza colonna del primo feed) e controllo prima del COMMIT (trigger che abilita il feed)
         $null = Invoke-Sql ('DELETE FROM export WHERE Descrizione LIKE ''ESEMPIO %(azienda %)'';') -Write
         $trgErr = "CREATE TRIGGER ks_ex_test_trg_err BEFORE INSERT ON export_colonne FOR EACH ROW SET NEW.Posizione = IF(NEW.Posizione = 3, (SELECT 1 UNION SELECT 2), NEW.Posizione);"
@@ -301,10 +330,12 @@ function Run-Battery([hashtable]$b, [bool]$full) {
     return ,($script:cur.ToArray())
 }
 
-if ($Cleanup) { Clean-Lab; Write-Host 'EXPORT_FEED_EXAMPLES CLEANUP DONE'; Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue; exit 0 }
+if ($Cleanup) { Restore-Campi; $null = Invoke-Sql 'DELETE FROM exportcampi WHERE NomeCampo IN (''CondizioneInglese'', ''EanValido'', ''DescrizioneSoloTesto'', ''TitoloNormalizzato''); DROP TABLE IF EXISTS ks_exportcampi_backup;' -Write; Clean-Lab; Write-Host 'EXPORT_FEED_EXAMPLES CLEANUP DONE'; Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue; exit 0 }
 
 try {
     Clean-Lab
+    $o = Invoke-Sql $campiBackupSql -Write
+    if (Sql-Failed $o) { throw ('BACKUP_CAMPI_FAILED ' + ($o -join ' ')) }
     $o = Invoke-Sql $fixtureSql -Write
     if (Sql-Failed $o) { throw ('FIXTURE_FAILED ' + ($o -join ' ')) }
     $crcStart = Others-Crc
@@ -318,6 +349,9 @@ try {
     # (V) verify sullo stato reale
     $o = Invoke-Sql $blocks['esempi'] -Write
     $script:cur = New-Object Collections.Generic.List[string]
+    $vt0 = (Invoke-Sql $blocks['verify'] -Write) -join "`n"
+    Check ($vt0 -match 'campi_registrati_nel_gestionale\s+ATTENZIONE') 'V0 verify segnala i campi nuovi non registrati in exportcampi'
+    $o = Invoke-Sql $blocks['campi'] -Write
     $v = Invoke-Sql $blocks['verify'] -Write
     $vt = $v -join "`n"
     Check ($vt -match 'EXPORT_FEED_ESEMPI_VERIFY_OK') 'V1 verify: verdetto OK dopo la creazione'
@@ -327,7 +361,7 @@ try {
     $null = Invoke-Sql ('UPDATE export SET Abilitato = 1, IdVettore = 0 WHERE ID IN (' + $gid + ',' + $iid + ');') -Write
     $v = Invoke-Sql $blocks['verify'] -Write
     $vt = $v -join "`n"
-    Check ($vt -match 'google_abilitato\s+ATTENZIONE') 'V2 verify segnala l esempio Google abilitato'
+    Check (-not ($vt -match 'google_abilitato')) 'V2 verify non segnala piu l esempio Google (ora conforme)'
     Check ($vt -match 'abilitati_senza_vettore_con_fasce\s+ATTENZIONE') 'V2 verify segnala un esempio abilitato senza vettore con fasce'
     Check ($vt -match 'abilitati_con_giorni_zero\s+ATTENZIONE') 'V2 verify segnala idealo abilitato con 0 giorni'
     Check ($vt -match 'esempi_non_modificati\s+INFO') 'V2 verify segnala gli esempi modificati (abilitati)'
@@ -352,7 +386,15 @@ try {
             @('azienda-con-url-doppio-accettata', 'esempi', "AND (SELECT COUNT(*) FROM aziende b WHERE LOWER(TRIM(b.URL1)) = LOWER(TRIM(a.URL1)) OR LOWER(TRIM(b.URL2)) = LOWER(TRIM(a.URL1))) = 1;", ';'),
             @('azienda-senza-listino-accettata', 'esempi', "AND COALESCE(a.ListinoDefault, 0) > 0", ''),
             @('colonne-riordinate', 'esempi', "('G', 1, 'id', 'Id'", "('G', 12, 'id', 'Id'"),
-            @('descrizione-senza-titolo', 'esempi', "'#Descrizione1#. #DescrizioneLunga#'", "'#DescrizioneLunga#'"),
+            @('descrizione-senza-titolo', 'esempi', "'#Descrizione1#. #DescrizioneSoloTesto#'", "'#DescrizioneSoloTesto#'"),
+            @('descrizione-con-html', 'esempi', "'#TitoloNormalizzato#. #DescrizioneSoloTesto#'", "'#TitoloNormalizzato#. #DescrizioneLunga#'"),
+            @('google-condizione-italiana', 'esempi', "'CondizioneInglese'", "'Condizione'"),
+            @('gtin-grezzo', 'esempi', "'EanValido'", "'Ean'"),
+            @('google-titolo-grezzo', 'esempi', "'TitoloNormalizzato'", "'Descrizione1'"),
+            @('campi-guardia-tolta', 'campi', 'SELECT * FROM information_schema.KEEPSTORE_STOP_EXPORT_FEED_CAMPI_STRUTTURA', 'SELECT 1'),
+            @('campi-non-ripetibile', 'campi', 'WHERE @ks_go = 1 AND NOT EXISTS (SELECT 1 FROM exportcampi e WHERE e.NomeCampo = v.n)', 'WHERE @ks_go = 1'),
+            @('campi-rollback-senza-conferma', 'campi_rollback', 'SET @ks_ok = IF(@KeepStoreConfirmDeleteFields = 1, 1, 0);', 'SET @ks_ok = 1;'),
+            @('campi-rollback-largo', 'campi_rollback', 'DELETE FROM exportcampi WHERE @ks_ok = 1 AND NomeCampo IN (', 'DELETE FROM exportcampi WHERE @ks_ok = 1 AND NomeCampo NOT IN ('),
             @('rollback-senza-impronta', 'rollback', 't.Identico = 1 AND ', ''),
             @('rollback-ignora-uso-del-sito', 'rollback', ' AND t.ConStato = 0', ''),
             @('rollback-ignora-filtri', 'rollback', ' AND t.ConFiltri = 0', ''),
@@ -365,9 +407,9 @@ try {
             if (-not $bm[$m[1]].Contains($m[2])) { Write-Host ('  FAIL mutante non applicabile: ' + $m[0]); $fails.Add('mutante ' + $m[0] + ' non applicabile'); continue }
             $bm[$m[1]] = $bm[$m[1]].Replace($m[2], $m[3])
             $script:quiet = $true
-            try { $res = @(Run-Battery $bm $true) } catch { $res = @($script:cur.ToArray()) + @('ECCEZIONE ' + $_.Exception.Message) } finally { $script:quiet = $false }
+            try { $null = Run-Battery $bm $true; $res = @($script:cur.ToArray()) } catch { $res = @($script:cur.ToArray()) + @('ECCEZIONE ' + $_.Exception.Message) } finally { $script:quiet = $false }
             if ($res.Count -gt 0) { $killed++; Write-Host ('  ucciso ' + $m[0] + ' (primo fallimento: ' + $res[0] + ')') } else { Write-Host ('  FAIL SOPRAVVISSUTO ' + $m[0]); $fails.Add('mutante sopravvissuto ' + $m[0]) }
-            Clean-Examples
+            Clean-Examples; Restore-Campi
         }
         Write-Host ('  mutanti uccisi ' + $killed + '/' + $mut.Count)
     }
@@ -378,6 +420,7 @@ try {
         . (Join-Path $root 'Tools\Test-ExportFeedExamples.Site.ps1')
     }
 } finally {
+    try { Restore-Campi; $null = Invoke-Sql 'DELETE FROM exportcampi WHERE NomeCampo IN (''CondizioneInglese'', ''EanValido'', ''DescrizioneSoloTesto'', ''TitoloNormalizzato''); DROP TABLE IF EXISTS ks_exportcampi_backup;' -Write } catch { Write-Host ('  ripristino dei campi non riuscito: ' + $_.Exception.Message) }
     try { Clean-Lab } catch { Write-Host ('  pulizia non riuscita: ' + $_.Exception.Message) }
     $script:quiet = $false
     try { $crcEnd = Others-Crc; if ($crcEnd -ne $crcStart) { Write-Host ('  FAIL i feed esistenti non sono tornati identici (' + $crcStart + ' <> ' + $crcEnd + ')'); $fails.Add('feed esistenti alterati') } } catch { }

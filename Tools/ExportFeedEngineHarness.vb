@@ -247,6 +247,81 @@ Public Module ExportFeedEngineHarness
         Check(KeepStoreFeedEngine.ResolveEncoding("windows-1252").GetBytes(ChrW(&H20AC))(0) = &H80, "windows-1252 ha l'euro")
         Check(KeepStoreFeedEngine.ResolveEncoding("utf-16") Is Nothing, "codifica sconosciuta")
 
+        ' --- GOOGLE-MERCHANT-CENTER-FEED-1A: campi nuovi (CondizioneInglese, EanValido, DescrizioneSoloTesto, TitoloNormalizzato) ---
+        ' PlainText: ordine decodifica entita, via commenti/script/stile con il contenuto, via i soli tag veri, poi una riga.
+        Check(KeepStoreFeedEngine.PlainText("<p>Ciao&nbsp;<b>mondo</b> &amp; co</p>") = "Ciao mondo & co", "testo semplice: tag e entita")
+        Check(KeepStoreFeedEngine.PlainText("A &amp; B") = "A & B", "testo semplice: entita senza tag decodificata")
+        Check(KeepStoreFeedEngine.PlainText("&lt;b&gt;X&lt;/b&gt;") = "X", "testo semplice: tag scritto come entita non ricompare")
+        Check(KeepStoreFeedEngine.PlainText("<script>alert(1)</script>Testo") = "Testo", "testo semplice: contenuto di script tolto")
+        Check(KeepStoreFeedEngine.PlainText("<SCRIPT type=""x"">a</SCRIPT>y<style>p{color:red}</style>z") = "y z", "testo semplice: script e stile in maiuscolo")
+        Check(KeepStoreFeedEngine.PlainText("a<!-- x > y -->b") = "a b", "testo semplice: commento con > dentro")
+        Check(KeepStoreFeedEngine.PlainText("peso <2kg, schermo >15"" ok") = "peso <2kg, schermo >15"" ok", "testo semplice: minore e maggiore non sono tag")
+        Check(KeepStoreFeedEngine.PlainText("5 < 10 > 3") = "5 < 10 > 3", "testo semplice: confronto numerico intatto")
+        Check(KeepStoreFeedEngine.PlainText("Riga1<br>Riga2<br/>Riga3") = "Riga1 Riga2 Riga3", "testo semplice: br diventa spazio")
+        Check(KeepStoreFeedEngine.PlainText("&amp;lt;b&amp;gt;") = "&lt;b&gt;", "testo semplice: una sola decodifica")
+        Check(KeepStoreFeedEngine.PlainText("Linea" & vbTab & "x" & vbLf & "y") = "Linea x y", "testo semplice: tab e a-capo in spazio")
+        Check(KeepStoreFeedEngine.PlainText("") = "" AndAlso KeepStoreFeedEngine.PlainText(Nothing) = "", "testo semplice: vuoto")
+        Check(KeepStoreFeedEngine.PlainText("<script>abc") = "abc", "testo semplice: script non chiuso lascia il testo")
+        ' ValidGtin: cifra di controllo GS1, lunghezze 8/12/13/14, niente spazi, niente tutto zero, prefissi non ammessi.
+        Check(KeepStoreFeedEngine.ValidGtin("4006381333931") = "4006381333931", "gtin: EAN-13 valido")
+        Check(KeepStoreFeedEngine.ValidGtin("3001234567892") = "3001234567892", "gtin: EAN-13 valido (esempio Google)")
+        Check(KeepStoreFeedEngine.ValidGtin("036000291452") = "036000291452", "gtin: UPC-A con zero iniziale valido, zeri conservati")
+        Check(KeepStoreFeedEngine.ValidGtin("10856435001702") = "10856435001702", "gtin: GTIN-14 valido")
+        Check(KeepStoreFeedEngine.ValidGtin("96385074") = "96385074", "gtin: EAN-8 valido")
+        Check(KeepStoreFeedEngine.ValidGtin(" 4006381333931 ") = "4006381333931", "gtin: spazi ai bordi tolti")
+        Check(KeepStoreFeedEngine.ValidGtin("4006381333932") = "", "gtin: cifra di controllo errata")
+        Check(KeepStoreFeedEngine.ValidGtin("96385075") = "", "gtin: EAN-8 con cifra errata")
+        Check(KeepStoreFeedEngine.ValidGtin("4006 381333931") = "" AndAlso KeepStoreFeedEngine.ValidGtin("4006-381333931") = "", "gtin: spazi o trattini interni non validi")
+        Check(KeepStoreFeedEngine.ValidGtin("40063813339X1") = "" AndAlso KeepStoreFeedEngine.ValidGtin("12345678901") = "" AndAlso KeepStoreFeedEngine.ValidGtin("123456789") = "" AndAlso KeepStoreFeedEngine.ValidGtin("123456789012345") = "", "gtin: lettere o lunghezza non ammessa")
+        Check(KeepStoreFeedEngine.ValidGtin("300123456A892") = "", "gtin: lettera che lascia giusta la somma di controllo (A vale 17, come un 7)")
+        Check(KeepStoreFeedEngine.ValidGtin("0000000000000") = "" AndAlso KeepStoreFeedEngine.ValidGtin("000000000000") = "" AndAlso KeepStoreFeedEngine.ValidGtin("00000000") = "", "gtin: tutto zero non valido")
+        Check(KeepStoreFeedEngine.ValidGtin("0212345678909") = "" AndAlso KeepStoreFeedEngine.ValidGtin("0412345678903") = "" AndAlso KeepStoreFeedEngine.ValidGtin("2012345678903") = "", "gtin: prefissi 02, 04, 2 non ammessi")
+        Check(KeepStoreFeedEngine.ValidGtin("9812345678902") = "" AndAlso KeepStoreFeedEngine.ValidGtin("9912345678909") = "", "gtin: prefissi 98 e 99 (coupon) non ammessi")
+        Check(KeepStoreFeedEngine.ValidGtin("212345678909") = "" AndAlso KeepStoreFeedEngine.ValidGtin("412345678903") = "", "gtin: UPC-A che comincia con 2 o 4 non ammesso")
+        Check(KeepStoreFeedEngine.ValidGtin("0012345678905") = "0012345678905", "gtin: prefisso 00 ammesso")
+        Check(KeepStoreFeedEngine.ValidGtin("") = "" AndAlso KeepStoreFeedEngine.ValidGtin(Nothing) = "", "gtin: vuoto")
+        ' NormalizeTitle: solo se non c'e nessuna lettera minuscola.
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAVO DI RETE EWENT") = "Cavo Di Rete Ewent", "titolo: tutto maiuscolo normalizzato")
+        Check(KeepStoreFeedEngine.NormalizeTitle("HARD DISK 2.5"" STKM2000400 2TB USB 3.0") = "Hard Disk 2.5"" STKM2000400 2TB Usb 3.0", "titolo: le parole con cifre restano")
+        Check(KeepStoreFeedEngine.NormalizeTitle("HP USB-C") = "Hp Usb-c", "titolo: parola con trattino")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo HDMI 2m SSD") = "Cavo HDMI 2m SSD", "titolo: con almeno una minuscola resta com'e")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo ""A&B"" <rosso>;" & vbCrLf & "x") = "Cavo ""A&B"" <rosso>; x", "titolo: ripulito ma non cambiato")
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAFF" & ChrW(&HC8) & " NERO") = "Caff" & ChrW(&HE8) & " Nero", "titolo: lettere accentate")
+        Check(KeepStoreFeedEngine.NormalizeTitle("123 456") = "123 456" AndAlso KeepStoreFeedEngine.NormalizeTitle("") = "" AndAlso KeepStoreFeedEngine.NormalizeTitle(Nothing) = "", "titolo: senza lettere o vuoto")
+        Check(KeepStoreFeedEngine.NormalizeTitle("A  B") = "A B", "titolo: spazi compressi")
+        ' Token nuovi: valore, conoscenza (Validate) e campi esistenti invariati.
+        Dim gr As KeepStoreFeedRow = Row()
+        Dim go As New KeepStoreFeedOptions()
+        Dim gc As KeepStoreFeedContext = Ctx()
+        gr.Refurbished = 1
+        Check(KeepStoreFeedEngine.TokenValue("CondizioneInglese", gr, gc, go) = "refurbished", "token CondizioneInglese: ricondizionato")
+        gr.Refurbished = 0
+        Check(KeepStoreFeedEngine.TokenValue("CondizioneInglese", gr, gc, go) = "new", "token CondizioneInglese: nuovo")
+        gr.Refurbished = 2
+        Check(KeepStoreFeedEngine.TokenValue("condizioneinglese", gr, gc, go) = "new", "token CondizioneInglese: valore diverso da 1 e nuovo, nome in minuscolo")
+        gr.Refurbished = 1
+        Check(KeepStoreFeedEngine.TokenValue("Condizione", gr, gc, go) = "RICONDIZIONATO", "token Condizione esistente invariato")
+        gr.Ean = "4006381333931"
+        Check(KeepStoreFeedEngine.TokenValue("EanValido", gr, gc, go) = "4006381333931", "token EanValido: valido")
+        gr.Ean = "123"
+        Check(KeepStoreFeedEngine.TokenValue("EanValido", gr, gc, go) = "" AndAlso KeepStoreFeedEngine.TokenValue("Ean", gr, gc, go) = "123", "token EanValido: non valido vuoto, Ean esistente invariato")
+        gr.LongText = "Testo <b>lungo</b> &amp; <script>x()</script>ok"
+        Check(KeepStoreFeedEngine.TokenValue("DescrizioneSoloTesto", gr, gc, go) = "Testo lungo & ok", "token DescrizioneSoloTesto")
+        Check(KeepStoreFeedEngine.TokenValue("DescrizioneLunga", gr, gc, go) = "Testo <b>lungo</b> &amp; <script>x()</script>ok", "token DescrizioneLunga esistente invariato")
+        gr.Title1 = "CAVO RETE"
+        go.LowerCaseTitle = False
+        Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = "Cavo Rete" AndAlso KeepStoreFeedEngine.TokenValue("Descrizione1", gr, gc, go) = "CAVO RETE", "token TitoloNormalizzato e Descrizione1 invariato")
+        go.LowerCaseTitle = True
+        Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = "Cavo Rete", "token TitoloNormalizzato non dipende da Tutto in minuscolo")
+        Dim vcols As New List(Of KeepStoreFeedColumn)()
+        vcols.Add(Col("a", "#CondizioneInglese#"))
+        vcols.Add(Col("b", "#EanValido#"))
+        vcols.Add(Col("c", "#DescrizioneSoloTesto#"))
+        vcols.Add(Col("d", "#TitoloNormalizzato#. #DescrizioneSoloTesto#"))
+        Check(KeepStoreFeedEngine.Validate(New KeepStoreFeedOptions(), vcols) = "", "i quattro token nuovi sono noti alla validazione")
+        vcols.Add(Col("e", "#TokenInventato#"))
+        Check(KeepStoreFeedEngine.Validate(New KeepStoreFeedOptions(), vcols) = "CAMPO_SCONOSCIUTO", "un token inventato resta sconosciuto")
+
         Console.WriteLine("failures=" & failures.ToString())
         Return If(failures = 0, 0, 1)
     End Function
