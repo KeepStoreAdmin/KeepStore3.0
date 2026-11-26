@@ -74,7 +74,7 @@ Next
 ```
 
 ## 5. I pulsanti e il link
-- **Link** (sola lettura, sostituisce la costruzione di `export.aspx?id=&pwd=&comparatore=` in `cmbAzienda_SelectedIndexChanged` e `cmbTipoExport_SelectedIndexChanged`): `https://<Azienda>/feed.aspx?c=<TokenAccesso>`; **Copia link** copia questo testo. Nessun `&google=1`.
+- **Link** (sola lettura, sostituisce la costruzione del vecchio link di `export.aspx` (identificativo, password e nome del comparatore) in `cmbAzienda_SelectedIndexChanged` e `cmbTipoExport_SelectedIndexChanged`): `https://<Azienda>/feed.aspx?c=<TokenAccesso>`; **Copia link** copia questo testo. Nessun `&google=1`.
 - **Nuovo codice**: conferma («il link attuale smettera di funzionare»), `Modexport_codice`, rileggere `TokenAccesso`. Effetto sul sito entro 60 secondi.
 - **Duplica**: `Dupexport` dentro la transazione; poi riaprire l'elenco sul nuovo feed (spento).
 - **Anteprima**: apre `<link>&anteprima=1` nel browser (o lo scarica e lo mostra): sono le **prime 20 righe** (xml: le prime 80) del **file pronto**, `text/plain`; l'intestazione `X-Feed-Generato` dice quando e stato generato (il file puo avere fino a `MinutiCache` minuti: dire all'utente l'ora). Se il feed non e mai stato letto, la prima richiesta lo genera (qualche secondo).
