@@ -73,7 +73,13 @@ $engineMutants = @(
     @('http-non-riscritto', 'Return "https://" & url.Substring(7)', 'Return url'),
     @('etag-senza-lunghezza', 'lastWriteTicks.ToString("x", Invariant) & "-" & length.ToString("x", Invariant)', 'lastWriteTicks.ToString("x", Invariant) & "-"'),
     @('link-con-http', 'Return "https://" & ctx.Domain & "/articolo.aspx?id="', 'Return "http://" & ctx.Domain & "/articolo.aspx?id="'),
-    @('stato-obsoleto-id', 'Return scope & "-" & exportId.ToString(Invariant) & "-" & token & "." & NormalizeFormat(format)', 'Return scope & "-" & token & "." & NormalizeFormat(format)')
+    @('nome-senza-id', 'Return scope & "-" & exportId.ToString(Invariant) & "-" & token & "-" & fingerprint & "." & NormalizeFormat(format)', 'Return scope & "-" & token & "-" & fingerprint & "." & NormalizeFormat(format)'),
+    @('nome-senza-impronta', 'Return scope & "-" & exportId.ToString(Invariant) & "-" & token & "-" & fingerprint & "." & NormalizeFormat(format)', 'Return scope & "-" & exportId.ToString(Invariant) & "-" & token & "." & NormalizeFormat(format)'),
+    @('impronta-senza-lunghezze', 'sb.Append(v.Length.ToString(Invariant)).Append(":"c).Append(v).Append(";"c)', 'sb.Append(v)'),
+    @('impronta-con-nothing-diverso', 'Dim v As String = NZ(p)', 'Dim v As String = If(p Is Nothing, "NULL", p)'),
+    @('vecchio-file-senza-impronta-resta', '[0-9A-F]{48}(-[0-9a-f]{12})?\.(txt|csv|tsv|xml)$', '[0-9A-F]{48}-[0-9a-f]{12}\.(txt|csv|tsv|xml)$'),
+    @('anteprima-riga-incompleta', 'If lines.Count > 0 AndAlso (cutByBytes OrElse lines(lines.Count - 1).Length = 0) Then lines.RemoveAt(lines.Count - 1)', 'If lines.Count > 0 AndAlso lines(lines.Count - 1).Length = 0 Then lines.RemoveAt(lines.Count - 1)'),
+    @('anteprima-senza-tetto-righe', 'If lines.Count > maxLines Then lines.RemoveRange(maxLines, lines.Count - maxLines)', '')
 )
 if (-not $SkipMutants -and $u.Compiled) {
     $killed = 0; $total = 0
@@ -132,6 +138,16 @@ function Test-Source([string]$svc, [string]$eng, [string]$page, [string]$markup)
     if ($svc -notmatch 'MarkFailure\(cfg\)') { $f.Add('S22 attesa dopo un errore') }
     if ($svc -notmatch 'If InCooldown\(cfg\) Then Return False') { $f.Add('S23 nessun nuovo tentativo durante l attesa dopo un errore') }
     if ($svc -notmatch 'minutes >= MinMinutesCache AndAlso minutes <= MaxMinutesCache') { $f.Add('S24 MinutiCache fuori dai limiti non si usa') }
+    # impronta della configurazione nel nome del file, filtri nella stessa fotografia, anteprima
+    if ($svc -notmatch 'KeepStoreFeedEngine\.FileName\(ScopePrefix\(\), cfg\.ExportId, cfg\.Token, cfg\.Options\.Format, cfg\.Fingerprint\)') { $f.Add('S26 il nome del file deve portare l impronta della configurazione') }
+    $iFp = $svc.IndexOf('Private Shared Function ComputeFingerprint('); $fpBody = if ($iFp -ge 0) { $t2 = $svc.Substring($iFp); $t2.Substring(0, $t2.IndexOf('End Function')) } else { '' }
+    if ($fpBody -notmatch 'EngineVersion' -or $fpBody -notmatch 'Date\.Today' -or $fpBody -notmatch 'cfg\.CompanyId' -or $fpBody -notmatch 'cfg\.Domain' -or $fpBody -notmatch 'cfg\.Listino\.' -or $fpBody -notmatch 'For Each c As KeepStoreFeedColumn In cfg\.Columns' -or $fpBody -notmatch 'For Each f As Dictionary\(Of String, Integer\) In cfg\.Filters' -or $fpBody -notmatch 'o\.Separator' -or $fpBody -notmatch 'cfg\.IncludeTax') { $f.Add('S27 impronta incompleta (versione, giorno, azienda, dominio, listino, IVA, opzioni, colonne, filtri)') }
+    if ($svc -notmatch 'FROM export_opzioni o JOIN export e ON e\.ID = o\.ExportId' -or $svc -notmatch 'WHERE o\.TokenAccesso=@t') { $f.Add('S28 la configurazione si cerca per il codice di export_opzioni') }
+    if ($svc -notmatch 'cfg\.Filters = ReadFilters\(conn, cfg\.ExportId\)' -or $svc -match 'Dim filters As List\(Of Dictionary\(Of String, Integer\)\) = ReadFilters') { $f.Add('S29 i filtri si leggono con la configurazione, non durante la generazione') }
+    $iPv = $svc.IndexOf('Private Shared Sub SendPreview('); $pvBody = if ($iPv -ge 0) { $t = $svc.Substring($iPv); $t.Substring(0, $t.IndexOf('End Sub')) } else { '' }
+    if ($pvBody -eq '' -or $pvBody -match 'ETag|If-None-Match|TouchRequest|WriteState|EnsureFresh' -or $pvBody -notmatch 'SetNoStore' -or $pvBody -notmatch 'PreviewMaxBytes' -or $pvBody -notmatch 'X-Feed-Generato') { $f.Add('S30 anteprima: limite di byte, no-store, ora del file, nessun ETag ne registrazione') }
+    if ($svc -notmatch 'If Not preview Then TouchRequest\(cfg\)' -or $svc.IndexOf('SendPreview(context, cfg, path, isHead)') -lt 0 -or $svc.IndexOf('SendPreview(context, cfg, path, isHead)') -gt $svc.IndexOf('SendFile(context, cfg, path, isHead)')) { $f.Add('S31 l anteprima precede la risposta ordinaria e non registra la richiesta') }
+    if ($svc -notmatch 'xs\.Indent = True') { $f.Add('S32 xml indentato (l anteprima si legge per righe)') }
     # pagina e cartella
     if ($markup -notmatch 'EnableSessionState="false"') { $f.Add('P1 sessione spenta') }
     if ($page -notmatch 'Public Overrides Sub ProcessRequest' -or $page -match 'MyBase\.ProcessRequest') { $f.Add('P2 ProcessRequest senza ciclo della pagina') }
@@ -166,6 +182,15 @@ $svcMutants = @(
     @('stato-a-ogni-richiesta', 'RequestStampMinutes As Integer = 10', 'RequestStampMinutes As Integer = 0'),
     @('messaggio-nello-stato', 'Return "ERRORE_" & ex.GetType().Name', 'Return ex.Message'),
     @('guardia-cartella-persa', 'allowUnlisted=""false""', 'allowUnlisted=""true""'),
+    @('impronta-fuori-dal-nome', 'cfg.Options.Format, cfg.Fingerprint))', 'cfg.Options.Format, ""))'),
+    @('impronta-senza-colonne', 'For Each c As KeepStoreFeedColumn In cfg.Columns' + "`n" + '            p.Add(c.Title)', 'For Each c As KeepStoreFeedColumn In New List(Of KeepStoreFeedColumn)()' + "`n" + '            p.Add(c.Title)'),
+    @('impronta-senza-giorno', 'p.Add(Date.Today.ToString("yyyyMMdd", Invariant))', 'p.Add("")'),
+    @('filtri-riletti-in-generazione', 'Dim filters As List(Of Dictionary(Of String, Integer)) = cfg.Filters', 'Dim filters As List(Of Dictionary(Of String, Integer)) = ReadFilters(conn, cfg.ExportId)'),
+    @('anteprima-registra-la-richiesta', 'If Not preview Then TouchRequest(cfg)', 'TouchRequest(cfg)'),
+    @('anteprima-senza-limite-di-byte', 'Dim buffer(KeepStoreFeedEngine.PreviewMaxBytes - 1) As Byte', 'Dim buffer(104857599) As Byte'),
+    @('anteprima-con-etag', 'r.AppendHeader("X-Feed-Generato"', 'r.AppendHeader("ETag", "x")' + "`n" + '        r.AppendHeader("X-Feed-Generato"'),
+    @('xml-su-una-riga', 'xs.Indent = True', 'xs.Indent = False'),
+    @('configurazione-dal-vecchio-schema', 'FROM export_opzioni o JOIN export e ON e.ID = o.ExportId', 'FROM export e JOIN export_opzioni o ON e.ID = o.ExportId'),
     @('eta-massima-tolta', 'Math.Max(24.0R * 60.0R, 3.0R * cfg.Options.MinutesCache)', '1.0E+30')
 )
 if (-not $SkipMutants) {
@@ -195,7 +220,7 @@ if ($SitePath -notmatch '^C:\\Temp\\KeepStoreRegOrderLab-[0-9]+\\site$') { Write
 $base = 'https://www.taikun.it:18843'
 $labSql = Join-Path $root 'Tools\Invoke-KeepStoreLabSql.ps1'
 $scriptsDoc = Join-Path $root 'docs\EXPORT_FEED_DB_SCRIPTS.md'
-$prefixMig = '20261125_EXPORT_FEED_DB_1A_'
+$prefixMig = '20261126_EXPORT_FEED_DB_2A_'
 $migDir = Join-Path $tmp 'mig'; New-Item -ItemType Directory -Force -Path $migDir | Out-Null
 $docText = [IO.File]::ReadAllText($scriptsDoc, $utf8)
 foreach ($k in @('preflight', 'forward', 'verify', 'rollback')) {
@@ -324,7 +349,7 @@ if ($Cleanup) {
     [void]$q.AppendLine('DELETE FROM offertedettaglio WHERE id BETWEEN 9990101 AND 9990140;')
     [void]$q.AppendLine('DELETE FROM offerte WHERE id BETWEEN 9990101 AND 9990140;')
     $null = Invoke-Sql $q.ToString() -Write
-    if ((Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export' AND COLUMN_NAME='TokenAccesso';") -eq '1') {
+    if ((Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export_opzioni';") -eq '1') {
         $null = Invoke-Sql 'DELETE FROM export_filtri WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM export_colonne WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM export_stato WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM `export` WHERE ID BETWEEN 9301 AND 9330 AND Descrizione LIKE ''KSFEEDENGINE%'';' -Write
         $rb = (Invoke-Sql ('SET @KeepStoreConfirmDropFeedData=1;' + "`n" + [IO.File]::ReadAllText((Join-Path $migDir ($prefixMig + 'rollback.sql')), $utf8)) -Write) -join "`n"
         Write-Host ('  rollback della migrazione: ' + $(if ($rb -match 'EXPORT_FEED_DB_ROLLBACK_OK') { 'ok' } else { 'NON RIUSCITO' }))
@@ -347,7 +372,7 @@ try {
     if ((Get-Scalar 'SELECT COUNT(*) AS ksval FROM offerte WHERE id BETWEEN 9990101 AND 9990140;') -ne '0') { throw 'FIXTURE_OFFERS_NOT_FREE' }
 
     # --- migrazione reale: preflight, forward, verify ---
-    $hasToken = Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export' AND COLUMN_NAME='TokenAccesso';"
+    $hasToken = Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export_opzioni';"
     if ($hasToken -ne '0') { throw 'MIGRATION_ALREADY_APPLIED_ON_LAB (prova precedente interrotta: rilanciare con -Cleanup)' }
     $pf = (Invoke-Sql ([IO.File]::ReadAllText((Join-Path $migDir ($prefixMig + 'preflight.sql')), $utf8))) -join "`n"
     Check ($pf -match 'EXPORT_FEED_DB_PREFLIGHT_OK') 'C0 preflight della migrazione'
@@ -432,28 +457,30 @@ try {
     Add-Feed 9311 'csv' '#id#|#Descrizione1#' 2 1 'www.taikun.it'
     Add-Feed 9312 'txt' '#id#|#CostoSpedizioneProdo#|#SpeseSpedizione#|#Peso#|#Prezzo2#' 1 1 'www.taikun.it' 10 '-1' 5
     Add-Feed 9313 'txt' $fmt 2 1 'www.taikun.it'
+    Add-Feed 9314 'txt' $fmt 2 1 'www.taikun.it'
     [void]$ins.AppendLine('INSERT INTO export_filtri (ExportId, MarcheId, SettoriId, CategorieId, TipologieId, GruppiId, SottogruppiId, ArticoliId) VALUES (9310, -1, -1, -1, -1, -1, -1, ' + $cand[0]['id'] + ');')
     [void]$ins.AppendLine('INSERT INTO export_filtri (ExportId, MarcheId, SettoriId, CategorieId, TipologieId, GruppiId, SottogruppiId, ArticoliId) VALUES (9310, -1, -1, -1, -1, -1, -1, ' + $cand[1]['id'] + ');')
     # colonne libere del feed xml 9304
     $cols = @(@('sku', '#Codice#', '', '', '', 0, ''), @('title', '#Descrizione1#', '', '', '', 0, ''), @('price', '#Prezzo#', '', ' EUR', '', 0, ''), @('description', '#DescrizioneHtml#', '', '', '', 0, 'nessuna'), @('desc2', '#Descrizione2#', '', '', '', 0, ''), @('link', '#Link#', '', '', '', 0, ''), @('availability', '#Disponibilita#', '', '', '', 0, ''), @('fisso', '', '', '', 'IT', 0, ''), @('path', '#CategoriaPercorso#', '', '', '', 0, ''))
     $pos = 0
     foreach ($c in $cols) { $pos++; [void]$ins.AppendLine('INSERT INTO export_colonne (ExportId, Posizione, TitoloColonna, Campo, Prefisso, Suffisso, ValoreFisso, MassimoCaratteri, SeVuoto) VALUES (9304, ' + $pos + ', ''' + $c[0] + ''', ' + (Sql-Text ($c[1] -replace '^#|#$', '')) + ', ''' + $c[2] + ''', ' + (Sql-Text $c[3]) + ', ''' + $c[4] + ''', NULL, ' + (Sql-Text $c[6]) + ');') }
-    [void]$ins.AppendLine("UPDATE export SET XmlRadice='catalogo', XmlElemento='item', SeparatoreDecimale='.' WHERE ID=9304;")
+    [void]$ins.AppendLine("INSERT INTO export_opzioni (ExportId) SELECT ID FROM export WHERE ID BETWEEN 9301 AND 9330;")
+    [void]$ins.AppendLine("UPDATE export_opzioni SET XmlRadice='catalogo', XmlElemento='item', SeparatoreDecimale='.' WHERE ExportId=9304;")
     # tsv 9305: titolo e prezzo con virgola decimale
     [void]$ins.AppendLine("INSERT INTO export_colonne (ExportId, Posizione, TitoloColonna, Campo, Prefisso, Suffisso, ValoreFisso, MassimoCaratteri, SeVuoto) VALUES (9305, 1, 'id', 'id', '', '', '', NULL, ''), (9305, 2, 'prezzo', 'Prezzo', '', '', '', NULL, '');")
-    [void]$ins.AppendLine("UPDATE export SET SeparatoreDecimale=',', Separatore='|' WHERE ID=9305;")
+    [void]$ins.AppendLine("UPDATE export_opzioni SET SeparatoreDecimale=',', Separatore='|' WHERE ExportId=9305;")
     # csv 9311 in latin1 con delimitatore e separatore ';'
     [void]$ins.AppendLine("INSERT INTO export_colonne (ExportId, Posizione, TitoloColonna, Campo, Prefisso, Suffisso, ValoreFisso, MassimoCaratteri, SeVuoto) VALUES (9311, 1, 'id', 'id', '', '', '', NULL, ''), (9311, 2, 'titolo', 'Descrizione1', '', '', '', NULL, '');")
-    [void]$ins.AppendLine("UPDATE export SET Codifica='iso-8859-1', Separatore=';', DelimitatoreTesto='""' WHERE ID=9311;")
+    [void]$ins.AppendLine("UPDATE export_opzioni SET Codifica='iso-8859-1', Separatore=';', DelimitatoreTesto='""' WHERE ExportId=9311;")
     # 9309: configurazione incoerente (separatore e decimale uguali, nessun delimitatore)
-    [void]$ins.AppendLine("UPDATE export SET Separatore=',', SeparatoreDecimale=',' WHERE ID=9309;")
+    [void]$ins.AppendLine("UPDATE export_opzioni SET Separatore=',', SeparatoreDecimale=',' WHERE ExportId=9309;")
     # 9301/9302 senza scarto del prezzo zero? predefinito: PrezzoZero=1 (scarta); 9313 lascia passare i prezzi zero
-    [void]$ins.AppendLine("UPDATE export SET PrezzoZero=0 WHERE ID=9313;")
+    [void]$ins.AppendLine("UPDATE export_opzioni SET PrezzoZero=0 WHERE ExportId=9313;")
     $r = Invoke-Sql $ins.ToString() -Write
     if (Sql-Failed $r) { throw ('FIXTURE_FEEDS_FAILED ' + ($r -join ' ')) }
     $tok = @{}
-    foreach ($row in @(Get-Rows 'SELECT ID AS i, TokenAccesso AS t FROM `export` WHERE ID BETWEEN 9301 AND 9313;')) { $tok[[int]$row['i']] = $row['t'] }
-    Check ($tok.Count -eq 13 -and @($tok.Values | Where-Object { $_ -match '^[0-9A-F]{48}$' }).Count -eq 13) 'C1 i 13 feed di prova hanno il codice creato dal database'
+    foreach ($row in @(Get-Rows 'SELECT ExportId AS i, TokenAccesso AS t FROM export_opzioni WHERE ExportId BETWEEN 9301 AND 9314;')) { $tok[[int]$row['i']] = $row['t'] }
+    Check ($tok.Count -eq 14 -and @($tok.Values | Where-Object { $_ -match '^[0-9A-F]{48}$' }).Count -eq 14) 'C1 i 14 feed di prova hanno il codice creato dal database'
 
     # --- oracolo: catalogo esportabile del listino 10 e prezzi ---
     $expIds = @(Get-Rows 'SELECT DISTINCT v.id AS id FROM vsuperarticoli v JOIN articoli a ON a.id=v.id WHERE v.export=1 AND v.nlistino=10 AND COALESCE(a.Abilitato,0)=1;' | ForEach-Object { $_['id'] })
@@ -510,7 +537,7 @@ try {
     Check ($r1.Status -eq 200) ('F1 la prima richiesta genera e risponde 200 (visto ' + $r1.Status + ')')
     Check ($coldSecs -lt 10) ('F1 generazione completa sotto i 10 secondi (' + [Math]::Round($coldSecs, 1) + ' s)')
     $files = & $folderFiles
-    Check (@($files | Where-Object { $_ -match '^[0-9a-f]{8}-9301-[0-9A-F]{48}\.txt$' }).Count -eq 1 -and ($files -contains 'web.config')) 'F1 nella cartella: il file pronto del feed e il web.config di guardia scritto dal motore'
+    Check (@($files | Where-Object { $_ -match '^[0-9a-f]{8}-9301-[0-9A-F]{48}-[0-9a-f]{12}\.txt$' }).Count -eq 1 -and ($files -contains 'web.config')) 'F1 nella cartella: il file pronto del feed e il web.config di guardia scritto dal motore'
     Check ((Test-Path -LiteralPath (Join-Path $folder 'web.config')) -and ([IO.File]::ReadAllText((Join-Path $folder 'web.config'), $utf8) -match 'allowUnlisted="false"')) 'F1 la guardia della cartella nega ogni estensione'
     $readyName = @($files | Where-Object { $_ -match '^[0-9a-f]{8}-9301-' })[0]
     $scope = $readyName.Substring(0, 8)
@@ -577,6 +604,7 @@ try {
     if ($null -ne $xdoc) {
         $items = @($xdoc.DocumentElement.ChildNodes | Where-Object { $_.Name -eq 'item' })
         Check ($items.Count -gt 3500) ('X1 un elemento item per prodotto (' + $items.Count + ')')
+        Check ($r4.Body -match "\r?\n  <item>\r?\n    <sku>") 'X1 xml indentato (due spazi per livello)'
         $it = $items | Where-Object { $_.link -match ('id=' + $trickId + '$') } | Select-Object -First 1
         Check ($null -ne $it -and $it.title -ceq $trickD1) 'X2 xml: testo con virgolette, & e < preservato dopo il parsing'
         Check ($null -ne $it -and $it.desc2 -ceq 'riga1 riga2x') 'X2 xml: a-capo diventano spazio e il carattere non ammesso da XML 1.0 e tolto'
@@ -667,8 +695,42 @@ try {
     $after = Get-Feed $tok[9313]
     Check ($after.Status -eq 200) 'L2 il file e pronto per chi arriva dopo'
 
+    # ---------------- anteprima: le prime righe del file pronto ----------------
+    $pv = Get-Feed ($tok[9301] + '&anteprima=1')
+    $pvl = @($pv.Body -split "`r?`n" | Where-Object { $_ -ne '' })
+    Check ($pv.Status -eq 200 -and $pv.Headers['content-type'] -match '^text/plain; charset=utf-8' -and $pv.Headers['cache-control'] -match 'no-store' -and -not $pv.Headers.ContainsKey('etag') -and $pv.Headers['x-feed-generato'] -match '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$') 'PV1 anteprima: 200 text/plain no-store, nessun ETag, ora del file in X-Feed-Generato'
+    Check ($pvl.Count -eq 21 -and $pvl[0] -ceq 'id|Codice|Ean|Disponibilita|Prezzo|Link') ('PV1 anteprima txt: intestazione piu 20 righe (viste ' + $pvl.Count + ')')
+    Check (($pvl[1] -split '[|]')[0] -ceq $p1.Rows[0][0]) 'PV1 anteprima: le righe sono quelle del file'
+    $pvx = Get-Feed ($tok[9304] + '&anteprima=1')
+    $pvxl = @($pvx.Body -split "`r?`n" | Where-Object { $_ -ne '' })
+    Check ($pvx.Status -eq 200 -and $pvxl.Count -eq 80 -and $pvxl[0] -match '^<\?xml' -and $pvxl[1] -match '^<catalogo>$' -and $pvxl[2] -match '^\s{2}<item>$') ('PV2 anteprima xml: 80 righe, xml indentato (viste ' + $pvxl.Count + ')')
+    Check ((Get-Feed ('F' * 48 + '&anteprima=1')).Status -eq 404) 'PV3 anteprima con codice sconosciuto: 404'
+    $pvh = Get-Feed ($tok[9301] + '&anteprima=1') @() 'HEAD'
+    Check ($pvh.Status -eq 200 -and $pvh.Bytes.Length -eq 0) 'PV3 anteprima in HEAD: nessun corpo'
+    $null = Get-Feed ($tok[9314] + '&anteprima=1')
+    Check ((Get-Scalar 'SELECT IF(UltimaRichiestaUtc IS NULL, 1, 0) AS ksval FROM export_stato WHERE ExportId=9314;') -eq '1') 'PV4 l anteprima non registra la richiesta (UltimaRichiestaUtc resta vuota)'
+    $null = Get-Feed $tok[9314]
+    Check ((Get-Scalar 'SELECT IF(UltimaRichiestaUtc IS NULL, 1, 0) AS ksval FROM export_stato WHERE ExportId=9314;') -eq '0') 'PV4 una richiesta ordinaria la registra'
+
+    # ---------------- impronta: ogni modifica della configurazione cambia il file, mai un file di una configurazione diversa ----------------
+    $before9301 = @(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9301-' })
+    $null = Invoke-Sql "UPDATE export_opzioni SET Separatore=';' WHERE ExportId=9301;" -Write
+    Reset-App
+    $fp1 = Get-Feed $tok[9301]
+    $after9301 = @(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9301-' })
+    Check ($fp1.Status -eq 200 -and $fp1.Body.StartsWith('id;Codice;Ean') -and $after9301.Count -eq 1 -and $before9301.Count -eq 1 -and $after9301[0] -ne $before9301[0]) 'FP1 cambio di un'' opzione nel gestionale: subito un file nuovo con il separatore nuovo, il vecchio e cancellato'
+    $null = Invoke-Sql 'UPDATE `export` SET Azienda=''localhost2'' WHERE ID=9302;' -Write
+    Reset-App
+    $fp2 = Get-Feed $tok[9302]
+    Check ($fp2.Status -eq 200 -and $fp2.Body -match 'https://localhost2/articolo\.aspx\?id=' -and $fp2.Body -notmatch 'https://www\.taikun\.it/articolo') 'FP2 cambio di dominio (alias della stessa azienda): i link del file sono quelli nuovi, mai quelli del file vecchio'
+    $null = Invoke-Sql ('INSERT INTO export_filtri (ExportId, MarcheId, SettoriId, CategorieId, TipologieId, GruppiId, SottogruppiId, ArticoliId) VALUES (9310, -1, -1, -1, -1, -1, -1, ' + $cand[2]['id'] + ');') -Write
+    Reset-App
+    $fp3 = Get-Feed $tok[9310]
+    $p3 = Parse-Txt $fp3.Body
+    Check ($fp3.Status -eq 200 -and $p3.Rows.Count -eq 3) ('FP3 un filtro in piu: il file nuovo ha tre articoli (visti ' + $p3.Rows.Count + ')')
+
     # ---------------- file scaduto: rigenera, nel frattempo si serve quello vecchio, mai un file a meta ----------------
-    $f9301 = Join-Path $folder $readyName
+    $f9301 = Join-Path $folder (@(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9301-' })[0])
     $fullLen = (Get-Item -LiteralPath $f9301).Length
     (Get-Item -LiteralPath $f9301).LastWriteTime = (Get-Date).AddMinutes(-90)
     $urls = @(); for ($i = 0; $i -lt 16; $i++) { $urls += ('/feed.aspx?c=' + $tok[9301]) }
@@ -686,8 +748,8 @@ try {
     Check ($rv.Status -eq 404 -and @(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9301-' }).Count -eq 0) 'V1 feed spento: 404 e il file pronto e cancellato'
     $null = Invoke-Sql 'UPDATE `export` SET Abilitato=1 WHERE ID=9301;' -Write
     $oldTok = $tok[9302]
-    $null = Invoke-Sql 'UPDATE `export` SET TokenAccesso=DEFAULT WHERE ID=9302;' -Write
-    $newTok = Get-Scalar 'SELECT TokenAccesso AS ksval FROM `export` WHERE ID=9302;'
+    $null = Invoke-Sql 'UPDATE export_opzioni SET TokenAccesso=DEFAULT WHERE ExportId=9302;' -Write
+    $newTok = Get-Scalar 'SELECT TokenAccesso AS ksval FROM export_opzioni WHERE ExportId=9302;'
     Check ($newTok -match '^[0-9A-F]{48}$' -and $newTok -ne $oldTok) 'V2 Nuovo codice: il database ne crea uno diverso'
     Reset-App
     $ro = Get-Feed $oldTok; $rn = Get-Feed $newTok
@@ -710,15 +772,25 @@ try {
     Check ($x9.Status -eq 503 -and $s9 -eq 'CONFIG_SEPARATORE_DECIMALE' -and @(& $folderFiles | Where-Object { $_ -match '-9309-' }).Count -eq 0) ('T4 separatore uguale al decimale: nessun file, 503, errore registrato (' + $s9 + ')')
     $dcool = Measure-Work { $script:x9b = Get-Feed $tok[9309] }
     Check ($x9b.Status -eq 503 -and $dcool['Com_select'] -le 0) ('T5 dopo un errore nessun nuovo tentativo per 5 minuti (select ' + $dcool['Com_select'] + ')')
-    # file vecchio con generazione in errore: fino a 24 ore si serve quello, oltre 503
-    $stale = Join-Path $folder ($scope + '-9309-' + $tok[9309] + '.txt')
-    [IO.File]::WriteAllText($stale, "id|Codice`n1|X`n", $utf8)
-    (Get-Item -LiteralPath $stale).LastWriteTime = (Get-Date).AddHours(-3)
-    $xs = Get-Feed $tok[9309]
-    Check ($xs.Status -eq 200 -and $xs.Body -match 'id\|Codice') 'T6 generazione in errore con file di 3 ore: si serve il precedente'
-    (Get-Item -LiteralPath $stale).LastWriteTime = (Get-Date).AddHours(-30)
-    $xs2 = Get-Feed $tok[9309]
-    Check ($xs2.Status -eq 503) 'T6 file piu vecchio di 24 ore e generazione in errore: 503, mai prezzi vecchi'
+    # stessa configurazione, generazione che fallisce (cartella non scrivibile): fino a 24 ore si serve il file precedente, oltre 503
+    $f13 = @(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9313-' })
+    Check ($f13.Count -eq 1) 'T6 il feed 9313 ha il suo file pronto'
+    $p13file = Join-Path $folder $f13[0]
+    $pool = 'IIS APPPOOL\KeepStoreRegOrderLabPool-20261025'
+    (Get-Item -LiteralPath $p13file).LastWriteTime = (Get-Date).AddHours(-3)
+    $null = & icacls.exe $folder /deny ($pool + ':(OI)(CI)(WD,AD)')
+    try {
+        $xs = Get-Feed $tok[9313]
+        Check ($xs.Status -eq 200 -and $xs.Body -match '^id\|Codice') 'T6 generazione in errore con file di 3 ore della stessa configurazione: si serve il precedente'
+        Check ((Get-Scalar 'SELECT IFNULL(UltimoErrore, ''-'') AS ksval FROM export_stato WHERE ExportId=9313;') -eq 'CARTELLA_NON_SCRIVIBILE') 'T6 l errore e registrato con il suo codice'
+        (Get-Item -LiteralPath $p13file).LastWriteTime = (Get-Date).AddHours(-30)
+        $xs2 = Get-Feed $tok[9313]
+        Check ($xs2.Status -eq 503) 'T6 file piu vecchio di 24 ore e generazione in errore: 503, mai prezzi vecchi'
+    } finally {
+        $null = & icacls.exe $folder /remove:d $pool
+        $null = & icacls.exe $folder /grant ($pool + ':(OI)(CI)M')   # il deny di icacls ha tolto anche i diritti di scrittura al permesso concesso: si riconcede
+        Reset-App
+    }
     # codici sconosciuti ben formati: tetto al secondo
     $urls = @(); for ($i = 0; $i -lt 60; $i++) { $urls += ('/feed.aspx?c=' + ('{0:X48}' -f (Get-Random -Minimum 1000000 -Maximum 99999999))) }
     $dm = Measure-Work { $script:mcodes = Get-Parallel $urls 60 }
@@ -728,9 +800,10 @@ try {
     $r10 = Get-Feed $tok[9310]
     $p10 = Parse-Txt $r10.Body
     $got = @($p10.Rows | ForEach-Object { $_[0] } | Sort-Object)
-    $want = @($cand[0]['id'], $cand[1]['id'] | Sort-Object)
-    Check ($r10.Status -eq 200 -and ($got -join ',') -eq ($want -join ',')) ('S1 feed con due articoli scelti: esattamente quei due (visti ' + ($got -join ',') + ')')
+    $want = @(@($cand[0]['id'], $cand[1]['id'], $cand[2]['id']) | Sort-Object)
+    Check ($r10.Status -eq 200 -and ($got -join ',') -eq ($want -join ',')) ('S1 feed con tre articoli scelti (due dall inizio, il terzo aggiunto dalla prova dell impronta): esattamente quei tre (visti ' + ($got -join ',') + ')')
     $r13 = Get-Feed $tok[9313]
+    if ($r13.Status -ne 200) { Diag 'r13' $r13; Write-Host ('  diag errore=' + (Get-Scalar 'SELECT IFNULL(UltimoErrore, ''-'') AS ksval FROM export_stato WHERE ExportId=9313;')); Write-Host ('  diag acl=' + ((& icacls.exe $folder) -join ' ')) }
     $p13 = Parse-Txt $r13.Body
     $ids13 = @($p13.Rows | ForEach-Object { $_[0] })
     $extra13 = @($p13.Rows | Where-Object { -not $feed1.ContainsKey($_[0]) })
@@ -748,6 +821,8 @@ try {
             @('cooldown-assente', 'App_Code\KeepStoreFeedService.vb', 'If InCooldown(cfg) Then Return False', '', 'T5'),
             @('304-sempre', 'App_Code\KeepStoreFeedService.vb', 'If part.Trim() = etag OrElse part.Trim() = "*" Then notModified = True', 'notModified = True', 'H3'),
             @('guardia-non-scritta', 'App_Code\KeepStoreFeedService.vb', 'File.WriteAllText(guard, GuardConfigText, New UTF8Encoding(False))', 'Dim noGuard As Integer = 0', 'F1'),
+            @('impronta-persa', 'App_Code\KeepStoreFeedService.vb', 'cfg.Options.Format, cfg.Fingerprint))', 'cfg.Options.Format, ""))', 'FP1'),
+            @('anteprima-con-etag-sito', 'App_Code\KeepStoreFeedService.vb', 'r.AppendHeader("X-Feed-Generato"', 'r.AppendHeader("ETag", "x")' + "`n" + '        r.AppendHeader("X-Feed-Generato"', 'PV1'),
             @('stato-errore-non-scritto', 'App_Code\KeepStoreFeedService.vb', 'WriteState(cfg, 0, 0, ex.Code, False)', 'Dim noState As Integer = 0', 'T2')
         )
         $killed = 0; $total = 0
@@ -765,11 +840,13 @@ try {
                 switch ($m[4]) {
                     'V1' { $null = Invoke-Sql 'UPDATE `export` SET Abilitato=0 WHERE ID=9301;' -Write; Reset-App; $rr = Get-Feed $tok[9301]; Check ($rr.Status -eq 404) ('mutante ' + $m[0] + ': feed spento 404'); $null = Invoke-Sql 'UPDATE `export` SET Abilitato=1 WHERE ID=9301;' -Write }
                     'T1' { $rr = Get-Feed $tok[9307]; Check ($rr.Status -eq 404) ('mutante ' + $m[0] + ': altra azienda 404') }
-                    'V2' { $a1 = Get-Feed $tok[9302]; $o2 = $tok[9302]; $null = Invoke-Sql 'UPDATE `export` SET TokenAccesso=DEFAULT WHERE ID=9302;' -Write; $nt = Get-Scalar 'SELECT TokenAccesso AS ksval FROM `export` WHERE ID=9302;'; Reset-App; $a2 = Get-Feed $nt; Check (@(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9302-' }).Count -eq 1) ('mutante ' + $m[0] + ': un solo file per feed'); $tok[9302] = $nt }
+                    'V2' { $a1 = Get-Feed $tok[9302]; $o2 = $tok[9302]; $null = Invoke-Sql 'UPDATE export_opzioni SET TokenAccesso=DEFAULT WHERE ExportId=9302;' -Write; $nt = Get-Scalar 'SELECT TokenAccesso AS ksval FROM export_opzioni WHERE ExportId=9302;'; Reset-App; $a2 = Get-Feed $nt; Check (@(& $folderFiles | Where-Object { $_ -match '^[0-9a-f]{8}-9302-' }).Count -eq 1) ('mutante ' + $m[0] + ': un solo file per feed'); $tok[9302] = $nt }
                     'P3' { $a1 = Get-Feed $tok[9301]; $q = Parse-Txt $a1.Body; $row = @($q.Rows | Where-Object { $_[0] -eq $cases[0].art['id'] })[0]; Check ($null -ne $row -and $row[4] -ceq (Money (((Dec $cases[0].art['net']) * 0.9d) * ((Dec $cases[0].art['gross']) / (Dec $cases[0].art['net']))))) ('mutante ' + $m[0] + ': promozione applicata') }
                     'T5' { $null = Get-Feed $tok[9309]; $dd = Measure-Work { $script:y = Get-Feed $tok[9309] }; Check ($dd['Com_select'] -le 0) ('mutante ' + $m[0] + ': nessun nuovo tentativo') }
                     'H3' { $a1 = Get-Feed $tok[9301]; $a2 = Get-Feed $tok[9301] @('If-None-Match: W/"0-0"'); Check ($a2.Status -eq 200) ('mutante ' + $m[0] + ': etag diverso = 200') }
                     'F1' { $a1 = Get-Feed $tok[9301]; Check (Test-Path -LiteralPath (Join-Path $folder 'web.config')) ('mutante ' + $m[0] + ': guardia scritta') }
+                    'FP1' { $null = Invoke-Sql "UPDATE export_opzioni SET Separatore='|' WHERE ExportId=9301;" -Write; Reset-App; $b1 = Get-Feed $tok[9301]; Check ($b1.Body.StartsWith('id|Codice|Ean')) ('mutante ' + $m[0] + ': prima del cambio il separatore e |'); $null = Invoke-Sql "UPDATE export_opzioni SET Separatore=';' WHERE ExportId=9301;" -Write; Reset-App; $b2 = Get-Feed $tok[9301]; Check ($b2.Body.StartsWith('id;Codice;Ean')) ('mutante ' + $m[0] + ': separatore nuovo subito') }
+                    'PV1' { $b1 = Get-Feed ($tok[9301] + '&anteprima=1'); Check (-not $b1.Headers.ContainsKey('etag')) ('mutante ' + $m[0] + ': anteprima senza ETag') }
                     'T2' { $null = Get-Feed $tok[9308]; $s = Get-Scalar 'SELECT UltimoErrore AS ksval FROM export_stato WHERE ExportId=9308;'; Check ($s -eq 'AZIENDA_NON_RISOLTA') ('mutante ' + $m[0] + ': errore registrato') }
                 }
                 $diff = $e2e.Count - $before
@@ -805,7 +882,7 @@ try {
             $null = Invoke-Sql 'DELETE FROM export_filtri WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM export_colonne WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM export_stato WHERE ExportId BETWEEN 9301 AND 9330; DELETE FROM `export` WHERE ID BETWEEN 9301 AND 9330 AND Descrizione LIKE ''KSFEEDENGINE%'';' -Write
             $rb = (Invoke-Sql ('SET @KeepStoreConfirmDropFeedData=1;' + "`n" + [IO.File]::ReadAllText((Join-Path $migDir ($prefixMig + 'rollback.sql')), $utf8)) -Write) -join "`n"
             if ($rb -match 'ERROR \d+|^stderr:') { Write-Host '  ATTENZIONE: rollback della migrazione non riuscito'; $e2e.Add('rollback della migrazione') }
-            $left = Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export' AND COLUMN_NAME='TokenAccesso';"
+            $left = Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='export_opzioni';"
             Check ($left -eq '0') 'Z1 lo schema del LAB e tornato allo stato iniziale (nessuna colonna nuova)'
         } catch { Write-Host ('  ATTENZIONE: rollback: ' + $_.Exception.Message); $e2e.Add('rollback') }
     }

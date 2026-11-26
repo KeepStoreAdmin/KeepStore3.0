@@ -34,6 +34,9 @@ Public NotInheritable Class KeepStoreFeedConfig
     Public Property FormatString As String = ""
     Public Property Options As New KeepStoreFeedOptions()
     Public Property Columns As New List(Of KeepStoreFeedColumn)()
+    ' Filtri di selezione (export_filtri), letti con il resto della configurazione: stessa fotografia per il file e per l'impronta.
+    Public Property Filters As New List(Of Dictionary(Of String, Integer))()
+    Public Property Fingerprint As String = ""
 End Class
 
 Public NotInheritable Class KeepStoreFeedException
@@ -180,9 +183,9 @@ Public NotInheritable Class KeepStoreFeedService
         Using conn As New MySqlConnection(cs)
             conn.Open()
             Using cmd As New MySqlCommand("SELECT e.ID, e.FormatString, e.NListino, e.NListino2, e.IvaTipo, e.Giacenza, e.SpeseSpedizione, e.GiorniSpedizione, e.Azienda, e.Tipo, e.IdVettore, " &
-                                          "e.Tutto_in_minuscolo, e.Abilitato, e.Separatore, e.DelimitatoreTesto, e.Codifica, e.SeparatoreDecimale, e.Intestazione, e.XmlRadice, e.XmlElemento, " &
-                                          "e.TogliHtml, e.MinutiCache, e.ParolaDisponibile, e.ParolaInArrivo, e.ParolaNonDisponibile, e.SenzaImmagine, e.SenzaEan, e.PrezzoZero, iva.valore AS CarrierVat " &
-                                          "FROM export e LEFT JOIN vettori v ON e.IdVettore=v.id LEFT JOIN iva ON v.iva=iva.id WHERE e.TokenAccesso=@t LIMIT 1", conn)
+                                          "e.Tutto_in_minuscolo, e.Abilitato, o.Separatore, o.DelimitatoreTesto, o.Codifica, o.SeparatoreDecimale, o.Intestazione, o.XmlRadice, o.XmlElemento, " &
+                                          "o.TogliHtml, o.MinutiCache, o.ParolaDisponibile, o.ParolaInArrivo, o.ParolaNonDisponibile, o.SenzaImmagine, o.SenzaEan, o.PrezzoZero, iva.valore AS CarrierVat " &
+                                          "FROM export_opzioni o JOIN export e ON e.ID = o.ExportId LEFT JOIN vettori v ON e.IdVettore=v.id LEFT JOIN iva ON v.iva=iva.id WHERE o.TokenAccesso=@t LIMIT 1", conn)
                 cmd.CommandTimeout = 10
                 cmd.Parameters.Add("@t", MySqlDbType.VarChar, 64).Value = token
                 Using r As MySqlDataReader = cmd.ExecuteReader()
@@ -261,6 +264,7 @@ Public NotInheritable Class KeepStoreFeedService
                     End While
                 End Using
             End Using
+            cfg.Filters = ReadFilters(conn, cfg.ExportId)
         End Using
 
         If cfg.Columns.Count = 0 Then
@@ -271,13 +275,67 @@ Public NotInheritable Class KeepStoreFeedService
                 cfg.Options.TextDelimiter = """"
             End If
         End If
+        cfg.Fingerprint = ComputeFingerprint(cfg)
         Return cfg
+    End Function
+
+    ' Impronta della configurazione: tutto cio che cambia il CONTENUTO del file (azienda e dominio, listini, IVA, selezione, spedizione, opzioni gia normalizzate, colonne in ordine,
+    ' filtri in ordine) piu il giorno (le promozioni valgono per giorno) e la versione del motore. Modificare un feed nel gestionale cambia il nome del file: mai un file vecchio.
+    Private Shared Function ComputeFingerprint(ByVal cfg As KeepStoreFeedConfig) As String
+        Dim p As New List(Of String)()
+        Dim o As KeepStoreFeedOptions = cfg.Options
+        p.Add(KeepStoreFeedEngine.EngineVersion)
+        p.Add(Date.Today.ToString("yyyyMMdd", Invariant))
+        p.Add(cfg.CompanyId.ToString(Invariant))
+        p.Add(cfg.Domain)
+        p.Add(cfg.Listino.ToString(Invariant))
+        p.Add(cfg.Listino2.ToString(Invariant))
+        p.Add(If(cfg.IncludeTax, "1", "0"))
+        p.Add(cfg.MinStock.ToString("R", Invariant))
+        p.Add(cfg.ShippingFee.ToString(Invariant))
+        p.Add(cfg.ShippingDays)
+        p.Add(cfg.CarrierId.ToString(Invariant))
+        p.Add(cfg.CarrierVat.ToString(Invariant))
+        p.Add(cfg.FormatString)
+        p.Add(o.Format)
+        p.Add(o.Separator)
+        p.Add(o.TextDelimiter)
+        p.Add(o.EncodingName)
+        p.Add(o.DecimalSeparator)
+        p.Add(If(o.Header, "1", "0"))
+        p.Add(o.XmlRoot)
+        p.Add(o.XmlElement)
+        p.Add(If(o.StripHtml, "1", "0"))
+        p.Add(o.MinutesCache.ToString(Invariant))
+        p.Add(o.WordAvailable)
+        p.Add(o.WordIncoming)
+        p.Add(o.WordUnavailable)
+        p.Add(If(o.SkipNoImage, "1", "0"))
+        p.Add(If(o.SkipNoEan, "1", "0"))
+        p.Add(If(o.SkipZeroPrice, "1", "0"))
+        p.Add(If(o.LowerCaseTitle, "1", "0"))
+        p.Add(cfg.Columns.Count.ToString(Invariant))
+        For Each c As KeepStoreFeedColumn In cfg.Columns
+            p.Add(c.Title)
+            p.Add(c.Source)
+            p.Add(c.Prefix)
+            p.Add(c.Suffix)
+            p.Add(c.MaxChars.ToString(Invariant))
+            p.Add(c.IfEmpty)
+        Next
+        p.Add(cfg.Filters.Count.ToString(Invariant))
+        For Each f As Dictionary(Of String, Integer) In cfg.Filters
+            For Each name As String In New String() {"MarcheId", "SettoriId", "CategorieId", "TipologieId", "GruppiId", "SottogruppiId", "ArticoliId"}
+                p.Add(f(name).ToString(Invariant))
+            Next
+        Next
+        Return KeepStoreFeedEngine.Fingerprint(p)
     End Function
 
     ' ---------- file ----------
 
     Public Shared Function FinalPath(ByVal cfg As KeepStoreFeedConfig) As String
-        Return Path.Combine(FolderPath(), KeepStoreFeedEngine.FileName(ScopePrefix(), cfg.ExportId, cfg.Token, cfg.Options.Format))
+        Return Path.Combine(FolderPath(), KeepStoreFeedEngine.FileName(ScopePrefix(), cfg.ExportId, cfg.Token, cfg.Options.Format, cfg.Fingerprint))
     End Function
 
     Public Shared Sub RemoveFeedFiles(ByVal cfg As KeepStoreFeedConfig)
@@ -604,7 +662,7 @@ Public NotInheritable Class KeepStoreFeedService
                 End Using
             End If
 
-            Dim filters As List(Of Dictionary(Of String, Integer)) = ReadFilters(conn, cfg.ExportId)
+            Dim filters As List(Of Dictionary(Of String, Integer)) = cfg.Filters
 
             ' Promozioni valide oggi per un utente anonimo di questa azienda e di questo listino: una sola lettura per generazione.
             Dim promoContext As ProductPromotionEligibilityContext = ProductPromotionEligibilityResolver.CreateAnonymousContext(
@@ -652,7 +710,8 @@ Public NotInheritable Class KeepStoreFeedService
                         If isXml Then
                             Dim xs As New XmlWriterSettings()
                             xs.Encoding = New UTF8Encoding(False)
-                            xs.Indent = False
+                            xs.Indent = True
+                            xs.IndentChars = "  "
                             xs.CheckCharacters = True
                             xs.NewLineHandling = NewLineHandling.Replace
                             xw = XmlWriter.Create(fs, xs)
@@ -854,6 +913,7 @@ Public NotInheritable Class KeepStoreFeedService
         Catch
         End Try
 
+        Dim preview As Boolean = String.Equals(context.Request.QueryString("anteprima"), "1", StringComparison.Ordinal)
         Dim path As String = FinalPath(cfg)
         If Not isHead Then
             Try
@@ -861,7 +921,7 @@ Public NotInheritable Class KeepStoreFeedService
             Catch
             End Try
         End If
-        TouchRequest(cfg)
+        If Not preview Then TouchRequest(cfg)
 
         Dim maxAge As Double = Math.Max(24.0R * 60.0R, 3.0R * cfg.Options.MinutesCache)
         If Not File.Exists(path) OrElse (DateTime.UtcNow - File.GetLastWriteTimeUtc(path)).TotalMinutes > maxAge Then
@@ -870,10 +930,52 @@ Public NotInheritable Class KeepStoreFeedService
         End If
 
         Try
-            SendFile(context, cfg, path, isHead)
+            If preview Then
+                SendPreview(context, cfg, path, isHead)
+            Else
+                SendFile(context, cfg, path, isHead)
+            End If
         Catch ex As IOException
             Plain(context, 503, "Feed in preparazione", 30)
         End Try
+    End Sub
+
+    ' Anteprima per il gestionale: le prime righe del file pronto (mai una generazione in piu), al massimo 32 KB, decodificate con la codifica del file e riscritte in utf-8.
+    ' Nessun ETag/304 (e la testa, non il file), nessuna registrazione di richiesta. X-Feed-Generato dichiara l'ora del file mostrato.
+    Private Shared Sub SendPreview(ByVal context As HttpContext, ByVal cfg As KeepStoreFeedConfig, ByVal path As String, ByVal isHead As Boolean)
+        Dim r As HttpResponse = context.Response
+        Dim isXml As Boolean = (KeepStoreFeedEngine.NormalizeFormat(cfg.Options.Format) = "xml")
+        Dim enc As Encoding = KeepStoreFeedEngine.ResolveEncoding(If(isXml, "utf-8", cfg.Options.EncodingName))
+        Dim maxLines As Integer = If(isXml, KeepStoreFeedEngine.PreviewXmlLines, KeepStoreFeedEngine.PreviewTextLines + If(cfg.Options.Header, 1, 0))
+        Dim buffer(KeepStoreFeedEngine.PreviewMaxBytes - 1) As Byte
+        Dim total As Integer = 0
+        Dim written As DateTime
+        Dim fileLength As Long
+        Using fs As New FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite Or FileShare.Delete)
+            written = New FileInfo(path).LastWriteTimeUtc
+            fileLength = fs.Length
+            While total < buffer.Length
+                Dim n As Integer = fs.Read(buffer, total, buffer.Length - total)
+                If n <= 0 Then Exit While
+                total += n
+            End While
+        End Using
+        Dim cutByBytes As Boolean = (fileLength > total)
+        Dim body As String = KeepStoreFeedEngine.PreviewText(enc.GetString(buffer, 0, total), maxLines, cutByBytes)
+
+        r.Clear()
+        r.TrySkipIisCustomErrors = True
+        r.Cache.SetCacheability(HttpCacheability.NoCache)
+        r.Cache.SetNoStore()
+        r.AppendHeader("X-Robots-Tag", "noindex, nofollow")
+        r.AppendHeader("X-Feed-Generato", written.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", Invariant))
+        r.StatusCode = 200
+        r.ContentType = "text/plain; charset=utf-8"
+        If isHead Then
+            r.SuppressContent = True
+            Return
+        End If
+        r.Write(body)
     End Sub
 
     Private Shared Sub SendFile(ByVal context As HttpContext, ByVal cfg As KeepStoreFeedConfig, ByVal path As String, ByVal isHead As Boolean)

@@ -101,6 +101,12 @@ Public NotInheritable Class KeepStoreFeedEngine
     Private Shared ReadOnly XmlNameRegex As New Regex("^[A-Za-z_][A-Za-z0-9_.\-]*$", RegexOptions.Compiled)
     Private Shared ReadOnly TokenCodeRegex As New Regex("^[0-9A-F]{48}$", RegexOptions.Compiled)
 
+    ' Versione del formato dei file pronti: fa parte dell'impronta (cambiandola si rigenerano tutti).
+    Public Const EngineVersion As String = "E2"
+    Public Const PreviewTextLines As Integer = 20
+    Public Const PreviewXmlLines As Integer = 80
+    Public Const PreviewMaxBytes As Integer = 32768
+
     Public Const MaxRows As Integer = 200000
     Public Const MaxBytes As Long = 262144000L
     Public Const MaxSeconds As Integer = 120
@@ -126,14 +132,42 @@ Public NotInheritable Class KeepStoreFeedEngine
         Return "txt"
     End Function
 
-    Public Shared Function FileName(ByVal scope As String, ByVal exportId As Integer, ByVal token As String, ByVal format As String) As String
-        Return scope & "-" & exportId.ToString(Invariant) & "-" & token & "." & NormalizeFormat(format)
+    ' Il nome porta l'impronta della configurazione (azienda, listino, opzioni, colonne, filtri, giorno): una modifica nel gestionale cambia il nome, quindi il file
+    ' di una configurazione diversa non si serve mai.
+    Public Shared Function FileName(ByVal scope As String, ByVal exportId As Integer, ByVal token As String, ByVal format As String, ByVal fingerprint As String) As String
+        Return scope & "-" & exportId.ToString(Invariant) & "-" & token & "-" & fingerprint & "." & NormalizeFormat(format)
+    End Function
+
+    ' SHA-256 di un testo canonico: ogni parte con la sua lunghezza (nessuna ambiguita fra "ab"+"c" e "a"+"bc"); 12 caratteri esadecimali minuscoli.
+    Public Shared Function Fingerprint(ByVal parts As IList(Of String)) As String
+        Dim sb As New StringBuilder()
+        For Each p As String In parts
+            Dim v As String = NZ(p)
+            sb.Append(v.Length.ToString(Invariant)).Append(":"c).Append(v).Append(";"c)
+        Next
+        Using sha As System.Security.Cryptography.SHA256 = System.Security.Cryptography.SHA256.Create()
+            Dim hash As Byte() = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()))
+            Dim hex As New StringBuilder()
+            For i As Integer = 0 To 5
+                hex.Append(hash(i).ToString("x2", Invariant))
+            Next
+            Return hex.ToString()
+        End Using
+    End Function
+
+    ' Anteprima: le prime righe del testo letto dalla testa del file. Se la lettura e stata tagliata in byte, l'ultima riga (forse incompleta) si scarta.
+    Public Shared Function PreviewText(ByVal text As String, ByVal maxLines As Integer, ByVal cutByBytes As Boolean) As String
+        Dim lines As New List(Of String)(NZ(text).Replace(vbCrLf, vbLf).Split(ControlChars.Lf))
+        ' L'ultimo elemento e vuoto se il testo finisce con un a-capo, parziale se la lettura e stata tagliata: in entrambi i casi non e una riga completa.
+        If lines.Count > 0 AndAlso (cutByBytes OrElse lines(lines.Count - 1).Length = 0) Then lines.RemoveAt(lines.Count - 1)
+        If lines.Count > maxLines Then lines.RemoveRange(maxLines, lines.Count - maxLines)
+        Return String.Join(vbCrLf, lines.ToArray())
     End Function
 
     ' Vero se il nome e un file pronto di QUESTO feed (stessa installazione e stesso id) diverso da quello attuale.
     Public Shared Function IsStaleFileOf(ByVal name As String, ByVal scope As String, ByVal exportId As Integer, ByVal currentName As String) As Boolean
         If String.IsNullOrEmpty(name) OrElse String.Equals(name, currentName, StringComparison.OrdinalIgnoreCase) Then Return False
-        Dim pattern As String = "^" & Regex.Escape(scope & "-" & exportId.ToString(Invariant) & "-") & "[0-9A-F]{48}\.(txt|csv|tsv|xml)$"
+        Dim pattern As String = "^" & Regex.Escape(scope & "-" & exportId.ToString(Invariant) & "-") & "[0-9A-F]{48}(-[0-9a-f]{12})?\.(txt|csv|tsv|xml)$"
         Return Regex.IsMatch(name, pattern, RegexOptions.IgnoreCase)
     End Function
 

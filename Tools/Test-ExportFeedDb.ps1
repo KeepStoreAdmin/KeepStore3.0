@@ -1,36 +1,35 @@
 [CmdletBinding()]
-param([switch]$SkipMutants, [string]$MutantFilter = '')
+param([switch]$SkipMutants, [string]$MutantFilter = '', [switch]$SkipHarness)
 
-# EXPORT-FEED-DB-1A. Prova della migrazione unica dei dati dei feed (i quattro script in docs/EXPORT_FEED_DB_SCRIPTS.md) sul LAB locale:
+# EXPORT-FEED-GESTIONALE-1A (migrazione EXPORT-FEED-DB-2A, che sostituisce la 1A mai applicata). Prova degli script di docs/EXPORT_FEED_DB_SCRIPTS.md sul LAB locale:
 #  - preflight, forward, verify, rollback eseguiti dagli script REALI (nessuna copia di prova), sul database LAB (identita verificata da Invoke-KeepStoreLabSql);
-#  - le routine del gestionale (Newexport, Modexport, Delexport) continuano a funzionare con la firma attuale e non toccano le colonne nuove;
-#  - il codice del link (TokenAccesso) lo crea il database: 48 caratteri esadecimali maiuscoli, distinti, unico, regolare anche per le righe esistenti e per quelle inserite
-#    durante la migrazione; un codice errato o duplicato e rifiutato; SET TokenAccesso = DEFAULT lo rinnova;
-#  - la cancellazione di un feed cancella le sue colonne e il suo stato (cascata);
-#  - ripresa: dopo OGNI interruzione (script fermato prima di ciascun passo -- STEP n) il forward si puo rilanciare e il rollback riporta lo schema allo stato iniziale;
-#  - arresto con binlog STATEMENT (condizione sostituita nel testo: il LAB ha log_bin=0), rifiuto del rollback senza conferma, verify che si ferma se i dati sono corrotti;
-#  - nessun effetto su exportcampi, export_filtri e sul numero delle righe di export.
-# -MutantFilter: esegue solo i mutanti il cui nome contiene il testo. Mutanti: una copia degli script con una sola modifica; la prova deve fallire.
-# Scrive solo righe sintetiche (Descrizione KSFEEDDB%) e le tabelle/colonne della migrazione, riportate allo stato iniziale dal rollback. Solo ASCII (Windows PowerShell 5.1).
+#  - la tabella export, le routine esistenti (Newexport, Modexport, Delexport, Newexport_filtri), il loro registro in sysparametristored, export_filtri NON cambiano;
+#  - una riga di export_opzioni per ogni feed esistente, con codice del link distinto creato dal database; un codice errato o duplicato e rifiutato; SET TokenAccesso = DEFAULT lo rinnova;
+#  - il forward si rilancia (idempotente: nessuna riga doppia nel registro) e riprende dopo OGNI interruzione (script fermato prima di ciascun passo -- STEP n); il rollback riporta lo stato iniziale;
+#  - rifiuto del rollback senza conferma, arresto con binlog STATEMENT (condizione sostituita: il LAB ha log_bin=0), verify che si ferma se i dati o il registro sono corrotti;
+#  - il programma Tools\ExportFeedGestionaleHarness.vb (connettore .NET, registro REALE, stessa logica di AggiungiDati/ExecStoreTrnNoCommit del gestionale) salva, modifica, duplica;
+#  - mutazioni degli script (una modifica per volta): la prova deve fallire.
+# Scrive solo righe sintetiche (KSGESTHARNESS%) e gli oggetti della migrazione, riportati allo stato iniziale dal rollback. Solo ASCII (Windows PowerShell 5.1).
+# Durata circa 8 minuti: con Tools\Run-KeepStoreRelatedTests.ps1 serve -TimeoutSec 1800.
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $utf8 = New-Object Text.UTF8Encoding($false)
 $scriptsDoc = Join-Path $root 'docs\EXPORT_FEED_DB_SCRIPTS.md'
-$prefix = '20261125_EXPORT_FEED_DB_1A_'
+$prefix = '20261126_EXPORT_FEED_DB_2A_'
 $labSql = Join-Path $root 'Tools\Invoke-KeepStoreLabSql.ps1'
 $tmp = Join-Path $env:TEMP ('ks-exportfeeddb-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-# Gli script stanno in blocchi di docs/EXPORT_FEED_DB_SCRIPTS.md (il repository pubblico non ammette file .sql nuovi): si estraggono in una cartella temporanea con i nomi di file attesi.
 $migDir = Join-Path $tmp 'mig'
 New-Item -ItemType Directory -Force -Path $migDir | Out-Null
 $docText = [IO.File]::ReadAllText($scriptsDoc, $utf8)
 foreach ($k in @('preflight', 'forward', 'verify', 'rollback')) {
-    $m = [regex]::Match($docText, '(?s)## ' + [regex]::Escape($prefix + $k) + '\.sql\r?\n\r?\n```sql\r?\n(.*?)\r?\n```')
+    $m = [regex]::Match($docText, '(?s)## ' + [regex]::Escape($prefix + $k) + '\.sql\r?\n\r?\n```sql\r?\n(.*?)```')
     if ($m.Success) { [IO.File]::WriteAllText((Join-Path $migDir ($prefix + $k + '.sql')), ($m.Groups[1].Value -replace '\r\n', "`n"), $utf8) }
 }
 $confirm = 'SET @KeepStoreConfirmDropFeedData=1;' + "`n"
+$names = "'Newexport_opzioni', 'Newexport_colonne', 'Dupexport', 'Modexport_codice'"
 
 function Invoke-Sql([string]$sql, [switch]$Write) {
     $f = Join-Path $tmp ('q' + [Guid]::NewGuid().ToString('N') + '.sql')
@@ -47,224 +46,242 @@ function Get-Scalar([string]$sql) {
     for ($i = 0; $i -lt $o.Count - 1; $i++) { if ($o[$i].Trim() -eq 'ksval') { return $o[$i + 1].Trim() } }
     return ''
 }
-function Read-Mig([string]$dir, [string]$kind) { return [IO.File]::ReadAllText((Join-Path $dir ($prefix + $kind + '.sql')), $utf8) }
-# Fotografia dello schema interessato (senza AUTO_INCREMENT): colonne di export, elenco tabelle nuove, checksum di exportcampi e export_filtri, numero righe di export.
+function Read-Mig([string]$kind) { return [IO.File]::ReadAllText((Join-Path $migDir ($prefix + $kind + '.sql')), $utf8) }
+# Fotografia di cio che la migrazione NON deve cambiare: export (colonne, righe), le routine esistenti (definizione), il loro registro, export_filtri, exportcampi senza la voce nostra.
 function Get-Snapshot {
-    $s = Get-Scalar ("SELECT CONCAT_WS('#', " +
-        "(SELECT SHA2(IFNULL(GROUP_CONCAT(CONCAT_WS(':', COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, IFNULL(COLUMN_DEFAULT, 'NULL'), IFNULL(COLLATION_NAME, '-'), EXTRA) ORDER BY ORDINAL_POSITION SEPARATOR '|'), ''), 256) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'export'), " +
-        "(SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('export_stato', 'export_colonne')), " +
-        "(SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'export'), " +
-        "(SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'export'), " +
-        "(SELECT COUNT(*) FROM exportcampi), (SELECT COUNT(*) FROM export_filtri), (SELECT COUNT(*) FROM export WHERE Descrizione NOT LIKE 'KSFEEDDB%')) AS ksval;")
-    return $s
+    return Get-Scalar ("SELECT CONCAT_WS('#', " +
+        "(SELECT SHA2(IFNULL(GROUP_CONCAT(CONCAT_WS(':', COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, IFNULL(COLUMN_DEFAULT, 'NULL'), IFNULL(COLLATION_NAME, '-'), EXTRA) ORDER BY ORDINAL_POSITION SEPARATOR '|'), ''), 256) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'export')," +
+        "(SELECT COUNT(*) FROM export)," +
+        "(SELECT SHA2(IFNULL(GROUP_CONCAT(CONCAT_WS(':', ROUTINE_NAME, SHA2(ROUTINE_DEFINITION, 256), DEFINER) ORDER BY ROUTINE_NAME SEPARATOR '|'), ''), 256) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_NAME IN ('Newexport', 'Modexport', 'Delexport', 'Newexport_filtri'))," +
+        "(SELECT SHA2(IFNULL(GROUP_CONCAT(CONCAT_WS(':', NomeStore, NomeParametro, Tipo, Lunghezza, Direzione) ORDER BY NomeStore, id SEPARATOR '|'), ''), 256) FROM sysparametristored WHERE NomeStore IN ('Newexport', 'Modexport', 'Delexport', 'Newexport_filtri'))," +
+        "(SELECT COUNT(*) FROM sysparametristored)," +
+        "(SELECT COUNT(*) FROM export_filtri)," +
+        "(SELECT COUNT(*) FROM exportcampi)," +
+        "(SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('export_opzioni', 'export_stato', 'export_colonne'))," +
+        "(SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_NAME IN (" + $names + "))) AS ksval;")
 }
 $e2e = New-Object Collections.Generic.List[string]
-$script:stopFirst = $false
 function Check([bool]$ok, [string]$name) {
-    if ($ok) { if (-not $script:stopFirst) { Write-Host ('  ok   ' + $name) } } else { Write-Host ('  FAIL ' + $name); $e2e.Add($name); if ($script:stopFirst) { throw 'MUTANT_KILLED' } }
+    if ($ok) { Write-Host ('  ok   ' + $name) } else { Write-Host ('  FAIL ' + $name); $e2e.Add($name) }
 }
-# Parti del forward: prologo + passi "-- STEP n". Restituisce il testo fino al passo $upTo incluso (0 = solo il prologo).
 function Get-ForwardUpTo([string]$text, [int]$upTo) {
     $ms = [regex]::Matches($text, '(?m)^-- STEP (\d+)')
     if ($upTo -ge $ms.Count) { return $text }
-    $cut = $ms[$upTo].Index
-    return $text.Substring(0, $cut)
+    return $text.Substring(0, $ms[$upTo].Index)
 }
 function Count-Steps([string]$text) { return [regex]::Matches($text, '(?m)^-- STEP (\d+)').Count }
+function Run-Rollback([string]$rollbackText) { return Invoke-Sql ($confirm + $rollbackText) -Write }
+function Remove-TestRows { $null = Invoke-Sql "DELETE FROM export_filtri WHERE ExportId IN (SELECT ID FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%'); DELETE FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%'; DELETE FROM exportcampi WHERE NomeCampo = 'CategoriaPercorsoX'; DELETE FROM export_filtri WHERE ExportId = 0;" -Write }
 
-function Remove-TestRows {
-    $null = Invoke-Sql ("DELETE FROM export WHERE Descrizione LIKE 'KSFEEDDB%';") -Write
-}
-function Reset-Clean([string]$dir) {
-    Remove-TestRows
-    $out = Invoke-Sql ($confirm + (Read-Mig $dir 'rollback')) -Write
-    return $out
-}
-function Test-Newexport([string]$desc) {
-    $o = Invoke-Sql ("CALL Newexport('" + $desc + "', 'pw', '#Codice#', 1, 0, 0, 0, 0, 'www.example.test', 'txt', 0, 0, 0, 0, 0, 0, 1, @r); SELECT @r AS ksval;") -Write
-    $o2 = $o -split "`n"
-    for ($i = 0; $i -lt $o2.Count - 1; $i++) { if ($o2[$i].Trim() -eq 'ksval') { return $o2[$i + 1].Trim() } }
-    return ''
-}
-
-function Run-Suite([string]$dir) {
-    $rows0 = Reset-Clean $dir
-    $snapA = Get-Snapshot
-    $cntBefore = Get-Scalar 'SELECT COUNT(*) AS ksval FROM export;'
-    $fwd = Read-Mig $dir 'forward'
-    $n = Count-Steps $fwd
-    Check ($n -ge 6) ('forward ha almeno 6 passi (trovati ' + $n + ')')
-
-    # 1 preflight su stato pulito
-    $o = Invoke-Sql (Read-Mig $dir 'preflight')
-    Check ((-not (Failed $o)) -and $o -match 'EXPORT_FEED_DB_PREFLIGHT_OK') 'preflight OK sullo stato iniziale'
-    # 2 forward e verify
-    $o = Invoke-Sql $fwd -Write
-    Check ((-not (Failed $o)) -and $o -match 'EXPORT_FEED_DB_FORWARD_OK') 'forward OK'
-    $o = Invoke-Sql (Read-Mig $dir 'verify')
-    Check ((-not (Failed $o)) -and $o -match 'EXPORT_FEED_DB_VERIFY_OK' -and $o -notmatch "(?m)\tSTOP\s*$") 'verify OK dopo il forward'
-    # 3 righe esistenti: tutte con un codice distinto e regolare, nessuna riga persa
-    $cntAfter = Get-Scalar 'SELECT COUNT(*) AS ksval FROM export;'
-    Check ($cntAfter -eq $cntBefore) ('nessuna riga persa (' + $cntBefore + ' prima, ' + $cntAfter + ' dopo)')
-    $dist = Get-Scalar 'SELECT COUNT(DISTINCT TokenAccesso) AS ksval FROM export;'
-    Check ($dist -eq $cntBefore) 'ogni feed esistente ha un codice distinto'
-    $bad = Get-Scalar "SELECT COUNT(*) AS ksval FROM export WHERE CHAR_LENGTH(TokenAccesso) <> 48 OR TokenAccesso NOT REGEXP '^[0-9A-F]+$';"
-    Check ($bad -eq '0') 'ogni codice e di 48 caratteri esadecimali maiuscoli'
-    # 4 routine del gestionale con la firma attuale
-    $id = Test-Newexport 'KSFEEDDB1'
-    Check ($id -match '^\d+$') 'Newexport crea una riga'
-    $row = Get-Scalar ("SELECT CONCAT_WS(';', LENGTH(TokenAccesso), Separatore, DelimitatoreTesto, Codifica, SeparatoreDecimale, Intestazione, XmlRadice, XmlElemento, TogliHtml, MinutiCache, ParolaDisponibile, ParolaInArrivo, ParolaNonDisponibile, SenzaImmagine, SenzaEan, PrezzoZero) AS ksval FROM export WHERE ID = " + $id + ";")
-    Check ($row -eq '48;|;;utf-8;.;1;prodotti;prodotto;1;60;Disponibile;In Arrivo;Non Disponibile;0;0;1') 'i predefiniti delle colonne nuove sono quelli dichiarati'
-    $tok1 = Get-Scalar ("SELECT TokenAccesso AS ksval FROM export WHERE ID = " + $id + ";")
-    $o = Invoke-Sql ("CALL Modexport('KSFEEDDB1m', 'pw2', '#Codice#|#Ean#', 1, 0, 0, 0, 0, 'www.example.test', 'csv', 0, 0, 0, 0, 0, 0, 1, " + $id + ", @r);") -Write
-    Check (-not (Failed $o)) 'Modexport funziona con la firma attuale'
-    $tok2 = Get-Scalar ("SELECT TokenAccesso AS ksval FROM export WHERE ID = " + $id + ";")
-    Check ($tok1 -eq $tok2 -and $tok1 -ne '') 'Modexport non cambia il codice'
-    $o = Invoke-Sql ("UPDATE export SET TokenAccesso = DEFAULT WHERE ID = " + $id + ";") -Write
-    $tok3 = Get-Scalar ("SELECT TokenAccesso AS ksval FROM export WHERE ID = " + $id + ";")
-    Check ((-not (Failed $o)) -and $tok3 -ne $tok1 -and $tok3 -match '^[0-9A-F]{48}$') 'Nuovo codice: SET TokenAccesso = DEFAULT lo rinnova'
-    # 5 codice errato o duplicato rifiutato
-    $o = Invoke-Sql ("INSERT INTO export (Descrizione, TokenAccesso) VALUES ('KSFEEDDB2', 'abc');") -Write
-    Check ($o -match 'ERROR 3819') 'codice corto rifiutato (CHECK)'
-    $o = Invoke-Sql ("INSERT INTO export (Descrizione, TokenAccesso) VALUES ('KSFEEDDB2', LOWER('" + $tok3 + "'));") -Write
-    Check ($o -match 'ERROR 3819') 'codice in minuscolo rifiutato (CHECK)'
-    $o = Invoke-Sql ("INSERT INTO export (Descrizione, TokenAccesso) VALUES ('KSFEEDDB2', '" + $tok3 + "');") -Write
-    Check ($o -match 'ERROR 1062') 'codice duplicato rifiutato (indice unico)'
-    # 6 cascata
-    $o = Invoke-Sql ("INSERT INTO export_colonne (ExportId, Posizione, TitoloColonna, Campo) VALUES (" + $id + ", 1, 'title', 'Descrizione1'), (" + $id + ", 2, 'price', 'Prezzo'); INSERT INTO export_stato (ExportId, UltimeRighe) VALUES (" + $id + ", 5);") -Write
-    Check (-not (Failed $o)) 'righe in export_colonne e export_stato'
-    $o = Invoke-Sql ("INSERT INTO export_colonne (ExportId, Posizione, TitoloColonna, Campo) VALUES (" + $id + ", 2, 'dup', 'Marca');") -Write
-    Check ($o -match 'ERROR 1062') 'posizione duplicata nello stesso feed rifiutata'
-    $o = Invoke-Sql ("INSERT INTO export_colonne (ExportId, Posizione, TitoloColonna, Campo) VALUES (99999999, 1, 'x', 'Marca');") -Write
-    Check ($o -match 'ERROR 1452') 'colonna di un feed inesistente rifiutata (chiave esterna)'
-    $o = Invoke-Sql ("CALL Delexport(" + $id + ");") -Write
-    $left = Get-Scalar ("SELECT (SELECT COUNT(*) FROM export_colonne WHERE ExportId = " + $id + ") + (SELECT COUNT(*) FROM export_stato WHERE ExportId = " + $id + ") AS ksval;")
-    Check ((-not (Failed $o)) -and $left -eq '0') 'Delexport cancella anche colonne e stato (cascata)'
-    # 7 forward rilanciato: idempotente, i codici non cambiano
-    $tokSum1 = Get-Scalar 'SELECT SHA2(GROUP_CONCAT(TokenAccesso ORDER BY ID), 256) AS ksval FROM export;'
-    $o = Invoke-Sql $fwd -Write
-    $tokSum2 = Get-Scalar 'SELECT SHA2(GROUP_CONCAT(TokenAccesso ORDER BY ID), 256) AS ksval FROM export;'
-    Check ((-not (Failed $o)) -and $o -match 'EXPORT_FEED_DB_FORWARD_OK' -and $tokSum1 -eq $tokSum2) 'forward rilanciato: nessun errore e codici invariati'
-    # 8 rollback rifiutato senza conferma, eseguito con conferma
-    $o = Invoke-Sql (Read-Mig $dir 'rollback') -Write
-    $still = Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('export_stato', 'export_colonne');"
-    Check ((Failed $o) -and $still -eq '2') 'rollback senza conferma: rifiutato, nulla cancellato'
-    # 9 verify si ferma se i dati sono corrotti
-    # il vincolo CHECK resta presente ma non applicato: il verify deve fermarsi per il solo codice troppo corto (esadecimale valido, lunghezza sbagliata)
-    $o = Invoke-Sql ("ALTER TABLE export DROP CHECK ck_export_token_accesso; UPDATE export SET TokenAccesso = 'ABC' WHERE ID = (SELECT m FROM (SELECT MIN(ID) m FROM export) x); ALTER TABLE export ADD CONSTRAINT ck_export_token_accesso CHECK (1 = 1) NOT ENFORCED;") -Write
-    Check (-not (Failed $o)) 'preparazione: codice corto con il CHECK non applicato'
-    $o = Invoke-Sql (Read-Mig $dir 'verify')
-    Check ((Failed $o) -and $o -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify si ferma con un codice di lunghezza sbagliata'
-    $null = Invoke-Sql ("ALTER TABLE export DROP CHECK ck_export_token_accesso; UPDATE export SET TokenAccesso = DEFAULT WHERE TokenAccesso NOT REGEXP '^[0-9A-F]{48}$';") -Write
-    $null = Invoke-Sql $fwd -Write
-    $o = Invoke-Sql (Read-Mig $dir 'verify')
-    Check ((-not (Failed $o)) -and $o -match 'EXPORT_FEED_DB_VERIFY_OK') 'dopo il ripristino il verify torna OK (il forward rimette il CHECK)'
-    $o = Invoke-Sql ("ALTER TABLE export ALTER COLUMN Intestazione SET DEFAULT 0;") -Write
-    $o = Invoke-Sql (Read-Mig $dir 'verify')
-    Check ((Failed $o) -and $o -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify si ferma con un predefinito sbagliato'
-    $null = Invoke-Sql ("ALTER TABLE export ALTER COLUMN Intestazione SET DEFAULT 1;") -Write
-    # 10 binlog STATEMENT: preflight e forward si fermano
-    $pf = (Read-Mig $dir 'preflight').Replace('@@global.log_bin', '1').Replace('@@global.binlog_format', "'STATEMENT'")
-    $o = Invoke-Sql $pf
-    Check ((Failed $o) -and $o -notmatch 'EXPORT_FEED_DB_PREFLIGHT_OK') 'preflight si ferma con binlog STATEMENT'
-    $null = Reset-Clean $dir
-    $fb = $fwd.Replace('@@global.log_bin', '1').Replace('@@global.binlog_format', "'STATEMENT'")
-    $o = Invoke-Sql $fb -Write
-    Check ((Failed $o) -and (Get-Snapshot) -eq $snapA) 'forward si ferma con binlog STATEMENT senza toccare lo schema'
-    # 11 rollback: stato iniziale identico
-    $null = Invoke-Sql $fwd -Write
-    $null = Reset-Clean $dir
-    Check ((Get-Snapshot) -eq $snapA) 'rollback: schema, indici, vincoli e dati di export, exportcampi e export_filtri come prima'
-    # 12 riga inserita durante la migrazione (dopo il passo che imposta il predefinito, prima del backfill)
-    $stepDefault = 0
-    $ms = [regex]::Matches($fwd, '(?m)^-- STEP (\d+)[^\r\n]*')
-    for ($i = 0; $i -lt $ms.Count; $i++) { if ($ms[$i].Value -match 'PREDEFINITO') { $stepDefault = [int]$ms[$i].Groups[1].Value } }
-    Check ($stepDefault -gt 0) 'un passo e marcato PREDEFINITO'
-    if ($stepDefault -gt 0) {
-        $null = Invoke-Sql (Get-ForwardUpTo $fwd $stepDefault) -Write
-        $idw = Test-Newexport 'KSFEEDDB3'
-        $tw = Get-Scalar ("SELECT IFNULL(TokenAccesso, 'NULL') AS ksval FROM export WHERE ID = " + $idw + ";")
-        Check ($tw -match '^[0-9A-F]{48}$') 'una riga creata a meta migrazione riceve gia il suo codice'
-        $o = Invoke-Sql $fwd -Write
-        $o = Invoke-Sql (Read-Mig $dir 'verify')
-        Check ((-not (Failed $o)) -and $o -match 'EXPORT_FEED_DB_VERIFY_OK') 'dopo il forward completo la riga di meta migrazione e regolare'
-        $null = Reset-Clean $dir
+# --- programma .NET che simula il gestionale ---
+function Run-Harness {
+    $vbc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\vbc.exe'
+    $bin = Join-Path $root 'Bin'
+    $work = Join-Path $tmp ('h' + [Guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Path $work | Out-Null
+    foreach ($dep in 'MySql.Data.dll', 'Google.Protobuf.dll', 'BouncyCastle.Cryptography.dll', 'System.Buffers.dll', 'System.Memory.dll', 'System.Numerics.Vectors.dll', 'System.Runtime.CompilerServices.Unsafe.dll', 'System.Threading.Tasks.Extensions.dll', 'K4os.Compression.LZ4.dll', 'K4os.Compression.LZ4.Streams.dll', 'K4os.Hash.xxHash.dll', 'ZstdSharp.dll', 'System.Configuration.ConfigurationManager.dll') {
+        if (Test-Path -LiteralPath (Join-Path $bin $dep)) { Copy-Item -LiteralPath (Join-Path $bin $dep) -Destination $work -Force }
     }
-    # 13 interruzione dopo ciascun passo: ripresa e rollback
-    for ($k = 0; $k -lt $n; $k++) {
-        $null = Reset-Clean $dir
-        $null = Invoke-Sql (Get-ForwardUpTo $fwd $k) -Write
-        $o = Invoke-Sql $fwd -Write
-        $v = Invoke-Sql (Read-Mig $dir 'verify')
-        Check ((-not (Failed $o)) -and (-not (Failed $v)) -and $v -match 'EXPORT_FEED_DB_VERIFY_OK') ('ripresa dopo l''interruzione prima del passo ' + ($k + 1) + ': forward e verify OK')
-        $null = Reset-Clean $dir
-        $null = Invoke-Sql (Get-ForwardUpTo $fwd $k) -Write
-        $o = Invoke-Sql ($confirm + (Read-Mig $dir 'rollback')) -Write
-        Check ((-not (Failed $o)) -and (Get-Snapshot) -eq $snapA) ('rollback dopo l''interruzione prima del passo ' + ($k + 1) + ': stato iniziale')
-    }
-    $null = Reset-Clean $dir
-    Remove-TestRows
-    Check ((Get-Snapshot) -eq $snapA) 'stato finale = stato iniziale'
+    $cfg = '<?xml version="1.0" encoding="utf-8"?><configuration><startup><supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.8"/></startup><runtime><assemblyBinding xmlns="urn:schemas-microsoft-com:asm.v1">' +
+        '<dependentAssembly><assemblyIdentity name="System.Threading.Tasks.Extensions" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral"/><bindingRedirect oldVersion="0.0.0.0-4.2.4.0" newVersion="4.2.4.0"/></dependentAssembly>' +
+        '<dependentAssembly><assemblyIdentity name="System.Buffers" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral"/><bindingRedirect oldVersion="0.0.0.0-4.0.5.0" newVersion="4.0.5.0"/></dependentAssembly>' +
+        '<dependentAssembly><assemblyIdentity name="System.Memory" publicKeyToken="cc7b13ffcd2ddd51" culture="neutral"/><bindingRedirect oldVersion="0.0.0.0-4.0.5.0" newVersion="4.0.5.0"/></dependentAssembly>' +
+        '<dependentAssembly><assemblyIdentity name="System.Runtime.CompilerServices.Unsafe" publicKeyToken="b03f5f7f11d50a3a" culture="neutral"/><bindingRedirect oldVersion="0.0.0.0-6.0.3.0" newVersion="6.0.3.0"/></dependentAssembly>' +
+        '<dependentAssembly><assemblyIdentity name="System.Numerics.Vectors" publicKeyToken="b03f5f7f11d50a3a" culture="neutral"/><bindingRedirect oldVersion="0.0.0.0-4.1.6.0" newVersion="4.1.6.0"/></dependentAssembly>' +
+        '</assemblyBinding></runtime></configuration>'
+    $exe = Join-Path $work 'h.exe'
+    [IO.File]::WriteAllText($exe + '.config', $cfg, $utf8)
+    $b = & $vbc /nologo /target:exe /optionstrict+ /optionexplicit+ ('/out:' + $exe) ('/reference:' + (Join-Path $bin 'MySql.Data.dll')) /reference:System.dll /reference:System.Data.dll /reference:System.Core.dll (Join-Path $root 'Tools\ExportFeedGestionaleHarness.vb') 2>&1
+    if (-not (Test-Path -LiteralPath $exe)) { return @{ Out = ('COMPILE_ERROR ' + (($b | Select-Object -First 4) -join ' | ')); Code = -1 } }
+    $credFile = Join-Path $env:APPDATA 'KeepStore\lab-13317-claude.clixml'
+    $cred = Import-Clixml -LiteralPath $credFile
+    $plain = $cred.GetNetworkCredential().Password
+    $schema = Get-Scalar 'SELECT DATABASE() AS ksval;'
+    $info = New-Object Diagnostics.ProcessStartInfo
+    $info.FileName = $exe; $info.UseShellExecute = $false; $info.RedirectStandardOutput = $true; $info.RedirectStandardError = $true; $info.CreateNoWindow = $true
+    $info.EnvironmentVariables['KS_LAB_USER'] = $cred.UserName
+    $info.EnvironmentVariables['KS_LAB_PWD'] = $plain
+    $info.EnvironmentVariables['KS_LAB_SCHEMA'] = $schema
+    $proc = [Diagnostics.Process]::Start($info)
+    $stdout = $proc.StandardOutput.ReadToEnd(); $stderr = $proc.StandardError.ReadToEnd(); $proc.WaitForExit()
+    if ($plain) { $stdout = $stdout.Replace($plain, '<hidden>'); $stderr = $stderr.Replace($plain, '<hidden>') }
+    $plain = $null; $cred = $null
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    return @{ Out = $stdout + $stderr; Code = $proc.ExitCode }
 }
 
-# ---------------------------------------------------------------- esecuzione
-$exitCode = 0
+# Applica forward (una o due volte), verify e harness: restituisce l'elenco dei guasti (vuoto = tutto passa).
+function Exercise([string]$forwardText, [int]$times = 2) {
+    $fails = New-Object Collections.Generic.List[string]
+    for ($i = 1; $i -le $times; $i++) {
+        $f = Invoke-Sql $forwardText -Write
+        if ($f -notmatch 'EXPORT_FEED_DB_FORWARD_OK') { $fails.Add('forward ' + $i + ' senza FORWARD_OK'); return $fails.ToArray() }
+    }
+    $v = Invoke-Sql (Read-Mig 'verify')
+    if ($v -notmatch 'EXPORT_FEED_DB_VERIFY_OK') { $fails.Add('verify: ' + (@($v -split "`n" | Where-Object { $_ -match "`tKO$" } | ForEach-Object { $_.Split("`t")[0] }) -join ',')) }
+    if (-not $SkipHarness) {
+        $h = Run-Harness
+        if ($h.Code -ne 0) { $fails.Add('harness: ' + (@($h.Out -split "`r?`n" | Where-Object { $_ -cmatch '^(FAIL |HARNESS_ERROR|COMPILE_ERROR)' } | Select-Object -First 3) -join ' | ')) }
+    }
+    return $fails.ToArray()
+}
+
+$exit = 0
 try {
-    foreach ($k in @('preflight', 'forward', 'verify', 'rollback')) {
-        if (-not (Test-Path -LiteralPath (Join-Path $migDir ($prefix + $k + '.sql')))) { Write-Host ('EXPORT_FEED_DB FAIL: manca ' + $prefix + $k + '.sql'); exit 1 }
-    }
-    Write-Host 'Prova sugli script reali'
-    Run-Suite $migDir
-    if ($e2e.Count -gt 0) { Write-Host ('EXPORT_FEED_DB FAIL: ' + $e2e.Count + ' controlli falliti'); $exitCode = 1 }
-    else { Write-Host 'EXPORT_FEED_DB OK (script reali)' }
+    $uuid = Get-Scalar 'SELECT @@server_uuid AS ksval;'
+    if ($uuid -ne '1167ebae-d0c0-11f1-b348-9c7bef540c10') { throw 'NOT_THE_LAB' }
+    Remove-TestRows
+    $forward = Read-Mig 'forward'; $rollback = Read-Mig 'rollback'; $verify = Read-Mig 'verify'; $preflight = Read-Mig 'preflight'
+    if ($forward -eq '' -or $rollback -eq '' -or $verify -eq '' -or $preflight -eq '') { throw 'SCRIPTS_NOT_FOUND_IN_DOC' }
+    $initial = Get-Snapshot
+    if ($initial -notmatch '#0#0$') { throw 'LAB_NOT_IN_INITIAL_STATE (eseguire il rollback prima di provare)' }
+    $nSteps = Count-Steps $forward
+    Check ($nSteps -eq 8) ('il forward ha 8 passi (visti ' + $nSteps + ')')
 
-    if (-not $SkipMutants -and $exitCode -eq 0) {
-        # Mutanti: (nome, file, testo da sostituire, nuovo testo). Ogni mutante cambia UNA cosa; la prova deve fallire.
-        $mutants = @(
-            @('indice-unico-tolto', 'forward', 'ADD UNIQUE KEY uk_export_token_accesso', 'ADD KEY uk_export_token_accesso'),
-            @('predefinito-prima-del-backfill-tolto', 'forward', 'SET DEFAULT (HEX(RANDOM_BYTES(24)))', 'SET DEFAULT NULL'),
-            @('backfill-tolto', 'forward', 'SET TokenAccesso = HEX(RANDOM_BYTES(24)) WHERE ID > 0', 'SET TokenAccesso = TokenAccesso WHERE ID > 0'),
-            @('ascii-bin-tolto', 'forward', 'MODIFY COLUMN TokenAccesso varchar(64) CHARACTER SET ascii COLLATE ascii_bin', 'MODIFY COLUMN TokenAccesso varchar(64) CHARACTER SET ascii COLLATE ascii_general_ci'),
-            @('check-formato-tolto', 'forward', "REGEXP_LIKE(TokenAccesso, ''^[0-9A-F]{48}$'', ''c'')", '1 = 1'),
-            @('cascata-colonne-tolta', 'forward', 'CONSTRAINT fk_export_colonne_export FOREIGN KEY (ExportId) REFERENCES `export` (ID) ON DELETE CASCADE', 'CONSTRAINT fk_export_colonne_export FOREIGN KEY (ExportId) REFERENCES `export` (ID)'),
-            @('cascata-stato-tolta', 'forward', 'CONSTRAINT fk_export_stato_export FOREIGN KEY (ExportId) REFERENCES `export` (ID) ON DELETE CASCADE', 'CONSTRAINT fk_export_stato_export FOREIGN KEY (ExportId) REFERENCES `export` (ID)'),
-            @('posizione-senza-unicita', 'forward', 'UNIQUE KEY uk_export_colonne_posizione', 'KEY uk_export_colonne_posizione'),
-            @('predefinito-intestazione-0', 'forward', 'ADD COLUMN Intestazione int NOT NULL DEFAULT 1', 'ADD COLUMN Intestazione int NOT NULL DEFAULT 0'),
-            @('predefinito-prezzozero-0', 'forward', 'ADD COLUMN PrezzoZero int NOT NULL DEFAULT 1', 'ADD COLUMN PrezzoZero int NOT NULL DEFAULT 0'),
-            @('predefinito-minuticache', 'forward', 'ADD COLUMN MinutiCache int NOT NULL DEFAULT 60', 'ADD COLUMN MinutiCache int NOT NULL DEFAULT 30'),
-            @('predefinito-separatore', 'forward', "NOT NULL DEFAULT ''|''", "NOT NULL DEFAULT '';''"),
-            @('passo-senza-guardia', 'forward', "AND COLUMN_NAME = 'TokenAccesso') = 0,", "AND COLUMN_NAME = 'TokenAccesso') >= 0,"),
-            @('guardia-binlog-tolta-forward', 'forward', '@@global.log_bin = 1 AND', '@@global.log_bin = 9 AND'),
-            @('guardia-binlog-tolta-preflight', 'preflight', '@@global.log_bin = 1 AND', '@@global.log_bin = 9 AND'),
-            @('rollback-senza-conferma', 'rollback', '(@KeepStoreConfirmDropFeedData <=> 1)', '(1 = 1)'),
-            @('rollback-non-cancella-stato', 'rollback', 'DROP TABLE IF EXISTS export_stato', 'DO 0'),
-            @('rollback-non-cancella-colonne', 'rollback', '''DROP COLUMN `''', '''DO 0 `'''),
-            @('verify-senza-lunghezza', 'verify', 'CHAR_LENGTH(TokenAccesso) <> 48 OR', ''),
-            @('verify-senza-predefiniti', 'verify', 'e.col_default', 'c.COLUMN_DEFAULT')
-        )
-        $script:stopFirst = $true
-        foreach ($m in $mutants) {
-            if ($MutantFilter -and $m[0] -notlike ('*' + $MutantFilter + '*')) { continue }
-            $mdir = Join-Path $tmp ('mut-' + $m[0])
-            New-Item -ItemType Directory -Force -Path $mdir | Out-Null
-            foreach ($k in @('preflight', 'forward', 'verify', 'rollback')) { Copy-Item -LiteralPath (Join-Path $migDir ($prefix + $k + '.sql')) -Destination $mdir }
-            $target = Join-Path $mdir ($prefix + $m[1] + '.sql')
-            $txt = [IO.File]::ReadAllText($target, $utf8)
-            if (-not $txt.Contains($m[2])) { Write-Host ('  FAIL mutante ' + $m[0] + ': testo da sostituire non trovato'); $exitCode = 1; continue }
-            [IO.File]::WriteAllText($target, $txt.Replace($m[2], $m[3]), $utf8)
-            $e2e.Clear()
-            $killed = $false
-            try { Run-Suite $mdir } catch { $killed = $true; if ($_.Exception.Message -ne 'MUTANT_KILLED') { Write-Host ('       (arresto per errore: ' + $_.Exception.Message + ')') } }
-            if ($e2e.Count -gt 0) { $killed = $true }
-            try { $null = Reset-Clean $migDir } catch { }
-            if ($killed) { Write-Host ('  ok   mutante ucciso: ' + $m[0]) } else { Write-Host ('  FAIL mutante SOPRAVVISSUTO: ' + $m[0]); $exitCode = 1 }
-        }
-        if ($exitCode -eq 0) { Write-Host 'EXPORT_FEED_DB OK (mutanti)' }
+    # --- preflight, forward, verify ---
+    $pf = Invoke-Sql $preflight
+    Check ($pf -match 'EXPORT_FEED_DB_PREFLIGHT_OK' -and -not (Failed $pf)) 'preflight: PREFLIGHT_OK'
+    $f1 = Invoke-Sql $forward -Write
+    Check (-not (Failed $f1) -and $f1 -match 'EXPORT_FEED_DB_FORWARD_OK') 'forward: FORWARD_OK'
+    $v1 = Invoke-Sql $verify
+    Check ($v1 -match 'EXPORT_FEED_DB_VERIFY_OK' -and $v1 -notmatch "`tKO") 'verify: tutte OK e VERIFY_OK'
+    $afterSnap = Get-Snapshot
+    $a = $initial.Split('#'); $b = $afterSnap.Split('#')
+    Check ($a[0] -eq $b[0] -and $a[1] -eq $b[1]) 'export: colonne e righe IDENTICHE a prima (il gestionale attuale non vede differenze)'
+    Check ($a[2] -eq $b[2] -and $a[3] -eq $b[3]) 'routine esistenti e loro registro IDENTICI a prima (nessuna routine esistente cambia)'
+    Check ($a[5] -eq $b[5] -and ([int]$b[6] -eq [int]$a[6] + 1)) 'export_filtri invariata; exportcampi ha una voce in piu (CategoriaPercorso)'
+    Check ([int]$b[4] -gt [int]$a[4] -and $b[7] -eq '3' -and $b[8] -eq '4') 'registro: righe delle sole routine nuove aggiunte; tre tabelle e quattro routine create'
+    $feeds = Get-Scalar 'SELECT COUNT(*) AS ksval FROM export;'
+    Check ((Get-Scalar 'SELECT COUNT(*) AS ksval FROM export_opzioni;') -eq $feeds -and (Get-Scalar 'SELECT COUNT(DISTINCT TokenAccesso) AS ksval FROM export_opzioni;') -eq $feeds) ('una riga di opzioni per ognuno dei ' + $feeds + ' feed, con codici tutti distinti')
+    $regCount1 = Get-Scalar 'SELECT COUNT(*) AS ksval FROM sysparametristored;'
+
+    # --- idempotenza ---
+    $f2 = Invoke-Sql $forward -Write
+    Check ($f2 -match 'EXPORT_FEED_DB_FORWARD_OK') 'forward rilanciato da solo: FORWARD_OK'
+    Check ((Get-Scalar 'SELECT COUNT(*) AS ksval FROM sysparametristored;') -eq $regCount1 -and (Get-Snapshot) -eq $afterSnap) 'forward rilanciato: nessuna riga doppia nel registro, stato identico'
+    Check ((Invoke-Sql $verify) -match 'EXPORT_FEED_DB_VERIFY_OK') 'verify dopo il secondo forward: VERIFY_OK'
+
+    # --- vincoli di export_opzioni (SQL diretto) ---
+    $ins = Invoke-Sql "INSERT INTO export (Descrizione, FormatString, NListino, Azienda, Tipo, Abilitato) VALUES ('KSGESTHARNESSX', '#Codice#', 10, 'www.example.test', 'txt', 0); INSERT INTO export_opzioni (ExportId) SELECT ID FROM export WHERE Descrizione = 'KSGESTHARNESSX'; SELECT CHAR_LENGTH(TokenAccesso) AS ksval FROM export_opzioni o JOIN export e ON e.ID = o.ExportId WHERE e.Descrizione = 'KSGESTHARNESSX';" -Write
+    Check ($ins -match '(?m)^48$') 'una riga inserita dopo la migrazione riceve un codice da 48 caratteri'
+    $bad = Invoke-Sql "UPDATE export_opzioni o JOIN export e ON e.ID = o.ExportId SET o.TokenAccesso = 'ABC' WHERE e.Descrizione = 'KSGESTHARNESSX';" -Write
+    Check ($bad -match 'ERROR 3819') 'un codice di formato errato e rifiutato (ERROR 3819)'
+    $dup = Invoke-Sql "UPDATE export_opzioni o JOIN export e ON e.ID = o.ExportId SET o.TokenAccesso = (SELECT t FROM (SELECT TokenAccesso AS t FROM export_opzioni WHERE ExportId <> (SELECT ID FROM export WHERE Descrizione = 'KSGESTHARNESSX') LIMIT 1) z) WHERE e.Descrizione = 'KSGESTHARNESSX';" -Write
+    Check ($dup -match 'ERROR 1062') 'un codice duplicato e rifiutato (ERROR 1062)'
+    $second = Invoke-Sql "INSERT INTO export_opzioni (ExportId) SELECT ID FROM export WHERE Descrizione = 'KSGESTHARNESSX';" -Write
+    Check ($second -match 'ERROR 1062') 'una seconda riga di opzioni per lo stesso feed e rifiutata'
+    $reg = Invoke-Sql "UPDATE export_opzioni SET TokenAccesso = DEFAULT WHERE ExportId = (SELECT ID FROM export WHERE Descrizione = 'KSGESTHARNESSX');" -Write
+    Check (-not (Failed $reg)) 'SET TokenAccesso = DEFAULT rinnova il codice'
+    $null = Invoke-Sql "DELETE FROM export WHERE Descrizione = 'KSGESTHARNESSX';" -Write
+    Check ((Get-Scalar "SELECT COUNT(*) AS ksval FROM export_opzioni WHERE ExportId NOT IN (SELECT ID FROM export);") -eq '0') 'cancellare il feed cancella la riga delle opzioni'
+
+    # --- il programma che simula il gestionale ---
+    if (-not $SkipHarness) {
+        $h = Run-Harness
+        $hFails = @($h.Out -split "`r?`n" | Where-Object { $_ -cmatch '^(FAIL |HARNESS_ERROR|COMPILE_ERROR)' })
+        $hOk = @($h.Out -split "`r?`n" | Where-Object { $_ -match '^ok ' }).Count
+        Check ($h.Code -eq 0 -and $hFails.Count -eq 0 -and $hOk -ge 30) ('gestionale simulato (connettore .NET, registro reale): ' + $hOk + ' casi ok' + $(if ($hFails.Count -gt 0) { '; ' + ($hFails -join ' | ') } else { '' }))
+        Check ((Get-Scalar "SELECT COUNT(*) AS ksval FROM export WHERE Descrizione LIKE 'KSGESTHARNESS%';") -eq '0') 'il programma di prova non lascia righe'
     }
+
+    # --- rollback senza conferma: rifiutato ---
+    $before = Get-Snapshot
+    $rbNo = Invoke-Sql $rollback -Write
+    Check ($rbNo -match 'ERROR 1109' -and (Get-Snapshot) -eq $before) 'rollback senza conferma: si ferma e non cambia nulla'
+
+    # --- verify che si ferma se i dati o il registro sono corrotti ---
+    $null = Invoke-Sql "ALTER TABLE export_opzioni ALTER CHECK ck_export_opzioni_token NOT ENFORCED; UPDATE export_opzioni SET TokenAccesso = 'ABC' WHERE Id = (SELECT m FROM (SELECT MIN(Id) AS m FROM export_opzioni) z);" -Write
+    $vBad = Invoke-Sql $verify
+    Check ($vBad -match "codici_validi_e_distinti`tKO" -and $vBad -match "controllo_formato_codice_attivo`tKO" -and $vBad -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify si ferma con un codice corrotto e il controllo di formato spento'
+    $null = Invoke-Sql "UPDATE export_opzioni SET TokenAccesso = DEFAULT WHERE TokenAccesso = 'ABC'; ALTER TABLE export_opzioni ALTER CHECK ck_export_opzioni_token ENFORCED;" -Write
+    $null = Invoke-Sql "DELETE FROM sysparametristored WHERE NomeStore = 'Dupexport' AND NomeParametro = 'parRetVal';" -Write
+    $vReg = Invoke-Sql $verify
+    Check ($vReg -match "registro_uguale_ai_parametri_nello_stesso_ordine`tKO" -and $vReg -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify si ferma se manca una riga del registro'
+    $null = Invoke-Sql $forward -Write
+    Check ((Invoke-Sql $verify) -match 'EXPORT_FEED_DB_VERIFY_OK') 'il forward ripristina il registro'
+    $null = Invoke-Sql "UPDATE sysparametristored SET id = id + 100000 WHERE NomeStore = 'Newexport_opzioni' AND NomeParametro IN ('parExportId', 'parTokenAccesso') ORDER BY id DESC;" -Write
+    $vOrd = Invoke-Sql $verify
+    Check ($vOrd -match "registro_uguale_ai_parametri_nello_stesso_ordine`tKO" -and $vOrd -notmatch 'EXPORT_FEED_DB_VERIFY_OK') 'verify si ferma se il registro e in un altro ordine'
+    $null = Invoke-Sql $forward -Write
+
+    # --- rollback con conferma e binlog STATEMENT ---
+    $rbBase = Invoke-Sql ($confirm + $rollback) -Write
+    Check ($rbBase -match 'EXPORT_FEED_DB_ROLLBACK_OK' -and (Get-Snapshot) -eq $initial) 'rollback con conferma: stato iniziale identico (tabelle, routine, registro, exportcampi)'
+    $sub = "@@global.log_bin = 1 AND (@@global.binlog_format = 'STATEMENT' OR @@session.binlog_format = 'STATEMENT')"
+    foreach ($kind in @('preflight', 'forward')) {
+        $text = Read-Mig $kind
+        Check ($text.Contains($sub)) ('il testo ' + $kind + ' contiene la condizione sul binlog')
+        $simulated = $text.Replace($sub, '1 = 1')
+        $r = if ($kind -eq 'forward') { Invoke-Sql $simulated -Write } else { Invoke-Sql $simulated }
+        Check ($r -match 'ERROR 1109' -and ((Get-Snapshot) -eq $initial)) ('binlog STATEMENT simulato: ' + $kind + ' si ferma e non crea nulla')
+    }
+
+    # --- ripresa: interruzione dopo ogni passo, poi forward completo, verify, rollback ---
+    for ($n = 0; $n -le $nSteps; $n++) {
+        $part = Get-ForwardUpTo $forward $n
+        $r = Invoke-Sql $part -Write
+        if (Failed $r) { Check $false ('forward interrotto prima del passo ' + ($n + 1) + ' eseguito senza errori') }
+        $r2 = Invoke-Sql $forward -Write
+        $okv = (Invoke-Sql $verify) -match 'EXPORT_FEED_DB_VERIFY_OK'
+        Check ($r2 -match 'EXPORT_FEED_DB_FORWARD_OK' -and $okv) ('ripresa dopo l''interruzione prima del passo ' + ($n + 1) + ': forward e verify OK')
+        $null = Run-Rollback $rollback
+        Check ((Get-Snapshot) -eq $initial) ('rollback dopo la ripresa ' + ($n + 1) + ': stato iniziale')
+    }
+    foreach ($n in 2, 4, 6, 7) {
+        $null = Invoke-Sql (Get-ForwardUpTo $forward $n) -Write
+        $null = Run-Rollback $rollback
+        Check ((Get-Snapshot) -eq $initial) ('rollback direttamente dopo un forward interrotto al passo ' + $n + ': stato iniziale')
+    }
+
+    # --- mutazioni degli script ---
+    if (-not $SkipMutants) {
+        $nl = "`n"
+        $mutants = @(
+            @('registro-non-ripulito', 'DELETE FROM sysparametristored WHERE NomeStore IN', 'DELETE FROM sysparametristored WHERE 1 = 0 AND NomeStore IN'),
+            @('registro-ordine-inverso', 'ORDER BY SPECIFIC_NAME, ORDINAL_POSITION', 'ORDER BY SPECIFIC_NAME, ORDINAL_POSITION DESC'),
+            @('cascata-tolta-opzioni', ('FOREIGN KEY (ExportId) REFERENCES `export` (ID) ON DELETE CASCADE,' + $nl + '  CONSTRAINT ck_export_opzioni_token'), ('FOREIGN KEY (ExportId) REFERENCES `export` (ID),' + $nl + '  CONSTRAINT ck_export_opzioni_token')),
+            @('codice-senza-predefinito-database', 'DEFAULT (HEX(RANDOM_BYTES(24)))', 'DEFAULT ''AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'''),
+            @('riempimento-tolto', 'WHERE NOT EXISTS (SELECT 1 FROM export_opzioni o WHERE o.ExportId = e.ID) ORDER BY e.ID', 'WHERE 1 = 0 ORDER BY e.ID'),
+            @('salvataggio-riscrive-il-codice', 'ON DUPLICATE KEY UPDATE Separatore = nuovo.Separatore', 'ON DUPLICATE KEY UPDATE TokenAccesso = DEFAULT, Separatore = nuovo.Separatore'),
+            @('parametri-scambiati', 'IFNULL(parSeparatore, DEFAULT(Separatore)), IFNULL(parDelimitatoreTesto, DEFAULT(DelimitatoreTesto))', 'IFNULL(parDelimitatoreTesto, DEFAULT(DelimitatoreTesto)), IFNULL(parSeparatore, DEFAULT(Separatore))'),
+            @('duplicato-abilitato', ('NoVettoreSuGratis, 0' + $nl + '  FROM `export` WHERE ID = parId;'), ('NoVettoreSuGratis, Abilitato' + $nl + '  FROM `export` WHERE ID = parId;')),
+            @('duplicato-senza-filtri', ('SottogruppiId, ArticoliId)' + $nl + '    SELECT vNuovo'), ('SottogruppiId, ArticoliId)' + $nl + '    SELECT 0')),
+            @('colonne-id-sbagliato', 'SET parRetVal = LAST_INSERT_ID();', 'SET parRetVal = parExportId;'),
+            @('nuovo-codice-non-cambia', 'UPDATE export_opzioni SET TokenAccesso = DEFAULT WHERE ExportId = parId;', 'UPDATE export_opzioni SET Separatore = Separatore WHERE ExportId = parId;'),
+            @('posizione-non-unica', 'UNIQUE KEY uk_export_colonne_posizione (ExportId, Posizione),', ''),
+            @('opzioni-id-uguale-exportid', 'SELECT Id INTO parRetVal FROM export_opzioni WHERE ExportId = parExportId;', 'SET parRetVal = parExportId;'),
+            @('voce-categoriapercorso-tolta', 'SELECT ''''CategoriaPercorso'''' FROM DUAL', 'SELECT ''''CategoriaPercorsoX'''' FROM DUAL')
+        )
+        $killed = 0; $total = 0
+        foreach ($mu in $mutants) {
+            if ($MutantFilter -ne '' -and $mu[0] -notlike ('*' + $MutantFilter + '*')) { continue }
+            $total++
+            if (-not $forward.Contains($mu[1])) { Write-Host ('  FAIL mutante ' + $mu[0] + ': testo da mutare non trovato'); $e2e.Add('mutante ' + $mu[0] + ' non applicabile'); continue }
+            $mutated = $forward.Replace($mu[1], $mu[2])
+            $null = Run-Rollback $rollback
+            $fails = @(Exercise $mutated 2)
+            if ($fails.Count -gt 0) { $killed++; Write-Host ('  ok   mutante ' + $mu[0] + ' ucciso (' + $fails[0] + ')') }
+            else { Write-Host ('  FAIL mutante ' + $mu[0] + ' sopravvissuto'); $e2e.Add('mutante ' + $mu[0] + ' sopravvissuto') }
+            $null = Run-Rollback $rollback
+            Remove-TestRows
+        }
+        Write-Host ('  mutanti uccisi ' + $killed + '/' + $total)
+    }
+
+    # --- stato finale ---
+    $null = Run-Rollback $rollback
+    Check ((Get-Snapshot) -eq $initial) 'stato finale del LAB identico a quello iniziale'
 } catch {
-    Write-Host ('EXPORT_FEED_DB FAIL: ' + $_.Exception.Message); $exitCode = 1
+    Write-Host ('  FAIL ' + $_.Exception.Message); $exit = 1
 } finally {
-    try { $null = Reset-Clean $migDir } catch { }
+    try { Remove-TestRows } catch { }
+    try {
+        if ((Get-Scalar "SELECT COUNT(*) AS ksval FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('export_opzioni', 'export_stato', 'export_colonne');") -ne '0') {
+            $null = Run-Rollback (Read-Mig 'rollback')
+            Write-Host '  nota: migrazione rimasta sul LAB, annullata dal rollback finale'
+        }
+    } catch { Write-Host ('  ATTENZIONE: pulizia finale non riuscita: ' + $_.Exception.Message); $exit = 1 }
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 }
-exit $exitCode
+if ($e2e.Count -gt 0) { $exit = 1 }
+if ($exit -eq 0) { Write-Host 'EXPORT_FEED_DB PASS' } else { Write-Host 'EXPORT_FEED_DB FAIL' }
+exit $exit

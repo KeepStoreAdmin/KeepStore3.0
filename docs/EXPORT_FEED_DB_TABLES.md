@@ -1,55 +1,38 @@
-# Dati dei feed: colonne nuove di `export` e due tabelle nuove
+# Dati dei feed: tre tabelle nuove, quattro routine nuove (migrazione `EXPORT-FEED-DB-2A`)
 
-`EXPORT-FEED-DB-1A` (task 2 del progetto feed, [manuale](KEEPSTORE_FEED_COMPARATORI_AUDIT_2026_11_25.md)). Questa pagina serve al PO (che applica gli script **solo su `taikun`**) e a Enzo (il cui programma di allineamento li porta sugli altri database). Un solo testo, identico per ogni database: nessun nome di database, cliente, dominio, account o `DEFINER`; nessuna routine e nessun trigger.
+`EXPORT-FEED-DB-2A` (parte del task 4 del progetto feed, [manuale](KEEPSTORE_FEED_COMPARATORI_AUDIT_2026_11_25.md)). Questa pagina serve al PO (che applica gli script **solo su `taikun`**) e a Enzo (il cui programma di allineamento li porta sugli altri database). Un solo testo, identico per ogni database: nessun nome di database, cliente, dominio o account; **nessun `DEFINER`** (il proprietario delle routine e chi esegue lo script: lo stesso account delle routine esistenti). Script: [EXPORT_FEED_DB_SCRIPTS](EXPORT_FEED_DB_SCRIPTS.md). Uso da parte del gestionale: [EXPORT_FEED_GESTIONALE_ENZO](EXPORT_FEED_GESTIONALE_ENZO.md).
 
-**Stato: script NON applicati a nessun database reale.** Provati sul LAB locale da `Tools/Test-ExportFeedDb.ps1` (script reali, ripresa dopo ogni interruzione, 20 mutazioni). Il sito e il gestionale attuali non cambiano: `Newexport`, `Modexport` e `Delexport` usano colonne nominate e continuano a funzionare con la firma di oggi.
+**Stato: script NON applicati a nessun database reale.** Provati sul LAB locale da `Tools/Test-ExportFeedDb.ps1` (script reali, ripresa dopo ogni interruzione, rollback, 14 mutazioni) e da `Tools/ExportFeedGestionaleHarness.vb` (connettore .NET con la stessa logica di `AggiungiDati` e `ExecStoreTrnNoCommit` del gestionale, sul registro REALE).
+
+## 0. Perche questa migrazione sostituisce la `EXPORT-FEED-DB-1A` (mai applicata)
+La `1A` aggiungeva 16 colonne in fondo a `export`. Il gestionale **non passa i parametri per nome**: `SalvaDati` legge `Select * from export where id=-1`, e `AggiungiDati` copia tutte le colonne dalla seconda all'ultima per posizione, poi mette l'`id` nell'ultimo posto; `ExecStoreTrnNoCommit` le assegna alle routine **per posizione** secondo `sysparametristored`. Con 16 colonne in piu `ModExport` riceverebbe `parId = NULL` (aggiorna 0 righe, il salvataggio dice «Errore Salvataggio Dati») e dopo `NewExport` l'id letto in `UBound(ValorePar) - 1` sarebbe vuoto (errore di conversione, annullamento): **il gestionale attuale non avrebbe piu salvato i feed.** La `2A` lascia `export` identica (provato: colonne, righe, routine esistenti e loro registro identici prima e dopo) e mette le novita in tabelle separate.
 
 ## 1. Che cosa fa
-- Aggiunge a `export` quindici colonne di opzione (tutte con valore predefinito) e il **codice del link** `TokenAccesso`, creato **dal database** (48 caratteri esadecimali maiuscoli, `HEX(RANDOM_BYTES(24))`), con indice unico e controllo di formato. I feed che ci sono gia ricevono un codice distinto.
-- Crea `export_colonne` (le colonne del file, una riga per colonna) e `export_stato` (cosa ha fatto il sito: ultima generazione, ultima richiesta, righe, errore). Entrambe si cancellano da sole quando si cancella il feed (chiave esterna con cancellazione a catena).
-- **Non tocca** `exportcampi`, `export_filtri`, le routine del gestionale, ne alcun dato esistente. La riga `CategoriaPercorso` di `exportcampi` la aggiunge il task del gestionale (task 4): il motore (task 3) la scrive gia nel file, ma la riga serve solo al selettore dei campi del gestionale.
+- **`export_opzioni`**: una riga per feed (`Id` automatico, `ExportId` unico con chiave esterna a cascata), il **codice del link** `TokenAccesso` creato **dal database** (48 caratteri esadecimali maiuscoli, `HEX(RANDOM_BYTES(24))`, unico, controllo di formato) e le 15 opzioni del file con il loro predefinito. Una riga per ogni feed esistente viene creata dallo script. **La tabella e congelata**: ogni colonna futura andrebbe nella forma di `Select *` e riporterebbe lo stesso guasto; le opzioni future vanno in un'altra tabella.
+- **`export_colonne`** (le colonne del file) e **`export_stato`** (scritta dal sito: ultima generazione e richiesta, righe, errore): a cascata con il feed.
+- **Quattro routine nuove** (solo aggiuntive; `Newexport`, `Modexport`, `Delexport`, `Newexport_filtri` non cambiano) con le loro righe in `sysparametristored`, generate da `information_schema` nell'ordine dei parametri, **con la stessa regola di `AggiornaDb` del gestionale**: `Newexport_opzioni` (inserisce o aggiorna le opzioni di un feed, mai il codice), `Newexport_colonne` (una colonna del file), `Dupexport` (copia un feed con nuovo codice e `Abilitato = 0`), `Modexport_codice` (nuovo codice).
+- La voce `CategoriaPercorso` in `exportcampi` (selettore dei campi).
 
 ## 2. Come si esegue (SQLyog, un database alla volta, solo dopo il si del PO per quel database)
-I quattro script stanno in [EXPORT_FEED_DB_SCRIPTS](EXPORT_FEED_DB_SCRIPTS.md), un blocco ciascuno (non sono file `.sql` del repository: il repository e pubblico). Tutti gli script iniziano senza `USE`: si sceglie il database nello strumento. Attivare **Halt Execution of Queries on Error** e, dopo qualunque STOP o errore, chiudere la connessione prima di rilanciare (la sessione conserva le variabili).
-1. `20261125_EXPORT_FEED_DB_1A_preflight.sql` (sola lettura): deve dare `EXPORT_FEED_DB_PREFLIGHT_OK`. Mostra database, server, versione e numero di feed: controllare che sia il database voluto. Si ferma se la versione e inferiore a MySQL 8.0.19, se e MariaDB, se il registro binario e attivo in formato `STATEMENT` (i codici sarebbero diversi sulla replica) o se `export` non e come atteso.
-2. `20261125_EXPORT_FEED_DB_1A_forward.sql`: otto passi (`-- STEP 1` ... `-- STEP 8`); alla fine `EXPORT_FEED_DB_FORWARD_OK`. **Si puo rilanciare dopo qualunque interruzione**: ogni passo guarda lo stato reale del database e salta quello che c'e gia.
-3. `20261125_EXPORT_FEED_DB_1A_verify.sql` (sola lettura): tutte le righe `OK` e, in fondo, `EXPORT_FEED_DB_VERIFY_OK`; altrimenti errore deliberato.
-4. **Ritorno indietro:** `20261125_EXPORT_FEED_DB_1A_rollback.sql`, preceduto nella stessa scheda da `SET @KeepStoreConfirmDropFeedData=1;`. Cancella le due tabelle, i codici e le quindici colonne: **dati che un uso successivo avra scritto**; senza la conferma si ferma.
+Attivare **Halt Execution of Queries on Error**; dopo qualunque STOP o errore chiudere la connessione prima di rilanciare (la sessione conserva le variabili). Le routine (`CREATE`/`DROP PROCEDURE` non si possono eseguire con `PREPARE`) non hanno la guardia dei passi sulle tabelle: **il preflight e il cancello**, il forward va lanciato solo dopo un preflight OK. Lanciare lo script con **lo stesso account** delle routine esistenti (il preflight lo stampa).
+1. `preflight`: deve dare `EXPORT_FEED_DB_PREFLIGHT_OK` (versione >= MySQL 8.0.19 non MariaDB, nessun binlog `STATEMENT`, `export`, `sysparametristored` e `exportcampi` presenti). Stampa database, server, account e le routine con gli stessi nomi gia presenti (il forward le sostituisce).
+2. `forward`: otto passi (`-- STEP 1` ... `-- STEP 8`); alla fine `EXPORT_FEED_DB_FORWARD_OK`. **Si puo rilanciare dopo qualunque interruzione** (nessuna riga doppia nel registro).
+3. `verify` (sola lettura): tutte le righe `OK` e in fondo `EXPORT_FEED_DB_VERIFY_OK`.
+4. **Riavviare il gestionale**: carica il registro dei parametri una volta per processo.
+5. Ritorno indietro: `rollback`, preceduto nella stessa scheda da `SET @KeepStoreConfirmDropFeedData=1;` (senza si ferma): cancella le routine nuove, le loro righe di registro, la voce di `exportcampi` e le tre tabelle (**anche i codici dei link e lo stato scritti nel frattempo**).
 
-Perche cinque passi per il codice: un solo `ALTER` con questo valore predefinito fallisce (ERROR 1674, misurato sul LAB). L'ordine e: colonna senza predefinito, **predefinito creato dal database**, riempimento dei feed esistenti, poi non nullo + unico + controllo. Il predefinito viene prima del riempimento, cosi un feed creato mentre la migrazione gira riceve gia il suo codice.
+## 3. Campi nuovi (nomi con soli caratteri ASCII)
+`export_opzioni` (tutte `NOT NULL`; testo `utf8mb4_0900_ai_ci`): `Id` `int` automatico; `ExportId` `int` unico; `TokenAccesso` `varchar(64)` `ascii_bin` unico (predefinito creato dal database); `Separatore` `varchar(5)` `|`; `DelimitatoreTesto` `varchar(1)` vuoto; `Codifica` `varchar(10)` `utf-8`; `SeparatoreDecimale` `varchar(1)` `.`; `Intestazione` `int` 1; `XmlRadice` `varchar(40)` `prodotti`; `XmlElemento` `varchar(40)` `prodotto`; `TogliHtml` `int` 1; `MinutiCache` `int` 60; `ParolaDisponibile` `varchar(40)` `Disponibile`; `ParolaInArrivo` `varchar(40)` `In Arrivo`; `ParolaNonDisponibile` `varchar(40)` `Non Disponibile`; `SenzaImmagine` `int` 0; `SenzaEan` `int` 0; `PrezzoZero` `int` 1. Significato: [EXPORT_FEED_ENGINE](EXPORT_FEED_ENGINE.md). I valori ammessi li valida il motore (con il codice dell'errore in `export_stato.UltimoErrore`): il database non ha controlli su questi campi.
+`export_colonne`: `Id` automatico; `ExportId`; `Posizione` (unica insieme a `ExportId`); `TitoloColonna` `varchar(60)`, `Campo` `varchar(40)` (vuoto = valore fisso), `Prefisso`, `Suffisso` `varchar(40)`, `ValoreFisso` `varchar(100)`, `MassimoCaratteri` `int` (puo essere vuoto), `SeVuoto` `varchar(100)`.
+`export_stato`: `ExportId` (chiave), `UltimaGenerazioneUtc`, `UltimaRichiestaUtc` `datetime`, `UltimeRighe`, `UltimeScartate` `int`, `UltimoErrore` `varchar(200)`; la riga nasce alla prima scrittura del sito: leggerla con `LEFT JOIN`.
 
-## 3. Colonne nuove di `export` (nomi con soli caratteri ASCII)
-Tutte `NOT NULL`; le colonne di testo hanno `utf8mb4` / `utf8mb4_0900_ai_ci`. `export` e `latin1` per default: solo le colonne nuove sono utf8mb4.
+## 4. Privilegi (li da il programma di Enzo, non questi script)
+Account del sito: `SELECT` su `export`, `export_opzioni`, `export_colonne`, `export_filtri`, `aziende`; `SELECT`, `INSERT`, `UPDATE` su `export_stato`; nessuna scrittura sulla configurazione. Account del gestionale: lettura e scrittura sulle tabelle nuove e `EXECUTE` sulle quattro routine.
 
-| Nome | Tipo | Predefinito | Significato |
-| --- | --- | --- | --- |
-| `TokenAccesso` | `varchar(64)` ascii `ascii_bin`, indice unico | creato dal database (48 car.) | codice del link `feed.aspx?c=...`; «Nuovo codice» = `UPDATE export SET TokenAccesso = DEFAULT WHERE ID = ...` |
-| `Separatore` | `varchar(5)` | `\|` | separatore dei campi (txt, csv, tsv) |
-| `DelimitatoreTesto` | `varchar(1)` | vuoto | virgolette attorno ai testi (vuoto = mai) |
-| `Codifica` | `varchar(10)` | `utf-8` | codifica del file |
-| `SeparatoreDecimale` | `varchar(1)` | `.` | `.` oppure `,` |
-| `Intestazione` | `int` | `1` | 1 = prima riga con i titoli |
-| `XmlRadice`, `XmlElemento` | `varchar(40)` | `prodotti`, `prodotto` | solo XML |
-| `TogliHtml` | `int` | `1` | 1 = toglie i tag dai testi lunghi |
-| `MinutiCache` | `int` | `60` | validita del file pronto |
-| `ParolaDisponibile`, `ParolaInArrivo`, `ParolaNonDisponibile` | `varchar(40)` | `Disponibile`, `In Arrivo`, `Non Disponibile` | parole scritte nel campo disponibilita |
-| `SenzaImmagine`, `SenzaEan`, `PrezzoZero` | `int` | `0`, `0`, `1` | 1 = scarta il prodotto |
+## 5. Per Enzo: avvertenze e una domanda
+- **Domanda (la sola aperta):** il programma di allineamento esegue **lo script** sugli altri database o confronta gli schemi e copia le routine? Per gli altri database va lanciato lo script (anche piu volte: e ripetibile).
+- Il registro `sysparametristored` si ricostruisce da solo con `AggiornaDb` solo per le routine modificate dopo `sysappversion.LastProcedureUpdate`: lo script scrive le righe nello stesso formato, senza toccare `sysappversion`.
+- Difetti **preesistenti**, non toccati: `Newexport` restituisce `MAX(id)` e non l'id della propria riga (due creazioni contemporanee possono confondersi: le routine nuove usano `LAST_INSERT_ID()`), `Delexport` e la cancellazione dell'elenco non cancellano le righe di `export_filtri` (orfane, innocue), `OpenTransaction` e `CommitTrns` ignorano gli errori.
 
-I valori ammessi (per esempio `.` o `,` nel separatore decimale, `MinutiCache` positivo) li valida il motore, con ripiego sui predefiniti: il database non ha controlli su questi campi.
-
-## 4. `export_stato` (scritta dal sito, letta dal gestionale)
-`ExportId` `int` non nullo, chiave primaria e chiave esterna verso `export(ID)` con cancellazione a catena; `UltimaGenerazioneUtc`, `UltimaRichiestaUtc` `datetime` (possono essere vuoti); `UltimeRighe`, `UltimeScartate` `int` (possono essere vuoti); `UltimoErrore` `varchar(200)` (puo essere vuoto, senza dati sensibili). La riga di un feed nasce **alla prima scrittura del sito**: l'elenco del gestionale deve leggerla con `LEFT JOIN`, altrimenti nasconde i feed mai generati. Tenerla separata da `export` serve a due cose verificabili: il salvataggio del gestionale (`Modexport`) non compete con le scritture del sito sulla stessa riga, e la configurazione puo restare in sola lettura per il sito.
-
-## 5. `export_colonne`
-`Id` `int` automatico, chiave; `ExportId` `int` non nullo, chiave esterna verso `export(ID)` con cancellazione a catena; `Posizione` `int` non nullo (unica insieme a `ExportId`); `TitoloColonna` `varchar(60)`, `Campo` `varchar(40)` (vuoto = valore fisso), `Prefisso` e `Suffisso` `varchar(40)`, `ValoreFisso` `varchar(100)`, `SeVuoto` `varchar(100)`, tutti non nulli con predefinito vuoto; `MassimoCaratteri` `int` (puo essere vuoto). **Riordinare:** scambiare due `Posizione` direttamente collide con l'unicita: si usa una posizione temporanea libera dentro la stessa transazione.
-
-## 6. Privilegi (li da il programma di Enzo, non questi script)
-L'account del sito ha gia `SELECT` su `export`. Servono: `SELECT` su `export_colonne` e `SELECT`, `INSERT`, `UPDATE` su `export_stato`. Non servono privilegi di scrittura sulla configurazione. Il gestionale ha gia accesso a `export`.
-
-## 7. Per Enzo: una domanda e due avvertenze
-- **Domanda (la sola aperta):** il programma di allineamento esegue **lo script** sugli altri database o confronta gli schemi e crea le colonne? Se confronta gli schemi, il predefinito `HEX(RANDOM_BYTES(24))` su una tabella con righe cade nell'ERROR 1674; se lo copia come testo fisso, tutti i feed avrebbero lo stesso codice (ma l'indice unico lo rifiuta: l'errore e rumoroso, mai silenzioso). Per gli altri database va lanciato **lo script** (anche piu volte: e ripetibile).
-- Il gestionale oggi legge `Select * from Export` (elenco e scheda): finche non applica il layout del task del gestionale vedra le colonne nuove (tra cui il codice) nella griglia.
-- Esistono due difetti **preesistenti** non toccati qui: `Newexport` restituisce `MAX(id)` e non l'identificativo della propria riga (due creazioni contemporanee possono confondersi), e `Delexport` cancella solo la riga di `export` e lascia le righe di `export_filtri` (orfane; `export_filtri` non ha nemmeno un indice su `ExportId`). Vanno nel task del gestionale e in quello del motore.
-
-## 8. Limiti di prova
-Provato su MySQL 8.0.46 del LAB con registro binario disattivato: **non** su 8.0.42, **non** con registro binario attivo (l'arresto con `STATEMENT` e provato sostituendo i valori nella condizione), **non** con replica, **non** con SQLyog. Il preflight stampa versione e impostazioni: se l'esito sul database di destinazione e diverso dal LAB, fermarsi e dirlo.
+## 6. Limiti di prova
+Provato su MySQL 8.0.46 del LAB con registro binario disattivato: **non** su 8.0.42, **non** con registro binario attivo (l'arresto con `STATEMENT` e provato sostituendo i valori nella condizione), **non** con replica, **non** con SQLyog, **non** con il gestionale reale (il programma di prova riscrive fedelmente la logica letta nel repository, in sola lettura). I permessi reali degli account e il valore di `LastProcedureUpdate` sui database reali non sono noti.
