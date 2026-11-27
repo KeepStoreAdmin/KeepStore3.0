@@ -233,6 +233,7 @@
                     </div>
 
                     <asp:Literal ID="litOrderReceipt" runat="server"></asp:Literal>
+                    <asp:Literal ID="litGoogleCustomerReviews" runat="server"></asp:Literal>
                 </asp:Panel>
 
                         <asp:Panel ID="Panel2" runat="server" ClientIDMode="Static" Visible="false" role="alert" aria-live="assertive" tabindex="-1">

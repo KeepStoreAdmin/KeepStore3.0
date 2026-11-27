@@ -25,13 +25,7 @@ Public Module KeepStoreSecurity
         SafeSetHeader(resp, "Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 
         ' CSP "compatibile" (per template legacy): molto permissiva, ma aggiunge frame-ancestors.
-        Dim csp As String = "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; " &
-                            "img-src 'self' data: blob:; " &
-                            "media-src 'self' data: blob:; " &
-                            "font-src 'self' data:; " &
-                            "connect-src 'self' *; " &
-                            "frame-ancestors 'self';"
-        SafeSetHeader(resp, "Content-Security-Policy", csp)
+        SafeSetHeader(resp, "Content-Security-Policy", KeepStoreContentSecurityPolicy.Strict())
 
         SafeSetHeader(resp, "Cross-Origin-Opener-Policy", "same-origin")
         SafeSetHeader(resp, "Cross-Origin-Resource-Policy", "same-origin")
@@ -105,6 +99,13 @@ Public Module KeepStoreSecurity
         If enableHsts AndAlso isHttps Then
             SafeSetHeader(resp, "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         End If
+    End Sub
+
+    ' Solo per la pagina che emette lo snippet di Recensioni dei clienti su Google (GCR-OPTIN-1A): sostituisce la CSP con quella che consente, in piu, lo script e la finestra
+    ' di Google. Va chiamata dopo OnPreInit (che reimposta le intestazioni) e solo con uno snippet costruito; sempre Remove+Add, una sola intestazione.
+    Public Sub AllowGoogleCustomerReviews(resp As HttpResponse)
+        If resp Is Nothing Then Return
+        SafeSetHeader(resp, "Content-Security-Policy", KeepStoreContentSecurityPolicy.WithGoogleCustomerReviews())
     End Sub
 
     Private Sub SafeSetHeader(resp As HttpResponse, name As String, value As String)

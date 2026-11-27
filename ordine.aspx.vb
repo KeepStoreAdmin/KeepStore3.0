@@ -831,6 +831,14 @@ End Sub
         If litOrderReceipt IsNot Nothing Then
             litOrderReceipt.Text = BuildOrderReceiptHtml(conn, documentId, documentLabel, documentNumber, documentDate, String.Empty, identity)
         End If
+        If litGoogleCustomerReviews IsNot Nothing Then litGoogleCustomerReviews.Text = String.Empty
+        If litGoogleCustomerReviews IsNot Nothing AndAlso documentType = KeepStoreGoogleCustomerReviews.OrderDocumentType Then
+            Dim gcr As String = KeepStoreGoogleCustomerReviews.TryBuildForDocument(conn, Me.Session, documentId, ownerUtentiId, identity.CompanyId)
+            If gcr.Length > 0 Then
+                litGoogleCustomerReviews.Text = gcr
+                KeepStoreSecurity.AllowGoogleCustomerReviews(Response)
+            End If
+        End If
         Me.Panel2.Visible = False
         Me.Panel1.Visible = True
         Return True
@@ -1524,6 +1532,10 @@ CheckoutFailureRecoveryService.TracePhase(
                 commitAttempted = True
                 trns.Commit()
                 commitCompleted = True
+                ' GCR-OPTIN-1A: un ordine appena creato puo mostrare l'attivazione di Recensioni dei clienti su Google (ricevuta o ritorno dal gateway). Mai per un preventivo.
+                If TipoDoc = KeepStoreGoogleCustomerReviews.OrderDocumentType Then
+                    KeepStoreGoogleCustomerReviews.MarkPending(Me.Session, orderIdentity.CompanyId, orderIdentity.UtentiId, id)
+                End If
                 trns.Dispose()
                 trns = Nothing
                 CheckoutFailureRecoveryService.TracePhase(
