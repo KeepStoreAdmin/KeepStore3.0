@@ -21,7 +21,7 @@ Task `GOOGLE-MERCHANT-CENTER-FEED-1A` (26/11/2026). Stato: **SOURCE, nulla pubbl
 3. Scheda Merciologia Selezionata: per la prima prova scegli un solo marchio o una categoria con poche decine di articoli.
 4. **Abilita** il feed (casella Abilitato) e salva. Il feed ha un codice lungo casuale: il link e `https://<dominio del negozio>/feed.aspx?c=<codice>`. Il codice si cambia con **Nuovo codice** (il vecchio smette di funzionare).
 5. **Anteprima**: aggiungi `&anteprima=1` al link e aprilo: mostra le prime 20 righe senza contare come lettura di Google. Controlla a occhio:
-   - `title`: le parole maiuscole sono diventate «Parola Parola» (sigle come USB diventano `Usb`: e voluto, e meglio di tutto maiuscolo che Google non ammette);
+   - `title`: i titoli urlati sono diventati «Parola Parola» (sigle come USB diventano `Usb`: e voluto, e meglio di tutto maiuscolo che Google non ammette); i pollici escono come `15.6″`, le citazioni fra `« »`;
    - `price`: `12.34 EUR`, IVA inclusa, uguale alla scheda articolo (per gli articoli in offerta valida oggi per 1 pezzo e il prezzo di offerta);
    - `condition`: `new` oppure `refurbished`;
    - `gtin`: o un codice con 8, 12, 13 o 14 cifre, o vuoto (codici interni del negozio non validi vengono lasciati vuoti di proposito);
@@ -56,8 +56,8 @@ Se tutto e a posto sulla prova, estendi la selezione del feed (o usa il feed com
 2. **`mpn` = `Codice`** (decisione del PO 2026-11-25): non e provato che ogni codice sia un vero codice del produttore. Circa 70 articoli su 1.569 (4,5%) non hanno un GTIN valido: per loro Google si basera su marchio e `mpn`.
 3. **`identifier_exists` non viene scritto**: per un articolo senza GTIN e senza un `mpn` che Google riconosce, Google chiedera di dichiarare «nessun identificativo».
 4. **14 valori di EAN compaiono su articoli diversi** (varianti con lo stesso codice a barre): Google puo segnalarli come duplicati.
-5. **Virgolette**: i titoli con virgolette interne (pollici) non vengono modificati; se la diagnostica li segnala, le specifiche non dicono che sia un errore, ma e il primo punto da controllare.
-6. **Titoli normalizzati**: regola solo strutturale (parole con cifre invariate, le altre con la sola iniziale maiuscola). Le sigle senza cifre (`USB`, `SSD`, `HDMI`) diventano `Usb`, `Ssd`, `Hdmi`. Se non ti piace, nel feed duplicato usa il campo `Descrizione1` nella colonna `title` (ma i titoli tutto maiuscolo saranno segnalati da Google).
+5. **Virgolette**: nel titolo i pollici diventano `″` e le citazioni `« »` (o `'` se dispari); la descrizione non viene modificata e puo contenere ancora `"`: se la diagnostica segnala righe con colonne in meno, e il primo punto da controllare.
+6. **Titoli normalizzati** (FEED-TITLES-1B): un titolo e "urlato" se non ha minuscole o se almeno il 60% delle lettere delle parole di 5 o piu lettere senza cifre e maiuscolo; allora ogni parola senza cifre prende la sola iniziale maiuscola (anche dopo `-` e `/`), le parole con cifre restano. Le sigle senza cifre (`USB`, `SSD`, `HDMI`, `HP`) diventano `Usb`, `Ssd`, `Hdmi`, `Hp`. Circa 114 titoli (testa urlata, coda mista) restano come sono. Se non ti piace, nel feed duplicato usa il campo `Descrizione1` nella colonna `title` (ma i titoli tutto maiuscolo saranno segnalati da Google).
 7. Per Trovaprezzi / 7Pixel e idealo vedi [EXPORT_FEED_ESEMPI](EXPORT_FEED_ESEMPI.md): in questa guida c'e solo Google.
 
 CONSEGNA SERVER SOSPESA.

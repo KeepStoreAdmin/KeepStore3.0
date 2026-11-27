@@ -19,6 +19,14 @@ Public Module ExportFeedEngineHarness
         End If
     End Sub
 
+    Private Function HexOf(ByVal enc As Encoding, ByVal text As String) As String
+        Dim sb As New StringBuilder()
+        For Each bt As Byte In enc.GetBytes(text)
+            sb.Append(bt.ToString("X2"))
+        Next
+        Return sb.ToString()
+    End Function
+
     Private Function Col(ByVal title As String, ByVal source As String) As KeepStoreFeedColumn
         Dim c As New KeepStoreFeedColumn()
         c.Title = title
@@ -280,15 +288,47 @@ Public Module ExportFeedEngineHarness
         Check(KeepStoreFeedEngine.ValidGtin("212345678909") = "" AndAlso KeepStoreFeedEngine.ValidGtin("412345678903") = "", "gtin: UPC-A che comincia con 2 o 4 non ammesso")
         Check(KeepStoreFeedEngine.ValidGtin("0012345678905") = "0012345678905", "gtin: prefisso 00 ammesso")
         Check(KeepStoreFeedEngine.ValidGtin("") = "" AndAlso KeepStoreFeedEngine.ValidGtin(Nothing) = "", "gtin: vuoto")
-        ' NormalizeTitle: solo se non c'e nessuna lettera minuscola.
-        Check(KeepStoreFeedEngine.NormalizeTitle("CAVO DI RETE EWENT") = "Cavo Di Rete Ewent", "titolo: tutto maiuscolo normalizzato")
-        Check(KeepStoreFeedEngine.NormalizeTitle("HARD DISK 2.5"" STKM2000400 2TB USB 3.0") = "Hard Disk 2.5"" STKM2000400 2TB Usb 3.0", "titolo: le parole con cifre restano")
-        Check(KeepStoreFeedEngine.NormalizeTitle("HP USB-C") = "Hp Usb-c", "titolo: parola con trattino")
-        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo HDMI 2m SSD") = "Cavo HDMI 2m SSD", "titolo: con almeno una minuscola resta com'e")
-        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo ""A&B"" <rosso>;" & vbCrLf & "x") = "Cavo ""A&B"" <rosso>; x", "titolo: ripulito ma non cambiato")
-        Check(KeepStoreFeedEngine.NormalizeTitle("CAFF" & ChrW(&HC8) & " NERO") = "Caff" & ChrW(&HE8) & " Nero", "titolo: lettere accentate")
-        Check(KeepStoreFeedEngine.NormalizeTitle("123 456") = "123 456" AndAlso KeepStoreFeedEngine.NormalizeTitle("") = "" AndAlso KeepStoreFeedEngine.NormalizeTitle(Nothing) = "", "titolo: senza lettere o vuoto")
-        Check(KeepStoreFeedEngine.NormalizeTitle("A  B") = "A B", "titolo: spazi compressi")
+        ' NormalizeTitle (FEED-TITLES-1B): urlato = nessuna minuscola, oppure maiuscole/(maiuscole+minuscole) >= 0,6 sulle sole parole senza cifre con almeno 5 lettere.
+        ' Ricomposizione per segmenti (spazio, trattino, barra) con la maiuscola sulla prima LETTERA; virgolette: pollici dopo cifra, citazioni a coppie. Attesi scritti a mano.
+        Dim qd As String = ChrW(34)
+        Dim prime As String = ChrW(&H2033)
+        Dim lq As String = ChrW(&HAB)
+        Dim rq As String = ChrW(&HBB)
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAVO DI RETE EWENT", True) = "Cavo Di Rete Ewent", "titolo: tutto maiuscolo normalizzato")
+        Check(KeepStoreFeedEngine.NormalizeTitle("HARD DISK 2.5" & qd & " STKM2000400 2TB USB 3.0", True) = "Hard Disk 2.5" & prime & " STKM2000400 2TB Usb 3.0", "titolo: le parole con cifre restano, il pollice diventa primo doppio")
+        Check(KeepStoreFeedEngine.NormalizeTitle("HARD DISK 2.5" & qd & " STKM2000400 2TB USB 3.0", False) = "Hard Disk 2.5" & qd & " STKM2000400 2TB Usb 3.0", "titolo: codifica senza primo doppio, il pollice resta virgoletta")
+        Check(KeepStoreFeedEngine.NormalizeTitle("HP USB-C", True) = "Hp Usb-C", "titolo: ogni segmento con trattino")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo HDMI 2m SSD", True) = "Cavo HDMI 2m SSD", "titolo: normale con sigle resta com'e")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo HDMI SSD LED 2m", True) = "Cavo HDMI SSD LED 2m" AndAlso KeepStoreFeedEngine.NormalizeTitle("Cavo USB-C HDMI LED", True) = "Cavo USB-C HDMI LED" AndAlso KeepStoreFeedEngine.NormalizeTitle("Scheda Video NVIDIA RTX", True) = "Scheda Video NVIDIA RTX", "titolo: le sigle corte non rendono urlato un titolo normale")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo HDMI LAN WIFI 2m", True) = "Cavo HDMI LAN WIFI 2m", "titolo: parole di 4 lettere non contano nel rapporto")
+        Check(KeepStoreFeedEngine.NormalizeTitle("ALPHA beta 2m", True) = "Alpha beta 2m", "titolo: una parola di 5 lettere conta nel rapporto")
+        Check(KeepStoreFeedEngine.NormalizeTitle("CUSTODIA IN SILICONE 2mm CON MagSafe PROTEZIONE FOTOCAMERA ( NERO ) PER SAMSUNG S26 ULTRA 5G", True) = "Custodia In Silicone 2mm Con MagSafe Protezione Fotocamera ( Nero ) Per Samsung S26 Ultra 5G", "titolo: urlato con minuscole sparse")
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAVO DI RETE (NERO) ORIGINALE", True) = "Cavo Di Rete (Nero) Originale", "titolo: la maiuscola va sulla prima lettera, non sul primo carattere")
+        Check(KeepStoreFeedEngine.NormalizeTitle("SCHEDA S-ATA KDI/ANYCOOL DDR-II", True) = "Scheda S-Ata Kdi/Anycool Ddr-Ii", "titolo: trattino e barra separano i segmenti")
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAPACITA' DALL'ANELLO PROTEZIONE", True) = "Capacita' Dall'anello Protezione", "titolo: apostrofo")
+        Check(KeepStoreFeedEngine.NormalizeTitle("TONER BROTHER COMPATIBILE TN-243BK / TN-247BK NERO", True) = "Toner Brother Compatibile TN-243BK / TN-247BK Nero", "titolo: codici con cifre e trattino interi")
+        Check(KeepStoreFeedEngine.NormalizeTitle("ALPHA BRAVO CHARL delta echoo", True) = "Alpha Bravo Charl delta echoo", "titolo: rapporto esattamente 0,6 e urlato")
+        Check(KeepStoreFeedEngine.NormalizeTitle("ALPHA BRAVO CHARL delta echoos", True) = "ALPHA BRAVO CHARL delta echoos", "titolo: rapporto appena sotto 0,6 non e urlato")
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAVO USB", True) = "Cavo Usb" AndAlso KeepStoreFeedEngine.NormalizeTitle("Cavo USB 2m", True) = "Cavo USB 2m", "titolo: senza parole lunghe vale solo il tutto maiuscolo")
+        Check(KeepStoreFeedEngine.NormalizeTitle("CAFF" & ChrW(&HC8) & " NERO", True) = "Caff" & ChrW(&HE8) & " Nero", "titolo: lettere accentate")
+        Check(KeepStoreFeedEngine.NormalizeTitle(ChrW(&H4E2D) & ChrW(&H6587) & " USB", True) = ChrW(&H4E2D) & ChrW(&H6587) & " Usb", "titolo: lettere senza maiuscola restano")
+        Check(KeepStoreFeedEngine.NormalizeTitle("123 456", True) = "123 456" AndAlso KeepStoreFeedEngine.NormalizeTitle("", True) = "" AndAlso KeepStoreFeedEngine.NormalizeTitle(Nothing, True) = "", "titolo: senza lettere o vuoto")
+        Check(KeepStoreFeedEngine.NormalizeTitle("A  B", True) = "A B", "titolo: spazi compressi")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo " & qd & "A&B" & qd & " <rosso>;" & vbCrLf & "x", True) = "Cavo " & lq & "A&B" & rq & " <rosso>; x", "titolo: ripulito, citazione fra virgolette basse")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Cavo " & qd & "OUT nero", True) = "Cavo 'OUT nero", "titolo: citazione dispari diventa apostrofo")
+        Check(KeepStoreFeedEngine.NormalizeTitle(qd & "B&W" & qd & " stampante", True) = lq & "B&W" & rq & " stampante", "titolo: citazione a inizio valore")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Monitor 15.6" & qd & " " & qd & "Pro" & qd & " nero", True) = "Monitor 15.6" & prime & " " & lq & "Pro" & rq & " nero", "titolo: pollici e citazione insieme")
+        Check(KeepStoreFeedEngine.NormalizeTitle("Monitor 15.6" & qd & " " & qd & "Pro" & qd & " nero", False) = "Monitor 15.6" & qd & " " & lq & "Pro" & rq & " nero", "titolo: pollici senza primo doppio, citazione sempre rappresentabile")
+        Check(KeepStoreFeedEngine.NormalizeTitle("HARD DISK " & qd & "OUT" & qd & " 2TB", True) = "Hard Disk " & lq & "Out" & rq & " 2TB", "titolo: urlato con citazione")
+        Check(KeepStoreFeedEngine.NormalizeTitle(ChrW(&H4E2D) & ChrW(&H6587) & ChrW(&H4E2D) & ChrW(&H6587) & ChrW(&H4E2D) & " ALPHA beta", True) = ChrW(&H4E2D) & ChrW(&H6587) & ChrW(&H4E2D) & ChrW(&H6587) & ChrW(&H4E2D) & " Alpha beta", "titolo: le lettere senza maiuscola non contano nel rapporto")
+        Check(KeepStoreFeedEngine.EngineVersion = "E3", "versione del motore E3: i file pronti col titolo vecchio si rigenerano")
+        Dim idem As String() = New String() {"CAVO DI RETE (NERO) ORIGINALE", "HARD DISK 2.5" & qd & " USB-C", "Monitor 15.6" & qd & " " & qd & "Pro" & qd & " nero", "ALPHA BRAVO CHARL delta echoo", "SCHEDA S-ATA KDI/ANYCOOL"}
+        Dim idemOk As Boolean = True
+        For Each it As String In idem
+            Dim once As String = KeepStoreFeedEngine.NormalizeTitle(it, True)
+            If KeepStoreFeedEngine.NormalizeTitle(once, True) <> once Then idemOk = False
+        Next
+        Check(idemOk, "titolo: applicata due volte da lo stesso risultato")
         ' Token nuovi: valore, conoscenza (Validate) e campi esistenti invariati.
         Dim gr As KeepStoreFeedRow = Row()
         Dim go As New KeepStoreFeedOptions()
@@ -313,6 +353,27 @@ Public Module ExportFeedEngineHarness
         Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = "Cavo Rete" AndAlso KeepStoreFeedEngine.TokenValue("Descrizione1", gr, gc, go) = "CAVO RETE", "token TitoloNormalizzato e Descrizione1 invariato")
         go.LowerCaseTitle = True
         Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = "Cavo Rete", "token TitoloNormalizzato non dipende da Tutto in minuscolo")
+        go.LowerCaseTitle = False
+        gr.Title1 = "MONITOR 15.6" & qd & " " & qd & "PRO" & qd & " NERO"
+        Dim wantUtf As String = "Monitor 15.6" & prime & " " & lq & "Pro" & rq & " Nero"
+        Dim wantLat As String = "Monitor 15.6" & qd & " " & lq & "Pro" & rq & " Nero"
+        go.EncodingName = "utf-8"
+        Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = wantUtf, "token TitoloNormalizzato: utf-8 con primo doppio")
+        go.EncodingName = "iso-8859-1"
+        Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = wantLat, "token TitoloNormalizzato: iso-8859-1 senza primo doppio")
+        go.EncodingName = "windows-1252"
+        Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = wantLat, "token TitoloNormalizzato: windows-1252 senza primo doppio")
+        go.Format = "xml"
+        Check(KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go) = wantUtf, "token TitoloNormalizzato: xml e sempre utf-8")
+        go.Format = "txt"
+        go.EncodingName = "iso-8859-1"
+        Check(HexOf(KeepStoreFeedEngine.ResolveEncoding("iso-8859-1"), KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go)) = "4D6F6E69746F7220" & "31352E3622" & "20AB" & "50726F" & "BB204E65726F", "titolo in iso-8859-1: byte esatti, nessun punto interrogativo")
+        go.EncodingName = "utf-8"
+        Check(HexOf(KeepStoreFeedEngine.ResolveEncoding("utf-8"), KeepStoreFeedEngine.TokenValue("TitoloNormalizzato", gr, gc, go)) = "4D6F6E69746F7220" & "31352E36E280B3" & "20C2AB" & "50726F" & "C2BB204E65726F", "titolo in utf-8: byte esatti")
+        Check(KeepStoreFeedEngine.TokenValue("Descrizione1", gr, gc, go) = gr.Title1, "token Descrizione1 conserva le virgolette")
+        gr.LongText = "Misura 15" & qd & " e " & qd & "citazione" & qd
+        Check(KeepStoreFeedEngine.TokenValue("DescrizioneSoloTesto", gr, gc, go) = "Misura 15" & qd & " e " & qd & "citazione" & qd, "token DescrizioneSoloTesto conserva le virgolette")
+        gr.Title1 = "CAVO RETE"
         Dim vcols As New List(Of KeepStoreFeedColumn)()
         vcols.Add(Col("a", "#CondizioneInglese#"))
         vcols.Add(Col("b", "#EanValido#"))

@@ -105,7 +105,7 @@ Public NotInheritable Class KeepStoreFeedEngine
     Private Shared ReadOnly TokenCodeRegex As New Regex("^[0-9A-F]{48}$", RegexOptions.Compiled)
 
     ' Versione del formato dei file pronti: fa parte dell'impronta (cambiandola si rigenerano tutti).
-    Public Const EngineVersion As String = "E2"
+    Public Const EngineVersion As String = "E3"
     Public Const PreviewTextLines As Integer = 20
     Public Const PreviewXmlLines As Integer = 80
     Public Const PreviewMaxBytes As Integer = 32768
@@ -331,30 +331,123 @@ Public NotInheritable Class KeepStoreFeedEngine
         Return s
     End Function
 
-    ' Titolo per i destinatari che non ammettono il tutto maiuscolo: se il titolo NON ha nessuna lettera minuscola, ogni parola senza cifre diventa maiuscola iniziale e
-    ' resto minuscolo (le parole con cifre, per esempio i codici modello, restano); un titolo con almeno una minuscola resta com'e (solo ripulito). Regola solo strutturale.
-    Public Shared Function NormalizeTitle(ByVal raw As String) As String
-        Dim t As String = CleanText(raw, False)
-        If t.Length = 0 Then Return ""
-        For Each ch As Char In t
-            If Char.IsLower(ch) Then Return t
-        Next
+    ' Titolo per i destinatari che non ammettono il tutto maiuscolo (FEED-TITLES-1B). Il testo e ripulito (CleanText) e le virgolette sono sistemate SEMPRE: un pollice (virgoletta
+    ' subito dopo una cifra) diventa U+2033 se il file e xml o utf-8 (altrimenti resta com'e: nessun punto interrogativo), le altre sono citazioni e diventano virgolette basse a coppie (U+00AB e U+00BB), oppure
+    ' tutte apostrofo se sono in numero dispari. Poi, SOLO se il titolo e "urlato", ogni parola senza cifre si ricompone per segmenti (spazio, trattino, barra): un segmento tutto
+    ' maiuscolo diventa maiuscola sulla prima LETTERA e resto minuscolo; un segmento con una minuscola resta; le parole con cifre (codici modello) restano intere. Regola solo strutturale.
+    Public Shared Function NormalizeTitle(ByVal raw As String, ByVal primeAllowed As Boolean) As String
+        Dim t As String = FixTitleQuotes(CleanText(raw, False), primeAllowed)
+        If t.Length = 0 OrElse Not IsShoutingTitle(t) Then Return t
         Dim words As String() = t.Split(" "c)
         For i As Integer = 0 To words.Length - 1
-            Dim w As String = words(i)
-            Dim hasDigit As Boolean = False
-            For Each ch As Char In w
-                If Char.IsDigit(ch) Then
-                    hasDigit = True
-                    Exit For
-                End If
-            Next
-            If Not hasDigit AndAlso w.Length > 0 Then
-                Dim lower As String = w.ToLowerInvariant()
-                words(i) = lower.Substring(0, 1).ToUpperInvariant() & lower.Substring(1)
-            End If
+            If words(i).Length > 0 AndAlso Not HasDigit(words(i)) Then words(i) = CapitalizeSegments(words(i))
         Next
         Return String.Join(" ", words)
+    End Function
+
+    ' Il primo doppio (U+2033) esiste solo in utf-8 e in xml (sempre utf-8): in iso-8859-1 e windows-1252 uscirebbe come punto interrogativo.
+    Private Shared Function PrimeAllowed(ByVal opts As KeepStoreFeedOptions) As Boolean
+        If NormalizeFormat(opts.Format) = "xml" Then Return True
+        Dim enc As Encoding = ResolveEncoding(opts.EncodingName)
+        Return enc IsNot Nothing AndAlso enc.CodePage = 65001
+    End Function
+
+    Private Shared Function HasDigit(ByVal word As String) As Boolean
+        For Each ch As Char In word
+            If Char.IsDigit(ch) Then Return True
+        Next
+        Return False
+    End Function
+
+    ' Urlato = nessuna lettera minuscola, oppure maiuscole/(maiuscole+minuscole) >= 0,6 contando solo le parole (separate da spazio) senza cifre e con almeno 5 lettere:
+    ' le sigle corte (USB, HDMI, SSD) e i codici con cifre non pesano. Aritmetica intera: nessun confronto in virgola mobile sul confine.
+    Private Shared Function IsShoutingTitle(ByVal t As String) As Boolean
+        Dim anyLower As Boolean = False
+        For Each ch As Char In t
+            If Char.IsLower(ch) Then
+                anyLower = True
+                Exit For
+            End If
+        Next
+        If Not anyLower Then Return True
+        Dim up As Integer = 0
+        Dim lo As Integer = 0
+        For Each w As String In t.Split(" "c)
+            If w.Length = 0 OrElse HasDigit(w) Then Continue For
+            Dim letters As Integer = 0
+            Dim wu As Integer = 0
+            Dim wl As Integer = 0
+            For Each ch As Char In w
+                If Char.IsLetter(ch) Then
+                    letters += 1
+                    If Char.IsUpper(ch) Then
+                        wu += 1
+                    ElseIf Char.IsLower(ch) Then
+                        wl += 1
+                    End If
+                End If
+            Next
+            If letters >= 5 Then
+                up += wu
+                lo += wl
+            End If
+        Next
+        Return up + lo > 0 AndAlso up * 10 >= (up + lo) * 6
+    End Function
+
+    Private Shared Function CapitalizeSegments(ByVal word As String) As String
+        Dim sb As New StringBuilder(word.Length)
+        Dim seg As New StringBuilder()
+        For Each ch As Char In word
+            If ch = "-"c OrElse ch = "/"c Then
+                sb.Append(CapitalizeSegment(seg.ToString())).Append(ch)
+                seg.Length = 0
+            Else
+                seg.Append(ch)
+            End If
+        Next
+        sb.Append(CapitalizeSegment(seg.ToString()))
+        Return sb.ToString()
+    End Function
+
+    ' Un segmento con almeno una maiuscola e nessuna minuscola diventa minuscolo con la maiuscola sulla prima lettera (non sul primo carattere: "(NERO" diventa "(Nero").
+    Private Shared Function CapitalizeSegment(ByVal seg As String) As String
+        Dim hasUpper As Boolean = False
+        For Each ch As Char In seg
+            If Char.IsLower(ch) Then Return seg
+            If Char.IsUpper(ch) Then hasUpper = True
+        Next
+        If Not hasUpper Then Return seg
+        Dim lower As String = seg.ToLowerInvariant()
+        For k As Integer = 0 To lower.Length - 1
+            If Char.IsLetter(lower(k)) Then Return lower.Substring(0, k) & Char.ToUpperInvariant(lower(k)) & lower.Substring(k + 1)
+        Next
+        Return lower
+    End Function
+
+    Private Shared Function FixTitleQuotes(ByVal t As String, ByVal primeAllowed As Boolean) As String
+        If t.IndexOf(""""c) < 0 Then Return t
+        Dim cites As Integer = 0
+        For i As Integer = 0 To t.Length - 1
+            If t(i) = """"c AndAlso Not (i > 0 AndAlso Char.IsDigit(t(i - 1))) Then cites += 1
+        Next
+        Dim paired As Boolean = (cites Mod 2 = 0)
+        Dim opening As Boolean = True
+        Dim sb As New StringBuilder(t.Length)
+        For i As Integer = 0 To t.Length - 1
+            Dim ch As Char = t(i)
+            If ch <> """"c Then
+                sb.Append(ch)
+            ElseIf i > 0 AndAlso Char.IsDigit(t(i - 1)) Then
+                sb.Append(If(primeAllowed, ChrW(&H2033), ch))
+            ElseIf paired Then
+                sb.Append(If(opening, ChrW(&HAB), ChrW(&HBB)))
+                opening = Not opening
+            Else
+                sb.Append("'"c)
+            End If
+        Next
+        Return sb.ToString()
     End Function
 
     ' Caratteri ammessi da XML 1.0 (le coppie surrogate valide passano).
@@ -463,7 +556,7 @@ Public NotInheritable Class KeepStoreFeedEngine
             Case "condizioneinglese" : Return If(row.Refurbished = 1, "refurbished", "new")
             Case "eanvalido" : Return ValidGtin(row.Ean)
             Case "descrizionesolotesto" : Return PlainText(row.LongText)
-            Case "titolonormalizzato" : Return NormalizeTitle(row.Title1)
+            Case "titolonormalizzato" : Return NormalizeTitle(row.Title1, PrimeAllowed(opts))
             Case "costospedizioneprodo" : Return row.ShippingCost
             Case "descrizione1"
                 Dim t As String = CleanText(row.Title1, False)

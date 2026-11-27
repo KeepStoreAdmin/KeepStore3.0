@@ -79,12 +79,46 @@ function Gs1-Valid([string]$raw) {
     return $s
 }
 function Title-Norm([string]$t) {
+    # FEED-TITLES-1B: seconda scrittura indipendente della regola (oracolo). Virgolette: pollice (dopo una cifra) = U+2033 (il feed Google e utf-8), le altre a coppie U+00AB U+00BB, dispari = apostrofo.
     $t = Clean $t
-    if ($t -eq '' -or $t -cmatch '\p{Ll}') { return $t }
+    if ($t -eq '') { return $t }
+    $dq = [char]34
+    $cites = 0
+    for ($i = 0; $i -lt $t.Length; $i++) { if ($t[$i] -eq $dq -and -not ($i -gt 0 -and [char]::IsDigit($t[$i - 1]))) { $cites++ } }
+    $paired = (($cites % 2) -eq 0); $open = $true
+    $sb = New-Object Text.StringBuilder
+    for ($i = 0; $i -lt $t.Length; $i++) {
+        $c = $t[$i]
+        if ($c -ne $dq) { [void]$sb.Append($c) }
+        elseif ($i -gt 0 -and [char]::IsDigit($t[$i - 1])) { [void]$sb.Append([char]0x2033) }
+        elseif ($paired) { if ($open) { [void]$sb.Append([char]0xAB) } else { [void]$sb.Append([char]0xBB) }; $open = -not $open }
+        else { [void]$sb.Append([char]39) }
+    }
+    $t = $sb.ToString()
+    $shout = ($t -cnotmatch '\p{Ll}')
+    if (-not $shout) {
+        $up = 0; $lo = 0
+        foreach ($w in $t.Split(' ')) {
+            if ($w.Length -eq 0 -or $w -match '\d') { continue }
+            $letters = [regex]::Matches($w, '\p{L}').Count
+            if ($letters -ge 5) { $up += [regex]::Matches($w, '\p{Lu}').Count; $lo += [regex]::Matches($w, '\p{Ll}').Count }
+        }
+        $shout = (($up + $lo) -gt 0 -and ($up * 10) -ge (($up + $lo) * 6))
+    }
+    if (-not $shout) { return $t }
     $words = $t.Split(' ')
     for ($i = 0; $i -lt $words.Count; $i++) {
         $w = $words[$i]
-        if ($w.Length -gt 0 -and $w -notmatch '\d') { $words[$i] = $w.Substring(0, 1).ToUpperInvariant() + $w.Substring(1).ToLowerInvariant() }
+        if ($w.Length -eq 0 -or $w -match '\d') { continue }
+        $segs = [regex]::Split($w, '([-/])')
+        for ($k = 0; $k -lt $segs.Count; $k++) {
+            $g = $segs[$k]
+            if ($g -eq '-' -or $g -eq '/' -or $g -cmatch '\p{Ll}' -or $g -cnotmatch '\p{Lu}') { continue }
+            $g = $g.ToLowerInvariant()
+            $m = [regex]::Match($g, '\p{L}')
+            $segs[$k] = $g.Substring(0, $m.Index) + $g.Substring($m.Index, 1).ToUpperInvariant() + $g.Substring($m.Index + 1)
+        }
+        $words[$i] = ($segs -join '')
     }
     return ($words -join ' ')
 }
@@ -208,8 +242,8 @@ try {
             if (-not $oraMap.ContainsKey($id)) { continue }
             $a = $oraMap[$id]
             $tRaw = Clean (Unesc $a['t']); $br = Clean (Unesc $a['b']); $ean = (Unesc $a['e']).Trim(); $cod = Clean (Unesc $a['c'])
-            # il titolo si confronta sempre, tranne quando e tutto maiuscolo E ha caratteri non ASCII: li la normalizzazione dipende da lettere che la console altera
-            $nonAscii = (($tRaw -match '[^\x20-\x7E]|\?') -and ($tRaw -cnotmatch '[a-z]'))
+            # il titolo si confronta sempre, tranne quando ha caratteri non ASCII: li la normalizzazione dipende da lettere che la console altera
+            $nonAscii = ($tRaw -match '[^\x20-\x7E]|\?')
             if ($nonAscii) { $skipTitle++ }
             $gx = Gs1-Valid $ean
             if ($gx -ne '') { $gtinExp++ }

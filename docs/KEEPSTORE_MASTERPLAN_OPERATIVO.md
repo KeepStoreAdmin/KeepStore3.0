@@ -1,5 +1,17 @@
 # KeepStore Masterplan Operativo
 
+## FEED-TITLES-1B — 27/11/2026 — SOURCE (titoli del feed Google ricomposti con una regola piu fedele, pollici e citazioni)
+
+**Esito: A (SOURCE, nulla pubblicato, nessun database toccato). Livello M. PR [#699](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/699).** `TitoloNormalizzato` ricompone ora anche i titoli con qualche minuscola ma di fatto urlati (1.566 su 1.680 esportabili contro 529): un titolo e urlato se non ha minuscole o se almeno il 60% delle lettere delle parole senza cifre di 5 o piu lettere e maiuscolo; maiuscola sulla prima lettera, anche dopo `-` e `/`. Le virgolette del titolo: pollice dopo cifra = U+2033 (solo utf-8/xml, altrimenti resta), citazioni = virgolette basse a coppie (apostrofo se dispari). `DescrizioneSoloTesto` e i campi vecchi non cambiano. `EngineVersion` E3: i file pronti si rigenerano (contenuto identico per i 42 feed vecchi).
+
+**Fatti e causa.** La regola vecchia si fermava alla prima minuscola (529 titoli); un criterio a lettere con soglia 0,7/0,8 lascia urlati 217/336 titoli o altera `Cavo HDMI SSD LED 2m`; il file di misura era in CP850 (conteggi identici). 549 titoli con `"`: `"OUT"` non e un pollice e `2.5″` in iso-8859-1 diventerebbe `?`.
+
+**Revisioni.** ChatGPT: eseguita, accolto: contratto delle virgolette, prima lettera, `EngineVersion`, test indipendenti e sui byte; scartato: «misura non fedele» come bloccante (cp850, conteggi uguali). Claude (Opus): eseguita, accolto: criterio sulle parole da 5 lettere con soglia 0,6, `«»`/pollici, mutanti inapplicabili riscritti, `DescrizioneSoloTesto` esclusa. Gate di certezza: PASS con limiti.
+
+**Prove.** Collaudo unitario 171 casi, mutanti **70/70** motore e **30/30** sorgente (21 nuovi); `Test-ExportFeedExamples.ps1` PASS con un secondo oracolo PowerShell su tutti i titoli del LAB; `Test-ExportFeedEngine` sezione C non eseguibile (la copia del LAB ha gia `export_opzioni`: limite d'ambiente, non del cambio).
+
+**Limiti e residuo (NON AVVIATO).** 114 titoli con testa urlata e coda mista restano; sigle diventano `Usb`, `Hp`, `Tp-Link`; soglia 0,6 e `«»` da confermare dal PO su un campione; policy Google e accettazione in Merchant Center non provabili offline. **Alla consegna futura:** copiare `App_Code/KeepStoreFeedEngine.vb`. CONSEGNA SERVER SOSPESA.
+
 ## GOOGLE-MERCHANT-CENTER-FEED-1A — 26/11/2026 — SOURCE (feed Google conforme alle regole pubblicate, quattro campi nuovi del motore, guida al collegamento)
 
 **Esito: A (SOURCE, nulla pubblicato, nessun database reale toccato). Livello L. PR [#698](https://github.com/KeepStoreAdmin/KeepStore3.0/pull/698).** Il motore dei feed ha quattro campi nuovi e generici (nessun comparatore nel codice): `CondizioneInglese` (`new`/`refurbished`), `EanValido` (GTIN GS1 con cifra di controllo e prefissi ammessi, altrimenti vuoto), `DescrizioneSoloTesto` (testo senza commenti, script, stile e tag) e `TitoloNormalizzato` (solo se il titolo e tutto maiuscolo). L'esempio Google ora ha 13 colonne (`condition`, `mpn`, `gtin` valido, titolo e descrizione normalizzati) e si puo abilitare; nuova guida [GOOGLE_MERCHANT_CENTER_COLLEGAMENTO](GOOGLE_MERCHANT_CENTER_COLLEGAMENTO.md). I campi esistenti e i 56 feed attuali non cambiano.
