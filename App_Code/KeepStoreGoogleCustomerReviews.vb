@@ -24,9 +24,9 @@ Public NotInheritable Class KeepStoreGoogleCustomerReviews
     Public Const OrderDocumentType As Integer = 4
     Public Const DefaultDeliveryDays As Integer = 5
 
-    Private Shared ReadOnly MerchantRegex As New Regex("^[0-9]{1,20}$", RegexOptions.Compiled Or RegexOptions.CultureInvariant)
-    Private Shared ReadOnly CountryRegex As New Regex("^[A-Z]{2}$", RegexOptions.Compiled Or RegexOptions.CultureInvariant)
-    Private Shared ReadOnly EmailRegex As New Regex("^[^@\s<>""]+@[^@\s<>""]+\.[^@\s<>""]+$", RegexOptions.Compiled Or RegexOptions.CultureInvariant)
+    Private Shared ReadOnly MerchantRegex As New Regex("^[0-9]{1,20}\z", RegexOptions.Compiled Or RegexOptions.CultureInvariant)
+    Private Shared ReadOnly CountryRegex As New Regex("^[A-Z]{2}\z", RegexOptions.Compiled Or RegexOptions.CultureInvariant)
+    Private Shared ReadOnly EmailRegex As New Regex("^[^@\s<>""]+@[^@\s<>""]+\.[^@\s<>""]+\z", RegexOptions.Compiled Or RegexOptions.CultureInvariant)
 
     ' ---------- snippet ----------
 
@@ -163,7 +163,13 @@ Public NotInheritable Class KeepStoreGoogleCustomerReviews
                     country = Convert.ToString(dr("nazione"), CultureInfo.InvariantCulture).Trim().ToUpperInvariant()
                     tipo = Convert.ToInt32(dr("tipo"), CultureInfo.InvariantCulture)
                     Dim rawDate As Object = dr("data_documento")
-                    If rawDate IsNot Nothing AndAlso rawDate IsNot DBNull.Value Then documentDate = Convert.ToDateTime(rawDate, CultureInfo.InvariantCulture)
+                    If rawDate IsNot Nothing AndAlso rawDate IsNot DBNull.Value Then
+                        Try
+                            documentDate = Convert.ToDateTime(rawDate, CultureInfo.InvariantCulture)
+                        Catch
+                            documentDate = DateTime.Today
+                        End Try
+                    End If
                 End Using
             End Using
 

@@ -47,6 +47,7 @@ function Get-SourceFailures([string]$csp, [string]$gcr, [string]$sec, [string]$o
     if ($sec -match 'apis\.google\.com|default-src') { $f.Add('S3 KeepStoreSecurity non contiene testi di policy ne host Google') }
     if ($ord -notmatch 'commitCompleted = True[\s\S]{0,700}If TipoDoc = KeepStoreGoogleCustomerReviews\.OrderDocumentType Then[\s\S]{0,200}KeepStoreGoogleCustomerReviews\.MarkPending\(Me\.Session, orderIdentity\.CompanyId, orderIdentity\.UtentiId, id\)') { $f.Add('S4 il marcatore si scrive dopo il commit e solo per un ordine (tipo 4)') }
     if ($ord -notmatch 'AndAlso documentType = KeepStoreGoogleCustomerReviews\.OrderDocumentType Then[\s\S]{0,600}KeepStoreGoogleCustomerReviews\.TryBuildForDocument\(conn, Me\.Session, documentId, ownerUtentiId, identity\.CompanyId\)[\s\S]{0,300}If gcr\.Length > 0 Then[\s\S]{0,300}litGoogleCustomerReviews\.Text = gcr[\s\S]{0,300}KeepStoreSecurity\.AllowGoogleCustomerReviews\(Response\)') { $f.Add('S5 la ricevuta emette lo snippet solo per un ordine e allarga la CSP solo se lo snippet c e') }
+    if (([regex]::Matches($ord, 'KeepStoreGoogleCustomerReviews\.MarkPending')).Count -ne 1) { $f.Add('S4b il marcatore si scrive in un solo punto, dopo il commit') }
     if (([regex]::Matches($ord, 'AllowGoogleCustomerReviews')).Count -ne 1) { $f.Add('S6 ordine.aspx.vb allarga la CSP in un solo punto') }
     if ($ord -match 'GCR_ShowOptIn_DocId' -or $det -match 'GCR_ShowOptIn_DocId') { $f.Add('S7 la chiave di sessione mai scritta non esiste piu') }
     if ($aspx -notmatch '<asp:Panel ID="Panel1"[\s\S]*?<asp:Literal ID="litGoogleCustomerReviews"[\s\S]*?</asp:Panel>') { $f.Add('S8 il segnaposto sta dentro la ricevuta (Panel1)') }
@@ -60,8 +61,8 @@ function Get-SourceFailures([string]$csp, [string]$gcr, [string]$sec, [string]$o
     if ($gcr -notmatch 'If script\.Length = 0 Then Return String\.Empty[\s\S]{0,200}ClearPending\(session, companyId, utentiId, documentId\)[\s\S]{0,100}Return script') { $f.Add('S16 il marcatore si toglie solo dopo aver costruito lo snippet') }
     if ($gcr -match '"IT"' -or $gcr -match 'HtmlEncode') { $f.Add('S17 nessun paese inventato, nessun HtmlEncode dentro lo script') }
     if ($gcr -notmatch 'JavaScriptStringEncode') { $f.Add('S18 i valori si codificano per JavaScript') }
+    if ($gcr -notmatch 'Try\s+documentDate = Convert\.ToDateTime\(rawDate, CultureInfo\.InvariantCulture\)\s+Catch\s+documentDate = DateTime\.Today\s+End Try') { $f.Add('S20 una data del documento non valida ripiega su oggi, non annulla lo snippet') }
     if (($gcr + $csp + $sec) -match '(?i)taikun|webaffare|onsus') { $f.Add('S19 nessun cliente nel codice condiviso') }
-    foreach ($rel in @('Page.master.vb', 'ordine.aspx.vb', 'documentidettaglio.aspx.vb')) { }
     return $f
 }
 
@@ -84,11 +85,11 @@ try {
     # (C) mutanti
     $mutants = @(
         @('merchant-fino-a-9-cifre', 'gcr', '[0-9]{1,20}', '[0-9]{1,9}'),
-        @('paese-anche-minuscolo', 'gcr', '"^[A-Z]{2}$"', '"^[A-Za-z]{2}$"'),
+        @('paese-anche-minuscolo', 'gcr', '"^[A-Z]{2}\z"', '"^[A-Za-z]{2}\z"'),
         @('paese-zz-accettato', 'gcr', ' OrElse country = "ZZ"', ''),
         @('marcatore-50-invece-di-20', 'gcr', 'MaxPending As Integer = 20', 'MaxPending As Integer = 50'),
         @('consegna-4-giorni', 'gcr', 'DefaultDeliveryDays As Integer = 5', 'DefaultDeliveryDays As Integer = 4'),
-        @('email-con-tag-accettata', 'gcr', '^[^@\s<>""]+@[^@\s<>""]+\.[^@\s<>""]+$', '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+        @('email-con-tag-accettata', 'gcr', '^[^@\s<>""]+@[^@\s<>""]+\.[^@\s<>""]+\z', '^[^@\s]+@[^@\s]+\.[^@\s]+\z'),
         @('email-codificata-html', 'gcr', 'HttpUtility.JavaScriptStringEncode(email)', 'HttpUtility.HtmlEncode(email)'),
         @('data-con-cultura-del-server', 'gcr', 'estimatedDelivery.ToString("yyyy-MM-dd", inv)', 'estimatedDelivery.ToString("yyyy-MM-dd")'),
         @('chiave-con-pezzi-mancanti', 'gcr', 'If companyId <= 0 OrElse utentiId <= 0 OrElse documentId <= 0 Then Return String.Empty', 'If documentId <= 0 Then Return String.Empty'),
@@ -96,7 +97,10 @@ try {
         @('marcatore-corrispondenza-parziale', 'gcr', 'Return PendingList(current).Contains(key)', 'Return Not String.IsNullOrEmpty(current) AndAlso current.Contains(key)'),
         @('senza-marcatore-si-emette', 'gcr', 'If Not IsPending(session, companyId, utentiId, documentId) Then Return String.Empty', ''),
         @('preventivi-ammessi', 'gcr', 'If tipo <> OrderDocumentType Then Return String.Empty', ''),
-        @('marcatore-non-consumato', 'gcr', '            ClearPending(session, companyId, utentiId, documentId)'+[char]10+'', ''),
+        @('marcatore-non-consumato', 'gcr', ('            ClearPending(session, companyId, utentiId, documentId)'+[char]10+''), ''),
+        @('consumo-prima-del-controllo', 'gcr', ('            If script.Length = 0 Then Return String.Empty'+[char]10+'            ClearPending(session, companyId, utentiId, documentId)'+[char]10+''), ('            ClearPending(session, companyId, utentiId, documentId)'+[char]10+'            If script.Length = 0 Then Return String.Empty'+[char]10+'')),
+        @('data-del-documento-senza-protezione', 'gcr', ('                        Catch'+[char]10+'                            documentDate = DateTime.Today'+[char]10+''), ('                        Catch'+[char]10+'                            Throw'+[char]10+'')),
+        @('a-capo-finale-ammesso', 'gcr', '[0-9]{1,20}\z', '[0-9]{1,20}$'),
         @('documento-senza-utente', 'gcr', 'd.UtentiId=?uid AND ', ''),
         @('paese-di-ripiego-it', 'gcr', 'Dim script As String = BuildOptInScript(merchantId, documentId, email, country,', 'Dim script As String = BuildOptInScript(merchantId, documentId, email, If(country.Length <> 2, "IT", country),'),
         @('csp-stretta-cambiata', 'csp', '"font-src ''self'' data:; "', '"font-src ''self'' data: https:; "'),
@@ -109,14 +113,15 @@ try {
         @('csp-doppia-intestazione', 'sec', 'SafeSetHeader(resp, "Content-Security-Policy", KeepStoreContentSecurityPolicy.WithGoogleCustomerReviews())', 'resp.AppendHeader("Content-Security-Policy", KeepStoreContentSecurityPolicy.WithGoogleCustomerReviews())'),
         @('marcatore-per-ogni-documento', 'ord', 'If TipoDoc = KeepStoreGoogleCustomerReviews.OrderDocumentType Then', 'If True Then'),
         @('marcatore-non-scritto', 'ord', 'KeepStoreGoogleCustomerReviews.MarkPending(Me.Session, orderIdentity.CompanyId, orderIdentity.UtentiId, id)', ''),
+        @('marcatore-anche-prima-del-commit', 'ord', ('                commitAttempted = True'+[char]10+'                trns.Commit()'), ('                commitAttempted = True'+[char]10+'                KeepStoreGoogleCustomerReviews.MarkPending(Me.Session, orderIdentity.CompanyId, orderIdentity.UtentiId, id)'+[char]10+'                trns.Commit()')),
         @('ricevuta-anche-per-preventivi', 'ord', 'AndAlso documentType = KeepStoreGoogleCustomerReviews.OrderDocumentType Then', 'Then'),
         @('csp-allargata-senza-snippet', 'ord', 'If gcr.Length > 0 Then', 'If True Then'),
         @('ricevuta-utente-sbagliato', 'ord', 'documentId, ownerUtentiId, identity.CompanyId)', 'documentId, 1, identity.CompanyId)'),
         @('segnaposto-tolto', 'aspx', '<asp:Literal ID="litGoogleCustomerReviews" runat="server"></asp:Literal>', ''),
         @('payreturn-ko-invece-di-ok', 'det', 'Request.QueryString("payreturn")), "ok", StringComparison.OrdinalIgnoreCase)', 'Request.QueryString("payreturn")), "ko", StringComparison.OrdinalIgnoreCase)'),
         @('snippet-vuoto-allarga-la-csp', 'det', 'If script.Length = 0 Then Return', ''),
-        @('documento-con-lo-snippet-in-cache', 'det', 'Response.Cache.SetNoStore()'+[char]10+'        Catch'+[char]10+'            '' Fail-closed: nessun impatto sulla pagina del documento.', 'Catch'+[char]10+'            '' Fail-closed: nessun impatto sulla pagina del documento.'),
-        @('documento-utente-sbagliato', 'det', '_authorizedIdentity.UtentiId, _authorizedIdentity.CompanyId)'+[char]10+'            End Using', '0, _authorizedIdentity.CompanyId)'+[char]10+'            End Using'),
+        @('documento-con-lo-snippet-in-cache', 'det', ('Response.Cache.SetNoStore()'+[char]10+'        Catch'+[char]10+'            '' Fail-closed: nessun impatto sulla pagina del documento.'), ('Catch'+[char]10+'            '' Fail-closed: nessun impatto sulla pagina del documento.')),
+        @('documento-utente-sbagliato', 'det', ('_authorizedIdentity.UtentiId, _authorizedIdentity.CompanyId)'+[char]10+'            End Using'), ('0, _authorizedIdentity.CompanyId)'+[char]10+'            End Using')),
         @('chiave-morta-ritornata', 'det', 'Fail-closed: nessun impatto sulla pagina del documento.', 'GCR_ShowOptIn_DocId')
     )
     if (-not $SkipMutants -and $failures.Count -eq 0) {
